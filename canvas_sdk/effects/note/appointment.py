@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.base import _BaseEffect, async_effect
+from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import Appointment as AppointmentDataModel
 from canvas_sdk.v1.data import AppointmentLabel, NoteType, Patient
@@ -111,7 +111,6 @@ class ScheduleEvent(AppointmentABC):
 
         return errors
 
-    @async_effect
     def delete(self) -> Effect:
         """Send a DELETE effect for the schedule event."""
         self._validate_before_effect("delete")
@@ -264,7 +263,6 @@ class Appointment(AppointmentABC):
             values["labels"] = sorted(self.labels)
         return values
 
-    @async_effect
     def cancel(self) -> Effect:
         """Send a CANCEL effect for the appointment."""
         self._validate_before_effect("cancel")

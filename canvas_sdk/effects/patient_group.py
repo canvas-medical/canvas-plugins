@@ -5,12 +5,12 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import EffectType, _BaseEffect, async_effect
+from canvas_sdk.effects.base import EffectType, _AsyncEffectMixin, _BaseEffect
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.patient_group import PatientGroup as PatientGroupModel
 
 
-class PatientGroupEffect(Model):
+class PatientGroupEffect(Model, _AsyncEffectMixin):
     """
     Effect for performing actions on a Patient Group.
 
@@ -20,12 +20,10 @@ class PatientGroupEffect(Model):
 
     group_id: UUID | str
 
-    @async_effect
     def add_member(self, patient_ids: list[str]) -> Effect:
         """Add patient(s) as members of the group."""
         return _AddPatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply()
 
-    @async_effect
     def deactivate_member(self, patient_ids: list[str]) -> Effect:
         """Deactivate patient(s) from the group."""
         return _DeactivatePatientGroupMember(

@@ -7,11 +7,11 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data.external_event import ExternalEvent as ExternalEventModel
 
 
-class ExternalEvent(TrackableFieldsModel):
+class ExternalEvent(TrackableFieldsModel, _AsyncEffectMixin):
     """
     Effect to create or update an External Event in Canvas.
 
@@ -116,7 +116,6 @@ class ExternalEvent(TrackableFieldsModel):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Create a new External Event."""
         self._validate_before_effect("create")
@@ -128,7 +127,6 @@ class ExternalEvent(TrackableFieldsModel):
             payload=json.dumps(payload),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Update an existing External Event."""
         self._validate_before_effect("update")

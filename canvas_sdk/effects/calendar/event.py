@@ -8,7 +8,6 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import EffectType, _BaseEffect
-from canvas_sdk.effects.base import async_effect
 
 
 class EventRecurrence(StrEnum):
@@ -130,7 +129,6 @@ class Event(_BaseEffect):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Send a CREATE effect for the calendar event."""
         self._validate_before_effect("create")
@@ -144,7 +142,6 @@ class Event(_BaseEffect):
             ),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Send an UPDATE effect for the calendar event."""
         self._validate_before_effect("update")
@@ -158,7 +155,6 @@ class Event(_BaseEffect):
             ),
         )
 
-    @async_effect
     def delete(self) -> Effect:
         """Send a DELETE effect for the calendar event."""
         self._validate_before_effect("delete")

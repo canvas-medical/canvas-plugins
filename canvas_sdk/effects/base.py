@@ -2,7 +2,7 @@ import functools
 import inspect
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import Any, get_type_hints
 
 from pydantic import NonNegativeInt
 
@@ -50,11 +50,34 @@ def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
     wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
 
     wrapper.__doc__ = (wrapper.__doc__ or "").rstrip() + _DELAY_SECONDS_DOC
+    wrapper.__async_effect_wrapped__ = True  # type: ignore[attr-defined]
 
     return wrapper
 
 
-class _BaseEffect(Model):
+class _AsyncEffectMixin:
+    """Auto-wrap public methods that return ``Effect`` with :func:`async_effect`.
+
+    Any subclass gets a ``delay_seconds`` kwarg added to each of its own
+    public methods whose return annotation is exactly ``Effect``.
+    """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for name, attr in list(vars(cls).items()):
+            if not inspect.isfunction(attr) or name.startswith("_"):
+                continue
+            if getattr(attr, "__async_effect_wrapped__", False):
+                continue
+            try:
+                hints = get_type_hints(attr)
+            except Exception:
+                continue
+            if hints.get("return") is Effect:
+                setattr(cls, name, async_effect(attr))
+
+
+class _BaseEffect(Model, _AsyncEffectMixin):
     """
     A Canvas Effect that changes user behavior or autonomously performs activities on behalf of users.
     """
@@ -72,7 +95,6 @@ class _BaseEffect(Model):
     def effect_payload(self) -> dict[str, Any]:
         return {"data": self.values}
 
-    @async_effect
     def apply(self) -> Effect:
         self._validate_before_effect("apply")
         return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))

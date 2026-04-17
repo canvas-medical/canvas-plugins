@@ -7,12 +7,12 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
 
-class Message(TrackableFieldsModel):
+class Message(TrackableFieldsModel, _AsyncEffectMixin):
     """
     Effect to create and/or send a message.
     """
@@ -95,7 +95,6 @@ class Message(TrackableFieldsModel):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("create")
@@ -108,7 +107,6 @@ class Message(TrackableFieldsModel):
             ),
         )
 
-    @async_effect
     def create_and_send(self) -> Effect:
         """Create and send message."""
         self._validate_before_effect("create_and_send")
@@ -117,13 +115,11 @@ class Message(TrackableFieldsModel):
             payload=json.dumps({"data": self.values}),
         )
 
-    @async_effect
     def edit(self) -> Effect:
         """Edit message."""
         self._validate_before_effect("edit")
         return Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
 
-    @async_effect
     def send(self) -> Effect:
         """Send message."""
         self._validate_before_effect("send")

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.effects.claim.claim_banner_alert import (
     BannerAlertIntent,
     _AddClaimBannerAlert,
@@ -30,7 +30,7 @@ from canvas_sdk.effects.claim.payment.base import (
 from canvas_sdk.effects.claim.payment.claim_payment import _PostClaimPayment
 
 
-class ClaimEffect(Model):
+class ClaimEffect(Model, _AsyncEffectMixin):
     """
     Effect for performing actions on a Claim.
 
@@ -40,7 +40,6 @@ class ClaimEffect(Model):
 
     claim_id: UUID | str
 
-    @async_effect
     def update_provider(
         self,
         billing_provider: ClaimBillingProvider | None = None,
@@ -71,7 +70,6 @@ class ClaimEffect(Model):
             facility=facility,
         ).apply()
 
-    @async_effect
     def upsert_metadata(self, key: str, value: str) -> Effect:
         """
         Upserts a metadata record to the claim.
@@ -85,7 +83,6 @@ class ClaimEffect(Model):
         """
         return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(value=value)
 
-    @async_effect
     def add_banner(
         self,
         key: str,
@@ -109,7 +106,6 @@ class ClaimEffect(Model):
             claim_id=self.claim_id, key=key, narrative=narrative, intent=intent, href=href
         ).apply()
 
-    @async_effect
     def remove_banner(self, key: str) -> Effect:
         """
         Removes a banner alert from a claim.
@@ -122,7 +118,6 @@ class ClaimEffect(Model):
         """
         return _RemoveClaimBannerAlert(claim_id=self.claim_id, key=key).apply()
 
-    @async_effect
     def add_comment(self, comment: str) -> Effect:
         """
         Adds a comment to the claim.
@@ -135,7 +130,6 @@ class ClaimEffect(Model):
         """
         return _AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
 
-    @async_effect
     def add_labels(self, labels: list[str | Label]) -> Effect:
         """
         Adds one or more labels to the claim.
@@ -148,7 +142,6 @@ class ClaimEffect(Model):
         """
         return _AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
-    @async_effect
     def remove_labels(self, labels: list[str]) -> Effect:
         """
         Removes one or more labels from the claim.
@@ -161,7 +154,6 @@ class ClaimEffect(Model):
         """
         return _RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
-    @async_effect
     def move_to_queue(self, queue: str) -> Effect:
         """
         Moves the claim to a queue.
@@ -174,7 +166,6 @@ class ClaimEffect(Model):
         """
         return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
 
-    @async_effect
     def post_payment(
         self,
         claim_coverage_id: str | UUID | Literal["patient"],

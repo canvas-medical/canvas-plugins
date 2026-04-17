@@ -8,7 +8,6 @@ from typing import Any
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect, EffectType, _BaseEffect
-from canvas_sdk.effects.base import async_effect
 
 JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
@@ -37,7 +36,6 @@ class Response(_BaseEffect):
             headers=headers,  # type: ignore[call-arg]
         )
 
-    @async_effect
     def apply(self) -> Effect:
         """Convert the response into an effect."""
         payload = {

@@ -9,7 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.appointment import Appointment, AppointmentProgressStatus
 
@@ -28,7 +28,7 @@ class AppointmentIdentifier:
     value: str
 
 
-class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
+class NoteOrAppointmentABC(TrackableFieldsModel, _AsyncEffectMixin, ABC):
     """
     Base class for all note effects.
 
@@ -108,7 +108,6 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Send a CREATE effect for the note or appointment."""
         self._validate_before_effect("create")
@@ -121,7 +120,6 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             ),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Send an UPDATE effect for the note or appointment."""
         self._validate_before_effect("update")
@@ -241,7 +239,6 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
 
         return values
 
-    @async_effect
     def reschedule(self) -> Effect:
         """Send a RESCHEDULE effect for the appointment."""
         self._validate_before_effect("update")

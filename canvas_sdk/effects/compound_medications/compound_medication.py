@@ -5,11 +5,11 @@ from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 
-class CompoundMedication(TrackableFieldsModel):
+class CompoundMedication(TrackableFieldsModel, _AsyncEffectMixin):
     """Effect to create or update a Compound Medication record."""
 
     class Meta:
@@ -239,7 +239,6 @@ class CompoundMedication(TrackableFieldsModel):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
@@ -256,7 +255,6 @@ class CompoundMedication(TrackableFieldsModel):
             payload=json.dumps(payload),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")

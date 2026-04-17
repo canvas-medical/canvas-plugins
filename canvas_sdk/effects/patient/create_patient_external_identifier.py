@@ -2,10 +2,10 @@ import json
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 
 
-class CreatePatientExternalIdentifier(TrackableFieldsModel):
+class CreatePatientExternalIdentifier(TrackableFieldsModel, _AsyncEffectMixin):
     """Effect to create a Patient External Identifier record."""
 
     class Meta:
@@ -24,7 +24,6 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
             "patient_id": self.patient_id,
         }
 
-    @async_effect
     def create(self) -> Effect:
         """Create a new Patient External Identifier."""
         self._validate_before_effect("create")

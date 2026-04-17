@@ -4,7 +4,7 @@ from typing import Any
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 
 
 @dataclass
@@ -19,12 +19,11 @@ class Metadata:
         return {"key": self.key, "value": self.value}
 
 
-class BaseMetadata(TrackableFieldsModel):
+class BaseMetadata(TrackableFieldsModel, _AsyncEffectMixin):
     """Base class for metadata effects."""
 
     key: str
 
-    @async_effect
     def upsert(self, value: str) -> Effect:
         """Upsert the metadata."""
         self._validate_before_effect("upsert")

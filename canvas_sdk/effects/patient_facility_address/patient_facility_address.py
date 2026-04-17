@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data.facility import Facility
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.patient import PatientFacilityAddress as PatientFacilityAddressModel
@@ -21,7 +21,7 @@ class AddressType(StrEnum):
     BOTH = "both"
 
 
-class PatientFacilityAddress(TrackableFieldsModel):
+class PatientFacilityAddress(TrackableFieldsModel, _AsyncEffectMixin):
     """
     Effect to create, update, or delete a Patient Facility Address in Canvas.
 
@@ -251,7 +251,6 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Create a new Patient Facility Address."""
         self._validate_before_effect("create")
@@ -263,7 +262,6 @@ class PatientFacilityAddress(TrackableFieldsModel):
             payload=json.dumps(payload),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Update an existing Patient Facility Address."""
         self._validate_before_effect("update")
@@ -275,7 +273,6 @@ class PatientFacilityAddress(TrackableFieldsModel):
             payload=json.dumps(payload),
         )
 
-    @async_effect
     def delete(self) -> Effect:
         """Delete an existing Patient Facility Address."""
         self._validate_before_effect("delete")

@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import async_effect
+from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data.observation import Observation as ObservationModel
 
 
@@ -52,7 +52,7 @@ class ObservationComponentData:
         }
 
 
-class Observation(TrackableFieldsModel):
+class Observation(TrackableFieldsModel, _AsyncEffectMixin):
     """Effect to create or update an Observation record."""
 
     class Meta:
@@ -173,7 +173,6 @@ class Observation(TrackableFieldsModel):
 
         return errors
 
-    @async_effect
     def create(self) -> Effect:
         """Create a new Observation."""
         self._validate_before_effect("create")
@@ -187,7 +186,6 @@ class Observation(TrackableFieldsModel):
             ),
         )
 
-    @async_effect
     def update(self) -> Effect:
         """Update an existing Observation."""
         self._validate_before_effect("update")

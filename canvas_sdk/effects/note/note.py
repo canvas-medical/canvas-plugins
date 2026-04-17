@@ -7,7 +7,6 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import async_effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
@@ -51,7 +50,6 @@ class Note(NoteOrAppointmentABC):
     title: str | None = None
     related_data: dict | None = None
 
-    @async_effect
     def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
         self._validate_before_effect("push_charges")
@@ -60,7 +58,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def unlock(self) -> Effect:
         """Unlocks the note to allow further edits."""
         self._validate_before_effect("unlock")
@@ -69,7 +66,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def lock(self) -> Effect:
         """Locks the note to prevent further edits."""
         self._validate_before_effect("lock")
@@ -78,7 +74,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def sign(self) -> Effect:
         """Signs the note."""
         self._validate_before_effect("sign")
@@ -87,7 +82,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def check_in(self) -> Effect:
         """Mark the note as checked-in."""
         self._validate_before_effect("check_in")
@@ -96,7 +90,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def no_show(self) -> Effect:
         """Mark the note as no-show."""
         self._validate_before_effect("no_show")
@@ -105,7 +98,6 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    @async_effect
     def upsert_metadata(self, key: str, value: str) -> Effect:
         """
         Upserts a metadata record to the note.

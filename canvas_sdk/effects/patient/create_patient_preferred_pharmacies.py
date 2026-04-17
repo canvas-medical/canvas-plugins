@@ -6,7 +6,6 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import _BaseEffect
-from canvas_sdk.effects.base import async_effect
 from canvas_sdk.effects.patient import PatientPreferredPharmacy
 from canvas_sdk.v1.data import Patient
 
@@ -54,7 +53,6 @@ class CreatePatientPreferredPharmacies(_BaseEffect):
             "patient_id": str(self.patient_id),
         }
 
-    @async_effect
     def create(self) -> Effect:
         """Create Patient Preferred Pharmacies."""
         self._validate_before_effect("create")
