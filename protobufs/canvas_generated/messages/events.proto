@@ -117,10 +117,6 @@ enum EventType {
   CLAIM_CREATED = 98;
   CLAIM_UPDATED = 99;
 
-  // Claim lifecycle events
-
-  CLAIM_QUEUE_MOVED = 400;
-
   PATIENT_GROUP_CREATED = 116;
   PATIENT_GROUP_UPDATED = 117;
   PATIENT_GROUP_MEMBERSHIP_CREATED = 118;
@@ -170,6 +166,10 @@ enum EventType {
   PRESCRIPTION_INQUEUE = 309;
   PRESCRIPTION_TRANSMITTED = 310;
   PRESCRIPTION_DELIVERED = 311;
+
+  // Claim lifecycle events
+
+  CLAIM_QUEUE_MOVED = 400;
 
   // Specific Command event types.
   // The commented lines are event types for commands that are not available yet.
