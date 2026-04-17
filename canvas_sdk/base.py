@@ -1,5 +1,6 @@
 import functools
 import inspect
+import re
 from collections.abc import Callable
 from datetime import date, datetime
 from enum import Enum
@@ -18,9 +19,43 @@ _DELAY_PARAM = inspect.Parameter(
     annotation="NonNegativeInt | None",
 )
 
-_DELAY_SECONDS_DOC = (
-    "\n\nArgs:\n    delay_seconds (int | None): Optional number of seconds to delay the effect.\n"
+_DELAY_SECONDS_DESC = "delay_seconds (int | None): Optional number of seconds to delay the effect."
+
+_DOCSTRING_SECTION_HEADERS = (
+    "Returns",
+    "Raises",
+    "Yields",
+    "Yield",
+    "Example",
+    "Examples",
+    "Note",
+    "Notes",
+    "Attributes",
+    "See Also",
 )
+
+
+def _insert_delay_seconds_into_doc(doc: str | None) -> str:
+    """Insert ``delay_seconds`` into an existing Google-style ``Args:`` block, or append one."""
+    if not doc:
+        return "\n\nArgs:\n    " + _DELAY_SECONDS_DESC + "\n"
+
+    args_match = re.search(r"^([ \t]*)Args:[ \t]*$", doc, re.MULTILINE)
+    if args_match is None:
+        return doc.rstrip() + "\n\nArgs:\n    " + _DELAY_SECONDS_DESC + "\n"
+
+    args_indent = args_match.group(1)
+    entry_line = f"{args_indent}    {_DELAY_SECONDS_DESC}"
+
+    section_re = rf"^{re.escape(args_indent)}(?:{'|'.join(_DOCSTRING_SECTION_HEADERS)}):[ \t]*$"
+    next_match = re.search(section_re, doc[args_match.end() :], re.MULTILINE)
+    if next_match is None:
+        return doc.rstrip() + "\n" + entry_line + "\n"
+
+    abs_pos = args_match.end() + next_match.start()
+    while abs_pos > 0 and doc[abs_pos - 1] == "\n":
+        abs_pos -= 1
+    return doc[:abs_pos] + "\n" + entry_line + doc[abs_pos:]
 
 
 def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
@@ -34,25 +69,24 @@ def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
 
     @functools.wraps(func)
     def wrapper(*args: Any, delay_seconds: NonNegativeInt | None = None, **kwargs: Any) -> Effect:
-        if delay_seconds is not None and delay_seconds < 0:
-            raise ValueError(f"delay_seconds must be non-negative, got {delay_seconds}")
+        if delay_seconds is not None:
+            if not isinstance(delay_seconds, int) or isinstance(delay_seconds, bool):
+                raise ValueError(
+                    f"delay_seconds must be an integer, got {type(delay_seconds).__name__}"
+                )
+            if delay_seconds < 0:
+                raise ValueError(f"delay_seconds must be non-negative, got {delay_seconds}")
         effect = func(*args, **kwargs)
         if delay_seconds is not None:
             effect.delay_seconds = delay_seconds
         return effect
 
     sig = inspect.signature(func)
-    params = list(sig.parameters.values())
-    insert_idx = len(params)
-    for i, p in enumerate(params):
-        if p.kind == inspect.Parameter.VAR_KEYWORD:
-            insert_idx = i
-            break
-    params.insert(insert_idx, _DELAY_PARAM)
-    wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
+    wrapper.__signature__ = sig.replace(  # type: ignore[attr-defined]
+        parameters=[*sig.parameters.values(), _DELAY_PARAM]
+    )
 
-    wrapper.__doc__ = (wrapper.__doc__ or "").rstrip() + _DELAY_SECONDS_DOC
-    wrapper.__async_effect_wrapped__ = True  # type: ignore[attr-defined]
+    wrapper.__doc__ = _insert_delay_seconds_into_doc(wrapper.__doc__)
 
     return wrapper
 
@@ -68,8 +102,6 @@ class _AsyncEffectMixin:
         super().__init_subclass__(**kwargs)
         for name, attr in list(vars(cls).items()):
             if not inspect.isfunction(attr) or name.startswith("_"):
-                continue
-            if getattr(attr, "__async_effect_wrapped__", False):
                 continue
             try:
                 hints = get_type_hints(attr)

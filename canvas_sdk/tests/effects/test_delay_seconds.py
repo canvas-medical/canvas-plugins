@@ -17,21 +17,21 @@ def test_delay_seconds_not_set_by_default() -> None:
 
 def test_delay_seconds_set_to_zero() -> None:
     """apply(delay_seconds=0) should set the field (async, no delay)."""
-    effect = _TestEffect().apply(delay_seconds=0)
+    effect = _TestEffect().apply(delay_seconds=0)  # type: ignore[call-arg]
     assert effect.HasField("delay_seconds")
     assert effect.delay_seconds == 0
 
 
 def test_delay_seconds_set_to_positive() -> None:
     """apply(delay_seconds=60) should set the field with the correct value."""
-    effect = _TestEffect().apply(delay_seconds=60)
+    effect = _TestEffect().apply(delay_seconds=60)  # type: ignore[call-arg]
     assert effect.HasField("delay_seconds")
     assert effect.delay_seconds == 60
 
 
 def test_delay_seconds_none_does_not_set_field() -> None:
     """Explicitly passing delay_seconds=None should not set the field."""
-    effect = _TestEffect().apply(delay_seconds=None)
+    effect = _TestEffect().apply(delay_seconds=None)  # type: ignore[call-arg]
     assert not effect.HasField("delay_seconds")
 
 
@@ -40,4 +40,4 @@ def test_negative_delay_seconds_raises() -> None:
     import pytest
 
     with pytest.raises(ValueError, match="delay_seconds must be non-negative"):
-        _TestEffect().apply(delay_seconds=-5)
+        _TestEffect().apply(delay_seconds=-5)  # type: ignore[call-arg]
