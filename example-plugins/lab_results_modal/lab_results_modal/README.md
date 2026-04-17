@@ -1,7 +1,6 @@
 # lab_results_modal
 
-Adds a "Lab Results" button to the patient chart header. Clicking it opens a
-right-pane modal that lists the patient's lab reports and the values within
+Adds a "Lab Results" button to the patient chart header. Clicking it opens a modal that lists the patient's lab reports and the values within
 each report.
 
 The modal demonstrates how to walk the `LabReport` → `LabTest` → `LabValue`
