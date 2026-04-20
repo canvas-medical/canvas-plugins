@@ -90,4 +90,4 @@ def with_async(
     return effect
 
 
-__all__ = ("ASYNC_PROPS_KEY", "with_async")
+__exports__ = ("with_async",)

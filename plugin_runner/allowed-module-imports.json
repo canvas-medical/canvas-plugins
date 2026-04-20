@@ -415,6 +415,9 @@
   "canvas_sdk.effects.appointments_metadata.base": [
     "AppointmentsMetadata"
   ],
+  "canvas_sdk.effects.async_props": [
+    "with_async"
+  ],
   "canvas_sdk.effects.banner_alert": [
     "AddBannerAlert",
     "RemoveBannerAlert"
