@@ -428,6 +428,9 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.batch_commit": [
+    "BatchCommitCommandEffect"
+  ],
   "canvas_sdk.effects.batch_originate": [
     "BatchOriginateCommandEffect"
   ],
