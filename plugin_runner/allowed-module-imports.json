@@ -398,7 +398,8 @@
   "canvas_sdk.effects": [
     "Effect",
     "EffectType",
-    "_BaseEffect"
+    "_BaseEffect",
+    "with_async"
   ],
   "canvas_sdk.effects.appointments_metadata": [
     "AppointmentsMetadata",
