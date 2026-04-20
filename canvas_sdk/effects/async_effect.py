@@ -1,19 +1,44 @@
 """Async execution options for effects.
 
-Plugin developers wrap an Effect with :func:`with_async` to have the platform
-execute it via Celery instead of inline. Supports delay, retries, and
-retry-filtering on exception type or HTTP status code.
+Plugin developers call :meth:`Effect.set_async` on a returned effect to have
+the platform execute it via Celery instead of inline. Supports delay, retries,
+and retry-filtering on exception type or HTTP status code.
+
+``set_async`` is attached to the generated protobuf :class:`Effect` class at
+module import time so it can be chained off any helper that returns an
+``Effect`` — e.g. ``claim.add_comment(...).set_async(delay_seconds=60)``. It
+mutates the effect's payload in place and returns the same effect to enable
+the chained form.
 """
 
 import json
+from typing import TYPE_CHECKING
 
-from canvas_generated.messages.effects_pb2 import Effect
+if TYPE_CHECKING:
+    from canvas_generated.messages.effects_pb2 import Effect as _PbEffect
+
+    class Effect(_PbEffect):
+        """Stub — runtime is the real protobuf Effect with ``set_async`` attached below."""
+
+        def set_async(  # noqa: D102 — see attached function below for real docs
+            self,
+            *,
+            delay_seconds: int | None = ...,
+            max_retries: int | None = ...,
+            retry_on_exceptions: list[str] | None = ...,
+            retry_on_status_codes: list[int] | None = ...,
+            retry_backoff: bool | int = ...,
+            retry_backoff_max: int | None = ...,
+            retry_jitter: bool = ...,
+        ) -> "Effect": ...
+else:
+    from canvas_generated.messages.effects_pb2 import Effect
 
 ASYNC_PROPS_KEY = "async_props"
 
 
-def with_async(
-    effect: Effect,
+def set_async(  # noqa: D417 — `self` is the bound Effect instance
+    self: Effect,
     *,
     delay_seconds: int | None = None,
     max_retries: int | None = None,
@@ -23,14 +48,13 @@ def with_async(
     retry_backoff_max: int | None = None,
     retry_jitter: bool = False,
 ) -> Effect:
-    """Attach async execution options to an effect.
+    """Attach async execution options to this effect.
 
     The platform will run the effect through Celery rather than inline. All
     async options are packed into the effect's payload under the
     ``async_props`` key, so no extra protobuf fields are needed.
 
     Args:
-        effect: The effect to make async.
         delay_seconds: Wait this many seconds before running. ``0`` runs
             immediately on Celery (async-now). Must be non-negative.
         max_retries: Maximum number of retry attempts on failure. Defaults
@@ -54,7 +78,8 @@ def with_async(
             to avoid thundering herd when many tasks retry in sync.
 
     Returns:
-        The same ``Effect`` with async options merged into its payload.
+        The same ``Effect`` with async options merged into its payload, so
+        callers can chain: ``claim.add_comment(...).set_async(...)``.
     """
     if delay_seconds is not None:
         if isinstance(delay_seconds, bool) or not isinstance(delay_seconds, int):
@@ -67,7 +92,7 @@ def with_async(
         if max_retries < 0:
             raise ValueError(f"max_retries must be non-negative, got {max_retries}")
 
-    payload = json.loads(effect.payload) if effect.payload else {}
+    payload = json.loads(self.payload) if self.payload else {}
     props = payload.get(ASYNC_PROPS_KEY, {})
 
     if delay_seconds is not None:
@@ -86,8 +111,11 @@ def with_async(
         props["retry_jitter"] = True
 
     payload[ASYNC_PROPS_KEY] = props
-    effect.payload = json.dumps(payload)
-    return effect
+    self.payload = json.dumps(payload)
+    return self
 
 
-__exports__ = ("with_async",)
+Effect.set_async = set_async  # type: ignore[method-assign]
+
+
+__exports__ = ()

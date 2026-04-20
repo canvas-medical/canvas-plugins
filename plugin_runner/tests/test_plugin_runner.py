@@ -12,12 +12,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from canvas_generated.messages.effects_pb2 import Effect, EffectType
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginRequest,
     ReloadPluginsRequest,
     UnloadPluginRequest,
 )
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.payment_processor import (
     AddPaymentMethodResponse,
     CardTransaction,

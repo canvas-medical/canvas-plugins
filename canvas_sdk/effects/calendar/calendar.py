@@ -3,8 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from canvas_generated.messages.effects_pb2 import Effect
-from canvas_sdk.effects import EffectType, _BaseEffect
+from canvas_sdk.effects import Effect, EffectType, _BaseEffect
 
 
 class CalendarType(StrEnum):
