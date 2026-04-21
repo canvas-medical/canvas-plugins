@@ -21,9 +21,9 @@ def _get_async_props(effect: object) -> dict:
 
 
 def test_set_async_does_nothing_when_no_options_passed() -> None:
-    """Calling set_async without any options leaves async_props empty."""
+    """Calling set_async without any options leaves the async_props key absent."""
     effect = _TestEffect().apply().set_async()
-    assert _get_async_props(effect) == {}
+    assert ASYNC_PROPS_KEY not in json.loads(effect.payload)
 
 
 def test_set_async_returns_same_effect_for_chaining() -> None:
@@ -65,7 +65,7 @@ def test_bool_delay_seconds_raises() -> None:
 def test_bool_max_retries_raises() -> None:
     """``max_retries=True`` is a type-safety trap; reject it."""
     with pytest.raises(TypeError, match="max_retries must be an int"):
-        _TestEffect().apply().set_async(max_retries=False)
+        _TestEffect().apply().set_async(max_retries=True)
 
 
 def test_non_int_delay_seconds_raises() -> None:

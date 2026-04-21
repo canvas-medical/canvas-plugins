@@ -110,8 +110,9 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     if retry_jitter:
         props["retry_jitter"] = True
 
-    payload[ASYNC_PROPS_KEY] = props
-    self.payload = json.dumps(payload)
+    if props:
+        payload[ASYNC_PROPS_KEY] = props
+        self.payload = json.dumps(payload)
     return self
 
 
