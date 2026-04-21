@@ -188,6 +188,14 @@ def test_non_bool_retry_jitter_raises() -> None:
         _TestEffect().apply().set_async(retry_jitter=1)  # type: ignore[arg-type]
 
 
+def test_non_json_payload_raises_descriptive_error() -> None:
+    """A non-JSON effect payload should raise a clear ValueError, not JSONDecodeError."""
+    effect = _TestEffect().apply()
+    effect.payload = "Hello, world!"
+    with pytest.raises(ValueError, match="Effect payload must be valid JSON to use set_async"):
+        effect.set_async(delay_seconds=1)
+
+
 def test_preserves_existing_payload_data() -> None:
     """Non-async payload data should be left alone."""
     effect = _TestEffect().apply()

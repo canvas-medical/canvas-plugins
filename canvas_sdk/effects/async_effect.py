@@ -122,7 +122,13 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
         The same ``Effect`` with async options merged into its payload, so
         callers can chain: ``claim.add_comment(...).set_async(...)``.
     """
-    payload = json.loads(self.payload) if self.payload else {}
+    if self.payload:
+        try:
+            payload = json.loads(self.payload)
+        except json.JSONDecodeError as e:
+            raise ValueError("Effect payload must be valid JSON to use set_async()") from e
+    else:
+        payload = {}
     props = payload.get(ASYNC_PROPS_KEY, {})
 
     if delay_seconds is not None:
