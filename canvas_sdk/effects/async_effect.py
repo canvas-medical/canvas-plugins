@@ -101,9 +101,6 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     if props:
         payload[ASYNC_PROPS_KEY] = props
         self.payload = json.dumps(payload)
-    elif ASYNC_PROPS_KEY in payload:
-        del payload[ASYNC_PROPS_KEY]
-        self.payload = json.dumps(payload)
     return self
 
 
