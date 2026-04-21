@@ -37,6 +37,47 @@ else:
 ASYNC_PROPS_KEY = "async_props"
 
 
+def _validate_non_negative_int(name: str, value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be an int, got {type(value).__name__}")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative, got {value}")
+
+
+def _validate_positive_int(name: str, value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be an int, got {type(value).__name__}")
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+
+
+def _validate_str_list(name: str, value: object) -> None:
+    if isinstance(value, str) or not isinstance(value, (list, tuple)):
+        raise TypeError(f"{name} must be a list of strings, got {type(value).__name__}")
+    for item in value:
+        if not isinstance(item, str):
+            raise TypeError(f"{name} items must be strings, got {type(item).__name__}")
+
+
+def _validate_status_code_list(name: str, value: object) -> None:
+    if isinstance(value, str) or not isinstance(value, (list, tuple)):
+        raise TypeError(f"{name} must be a list of ints, got {type(value).__name__}")
+    for code in value:
+        if isinstance(code, bool) or not isinstance(code, int):
+            raise TypeError(f"{name} items must be ints, got {type(code).__name__}")
+        if not 100 <= code <= 599:
+            raise ValueError(f"{name} items must be valid HTTP status codes (100-599), got {code}")
+
+
+def _validate_retry_backoff(value: object) -> None:
+    if isinstance(value, bool):
+        return
+    if not isinstance(value, int):
+        raise TypeError(f"retry_backoff must be a bool or int, got {type(value).__name__}")
+    if value < 0:
+        raise ValueError(f"retry_backoff must be non-negative, got {value}")
+
+
 def set_async(  # noqa: D417 — `self` is the bound Effect instance
     self: Effect,
     *,
@@ -81,32 +122,35 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
         The same ``Effect`` with async options merged into its payload, so
         callers can chain: ``claim.add_comment(...).set_async(...)``.
     """
-    if delay_seconds is not None:
-        if isinstance(delay_seconds, bool) or not isinstance(delay_seconds, int):
-            raise TypeError(f"delay_seconds must be an int, got {type(delay_seconds).__name__}")
-        if delay_seconds < 0:
-            raise ValueError(f"delay_seconds must be non-negative, got {delay_seconds}")
-    if max_retries is not None:
-        if isinstance(max_retries, bool) or not isinstance(max_retries, int):
-            raise TypeError(f"max_retries must be an int, got {type(max_retries).__name__}")
-        if max_retries < 0:
-            raise ValueError(f"max_retries must be non-negative, got {max_retries}")
-
     payload = json.loads(self.payload) if self.payload else {}
     props = payload.get(ASYNC_PROPS_KEY, {})
 
     if delay_seconds is not None:
+        _validate_non_negative_int("delay_seconds", delay_seconds)
         props["delay_seconds"] = delay_seconds
+
     if max_retries is not None:
+        _validate_non_negative_int("max_retries", max_retries)
         props["max_retries"] = max_retries
+
     if retry_on_exceptions is not None:
+        _validate_str_list("retry_on_exceptions", retry_on_exceptions)
         props["retry_on_exceptions"] = list(retry_on_exceptions)
+
     if retry_on_status_codes is not None:
+        _validate_status_code_list("retry_on_status_codes", retry_on_status_codes)
         props["retry_on_status_codes"] = list(retry_on_status_codes)
+
+    _validate_retry_backoff(retry_backoff)
     if retry_backoff:
         props["retry_backoff"] = retry_backoff
+
     if retry_backoff_max is not None:
+        _validate_positive_int("retry_backoff_max", retry_backoff_max)
         props["retry_backoff_max"] = retry_backoff_max
+
+    if not isinstance(retry_jitter, bool):
+        raise TypeError(f"retry_jitter must be a bool, got {type(retry_jitter).__name__}")
     if retry_jitter:
         props["retry_jitter"] = True
 

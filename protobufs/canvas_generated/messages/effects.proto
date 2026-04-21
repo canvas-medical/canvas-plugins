@@ -447,4 +447,7 @@ message Effect {
   string handler_name = 5;
   string actor = 6;
   string source = 7;
+  //Oneof effect_payload {
+  //  ...
+  //}
 }

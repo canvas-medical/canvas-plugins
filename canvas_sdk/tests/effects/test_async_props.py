@@ -118,6 +118,76 @@ def test_retry_backoff_zero_is_omitted() -> None:
     assert "retry_backoff" not in _get_async_props(effect)
 
 
+def test_bare_string_retry_on_exceptions_raises() -> None:
+    """A bare string would iterate char-by-char via list(); reject it."""
+    with pytest.raises(TypeError, match="retry_on_exceptions must be a list of strings"):
+        _TestEffect().apply().set_async(retry_on_exceptions="ValueError")  # type: ignore[arg-type]
+
+
+def test_non_string_retry_on_exceptions_item_raises() -> None:
+    """Each retry_on_exceptions item must be a string."""
+    with pytest.raises(TypeError, match="retry_on_exceptions items must be strings"):
+        _TestEffect().apply().set_async(retry_on_exceptions=["ValueError", 42])  # type: ignore[list-item]
+
+
+def test_bare_string_retry_on_status_codes_raises() -> None:
+    """A bare string would iterate char-by-char via list(); reject it."""
+    with pytest.raises(TypeError, match="retry_on_status_codes must be a list of ints"):
+        _TestEffect().apply().set_async(retry_on_status_codes="500,502")  # type: ignore[arg-type]
+
+
+def test_non_int_retry_on_status_codes_item_raises() -> None:
+    """Each retry_on_status_codes item must be an int."""
+    with pytest.raises(TypeError, match="retry_on_status_codes items must be ints"):
+        _TestEffect().apply().set_async(retry_on_status_codes=[500, "502"])  # type: ignore[list-item]
+
+
+def test_bool_retry_on_status_codes_item_raises() -> None:
+    """``True`` is an int in Python but not a valid status code; reject it."""
+    with pytest.raises(TypeError, match="retry_on_status_codes items must be ints"):
+        _TestEffect().apply().set_async(retry_on_status_codes=[True])
+
+
+def test_out_of_range_retry_on_status_codes_raises() -> None:
+    """Status codes outside 100-599 are rejected."""
+    with pytest.raises(ValueError, match="valid HTTP status codes"):
+        _TestEffect().apply().set_async(retry_on_status_codes=[42])
+    with pytest.raises(ValueError, match="valid HTTP status codes"):
+        _TestEffect().apply().set_async(retry_on_status_codes=[600])
+
+
+def test_non_bool_non_int_retry_backoff_raises() -> None:
+    """retry_backoff must be bool or int."""
+    with pytest.raises(TypeError, match="retry_backoff must be a bool or int"):
+        _TestEffect().apply().set_async(retry_backoff="exponential")  # type: ignore[arg-type]
+
+
+def test_negative_retry_backoff_raises() -> None:
+    """Negative retry_backoff base delay is rejected."""
+    with pytest.raises(ValueError, match="retry_backoff must be non-negative"):
+        _TestEffect().apply().set_async(retry_backoff=-1)
+
+
+def test_bool_retry_backoff_max_raises() -> None:
+    """``retry_backoff_max=True`` is a type-safety trap; reject it."""
+    with pytest.raises(TypeError, match="retry_backoff_max must be an int"):
+        _TestEffect().apply().set_async(retry_backoff_max=True)
+
+
+def test_non_positive_retry_backoff_max_raises() -> None:
+    """retry_backoff_max must be strictly positive."""
+    with pytest.raises(ValueError, match="retry_backoff_max must be positive"):
+        _TestEffect().apply().set_async(retry_backoff_max=0)
+    with pytest.raises(ValueError, match="retry_backoff_max must be positive"):
+        _TestEffect().apply().set_async(retry_backoff_max=-5)
+
+
+def test_non_bool_retry_jitter_raises() -> None:
+    """retry_jitter must be a bool."""
+    with pytest.raises(TypeError, match="retry_jitter must be a bool"):
+        _TestEffect().apply().set_async(retry_jitter=1)  # type: ignore[arg-type]
+
+
 def test_preserves_existing_payload_data() -> None:
     """Non-async payload data should be left alone."""
     effect = _TestEffect().apply()
