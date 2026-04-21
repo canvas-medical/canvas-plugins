@@ -118,6 +118,59 @@ def test_retry_backoff_zero_is_omitted() -> None:
     assert "retry_backoff" not in _get_async_props(effect)
 
 
+def test_retry_backoff_false_clears_previously_set_value() -> None:
+    """A later set_async(retry_backoff=False) must disable a previously enabled backoff."""
+    effect = _TestEffect().apply()
+    effect.set_async(retry_backoff=True)
+    assert _get_async_props(effect) == {"retry_backoff": True}
+
+    effect.set_async(retry_backoff=False)
+    assert "retry_backoff" not in _get_async_props(effect)
+
+
+def test_retry_backoff_zero_clears_previously_set_value() -> None:
+    """retry_backoff=0 must also clear a previously enabled backoff."""
+    effect = _TestEffect().apply().set_async(retry_backoff=5)
+    assert _get_async_props(effect) == {"retry_backoff": 5}
+
+    effect.set_async(retry_backoff=0)
+    assert "retry_backoff" not in _get_async_props(effect)
+
+
+def test_retry_jitter_false_clears_previously_set_value() -> None:
+    """A later set_async(retry_jitter=False) must disable a previously enabled jitter."""
+    effect = _TestEffect().apply()
+    effect.set_async(retry_jitter=True)
+    assert _get_async_props(effect) == {"retry_jitter": True}
+
+    effect.set_async(retry_jitter=False)
+    assert "retry_jitter" not in _get_async_props(effect)
+
+
+def test_clearing_last_flag_removes_async_props_key_entirely() -> None:
+    """If clearing the only flag empties async_props, the key should be removed."""
+    effect = _TestEffect().apply().set_async(retry_backoff=True)
+    assert ASYNC_PROPS_KEY in json.loads(effect.payload)
+
+    effect.set_async(retry_backoff=False)
+    assert ASYNC_PROPS_KEY not in json.loads(effect.payload)
+
+
+def test_clearing_one_flag_preserves_other_props() -> None:
+    """Clearing retry_backoff must not affect unrelated async_props entries."""
+    effect = (
+        _TestEffect().apply().set_async(delay_seconds=30, retry_backoff=True, retry_jitter=True)
+    )
+    assert _get_async_props(effect) == {
+        "delay_seconds": 30,
+        "retry_backoff": True,
+        "retry_jitter": True,
+    }
+
+    effect.set_async(retry_backoff=False)
+    assert _get_async_props(effect) == {"delay_seconds": 30, "retry_jitter": True}
+
+
 def test_bare_string_retry_on_exceptions_raises() -> None:
     """A bare string would iterate char-by-char via list(); reject it."""
     with pytest.raises(TypeError, match="retry_on_exceptions must be a list of strings"):

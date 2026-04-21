@@ -27,9 +27,9 @@ if TYPE_CHECKING:
             max_retries: int | None = ...,
             retry_on_exceptions: list[str] | None = ...,
             retry_on_status_codes: list[int] | None = ...,
-            retry_backoff: bool | int = ...,
+            retry_backoff: bool | int | None = ...,
             retry_backoff_max: int | None = ...,
-            retry_jitter: bool = ...,
+            retry_jitter: bool | None = ...,
         ) -> "Effect": ...
 else:
     from canvas_generated.messages.effects_pb2 import Effect
@@ -85,9 +85,9 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     max_retries: int | None = None,
     retry_on_exceptions: list[str] | None = None,
     retry_on_status_codes: list[int] | None = None,
-    retry_backoff: bool | int = False,
+    retry_backoff: bool | int | None = None,
     retry_backoff_max: int | None = None,
-    retry_jitter: bool = False,
+    retry_jitter: bool | None = None,
 ) -> Effect:
     """Attach async execution options to this effect.
 
@@ -113,10 +113,14 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
         retry_backoff: ``True`` for exponential backoff (1, 2, 4, 8, ...
             seconds). A positive ``int`` sets the base delay:
             ``retry_backoff=5`` produces ``5, 10, 20, 40, ...`` Falsy
-            values (``False``, ``0``) disable backoff.
+            values (``False``, ``0``) disable backoff, clearing any
+            previously-set value. ``None`` (the default) leaves any
+            existing setting untouched.
         retry_backoff_max: Cap the backoff delay at this many seconds.
         retry_jitter: Add random jitter (0.5x–1.5x) to the backoff delay
             to avoid thundering herd when many tasks retry in sync.
+            ``False`` clears a previously-set value; ``None`` (the
+            default) leaves any existing setting untouched.
 
     Returns:
         The same ``Effect`` with async options merged into its payload, so
@@ -147,21 +151,30 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
         _validate_status_code_list("retry_on_status_codes", retry_on_status_codes)
         props["retry_on_status_codes"] = list(retry_on_status_codes)
 
-    _validate_retry_backoff(retry_backoff)
-    if retry_backoff:
-        props["retry_backoff"] = retry_backoff
+    if retry_backoff is not None:
+        _validate_retry_backoff(retry_backoff)
+        if retry_backoff:
+            props["retry_backoff"] = retry_backoff
+        else:
+            props.pop("retry_backoff", None)
 
     if retry_backoff_max is not None:
         _validate_positive_int("retry_backoff_max", retry_backoff_max)
         props["retry_backoff_max"] = retry_backoff_max
 
-    if not isinstance(retry_jitter, bool):
-        raise TypeError(f"retry_jitter must be a bool, got {type(retry_jitter).__name__}")
-    if retry_jitter:
-        props["retry_jitter"] = True
+    if retry_jitter is not None:
+        if not isinstance(retry_jitter, bool):
+            raise TypeError(f"retry_jitter must be a bool, got {type(retry_jitter).__name__}")
+        if retry_jitter:
+            props["retry_jitter"] = True
+        else:
+            props.pop("retry_jitter", None)
 
     if props:
         payload[ASYNC_PROPS_KEY] = props
+        self.payload = json.dumps(payload)
+    elif ASYNC_PROPS_KEY in payload:
+        del payload[ASYNC_PROPS_KEY]
         self.payload = json.dumps(payload)
     return self
 
