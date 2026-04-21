@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from canvas_sdk.effects import EffectType
+from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.async_effect import ASYNC_PROPS_KEY
 from canvas_sdk.effects.base import _BaseEffect
 
@@ -186,6 +186,16 @@ def test_non_bool_retry_jitter_raises() -> None:
     """retry_jitter must be a bool."""
     with pytest.raises(TypeError, match="retry_jitter must be a bool"):
         _TestEffect().apply().set_async(retry_jitter=1)  # type: ignore[arg-type]
+
+
+def test_empty_payload_starts_a_fresh_async_props_dict() -> None:
+    """When the effect has no payload yet, set_async should seed a new one."""
+    effect = Effect()
+    assert effect.payload == ""
+
+    effect.set_async(delay_seconds=5)
+
+    assert json.loads(effect.payload) == {ASYNC_PROPS_KEY: {"delay_seconds": 5}}
 
 
 def test_non_json_payload_raises_descriptive_error() -> None:
