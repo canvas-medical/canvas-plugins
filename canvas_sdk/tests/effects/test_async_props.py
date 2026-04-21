@@ -107,8 +107,8 @@ def test_retry_backoff_accepts_integer_base() -> None:
 
 
 def test_retry_backoff_false_is_omitted() -> None:
-    """retry_backoff=False (the default) should not leak into async_props."""
-    effect = _TestEffect().apply().set_async(delay_seconds=10)
+    """Explicitly passing retry_backoff=False should not leak into async_props."""
+    effect = _TestEffect().apply().set_async(retry_backoff=False)
     assert "retry_backoff" not in _get_async_props(effect)
 
 
@@ -135,6 +135,15 @@ def test_retry_backoff_zero_clears_previously_set_value() -> None:
 
     effect.set_async(retry_backoff=0)
     assert "retry_backoff" not in _get_async_props(effect)
+
+
+def test_retry_backoff_false_also_clears_retry_backoff_max() -> None:
+    """retry_backoff_max is only meaningful as a cap on backoff; clearing backoff must clear it too."""
+    effect = _TestEffect().apply().set_async(retry_backoff=5, retry_backoff_max=600)
+    assert _get_async_props(effect) == {"retry_backoff": 5, "retry_backoff_max": 600}
+
+    effect.set_async(retry_backoff=False)
+    assert _get_async_props(effect) == {}
 
 
 def test_retry_jitter_false_clears_previously_set_value() -> None:

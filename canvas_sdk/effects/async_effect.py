@@ -157,6 +157,7 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
             props["retry_backoff"] = retry_backoff
         else:
             props.pop("retry_backoff", None)
+            props.pop("retry_backoff_max", None)
 
     if retry_backoff_max is not None:
         _validate_positive_int("retry_backoff_max", retry_backoff_max)
