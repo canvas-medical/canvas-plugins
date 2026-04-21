@@ -74,122 +74,22 @@ def test_non_int_delay_seconds_raises() -> None:
         _TestEffect().apply().set_async(delay_seconds=1.5)  # type: ignore[arg-type]
 
 
-def test_all_retry_options_recorded() -> None:
-    """Every retry-related option should flow through to async_props."""
+def test_all_options_recorded() -> None:
+    """Every option should flow through to async_props."""
     effect = (
         _TestEffect()
         .apply()
         .set_async(
             delay_seconds=30,
             max_retries=3,
-            retry_on_exceptions=["requests.exceptions.ConnectionError"],
             retry_on_status_codes=[500, 502, 503, 504],
-            retry_backoff=True,
-            retry_backoff_max=600,
-            retry_jitter=True,
         )
     )
     assert _get_async_props(effect) == {
         "delay_seconds": 30,
         "max_retries": 3,
-        "retry_on_exceptions": ["requests.exceptions.ConnectionError"],
         "retry_on_status_codes": [500, 502, 503, 504],
-        "retry_backoff": True,
-        "retry_backoff_max": 600,
-        "retry_jitter": True,
     }
-
-
-def test_retry_backoff_accepts_integer_base() -> None:
-    """An integer retry_backoff is recorded as-is (used as the base delay)."""
-    effect = _TestEffect().apply().set_async(retry_backoff=5)
-    assert _get_async_props(effect) == {"retry_backoff": 5}
-
-
-def test_retry_backoff_false_is_omitted() -> None:
-    """Explicitly passing retry_backoff=False should not leak into async_props."""
-    effect = _TestEffect().apply().set_async(retry_backoff=False)
-    assert "retry_backoff" not in _get_async_props(effect)
-
-
-def test_retry_backoff_zero_is_omitted() -> None:
-    """retry_backoff=0 is equivalent to False and should not be recorded."""
-    effect = _TestEffect().apply().set_async(retry_backoff=0)
-    assert "retry_backoff" not in _get_async_props(effect)
-
-
-def test_retry_backoff_false_clears_previously_set_value() -> None:
-    """A later set_async(retry_backoff=False) must disable a previously enabled backoff."""
-    effect = _TestEffect().apply()
-    effect.set_async(retry_backoff=True)
-    assert _get_async_props(effect) == {"retry_backoff": True}
-
-    effect.set_async(retry_backoff=False)
-    assert "retry_backoff" not in _get_async_props(effect)
-
-
-def test_retry_backoff_zero_clears_previously_set_value() -> None:
-    """retry_backoff=0 must also clear a previously enabled backoff."""
-    effect = _TestEffect().apply().set_async(retry_backoff=5)
-    assert _get_async_props(effect) == {"retry_backoff": 5}
-
-    effect.set_async(retry_backoff=0)
-    assert "retry_backoff" not in _get_async_props(effect)
-
-
-def test_retry_backoff_false_also_clears_retry_backoff_max() -> None:
-    """retry_backoff_max is only meaningful as a cap on backoff; clearing backoff must clear it too."""
-    effect = _TestEffect().apply().set_async(retry_backoff=5, retry_backoff_max=600)
-    assert _get_async_props(effect) == {"retry_backoff": 5, "retry_backoff_max": 600}
-
-    effect.set_async(retry_backoff=False)
-    assert _get_async_props(effect) == {}
-
-
-def test_retry_jitter_false_clears_previously_set_value() -> None:
-    """A later set_async(retry_jitter=False) must disable a previously enabled jitter."""
-    effect = _TestEffect().apply()
-    effect.set_async(retry_jitter=True)
-    assert _get_async_props(effect) == {"retry_jitter": True}
-
-    effect.set_async(retry_jitter=False)
-    assert "retry_jitter" not in _get_async_props(effect)
-
-
-def test_clearing_last_flag_removes_async_props_key_entirely() -> None:
-    """If clearing the only flag empties async_props, the key should be removed."""
-    effect = _TestEffect().apply().set_async(retry_backoff=True)
-    assert ASYNC_PROPS_KEY in json.loads(effect.payload)
-
-    effect.set_async(retry_backoff=False)
-    assert ASYNC_PROPS_KEY not in json.loads(effect.payload)
-
-
-def test_clearing_one_flag_preserves_other_props() -> None:
-    """Clearing retry_backoff must not affect unrelated async_props entries."""
-    effect = (
-        _TestEffect().apply().set_async(delay_seconds=30, retry_backoff=True, retry_jitter=True)
-    )
-    assert _get_async_props(effect) == {
-        "delay_seconds": 30,
-        "retry_backoff": True,
-        "retry_jitter": True,
-    }
-
-    effect.set_async(retry_backoff=False)
-    assert _get_async_props(effect) == {"delay_seconds": 30, "retry_jitter": True}
-
-
-def test_bare_string_retry_on_exceptions_raises() -> None:
-    """A bare string would iterate char-by-char via list(); reject it."""
-    with pytest.raises(TypeError, match="retry_on_exceptions must be a list of strings"):
-        _TestEffect().apply().set_async(retry_on_exceptions="ValueError")  # type: ignore[arg-type]
-
-
-def test_non_string_retry_on_exceptions_item_raises() -> None:
-    """Each retry_on_exceptions item must be a string."""
-    with pytest.raises(TypeError, match="retry_on_exceptions items must be strings"):
-        _TestEffect().apply().set_async(retry_on_exceptions=["ValueError", 42])  # type: ignore[list-item]
 
 
 def test_bare_string_retry_on_status_codes_raises() -> None:
@@ -216,38 +116,6 @@ def test_out_of_range_retry_on_status_codes_raises() -> None:
         _TestEffect().apply().set_async(retry_on_status_codes=[42])
     with pytest.raises(ValueError, match="valid HTTP status codes"):
         _TestEffect().apply().set_async(retry_on_status_codes=[600])
-
-
-def test_non_bool_non_int_retry_backoff_raises() -> None:
-    """retry_backoff must be bool or int."""
-    with pytest.raises(TypeError, match="retry_backoff must be a bool or int"):
-        _TestEffect().apply().set_async(retry_backoff="exponential")  # type: ignore[arg-type]
-
-
-def test_negative_retry_backoff_raises() -> None:
-    """Negative retry_backoff base delay is rejected."""
-    with pytest.raises(ValueError, match="retry_backoff must be non-negative"):
-        _TestEffect().apply().set_async(retry_backoff=-1)
-
-
-def test_bool_retry_backoff_max_raises() -> None:
-    """``retry_backoff_max=True`` is a type-safety trap; reject it."""
-    with pytest.raises(TypeError, match="retry_backoff_max must be an int"):
-        _TestEffect().apply().set_async(retry_backoff_max=True)
-
-
-def test_non_positive_retry_backoff_max_raises() -> None:
-    """retry_backoff_max must be strictly positive."""
-    with pytest.raises(ValueError, match="retry_backoff_max must be positive"):
-        _TestEffect().apply().set_async(retry_backoff_max=0)
-    with pytest.raises(ValueError, match="retry_backoff_max must be positive"):
-        _TestEffect().apply().set_async(retry_backoff_max=-5)
-
-
-def test_non_bool_retry_jitter_raises() -> None:
-    """retry_jitter must be a bool."""
-    with pytest.raises(TypeError, match="retry_jitter must be a bool"):
-        _TestEffect().apply().set_async(retry_jitter=1)  # type: ignore[arg-type]
 
 
 def test_empty_payload_starts_a_fresh_async_props_dict() -> None:
