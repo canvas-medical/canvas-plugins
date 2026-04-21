@@ -1,7 +1,7 @@
 from typing import Self, cast
 
 from django.db import models
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
@@ -26,7 +26,15 @@ from canvas_sdk.v1.data.staff import Staff
 class LabReportQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reports."""
 
-    pass
+    def with_result_tests_and_values(self) -> Self:
+        """Prefetch result tests (with their values) and the report's full value list."""
+        return self.prefetch_related(
+            Prefetch(
+                "tests",
+                queryset=LabTest.objects.filter(order__isnull=True).prefetch_related("values"),
+            ),
+            "values",
+        )
 
 
 LabReportManager = BaseModelManager.from_queryset(LabReportQuerySet)

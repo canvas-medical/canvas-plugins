@@ -35,9 +35,7 @@ def test_handle_renders_template_and_launches_modal() -> None:
             return_value={"stub": True},
         ),
     ):
-        mock_objects.filter.return_value.order_by.return_value.prefetch_related.return_value = (
-            fake_reports
-        )
+        mock_objects.filter.return_value.order_by.return_value.with_result_tests_and_values.return_value = fake_reports
         mock_effect_instance = MagicMock()
         mock_effect_instance.apply.return_value = "applied"
         mock_effect_class.return_value = mock_effect_instance
