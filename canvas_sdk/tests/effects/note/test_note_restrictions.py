@@ -10,15 +10,15 @@ def test_effect_type() -> None:
 
 
 def test_defaults() -> None:
-    """All fields default to their safe, unlocked values."""
+    """All fields default to their safe, unrestricted values."""
     effect = NoteRestrictionsEffect()
     assert effect.restrict_access is False
     assert effect.blur_content is False
     assert effect.banner_message is None
 
 
-def test_values_locked() -> None:
-    """values() returns all three fields when the note is locked."""
+def test_values_restricted() -> None:
+    """values() returns all three fields when the note is restricted."""
     effect = NoteRestrictionsEffect(
         restrict_access=True,
         blur_content=True,
@@ -31,8 +31,8 @@ def test_values_locked() -> None:
     }
 
 
-def test_values_unlocked() -> None:
-    """values() returns the correct payload when the note is not locked."""
+def test_values_unrestricted() -> None:
+    """values() returns the correct payload when the note is unrestricted."""
     effect = NoteRestrictionsEffect()
     assert effect.values == {
         "restrict_access": False,
@@ -89,7 +89,7 @@ def test_patient_filter_defaults_to_none() -> None:
 
 
 def test_patient_filter_can_be_set() -> None:
-    """patient_filter can be configured for scoped restrictions."""
+    """patient_filter can be configured to scope the restriction to a specific patient."""
     effect = NoteRestrictionsEffect(patient_filter={"key": "patient-123"})
     assert effect.patient_filter == {"key": "patient-123"}
 
