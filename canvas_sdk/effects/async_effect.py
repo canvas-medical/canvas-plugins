@@ -39,16 +39,6 @@ def _validate_non_negative_int(name: str, value: object) -> None:
         raise ValueError(f"{name} must be non-negative, got {value}")
 
 
-def _validate_status_code_list(name: str, value: object) -> None:
-    if isinstance(value, str) or not isinstance(value, (list, tuple)):
-        raise TypeError(f"{name} must be a list of ints, got {type(value).__name__}")
-    for code in value:
-        if isinstance(code, bool) or not isinstance(code, int):
-            raise TypeError(f"{name} items must be ints, got {type(code).__name__}")
-        if not 100 <= code <= 599:
-            raise ValueError(f"{name} items must be valid HTTP status codes (100-599), got {code}")
-
-
 def set_async(  # noqa: D417 — `self` is the bound Effect instance
     self: Effect,
     *,
