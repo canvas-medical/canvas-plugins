@@ -15,7 +15,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["OPENAI_API_KEY"],
+    "variables": [{"name": "OPENAI_API_KEY", "sensitive": true}],
     "tags": {},
     "references": [],
     "license": "",
