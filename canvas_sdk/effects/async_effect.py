@@ -1,8 +1,8 @@
 """Async execution options for effects.
 
 Plugin developers call :meth:`Effect.set_async` on a returned effect to have
-the platform execute it via Celery instead of inline. Supports delay, retries,
-and retry-filtering on HTTP status code.
+the platform execute it via Celery instead of inline. Supports delay and
+retries.
 
 ``set_async`` is attached to the generated protobuf :class:`Effect` class at
 module import time so it can be chained off any helper that returns an
@@ -54,8 +54,10 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     Args:
         delay_seconds: Wait this many seconds before running. ``0`` runs
             immediately on Celery (async-now). Must be non-negative.
-        max_retries: Maximum number of retry attempts on failure. Defaults
-            to ``0`` (no retries).
+        max_retries: Maximum number of retry attempts on failure. When
+            ``None`` (the default), the key is omitted from the payload and
+            the platform default applies. Pass ``0`` to explicitly disable
+            retries.
 
     Returns:
         The same ``Effect`` with async options merged into its payload, so
