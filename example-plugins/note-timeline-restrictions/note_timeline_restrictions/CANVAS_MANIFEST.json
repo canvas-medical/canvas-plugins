@@ -1,0 +1,61 @@
+{
+    "sdk_version": "0.136.0",
+    "plugin_version": "1.0.0",
+    "name": "note_timeline_restrictions",
+    "description": "Example plugin demonstrating note access restriction via NoteRestrictionsEffect. Implements concurrent edit locking to prevent simultaneous edits, role-based note type access control configurable from a dashboard, and real-time permission updates via GraphQL subscriptions.",
+    "components": {
+        "applications": [
+            {
+                "class": "note_timeline_restrictions.applications.application:NoteRestrictionDashboard",
+                "name": "Note Access Dashboard",
+                "description": "Global dashboard with two tabs: (1) Active Restrictions — view all notes with active edit locks and apply or remove restrictions on demand; (2) Note Type Access — configure which staff members can access each note type.",
+                "scope": "global",
+                "icon": "assets/icon.png"
+            }
+        ],
+        "handlers": [
+            {
+                "class": "note_timeline_restrictions.applications.api:NoteRestrictionApi",
+                "description": "REST API backing the Note Access Dashboard. Exposes endpoints for listing notes with restriction status, applying and removing restrictions, listing note types with their access configuration, updating note type access rules, and listing staff members."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:PatientTimelineHandler",
+                "description": "Configures which note types are visible in the patient timeline. Hides Message note types for non-privileged actors."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:TrackNoteBodyChecksum",
+                "description": "Responds to NOTE_CREATED. Stores an MD5 checksum of the note body so that RestrictNoteOnConcurrentEdit has a baseline for future change detection."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:RestrictNoteOnConcurrentEdit",
+                "description": "Responds to NOTE_UPDATED. Detects body changes via checksum comparison, writes a timed restriction to NoteMetadata, and immediately emits NoteRestrictionsUpdatedEffect so other users see the banner in real time."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:RestrictNoteOnLetterEdit",
+                "description": "Responds to LETTER_UPDATED. Writes a restriction on the parent note whenever an associated letter is edited (letter changes bypass the body checksum) and immediately emits NoteRestrictionsUpdatedEffect."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:NoteAccessPermissionsHandler",
+                "description": "Responds to GET_NOTE_RESTRICTIONS. Evaluates dynamic note-type access rules (from the dashboard) and concurrent edit locks, returning a NoteRestrictionsEffect that controls the banner, blur, and edit-disabled state in the frontend."
+            },
+            {
+                "class": "note_timeline_restrictions.handlers.event_handlers:ExpireNoteRestrictionsCron",
+                "description": "Runs every minute. Scans all active restrictions and releases any whose last_edited_at exceeds RESTRICTION_EXPIRY_MINUTES, broadcasting the change so connected clients update immediately."
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "custom_data": {
+        "namespace": "note_timeline__restrictions",
+        "access": "read_write"
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "MIT",
+    "diagram": false,
+    "readme": "./README.md"
+}
