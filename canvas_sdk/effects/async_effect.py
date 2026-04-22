@@ -25,7 +25,6 @@ if TYPE_CHECKING:
             *,
             delay_seconds: int | None = ...,
             max_retries: int | None = ...,
-            retry_on_status_codes: list[int] | None = ...,
         ) -> "Effect": ...
 else:
     from canvas_generated.messages.effects_pb2 import Effect
@@ -55,7 +54,6 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     *,
     delay_seconds: int | None = None,
     max_retries: int | None = None,
-    retry_on_status_codes: list[int] | None = None,
 ) -> Effect:
     """Attach async execution options to this effect.
 
@@ -68,10 +66,6 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
             immediately on Celery (async-now). Must be non-negative.
         max_retries: Maximum number of retry attempts on failure. Defaults
             to ``0`` (no retries).
-        retry_on_status_codes: HTTP status codes to retry on, for effects
-            whose handler raises an exception with a ``status_code``
-            attribute (e.g. the :class:`HttpRequest` effect). Common:
-            ``[500, 502, 503, 504]``.
 
     Returns:
         The same ``Effect`` with async options merged into its payload, so
@@ -93,10 +87,6 @@ def set_async(  # noqa: D417 — `self` is the bound Effect instance
     if max_retries is not None:
         _validate_non_negative_int("max_retries", max_retries)
         props["max_retries"] = max_retries
-
-    if retry_on_status_codes is not None:
-        _validate_status_code_list("retry_on_status_codes", retry_on_status_codes)
-        props["retry_on_status_codes"] = list(retry_on_status_codes)
 
     if props:
         payload[ASYNC_PROPS_KEY] = props

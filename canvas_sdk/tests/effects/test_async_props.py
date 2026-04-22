@@ -76,46 +76,8 @@ def test_non_int_delay_seconds_raises() -> None:
 
 def test_all_options_recorded() -> None:
     """Every option should flow through to async_props."""
-    effect = (
-        _TestEffect()
-        .apply()
-        .set_async(
-            delay_seconds=30,
-            max_retries=3,
-            retry_on_status_codes=[500, 502, 503, 504],
-        )
-    )
-    assert _get_async_props(effect) == {
-        "delay_seconds": 30,
-        "max_retries": 3,
-        "retry_on_status_codes": [500, 502, 503, 504],
-    }
-
-
-def test_bare_string_retry_on_status_codes_raises() -> None:
-    """A bare string would iterate char-by-char via list(); reject it."""
-    with pytest.raises(TypeError, match="retry_on_status_codes must be a list of ints"):
-        _TestEffect().apply().set_async(retry_on_status_codes="500,502")  # type: ignore[arg-type]
-
-
-def test_non_int_retry_on_status_codes_item_raises() -> None:
-    """Each retry_on_status_codes item must be an int."""
-    with pytest.raises(TypeError, match="retry_on_status_codes items must be ints"):
-        _TestEffect().apply().set_async(retry_on_status_codes=[500, "502"])  # type: ignore[list-item]
-
-
-def test_bool_retry_on_status_codes_item_raises() -> None:
-    """``True`` is an int in Python but not a valid status code; reject it."""
-    with pytest.raises(TypeError, match="retry_on_status_codes items must be ints"):
-        _TestEffect().apply().set_async(retry_on_status_codes=[True])
-
-
-def test_out_of_range_retry_on_status_codes_raises() -> None:
-    """Status codes outside 100-599 are rejected."""
-    with pytest.raises(ValueError, match="valid HTTP status codes"):
-        _TestEffect().apply().set_async(retry_on_status_codes=[42])
-    with pytest.raises(ValueError, match="valid HTTP status codes"):
-        _TestEffect().apply().set_async(retry_on_status_codes=[600])
+    effect = _TestEffect().apply().set_async(delay_seconds=30, max_retries=3)
+    assert _get_async_props(effect) == {"delay_seconds": 30, "max_retries": 3}
 
 
 def test_empty_payload_starts_a_fresh_async_props_dict() -> None:
