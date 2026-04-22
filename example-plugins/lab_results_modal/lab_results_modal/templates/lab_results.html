@@ -9,8 +9,9 @@
       th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 13px; }
       th { background: #f5f5f5; }
       .abnormal { color: #b00; font-weight: 600; }
-      .report-header { margin: 1rem 0 .25rem; }
+      .report-header { margin: 2.5rem 0 .25rem; }
       .report-meta { color: #666; font-size: 12px; margin-bottom: .5rem; }
+      .report-body { padding-left: 1.25rem; border-left: 2px solid #eee; }
       .empty { color: #666; font-style: italic; }
     </style>
   </head>
@@ -23,31 +24,33 @@
       <h3 class="report-header">{{ report.title }}</h3>
       <div class="report-meta">Collected {{ report.date }}</div>
 
-      {% if not report.sections %}
-        <p class="empty">No values on this report.</p>
-      {% endif %}
+      <div class="report-body">
+        {% if not report.sections %}
+          <p class="empty">No values on this report.</p>
+        {% endif %}
 
-      {% for section in report.sections %}
-        {% if section.heading %}<h4>{{ section.heading }}</h4>{% endif %}
-        <table>
-          <thead>
-            <tr>
-              <th>Value</th>
-              <th>Units</th>
-              {% if section.show_ref_range %}<th>Reference range</th>{% endif %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for value in section.values %}
+        {% for section in report.sections %}
+          {% if section.heading %}<h4>{{ section.heading }}</h4>{% endif %}
+          <table>
+            <thead>
               <tr>
-                <td>{{ value.value }}</td>
-                <td>{{ value.units }}</td>
-                {% if section.show_ref_range %}<td>{{ value.reference_range }}</td>{% endif %}
+                <th>Value</th>
+                <th>Units</th>
+                {% if section.show_ref_range %}<th>Reference range</th>{% endif %}
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% endfor %}
+            </thead>
+            <tbody>
+              {% for value in section.values %}
+                <tr>
+                  <td>{{ value.value }}</td>
+                  <td>{{ value.units }}</td>
+                  {% if section.show_ref_range %}<td>{{ value.reference_range }}</td>{% endif %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endfor %}
+      </div>
     {% endfor %}
   </body>
 </html>
