@@ -107,3 +107,58 @@ def test_effect_accepts_empty_form_fields() -> None:
     payload = json.loads(applied.payload)
 
     assert payload == {"data": {"command": "command-uuid", "form": []}}
+
+
+def test_effect_rejects_duplicate_form_field_keys() -> None:
+    """Two fields sharing the same `key` trigger a validation error."""
+    effect = CommandMetadataCreateFormEffect(
+        command_uuid="command-uuid",
+        form_fields=[
+            FormField(key="reason", label="Reason"),
+            FormField(key="reason", label="Reason Again"),
+        ],
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    errors = exc_info.value.errors()
+    assert any("Duplicate form field key" in e["msg"] and "reason" in e["msg"] for e in errors)
+
+
+def test_effect_reports_each_duplicated_key_once() -> None:
+    """If multiple distinct keys are duplicated, each one produces its own error."""
+    effect = CommandMetadataCreateFormEffect(
+        command_uuid="command-uuid",
+        form_fields=[
+            FormField(key="a", label="A1"),
+            FormField(key="a", label="A2"),
+            FormField(key="b", label="B1"),
+            FormField(key="b", label="B2"),
+            FormField(key="b", label="B3"),
+        ],
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    duplicate_errors = [
+        e for e in exc_info.value.errors() if "Duplicate form field key" in e["msg"]
+    ]
+    duplicated = {e["input"] for e in duplicate_errors}
+    assert duplicated == {"a", "b"}
+
+
+def test_effect_ignores_duplicate_none_keys() -> None:
+    """Multiple fields without a `key` don't trigger duplicate-key validation."""
+    effect = CommandMetadataCreateFormEffect(
+        command_uuid="command-uuid",
+        form_fields=[
+            FormField(label="A"),
+            FormField(label="B"),
+        ],
+    )
+    applied = effect.apply()
+    payload = json.loads(applied.payload)
+
+    assert [f["key"] for f in payload["data"]["form"]] == [None, None]
