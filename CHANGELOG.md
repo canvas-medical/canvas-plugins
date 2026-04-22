@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.136.0 (2026-04-22)
+
+### Features
+
+- Custom chart sections ([#1626](https://github.com/canvas-medical/canvas-plugins/pull/1626),
+  [`3871bfc`](https://github.com/canvas-medical/canvas-plugins/commit/3871bfc7cbeee1c9b40f60f2f07c23a1f76501dc))
+
+
 ## v0.135.0 (2026-04-20)
 
 ### Features
