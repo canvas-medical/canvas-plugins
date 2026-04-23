@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note import Note as NoteEffect
-from canvas_sdk.effects.note.restrictions_updated import NoteRestrictionsUpdatedEffect
+from canvas_sdk.effects.note.restrictions import NoteRestrictionsUpdatedEffect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, api
 from canvas_sdk.handlers.simple_api.security import StaffSessionAuthMixin

@@ -23,8 +23,10 @@ import arrow
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note import Note as NoteEffect
-from canvas_sdk.effects.note.note_restrictions import NoteRestrictionsEffect
-from canvas_sdk.effects.note.restrictions_updated import NoteRestrictionsUpdatedEffect
+from canvas_sdk.effects.note.restrictions import (
+    NoteRestrictionsEffect,
+    NoteRestrictionsUpdatedEffect,
+)
 from canvas_sdk.effects.patient.timeline import PatientTimelineEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
