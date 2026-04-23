@@ -1,4 +1,5 @@
 import pytest
+from jsonschema import ValidationError
 
 from canvas_cli.utils.validators import validate_manifest_file
 
@@ -32,6 +33,56 @@ def handler_manifest_example() -> dict:
     }
 
 
+def _make_application_manifest(scope: str) -> dict:
+    """Return a valid manifest with a single application using the given scope."""
+    return {
+        "sdk_version": "0.1.4",
+        "plugin_version": "0.0.1",
+        "name": "test_plugin",
+        "description": "A test plugin",
+        "components": {
+            "applications": [
+                {
+                    "class": "test_plugin.apps.my_app:MyApp",
+                    "name": "My App",
+                    "description": "A test application",
+                    "scope": scope,
+                    "icon": "assets/icon.png",
+                }
+            ]
+        },
+        "tags": {},
+        "license": "",
+        "readme": "README.md",
+    }
+
+
 def test_manifest_file_schema(handler_manifest_example: dict) -> None:
     """Test that no exception raised when a valid manifest file is validated."""
     validate_manifest_file(handler_manifest_example)
+
+
+@pytest.mark.parametrize(
+    "scope",
+    [
+        "provider_companion",
+        "provider_companion_global",
+        "provider_companion_patient_specific",
+        "provider_companion_note_specific",
+        "patient_specific",
+        "global",
+        "provider_menu_item",
+        "portal_menu_item",
+        "full_chart",
+    ],
+    ids=lambda s: s,
+)
+def test_manifest_validates_application_scope(scope: str) -> None:
+    """Test that all supported application scopes pass manifest validation."""
+    validate_manifest_file(_make_application_manifest(scope))
+
+
+def test_manifest_rejects_invalid_application_scope() -> None:
+    """Test that an unrecognized application scope fails manifest validation."""
+    with pytest.raises(ValidationError, match="is not one of"):
+        validate_manifest_file(_make_application_manifest("not_a_real_scope"))
