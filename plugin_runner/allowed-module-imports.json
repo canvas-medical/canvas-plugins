@@ -567,10 +567,8 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
-  "canvas_sdk.effects.note.note_restrictions": [
-    "NoteRestrictionsEffect"
-  ],
-  "canvas_sdk.effects.note.restrictions_updated": [
+  "canvas_sdk.effects.note.restrictions": [
+    "NoteRestrictionsEffect",
     "NoteRestrictionsUpdatedEffect"
   ],
   "canvas_sdk.effects.observation": [
