@@ -57,7 +57,7 @@ class NewOfficeVisitNoteHandler(BaseHandler):
             return []
 
         # Get the note UUID from the Note object
-        note_uuid = str(note.uuid)
+        note_uuid = str(note.id)
 
         # Get the patient to create a personalized goal statement
         patient_id = self.event.context.get("patient_id")

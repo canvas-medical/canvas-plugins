@@ -39,7 +39,7 @@ def test_handler_responds_to_new_office_visit_note() -> None:
     assert len(effects) == 1
 
     # Assert the effect has the correct type
-    assert effects[0].type == EffectType.ORIGINATE_COMMAND
+    assert effects[0].type == EffectType.ORIGINATE_GOAL_COMMAND
 
 
 def test_handler_skips_non_new_notes() -> None:
