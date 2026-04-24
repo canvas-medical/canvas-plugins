@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.136.0 (2026-04-22)
+
+### Features
+
+- Custom chart sections ([#1626](https://github.com/canvas-medical/canvas-plugins/pull/1626),
+  [`3871bfc`](https://github.com/canvas-medical/canvas-plugins/commit/3871bfc7cbeee1c9b40f60f2f07c23a1f76501dc))
+
+
+## v0.135.0 (2026-04-20)
+
+### Features
+
+- Allow command.upsert_metadata to be chained with command.originate
+  ([#1640](https://github.com/canvas-medical/canvas-plugins/pull/1640),
+  [`1d0e776`](https://github.com/canvas-medical/canvas-plugins/commit/1d0e77688fd8c030c5f5e999bdb95d9925252f8f))
+
+
 ## v0.134.0 (2026-04-17)
 
 ### Features
