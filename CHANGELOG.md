@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v0.136.0 (2026-04-22)
+
+### Features
+
+- Custom chart sections ([#1626](https://github.com/canvas-medical/canvas-plugins/pull/1626),
+  [`3871bfc`](https://github.com/canvas-medical/canvas-plugins/commit/3871bfc7cbeee1c9b40f60f2f07c23a1f76501dc))
+
+
+## v0.135.0 (2026-04-20)
+
+### Features
+
+- Allow command.upsert_metadata to be chained with command.originate
+  ([#1640](https://github.com/canvas-medical/canvas-plugins/pull/1640),
+  [`1d0e776`](https://github.com/canvas-medical/canvas-plugins/commit/1d0e77688fd8c030c5f5e999bdb95d9925252f8f))
+
+
+## v0.134.0 (2026-04-17)
+
+### Features
+
+- Allow originate and commit with a single effect
+  ([#1632](https://github.com/canvas-medical/canvas-plugins/pull/1632),
+  [`473da5d`](https://github.com/canvas-medical/canvas-plugins/commit/473da5d035364fb856f0c0c0d3e180f5ecfc9e77))
+
+
+## v0.133.0 (2026-04-16)
+
+### Features
+
+- Add address fields to claimprovider model and effect
+  ([#1629](https://github.com/canvas-medical/canvas-plugins/pull/1629),
+  [`3e43b92`](https://github.com/canvas-medical/canvas-plugins/commit/3e43b92297643196278e16e9f1da2f9529cd4045))
+
+
 ## v0.132.0 (2026-04-16)
 
 ### Bug Fixes
