@@ -520,7 +520,6 @@
     "DefaultHomepageEffect"
   ],
   "canvas_sdk.effects.effect": [
-    "ASYNC_PROPS_KEY",
     "Effect",
     "EffectType"
   ],

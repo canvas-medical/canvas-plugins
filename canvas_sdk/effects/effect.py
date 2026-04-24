@@ -12,13 +12,10 @@ protobuf class.
 """
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from canvas_generated.messages.effects_pb2 import Effect as _PbEffect
 from canvas_generated.messages.effects_pb2 import EffectType
-
-if TYPE_CHECKING:
-    from canvas_generated.messages.effects_pb2 import Effect as _PbEffectType
 
 ASYNC_PROPS_KEY = "async_props"
 
@@ -139,7 +136,7 @@ class Effect:
         self.payload = json.dumps(payload)
         return self
 
-    def to_proto(self) -> "_PbEffectType":
+    def to_proto(self) -> _PbEffect:
         """Return the underlying protobuf Effect.
 
         Called at the runtime/gRPC boundary to serialize the effect to its
@@ -158,4 +155,4 @@ class Effect:
         return f"Effect(type={self._pb.type}, payload={self._pb.payload!r})"
 
 
-__exports__ = ("Effect", "EffectType", "ASYNC_PROPS_KEY")
+__exports__ = ("Effect", "EffectType")
