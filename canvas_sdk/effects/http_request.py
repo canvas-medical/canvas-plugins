@@ -18,6 +18,7 @@ class HttpRequestEffect(_BaseEffect):
             method="POST",
             headers={"Authorization": "Bearer token"},
             body=json.dumps({"key": "value"}),
+            retry_on_status_codes=[500, 501]
         )
         return [http_effect.apply(delay_seconds=60)]
     """
@@ -29,6 +30,7 @@ class HttpRequestEffect(_BaseEffect):
     method: Annotated[str, Field(pattern="^(GET|POST|PUT|PATCH|DELETE)$")] = "GET"
     headers: dict[str, str] | None = None
     body: str | None = None
+    retry_on_status_codes: list[Annotated[int, Field(ge=100, le=599)]] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -38,6 +40,15 @@ class HttpRequestEffect(_BaseEffect):
             "method": self.method,
             "headers": self.headers or {},
             "body": self.body or "",
+            "retry_on_status_codes": self.retry_on_status_codes or [],
+        }
+
+    @property
+    def effect_payload(self) -> dict[str, Any]:
+        """The payload to be sent for the Effect."""
+        return {
+            "data": self.values,
+            "async_props": {"retry_on_status_codes": self.retry_on_status_codes},
         }
 
 

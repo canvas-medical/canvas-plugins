@@ -37,6 +37,67 @@ def test_http_request_defaults() -> None:
     assert data["method"] == "GET"
     assert data["headers"] == {}
     assert data["body"] == ""
+    assert data["retry_on_status_codes"] == []
+
+
+def test_http_request_payload_contains_retry_on_status_codes() -> None:
+    """retry_on_status_codes should be included in the payload data."""
+    effect = HttpRequestEffect(
+        url="https://api.example.com/submit",
+        method="POST",
+        retry_on_status_codes=[500, 502, 503],
+    ).apply()
+
+    data = json.loads(effect.payload)["data"]
+    assert data["retry_on_status_codes"] == [500, 502, 503]
+
+
+def test_http_request_async_props_contains_retry_on_status_codes() -> None:
+    """retry_on_status_codes should be included in async_props for the effect payload."""
+    effect = HttpRequestEffect(
+        url="https://api.example.com/submit",
+        retry_on_status_codes=[500, 501],
+    ).apply()
+
+    payload = json.loads(effect.payload)
+    assert payload["async_props"] == {"retry_on_status_codes": [500, 501]}
+
+
+def test_http_request_async_props_retry_on_status_codes_default_none() -> None:
+    """When retry_on_status_codes is not provided, async_props should reflect None."""
+    effect = HttpRequestEffect(url="https://api.example.com").apply()
+
+    payload = json.loads(effect.payload)
+    assert payload["async_props"] == {"retry_on_status_codes": None}
+
+
+def test_http_request_retry_on_status_codes_invalid_type_raises() -> None:
+    """retry_on_status_codes must be a list of ints."""
+    with pytest.raises(ValidationError):
+        HttpRequestEffect(
+            url="https://api.example.com",
+            retry_on_status_codes=["not-an-int"],  # type: ignore[list-item]
+        )
+
+
+@pytest.mark.parametrize("bad_code", [99, 600, 0, -1, 1000])
+def test_http_request_retry_on_status_codes_out_of_range_raises(bad_code: int) -> None:
+    """retry_on_status_codes items must be valid HTTP status codes (100-599)."""
+    with pytest.raises(ValidationError):
+        HttpRequestEffect(
+            url="https://api.example.com",
+            retry_on_status_codes=[bad_code],
+        )
+
+
+@pytest.mark.parametrize("good_code", [100, 408, 429, 500, 599])
+def test_http_request_retry_on_status_codes_in_range_accepted(good_code: int) -> None:
+    """retry_on_status_codes items within 100-599 should be accepted."""
+    effect = HttpRequestEffect(
+        url="https://api.example.com",
+        retry_on_status_codes=[good_code],
+    )
+    assert effect.retry_on_status_codes == [good_code]
 
 
 # def test_http_request_with_delay() -> None:
