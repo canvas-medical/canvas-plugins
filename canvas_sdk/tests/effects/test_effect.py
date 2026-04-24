@@ -53,14 +53,14 @@ def test_base_effect_apply_returns_wrapper() -> None:
     assert isinstance(effect, Effect)
 
 
-def test_runtime_metadata_fields_delegate_to_protobuf() -> None:
-    """Protobuf-only fields like ``plugin_name`` pass through ``__getattr__``/``__setattr__``."""
+def test_runtime_metadata_fields_not_settable_on_wrapper() -> None:
+    """Runtime-only fields like ``plugin_name`` must be set on the pb via ``to_proto()``."""
     effect = Effect()
-    effect.plugin_name = "my_plugin"
-    effect.handler_name = "MyHandler.compute"
-    assert effect.plugin_name == "my_plugin"
+    with pytest.raises(AttributeError):
+        effect.plugin_name = "my_plugin"  # type: ignore[attr-defined]
+
+    effect.to_proto().plugin_name = "my_plugin"
     assert effect.to_proto().plugin_name == "my_plugin"
-    assert effect.to_proto().handler_name == "MyHandler.compute"
 
 
 # --- to_proto ---------------------------------------------------------------

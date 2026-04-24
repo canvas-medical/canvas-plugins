@@ -12,7 +12,6 @@ protobuf class.
 """
 
 import json
-from typing import Any
 
 from canvas_generated.messages.effects_pb2 import Effect as _PbEffect
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -39,21 +38,17 @@ class Effect:
 
     def __init__(
         self,
-        type: "EffectType | int | str | None" = None,
+        type: EffectType = EffectType.UNKNOWN_EFFECT,
         payload: str = "",
-        **kwargs: Any,
     ) -> None:
-        pb_kwargs: dict[str, Any] = {"payload": payload, **kwargs}
-        if type is not None:
-            pb_kwargs["type"] = type
-        object.__setattr__(self, "_pb", _PbEffect(**pb_kwargs))
+        self._pb = _PbEffect(type=type, payload=payload)
 
     @property
-    def type(self) -> int:  # noqa: D102
+    def type(self) -> EffectType:  # noqa: D102
         return self._pb.type
 
     @type.setter
-    def type(self, value: "EffectType | int | str") -> None:
+    def type(self, value: EffectType) -> None:
         self._pb.type = value
 
     @property
@@ -63,32 +58,6 @@ class Effect:
     @payload.setter
     def payload(self, value: str) -> None:
         self._pb.payload = value
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate unknown attribute reads to the underlying protobuf.
-
-        Only invoked when the attribute is not found via the normal lookup
-        (class methods, properties, the ``_pb`` slot). This lets test and
-        runtime code read protobuf-only fields like ``plugin_name`` off the
-        wrapper without us needing to enumerate every field.
-        """
-        try:
-            pb = object.__getattribute__(self, "_pb")
-        except AttributeError:
-            raise AttributeError(name) from None
-        return getattr(pb, name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Route writes: ``_pb`` stays in the slot; everything else goes to the pb."""
-        if name == "_pb":
-            object.__setattr__(self, name, value)
-            return
-        # Let properties defined on the class (e.g. ``type``, ``payload``) win.
-        descriptor = getattr(type(self), name, None)
-        if isinstance(descriptor, property) and descriptor.fset is not None:
-            descriptor.fset(self, value)
-            return
-        setattr(self._pb, name, value)
 
     def set_async(
         self,

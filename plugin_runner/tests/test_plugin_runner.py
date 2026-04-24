@@ -633,7 +633,7 @@ def test_simple_api(
     for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
-    expected_response = Response(status_code=status_code).apply()
+    expected_response = Response(status_code=status_code).apply().to_proto()
     if status_code == HTTPStatus.OK:
         expected_response.plugin_name = "test_simple_api"
         expected_response.handler_name = "canvas_sdk.handlers.simple_api.api.SimpleAPIBase.compute"
@@ -680,9 +680,9 @@ def test_simple_api_websocket(
         result.append(response)
 
     expected_response = (
-        AcceptConnection().apply()
+        AcceptConnection().apply().to_proto()
         if context["plugin_name"] == "test_simple_api"
-        else DenyConnection().apply()
+        else DenyConnection().apply().to_proto()
     )
     if context["plugin_name"] == "test_simple_api":
         expected_response.plugin_name = "test_simple_api"
