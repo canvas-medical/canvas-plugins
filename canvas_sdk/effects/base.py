@@ -1,8 +1,9 @@
 import json
 from typing import Any
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.base import Model
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.effect import Effect
 
 
 class _BaseEffect(Model):

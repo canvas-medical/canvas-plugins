@@ -25,7 +25,7 @@ from redis.retry import Retry
 from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
-from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginRequest,
     ReloadPluginResponse,
@@ -38,7 +38,6 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
@@ -358,22 +357,24 @@ class PluginRunner(PluginRunnerServicer):
             # effects list to be a single 500 Internal Server Error response effect.
             if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
                         f" {event.context['path']}"
                     )
-                    effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+                    effect_list = [
+                        Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply().to_proto()
+                    ]
             if event.type == EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE)}"
                         f" {event.context['channel']}"
                     )
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
 
             # Don't log anything if a plugin handler didn't actually run.
             if relevant_plugins:

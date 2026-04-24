@@ -519,6 +519,11 @@
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
   ],
+  "canvas_sdk.effects.effect": [
+    "ASYNC_PROPS_KEY",
+    "Effect",
+    "EffectType"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
