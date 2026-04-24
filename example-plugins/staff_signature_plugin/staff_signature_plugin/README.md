@@ -1,5 +1,8 @@
 # staff_signature_plugin
 
+> **Note:** This plugin is intended only as an example of how to access and
+> render a staff signature. It is not meant for production use.
+
 Adds a **My Signature** button to the chart patient header. When clicked, it
 opens a modal that displays the logged-in staff member's signature image.
 
