@@ -372,7 +372,7 @@ class PluginRunner(PluginRunnerServicer):
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE)}"
-                        f" {event.context['channel']}"
+                        f" {event.context['channel_name']}"
                     )
                     effect_list = [DenyConnection().apply().to_proto()]
 

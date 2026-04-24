@@ -100,6 +100,20 @@ def test_wrapper_equal_to_raw_protobuf_with_same_fields() -> None:
     assert effect == pb
 
 
+def test_wrapper_not_equal_to_unrelated_type() -> None:
+    """Comparing to a non-Effect, non-pb value returns NotImplemented (falsy)."""
+    effect = Effect(type=EffectType.LOG, payload="{}")
+    assert effect != "not an effect"
+    assert effect != 42
+    assert effect != None  # noqa: E711
+
+
+def test_repr_includes_type_and_payload() -> None:
+    """``repr()`` surfaces both the type and the payload for debugging."""
+    effect = Effect(type=EffectType.LOG, payload='{"hello": "world"}')
+    assert repr(effect) == f'Effect(type={EffectType.LOG}, payload=\'{{"hello": "world"}}\')'
+
+
 # --- set_async --------------------------------------------------------------
 
 
