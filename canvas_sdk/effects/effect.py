@@ -38,7 +38,7 @@ class Effect:
 
     def __init__(
         self,
-        type: EffectType = EffectType.UNKNOWN_EFFECT,
+        type: EffectType | str = EffectType.UNKNOWN_EFFECT,
         payload: str = "",
     ) -> None:
         self._pb = _PbEffect(type=type, payload=payload)
