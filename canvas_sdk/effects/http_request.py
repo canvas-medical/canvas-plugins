@@ -22,6 +22,9 @@ class HttpRequestEffect(_BaseEffect):
     The platform will execute the HTTP request on behalf of the plugin.
     The URL must be included in the plugin's url_permissions.
 
+    Header values are transmitted as-is — store credentials in the plugin's
+    ``secrets`` and reference them here rather than hard-coding them.
+
     Example usage::
 
         http_effect = HttpRequestEffect(
