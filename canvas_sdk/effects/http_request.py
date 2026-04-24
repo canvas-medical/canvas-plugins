@@ -1,8 +1,19 @@
+from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import Field
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+
+class HttpMethod(StrEnum):
+    """HTTP method for an HttpRequestEffect."""
+
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    PATCH = "PATCH"
+    DELETE = "DELETE"
 
 
 class HttpRequestEffect(_BaseEffect):
@@ -15,19 +26,19 @@ class HttpRequestEffect(_BaseEffect):
 
         http_effect = HttpRequestEffect(
             url="https://api.example.com/submit",
-            method="POST",
+            method=HttpMethod.POST,
             headers={"Authorization": "Bearer token"},
             body=json.dumps({"key": "value"}),
-            retry_on_status_codes=[500, 501]
+            retry_on_status_codes=[500, 502]
         )
-        return [http_effect.apply(delay_seconds=60)]
+        return [http_effect.apply().set_async(delay_seconds=0)]
     """
 
     class Meta:
         effect_type = EffectType.HTTP_REQUEST
 
     url: Annotated[str, Field(min_length=1)]
-    method: Annotated[str, Field(pattern="^(GET|POST|PUT|PATCH|DELETE)$")] = "GET"
+    method: HttpMethod = Field(default=HttpMethod.GET, strict=False)
     headers: dict[str, str] | None = None
     body: str | None = None
     retry_on_status_codes: list[Annotated[int, Field(ge=100, le=599)]] | None = None
@@ -52,4 +63,4 @@ class HttpRequestEffect(_BaseEffect):
         }
 
 
-__exports__ = ("HttpRequestEffect",)
+__exports__ = ("HttpMethod", "HttpRequestEffect")
