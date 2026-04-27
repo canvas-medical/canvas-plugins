@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.139.0 (2026-04-27)
+
+### Features
+
+- Create thin wrapper around protobuf Effect to add set_async method
+  ([#1652](https://github.com/canvas-medical/canvas-plugins/pull/1652),
+  [`b3597d4`](https://github.com/canvas-medical/canvas-plugins/commit/b3597d45bad42fe9c9014a6b3e0573b60dfdbb88))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
 ## v0.138.0 (2026-04-27)
 
 ### Features
