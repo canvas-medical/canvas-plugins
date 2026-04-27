@@ -602,6 +602,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
         retry=Retry(backoff=ExponentialBackoff(), retries=10),
         retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
         health_check_interval=1,
+        socket_keepalive=True,
     )
     pubsub = client.pubsub()
 
