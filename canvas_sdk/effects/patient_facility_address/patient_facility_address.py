@@ -6,8 +6,8 @@ from uuid import UUID
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data.facility import Facility
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.patient import PatientFacilityAddress as PatientFacilityAddressModel
