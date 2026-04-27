@@ -111,7 +111,10 @@ def test_wrapper_not_equal_to_unrelated_type() -> None:
 def test_repr_includes_type_and_payload() -> None:
     """``repr()`` surfaces both the type and the payload for debugging."""
     effect = Effect(type=EffectType.LOG, payload='{"hello": "world"}')
-    assert repr(effect) == f'Effect(type={EffectType.LOG}, payload=\'{{"hello": "world"}}\')'
+    assert (
+        repr(effect)
+        == f'Effect(type={EffectType.Name(EffectType.LOG)}, payload=\'{{"hello": "world"}}\')'
+    )
 
 
 # --- set_async --------------------------------------------------------------
@@ -192,6 +195,15 @@ def test_non_json_payload_raises_descriptive_error() -> None:
     effect = _TestEffect().apply()
     effect.payload = "Hello, world!"
     with pytest.raises(ValueError, match="Effect payload must be valid JSON to use set_async"):
+        effect.set_async(delay_seconds=1)
+
+
+@pytest.mark.parametrize("payload", ["[1,2,3]", "42", '"hello"', "null", "true"])
+def test_non_object_json_payload_raises_descriptive_error(payload: str) -> None:
+    """Valid JSON that isn't an object raises ValueError, not AttributeError."""
+    effect = _TestEffect().apply()
+    effect.payload = payload
+    with pytest.raises(ValueError, match="Effect payload must be a JSON object to use set_async"):
         effect.set_async(delay_seconds=1)
 
 

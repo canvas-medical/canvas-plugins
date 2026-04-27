@@ -89,6 +89,8 @@ class Effect:
                 payload = json.loads(self.payload)
             except json.JSONDecodeError as e:
                 raise ValueError("Effect payload must be valid JSON to use set_async()") from e
+            if not isinstance(payload, dict):
+                raise ValueError("Effect payload must be a JSON object to use set_async()")
         else:
             payload = {}
         props = payload.get(ASYNC_PROPS_KEY) or {}
@@ -121,7 +123,7 @@ class Effect:
         return NotImplemented
 
     def __repr__(self) -> str:
-        return f"Effect(type={self._pb.type}, payload={self._pb.payload!r})"
+        return f"Effect(type={EffectType.Name(self._pb.type)}, payload={self._pb.payload!r})"
 
 
 __exports__ = ("Effect", "EffectType")
