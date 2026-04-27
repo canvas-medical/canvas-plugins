@@ -545,6 +545,8 @@
     "Appointment",
     "AppointmentIdentifier",
     "Note",
+    "NoteRestrictionsEffect",
+    "NoteRestrictionsUpdatedEffect",
     "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
@@ -564,6 +566,10 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
+  ],
+  "canvas_sdk.effects.note.restrictions": [
+    "NoteRestrictionsEffect",
+    "NoteRestrictionsUpdatedEffect"
   ],
   "canvas_sdk.effects.observation": [
     "CodingData",
