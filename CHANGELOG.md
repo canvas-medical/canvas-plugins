@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.137.0 (2026-04-27)
+
+### Features
+
+- Add lab test questions (aoe) to data module
+  ([#1639](https://github.com/canvas-medical/canvas-plugins/pull/1639),
+  [`d46cfd2`](https://github.com/canvas-medical/canvas-plugins/commit/d46cfd21cb7779761beceeb434a9f411c1ebedb8))
+
+- Add provider companion scopes and update example plugin
+  ([#1623](https://github.com/canvas-medical/canvas-plugins/pull/1623),
+  [`044f9f0`](https://github.com/canvas-medical/canvas-plugins/commit/044f9f0e2a6164dc01f726b319d76382f6504328))
+
+
 ## v0.136.0 (2026-04-22)
 
 ### Features
