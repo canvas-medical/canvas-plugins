@@ -67,7 +67,7 @@ class Effect:
     ) -> "Effect":
         """Attach async execution options to this effect.
 
-        The platform will run the effect through Celery rather than inline.
+        The platform will run the effect as an asynchronous task rather than inline.
 
         Args:
             delay_seconds: Wait this many seconds before running. ``0`` runs
