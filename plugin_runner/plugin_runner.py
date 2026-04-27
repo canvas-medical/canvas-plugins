@@ -27,6 +27,8 @@ from sentry_sdk.integrations.logging import ignore_logger
 import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
+    GetRegisteredEventTypesRequest,
+    GetRegisteredEventTypesResponse,
     ReloadPluginRequest,
     ReloadPluginResponse,
     ReloadPluginsRequest,
@@ -433,6 +435,12 @@ class PluginRunner(PluginRunnerServicer):
             yield UnloadPluginResponse(success=False)
         else:
             yield UnloadPluginResponse(success=True)
+
+    def GetRegisteredEventTypes(
+        self, request: GetRegisteredEventTypesRequest, context: Any
+    ) -> GetRegisteredEventTypesResponse:
+        """Return the event types that have at least one registered handler."""
+        return GetRegisteredEventTypesResponse(event_types=list(EVENT_HANDLER_MAP.keys()))
 
 
 STOP_SYNCHRONIZER = threading.Event()
