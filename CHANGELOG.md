@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.138.0 (2026-04-27)
+
+### Features
+
+- Create PATIENT_PAYMENT_PROCESSED event
+  ([#1651](https://github.com/canvas-medical/canvas-plugins/pull/1651),
+  [`a776d03`](https://github.com/canvas-medical/canvas-plugins/commit/a776d03f8c941f6005d502f56071db602c3ac9a3))
+
+
 ## v0.137.0 (2026-04-27)
 
 ### Features
