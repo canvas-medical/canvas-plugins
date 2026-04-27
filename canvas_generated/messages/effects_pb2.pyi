@@ -272,6 +272,12 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_BROADCAST: _ClassVar[EffectType]
+    MCP_TOOLS_LIST_RESPONSE: _ClassVar[EffectType]
+    MCP_RESOURCES_LIST_RESPONSE: _ClassVar[EffectType]
+    MCP_PROMPTS_LIST_RESPONSE: _ClassVar[EffectType]
+    MCP_CALL_TOOL_RESPONSE: _ClassVar[EffectType]
+    MCP_READ_RESOURCE_RESPONSE: _ClassVar[EffectType]
+    MCP_GET_PROMPT_RESPONSE: _ClassVar[EffectType]
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
@@ -612,6 +618,12 @@ SIMPLE_API_RESPONSE: EffectType
 SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
 SIMPLE_API_WEBSOCKET_DENY: EffectType
 SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
+MCP_TOOLS_LIST_RESPONSE: EffectType
+MCP_RESOURCES_LIST_RESPONSE: EffectType
+MCP_PROMPTS_LIST_RESPONSE: EffectType
+MCP_CALL_TOOL_RESPONSE: EffectType
+MCP_READ_RESOURCE_RESPONSE: EffectType
+MCP_GET_PROMPT_RESPONSE: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType

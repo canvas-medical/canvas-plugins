@@ -541,6 +541,18 @@
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
+  "canvas_sdk.effects.mcp": [
+    "ImageContent",
+    "MCPCallToolResponse",
+    "MCPGetPromptResponse",
+    "MCPPromptsListResponse",
+    "MCPReadResourceResponse",
+    "MCPResourcesListResponse",
+    "MCPToolsListResponse",
+    "PromptMessage",
+    "ResourceContent",
+    "TextContent"
+  ],
   "canvas_sdk.effects.metadata": [
     "Metadata"
   ],
@@ -785,6 +797,26 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.mcp": [
+    "MCP",
+    "prompt",
+    "resource",
+    "tool"
+  ],
+  "canvas_sdk.handlers.mcp.authorize": [
+    "Predicate",
+    "all_of",
+    "any_authenticated",
+    "any_of",
+    "has_role",
+    "has_scope"
+  ],
+  "canvas_sdk.handlers.mcp.mcp": [
+    "MCP",
+    "prompt",
+    "resource",
+    "tool"
   ],
   "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
     "PatientChartSummaryCustomSectionHandler"

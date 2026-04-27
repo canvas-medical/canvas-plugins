@@ -248,6 +248,15 @@ class PluginRunner(PluginRunnerServicer):
                 plugin_name = event.context["plugin_name"]
                 relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
             elif event_type in {
+                EventType.MCP_CALL_TOOL,
+                EventType.MCP_READ_RESOURCE,
+                EventType.MCP_GET_PROMPT,
+            }:
+                # Targeted MCP events name the destination plugin; list events broadcast to every
+                # plugin with an MCP handler so all contributions can aggregate.
+                plugin_name = event.context["plugin_name"]
+                relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+            elif event_type in {
                 EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
                 EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
                 EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
