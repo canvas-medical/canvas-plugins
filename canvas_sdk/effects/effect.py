@@ -30,7 +30,7 @@ class Effect:
     """Thin wrapper around :class:`canvas_generated.messages.effects_pb2.Effect`.
 
     Exposes the two fields plugin code ever touches (``type``, ``payload``)
-    plus :meth:`set_async` for opting into Celery-backed execution, and
+    plus :meth:`set_async` for opting into async execution, and
     :meth:`to_proto` for the runtime to retrieve the wire-format message.
     """
 
@@ -71,7 +71,7 @@ class Effect:
 
         Args:
             delay_seconds: Wait this many seconds before running. ``0`` runs
-                immediately on Celery (async-now). Must be non-negative.
+                immediately (async-now). Must be non-negative.
             max_retries: Maximum number of retry attempts on failure. When
                 ``None`` (the default), the key is omitted from the payload
                 and the platform default applies. Pass ``0`` to explicitly
