@@ -66,6 +66,11 @@ class NoIdentifierApp(EmbeddedApplication):
         return []
 
 
+def test_application_scope_values() -> None:
+    """Verify ApplicationScope enum members have the correct string values."""
+    assert ApplicationScope.NOTE.value == "note"
+
+
 def _make_event(
     event_type: EventType,
     target: str = "",

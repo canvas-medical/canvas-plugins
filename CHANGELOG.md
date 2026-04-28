@@ -1,6 +1,67 @@
 # CHANGELOG
 
 
+## v0.139.0 (2026-04-27)
+
+### Features
+
+- Create thin wrapper around protobuf Effect to add set_async method
+  ([#1652](https://github.com/canvas-medical/canvas-plugins/pull/1652),
+  [`b3597d4`](https://github.com/canvas-medical/canvas-plugins/commit/b3597d45bad42fe9c9014a6b3e0573b60dfdbb88))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.138.0 (2026-04-27)
+
+### Features
+
+- Create PATIENT_PAYMENT_PROCESSED event
+  ([#1651](https://github.com/canvas-medical/canvas-plugins/pull/1651),
+  [`a776d03`](https://github.com/canvas-medical/canvas-plugins/commit/a776d03f8c941f6005d502f56071db602c3ac9a3))
+
+
+## v0.137.0 (2026-04-27)
+
+### Features
+
+- Add lab test questions (aoe) to data module
+  ([#1639](https://github.com/canvas-medical/canvas-plugins/pull/1639),
+  [`d46cfd2`](https://github.com/canvas-medical/canvas-plugins/commit/d46cfd21cb7779761beceeb434a9f411c1ebedb8))
+
+- Add provider companion scopes and update example plugin
+  ([#1623](https://github.com/canvas-medical/canvas-plugins/pull/1623),
+  [`044f9f0`](https://github.com/canvas-medical/canvas-plugins/commit/044f9f0e2a6164dc01f726b319d76382f6504328))
+
+
+## v0.136.0 (2026-04-22)
+
+### Features
+
+- Custom chart sections ([#1626](https://github.com/canvas-medical/canvas-plugins/pull/1626),
+  [`3871bfc`](https://github.com/canvas-medical/canvas-plugins/commit/3871bfc7cbeee1c9b40f60f2f07c23a1f76501dc))
+
+
+## v0.135.0 (2026-04-20)
+
+### Features
+
+- Allow command.upsert_metadata to be chained with command.originate
+  ([#1640](https://github.com/canvas-medical/canvas-plugins/pull/1640),
+  [`1d0e776`](https://github.com/canvas-medical/canvas-plugins/commit/1d0e77688fd8c030c5f5e999bdb95d9925252f8f))
+
+
+## v0.134.0 (2026-04-17)
+
+### Features
+
+- Allow originate and commit with a single effect
+  ([#1632](https://github.com/canvas-medical/canvas-plugins/pull/1632),
+  [`473da5d`](https://github.com/canvas-medical/canvas-plugins/commit/473da5d035364fb856f0c0c0d3e180f5ecfc9e77))
+
+
 ## v0.133.0 (2026-04-16)
 
 ### Features

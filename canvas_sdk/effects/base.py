@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 from canvas_sdk.base import Model
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.effect import Effect, EffectType
 
 
 class _BaseEffect(Model):

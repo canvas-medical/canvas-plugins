@@ -519,6 +519,10 @@
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
   ],
+  "canvas_sdk.effects.effect": [
+    "Effect",
+    "EffectType"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
@@ -610,6 +614,9 @@
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
+  ],
+  "canvas_sdk.effects.patient_chart_summary_custom_section": [
+    "PatientChartSummaryCustomSection"
   ],
   "canvas_sdk.effects.patient_facility_address": [
     "AddressType",
@@ -778,6 +785,9 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
+    "PatientChartSummaryCustomSectionHandler"
   ],
   "canvas_sdk.handlers.payment_processors.base": [
     "PaymentProcessor"
@@ -996,6 +1006,8 @@
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "LabReport",
     "LabReportTemplate",
     "LabReportTemplateField",
@@ -1307,6 +1319,8 @@
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "LabReport",
     "LabReportTemplate",
     "LabReportTemplateField",
