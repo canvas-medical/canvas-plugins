@@ -537,10 +537,18 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
     for py_file in python_files:
         # Skip test files, __pycache__, and __init__ files
         # Check if file is in a test directory or is a test file itself
-        parts = py_file.parts
-        if "__pycache__" in str(py_file) or py_file.name == "__init__.py":
+        relative_parts = py_file.relative_to(plugin_path).parts
+        # Skip hidden directories/files (.venv, .git, .tox, .eggs, ...) — same
+        # rule _build_package uses when packaging the plugin.
+        if any(part.startswith(".") for part in relative_parts):
             continue
-        if "tests" in parts or "test" in parts or py_file.stem.startswith("test_"):
+        if "__pycache__" in relative_parts or py_file.name == "__init__.py":
+            continue
+        if (
+            "tests" in relative_parts
+            or "test" in relative_parts
+            or py_file.stem.startswith("test_")
+        ):
             continue
 
         # Parse the file using AST to avoid executing code

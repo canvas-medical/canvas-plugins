@@ -834,6 +834,39 @@ class HandlerInTestDir(BaseHandler):
     assert len(unreferenced) == 0
 
 
+def test_find_unreferenced_handlers_skips_hidden_dirs(tmp_path: Path) -> None:
+    """Handlers under hidden dirs (.venv, .tox, .git, ...) must not be reported.
+
+    Mirrors the dotfile-skip rule that _build_package already applies when
+    packaging a plugin: anything under a dot-prefixed directory is treated as
+    out-of-band (virtualenvs, VCS metadata, tool caches).
+    """
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    handler_source = """
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class VendoredHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+"""
+
+    for hidden in (".venv", ".tox", ".eggs"):
+        nested = plugin_dir / hidden / "lib" / "python3.14" / "site-packages" / "pkg"
+        nested.mkdir(parents=True)
+        (nested / "handler.py").write_text(handler_source)
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == []
+
+
 def test_find_unreferenced_handlers_skips_imported_classes(tmp_path: Path) -> None:
     """Test that _find_unreferenced_handlers skips imported classes."""
     plugin_dir = tmp_path / "test_plugin"
