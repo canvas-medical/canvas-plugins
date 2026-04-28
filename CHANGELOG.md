@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v0.139.0 (2026-04-27)
+
+### Features
+
+- Create thin wrapper around protobuf Effect to add set_async method
+  ([#1652](https://github.com/canvas-medical/canvas-plugins/pull/1652),
+  [`b3597d4`](https://github.com/canvas-medical/canvas-plugins/commit/b3597d45bad42fe9c9014a6b3e0573b60dfdbb88))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.138.0 (2026-04-27)
+
+### Features
+
+- Create PATIENT_PAYMENT_PROCESSED event
+  ([#1651](https://github.com/canvas-medical/canvas-plugins/pull/1651),
+  [`a776d03`](https://github.com/canvas-medical/canvas-plugins/commit/a776d03f8c941f6005d502f56071db602c3ac9a3))
+
+
+## v0.137.0 (2026-04-27)
+
+### Features
+
+- Add lab test questions (aoe) to data module
+  ([#1639](https://github.com/canvas-medical/canvas-plugins/pull/1639),
+  [`d46cfd2`](https://github.com/canvas-medical/canvas-plugins/commit/d46cfd21cb7779761beceeb434a9f411c1ebedb8))
+
+- Add provider companion scopes and update example plugin
+  ([#1623](https://github.com/canvas-medical/canvas-plugins/pull/1623),
+  [`044f9f0`](https://github.com/canvas-medical/canvas-plugins/commit/044f9f0e2a6164dc01f726b319d76382f6504328))
+
+
 ## v0.136.0 (2026-04-22)
 
 ### Features

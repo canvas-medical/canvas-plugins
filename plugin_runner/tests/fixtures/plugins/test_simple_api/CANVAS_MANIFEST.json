@@ -40,6 +40,15 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+                "class": "test_simple_api.websocket.handler:SecondWebsocketAPI",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],

@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
-from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 

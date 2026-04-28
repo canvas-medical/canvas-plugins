@@ -315,6 +315,38 @@ class LabPartnerTest(IdentifiableModel):
     cpt_code = models.CharField(max_length=256, blank=True, null=True)
 
 
+class LabPartnerTestQuestion(TimestampedModel):
+    """A class representing an ask-at-order-entry question for a lab partner test."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_lab_partner_test_question_001"
+
+    objects: models.Manager["LabPartnerTestQuestion"]
+
+    lab_partner_test = models.ForeignKey(
+        "LabPartnerTest", on_delete=models.CASCADE, related_name="questions"
+    )
+    required = models.BooleanField()
+    code = models.CharField(max_length=256)
+    body = models.TextField()
+    type = models.CharField(max_length=256)
+
+
+class LabPartnerTestQuestionChoice(TimestampedModel):
+    """A class representing a choice for a lab partner test question."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_lab_partner_test_question_choice_001"
+
+    objects: models.Manager["LabPartnerTestQuestionChoice"]
+
+    lab_partner_test_question = models.ForeignKey(
+        "LabPartnerTestQuestion", on_delete=models.CASCADE, related_name="choices"
+    )
+    label = models.CharField(max_length=256)
+    value = models.CharField(max_length=256)
+
+
 class FieldType(models.TextChoices):
     """Choices for lab report template field types."""
 
@@ -403,6 +435,8 @@ __exports__ = (
     "LabTest",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "FieldType",
     "LabReportTemplate",
     "LabReportTemplateField",
