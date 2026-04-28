@@ -4,6 +4,7 @@ import ast
 import base64
 import builtins
 import json
+import os
 import tarfile
 import tempfile
 from collections.abc import Iterable
@@ -527,67 +528,48 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
             # Store just the class part (module.path:ClassName)
             referenced_classes.add(class_ref)
 
-    # Find all Python files in the plugin
+    # Walk the plugin tree, pruning directories we never want to descend into.
+    # Mirrors _build_package's dotfile-skip rule (.venv, .git, .tox, .eggs, ...)
+    # so the validator sees the same set of files that ship in the package.
     unreferenced = []
-    python_files = builtins.list(plugin_path.rglob("*.py"))
-
-    # Known base class names to look for in inheritance
     base_handler_names = {"BaseHandler", "BaseProtocol"}
 
-    for py_file in python_files:
-        # Skip test files, __pycache__, and __init__ files
-        # Check if file is in a test directory or is a test file itself
-        relative_parts = py_file.relative_to(plugin_path).parts
-        # Skip hidden directories/files (.venv, .git, .tox, .eggs, ...) — same
-        # rule _build_package uses when packaging the plugin.
-        if any(part.startswith(".") for part in relative_parts):
-            continue
-        if "__pycache__" in relative_parts or py_file.name == "__init__.py":
-            continue
-        if (
-            "tests" in relative_parts
-            or "test" in relative_parts
-            or py_file.stem.startswith("test_")
-        ):
-            continue
+    def _skip_dir(name: str) -> bool:
+        return name.startswith(".") or name in {"__pycache__", "tests", "test"}
 
-        # Parse the file using AST to avoid executing code
-        try:
-            tree = ast.parse(py_file.read_text())
+    for dirpath, dirnames, filenames in os.walk(plugin_path):
+        dirnames[:] = [d for d in dirnames if not _skip_dir(d)]
+        for filename in filenames:
+            if not filename.endswith(".py"):
+                continue
+            if filename == "__init__.py" or filename.startswith("test_"):
+                continue
+            py_file = Path(dirpath) / filename
 
-            # Find all class definitions
+            try:
+                tree = ast.parse(py_file.read_bytes())
+            except Exception:
+                print(f"Warning: Could not parse file '{py_file}'")
+                continue
+
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # Check if this class inherits from BaseHandler or BaseProtocol
-                    inherits_from_base = False
-                    for base in node.bases:
-                        # Handle direct inheritance: class Foo(BaseHandler)
-                        if isinstance(base, ast.Name) and base.id in base_handler_names:
-                            inherits_from_base = True
-                            break
-                        # Handle module-qualified inheritance: class Foo(handlers.BaseHandler)
-                        elif isinstance(base, ast.Attribute):
-                            if base.attr in base_handler_names:
-                                inherits_from_base = True
-                                break
+                if not isinstance(node, ast.ClassDef):
+                    continue
 
-                    if inherits_from_base:
-                        # Build the class reference string
-                        # Get relative path from plugin root
-                        relative_path = py_file.relative_to(plugin_path)
-                        module_path = str(relative_path.with_suffix("")).replace("/", ".")
-                        # Include package name prefix to match manifest format
-                        package_name = plugin_path.name
-                        class_ref = f"{package_name}.{module_path}:{node.name}"
+                inherits_from_base = any(
+                    (isinstance(base, ast.Name) and base.id in base_handler_names)
+                    or (isinstance(base, ast.Attribute) and base.attr in base_handler_names)
+                    for base in node.bases
+                )
+                if not inherits_from_base:
+                    continue
 
-                        # Check if it's referenced in the manifest
-                        if not any(class_ref in ref for ref in referenced_classes):
-                            unreferenced.append(class_ref)
+                relative_path = py_file.relative_to(plugin_path)
+                module_path = str(relative_path.with_suffix("")).replace("/", ".")
+                class_ref = f"{plugin_path.name}.{module_path}:{node.name}"
 
-        except Exception:
-            # Skip files that can't be parsed
-            print(f"Warning: Could not parse file '{py_file}'")
-            pass
+                if not any(class_ref in ref for ref in referenced_classes):
+                    unreferenced.append(class_ref)
 
     return unreferenced
 
