@@ -74,7 +74,7 @@ class ClaimQueues(models.IntegerChoices):
     TRASH = 10, "Trash"
 
 
-class ClaimQueue(TimestampedModel):
+class ClaimQueue(TimestampedModel, IdentifiableModel):
     """ClaimQueue."""
 
     class Meta:
