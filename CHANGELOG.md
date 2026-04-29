@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.140.0 (2026-04-29)
+
+### Bug Fixes
+
+- Trap error on event type mismatches
+  ([#1637](https://github.com/canvas-medical/canvas-plugins/pull/1637),
+  [`b7db08d`](https://github.com/canvas-medical/canvas-plugins/commit/b7db08d210736203d91e11eeb416ae637d23d2e3))
+
+### Features
+
+- Add command custom fields ([#1643](https://github.com/canvas-medical/canvas-plugins/pull/1643),
+  [`3b355d0`](https://github.com/canvas-medical/canvas-plugins/commit/3b355d074e780db17f0710cf532fac574cb54741))
+
+
 ## v0.139.0 (2026-04-27)
 
 ### Features

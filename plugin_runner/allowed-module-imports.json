@@ -510,6 +510,16 @@
   "canvas_sdk.effects.claim_queue": [
     "MoveClaimToQueue"
   ],
+  "canvas_sdk.effects.command_metadata": [
+    "CommandMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.command_metadata.command_metadata_create_form": [
+    "CommandMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
