@@ -24,6 +24,10 @@ class HttpRequestEffect(_BaseEffect):
     Header values are transmitted as-is — store credentials in the plugin's
     ``secrets`` and reference them here rather than hard-coding them.
 
+    Providing ``retry_on_status_codes`` forces async execution: the effect runs
+    async-now (``delay_seconds=0``) by default. Chain ``.set_async(...)`` to
+    override the delay or set ``max_retries``.
+
     Example usage::
 
         http_effect = HttpRequestEffect(
