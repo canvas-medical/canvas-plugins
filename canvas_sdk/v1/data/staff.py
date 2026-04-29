@@ -266,7 +266,7 @@ class StaffExternalIdentifier(TimestampedModel, IdentifiableModel):
     staff = models.ForeignKey(
         "v1.Staff",
         related_name="external_identifiers",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         null=True,
     )
     use = models.CharField(max_length=255)
