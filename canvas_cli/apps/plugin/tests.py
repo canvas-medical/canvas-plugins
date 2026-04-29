@@ -867,6 +867,26 @@ class VendoredHandler(BaseHandler):
     assert unreferenced == []
 
 
+def test_find_unreferenced_handlers_skips_unparseable_files(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A file that can't be parsed by ast.parse must be skipped with a warning."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    broken = handlers_dir / "broken.py"
+    broken.write_text("class Foo(BaseHandler:\n    pass\n")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == []
+    assert f"Warning: Could not parse file '{broken}'" in capsys.readouterr().out
+
+
 def test_find_unreferenced_handlers_skips_imported_classes(tmp_path: Path) -> None:
     """Test that _find_unreferenced_handlers skips imported classes."""
     plugin_dir = tmp_path / "test_plugin"
