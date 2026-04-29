@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -257,11 +257,47 @@ class StaffLicense(IdentifiableModel):
     state = models.CharField(max_length=2, blank=True, null=True)
 
 
+class StaffExternalIdentifier(TimestampedModel, IdentifiableModel):
+    """A class representing a staff external identifier."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffexternalidentifier_001"
+
+    staff = models.ForeignKey(
+        "v1.Staff",
+        related_name="external_identifiers",
+        on_delete=models.DO_NOTHING,
+        null=True,
+    )
+    use = models.CharField(max_length=255)
+    identifier_type = models.CharField(max_length=255)
+    system = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+    issued_date = models.DateField()
+    expiration_date = models.DateField()
+
+
+class StaffMetadata(MetadataModel):
+    """A class representing staff metadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffmetadata_001"
+
+    staff = models.ForeignKey(
+        "v1.Staff",
+        related_name="metadata",
+        on_delete=models.DO_NOTHING,
+        null=True,
+    )
+
+
 __exports__ = (
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
 )
