@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.140.1 (2026-04-29)
+
+### Bug Fixes
+
+- Add identifiable model to claimqueue
+  ([#1661](https://github.com/canvas-medical/canvas-plugins/pull/1661),
+  [`3d15e98`](https://github.com/canvas-medical/canvas-plugins/commit/3d15e98482d3d99a227c9cd2afea507199dab596))
+
+
 ## v0.140.0 (2026-04-29)
 
 ### Bug Fixes
