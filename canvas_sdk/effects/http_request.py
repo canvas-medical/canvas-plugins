@@ -60,10 +60,14 @@ class HttpRequestEffect(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload to be sent for the Effect."""
-        return {
-            "data": self.values,
-            "async_props": {"retry_on_status_codes": self.retry_on_status_codes},
-        }
+        payload: dict[str, Any] = {"data": self.values}
+        if self.retry_on_status_codes:
+            payload["async_props"] = {
+                "retry_on_status_codes": self.retry_on_status_codes,
+                # delay_seconds=0 forces async execution; can be overridden via .set_async()
+                "delay_seconds": 0,
+            }
+        return payload
 
 
 __exports__ = ("HttpMethod", "HttpRequestEffect")

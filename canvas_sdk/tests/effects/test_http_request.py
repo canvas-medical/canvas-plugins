@@ -53,22 +53,52 @@ def test_http_request_payload_contains_retry_on_status_codes() -> None:
 
 
 def test_http_request_async_props_contains_retry_on_status_codes() -> None:
-    """retry_on_status_codes should be included in async_props for the effect payload."""
+    """retry_on_status_codes should be included in async_props with delay_seconds=0."""
     effect = HttpRequestEffect(
         url="https://api.example.com/submit",
         retry_on_status_codes=[500, 501],
     ).apply()
 
     payload = json.loads(effect.payload)
-    assert payload["async_props"] == {"retry_on_status_codes": [500, 501]}
+    assert payload["async_props"] == {
+        "retry_on_status_codes": [500, 501],
+        "delay_seconds": 0,
+    }
 
 
-def test_http_request_async_props_retry_on_status_codes_default_none() -> None:
-    """When retry_on_status_codes is not provided, async_props should reflect None."""
+def test_http_request_no_async_props_when_retry_on_status_codes_unset() -> None:
+    """async_props should be omitted entirely when retry_on_status_codes isn't provided."""
     effect = HttpRequestEffect(url="https://api.example.com").apply()
 
     payload = json.loads(effect.payload)
-    assert payload["async_props"] == {"retry_on_status_codes": None}
+    assert "async_props" not in payload
+
+
+def test_http_request_no_async_props_when_retry_on_status_codes_empty() -> None:
+    """An empty retry_on_status_codes list should not trigger async execution."""
+    effect = HttpRequestEffect(
+        url="https://api.example.com",
+        retry_on_status_codes=[],
+    ).apply()
+
+    payload = json.loads(effect.payload)
+    assert "async_props" not in payload
+
+
+def test_http_request_set_async_overrides_default_delay_seconds() -> None:
+    """.set_async(delay_seconds=N) should override the default delay_seconds=0."""
+    effect = (
+        HttpRequestEffect(
+            url="https://api.example.com",
+            retry_on_status_codes=[500],
+        )
+        .apply()
+        .set_async(delay_seconds=30)
+    )
+
+    payload = json.loads(effect.payload)
+    assert payload["async_props"]["delay_seconds"] == 30
+    assert payload["async_props"]["retry_on_status_codes"] == [500]
 
 
 def test_http_request_retry_on_status_codes_invalid_type_raises() -> None:
