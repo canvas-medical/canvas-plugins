@@ -348,6 +348,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_GROUP__ADD_MEMBER: _ClassVar[EffectType]
     PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
+    HTTP_REQUEST: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -689,6 +690,7 @@ CREATE_CCDA: EffectType
 PATIENT_GROUP__ADD_MEMBER: EffectType
 PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
+HTTP_REQUEST: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
