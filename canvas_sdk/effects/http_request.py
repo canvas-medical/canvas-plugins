@@ -24,7 +24,9 @@ class HttpRequestEffect(_BaseEffect):
     Header values are transmitted as-is — store credentials in the plugin's
     ``secrets`` and reference them here rather than hard-coding them.
 
-    Providing ``retry_on_status_codes`` forces async execution: the effect runs
+    Chaining ``.set_async(delay_seconds=...)`` results in async execution.
+
+    Providing ``retry_on_status_codes`` also forces async execution: the effect runs
     async-now (``delay_seconds=0``) by default. Chain ``.set_async(...)`` to
     override the delay or set ``max_retries``.
 
@@ -32,12 +34,12 @@ class HttpRequestEffect(_BaseEffect):
 
         http_effect = HttpRequestEffect(
             url="https://api.example.com/submit",
-            method=HttpMethod.POST,
+            method="POST",
             headers={"Authorization": "Bearer token"},
             body=json.dumps({"key": "value"}),
             retry_on_status_codes=[500, 502]
         )
-        return [http_effect.apply().set_async(delay_seconds=0)]
+        return [http_effect.apply().set_async(delay_seconds=5, max_retries=3)]
     """
 
     class Meta:
