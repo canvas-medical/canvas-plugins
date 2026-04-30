@@ -264,6 +264,10 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 
+        log.info(
+            f'Successfully installed plugin "{plugin_name}", version {attributes["version"]}'
+        )
+
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         sentry_sdk.capture_exception(e)

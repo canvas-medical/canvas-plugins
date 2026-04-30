@@ -795,6 +795,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             return False
 
         any_failed = False
+        loaded_handler_count = 0
 
         # Share evaluated_modules across all handlers in this plugin so that common
         # submodules (like constants.py) are only evaluated and reloaded once, not
@@ -870,6 +871,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                         "secrets": secrets_json,
                         "namespace_config": namespace_config,
                     }
+
+                loaded_handler_count += 1
             except Exception as e:
                 log.exception(f"Error importing module '{name_and_class}'")
                 sentry_sdk.capture_exception(e)
@@ -878,6 +881,19 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         # Re-register the AppConfig so that the freshly-created model classes are
         # visible to Django's relation graph (needed for select_related, etc.).
         register_plugin_app_config(name)
+
+        plugin_version = manifest_json.get("plugin_version", "unknown")
+        total_handlers = len(handlers)
+        if any_failed:
+            log.warning(
+                f'Plugin "{name}" version {plugin_version} loaded with errors '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded successfully)"
+            )
+        else:
+            log.info(
+                f'Successfully loaded plugin "{name}", version {plugin_version} '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded)"
+            )
 
         return not any_failed
 

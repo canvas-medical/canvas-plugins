@@ -240,6 +240,53 @@ def test_load_plugin_with_missing_manifest(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_logs_success_with_version_and_handler_count(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a success log including version and handler count."""
+    with caplog.at_level(logging.INFO):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is True
+
+    success_messages = [
+        record.message
+        for record in caplog.records
+        if "Successfully loaded plugin" in record.message
+    ]
+    assert len(success_messages) == 1, (
+        f"Expected exactly one success log message, got: {success_messages}"
+    )
+    # example_plugin's manifest declares plugin_version 0.0.1 and one handler.
+    assert "example_plugin" in success_messages[0]
+    assert "0.0.1" in success_messages[0]
+    assert "1/1 handlers loaded" in success_messages[0]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_logs_warning_when_handler_fails(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a warning log when at least one handler fails."""
+    with caplog.at_level(logging.WARNING):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+
+    warning_messages = [
+        record.message
+        for record in caplog.records
+        if "loaded with errors" in record.message
+    ]
+    assert len(warning_messages) == 1, (
+        f"Expected exactly one warning log message, got: {warning_messages}"
+    )
+    # cross_plugin_thief declares one handler from a foreign package, so 0/1 should load.
+    assert "cross_plugin_thief" in warning_messages[0]
+    assert "0/1 handlers loaded successfully" in warning_messages[0]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test reloading a plugin."""
     load_plugins()
