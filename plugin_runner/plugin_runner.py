@@ -74,7 +74,7 @@ from settings import (
     SENTRY_DSN,
 )
 
-if SENTRY_DSN and os.getenv("CI") != "true":
+if SENTRY_DSN and os.getenv("CI", "").lower() != "true":
     # Lazy import for faster reload time in dev
     from sentry_sdk.integrations.executing import ExecutingIntegration
     from sentry_sdk.integrations.pure_eval import PureEvalIntegration
