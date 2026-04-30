@@ -552,6 +552,13 @@
     "HttpMethod",
     "HttpRequestEffect"
   ],
+  "canvas_sdk.effects.lab_order": [
+    "LabOrderPayloadOverride"
+  ],
+  "canvas_sdk.effects.lab_order.payload_override": [
+    "BillToCode",
+    "LabOrderPayloadOverride"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
