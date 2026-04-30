@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.141.0 (2026-04-30)
+
+### Features
+
+- Create http request effect ([#1641](https://github.com/canvas-medical/canvas-plugins/pull/1641),
+  [`814b1eb`](https://github.com/canvas-medical/canvas-plugins/commit/814b1eb17345bc81c9625f6a8ab8f6bfe3f50715))
+
+
 ## v0.140.1 (2026-04-29)
 
 ### Bug Fixes
