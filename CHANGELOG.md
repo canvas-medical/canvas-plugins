@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.142.0 (2026-05-01)
+
+### Features
+
+- Add HealthGorillaLabOrderOverride effect + LAB_ORDER_COMMAND__PRE_SEND
+  ([#1667](https://github.com/canvas-medical/canvas-plugins/pull/1667),
+  [`4a8a6e1`](https://github.com/canvas-medical/canvas-plugins/commit/4a8a6e1fb9529203adfacd09824f2d7d23db8f0c))
+
+- Log a definitive success line on plugin install and load
+  ([#1666](https://github.com/canvas-medical/canvas-plugins/pull/1666),
+  [`1a7356d`](https://github.com/canvas-medical/canvas-plugins/commit/1a7356dc059ddc7054e2d23ba079f2ca9dc879dc))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.141.0 (2026-04-30)
 
 ### Features
