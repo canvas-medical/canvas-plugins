@@ -5,7 +5,7 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 BillToCode = Literal["self", "patient", "guarantor", "thirdParty"]
 
 
-class LabOrderPayloadOverride(_BaseEffect):
+class HealthGorillaLabOrderOverride(_BaseEffect):
     """Inject FHIR-shaped values into the outbound Health Gorilla lab-order
     payload. Returned by a handler of `EventType.LAB_ORDER_COMMAND__PRE_SEND`.
 
@@ -31,7 +31,7 @@ class LabOrderPayloadOverride(_BaseEffect):
     """
 
     class Meta:
-        effect_type = EffectType.LAB_ORDER_PAYLOAD_OVERRIDE
+        effect_type = EffectType.HEALTH_GORILLA_LAB_ORDER_OVERRIDE
 
     practitioner_account_number: str | None = None
     organizational_account_number: str | None = None
@@ -57,4 +57,4 @@ class LabOrderPayloadOverride(_BaseEffect):
         }
 
 
-__exports__ = ("LabOrderPayloadOverride", "BillToCode")
+__exports__ = ("HealthGorillaLabOrderOverride", "BillToCode")

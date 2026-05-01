@@ -553,11 +553,11 @@
     "HttpRequestEffect"
   ],
   "canvas_sdk.effects.lab_order": [
-    "LabOrderPayloadOverride"
+    "HealthGorillaLabOrderOverride"
   ],
-  "canvas_sdk.effects.lab_order.payload_override": [
+  "canvas_sdk.effects.lab_order.health_gorilla": [
     "BillToCode",
-    "LabOrderPayloadOverride"
+    "HealthGorillaLabOrderOverride"
   ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"

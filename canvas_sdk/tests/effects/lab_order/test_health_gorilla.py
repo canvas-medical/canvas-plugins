@@ -4,12 +4,12 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.lab_order import LabOrderPayloadOverride
+from canvas_sdk.effects.lab_order import HealthGorillaLabOrderOverride
 
 
 def test_apply_with_all_fields_emits_full_payload() -> None:
     """All set fields appear in the effect payload under data."""
-    effect = LabOrderPayloadOverride(
+    effect = HealthGorillaLabOrderOverride(
         practitioner_account_number="12349876",
         organizational_account_number="12349876",
         hg_organization_id="f-388554647b89801ea5e8320b",
@@ -20,7 +20,7 @@ def test_apply_with_all_fields_emits_full_payload() -> None:
 
     proto_effect = effect.apply()
 
-    assert proto_effect.type == EffectType.LAB_ORDER_PAYLOAD_OVERRIDE
+    assert proto_effect.type == EffectType.HEALTH_GORILLA_LAB_ORDER_OVERRIDE
     assert json.loads(proto_effect.payload) == {
         "data": {
             "practitioner_account_number": "12349876",
@@ -39,7 +39,7 @@ def test_apply_omits_unset_fields() -> None:
     A plugin overriding only one value should not stomp the others to None on
     the home-app side; the contract is "absent = no override".
     """
-    effect = LabOrderPayloadOverride(bill_to_code="patient")
+    effect = HealthGorillaLabOrderOverride(bill_to_code="patient")
 
     proto_effect = effect.apply()
 
@@ -49,13 +49,13 @@ def test_apply_omits_unset_fields() -> None:
 def test_bill_to_code_rejects_invalid_value() -> None:
     """Pydantic Literal constrains bill_to_code to the four HG-recognized codes."""
     with pytest.raises(ValidationError):
-        LabOrderPayloadOverride(bill_to_code="client")  # type: ignore[arg-type]
+        HealthGorillaLabOrderOverride(bill_to_code="client")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("code", ["self", "patient", "guarantor", "thirdParty"])
 def test_bill_to_code_accepts_valid_values(code: str) -> None:
     """All four HG-recognized bill-to codes round-trip cleanly."""
-    effect = LabOrderPayloadOverride(bill_to_code=code)  # type: ignore[arg-type]
+    effect = HealthGorillaLabOrderOverride(bill_to_code=code)  # type: ignore[arg-type]
 
     proto_effect = effect.apply()
 
@@ -64,9 +64,9 @@ def test_bill_to_code_accepts_valid_values(code: str) -> None:
 
 def test_empty_override_emits_empty_data() -> None:
     """An effect with no fields set is a valid no-op; payload is data: {}."""
-    effect = LabOrderPayloadOverride()
+    effect = HealthGorillaLabOrderOverride()
 
     proto_effect = effect.apply()
 
-    assert proto_effect.type == EffectType.LAB_ORDER_PAYLOAD_OVERRIDE
+    assert proto_effect.type == EffectType.HEALTH_GORILLA_LAB_ORDER_OVERRIDE
     assert json.loads(proto_effect.payload) == {"data": {}}

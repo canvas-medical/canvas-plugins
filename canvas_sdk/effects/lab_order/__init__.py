@@ -1,3 +1,3 @@
-from canvas_sdk.effects.lab_order.payload_override import LabOrderPayloadOverride
+from canvas_sdk.effects.lab_order.health_gorilla import HealthGorillaLabOrderOverride
 
-__all__ = __exports__ = ("LabOrderPayloadOverride",)
+__all__ = __exports__ = ("HealthGorillaLabOrderOverride",)
