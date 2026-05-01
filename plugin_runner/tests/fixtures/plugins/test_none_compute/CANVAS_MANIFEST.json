@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_none_compute",
+    "description": "Test fixture: handler whose compute() returns None.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_none_compute.handlers.my_handler:Handler",
+                "description": "A handler that returns None from compute.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

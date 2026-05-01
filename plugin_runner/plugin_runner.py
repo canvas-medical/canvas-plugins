@@ -324,6 +324,18 @@ class PluginRunner(PluginRunnerServicer):
                         ),
                     ):
                         _effects = handler.compute()
+                        if _effects is None:
+                            # Plugin authors sometimes forget to return their
+                            # effects list. Treat as empty with a warning so
+                            # the author can fix it, instead of raising
+                            # ``TypeError: 'NoneType' object is not iterable``
+                            # (KOALA-5365 / HOME-APP-RT8).
+                            log.warning(
+                                f"{handler_name} returned None from compute(); "
+                                "expected an iterable of effects. Treating as "
+                                "an empty list."
+                            )
+                            _effects = []
                         effects = [
                             Effect(
                                 type=effect.type,
