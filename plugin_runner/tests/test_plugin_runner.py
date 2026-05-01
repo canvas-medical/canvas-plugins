@@ -274,9 +274,7 @@ def test_load_plugin_logs_warning_when_handler_fails(
     assert result is False
 
     warning_messages = [
-        record.message
-        for record in caplog.records
-        if "loaded with errors" in record.message
+        record.message for record in caplog.records if "loaded with errors" in record.message
     ]
     assert len(warning_messages) == 1, (
         f"Expected exactly one warning log message, got: {warning_messages}"
