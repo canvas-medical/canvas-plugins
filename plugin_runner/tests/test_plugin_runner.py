@@ -418,6 +418,36 @@ def test_handle_plugin_event_returns_expected_result(
     assert result[0].effects[0].payload == "Hello, world!"
 
 
+@pytest.mark.parametrize("install_test_plugin", ["test_none_compute"], indirect=True)
+def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """A plugin returning None from compute() must not produce a Sentry exception.
+
+    Regression test for KOALA-5365 / HOME-APP-RT8 (~256k events / 0 users
+    impacted). Plugin authors sometimes forget to return their effects list;
+    the runner used to iterate ``for effect in _effects`` against ``None`` and
+    raise ``TypeError: 'NoneType' object is not iterable``, which the runner
+    caught and reported to Sentry. The fix treats a ``None`` return as an
+    empty effects list with a warning log instead.
+    """
+    event = EventRequest(type=EventType.UNKNOWN)
+
+    with patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture:
+        result = list(plugin_runner.HandleEvent(event, None))
+
+    assert mock_capture.call_count == 0, (
+        "compute() returning None should be handled gracefully, not reported "
+        "to Sentry as an unhandled exception (KOALA-5365)"
+    )
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
+
+
 @pytest.mark.parametrize(
     "method_name, plugin_request, expected_message",
     [
