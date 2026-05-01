@@ -552,6 +552,13 @@
     "HttpMethod",
     "HttpRequestEffect"
   ],
+  "canvas_sdk.effects.lab_order": [
+    "HealthGorillaLabOrderOverride"
+  ],
+  "canvas_sdk.effects.lab_order.health_gorilla": [
+    "BillToCode",
+    "HealthGorillaLabOrderOverride"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
