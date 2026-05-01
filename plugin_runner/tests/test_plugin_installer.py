@@ -1,15 +1,18 @@
 import json
+import logging
 import tarfile
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pytest_mock import MockerFixture
 
 from plugin_runner.installation import (
     PluginAttributes,
     _extract_rows_to_dict,
     download_plugin,
+    install_plugin,
     install_plugins,
     uninstall_plugin,
 )
@@ -112,6 +115,49 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
     uninstall_plugin("plugin2")
     assert not Path("plugin_runner/tests/data/plugins/plugin1").exists()
     assert not Path("plugin_runner/tests/data/plugins/plugin2").exists()
+
+
+def test_install_plugin_logs_success_with_version(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that install_plugin emits a success log including the plugin version."""
+    plugin_name = "plugin_success_log"
+    plugin_version = "1.2.3"
+    attributes = PluginAttributes(
+        version=plugin_version,
+        package=f"plugins/{plugin_name}.tar.gz",
+        secrets={},
+    )
+
+    tarball = _create_tarball(plugin_name)
+
+    def mock_download_plugin(package: str) -> MagicMock:
+        mock_context = mocker.Mock()
+        mock_context.__enter__ = mocker.Mock(return_value=tarball)
+        mock_context.__exit__ = mocker.Mock(return_value=None)
+        return mock_context
+
+    mocker.patch(
+        "plugin_runner.installation.download_plugin",
+        side_effect=mock_download_plugin,
+    )
+
+    try:
+        with caplog.at_level(logging.INFO):
+            install_plugin(plugin_name, attributes)
+
+        success_messages = [
+            record.message
+            for record in caplog.records
+            if "Successfully installed plugin" in record.message
+        ]
+        assert len(success_messages) == 1, (
+            f"Expected exactly one success log message, got: {success_messages}"
+        )
+        assert plugin_name in success_messages[0]
+        assert plugin_version in success_messages[0]
+    finally:
+        uninstall_plugin(plugin_name)
 
 
 def test_download() -> None:
