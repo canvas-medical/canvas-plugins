@@ -333,7 +333,7 @@ def test_install_success_no_secrets(
     plugin_path = Path("/fake/plugin")
     host = "https://example.canvasmesdical.com"
 
-    install(plugin_name=plugin_path, secrets=[], host=host)
+    install(plugin_name=plugin_path, secrets=[], is_enabled=True, host=host)
 
     mock_validate.assert_called_once_with(plugin_path)
     mock_build.assert_called_once_with(plugin_path)
@@ -390,7 +390,7 @@ def test_install_success_with_secrets(
     host = "https://example.canvasmedical.com"
     secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword"]
 
-    install(plugin_name=plugin_path, secrets=secrets, host=host)
+    install(plugin_name=plugin_path, secrets=secrets, is_enabled=True, host=host)
 
     expected_encoded_secrets = [
         ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
@@ -401,6 +401,52 @@ def test_install_success_with_secrets(
     mock_post.assert_called_once_with(
         "https://example.canvasmedical.com/api/plugins",
         data=expected_data,
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_disabled(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+) -> None:
+    """Test installing a plugin in the disabled state."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    mock_build.return_value = Path("/tmp/built-plugin.zip")
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.created
+    mock_post.return_value = mock_response
+
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=[],
+        is_enabled=False,
+        host="https://example.canvasmedical.com",
+    )
+
+    mock_post.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins",
+        data=[("is_enabled", False)],
         files={"package": mock_open_file.return_value.__enter__.return_value},
         headers={"Authorization": "Bearer test-token"},
     )
