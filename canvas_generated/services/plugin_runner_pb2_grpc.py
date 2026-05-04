@@ -59,7 +59,7 @@ class PluginRunnerStub(object):
                 '/canvas.PluginRunner/GetRegisteredEventTypes',
                 request_serializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesRequest.SerializeToString,
                 response_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesResponse.FromString,
-                )
+                _registered_method=True)
 
 
 class PluginRunnerServicer(object):
@@ -253,8 +253,18 @@ class PluginRunner(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/canvas.PluginRunner/GetRegisteredEventTypes',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/canvas.PluginRunner/GetRegisteredEventTypes',
             canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesRequest.SerializeToString,
             canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
