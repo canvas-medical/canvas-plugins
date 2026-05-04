@@ -248,6 +248,9 @@ def install(
     secrets: builtins.list[str] = typer.Option(
         [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
     ),
+    is_enabled: bool = typer.Option(
+        True, "--enable/--disable", help="Install the plugin in an enabled or disabled state"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -281,7 +284,7 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
-        data = [("is_enabled", True)] + encoded_secrets
+        data = [("is_enabled", is_enabled)] + encoded_secrets
         with open(built_package_path, "rb") as package:
             r = requests.post(
                 url,
@@ -302,7 +305,7 @@ def install(
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
         print(f"Plugin {package_name} already exists, updating instead...")
-        update(package_name, built_package_path, is_enabled=True, secrets=secrets, host=host)
+        update(package_name, built_package_path, is_enabled=is_enabled, secrets=secrets, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
