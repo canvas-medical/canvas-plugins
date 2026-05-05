@@ -1,0 +1,36 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "staff_signature_plugin",
+    "description": "Adds a chart header button that shows the logged-in staff member's signature in a modal.",
+    "components": {
+        "commands": [],
+        "handlers": [
+            {
+                "class": "staff_signature_plugin.handlers.signature_button:StaffSignatureButton",
+                "description": "Chart header button that opens a modal showing the logged-in staff's signature.",
+                "data_access": {
+                    "event": "SHOW_CHART_PATIENT_HEADER_BUTTON",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "staff_signature_plugin.handlers.signature_api:StaffSignatureAPI",
+                "description": "Serves the HTML modal body containing the signature image.",
+                "data_access": {
+                    "event": "",
+                    "read": ["v1.Staff"],
+                    "write": []
+                }
+            }
+        ],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": [],
+    "license": "NONE",
+    "readme": "./README.md"
+}
