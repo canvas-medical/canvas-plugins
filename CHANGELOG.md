@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v0.143.0 (2026-05-05)
+
+### Bug Fixes
+
+- Fixes a race condition under which non-schema managers could fail to …
+  ([#1674](https://github.com/canvas-medical/canvas-plugins/pull/1674),
+  [`e227699`](https://github.com/canvas-medical/canvas-plugins/commit/e22769966ad03bdfc1fed9cc7e13e85f38d4a713))
+
+- Handle plugin compute() returning None gracefully (KOALA-5365)
+  ([#1672](https://github.com/canvas-medical/canvas-plugins/pull/1672),
+  [`1061fff`](https://github.com/canvas-medical/canvas-plugins/commit/1061fffc1591096bc3b93eae64e4351415131405))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1614](https://github.com/canvas-medical/canvas-plugins/pull/1614),
+  [`c5f10a8`](https://github.com/canvas-medical/canvas-plugins/commit/c5f10a8f7ef8574aca6ddfea8b551fde9b468f2b))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add --disable flag to sdk install command
+  ([#1673](https://github.com/canvas-medical/canvas-plugins/pull/1673),
+  [`f53beb5`](https://github.com/canvas-medical/canvas-plugins/commit/f53beb5773319675788849b367f8b97b1c3cc950))
+
+- Adds staff signature on the Staff model of the SDK
+  ([#1653](https://github.com/canvas-medical/canvas-plugins/pull/1653),
+  [`7100821`](https://github.com/canvas-medical/canvas-plugins/commit/710082109b09ce411f3cf38dfd2deab1a280c13c))
+
+
 ## v0.142.0 (2026-05-01)
 
 ### Features
