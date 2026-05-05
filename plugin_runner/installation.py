@@ -141,6 +141,26 @@ def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
     return plugins
 
 
+def fetch_plugin_secrets(plugin_name: str) -> dict[str, str]:
+    """Read the latest secrets for a single plugin from plugin_io_pluginsecret.
+
+    Used by non-schema-manager containers after wait_for_namespace returns, to
+    pick up namespace access keys that the schema manager generated and
+    committed to the DB while the caller was waiting. The snapshot in
+    `attributes["secrets"]` (sourced from `enabled_plugins()` earlier) may not
+    yet have contained those keys.
+    """
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            "SELECT s.key AS key, s.value AS value "
+            "FROM plugin_io_pluginsecret s "
+            "JOIN plugin_io_plugin p ON s.plugin_id = p.id "
+            "WHERE p.name = %s",
+            [plugin_name],
+        )
+        return {row["key"]: row["value"] for row in cursor.fetchall()}
+
+
 @contextmanager
 def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
     """Download the plugin package from the S3 bucket."""
@@ -193,21 +213,32 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         with download_plugin(attributes["package"]) as plugin_file_path:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
-        install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
-
-        # Clear any previously registered Django models for this plugin so that
-        # models moved between files (e.g. from biography.py to __init__.py)
-        # don't conflict with stale registrations from the prior version.
-        # This must run on ALL containers, not just the schema manager.
-        clear_registered_models(plugin_name)
-
-        # Read the manifest to check for custom_data declaration
+        # Read the manifest first so we can decide whether to defer the
+        # SECRETS.json write. See KOALA-5378: a non-schema-manager container
+        # must not write its SECRETS.json before wait_for_namespace returns,
+        # because attributes["secrets"] is a snapshot of plugin_io_pluginsecret
+        # taken before the schema manager committed the namespace access keys.
         manifest_path = plugin_installation_path / MANIFEST_FILE_NAME
         custom_data = None
         if manifest_path.exists():
             with open(manifest_path) as f:
                 manifest = json.load(f)
                 custom_data = manifest.get("custom_data")
+
+        defer_secrets_write = bool(
+            custom_data
+            and custom_data.get("access")
+            == "read_write"  # read only plugins don't create namespaces or keys
+            and not is_schema_manager()
+        )
+        if not defer_secrets_write:
+            install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
+
+        # Clear any previously registered Django models for this plugin so that
+        # models moved between files (e.g. from biography.py to __init__.py)
+        # don't conflict with stale registrations from the prior version.
+        # This must run on ALL containers, not just the schema manager.
+        clear_registered_models(plugin_name)
 
         # Initialize namespace schema and generate model migrations if custom_data is declared.
         # Only the schema manager (primary cmd container) performs DDL.
@@ -248,6 +279,12 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                     f"namespace '{schema_name}' to be initialized"
                 )
                 wait_for_namespace(schema_name, plugin_name, models_hash)
+                # The schema manager has now committed namespace_read_*_access_key
+                # to plugin_io_pluginsecret (mark_namespace_ready fires after
+                # store_namespace_keys_as_plugin_secrets). Re-fetch this
+                # plugin's secrets and write SECRETS.json with the fresh values.
+                fresh_secrets = fetch_plugin_secrets(plugin_name)
+                install_plugin_secrets(plugin_name=plugin_name, secrets=fresh_secrets)
             else:
                 # read-only plugins have no DDL to wait for — they just need
                 # the namespace to already exist.
