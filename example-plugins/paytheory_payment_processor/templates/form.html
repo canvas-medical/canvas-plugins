@@ -31,7 +31,13 @@
   <button type="submit" id="submit" class="submitButton">Pay</button>
 
 
-  <script src="{{ sdk_url }}"></script>
+  <script>
+    if (!document.querySelector('script[src="{{ sdk_url }}"]')) {
+      var s = document.createElement('script');
+      s.src = '{{ sdk_url }}';
+      document.head.appendChild(s);
+    }
+  </script>
   <script>
     var cleanUpReady, cleanUpValid, cleanUpState;
 
