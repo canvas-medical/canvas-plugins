@@ -66,6 +66,7 @@ from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
     ENV,
+    INSTALLATION_TIME_ZONE,
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
@@ -122,6 +123,7 @@ LOADED_PLUGINS: dict[str, Plugin] = {}
 # a global dictionary of values made available to all plugins
 ENVIRONMENT: dict = {
     "CUSTOMER_IDENTIFIER": CUSTOMER_IDENTIFIER,
+    "INSTALLATION_TIME_ZONE": INSTALLATION_TIME_ZONE,
 }
 
 # a global dictionary of events to handler class names
