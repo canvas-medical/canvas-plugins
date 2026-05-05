@@ -824,11 +824,15 @@
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "FileFormPart",
+    "FormPart",
     "PatientSessionAuthMixin",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
+    "StringFormPart",
+    "UploadedFilePart",
     "api"
   ],
   "canvas_sdk.handlers.simple_api.api": [
@@ -842,6 +846,7 @@
     "SimpleAPIRoute",
     "SimpleAPIType",
     "StringFormPart",
+    "UploadedFilePart",
     "delete",
     "get",
     "parse_multipart_form",

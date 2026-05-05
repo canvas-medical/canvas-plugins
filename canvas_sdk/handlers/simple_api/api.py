@@ -91,6 +91,48 @@ class FileFormPart(FormPart):
         )
 
 
+class UploadedFilePart(FormPart):
+    """Form part for a file that home-app uploaded to S3 before invoking the plugin.
+
+    The bytes are not available — they live in S3 only. Use ``key`` to reference the
+    file in subsequent effects. Consumer code (FHIR, message viewer, etc.) generates a
+    fresh presigned URL on read.
+
+    Returned by ``Request.form_data()`` for file fields when the matched route was
+    declared with ``upload_files=True`` on its decorator.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        filename: str,
+        content_type: str | None,
+        size: int,
+        key: str,
+    ) -> None:
+        self.name = name
+        self.filename = filename
+        self.content_type = content_type
+        self.size = size
+        self.key = key
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, UploadedFilePart):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.filename == other.filename
+            and self.content_type == other.content_type
+            and self.size == other.size
+            and self.key == other.key
+        )
+
+
 def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]:
     """Parse a multipart form and return a dict of string to list of form parts."""
     form_data: list[tuple[str, FormPart]] = []
@@ -157,12 +199,18 @@ def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]
 class Request:
     """Request class for incoming requests to the API."""
 
-    def __init__(self, event: Event, path_pattern: re.Pattern) -> None:
+    def __init__(
+        self,
+        event: Event,
+        path_pattern: re.Pattern,
+        upload_files: bool = False,
+    ) -> None:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
+        self._upload_files = upload_files
 
         match = path_pattern.fullmatch(event.context["path"])
         self.path_params = match.groupdict() if match else {}
@@ -195,10 +243,41 @@ class Request:
         return self.body.decode()
 
     def form_data(self) -> MultiDict[str, FormPart]:
-        """Return the response body as a dict of string to list of FormPart objects."""
+        """Return the response body as a dict of string to list of FormPart objects.
+
+        When the matched route was declared with ``upload_files=True`` on its decorator,
+        home-app has already uploaded any file fields to S3 and replaced the body with a
+        JSON envelope. In that case file fields are returned as :class:`UploadedFilePart`
+        (with ``key`` instead of ``content``); non-file fields stay as
+        :class:`StringFormPart`.
+
+        Otherwise the body is parsed as ``application/x-www-form-urlencoded`` or
+        ``multipart/form-data`` and file fields are returned as :class:`FileFormPart`.
+        """
         form_data: MultiDict[str, FormPart]
 
-        if self.content_type == "application/x-www-form-urlencoded":
+        if self._upload_files:
+            # Home-app intercepted the multipart, uploaded files to S3, and rewrote the body
+            # as a JSON envelope.
+            envelope = json.loads(self.body)
+            entries: list[tuple[str, FormPart]] = []
+            for field in envelope.get("form_fields", []):
+                entries.append((field["name"], StringFormPart(field["name"], field["value"])))
+            for upload in envelope.get("uploaded_files", []):
+                entries.append(
+                    (
+                        upload["name"],
+                        UploadedFilePart(
+                            name=upload["name"],
+                            filename=upload["filename"],
+                            content_type=upload.get("content_type"),
+                            size=upload["size"],
+                            key=upload["key"],
+                        ),
+                    )
+                )
+            form_data = MultiDict(entries)
+        elif self.content_type == "application/x-www-form-urlencoded":
             # For request bodies that are URL-encoded, just parse them and return them as simple
             # form parts
             form_data = MultiDict(
@@ -223,33 +302,43 @@ def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
     return _handler_decorator("GET", path)
 
 
-def post(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API POST routes."""
-    return _handler_decorator("POST", path)
+def post(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API POST routes.
+
+    When ``upload_files=True``, home-app intercepts ``multipart/form-data`` requests:
+    file parts are uploaded to S3 before the plugin runs, and the plugin receives an
+    :class:`UploadedFilePart` (with ``key`` instead of ``content``) for each file
+    field via ``request.form_data()``. Default is ``False`` — file bytes flow through
+    to the plugin as today.
+    """
+    return _handler_decorator("POST", path, upload_files=upload_files)
 
 
-def put(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PUT routes."""
-    return _handler_decorator("PUT", path)
+def put(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API PUT routes. See :func:`post` for ``upload_files`` semantics."""
+    return _handler_decorator("PUT", path, upload_files=upload_files)
 
 
-def delete(path: str) -> Callable[[RouteHandler], RouteHandler]:
+def delete(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
     """Decorator for adding API DELETE routes."""
-    return _handler_decorator("DELETE", path)
+    return _handler_decorator("DELETE", path, upload_files=upload_files)
 
 
-def patch(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PATCH routes."""
-    return _handler_decorator("PATCH", path)
+def patch(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API PATCH routes. See :func:`post` for ``upload_files`` semantics."""
+    return _handler_decorator("PATCH", path, upload_files=upload_files)
 
 
-def _handler_decorator(method: str, path: str) -> Callable[[RouteHandler], RouteHandler]:
+def _handler_decorator(
+    method: str, path: str, *, upload_files: bool = False
+) -> Callable[[RouteHandler], RouteHandler]:
     if not path.startswith("/"):
         raise PluginError(f"Route path '{path}' must start with a forward slash")
 
     def decorator(handler: RouteHandler) -> RouteHandler:
-        """Mark the handler with the HTTP method and path."""
+        """Mark the handler with the HTTP method, path, and upload-mode flag."""
         handler.route = (method, path)  # type: ignore[attr-defined]
+        handler.upload_files = upload_files  # type: ignore[attr-defined]
 
         return handler
 
@@ -310,7 +399,12 @@ class SimpleAPIBase(BaseHandler, ABC):
     @cached_property
     def request(self) -> Request:
         """Return the request object from the event."""
-        return Request(self.event, cast(re.Pattern, self._path_pattern))
+        upload_files = bool(getattr(self._handler, "upload_files", False))
+        return Request(
+            self.event,
+            cast(re.Pattern, self._path_pattern),
+            upload_files=upload_files,
+        )
 
     def compute(self) -> list[Effect]:
         """Handle the authenticate or request event."""
@@ -345,9 +439,20 @@ class SimpleAPIBase(BaseHandler, ABC):
 
             # Pass the credentials object into the developer-defined authenticate method. If
             # authentication succeeds, return a 200 back to home-app, otherwise return a response
-            # with the error
+            # with the error.
+            #
+            # The auth-success effect carries the matched route's ``upload_files`` flag in its
+            # JSON payload (alongside the standard headers/body/status_code). home-app reads it
+            # to decide whether to intercept multipart uploads before sending the request event.
             if self.authenticate(credentials):
-                return [Response(status_code=HTTPStatus.OK).apply()]
+                upload_files = bool(getattr(self._handler, "upload_files", False))
+                payload = {
+                    "headers": {},
+                    "body": "",
+                    "status_code": int(HTTPStatus.OK),
+                    "upload_files": upload_files,
+                }
+                return [Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))]
             else:
                 raise InvalidCredentialsError
         except AuthenticationError as error:
@@ -449,7 +554,11 @@ class SimpleAPI(SimpleAPIBase, ABC):
 
 
 class SimpleAPIRoute(SimpleAPIBase, ABC):
-    """Base class for HTTP API routes."""
+    """Base class for HTTP API routes.
+
+    Set ``UPLOAD_FILES = True`` as a class attribute to opt this route into multipart
+    upload interception. See :func:`post` for the semantics.
+    """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Automatically mark the get, post, put, delete, and patch methods as handler methods."""
@@ -457,6 +566,8 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             raise PluginError(
                 f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
             )
+
+        upload_files = bool(getattr(cls, "UPLOAD_FILES", False))
 
         for attr_name, attr_value in cls.__dict__.items():
             decorator: Callable | None
@@ -490,7 +601,14 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             if not path:
                 raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
 
-            decorator(path)(attr_value)
+            # GET routes are body-less by HTTP semantics, so the @get decorator does not
+            # accept upload_files. Skip the kwarg for GET; pass it through for the rest.
+            # mypy can't narrow the union-typed `decorator` past the ``is get`` check, so
+            # the call-arg ignore is required on the else branch.
+            if decorator is get:
+                decorator(path)(attr_value)
+            else:
+                decorator(path, upload_files=upload_files)(attr_value)  # type: ignore[call-arg]
 
         super().__init_subclass__(**kwargs)
 
@@ -519,6 +637,7 @@ __exports__ = (
     "FormPart",
     "StringFormPart",
     "FileFormPart",
+    "UploadedFilePart",
     "parse_multipart_form",
     "Request",
     "SimpleAPIType",

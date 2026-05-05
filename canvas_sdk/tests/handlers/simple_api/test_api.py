@@ -28,6 +28,7 @@ from canvas_sdk.handlers.simple_api.api import (
     SimpleAPIBase,
     SimpleAPIRoute,
     StringFormPart,
+    UploadedFilePart,
 )
 from canvas_sdk.handlers.simple_api.security import (
     APIKeyAuthMixin,
@@ -1093,3 +1094,251 @@ def test_authentication_mixins(
 
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
     assert effects == expected_effects
+
+
+# ---------------------------------------------------------------------------
+# Upload-files mode
+# ---------------------------------------------------------------------------
+
+
+def test_upload_files_decorator_default_false() -> None:
+    """A route declared without upload_files defaults to False."""
+
+    @api.post("/route")
+    def handler(self: Any) -> list[Response | Effect]:
+        return []
+
+    # The decorator stashes route + upload_files as attributes on the handler at runtime;
+    # mypy sees only the static Callable type, so attr-defined ignores are required.
+    assert handler.route == ("POST", "/route")  # type: ignore[attr-defined]
+    assert handler.upload_files is False  # type: ignore[attr-defined]
+
+
+def test_upload_files_decorator_opt_in() -> None:
+    """A route can opt in to upload-files interception."""
+
+    @api.post("/upload", upload_files=True)
+    def handler(self: Any) -> list[Response | Effect]:
+        return []
+
+    assert handler.upload_files is True  # type: ignore[attr-defined]
+
+
+def test_uploaded_file_part_equality() -> None:
+    """UploadedFilePart compares equal field-by-field, and is_file() returns True."""
+    a = UploadedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
+    )
+    b = UploadedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
+    )
+    c = UploadedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="other"
+    )
+    assert a == b
+    assert a != c
+    assert UploadedFilePart.is_file() is True
+
+
+def test_authenticate_response_includes_upload_files() -> None:
+    """The auth-success response payload carries the matched route's upload_files flag."""
+
+    class API(APINoAuth):
+        @api.post("/upload", upload_files=True)
+        def upload(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+        @api.post("/regular")
+        def regular(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/upload"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["status_code"] == HTTPStatus.OK
+    assert payload["upload_files"] is True
+
+    handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/regular"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["status_code"] == HTTPStatus.OK
+    assert payload["upload_files"] is False
+
+
+def test_request_form_data_upload_mode() -> None:
+    """In upload mode, form_data() parses the JSON envelope and returns UploadedFilePart for files."""
+    envelope = json.dumps(
+        {
+            "form_fields": [{"name": "title", "value": "My Document"}],
+            "uploaded_files": [
+                {
+                    "name": "attachment",
+                    "filename": "invoice.pdf",
+                    "content_type": "application/pdf",
+                    "size": 12345,
+                    "key": "customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
+                }
+            ],
+        }
+    ).encode()
+
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+
+    expected = MultiDict(
+        (
+            ("title", StringFormPart(name="title", value="My Document")),
+            (
+                "attachment",
+                UploadedFilePart(
+                    name="attachment",
+                    filename="invoice.pdf",
+                    content_type="application/pdf",
+                    size=12345,
+                    key="customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
+                ),
+            ),
+        )
+    )
+    assert request.form_data() == expected
+
+
+def test_request_form_data_upload_mode_multiple_files() -> None:
+    """An envelope with multiple uploaded_files yields one UploadedFilePart per entry."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "uploaded_files": [
+                {
+                    "name": "first",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "size": 4,
+                    "key": "plugin-uploads/p/k1.txt",
+                },
+                {
+                    "name": "second",
+                    "filename": "b.bin",
+                    "content_type": "application/octet-stream",
+                    "size": 16,
+                    "key": "plugin-uploads/p/k2.bin",
+                },
+            ],
+        }
+    ).encode()
+
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+
+    parts = list(request.form_data().multi_items())
+    assert len(parts) == 2
+    names = [name for name, _ in parts]
+    assert names == ["first", "second"]
+    for _name, part in parts:
+        assert isinstance(part, UploadedFilePart)
+
+
+def test_request_form_data_upload_mode_empty_envelope() -> None:
+    """An envelope with no form_fields or uploaded_files yields an empty MultiDict."""
+    envelope = json.dumps({"form_fields": [], "uploaded_files": []}).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+    assert list(request.form_data().items()) == []
+
+
+def test_simple_api_full_upload_flow() -> None:
+    """End-to-end: authenticate -> request handler receives UploadedFilePart via form_data."""
+    captured: dict[str, Any] = {}
+
+    class API(APINoAuth):
+        @api.post("/upload", upload_files=True)
+        def upload(self) -> list[Response | Effect]:
+            forms = self.request.form_data()
+            captured["title"] = forms["title"]
+            attachment = forms["attachment"]
+            assert isinstance(attachment, UploadedFilePart)
+            captured["attachment"] = attachment
+            return [JSONResponse({"key": attachment.key})]
+
+    envelope = json.dumps(
+        {
+            "form_fields": [{"name": "title", "value": "Hello"}],
+            "uploaded_files": [
+                {
+                    "name": "attachment",
+                    "filename": "test.pdf",
+                    "content_type": "application/pdf",
+                    "size": 7,
+                    "key": "customer/plugin-uploads/p/ts-uuid-test.pdf",
+                }
+            ],
+        }
+    ).encode()
+
+    effects = handle_request(
+        API,
+        method="POST",
+        path="/upload",
+        body=envelope,
+        headers={"Content-Type": "application/json"},
+    )
+    response_payload = json_response_body(effects)
+    assert response_payload == {"key": "customer/plugin-uploads/p/ts-uuid-test.pdf"}
+    assert captured["title"] == StringFormPart(name="title", value="Hello")
+    assert captured["attachment"].filename == "test.pdf"
+    assert captured["attachment"].size == 7
+    assert isinstance(captured["attachment"], UploadedFilePart)
+
+
+def test_simple_api_route_upload_files_class_attribute() -> None:
+    """Setting UPLOAD_FILES = True on a SimpleAPIRoute opts the route into upload mode."""
+
+    class Route(NoAuthMixin, SimpleAPIRoute):
+        PATH = "/route"
+        UPLOAD_FILES = True
+
+        def post(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["upload_files"] is True
+
+
+def test_simple_api_route_upload_files_default_false() -> None:
+    """SimpleAPIRoute without UPLOAD_FILES defaults to upload_files=False (regression fence)."""
+
+    class Route(NoAuthMixin, SimpleAPIRoute):
+        PATH = "/route"
+
+        def post(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["upload_files"] is False
