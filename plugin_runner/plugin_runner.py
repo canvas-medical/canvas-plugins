@@ -46,6 +46,7 @@ from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
 from canvas_sdk.v1.data.base import IS_SQLITE
+from canvas_sdk.v1.data.plugin_data import plugin_context
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
@@ -307,6 +308,7 @@ class PluginRunner(PluginRunnerServicer):
                         namespace_config["access_level"] if namespace_config else "read"
                     )
 
+                    # Automatically set plugin context for PluginData access
                     with (
                         metrics.measure(
                             name=handler_name,
@@ -322,6 +324,7 @@ class PluginRunner(PluginRunnerServicer):
                             namespace=db_namespace,
                             access_level=db_access_level,
                         ),
+                        plugin_context(base_plugin_name),
                     ):
                         _effects = handler.compute()
                         if _effects is None:

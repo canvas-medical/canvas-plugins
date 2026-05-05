@@ -1087,6 +1087,7 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "PluginData",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
