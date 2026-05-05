@@ -29,6 +29,7 @@ from canvas_sdk.effects.payment_processor import (
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
+    ENVIRONMENT,
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
     PluginRunner,
@@ -98,6 +99,22 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Successfully imported!"
+
+
+def test_environment_exposes_customer_identifier_and_time_zone() -> None:
+    """The ENVIRONMENT dict passed to BaseHandler.__init__ as ``self.environment``
+    must expose both the customer identifier and the installation time zone so
+    plugin authors can render times in the instance's local zone.
+    """
+    from settings import CUSTOMER_IDENTIFIER, INSTALLATION_TIME_ZONE
+
+    assert ENVIRONMENT["CUSTOMER_IDENTIFIER"] == CUSTOMER_IDENTIFIER
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"] == INSTALLATION_TIME_ZONE
+    # INSTALLATION_TIME_ZONE should be a non-empty IANA name; we don't validate
+    # against pytz/zoneinfo here because the env var is set externally and a
+    # bad value would surface in plugins, not in the runner.
+    assert isinstance(ENVIRONMENT["INSTALLATION_TIME_ZONE"], str)
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"]
 
 
 def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> None:
