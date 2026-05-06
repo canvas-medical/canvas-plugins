@@ -526,6 +526,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.configure_command_buttons": [
+    "ConfigureCommandButtons"
+  ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
   ],
