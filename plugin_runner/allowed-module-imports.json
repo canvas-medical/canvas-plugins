@@ -228,6 +228,7 @@
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "ReferCommand",
+    "ReferenceCommand",
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
@@ -341,6 +342,9 @@
   ],
   "canvas_sdk.commands.commands.refer": [
     "ReferCommand"
+  ],
+  "canvas_sdk.commands.commands.reference": [
+    "ReferenceCommand"
   ],
   "canvas_sdk.commands.commands.refill": [
     "RefillCommand"
