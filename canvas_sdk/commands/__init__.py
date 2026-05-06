@@ -26,6 +26,7 @@ from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.refer import ReferCommand
+from canvas_sdk.commands.commands.reference import ReferenceCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.resolve_condition import ResolveConditionCommand
@@ -70,6 +71,7 @@ __all__ = __exports__ = (
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "ReferCommand",
+    "ReferenceCommand",
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
