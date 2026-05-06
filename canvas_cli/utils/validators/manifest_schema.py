@@ -5,6 +5,7 @@ manifest_schema = {
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
         "description": {"type": "string"},
+        "data_isolated": {"type": "boolean", "default": True},
         "secrets": {"type": "array", "items": {"type": "string"}},
         "origins": {"$ref": "#/$defs/origins"},
         "url_permissions": {"$ref": "#/$defs/url_permissions"},
