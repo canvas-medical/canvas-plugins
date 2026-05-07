@@ -1,42 +1,104 @@
 """OAuth2 PKCE login/logout for Control Room."""
 
 import base64
+import configparser
 import contextlib
 import hashlib
 import http.server
-import json
 import secrets
 import stat
+import time
 import urllib.parse
 import webbrowser
-from pathlib import Path
 from typing import Any
 
 import requests
 import typer
 
-CREDENTIALS_DIR = Path.home() / ".canvas"
-CREDENTIALS_FILE = CREDENTIALS_DIR / "credentials"
+from canvas_cli.apps.auth.utils import CONFIG_PATH
+
+CONTROL_ROOM_URL = "https://control-room.canvasmedical.com"
+CONTROL_ROOM_SECTION = "control-room"
 CLIENT_ID = "canvas-cli"
 CALLBACK_PORT = 9876
 CALLBACK_PATH = "/callback"
-
-# Default Control Room URL — overridable via --control-room flag
-DEFAULT_CONTROL_ROOM_URL = "https://control-room.canvasmedical.com"
+REFRESH_LEEWAY_SECONDS = 60
 
 
-def _get_credentials() -> dict[str, str]:
-    """Load stored credentials."""
-    if not CREDENTIALS_FILE.exists():
+def _read_section() -> dict[str, str]:
+    """Load the [control-room] section from credentials.ini."""
+    if not CONFIG_PATH.exists():
         return {}
-    return json.loads(CREDENTIALS_FILE.read_text())
+    config = configparser.ConfigParser()
+    config.read(CONFIG_PATH)
+    if CONTROL_ROOM_SECTION not in config:
+        return {}
+    return dict(config[CONTROL_ROOM_SECTION])
 
 
-def _save_credentials(data: dict[str, str]) -> None:
-    """Save credentials with restricted permissions (0600)."""
-    CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-    CREDENTIALS_FILE.write_text(json.dumps(data, indent=2))
-    CREDENTIALS_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR)
+def _replace_section(text: str, section: str, body: str | None) -> str:
+    """Replace, append, or remove a section in INI text, preserving the rest verbatim.
+
+    body=None removes the section. Otherwise, replaces in place if the section
+    exists, else appends to the end of the file.
+    """
+    header = f"[{section}]"
+    lines = text.splitlines(keepends=True)
+    out: list[str] = []
+    found = False
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() == header:
+            found = True
+            i += 1
+            while i < len(lines) and not lines[i].lstrip().startswith("["):
+                i += 1
+            if body is not None:
+                out.append(body)
+            continue
+        out.append(lines[i])
+        i += 1
+
+    if not found and body is not None:
+        if out and not out[-1].endswith("\n"):
+            out.append("\n")
+        if out:
+            out.append("\n")
+        out.append(body)
+
+    return "".join(out)
+
+
+def _write_section(data: dict[str, str | int]) -> None:
+    """Write the [control-room] section, preserving the rest of credentials.ini."""
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    body = f"[{CONTROL_ROOM_SECTION}]\n" + "".join(f"{k} = {v}\n" for k, v in data.items())
+    text = CONFIG_PATH.read_text() if CONFIG_PATH.exists() else ""
+    CONFIG_PATH.write_text(_replace_section(text, CONTROL_ROOM_SECTION, body))
+    CONFIG_PATH.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
+
+def _delete_section() -> None:
+    """Remove the [control-room] section from credentials.ini, if present."""
+    if not CONFIG_PATH.exists():
+        return
+    text = CONFIG_PATH.read_text()
+    new_text = _replace_section(text, CONTROL_ROOM_SECTION, None)
+    if new_text != text:
+        CONFIG_PATH.write_text(new_text)
+        CONFIG_PATH.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
+
+def _save_tokens(tokens: dict[str, Any]) -> None:
+    """Persist tokens from an OAuth2 response into credentials.ini."""
+    expires_at = int(time.time()) + int(tokens.get("expires_in") or 0)
+    _write_section(
+        {
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens.get("refresh_token", ""),
+            "expires_at": expires_at,
+        }
+    )
 
 
 def _generate_pkce() -> tuple[str, str]:
@@ -47,24 +109,30 @@ def _generate_pkce() -> tuple[str, str]:
     return code_verifier, code_challenge
 
 
-def get_access_token(control_room_url: str | None = None) -> str | None:
-    """Get a valid access token, refreshing if needed."""
-    creds = _get_credentials()
-    return creds.get("access_token")
+def get_access_token() -> str | None:
+    """Return a valid Control Room access token, refreshing proactively if near expiry."""
+    creds = _read_section()
+    access_token = creds.get("access_token")
+    if not access_token:
+        return None
+
+    expires_at = int(creds.get("expires_at") or 0)
+    if expires_at and expires_at - REFRESH_LEEWAY_SECONDS <= time.time():
+        return refresh_access_token()
+
+    return access_token
 
 
-def refresh_access_token(control_room_url: str | None = None) -> str | None:
+def refresh_access_token() -> str | None:
     """Refresh the access token using the stored refresh token."""
-    creds = _get_credentials()
-    cr_url = control_room_url or creds.get("control_room_url", DEFAULT_CONTROL_ROOM_URL)
+    creds = _read_section()
     refresh_token = creds.get("refresh_token")
-
     if not refresh_token:
         return None
 
     try:
         resp = requests.post(
-            f"{cr_url.rstrip('/')}/oauth/token/",
+            f"{CONTROL_ROOM_URL}/oauth/token/",
             data={
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
@@ -72,31 +140,22 @@ def refresh_access_token(control_room_url: str | None = None) -> str | None:
             },
             timeout=30,
         )
-        if resp.status_code == 200:
-            data = resp.json()
-            creds["access_token"] = data["access_token"]
-            if "refresh_token" in data:
-                creds["refresh_token"] = data["refresh_token"]
-            _save_credentials(creds)
-            return data["access_token"]
     except requests.RequestException:
-        pass
+        return None
 
-    return None
+    if resp.status_code != 200:
+        return None
+
+    data = resp.json()
+    _save_tokens(data)
+    return data["access_token"]
 
 
-def login(
-    control_room_url: str = typer.Option(
-        DEFAULT_CONTROL_ROOM_URL,
-        "--control-room",
-        help="Control Room URL",
-    ),
-) -> None:
+def login() -> None:
     """Log in to Control Room via browser-based OAuth2."""
     code_verifier, code_challenge = _generate_pkce()
     state = secrets.token_urlsafe(32)
 
-    # Capture the auth code via a local HTTP server
     auth_code: str | None = None
     received_state: str | None = None
 
@@ -123,12 +182,11 @@ def login(
                 self.end_headers()
 
         def log_message(self, format: str, *args: Any) -> None:
-            pass  # Silence request logging
+            pass
 
     server = http.server.HTTPServer(("localhost", CALLBACK_PORT), CallbackHandler)
 
-    # Build the authorization URL
-    authorize_url = f"{control_room_url.rstrip('/')}/oauth/authorize/?" + urllib.parse.urlencode(
+    authorize_url = f"{CONTROL_ROOM_URL}/oauth/authorize/?" + urllib.parse.urlencode(
         {
             "response_type": "code",
             "client_id": CLIENT_ID,
@@ -143,7 +201,6 @@ def login(
     webbrowser.open(authorize_url)
     print(f"Waiting for callback on http://localhost:{CALLBACK_PORT}...")
 
-    # Handle one request (the callback)
     server.handle_request()
     server.server_close()
 
@@ -155,10 +212,9 @@ def login(
         print("Login failed: state mismatch (possible CSRF attack).")
         raise typer.Exit(1)
 
-    # Exchange auth code for tokens
     try:
         resp = requests.post(
-            f"{control_room_url.rstrip('/')}/oauth/token/",
+            f"{CONTROL_ROOM_URL}/oauth/token/",
             data={
                 "grant_type": "authorization_code",
                 "code": auth_code,
@@ -176,36 +232,27 @@ def login(
         print(f"Login failed: {resp.status_code} {resp.text}")
         raise typer.Exit(1)
 
-    tokens = resp.json()
-    _save_credentials(
-        {
-            "control_room_url": control_room_url,
-            "access_token": tokens["access_token"],
-            "refresh_token": tokens.get("refresh_token", ""),
-        }
-    )
+    _save_tokens(resp.json())
 
-    print(f"Logged in to {control_room_url}")
-    print(f"Credentials saved to {CREDENTIALS_FILE}")
+    print(f"Logged in to {CONTROL_ROOM_URL}")
+    print(f"Credentials saved to {CONFIG_PATH} ([{CONTROL_ROOM_SECTION}])")
 
 
 def logout() -> None:
     """Log out of Control Room and clear stored credentials."""
-    creds = _get_credentials()
-    cr_url = creds.get("control_room_url", DEFAULT_CONTROL_ROOM_URL)
+    creds = _read_section()
     access_token = creds.get("access_token")
 
-    # Try to revoke the token server-side
     if access_token:
         with contextlib.suppress(requests.RequestException):
             requests.post(
-                f"{cr_url.rstrip('/')}/oauth/revoke_token/",
+                f"{CONTROL_ROOM_URL}/oauth/revoke_token/",
                 data={"token": access_token, "client_id": CLIENT_ID},
                 timeout=10,
             )
 
-    if CREDENTIALS_FILE.exists():
-        CREDENTIALS_FILE.unlink()
+    if creds:
+        _delete_section()
         print("Logged out. Credentials cleared.")
     else:
         print("No credentials found.")
