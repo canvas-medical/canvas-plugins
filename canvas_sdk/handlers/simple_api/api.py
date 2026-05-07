@@ -6,7 +6,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any, ClassVar, Protocol, TypeVar, cast
+from typing import Any, ClassVar, Protocol, TypeVar, cast, runtime_checkable
 from urllib.parse import parse_qsl
 
 import sentry_sdk
@@ -23,11 +23,18 @@ from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
 
+@runtime_checkable
 class FormPart(Protocol):
     """
     Protocol for representing a form part in the body of a multipart/form-data request.
 
     A form part can represent a simple string value, or a file with a content type.
+
+    The protocol is ``@runtime_checkable`` so plugin code can use
+    ``isinstance(part, FormPart)`` to detect any form-part variant. To distinguish
+    files from strings prefer ``part.is_file()`` over ``isinstance(part, FileFormPart)``
+    — the latter only matches the legacy passthrough type and silently misses
+    :class:`UploadedFilePart` from ``upload_files=True`` routes.
     """
 
     @staticmethod
@@ -242,6 +249,26 @@ class Request:
         """Return the response body as plain text."""
         return self.body.decode()
 
+    @cached_property
+    def _upload_envelope(self) -> dict[str, Any]:
+        """Parsed JSON envelope produced by home-app when ``upload_files=True``.
+
+        Defends against a malformed envelope: a non-JSON body or a non-object root
+        becomes a clean :class:`RuntimeError` rather than a cryptic ``KeyError`` /
+        ``json.JSONDecodeError`` deep inside plugin code.
+        """
+        try:
+            envelope = json.loads(self.body)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "upload_files route received a non-JSON body; expected a JSON envelope"
+            ) from exc
+        if not isinstance(envelope, dict):
+            raise RuntimeError(
+                f"upload_files envelope must be a JSON object; got {type(envelope).__name__}"
+            )
+        return envelope
+
     def form_data(self) -> MultiDict[str, FormPart]:
         """Return the response body as a dict of string to list of FormPart objects.
 
@@ -257,6 +284,9 @@ class Request:
 
         Otherwise the body is parsed as ``application/x-www-form-urlencoded`` or
         ``multipart/form-data`` and file fields are returned as :class:`FileFormPart`.
+
+        Raises :class:`RuntimeError` if ``upload_files=True`` but the envelope is
+        unparseable or missing a required field on a successful entry.
         """
         form_data: MultiDict[str, FormPart]
 
@@ -264,25 +294,35 @@ class Request:
             # Home-app intercepted the multipart, uploaded files to S3, and rewrote the body
             # as a JSON envelope. Each file entry has a ``status`` discriminator —
             # ``"ok"`` (with ``key``) or ``"failed"`` (with ``error``).
-            envelope = json.loads(self.body)
+            envelope = self._upload_envelope
             entries: list[tuple[str, FormPart]] = []
-            for field in envelope.get("form_fields", []):
-                entries.append((field["name"], StringFormPart(field["name"], field["value"])))
-            for upload in envelope.get("files", []):
-                if upload.get("status") != "ok":
+            for field in envelope.get("form_fields") or []:
+                try:
+                    entries.append((field["name"], StringFormPart(field["name"], field["value"])))
+                except (KeyError, TypeError) as exc:
+                    raise RuntimeError(
+                        "upload_files envelope has malformed form_fields entry"
+                    ) from exc
+            for upload in envelope.get("files") or []:
+                if not isinstance(upload, dict) or upload.get("status") != "ok":
                     continue
-                entries.append(
-                    (
-                        upload["name"],
-                        UploadedFilePart(
-                            name=upload["name"],
-                            filename=upload["filename"],
-                            content_type=upload.get("content_type"),
-                            size=upload["size"],
-                            key=upload["key"],
-                        ),
+                try:
+                    entries.append(
+                        (
+                            upload["name"],
+                            UploadedFilePart(
+                                name=upload["name"],
+                                filename=upload["filename"],
+                                content_type=upload.get("content_type"),
+                                size=upload["size"],
+                                key=upload["key"],
+                            ),
+                        )
                     )
-                )
+                except KeyError as exc:
+                    raise RuntimeError(
+                        f"upload_files envelope has ok entry missing required field {exc.args[0]!r}"
+                    ) from exc
             form_data = MultiDict(entries)
         elif self.content_type == "application/x-www-form-urlencoded":
             # For request bodies that are URL-encoded, just parse them and return them as simple
@@ -308,11 +348,17 @@ class Request:
         ``error`` code (e.g. ``"s3_upload_failed"``). Plugin handlers that need atomic
         upload semantics should check this and either delete the successful keys via the
         SDK or return a 4xx/5xx to their caller.
+
+        Raises :class:`RuntimeError` if ``upload_files=True`` but the envelope is
+        unparseable.
         """
         if not self._upload_files:
             return []
-        envelope = json.loads(self.body)
-        return [upload for upload in envelope.get("files", []) if upload.get("status") != "ok"]
+        return [
+            upload
+            for upload in self._upload_envelope.get("files") or []
+            if isinstance(upload, dict) and upload.get("status") != "ok"
+        ]
 
 
 SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
@@ -333,6 +379,12 @@ def post(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], R
     :class:`UploadedFilePart` (with ``key`` instead of ``content``) for each file
     field via ``request.form_data()``. Default is ``False`` — file bytes flow through
     to the plugin as today.
+
+    **Migration note:** when upgrading an existing route to ``upload_files=True``,
+    replace any ``isinstance(part, FileFormPart)`` checks with ``part.is_file()`` (or
+    ``isinstance(part, FormPart)`` when you want to match every variant). The two file
+    types do not share a concrete base class — files would otherwise be silently
+    skipped after the upgrade.
     """
     return _handler_decorator("POST", path, upload_files=upload_files)
 
