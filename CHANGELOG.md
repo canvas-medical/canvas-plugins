@@ -1,6 +1,40 @@
 # CHANGELOG
 
 
+## v0.144.0 (2026-05-07)
+
+### Bug Fixes
+
+- Canvas init generates tests that pass out of the box
+  ([#1635](https://github.com/canvas-medical/canvas-plugins/pull/1635),
+  [`cd47ddb`](https://github.com/canvas-medical/canvas-plugins/commit/cd47ddb757195e753b0d8ee97eef6e0ac347ad98))
+
+Co-authored-by: Ryan Bezman <ryan.bezman@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- Add variables support to CANVAS_MANIFEST.json schema
+  ([#1578](https://github.com/canvas-medical/canvas-plugins/pull/1578),
+  [`8028ed7`](https://github.com/canvas-medical/canvas-plugins/commit/8028ed79cd494ca88151791abf706711014e5ae7))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Adds LabTest foreign key relationship to LabValue in the data module
+  ([#1638](https://github.com/canvas-medical/canvas-plugins/pull/1638),
+  [`8c31bde`](https://github.com/canvas-medical/canvas-plugins/commit/8c31bded9bd56269df87399364523ac53f23ca94))
+
+- Expose INSTALLATION_TIME_ZONE on self.environment
+  ([#1677](https://github.com/canvas-medical/canvas-plugins/pull/1677),
+  [`73d7186`](https://github.com/canvas-medical/canvas-plugins/commit/73d7186294d51d87d2487b05e194c25c14cae744))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.143.0 (2026-05-05)
 
 ### Bug Fixes
