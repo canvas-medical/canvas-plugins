@@ -5,7 +5,27 @@ manifest_schema = {
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
         "description": {"type": "string"},
-        "secrets": {"type": "array", "items": {"type": "string"}},
+        "variables": {
+            "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "sensitive": {"type": "boolean", "default": False},
+                    "default": {"type": "string"},
+                },
+                "required": ["name"],
+                "additionalProperties": False,
+                "if": {"properties": {"sensitive": {"const": True}}, "required": ["sensitive"]},
+                "then": {"not": {"required": ["default"]}},
+            },
+        },
+        "secrets": {
+            "description": "Deprecated: use 'variables' with sensitive=true instead.",
+            "type": "array",
+            "items": {"type": "string"},
+        },
         "origins": {"$ref": "#/$defs/origins"},
         "url_permissions": {"$ref": "#/$defs/url_permissions"},
         "components": {
