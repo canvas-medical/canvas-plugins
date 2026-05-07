@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any, TypeVar
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -1454,3 +1455,110 @@ def test_request_upload_failures_empty_when_not_upload_mode() -> None:
         upload_files=False,
     )
     assert request.upload_failures() == []
+
+
+def _request_with_envelope_body(body: bytes) -> Request:
+    """Helper: Request configured for upload mode with the given body bytes."""
+    return Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=body,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+
+
+def test_request_form_data_upload_mode_raises_on_non_json_body() -> None:
+    """A non-JSON body in upload mode raises a clean RuntimeError, not JSONDecodeError."""
+    request = _request_with_envelope_body(b"not json at all")
+    with pytest.raises(RuntimeError, match="non-JSON body"):
+        request.form_data()
+
+
+def test_request_form_data_upload_mode_raises_on_non_object_envelope() -> None:
+    """A JSON envelope that isn't an object (e.g. a list) raises a clean RuntimeError."""
+    request = _request_with_envelope_body(b'["not", "an", "object"]')
+    with pytest.raises(RuntimeError, match="must be a JSON object"):
+        request.form_data()
+
+
+def test_request_form_data_upload_mode_raises_on_missing_required_field() -> None:
+    """An ok entry missing a required field (e.g. ``key``) raises a clean RuntimeError."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "f",
+                    "filename": "x.txt",
+                    "size": 1,
+                    "status": "ok",
+                    # ``key`` intentionally absent
+                }
+            ],
+        }
+    ).encode()
+    request = _request_with_envelope_body(envelope)
+    with pytest.raises(RuntimeError, match="missing required field 'key'"):
+        request.form_data()
+
+
+def test_request_upload_failures_raises_on_non_json_body() -> None:
+    """upload_failures() also surfaces a clean RuntimeError on a non-JSON body."""
+    request = _request_with_envelope_body(b"definitely not json")
+    with pytest.raises(RuntimeError, match="non-JSON body"):
+        request.upload_failures()
+
+
+def test_request_upload_envelope_is_cached_across_calls() -> None:
+    """form_data() and upload_failures() share a parsed envelope — only one json.loads call."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "good",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "size": 3,
+                    "status": "ok",
+                    "key": "k",
+                },
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "size": 8,
+                    "status": "failed",
+                    "error": "s3_upload_failed",
+                },
+            ],
+        }
+    ).encode()
+    request = _request_with_envelope_body(envelope)
+
+    with patch("canvas_sdk.handlers.simple_api.api.json.loads", wraps=json.loads) as loads:
+        request.form_data()
+        request.upload_failures()
+        request.form_data()
+    assert loads.call_count == 1
+
+
+def test_form_part_protocol_is_runtime_checkable_for_all_variants() -> None:
+    """isinstance(part, FormPart) returns True for every concrete form-part type so plugins
+    that match generically don't silently skip uploads after a route is upgraded to
+    ``upload_files=True`` (the previous trap with ``isinstance(part, FileFormPart)``).
+    """
+    assert isinstance(StringFormPart(name="f", value="v"), FormPart)
+    assert isinstance(
+        FileFormPart(name="f", filename="x.txt", content=b"x", content_type="text/plain"),
+        FormPart,
+    )
+    assert isinstance(
+        UploadedFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, key="k"),
+        FormPart,
+    )
