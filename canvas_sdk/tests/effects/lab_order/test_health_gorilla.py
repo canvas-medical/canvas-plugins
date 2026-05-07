@@ -15,6 +15,7 @@ def test_apply_with_all_fields_emits_full_payload() -> None:
         hg_organization_id="f-388554647b89801ea5e8320b",
         hg_tenant_id="2cd27b62c3407f285c5ef6a4",
         hg_location_id="3395266614caee5d2dade684",
+        hg_practitioner_id="d77d4063894e7f0a9e6b98cf",
         bill_to_code="self",
     )
 
@@ -28,8 +29,20 @@ def test_apply_with_all_fields_emits_full_payload() -> None:
             "hg_organization_id": "f-388554647b89801ea5e8320b",
             "hg_tenant_id": "2cd27b62c3407f285c5ef6a4",
             "hg_location_id": "3395266614caee5d2dade684",
+            "hg_practitioner_id": "d77d4063894e7f0a9e6b98cf",
             "bill_to_code": "self",
         }
+    }
+
+
+def test_apply_with_only_hg_practitioner_id() -> None:
+    """The HG Practitioner id can be the sole override."""
+    effect = HealthGorillaLabOrderOverride(hg_practitioner_id="d77d4063894e7f0a9e6b98cf")
+
+    proto_effect = effect.apply()
+
+    assert json.loads(proto_effect.payload) == {
+        "data": {"hg_practitioner_id": "d77d4063894e7f0a9e6b98cf"}
     }
 
 
