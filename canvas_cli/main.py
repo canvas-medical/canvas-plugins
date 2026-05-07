@@ -1,5 +1,6 @@
 import atexit
 import importlib.metadata
+import os
 from pathlib import Path
 
 import typer
@@ -33,8 +34,10 @@ app.command(
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
-app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
-app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
+
+if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
+    app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
+    app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
 
 # Config app
 config_app = typer.Typer(

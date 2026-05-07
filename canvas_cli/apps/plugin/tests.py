@@ -293,7 +293,7 @@ def test_list_secrets_success_no_secrets(
 
     list_secrets(plugin=plugin, host=host)
 
-    mock_print.assert_called_once_with("No secrets configured.")
+    mock_print.assert_called_once_with("No variables configured.")
 
 
 @patch("builtins.print")
@@ -333,7 +333,7 @@ def test_install_success_no_secrets(
     plugin_path = Path("/fake/plugin")
     host = "https://example.canvasmesdical.com"
 
-    install(plugin_name=plugin_path, secrets=[], is_enabled=True, host=host)
+    install(plugin_name=plugin_path, secrets=[], variables=[], is_enabled=True, host=host)
 
     mock_validate.assert_called_once_with(plugin_path)
     mock_build.assert_called_once_with(plugin_path)
@@ -390,7 +390,7 @@ def test_install_success_with_secrets(
     host = "https://example.canvasmedical.com"
     secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword"]
 
-    install(plugin_name=plugin_path, secrets=secrets, is_enabled=True, host=host)
+    install(plugin_name=plugin_path, secrets=secrets, variables=[], is_enabled=True, host=host)
 
     expected_encoded_secrets = [
         ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
@@ -440,6 +440,7 @@ def test_install_disabled(
     install(
         plugin_name=Path("/fake/plugin"),
         secrets=[],
+        variables=[],
         is_enabled=False,
         host="https://example.canvasmedical.com",
     )
@@ -495,7 +496,13 @@ def test_install_conflict_calls_update(
     host = "https://example.canvasmedical.com"
     secrets = ["API_KEY=secret123"]
 
-    install(plugin_name=Path("/fake/plugin"), secrets=secrets, is_enabled=True, host=host)
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=secrets,
+        variables=[],
+        is_enabled=True,
+        host=host,
+    )
 
     mock_get_name.assert_called_once_with(host, "test-token", built_path)
     mock_update.assert_called_once_with(
@@ -550,6 +557,7 @@ def test_install_error_status_exits(
         install(
             plugin_name=Path("/fake/plugin"),
             secrets=[],
+            variables=[],
             is_enabled=True,
             host="https://example.canvasmedical.com",
         )
@@ -603,6 +611,7 @@ def test_install_conflict_without_package_name_exits(
         install(
             plugin_name=Path("/fake/plugin"),
             secrets=[],
+            variables=[],
             is_enabled=True,
             host="https://example.canvasmedical.com",
         )
