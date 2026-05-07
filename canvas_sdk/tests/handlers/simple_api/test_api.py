@@ -840,8 +840,9 @@ APP_KEY = uuid4().hex
     params=[
         (
             BasicCredentials,
-            lambda _, credentials: credentials.username == USERNAME
-            and credentials.password == PASSWORD,
+            lambda _, credentials: (
+                credentials.username == USERNAME and credentials.password == PASSWORD
+            ),
             basic_headers(USERNAME, PASSWORD),
         ),
         (
@@ -861,8 +862,10 @@ APP_KEY = uuid4().hex
         ),
         (
             Credentials,
-            lambda request, _: request.headers.get("API-Key") == API_KEY
-            and request.headers.get("App-Key") == APP_KEY,
+            lambda request, _: (
+                request.headers.get("API-Key") == API_KEY
+                and request.headers.get("App-Key") == APP_KEY
+            ),
             custom_headers(API_KEY, APP_KEY),
         ),
     ],
@@ -1168,12 +1171,13 @@ def test_request_form_data_upload_mode() -> None:
     envelope = json.dumps(
         {
             "form_fields": [{"name": "title", "value": "My Document"}],
-            "uploaded_files": [
+            "files": [
                 {
                     "name": "attachment",
                     "filename": "invoice.pdf",
                     "content_type": "application/pdf",
                     "size": 12345,
+                    "status": "ok",
                     "key": "customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
                 }
             ],
@@ -1211,16 +1215,17 @@ def test_request_form_data_upload_mode() -> None:
 
 
 def test_request_form_data_upload_mode_multiple_files() -> None:
-    """An envelope with multiple uploaded_files yields one UploadedFilePart per entry."""
+    """An envelope with multiple ok files yields one UploadedFilePart per entry."""
     envelope = json.dumps(
         {
             "form_fields": [],
-            "uploaded_files": [
+            "files": [
                 {
                     "name": "first",
                     "filename": "a.txt",
                     "content_type": "text/plain",
                     "size": 4,
+                    "status": "ok",
                     "key": "plugin-uploads/p/k1.txt",
                 },
                 {
@@ -1228,6 +1233,7 @@ def test_request_form_data_upload_mode_multiple_files() -> None:
                     "filename": "b.bin",
                     "content_type": "application/octet-stream",
                     "size": 16,
+                    "status": "ok",
                     "key": "plugin-uploads/p/k2.bin",
                 },
             ],
@@ -1255,8 +1261,8 @@ def test_request_form_data_upload_mode_multiple_files() -> None:
 
 
 def test_request_form_data_upload_mode_empty_envelope() -> None:
-    """An envelope with no form_fields or uploaded_files yields an empty MultiDict."""
-    envelope = json.dumps({"form_fields": [], "uploaded_files": []}).encode()
+    """An envelope with no form_fields or files yields an empty MultiDict."""
+    envelope = json.dumps({"form_fields": [], "files": []}).encode()
     request = Request(
         make_event(
             EventType.SIMPLE_API_REQUEST,
@@ -1288,12 +1294,13 @@ def test_simple_api_full_upload_flow() -> None:
     envelope = json.dumps(
         {
             "form_fields": [{"name": "title", "value": "Hello"}],
-            "uploaded_files": [
+            "files": [
                 {
                     "name": "attachment",
                     "filename": "test.pdf",
                     "content_type": "application/pdf",
                     "size": 7,
+                    "status": "ok",
                     "key": "customer/plugin-uploads/p/ts-uuid-test.pdf",
                 }
             ],
@@ -1342,3 +1349,108 @@ def test_simple_api_route_upload_files_default_false() -> None:
     handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
     payload = json.loads(handler.compute()[0].payload)
     assert payload["upload_files"] is False
+
+
+def test_request_form_data_upload_mode_skips_failed_entries() -> None:
+    """form_data() yields only ok entries; failed uploads are excluded so plugin code
+    can't accidentally dereference a missing ``key``.
+    """
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "good",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "size": 3,
+                    "status": "ok",
+                    "key": "plugin-uploads/p/k-a.txt",
+                },
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "size": 8,
+                    "status": "failed",
+                    "error": "s3_upload_failed",
+                },
+            ],
+        }
+    ).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+
+    parts = list(request.form_data().multi_items())
+    assert [name for name, _ in parts] == ["good"]
+    assert isinstance(parts[0][1], UploadedFilePart)
+    assert parts[0][1].key == "plugin-uploads/p/k-a.txt"
+
+
+def test_request_upload_failures_returns_failed_entries() -> None:
+    """upload_failures() returns the failed entries with their stable error code."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "good",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "size": 3,
+                    "status": "ok",
+                    "key": "plugin-uploads/p/k-a.txt",
+                },
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "size": 8,
+                    "status": "failed",
+                    "error": "s3_upload_failed",
+                },
+            ],
+        }
+    ).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        upload_files=True,
+    )
+
+    failures = request.upload_failures()
+    assert len(failures) == 1
+    assert failures[0]["name"] == "bad"
+    assert failures[0]["filename"] == "b.txt"
+    assert failures[0]["error"] == "s3_upload_failed"
+
+
+def test_request_upload_failures_empty_when_not_upload_mode() -> None:
+    """Routes without ``upload_files=True`` see no upload step — upload_failures() is empty."""
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/route",
+            body=b"raw body",
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/route"),
+        upload_files=False,
+    )
+    assert request.upload_failures() == []
