@@ -251,6 +251,10 @@ class Request:
         (with ``key`` instead of ``content``); non-file fields stay as
         :class:`StringFormPart`.
 
+        Per-file S3 failures are **not** included in this MultiDict — they don't carry a
+        ``key`` and surfacing them here would tempt callers to dereference a missing
+        attribute. Use :meth:`upload_failures` to inspect them.
+
         Otherwise the body is parsed as ``application/x-www-form-urlencoded`` or
         ``multipart/form-data`` and file fields are returned as :class:`FileFormPart`.
         """
@@ -258,12 +262,15 @@ class Request:
 
         if self._upload_files:
             # Home-app intercepted the multipart, uploaded files to S3, and rewrote the body
-            # as a JSON envelope.
+            # as a JSON envelope. Each file entry has a ``status`` discriminator —
+            # ``"ok"`` (with ``key``) or ``"failed"`` (with ``error``).
             envelope = json.loads(self.body)
             entries: list[tuple[str, FormPart]] = []
             for field in envelope.get("form_fields", []):
                 entries.append((field["name"], StringFormPart(field["name"], field["value"])))
-            for upload in envelope.get("uploaded_files", []):
+            for upload in envelope.get("files", []):
+                if upload.get("status") != "ok":
+                    continue
                 entries.append(
                     (
                         upload["name"],
@@ -290,6 +297,22 @@ class Request:
             raise RuntimeError(f"Cannot parse content type {self.content_type} as form data")
 
         return form_data
+
+    def upload_failures(self) -> list[dict[str, Any]]:
+        """Return file parts that home-app attempted to upload to S3 but failed.
+
+        Only meaningful for routes declared with ``upload_files=True`` — outside of that
+        mode there is no upload step and this returns an empty list.
+
+        Each entry has ``name``, ``filename``, ``content_type``, ``size``, and a stable
+        ``error`` code (e.g. ``"s3_upload_failed"``). Plugin handlers that need atomic
+        upload semantics should check this and either delete the successful keys via the
+        SDK or return a 4xx/5xx to their caller.
+        """
+        if not self._upload_files:
+            return []
+        envelope = json.loads(self.body)
+        return [upload for upload in envelope.get("files", []) if upload.get("status") != "ok"]
 
 
 SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
