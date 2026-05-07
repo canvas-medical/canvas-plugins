@@ -564,3 +564,42 @@ def test_login_token_exchange_non_200_exits(
     with pytest.raises(typer.Exit):
         oauth.login()
     t.join()
+
+
+def test_main_registers_login_logout_with_beta_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that login/logout commands are registered when CONTROL_ROOM_BETA=true."""
+    import importlib
+
+    import canvas_cli.main
+
+    monkeypatch.setenv("CONTROL_ROOM_BETA", "true")
+    try:
+        importlib.reload(canvas_cli.main)
+        names = [
+            (c.callback.__name__ if c.callback else None)
+            for c in canvas_cli.main.app.registered_commands
+        ]
+        assert "login" in names
+        assert "logout" in names
+    finally:
+        # Restore module without the beta flag so other tests aren't polluted
+        monkeypatch.delenv("CONTROL_ROOM_BETA", raising=False)
+        importlib.reload(canvas_cli.main)
+
+
+def test_main_does_not_register_login_logout_without_beta_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that login/logout commands are hidden when CONTROL_ROOM_BETA is unset."""
+    import importlib
+
+    import canvas_cli.main
+
+    monkeypatch.delenv("CONTROL_ROOM_BETA", raising=False)
+    importlib.reload(canvas_cli.main)
+    names = [
+        (c.callback.__name__ if c.callback else None)
+        for c in canvas_cli.main.app.registered_commands
+    ]
+    assert "login" not in names
+    assert "logout" not in names
