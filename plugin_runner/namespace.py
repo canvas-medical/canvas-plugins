@@ -428,11 +428,11 @@ def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str
         for key_name, key_value in keys.items():
             cursor.execute(
                 """
-                INSERT INTO plugin_io_pluginsecret (plugin_id, key, value)
-                VALUES (%s, %s, %s)
+                INSERT INTO plugin_io_pluginsecret (plugin_id, key, value, sensitive)
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (plugin_id, key) DO UPDATE SET value = %s
                 """,
-                (plugin_id, key_name, key_value, key_value),
+                (plugin_id, key_name, key_value, False, key_value),
             )
 
         conn.commit()
