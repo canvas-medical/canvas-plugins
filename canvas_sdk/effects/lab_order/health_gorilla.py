@@ -23,9 +23,19 @@ class HealthGorillaLabOrderOverride(_BaseEffect):
         the `requestgroup-performer` reference. When set, skips the
         ontology-based lookup by lab partner name.
       - `hg_tenant_id`: Health Gorilla sub-tenant Organization id. When set,
-        Canvas adds a `requestgroup-authorizedBy` extension referencing
-        `Organization/t-{hg_tenant_id}`.
-      - `hg_location_id`: optional Location reference for the order.
+        Canvas adds a `requestgroup-authorizedBy` extension. With only
+        `hg_tenant_id`, the reference is `Organization/t-{hg_tenant_id}`.
+        With both `hg_tenant_id` and `hg_location_id` set, the reference is
+        `Organization/tl-{hg_tenant_id}-{hg_location_id}` (the HG sub-tenant
+        location form).
+      - `hg_location_id`: Health Gorilla tenant-location id. Combined with
+        `hg_tenant_id` to produce a `tl-` `requestgroup-authorizedBy`
+        reference. Has no effect on its own.
+      - `hg_practitioner_id`: Health Gorilla Practitioner id, appended as an
+        additional identifier on the contained Practitioner with system
+        `https://www.healthgorilla.com`. Use this when the ordering provider
+        is registered with HG and you want to surface that registration on
+        the outbound order alongside the NPI.
       - `bill_to_code`: explicit Account.type coding. Overrides the existing
         coverage-derived inference.
     """
@@ -38,6 +48,7 @@ class HealthGorillaLabOrderOverride(_BaseEffect):
     hg_organization_id: str | None = None
     hg_tenant_id: str | None = None
     hg_location_id: str | None = None
+    hg_practitioner_id: str | None = None
     bill_to_code: BillToCode | None = None
 
     @property
@@ -51,6 +62,7 @@ class HealthGorillaLabOrderOverride(_BaseEffect):
                 ("hg_organization_id", self.hg_organization_id),
                 ("hg_tenant_id", self.hg_tenant_id),
                 ("hg_location_id", self.hg_location_id),
+                ("hg_practitioner_id", self.hg_practitioner_id),
                 ("bill_to_code", self.bill_to_code),
             )
             if value is not None
