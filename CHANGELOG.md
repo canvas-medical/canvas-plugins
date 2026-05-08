@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.145.0 (2026-05-08)
+
+### Chores
+
+- Update CODEOWNERS ([#1679](https://github.com/canvas-medical/canvas-plugins/pull/1679),
+  [`3b91005`](https://github.com/canvas-medical/canvas-plugins/commit/3b91005038af5b890655ea40f3e44b1261592f22))
+
+Signed-off-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+### Features
+
+- Add HG overrides, payload event, and external lab ingest (KOALA-4854)
+  ([#1680](https://github.com/canvas-medical/canvas-plugins/pull/1680),
+  [`928ac93`](https://github.com/canvas-medical/canvas-plugins/commit/928ac936a840ce86d8366cf921b091246f811b54))
+
+
 ## v0.144.0 (2026-05-07)
 
 ### Bug Fixes
