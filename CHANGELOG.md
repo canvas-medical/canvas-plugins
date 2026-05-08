@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.146.0 (2026-05-08)
+
+### Bug Fixes
+
+- Include sensitive in PluginSecret raw INSERT (KOALA-5442)
+  ([#1683](https://github.com/canvas-medical/canvas-plugins/pull/1683),
+  [`afd1bf9`](https://github.com/canvas-medical/canvas-plugins/commit/afd1bf906e3c467c592e473131914c77147ea39b))
+
+### Features
+
+- **cli**: Add variables support and Control Room login/logout (KOALA-4601, KOALA-4550)
+  ([#1616](https://github.com/canvas-medical/canvas-plugins/pull/1616),
+  [`18f5e7f`](https://github.com/canvas-medical/canvas-plugins/commit/18f5e7faab3d885c935f7bac18fae4119a262f07))
+
+
 ## v0.145.0 (2026-05-08)
 
 ### Chores
