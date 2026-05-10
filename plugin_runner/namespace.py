@@ -12,7 +12,7 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 from logger import log
-from plugin_runner.exceptions import PluginInstallationError
+from plugin_runner.exceptions import NamespaceWaitTimeout, PluginInstallationError
 from settings import PLUGIN_DIRECTORY, SECRETS_FILE_NAME
 
 # Secret key names for namespace access credentials.
@@ -136,7 +136,7 @@ def wait_for_namespace(
         timeout: Maximum seconds to wait before raising.
 
     Raises:
-        PluginInstallationError: If the namespace does not become ready within the timeout.
+        NamespaceWaitTimeout: If the namespace does not become ready within the timeout.
     """
     channel = _namespace_notify_channel(namespace)
     expected_payload = f"{plugin_name}:{models_hash}"
@@ -165,7 +165,7 @@ def wait_for_namespace(
                 return
 
         # Generator exhausted without matching notification — timeout.
-        raise PluginInstallationError(
+        raise NamespaceWaitTimeout(
             f"Timed out after {timeout}s waiting for namespace '{namespace}' "
             f"to be created by the schema manager."
         )

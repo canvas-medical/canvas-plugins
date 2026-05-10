@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pytest_mock import MockerFixture
 
+from plugin_runner.exceptions import NamespaceWaitTimeout, PluginInstallationError
 from plugin_runner.installation import (
     PluginAttributes,
     _extract_rows_to_dict,
@@ -158,6 +159,48 @@ def test_install_plugin_logs_success_with_version(
         assert plugin_version in success_messages[0]
     finally:
         uninstall_plugin(plugin_name)
+
+
+def test_install_plugins_does_not_disable_on_namespace_wait_timeout(
+    mocker: MockerFixture,
+) -> None:
+    """Bootstrap race: when wait_for_namespace times out, the plugin must stay enabled."""
+    mock_plugins = {
+        "racing_plugin": PluginAttributes(
+            version="1.0", package="plugins/racing_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mocker.patch(
+        "plugin_runner.installation.install_plugin",
+        side_effect=NamespaceWaitTimeout("schema manager not ready"),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+
+    install_plugins()
+
+    mock_disable.assert_not_called()
+
+
+def test_install_plugins_disables_on_other_install_errors(
+    mocker: MockerFixture,
+) -> None:
+    """Non-transient install failures must still disable the plugin."""
+    mock_plugins = {
+        "broken_plugin": PluginAttributes(
+            version="1.0", package="plugins/broken_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mocker.patch(
+        "plugin_runner.installation.install_plugin",
+        side_effect=PluginInstallationError("manifest invalid"),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+
+    install_plugins()
+
+    mock_disable.assert_called_once_with("broken_plugin")
 
 
 def test_download() -> None:

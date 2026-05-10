@@ -17,6 +17,7 @@ from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.ddl import generate_plugin_migrations  # noqa: F401 — re-export
 from plugin_runner.exceptions import (
     InvalidPluginFormat,
+    NamespaceWaitTimeout,
     PluginInstallationError,
     PluginUninstallationError,
 )
@@ -303,6 +304,12 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         log.info(f'Successfully installed plugin "{plugin_name}", version {attributes["version"]}')
 
+    except PluginInstallationError:
+        # Preserve the original exception (including subclasses like
+        # NamespaceWaitTimeout) so callers can distinguish transient vs.
+        # permanent failures.
+        log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
+        raise
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         sentry_sdk.capture_exception(e)
@@ -390,6 +397,17 @@ def install_plugins() -> None:
     for plugin_name, attributes in enabled_plugins().items():
         try:
             install_plugin(plugin_name, attributes)
+        except NamespaceWaitTimeout as e:
+            # Bootstrap race: the schema manager hasn't created the namespace
+            # yet (e.g. index-1 container booted before index-0). Leave the
+            # plugin enabled so the next install pass — triggered by a
+            # pubsub event or a container restart — can complete the install.
+            log.warning(
+                f'Namespace wait timed out for plugin "{plugin_name}", version'
+                f' {attributes["version"]}; plugin remains enabled and will be retried'
+            )
+            sentry_sdk.capture_exception(e)
+            continue
         except PluginInstallationError as e:
             disable_plugin(plugin_name)
 
