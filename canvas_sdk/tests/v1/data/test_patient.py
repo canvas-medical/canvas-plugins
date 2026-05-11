@@ -1,8 +1,13 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from canvas_sdk.v1.data.patient import PatientIdentificationCard, PatientMetadata
+from canvas_sdk.v1.data.patient import (
+    Patient,
+    PatientIdentificationCard,
+    PatientMetadata,
+    PatientPhoto,
+)
 
 
 @pytest.mark.django_db
@@ -45,3 +50,49 @@ def test_patient_identification_card_image_url_without_image() -> None:
     card.image = ""
 
     assert card.image_url is None
+
+
+def _patient_with_photo(url: str | None) -> Patient:
+    photo = PatientPhoto(url=url) if url is not None else None
+    patient = Patient()
+    patient.photos = MagicMock()
+    patient.photos.first = MagicMock(return_value=photo)
+    return patient
+
+
+def test_patient_photo_returns_photo_when_avatar_prefix() -> None:
+    """photo returns the PatientPhoto when its url is under patient-avatars."""
+    patient = _patient_with_photo("patient-avatars/abc/photo.jpg")
+    photo = patient.photo
+    assert photo is not None
+    assert photo.url == "patient-avatars/abc/photo.jpg"
+
+
+def test_patient_photo_returns_none_when_no_photos() -> None:
+    """photo returns None when the patient has no photos."""
+    patient = _patient_with_photo(None)
+    assert patient.photo is None
+
+
+def test_patient_photo_returns_none_for_non_avatar_url() -> None:
+    """photo returns None when the stored url is not a patient-avatars path."""
+    patient = _patient_with_photo("some-other-bucket/foo.jpg")
+    assert patient.photo is None
+
+
+def test_patient_photo_url_returns_presigned_url() -> None:
+    """photo_url returns a presigned URL when a photo exists."""
+    patient = _patient_with_photo("patient-avatars/abc/photo.jpg")
+
+    with patch(
+        "canvas_sdk.v1.data.patient.presigned_url",
+        return_value="https://s3.example.com/presigned",
+    ) as mock:
+        assert patient.photo_url == "https://s3.example.com/presigned"
+        mock.assert_called_once_with("patient-avatars/abc/photo.jpg")
+
+
+def test_patient_photo_url_returns_default_avatar_when_no_photo() -> None:
+    """photo_url returns the default avatar URL when no photo is present."""
+    patient = _patient_with_photo(None)
+    assert patient.photo_url == "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"

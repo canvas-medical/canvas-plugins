@@ -5,7 +5,7 @@ from factory.fuzzy import FuzzyDate
 
 from canvas_sdk.test_utils.factories.facility import FacilityFactory
 from canvas_sdk.test_utils.factories.user import CanvasUserFactory
-from canvas_sdk.v1.data import Patient, PatientAddress, PatientFacilityAddress
+from canvas_sdk.v1.data import Patient, PatientAddress, PatientFacilityAddress, PatientPhoto
 
 
 class PatientAddressFactory(factory.django.DjangoModelFactory[PatientAddress]):
@@ -38,6 +38,16 @@ class PatientFactory(factory.django.DjangoModelFactory[Patient]):
     last_name = factory.Faker("last_name")
     addresses = factory.RelatedFactory(PatientAddressFactory, "patient")
     user = factory.SubFactory(CanvasUserFactory)
+
+
+class PatientPhotoFactory(factory.django.DjangoModelFactory[PatientPhoto]):
+    """Factory for creating PatientPhoto."""
+
+    class Meta:
+        model = PatientPhoto
+
+    url = ""
+    patient = factory.SubFactory(PatientFactory)
 
 
 class PatientFacilityAddressFactory(factory.django.DjangoModelFactory[PatientFacilityAddress]):

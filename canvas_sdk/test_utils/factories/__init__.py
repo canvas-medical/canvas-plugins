@@ -59,7 +59,12 @@ from .organization import (
     OrganizationContactPointFactory,
     OrganizationFactory,
 )
-from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
+from .patient import (
+    PatientAddressFactory,
+    PatientFacilityAddressFactory,
+    PatientFactory,
+    PatientPhotoFactory,
+)
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -155,6 +160,7 @@ __all__ = (
     "PatientFactory",
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
+    "PatientPhotoFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
