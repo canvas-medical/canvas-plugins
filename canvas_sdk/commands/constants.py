@@ -21,6 +21,7 @@ class CodeSystems(StrEnum):
     NDC = "http://hl7.org/fhir/sid/ndc"
     HCPCS = "http://www.cms.gov/medicare/coding/medhcpcsgeninfo"
     UNITS_OF_MEASURE = "http://unitsofmeasure.org"
+    FULLSCRIPT = "http://fullscript.com/"
     UNSTRUCTURED = "UNSTRUCTURED"
 
 
