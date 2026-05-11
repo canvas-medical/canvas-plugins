@@ -120,6 +120,11 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
             base_query += f" AND name IN ({placeholders})"
             params.extend(plugin_names)
 
+        # Order by name so every container iterates plugins in the same order.
+        # Without this, a schema manager and a non-schema-manager can reach the
+        # same plugin at different times, widening the wait_for_namespace race.
+        base_query += " ORDER BY name, key"
+
         cursor.execute(base_query, params)
         rows = cursor.fetchall()
 

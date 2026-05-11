@@ -13,6 +13,7 @@ from plugin_runner.installation import (
     PluginAttributes,
     _extract_rows_to_dict,
     download_plugin,
+    enabled_plugins,
     install_plugin,
     install_plugins,
     uninstall_plugin,
@@ -70,6 +71,26 @@ def test_extract_rows_to_dict() -> None:
 
     result = _extract_rows_to_dict(rows)
     assert result == expected_output
+
+
+def test_enabled_plugins_orders_by_name(mocker: MockerFixture) -> None:
+    """All containers must iterate plugins in the same order to avoid widening the install race."""
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = []
+    mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_cursor.__exit__ = MagicMock(return_value=None)
+
+    mock_conn = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=None)
+
+    mocker.patch("plugin_runner.installation.open_database_connection", return_value=mock_conn)
+
+    enabled_plugins()
+
+    executed_sql = mock_cursor.execute.call_args[0][0]
+    assert "ORDER BY name" in executed_sql
 
 
 def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
