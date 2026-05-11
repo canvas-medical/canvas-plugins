@@ -48,6 +48,7 @@ from canvas_sdk.utils.metrics import measured
 from canvas_sdk.v1.data.base import IS_SQLITE
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
+from logger.logger import plugin_context
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.ddl import generate_plugin_migrations
 from plugin_runner.exceptions import (
@@ -275,93 +276,97 @@ class PluginRunner(PluginRunnerServicer):
             effect_list = []
 
             for plugin_name in relevant_plugins:
-                log.debug(f"Processing {plugin_name}")
-                sentry_sdk.set_tag("plugin-name", plugin_name)
-
                 plugin = LOADED_PLUGINS[plugin_name]
                 handler_class = plugin["class"]
-                base_plugin_name = plugin_name.split(":")[0]
-                namespace_config = plugin.get("namespace_config")
+                base_plugin_name, handler_path, handler_classname = plugin_name.split(":")
 
-                secrets = plugin.get("secrets", {})
+                sentry_sdk.set_tag("plugin-name", plugin_name)
 
-                secrets.update(
-                    {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
-                )
+                with plugin_context(f"{handler_path}.{handler_classname}"):
+                    log.debug(f"Processing {plugin_name}")
 
-                try:
-                    handler = handler_class(event, secrets, ENVIRONMENT)
+                    namespace_config = plugin.get("namespace_config")
 
-                    if not handler.accept_event():
+                    secrets = plugin.get("secrets", {})
+
+                    secrets.update(
+                        {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
+                    )
+
+                    try:
+                        handler = handler_class(event, secrets, ENVIRONMENT)
+
+                        if not handler.accept_event():
+                            continue
+                        relevant_plugin_handlers.append(handler_class)
+
+                        classname = (
+                            handler.__class__.__name__
+                            if isinstance(handler, ClinicalQualityMeasure)
+                            else None
+                        )
+
+                        handler_name = metrics.get_qualified_name(handler.compute)
+
+                        # Determine namespace and access level for database context
+                        db_namespace = namespace_config["namespace"] if namespace_config else None
+                        db_access_level = (
+                            namespace_config["access_level"] if namespace_config else "read"
+                        )
+
+                        with (
+                            metrics.measure(
+                                name=handler_name,
+                                track_queries=True,
+                                track_memory_usage=True,
+                                extra_tags={
+                                    "plugin": base_plugin_name,
+                                    "event": event_name,
+                                },
+                            ),
+                            plugin_database_context(
+                                base_plugin_name,
+                                namespace=db_namespace,
+                                access_level=db_access_level,
+                            ),
+                        ):
+                            _effects = handler.compute()
+                            if _effects is None:
+                                # Plugin authors sometimes forget to return their
+                                # effects list. Treat as empty with a warning so
+                                # the author can fix it, instead of raising
+                                # ``TypeError: 'NoneType' object is not iterable``
+                                # (KOALA-5365 / HOME-APP-RT8).
+                                log.warning(
+                                    f"{handler_name} returned None from compute(); "
+                                    "expected an iterable of effects. Treating as "
+                                    "an empty list."
+                                )
+                                _effects = []
+                            effects = [
+                                Effect(
+                                    type=effect.type,
+                                    payload=effect.payload,
+                                    plugin_name=base_plugin_name,
+                                    classname=classname,
+                                    handler_name=handler_name,
+                                    actor=event.actor.id,
+                                    source=event.source,
+                                )
+                                for effect in _effects
+                            ]
+                            effects = validate_effects(effects)
+
+                            apply_effects_to_context(effects, event=event)
+
+                            log.info(f"{plugin_name}.compute() completed.")
+
+                    except Exception as e:
+                        log.exception(f"Encountered exception in plugin {plugin_name}")
+                        sentry_sdk.capture_exception(e)
                         continue
-                    relevant_plugin_handlers.append(handler_class)
 
-                    classname = (
-                        handler.__class__.__name__
-                        if isinstance(handler, ClinicalQualityMeasure)
-                        else None
-                    )
-                    handler_name = metrics.get_qualified_name(handler.compute)
-
-                    # Determine namespace and access level for database context
-                    db_namespace = namespace_config["namespace"] if namespace_config else None
-                    db_access_level = (
-                        namespace_config["access_level"] if namespace_config else "read"
-                    )
-
-                    with (
-                        metrics.measure(
-                            name=handler_name,
-                            track_queries=True,
-                            track_memory_usage=True,
-                            extra_tags={
-                                "plugin": base_plugin_name,
-                                "event": event_name,
-                            },
-                        ),
-                        plugin_database_context(
-                            base_plugin_name,
-                            namespace=db_namespace,
-                            access_level=db_access_level,
-                        ),
-                    ):
-                        _effects = handler.compute()
-                        if _effects is None:
-                            # Plugin authors sometimes forget to return their
-                            # effects list. Treat as empty with a warning so
-                            # the author can fix it, instead of raising
-                            # ``TypeError: 'NoneType' object is not iterable``
-                            # (KOALA-5365 / HOME-APP-RT8).
-                            log.warning(
-                                f"{handler_name} returned None from compute(); "
-                                "expected an iterable of effects. Treating as "
-                                "an empty list."
-                            )
-                            _effects = []
-                        effects = [
-                            Effect(
-                                type=effect.type,
-                                payload=effect.payload,
-                                plugin_name=base_plugin_name,
-                                classname=classname,
-                                handler_name=handler_name,
-                                actor=event.actor.id,
-                                source=event.source,
-                            )
-                            for effect in _effects
-                        ]
-                        effects = validate_effects(effects)
-
-                        apply_effects_to_context(effects, event=event)
-
-                        log.info(f"{plugin_name}.compute() completed.")
-
-                except Exception as e:
-                    log.exception(f"Encountered exception in plugin {plugin_name}")
-                    sentry_sdk.capture_exception(e)
-                    continue
-
-                effect_list += effects
+                    effect_list += effects
 
             sentry_sdk.set_tag("plugin-name", None)
 
