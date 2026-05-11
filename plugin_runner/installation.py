@@ -284,13 +284,27 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                     f"Plugin '{plugin_name}' is not the schema manager — waiting for "
                     f"namespace '{schema_name}' to be initialized"
                 )
-                wait_for_namespace(schema_name, plugin_name, models_hash)
-                # The schema manager has now committed namespace_read_*_access_key
-                # to plugin_io_pluginsecret (mark_namespace_ready fires after
-                # store_namespace_keys_as_plugin_secrets). Re-fetch this
-                # plugin's secrets and write SECRETS.json with the fresh values.
+                namespace_timeout: NamespaceWaitTimeout | None = None
+                try:
+                    wait_for_namespace(schema_name, plugin_name, models_hash)
+                except NamespaceWaitTimeout as e:
+                    # Schema manager hasn't finished yet. Fall through to
+                    # write whatever secrets exist so the plugin's non-
+                    # namespace functionality stays operable; calls into
+                    # the namespace will fail loudly until it catches up.
+                    namespace_timeout = e
+
+                # On success, the schema manager has committed
+                # namespace_read_*_access_key to plugin_io_pluginsecret
+                # (mark_namespace_ready fires after
+                # store_namespace_keys_as_plugin_secrets). On timeout,
+                # those keys may not be present yet — write what we have
+                # either way so the plugin remains operable.
                 fresh_secrets = fetch_plugin_secrets(plugin_name)
                 install_plugin_secrets(plugin_name=plugin_name, secrets=fresh_secrets)
+
+                if namespace_timeout is not None:
+                    raise namespace_timeout
             else:
                 # read-only plugins have no DDL to wait for — they just need
                 # the namespace to already exist.
