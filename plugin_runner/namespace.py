@@ -12,15 +12,18 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 from logger import log
-from plugin_runner.exceptions import PluginInstallationError
+from plugin_runner.exceptions import NamespaceWaitTimeout, PluginInstallationError
 from settings import PLUGIN_DIRECTORY, SECRETS_FILE_NAME
 
 # Secret key names for namespace access credentials.
 READ_ACCESS_KEY = "namespace_read_access_key"
 READ_WRITE_ACCESS_KEY = "namespace_read_write_access_key"
 
-# Default: wait up to 60 seconds for the schema manager to create a namespace.
-NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "60"))
+# Default: wait up to 3 minutes for the schema manager to create a namespace.
+# A full deployment / blue-green restart can take ~5 minutes for the web app to
+# start serving traffic, so holding the plugin runner to a tighter bound just
+# widens the bootstrap race window.
+NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "180"))
 
 # Namespace format: org__name — lowercase alphanumeric/underscore on each side.
 # Shared with the manifest JSON Schema in canvas_cli/utils/validators/manifest_schema.py.
@@ -136,7 +139,7 @@ def wait_for_namespace(
         timeout: Maximum seconds to wait before raising.
 
     Raises:
-        PluginInstallationError: If the namespace does not become ready within the timeout.
+        NamespaceWaitTimeout: If the namespace does not become ready within the timeout.
     """
     channel = _namespace_notify_channel(namespace)
     expected_payload = f"{plugin_name}:{models_hash}"
@@ -165,7 +168,7 @@ def wait_for_namespace(
                 return
 
         # Generator exhausted without matching notification — timeout.
-        raise PluginInstallationError(
+        raise NamespaceWaitTimeout(
             f"Timed out after {timeout}s waiting for namespace '{namespace}' "
             f"to be created by the schema manager."
         )

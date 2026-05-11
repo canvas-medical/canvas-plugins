@@ -641,8 +641,8 @@ def test_wait_for_namespace_unblocks_on_notify(
 def test_wait_for_namespace_raises_on_timeout(
     mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
-    """Should raise PluginInstallationError when no NOTIFY arrives before timeout."""
-    from plugin_runner.exceptions import PluginInstallationError
+    """Should raise NamespaceWaitTimeout when no NOTIFY arrives before timeout."""
+    from plugin_runner.exceptions import NamespaceWaitTimeout
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -651,7 +651,7 @@ def test_wait_for_namespace_raises_on_timeout(
     mock_conn.notifies.return_value = iter([])
     mock_open_conn.return_value = mock_conn
 
-    with pytest.raises(PluginInstallationError, match="Timed out after 4s"):
+    with pytest.raises(NamespaceWaitTimeout, match="Timed out after 4s"):
         wait_for_namespace("org__data", plugin_name="my_plugin", models_hash="abc123", timeout=4)
 
 
