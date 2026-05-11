@@ -793,6 +793,14 @@
     "Event",
     "TargetType"
   ],
+  "canvas_sdk.events.surescripts": [
+    "EligibilityPlan",
+    "SurescriptsEligibilityResponse"
+  ],
+  "canvas_sdk.events.surescripts.surescripts_messages": [
+    "EligibilityPlan",
+    "SurescriptsEligibilityResponse"
+  ],
   "canvas_sdk.handlers": [
     "BaseHandler"
   ],
