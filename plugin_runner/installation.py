@@ -404,7 +404,7 @@ def install_plugins() -> None:
             # pubsub event or a container restart — can complete the install.
             log.warning(
                 f'Namespace wait timed out for plugin "{plugin_name}", version'
-                f' {attributes["version"]}; plugin remains enabled and will be retried'
+                f" {attributes['version']}; plugin remains enabled and will be retried"
             )
             sentry_sdk.capture_exception(e)
             continue
