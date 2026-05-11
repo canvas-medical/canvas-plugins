@@ -17,6 +17,7 @@ from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.ddl import generate_plugin_migrations  # noqa: F401 — re-export
 from plugin_runner.exceptions import (
     InvalidPluginFormat,
+    NamespaceWaitTimeout,
     PluginInstallationError,
     PluginUninstallationError,
 )
@@ -118,6 +119,11 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
             placeholders = ",".join(["%s"] * len(plugin_names))
             base_query += f" AND name IN ({placeholders})"
             params.extend(plugin_names)
+
+        # Order by name so every container iterates plugins in the same order.
+        # Without this, a schema manager and a non-schema-manager can reach the
+        # same plugin at different times, widening the wait_for_namespace race.
+        base_query += " ORDER BY name, key"
 
         cursor.execute(base_query, params)
         rows = cursor.fetchall()
@@ -278,13 +284,27 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                     f"Plugin '{plugin_name}' is not the schema manager — waiting for "
                     f"namespace '{schema_name}' to be initialized"
                 )
-                wait_for_namespace(schema_name, plugin_name, models_hash)
-                # The schema manager has now committed namespace_read_*_access_key
-                # to plugin_io_pluginsecret (mark_namespace_ready fires after
-                # store_namespace_keys_as_plugin_secrets). Re-fetch this
-                # plugin's secrets and write SECRETS.json with the fresh values.
+                namespace_timeout: NamespaceWaitTimeout | None = None
+                try:
+                    wait_for_namespace(schema_name, plugin_name, models_hash)
+                except NamespaceWaitTimeout as e:
+                    # Schema manager hasn't finished yet. Fall through to
+                    # write whatever secrets exist so the plugin's non-
+                    # namespace functionality stays operable; calls into
+                    # the namespace will fail loudly until it catches up.
+                    namespace_timeout = e
+
+                # On success, the schema manager has committed
+                # namespace_read_*_access_key to plugin_io_pluginsecret
+                # (mark_namespace_ready fires after
+                # store_namespace_keys_as_plugin_secrets). On timeout,
+                # those keys may not be present yet — write what we have
+                # either way so the plugin remains operable.
                 fresh_secrets = fetch_plugin_secrets(plugin_name)
                 install_plugin_secrets(plugin_name=plugin_name, secrets=fresh_secrets)
+
+                if namespace_timeout is not None:
+                    raise namespace_timeout
             else:
                 # read-only plugins have no DDL to wait for — they just need
                 # the namespace to already exist.
@@ -303,6 +323,12 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         log.info(f'Successfully installed plugin "{plugin_name}", version {attributes["version"]}')
 
+    except PluginInstallationError:
+        # Preserve the original exception (including subclasses like
+        # NamespaceWaitTimeout) so callers can distinguish transient vs.
+        # permanent failures.
+        log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
+        raise
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         sentry_sdk.capture_exception(e)
@@ -390,6 +416,17 @@ def install_plugins() -> None:
     for plugin_name, attributes in enabled_plugins().items():
         try:
             install_plugin(plugin_name, attributes)
+        except NamespaceWaitTimeout as e:
+            # Bootstrap race: the schema manager hasn't created the namespace
+            # yet (e.g. index-1 container booted before index-0). Leave the
+            # plugin enabled so the next install pass — triggered by a
+            # pubsub event or a container restart — can complete the install.
+            log.warning(
+                f'Namespace wait timed out for plugin "{plugin_name}", version'
+                f" {attributes['version']}; plugin remains enabled and will be retried"
+            )
+            sentry_sdk.capture_exception(e)
+            continue
         except PluginInstallationError as e:
             disable_plugin(plugin_name)
 

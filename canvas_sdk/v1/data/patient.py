@@ -322,7 +322,7 @@ class PatientPhoto(TimestampedModel):
         db_table = "canvas_sdk_data_api_patientphoto_001"
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.CASCADE, related_name="photos"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="photos"
     )
     url = models.CharField(max_length=255)
     title = models.CharField(max_length=255, blank=True, default="")
