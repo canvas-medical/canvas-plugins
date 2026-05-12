@@ -1,4 +1,7 @@
 from typing import Any
+from uuid import uuid4
+
+from pydantic import Field
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
@@ -6,6 +9,12 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 class SendSurescriptsEligibilityRequestEffect(_BaseEffect):
     """
     An Effect that will send a Surescripts eligibility request.
+
+    A `correlation_id` is auto-generated on instantiation. Read it
+    (`effect.correlation_id`) and stash it so your
+    SURESCRIPTS_ELIGIBILITY_RESPONSE handler can match the response back to the
+    originating request. Pass an explicit `correlation_id` if you want to
+    control the value (for tests, or to thread external state through).
     """
 
     class Meta:
@@ -14,6 +23,7 @@ class SendSurescriptsEligibilityRequestEffect(_BaseEffect):
 
     patient_id: str | None = None
     staff_id: str | None = None
+    correlation_id: str = Field(default_factory=lambda: uuid4().hex)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -21,6 +31,7 @@ class SendSurescriptsEligibilityRequestEffect(_BaseEffect):
         return {
             "patient_id": self.patient_id,
             "staff_id": self.staff_id,
+            "correlation_id": self.correlation_id,
         }
 
     @property
