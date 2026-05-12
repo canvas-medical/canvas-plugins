@@ -219,6 +219,7 @@ def test_install_plugin_writes_secrets_on_namespace_wait_timeout(
         return_value={"api_key": "fresh_value"},
     )
     mock_install_secrets = mocker.patch("plugin_runner.installation.install_plugin_secrets")
+    mock_log = mocker.patch("plugin_runner.installation.log")
 
     try:
         with pytest.raises(NamespaceWaitTimeout):
@@ -227,6 +228,7 @@ def test_install_plugin_writes_secrets_on_namespace_wait_timeout(
         mock_install_secrets.assert_called_once_with(
             plugin_name=plugin_name, secrets={"api_key": "fresh_value"}
         )
+        mock_log.exception.assert_not_called()
     finally:
         uninstall_plugin(plugin_name)
 

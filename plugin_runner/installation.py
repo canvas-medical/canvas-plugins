@@ -323,10 +323,11 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         log.info(f'Successfully installed plugin "{plugin_name}", version {attributes["version"]}')
 
+    except NamespaceWaitTimeout:
+        # Transient bootstrap race — install_plugins logs this at WARNING.
+        # Skip the ERROR-level traceback here to avoid contradictory severity.
+        raise
     except PluginInstallationError:
-        # Preserve the original exception (including subclasses like
-        # NamespaceWaitTimeout) so callers can distinguish transient vs.
-        # permanent failures.
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise
     except Exception as e:
