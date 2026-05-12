@@ -1,13 +1,13 @@
 # Note Access Restriction — Example Plugin
 
-This plugin demonstrates how to use [`RestrictNoteEffect`](../../canvas_sdk/effects/note/restrict_note.py) to restrict access to notes and letters in the Canvas EHR. It covers two of the four use-cases from the SDK specification:
+This plugin demonstrates how to use [`NoteRestrictionsEffect`](../../canvas_sdk/effects/note/restrictions.py) to restrict access to notes and letters in the Canvas EHR. It covers two of the four use-cases from the SDK specification:
 
 | Use case | Implemented by |
 |---|---|
 | Prevent multiple users from editing the same note simultaneously | `RestrictNoteOnConcurrentEdit`, `RestrictNoteOnLetterEdit`, `ExpireNoteRestrictionsCron` |
 | Prevent certain staff from editing certain note types | `NoteAccessPermissionsHandler`, `NoteTypeAccessConfig` |
 
-The other two use-cases (preventing staff from seeing sensitive notes, break-the-glass workflows) can be built by following the same pattern — return a `RestrictNoteEffect` from a `GET_NOTE_RESTRICTIONS` handler.
+The other two use-cases (preventing staff from seeing sensitive notes, break-the-glass workflows) can be built by following the same pattern — return a `NoteRestrictionsEffect` from a `GET_NOTE_RESTRICTIONS` handler.
 
 ---
 
@@ -23,7 +23,7 @@ Writes NoteMetadata(key="restriction", value={active, editor_staff_id, blur, mes
   ↓
 Frontend subscription triggers → refetches GET_NOTE_RESTRICTIONS
   ↓
-NoteAccessPermissionsHandler reads the restriction, returns RestrictNoteEffect(restrict_access=True)
+NoteAccessPermissionsHandler reads the restriction, returns NoteRestrictionsEffect(restrict_access=True)
   ↓
 Banner shown, note body blurred, all inputs disabled for other users
 
@@ -81,7 +81,7 @@ Responds to `LETTER_UPDATED`. Writes a restriction on the parent note (since let
 Responds to `GET_NOTE_RESTRICTIONS`. Evaluates two policies in order:
 
 1. **Role-based** — checks `NoteTypeAccessConfig` for the note's type. If a row exists and the actor's `Staff.id` is not in `allowed_staff_ids`, access is denied with a blur and banner. Configure note-type access rules from the **Note Type Access** tab in the dashboard.
-2. **Concurrent edit restriction** — if an active restriction exists in `NoteMetadata` and the actor is not the staff member who holds it, returns `RestrictNoteEffect` with the restriction's blur and message settings.
+2. **Concurrent edit restriction** — if an active restriction exists in `NoteMetadata` and the actor is not the staff member who holds it, returns `NoteRestrictionsEffect` with the restriction's blur and message settings.
 
 Returning no effects leaves the note unrestricted.
 
@@ -139,7 +139,7 @@ All tuneable values are module-level constants in `handlers/event_handlers.py`:
 
 | Effect | Purpose |
 |---|---|
-| `RestrictNoteEffect` | Communicates whether a note is restricted, blurred, and what banner to display |
+| `NoteRestrictionsEffect` | Communicates whether a note is restricted, blurred, and what banner to display |
 | `NoteRestrictionsUpdatedEffect` | Triggers real-time permission refetch in the frontend |
 | `NoteEffect.upsert_metadata()` | Writes concurrent edit lock data to NoteMetadata |
 | `PatientTimelineEffect` | Controls which note types are visible in the patient timeline |

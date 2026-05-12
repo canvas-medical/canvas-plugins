@@ -15,7 +15,6 @@ from canvas_sdk.v1.data import Note
 from canvas_sdk.v1.data.note import NoteStates, NoteType
 from canvas_sdk.v1.data.staff import Staff
 from note_timeline_restrictions.handlers.event_handlers import (
-    RESTRICTION_EXPIRY_MINUTES,
     RESTRICTION_KEY,
     _clear_restriction_value,
     _restriction_value,
@@ -57,9 +56,15 @@ class NoteRestrictionApi(StaffSessionAuthMixin, SimpleAPI):
             queryset = queryset.filter(current_state__state=state)
 
         if locked == "true":
-            queryset = queryset.filter(metadata__key=RESTRICTION_KEY)
+            queryset = queryset.filter(
+                metadata__key=RESTRICTION_KEY,
+                metadata__value__contains='"active": true',
+            )
         elif locked == "false":
-            queryset = queryset.exclude(metadata__key=RESTRICTION_KEY)
+            queryset = queryset.exclude(
+                metadata__key=RESTRICTION_KEY,
+                metadata__value__contains='"active": true',
+            )
 
         total_count = queryset.count()
         total_pages = max(1, (total_count + page_size - 1) // page_size)
@@ -77,11 +82,6 @@ class NoteRestrictionApi(StaffSessionAuthMixin, SimpleAPI):
 
             active = lock_data.get("active", False)
             last_edited_at = lock_data.get("last_edited_at", "")
-            expired = (
-                bool(last_edited_at)
-                and last_edited_at
-                <= arrow.utcnow().shift(minutes=-RESTRICTION_EXPIRY_MINUTES).isoformat()
-            )
 
             notes.append(
                 {
@@ -107,7 +107,7 @@ class NoteRestrictionApi(StaffSessionAuthMixin, SimpleAPI):
                         if note.current_state
                         else "Unknown"
                     ),
-                    "locked": active and not expired,
+                    "locked": active,
                     "editor_staff_id": lock_data.get("editor_staff_id"),
                     "message": lock_data.get("message"),
                     "last_edited_at": last_edited_at,
