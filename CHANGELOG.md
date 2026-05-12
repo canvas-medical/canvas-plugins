@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.147.0 (2026-05-12)
+
+### Features
+
+- Charting permissions ([#1645](https://github.com/canvas-medical/canvas-plugins/pull/1645),
+  [`20d51cf`](https://github.com/canvas-medical/canvas-plugins/commit/20d51cf9368fc4588d2cdaea73cc979e1d832ab0))
+
+
 ## v0.146.1 (2026-05-12)
 
 ### Bug Fixes
