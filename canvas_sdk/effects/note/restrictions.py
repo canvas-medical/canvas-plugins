@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.base import _BaseEffect
@@ -43,12 +44,12 @@ class NoteRestrictionsUpdatedEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.NOTE_RESTRICTIONS_UPDATED
 
-    note_id: str
+    note_id: str | UUID
 
     @property
     def values(self) -> dict[str, Any]:
         """Values for the effect."""
-        return {"note_id": self.note_id}
+        return {"note_id": str(self.note_id)}
 
 
 __exports__ = ("NoteRestrictionsEffect", "NoteRestrictionsUpdatedEffect")
