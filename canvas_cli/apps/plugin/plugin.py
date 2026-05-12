@@ -506,14 +506,9 @@ def list_secrets(
         if variables_list:
             for var in variables_list:
                 name = var["name"]
-                sensitive = var.get("sensitive", True)
-                if sensitive:
-                    display = "[set]" if var.get("is_set") else "[not set]"
-                    print(f"  {name} = {display}  (sensitive)")
-                else:
-                    value = var.get("value", "")
-                    display = value if value else "[not set]"
-                    print(f"  {name} = {display}")
+                display = "[set]" if var.get("is_set") else "[not set]"
+                annotation = "  (sensitive)" if var.get("sensitive") else ""
+                print(f"  {name} = {display}{annotation}")
         elif secrets_list := data.get("secrets", []):
             # Legacy fallback: server doesn't return variables yet
             pprint(secrets_list)

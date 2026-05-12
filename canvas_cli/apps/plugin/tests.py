@@ -1186,7 +1186,7 @@ def test_list_secrets_with_variables_field(
     mock_requests_get: Mock,
     mock_print: Mock,
 ) -> None:
-    """Test list_secrets with the new server `variables` response (sensitive + non-sensitive)."""
+    """list_secrets renders is_set/not-set uniformly and never displays values."""
     mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins/p/metadata"
     mock_get_token.return_value = "test-token"
 
@@ -1196,8 +1196,8 @@ def test_list_secrets_with_variables_field(
         "variables": [
             {"name": "API_KEY", "sensitive": True, "is_set": True},
             {"name": "MISSING_SECRET", "sensitive": True, "is_set": False},
-            {"name": "REGION", "sensitive": False, "value": "us-west-2"},
-            {"name": "EMPTY_VAR", "sensitive": False, "value": ""},
+            {"name": "REGION", "sensitive": False, "is_set": True},
+            {"name": "EMPTY_VAR", "sensitive": False, "is_set": False},
         ]
     }
     mock_requests_get.return_value = mock_response
@@ -1207,8 +1207,8 @@ def test_list_secrets_with_variables_field(
     printed = [c.args[0] for c in mock_print.call_args_list]
     assert any("API_KEY = [set]  (sensitive)" in p for p in printed)
     assert any("MISSING_SECRET = [not set]  (sensitive)" in p for p in printed)
-    assert any("REGION = us-west-2" in p for p in printed)
-    assert any("EMPTY_VAR = [not set]" in p for p in printed)
+    assert any("REGION = [set]" in p and "(sensitive)" not in p for p in printed)
+    assert any("EMPTY_VAR = [not set]" in p and "(sensitive)" not in p for p in printed)
 
 
 @patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
