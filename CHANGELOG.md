@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.146.1 (2026-05-12)
+
+### Bug Fixes
+
+- Add socket_keepalive to Redis clients
+  ([#1609](https://github.com/canvas-medical/canvas-plugins/pull/1609),
+  [`7ea1856`](https://github.com/canvas-medical/canvas-plugins/commit/7ea1856a06c04a987daf257a0de5eea1dbfa87a3))
+
+- Don't disable plugins on namespace wait timeout
+  ([#1685](https://github.com/canvas-medical/canvas-plugins/pull/1685),
+  [`70657af`](https://github.com/canvas-medical/canvas-plugins/commit/70657af4b43be8f127af45d556e840f0833fba88))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Stop displaying plugin secret values in canvas config list
+  ([#1692](https://github.com/canvas-medical/canvas-plugins/pull/1692),
+  [`a8c0d96`](https://github.com/canvas-medical/canvas-plugins/commit/a8c0d966a91324b7fc88e076aea96167010ac7af))
+
+
 ## v0.146.0 (2026-05-08)
 
 ### Bug Fixes
