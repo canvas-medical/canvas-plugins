@@ -233,6 +233,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
     COMMAND_AVAILABLE_ACTIONS_RESULTS: _ClassVar[EffectType]
     COMMAND_VALIDATION_ERRORS: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_ORDER_OVERRIDE: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_ORDER_INGEST: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_REPORT_INGEST: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
@@ -275,6 +278,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
+    NOTE_RESTRICTIONS: _ClassVar[EffectType]
+    NOTE_RESTRICTIONS_UPDATED: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
     LOCK_NOTE: _ClassVar[EffectType]
@@ -350,6 +355,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_GROUP__ADD_MEMBER: _ClassVar[EffectType]
     PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
+    HTTP_REQUEST: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -576,6 +582,9 @@ COMMIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
 ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
 COMMAND_AVAILABLE_ACTIONS_RESULTS: EffectType
 COMMAND_VALIDATION_ERRORS: EffectType
+HEALTH_GORILLA_LAB_ORDER_OVERRIDE: EffectType
+HEALTH_GORILLA_LAB_ORDER_INGEST: EffectType
+HEALTH_GORILLA_LAB_REPORT_INGEST: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType
@@ -618,6 +627,8 @@ SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
+NOTE_RESTRICTIONS: EffectType
+NOTE_RESTRICTIONS_UPDATED: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
 LOCK_NOTE: EffectType
@@ -693,6 +704,7 @@ CREATE_CCDA: EffectType
 PATIENT_GROUP__ADD_MEMBER: EffectType
 PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
+HTTP_REQUEST: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

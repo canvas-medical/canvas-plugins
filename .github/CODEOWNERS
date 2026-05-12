@@ -2,4 +2,4 @@
 # the repo. Unless a later match takes precedence,
 # @platform-engineers will be requested for
 # review when someone opens a pull request.
-*       @canvas-medical/platform-engineers
+*       @canvas-medical/engineers

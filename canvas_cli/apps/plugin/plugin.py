@@ -246,7 +246,19 @@ def init(
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
     secrets: builtins.list[str] = typer.Option(
-        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+        [],
+        "--secret",
+        callback=parse_secrets,
+        help="Sensitive variables to set (treated as sensitive=true), e.g. Key=value",
+    ),
+    variables: builtins.list[str] = typer.Option(
+        [],
+        "--variable",
+        callback=parse_secrets,
+        help="Non-sensitive variables to set, e.g. Key=value",
+    ),
+    is_enabled: bool = typer.Option(
+        True, "--enable/--disable", help="Install the plugin in an enabled or disabled state"
     ),
     host: str | None = typer.Option(
         callback=get_default_host,
@@ -269,8 +281,11 @@ def install(
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
+    # Both --secret and --variable values are sent as base64 "secret" pairs
+    # (the sensitive flag is determined by the manifest, not the install command)
+    all_vars = secrets + variables
     encoded_secrets = []
-    for pair in secrets:
+    for pair in all_vars:
         encoded = base64.b64encode(pair.encode()).decode()
         encoded_secrets.append(("secret", encoded))
 
@@ -281,7 +296,7 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
-        data = [("is_enabled", True)] + encoded_secrets
+        data = [("is_enabled", is_enabled)] + encoded_secrets
         with open(built_package_path, "rb") as package:
             r = requests.post(
                 url,
@@ -302,7 +317,7 @@ def install(
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
         print(f"Plugin {package_name} already exists, updating instead...")
-        update(package_name, built_package_path, is_enabled=True, secrets=secrets, host=host)
+        update(package_name, built_package_path, is_enabled=is_enabled, secrets=all_vars, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -485,12 +500,20 @@ def list_secrets(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        secrets = r.json().get("secrets", [])
+        data = r.json()
+        variables_list = data.get("variables", [])
 
-        if secrets:
-            pprint(secrets)
+        if variables_list:
+            for var in variables_list:
+                name = var["name"]
+                display = "[set]" if var.get("is_set") else "[not set]"
+                annotation = "  (sensitive)" if var.get("sensitive") else ""
+                print(f"  {name} = {display}{annotation}")
+        elif secrets_list := data.get("secrets", []):
+            # Legacy fallback: server doesn't return variables yet
+            pprint(secrets_list)
         else:
-            print("No secrets configured.")
+            print("No variables configured.")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)

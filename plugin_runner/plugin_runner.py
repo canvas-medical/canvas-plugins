@@ -66,6 +66,7 @@ from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
     ENV,
+    INSTALLATION_TIME_ZONE,
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
@@ -122,6 +123,7 @@ LOADED_PLUGINS: dict[str, Plugin] = {}
 # a global dictionary of values made available to all plugins
 ENVIRONMENT: dict = {
     "CUSTOMER_IDENTIFIER": CUSTOMER_IDENTIFIER,
+    "INSTALLATION_TIME_ZONE": INSTALLATION_TIME_ZONE,
 }
 
 # a global dictionary of events to handler class names
@@ -324,6 +326,18 @@ class PluginRunner(PluginRunnerServicer):
                         ),
                     ):
                         _effects = handler.compute()
+                        if _effects is None:
+                            # Plugin authors sometimes forget to return their
+                            # effects list. Treat as empty with a warning so
+                            # the author can fix it, instead of raising
+                            # ``TypeError: 'NoneType' object is not iterable``
+                            # (KOALA-5365 / HOME-APP-RT8).
+                            log.warning(
+                                f"{handler_name} returned None from compute(); "
+                                "expected an iterable of effects. Treating as "
+                                "an empty list."
+                            )
+                            _effects = []
                         effects = [
                             Effect(
                                 type=effect.type,
@@ -602,6 +616,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
         retry=Retry(backoff=ExponentialBackoff(), retries=10),
         retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
         health_check_interval=1,
+        socket_keepalive=True,
     )
     pubsub = client.pubsub()
 
@@ -795,6 +810,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             return False
 
         any_failed = False
+        loaded_handler_count = 0
 
         # Share evaluated_modules across all handlers in this plugin so that common
         # submodules (like constants.py) are only evaluated and reloaded once, not
@@ -870,6 +886,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                         "secrets": secrets_json,
                         "namespace_config": namespace_config,
                     }
+
+                loaded_handler_count += 1
             except Exception as e:
                 log.exception(f"Error importing module '{name_and_class}'")
                 sentry_sdk.capture_exception(e)
@@ -878,6 +896,19 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         # Re-register the AppConfig so that the freshly-created model classes are
         # visible to Django's relation graph (needed for select_related, etc.).
         register_plugin_app_config(name)
+
+        plugin_version = manifest_json.get("plugin_version", "unknown")
+        total_handlers = len(handlers)
+        if any_failed:
+            log.warning(
+                f'Plugin "{name}" version {plugin_version} loaded with errors '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded successfully)"
+            )
+        else:
+            log.info(
+                f'Successfully loaded plugin "{name}", version {plugin_version} '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded)"
+            )
 
         return not any_failed
 

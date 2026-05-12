@@ -29,6 +29,7 @@ from canvas_sdk.effects.payment_processor import (
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
+    ENVIRONMENT,
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
     PluginRunner,
@@ -98,6 +99,22 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Successfully imported!"
+
+
+def test_environment_exposes_customer_identifier_and_time_zone() -> None:
+    """The ENVIRONMENT dict passed to BaseHandler.__init__ as ``self.environment``
+    must expose both the customer identifier and the installation time zone so
+    plugin authors can render times in the instance's local zone.
+    """
+    from settings import CUSTOMER_IDENTIFIER, INSTALLATION_TIME_ZONE
+
+    assert ENVIRONMENT["CUSTOMER_IDENTIFIER"] == CUSTOMER_IDENTIFIER
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"] == INSTALLATION_TIME_ZONE
+    # INSTALLATION_TIME_ZONE should be a non-empty IANA name; we don't validate
+    # against pytz/zoneinfo here because the env var is set externally and a
+    # bad value would surface in plugins, not in the runner.
+    assert isinstance(ENVIRONMENT["INSTALLATION_TIME_ZONE"], str)
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"]
 
 
 def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> None:
@@ -237,6 +254,51 @@ def test_load_plugin_with_missing_manifest(
     assert any("missing CANVAS_MANIFEST.json" in record.message for record in caplog.records), (
         "Expected log message about missing manifest was not found"
     )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_logs_success_with_version_and_handler_count(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a success log including version and handler count."""
+    with caplog.at_level(logging.INFO):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is True
+
+    success_messages = [
+        record.message
+        for record in caplog.records
+        if "Successfully loaded plugin" in record.message
+    ]
+    assert len(success_messages) == 1, (
+        f"Expected exactly one success log message, got: {success_messages}"
+    )
+    # example_plugin's manifest declares plugin_version 0.0.1 and one handler.
+    assert "example_plugin" in success_messages[0]
+    assert "0.0.1" in success_messages[0]
+    assert "1/1 handlers loaded" in success_messages[0]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_logs_warning_when_handler_fails(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a warning log when at least one handler fails."""
+    with caplog.at_level(logging.WARNING):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+
+    warning_messages = [
+        record.message for record in caplog.records if "loaded with errors" in record.message
+    ]
+    assert len(warning_messages) == 1, (
+        f"Expected exactly one warning log message, got: {warning_messages}"
+    )
+    # cross_plugin_thief declares one handler from a foreign package, so 0/1 should load.
+    assert "cross_plugin_thief" in warning_messages[0]
+    assert "0/1 handlers loaded successfully" in warning_messages[0]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -416,6 +478,36 @@ def test_handle_plugin_event_returns_expected_result(
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Hello, world!"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_none_compute"], indirect=True)
+def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """A plugin returning None from compute() must not produce a Sentry exception.
+
+    Regression test for KOALA-5365 / HOME-APP-RT8 (~256k events / 0 users
+    impacted). Plugin authors sometimes forget to return their effects list;
+    the runner used to iterate ``for effect in _effects`` against ``None`` and
+    raise ``TypeError: 'NoneType' object is not iterable``, which the runner
+    caught and reported to Sentry. The fix treats a ``None`` return as an
+    empty effects list with a warning log instead.
+    """
+    event = EventRequest(type=EventType.UNKNOWN)
+
+    with patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture:
+        result = list(plugin_runner.HandleEvent(event, None))
+
+    assert mock_capture.call_count == 0, (
+        "compute() returning None should be handled gracefully, not reported "
+        "to Sentry as an unhandled exception (KOALA-5365)"
+    )
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
 
 
 @pytest.mark.parametrize(

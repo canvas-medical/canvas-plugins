@@ -22,6 +22,7 @@ IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] ==
 IS_SCRIPT = env_to_bool("IS_SCRIPT", "plugin_runner.py" not in sys.argv[0])
 PLUGIN_POOL_DEBUG = env_to_bool("PLUGIN_POOL_DEBUG")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
+INSTALLATION_TIME_ZONE = os.getenv("INSTALLATION_TIME_ZONE", "UTC")
 HOSTNAME = os.getenv("HOSTNAME", "")
 APP_NAME = os.getenv("APP_NAME")
 

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic_core import ValidationError
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.staff import CreateStaffExternalIdentifier
 from canvas_sdk.effects.staff_metadata import StaffMetadata
 
@@ -25,7 +26,7 @@ def test_create_staff_external_identifier_create_serializes_payload() -> None:
         value="employee-001", system="urn:oid:hr-system", staff_id="staff-key-1"
     ).create()
 
-    assert effect.type == "CREATE_STAFF_EXTERNAL_IDENTIFIER"
+    assert effect.type == EffectType.CREATE_STAFF_EXTERNAL_IDENTIFIER
 
     payload = json.loads(effect.payload)
 
@@ -53,7 +54,7 @@ def test_staff_metadata_upsert_serializes_payload(mock_staff_exists: MagicMock) 
     """StaffMetadata(...).upsert(value) emits an UPSERT_STAFF_METADATA effect."""
     effect = StaffMetadata(staff_id="staff-key-1", key="department").upsert("cardiology")
 
-    assert effect.type == "UPSERT_STAFF_METADATA"
+    assert effect.type == EffectType.UPSERT_STAFF_METADATA
 
     payload = json.loads(effect.payload)
 
