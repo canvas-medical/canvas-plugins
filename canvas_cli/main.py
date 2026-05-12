@@ -41,7 +41,7 @@ if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
 
 # Config app
 config_app = typer.Typer(
-    help="Manage plugin variables. Sensitive values are write-only; non-sensitive values are readable.",
+    help="Manage plugin variables. Values are write-only; only key names and whether they are set are returned.",
     rich_markup_mode=None,
     add_completion=False,
 )
