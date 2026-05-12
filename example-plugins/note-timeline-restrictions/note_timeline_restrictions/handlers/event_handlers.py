@@ -119,35 +119,12 @@ def _clear_restriction_value() -> str:
 
 
 class PatientTimelineHandler(BaseHandler):
-    """Configures which note types are visible in the patient timeline."""
+    """Excludes Message note types from the patient timeline for all users."""
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_TIMELINE__GET_CONFIGURATION)
 
     def compute(self) -> list[Effect]:
-        """
-        Evaluate note-type access rules and concurrent edit locks, returning a
-        ``NoteRestrictionsEffect`` that controls the banner, blur, and edit-disabled
-        state in the frontend.
-
-        Policies are evaluated in order:
-
-        1. **Note-type access** — if ``NoteTypeAccessConfig`` has a row for this note's
-           type and the actor's staff ID is not in the allow-list, access is denied.
-        2. **Concurrent edit lock** — if an active restriction exists in ``NoteMetadata``
-           and the actor is not the lock holder, the restriction is surfaced with the
-           stored blur and message values.
-
-        Returns an empty list when the note is unrestricted.
-        """
-        """Write a restriction on the parent note and broadcast the change."""
-        """
-        Compare the current body checksum against the stored baseline.
-
-        Returns a checksum upsert only when content is unchanged, or a checksum
-        upsert + restriction write + ``NoteRestrictionsUpdatedEffect`` when it changed.
-        """
-        """Compute and store the initial body checksum for the newly created note."""
-        """Exclude Message note types from the patient timeline for all actors."""
+        """Return a PatientTimelineEffect that hides Message note types for all users."""
         message_note_types = NoteType.objects.filter(
             is_active=True, deprecated_at__isnull=True, name__in=["Message"]
         )
@@ -318,9 +295,9 @@ class NoteAccessPermissionsHandler(BaseHandler):
 
     Two restriction policies are evaluated in order:
 
-    1. **Role-based restriction** — if the note type is ``RESTRICTED_NOTE_TYPE`` and the
-       requesting user is not ``PRIVILEGED_ACTOR_ID``, access is denied and the note is
-       blurred with an explanatory banner.
+    1. **Role-based restriction** — if ``NoteTypeAccessConfig`` has a row for this note's
+       type and the requesting user's staff ID is not in the allow-list, access is denied
+       and the note is blurred with an access-denied banner.
 
     2. **Concurrent edit lock** — if an active edit lock exists in NoteMetadata and the
        requesting user is not the staff member who holds the lock, the note is restricted
@@ -339,8 +316,8 @@ class NoteAccessPermissionsHandler(BaseHandler):
 
         Policies are evaluated in order:
 
-        1. **Note-type access** — if ``NoteTypeAccessConfig`` has a row for this note's
-           type and the actor's staff ID is not in the allow-list, access is denied.
+        1. **Note-type access** — checks ``NoteTypeAccessConfig`` for the note's type;
+           if a row exists and the actor's staff ID is not in the allow-list, access is denied.
         2. **Concurrent edit lock** — if an active restriction exists in ``NoteMetadata``
            and the actor is not the lock holder, the restriction is surfaced with the
            stored blur and message values.

@@ -68,6 +68,9 @@ The table lives in the `note_timeline__restrictions` schema, declared in the man
 
 ## Handlers
 
+### `PatientTimelineHandler`
+Responds to `PATIENT_TIMELINE__GET_CONFIGURATION`. Excludes Message note types from the patient timeline for all users.
+
 ### `TrackNoteBodyChecksum`
 Responds to `NOTE_CREATED`. Writes an MD5 checksum of the note body to `NoteMetadata` (key `note_timeline_restrictions:body_checksum`). This baseline is compared on every subsequent save to detect whether the content changed.
 
