@@ -747,10 +747,10 @@
     "Response"
   ],
   "canvas_sdk.effects.staff": [
-    "CreateStaffExternalIdentifier"
+    "StaffExternalIdentifier"
   ],
-  "canvas_sdk.effects.staff.create_staff_external_identifier": [
-    "CreateStaffExternalIdentifier"
+  "canvas_sdk.effects.staff.staff_external_identifier": [
+    "StaffExternalIdentifier"
   ],
   "canvas_sdk.effects.staff_metadata": [
     "StaffMetadata"

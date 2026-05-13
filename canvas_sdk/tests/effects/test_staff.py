@@ -8,7 +8,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.staff import CreateStaffExternalIdentifier
+from canvas_sdk.effects.staff import StaffExternalIdentifier
 from canvas_sdk.effects.staff_metadata import StaffMetadata
 
 
@@ -20,9 +20,27 @@ def mock_staff_exists() -> Generator[MagicMock]:
         yield mock_staff
 
 
-def test_create_staff_external_identifier_create_serializes_payload() -> None:
-    """CreateStaffExternalIdentifier.create() should produce a properly typed Effect."""
-    effect = CreateStaffExternalIdentifier(
+@pytest.fixture
+def mock_external_id_targets() -> Generator[tuple[MagicMock, MagicMock]]:
+    """Mock the Staff and StaffExternalIdentifier existence checks to return True."""
+    with (
+        patch(
+            "canvas_sdk.effects.staff.staff_external_identifier.Staff.objects"
+        ) as mock_staff,
+        patch(
+            "canvas_sdk.effects.staff.staff_external_identifier.StaffExternalIdentifierModel.objects"
+        ) as mock_identifier,
+    ):
+        mock_staff.filter.return_value.exists.return_value = True
+        mock_identifier.filter.return_value.exists.return_value = True
+        yield mock_staff, mock_identifier
+
+
+def test_staff_external_identifier_create_serializes_payload(
+    mock_external_id_targets: tuple[MagicMock, MagicMock],
+) -> None:
+    """StaffExternalIdentifier.create() should produce a properly typed Effect."""
+    effect = StaffExternalIdentifier(
         value="employee-001", system="urn:oid:hr-system", staff_id="staff-key-1"
     ).create()
 
@@ -32,6 +50,7 @@ def test_create_staff_external_identifier_create_serializes_payload() -> None:
 
     assert payload == {
         "data": {
+            "id": None,
             "value": "employee-001",
             "system": "urn:oid:hr-system",
             "staff_id": "staff-key-1",
@@ -39,15 +58,56 @@ def test_create_staff_external_identifier_create_serializes_payload() -> None:
     }
 
 
-def test_create_staff_external_identifier_allows_optional_fields() -> None:
-    """system and staff_id are optional on the effect dataclass."""
-    effect = CreateStaffExternalIdentifier(value="employee-002").create()
+def test_staff_external_identifier_create_requires_staff_id() -> None:
+    """create() raises if staff_id is missing."""
+    with pytest.raises(ValidationError) as exc_info:
+        StaffExternalIdentifier(value="employee-002").create()
+
+    assert "'staff_id' is required" in str(exc_info.value)
+
+
+def test_staff_external_identifier_update_serializes_payload(
+    mock_external_id_targets: tuple[MagicMock, MagicMock],
+) -> None:
+    """StaffExternalIdentifier.update() should produce an UPDATE effect keyed by id."""
+    effect = StaffExternalIdentifier(
+        id="00000000-0000-0000-0000-000000000001",
+        value="employee-005",
+    ).update()
+
+    assert effect.type == EffectType.UPDATE_STAFF_EXTERNAL_IDENTIFIER
 
     payload = json.loads(effect.payload)
+    assert payload["data"]["id"] == "00000000-0000-0000-0000-000000000001"
+    assert payload["data"]["value"] == "employee-005"
 
-    assert payload["data"]["value"] == "employee-002"
-    assert payload["data"]["system"] is None
-    assert payload["data"]["staff_id"] is None
+
+def test_staff_external_identifier_update_requires_id() -> None:
+    """update() raises if id is missing."""
+    with pytest.raises(ValidationError) as exc_info:
+        StaffExternalIdentifier(value="employee-006").update()
+
+    assert "'id' is required to update" in str(exc_info.value)
+
+
+def test_staff_external_identifier_delete_serializes_payload(
+    mock_external_id_targets: tuple[MagicMock, MagicMock],
+) -> None:
+    """StaffExternalIdentifier.delete() should produce a DELETE effect with only id."""
+    effect = StaffExternalIdentifier(id="00000000-0000-0000-0000-000000000002").delete()
+
+    assert effect.type == EffectType.DELETE_STAFF_EXTERNAL_IDENTIFIER
+
+    payload = json.loads(effect.payload)
+    assert payload == {"data": {"id": "00000000-0000-0000-0000-000000000002"}}
+
+
+def test_staff_external_identifier_delete_requires_id() -> None:
+    """delete() raises if id is missing."""
+    with pytest.raises(ValidationError) as exc_info:
+        StaffExternalIdentifier().delete()
+
+    assert "'id' is required to delete" in str(exc_info.value)
 
 
 def test_staff_metadata_upsert_serializes_payload(mock_staff_exists: MagicMock) -> None:
@@ -61,6 +121,17 @@ def test_staff_metadata_upsert_serializes_payload(mock_staff_exists: MagicMock) 
     assert payload["data"]["staff_id"] == "staff-key-1"
     assert payload["data"]["key"] == "department"
     assert payload["data"]["value"] == "cardiology"
+
+
+def test_staff_metadata_delete_serializes_payload(mock_staff_exists: MagicMock) -> None:
+    """StaffMetadata(...).delete() emits a DELETE_STAFF_METADATA effect keyed by (staff_id, key)."""
+    effect = StaffMetadata(staff_id="staff-key-1", key="department").delete()
+
+    assert effect.type == EffectType.DELETE_STAFF_METADATA
+
+    payload = json.loads(effect.payload)
+    assert payload["data"]["staff_id"] == "staff-key-1"
+    assert payload["data"]["key"] == "department"
 
 
 def test_staff_metadata_validates_staff_exists() -> None:

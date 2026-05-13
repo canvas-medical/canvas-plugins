@@ -1,13 +1,15 @@
+import json
 from typing import Any
 
 from pydantic_core import InitErrorDetails
 
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.metadata import BaseMetadata
 from canvas_sdk.v1.data import Staff
 
 
 class StaffMetadata(BaseMetadata):
-    """Effect to upsert a Staff Metadata record."""
+    """Effect to upsert or delete a Staff Metadata record."""
 
     class Meta:
         effect_type = "STAFF_METADATA"
@@ -27,6 +29,15 @@ class StaffMetadata(BaseMetadata):
             )
 
         return errors
+
+    def delete(self) -> Effect:
+        """Delete a Staff Metadata record by (staff_id, key)."""
+        self._validate_before_effect("delete")
+
+        return Effect(
+            type=f"DELETE_{self.Meta.effect_type}",
+            payload=json.dumps({"data": self.values}),
+        )
 
 
 __exports__ = ("StaffMetadata",)
