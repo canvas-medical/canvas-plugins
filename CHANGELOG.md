@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.149.0 (2026-05-14)
+
+### Features
+
+- Add visual exam finding command events
+  ([#1636](https://github.com/canvas-medical/canvas-plugins/pull/1636),
+  [`954f020`](https://github.com/canvas-medical/canvas-plugins/commit/954f020b37151635cecec01afa245ce1e01e360d))
+
+
 ## v0.148.0 (2026-05-14)
 
 ### Features
