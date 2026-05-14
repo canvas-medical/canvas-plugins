@@ -63,23 +63,23 @@ def _patient_with_photos_first(url: str | None) -> MagicMock:
 
 
 def test_patient_photo_returns_photo_when_avatar_prefix() -> None:
-    """photo returns the PatientPhoto when its url is under patient-avatars."""
+    """Photo returns the PatientPhoto when its url is under patient-avatars."""
     patient = _patient_with_photos_first("patient-avatars/abc/photo.jpg")
-    photo = Patient.photo.fget(patient)
+    photo = Patient.photo.fget(patient)  # type: ignore[attr-defined]
     assert photo is not None
     assert photo.url == "patient-avatars/abc/photo.jpg"
 
 
 def test_patient_photo_returns_none_when_no_photos() -> None:
-    """photo returns None when the patient has no photos."""
+    """Photo returns None when the patient has no photos."""
     patient = _patient_with_photos_first(None)
-    assert Patient.photo.fget(patient) is None
+    assert Patient.photo.fget(patient) is None  # type: ignore[attr-defined]
 
 
 def test_patient_photo_returns_none_for_non_avatar_url() -> None:
-    """photo returns None when the stored url is not a patient-avatars path."""
+    """Photo returns None when the stored url is not a patient-avatars path."""
     patient = _patient_with_photos_first("some-other-bucket/foo.jpg")
-    assert Patient.photo.fget(patient) is None
+    assert Patient.photo.fget(patient) is None  # type: ignore[attr-defined]
 
 
 def test_patient_photo_url_returns_presigned_url() -> None:
@@ -91,7 +91,7 @@ def test_patient_photo_url_returns_presigned_url() -> None:
         "canvas_sdk.v1.data.patient.presigned_url",
         return_value="https://s3.example.com/presigned",
     ) as mock:
-        assert Patient.photo_url.fget(patient) == "https://s3.example.com/presigned"
+        assert Patient.photo_url.fget(patient) == "https://s3.example.com/presigned"  # type: ignore[attr-defined]
         mock.assert_called_once_with("patient-avatars/abc/photo.jpg")
 
 
@@ -99,4 +99,4 @@ def test_patient_photo_url_returns_default_avatar_when_no_photo() -> None:
     """photo_url returns the default avatar URL when no photo is present."""
     patient = MagicMock(spec=Patient)
     patient.photo = None
-    assert Patient.photo_url.fget(patient) == DEFAULT_AVATAR_URL
+    assert Patient.photo_url.fget(patient) == DEFAULT_AVATAR_URL  # type: ignore[attr-defined]

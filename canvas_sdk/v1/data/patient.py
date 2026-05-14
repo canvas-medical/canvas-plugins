@@ -190,7 +190,7 @@ class Patient(TimestampedModel):
         return (self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")).first()
 
     @property
-    def photo(self) -> "PatientPhoto | None":
+    def photo(self) -> PatientPhoto | None:
         """Return the patient's first uploaded avatar photo, if any."""
         photo = self.photos.first()
         if photo and photo.url and str(photo.url).startswith("patient-avatars"):
@@ -323,9 +323,7 @@ class PatientPhoto(TimestampedModel):
     class Meta:
         db_table = "canvas_sdk_data_api_patientphoto_001"
 
-    patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="photos"
-    )
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="photos")
     url = models.CharField(max_length=255)
     title = models.CharField(max_length=255, blank=True, default="")
 
