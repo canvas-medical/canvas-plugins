@@ -1,6 +1,57 @@
 # CHANGELOG
 
 
+## v0.149.0 (2026-05-14)
+
+### Features
+
+- Add visual exam finding command events
+  ([#1636](https://github.com/canvas-medical/canvas-plugins/pull/1636),
+  [`954f020`](https://github.com/canvas-medical/canvas-plugins/commit/954f020b37151635cecec01afa245ce1e01e360d))
+
+
+## v0.148.0 (2026-05-14)
+
+### Features
+
+- Expose notes field on condition data model
+  ([#1694](https://github.com/canvas-medical/canvas-plugins/pull/1694),
+  [`7534c6a`](https://github.com/canvas-medical/canvas-plugins/commit/7534c6a333aebd80b1e1fcf068308fb6f4e8a3b9))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
+## v0.147.0 (2026-05-12)
+
+### Features
+
+- Charting permissions ([#1645](https://github.com/canvas-medical/canvas-plugins/pull/1645),
+  [`20d51cf`](https://github.com/canvas-medical/canvas-plugins/commit/20d51cf9368fc4588d2cdaea73cc979e1d832ab0))
+
+
+## v0.146.1 (2026-05-12)
+
+### Bug Fixes
+
+- Add socket_keepalive to Redis clients
+  ([#1609](https://github.com/canvas-medical/canvas-plugins/pull/1609),
+  [`7ea1856`](https://github.com/canvas-medical/canvas-plugins/commit/7ea1856a06c04a987daf257a0de5eea1dbfa87a3))
+
+- Don't disable plugins on namespace wait timeout
+  ([#1685](https://github.com/canvas-medical/canvas-plugins/pull/1685),
+  [`70657af`](https://github.com/canvas-medical/canvas-plugins/commit/70657af4b43be8f127af45d556e840f0833fba88))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Stop displaying plugin secret values in canvas config list
+  ([#1692](https://github.com/canvas-medical/canvas-plugins/pull/1692),
+  [`a8c0d96`](https://github.com/canvas-medical/canvas-plugins/commit/a8c0d966a91324b7fc88e076aea96167010ac7af))
+
+
 ## v0.146.0 (2026-05-08)
 
 ### Bug Fixes
