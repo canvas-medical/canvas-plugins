@@ -1,5 +1,8 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
+
+from pydantic import ConfigDict
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
@@ -11,10 +14,12 @@ class ConfigureCommandButtons(_BaseEffect):
     Locations not listed retain their default visible/enabled state.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     class Meta:
         effect_type = EffectType.PATIENT_CHART__CONFIGURE_COMMAND_BUTTONS
 
-    class Location(Enum):
+    class Location(StrEnum):
         SOCIAL_DETERMINANTS = "social_determinants"
         GOALS = "goals"
         CONDITIONS = "conditions"
@@ -32,7 +37,7 @@ class ConfigureCommandButtons(_BaseEffect):
         REFERRAL_REVIEWS = "referral_reviews"
         DOCUMENT_REVIEWS = "document_reviews"
 
-    class Visibility(Enum):
+    class Visibility(StrEnum):
         VISIBLE = "visible"
         HIDDEN = "hidden"
         DISABLED = "disabled"
@@ -49,10 +54,14 @@ class ConfigureCommandButtons(_BaseEffect):
             self.location = location
             self.visibility = visibility
 
-    patient_id: str
-    locations: list = []
+        def to_dict(self) -> dict[str, Any]:
+            """Convert to a dictionary."""
+            return {"location": self.location, "visibility": self.visibility}
 
-    def _get_error_details(self, method: Any) -> list:
+    patient_id: str
+    locations: list[LocationConfig] = []
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate that no location appears more than once."""
         error_details = super()._get_error_details(method)
         seen: set = set()
@@ -73,10 +82,7 @@ class ConfigureCommandButtons(_BaseEffect):
         """The location visibility configuration."""
         return {
             "patient_id": self.patient_id,
-            "locations": [
-                {"location": config.location.value, "visibility": config.visibility.value}
-                for config in self.locations
-            ],
+            "locations": [config.to_dict() for config in self.locations],
         }
 
 
