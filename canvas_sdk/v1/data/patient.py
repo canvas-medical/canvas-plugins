@@ -18,6 +18,8 @@ from canvas_sdk.v1.data.common import (
 )
 from canvas_sdk.v1.data.utils import create_key, generate_mrn, presigned_url
 
+DEFAULT_AVATAR_URL = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
 
 class SexAtBirth(TextChoices):
     """SexAtBirth."""
@@ -201,7 +203,7 @@ class Patient(TimestampedModel):
         photo = self.photo
         if photo:
             return presigned_url(photo.url)
-        return "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+        return DEFAULT_AVATAR_URL
 
 
 class PatientContactPoint(IdentifiableModel):

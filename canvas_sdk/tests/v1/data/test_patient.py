@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from canvas_sdk.v1.data.patient import (
+    DEFAULT_AVATAR_URL,
     Patient,
     PatientIdentificationCard,
     PatientMetadata,
@@ -98,4 +99,4 @@ def test_patient_photo_url_returns_default_avatar_when_no_photo() -> None:
     """photo_url returns the default avatar URL when no photo is present."""
     patient = MagicMock(spec=Patient)
     patient.photo = None
-    assert Patient.photo_url.fget(patient) == "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+    assert Patient.photo_url.fget(patient) == DEFAULT_AVATAR_URL
