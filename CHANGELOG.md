@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v0.148.0 (2026-05-14)
+
+### Features
+
+- Expose notes field on condition data model
+  ([#1694](https://github.com/canvas-medical/canvas-plugins/pull/1694),
+  [`7534c6a`](https://github.com/canvas-medical/canvas-plugins/commit/7534c6a333aebd80b1e1fcf068308fb6f4e8a3b9))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
 ## v0.147.0 (2026-05-12)
 
 ### Features
