@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.150.0 (2026-05-14)
+
+### Chores
+
+- Fix integration test ([#1700](https://github.com/canvas-medical/canvas-plugins/pull/1700),
+  [`77b7d29`](https://github.com/canvas-medical/canvas-plugins/commit/77b7d29e44e53da2db9e7de89b1297705c0115b6))
+
+### Features
+
+- Filter plugin logs by plugin and handler
+  ([#1687](https://github.com/canvas-medical/canvas-plugins/pull/1687),
+  [`bfd10ee`](https://github.com/canvas-medical/canvas-plugins/commit/bfd10ee6ad3e6815fd1bc85caf801a2b5f2fb6ab))
+
+
 ## v0.149.0 (2026-05-14)
 
 ### Features
