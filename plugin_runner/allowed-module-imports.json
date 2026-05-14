@@ -1095,6 +1095,7 @@
     "PatientGroupMember",
     "PatientIdentificationCard",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PaymentCollection",
@@ -1429,6 +1430,7 @@
     "PatientFacilityAddress",
     "PatientIdentificationCard",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
     "SexAtBirth"

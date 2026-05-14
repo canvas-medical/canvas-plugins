@@ -132,6 +132,7 @@ from .patient import (
     PatientFacilityAddress,
     PatientIdentificationCard,
     PatientMetadata,
+    PatientPhoto,
     PatientSetting,
 )
 from .patient_consent import (
@@ -328,6 +329,7 @@ __all__ = __exports__ = (
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientIdentificationCard",
+    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
