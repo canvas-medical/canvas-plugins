@@ -104,6 +104,8 @@ manifest_schema = {
                                 "ALLOW_SAME_ORIGIN",
                                 "MICROPHONE",
                                 "CAMERA",
+                                "CLIPBOARD_READ",
+                                "CLIPBOARD_WRITE",
                             ],
                         },
                     },
