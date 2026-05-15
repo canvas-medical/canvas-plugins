@@ -179,6 +179,7 @@ enum EventType {
   // Payment events
 
   PATIENT_PAYMENT_PROCESSED = 500;
+  COVERAGE_PAYMENT_POSTED = 501;
 
   // Specific Command event types.
   // The commented lines are event types for commands that are not available yet.
