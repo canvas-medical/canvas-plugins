@@ -108,6 +108,73 @@ def test_staff_external_identifier_delete_requires_id() -> None:
     assert "'id' is required to delete" in str(exc_info.value)
 
 
+def test_staff_external_identifier_create_rejects_id(
+    mock_external_id_targets: tuple[MagicMock, MagicMock],
+) -> None:
+    """create() raises if id is set, since create assigns a new id."""
+    with pytest.raises(ValidationError) as exc_info:
+        StaffExternalIdentifier(
+            id="00000000-0000-0000-0000-000000000099",
+            value="employee-007",
+            staff_id="staff-key-1",
+        ).create()
+
+    assert "ID should not be set when creating" in str(exc_info.value)
+
+
+def test_staff_external_identifier_create_requires_value(
+    mock_external_id_targets: tuple[MagicMock, MagicMock],
+) -> None:
+    """create() raises if value is missing."""
+    with pytest.raises(ValidationError) as exc_info:
+        StaffExternalIdentifier(staff_id="staff-key-1").create()
+
+    assert "'value' is required" in str(exc_info.value)
+
+
+def test_staff_external_identifier_create_validates_staff_exists() -> None:
+    """create() raises when the referenced staff does not exist."""
+    with patch(
+        "canvas_sdk.effects.staff.staff_external_identifier.Staff.objects"
+    ) as mock_staff:
+        mock_staff.filter.return_value.exists.return_value = False
+
+        with pytest.raises(ValidationError) as exc_info:
+            StaffExternalIdentifier(
+                value="employee-008", staff_id="missing-staff"
+            ).create()
+
+    assert "Staff with id: missing-staff does not exist." in str(exc_info.value)
+
+
+def test_staff_external_identifier_update_validates_identifier_exists() -> None:
+    """update() raises when no identifier matches the supplied id."""
+    with patch(
+        "canvas_sdk.effects.staff.staff_external_identifier.StaffExternalIdentifierModel.objects"
+    ) as mock_identifier:
+        mock_identifier.filter.return_value.exists.return_value = False
+
+        with pytest.raises(ValidationError) as exc_info:
+            StaffExternalIdentifier(
+                id="00000000-0000-0000-0000-000000000098", value="employee-009"
+            ).update()
+
+    assert "Staff external identifier with id:" in str(exc_info.value)
+
+
+def test_staff_external_identifier_delete_validates_identifier_exists() -> None:
+    """delete() raises when no identifier matches the supplied id."""
+    with patch(
+        "canvas_sdk.effects.staff.staff_external_identifier.StaffExternalIdentifierModel.objects"
+    ) as mock_identifier:
+        mock_identifier.filter.return_value.exists.return_value = False
+
+        with pytest.raises(ValidationError) as exc_info:
+            StaffExternalIdentifier(id="00000000-0000-0000-0000-000000000097").delete()
+
+    assert "Staff external identifier with id:" in str(exc_info.value)
+
+
 def test_staff_metadata_upsert_serializes_payload(mock_staff_exists: MagicMock) -> None:
     """StaffMetadata(...).upsert(value) emits an UPSERT_STAFF_METADATA effect."""
     effect = StaffMetadata(staff_id="staff-key-1", key="department").upsert("cardiology")
