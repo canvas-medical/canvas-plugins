@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v0.151.0 (2026-05-15)
+
+### Features
+
+- Add approve and deny refill commands events
+  ([#1698](https://github.com/canvas-medical/canvas-plugins/pull/1698),
+  [`426ee34`](https://github.com/canvas-medical/canvas-plugins/commit/426ee349e691c330e01de1004dadc552115ca594))
+
+- Allow clipboard permissions in plugin manifest
+  ([#1699](https://github.com/canvas-medical/canvas-plugins/pull/1699),
+  [`a72d844`](https://github.com/canvas-medical/canvas-plugins/commit/a72d844db61d2fb4b5a99b9e4ed438a7fbbf672a))
+
+Co-authored-by: aaryanxshah <130312042+aaryanxshah@users.noreply.github.com>
+
+- Expose patient photo model and photo_url property in the SDK
+  ([#1690](https://github.com/canvas-medical/canvas-plugins/pull/1690),
+  [`9f66388`](https://github.com/canvas-medical/canvas-plugins/commit/9f6638855e7cf2f37f1c10828081d9c1f6ef0348))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: David Jantzen <david.jantzen@canvasmedical.com>
+
+
 ## v0.150.0 (2026-05-14)
 
 ### Chores
