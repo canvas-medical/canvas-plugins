@@ -3,6 +3,7 @@ import json
 import logging
 import pickle
 import shutil
+import signal
 from base64 import b64encode
 from http import HTTPStatus
 from pathlib import Path
@@ -28,6 +29,7 @@ from canvas_sdk.effects.payment_processor import (
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
+    ENVIRONMENT,
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
     PluginRunner,
@@ -37,6 +39,7 @@ from plugin_runner.plugin_runner import (
     synchronize_plugins,
     unload_plugin,
 )
+from plugin_runner.sandbox import Sandbox
 from settings import PLUGIN_DIRECTORY
 
 
@@ -48,12 +51,24 @@ def plugin_runner() -> PluginRunner:
     return runner
 
 
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_rejects_foreign_package_handler(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a plugin cannot load a handler from a different plugin's package."""
+    with caplog.at_level(logging.ERROR):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+    assert any("foreign package" in record.message for record in caplog.records)
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test loading plugins with a valid plugin."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
 
@@ -67,12 +82,12 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
     assert (
-        "test_module_imports_plugin:test_module_imports_plugin.protocols.my_protocol:Protocol"
+        "test_module_imports_plugin:test_module_imports_plugin.handlers.my_handler:Handler"
         in LOADED_PLUGINS
     )
     assert (
         LOADED_PLUGINS[
-            "test_module_imports_plugin:test_module_imports_plugin.protocols.my_protocol:Protocol"
+            "test_module_imports_plugin:test_module_imports_plugin.handlers.my_handler:Handler"
         ]["active"]
         is True
     )
@@ -84,6 +99,36 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Successfully imported!"
+
+
+def test_environment_exposes_customer_identifier_and_time_zone() -> None:
+    """The ENVIRONMENT dict passed to BaseHandler.__init__ as ``self.environment``
+    must expose both the customer identifier and the installation time zone so
+    plugin authors can render times in the instance's local zone.
+    """
+    from settings import CUSTOMER_IDENTIFIER, INSTALLATION_TIME_ZONE
+
+    assert ENVIRONMENT["CUSTOMER_IDENTIFIER"] == CUSTOMER_IDENTIFIER
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"] == INSTALLATION_TIME_ZONE
+    # INSTALLATION_TIME_ZONE should be a non-empty IANA name; we don't validate
+    # against pytz/zoneinfo here because the env var is set externally and a
+    # bad value would surface in plugins, not in the runner.
+    assert isinstance(ENVIRONMENT["INSTALLATION_TIME_ZONE"], str)
+    assert ENVIRONMENT["INSTALLATION_TIME_ZONE"]
+
+
+def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> None:
+    """Test that HandleEvent does not raise when receiving an event type unknown to the proto."""
+    unknown_event_type = (
+        999999  # simulates a newer home-app sending an event the proto doesn't know
+    )
+    result = list(
+        plugin_runner.HandleEvent(EventRequest(type=unknown_event_type), None)  # type: ignore[arg-type]
+    )
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
 
 
 @pytest.mark.parametrize(
@@ -140,7 +185,7 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
     with pytest.raises(ImportError, match="is not an allowed import."):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.protocols.my_protocol:Protocol"
+            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.handlers.my_handler:Handler"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -159,7 +204,7 @@ def test_plugin_that_implicitly_imports_allowed_modules(
     with caplog.at_level(logging.INFO):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Allowed"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Allowed"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -185,7 +230,7 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
     ):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Forbidden"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Forbidden"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -195,13 +240,75 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_with_missing_manifest(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a plugin with a missing manifest file fails to load gracefully."""
+    manifest_file = install_test_plugin / "CANVAS_MANIFEST.json"
+    manifest_file.unlink()
+
+    with caplog.at_level(logging.ERROR):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+    assert any("missing CANVAS_MANIFEST.json" in record.message for record in caplog.records), (
+        "Expected log message about missing manifest was not found"
+    )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_logs_success_with_version_and_handler_count(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a success log including version and handler count."""
+    with caplog.at_level(logging.INFO):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is True
+
+    success_messages = [
+        record.message
+        for record in caplog.records
+        if "Successfully loaded plugin" in record.message
+    ]
+    assert len(success_messages) == 1, (
+        f"Expected exactly one success log message, got: {success_messages}"
+    )
+    # example_plugin's manifest declares plugin_version 0.0.1 and one handler.
+    assert "example_plugin" in success_messages[0]
+    assert "0.0.1" in success_messages[0]
+    assert "1/1 handlers loaded" in success_messages[0]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_logs_warning_when_handler_fails(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that load_or_reload_plugin emits a warning log when at least one handler fails."""
+    with caplog.at_level(logging.WARNING):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+
+    warning_messages = [
+        record.message for record in caplog.records if "loaded with errors" in record.message
+    ]
+    assert len(warning_messages) == 1, (
+        f"Expected exactly one warning log message, got: {warning_messages}"
+    )
+    # cross_plugin_thief declares one handler from a foreign package, so 0/1 should load.
+    assert "cross_plugin_thief" in warning_messages[0]
+    assert "0/1 handlers loaded successfully" in warning_messages[0]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test reloading a plugin."""
     load_plugins()
 
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
 
@@ -211,10 +318,10 @@ def test_remove_plugin_should_be_removed_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test removing a plugin."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     shutil.rmtree(install_test_plugin)
     load_plugins()
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -227,7 +334,7 @@ def test_load_plugins_should_refresh_event_handler_map(
     load_plugins()
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
     ]
 
 
@@ -241,7 +348,7 @@ def test_load_plugin_should_refresh_event_handler_map(
     load_plugin(install_test_plugin)
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
     ]
 
 
@@ -250,13 +357,13 @@ def test_unload_plugin_should_remove_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin successfully removes it from loaded plugins."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
     unload_plugin("example_plugin")
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -268,7 +375,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
     class OtherPluginHandler:
         RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
-    LOADED_PLUGINS["other_example_plugin:example_plugin.protocols.my_protocol:Protocol"] = {
+    LOADED_PLUGINS["other_example_plugin:example_plugin.handlers.my_handler:Handler"] = {
         "active": True,
         "class": OtherPluginHandler,
         "sandbox": None,
@@ -278,11 +385,78 @@ def test_unload_plugin_should_refresh_event_handler_map(
 
     unload_plugin("example_plugin")
     assert (
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
         not in EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]
     )
 
     assert len(EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]) == 1
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+def test_unload_plugin_should_clean_sys_modules(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading a plugin removes its entries from sys.modules."""
+    import sys
+
+    # After loading, plugin modules should be in sys.modules (this plugin has
+    # cross-module imports which register in sys.modules via __import__)
+    plugin_modules_before = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert len(plugin_modules_before) > 0
+
+    unload_plugin("test_module_imports_plugin")
+
+    # After unloading, plugin modules should be removed from sys.modules
+    plugin_modules_after = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert plugin_modules_after == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_unload_and_reload_plugin_loads_cleanly(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading then reloading a plugin works without stale sys.modules."""
+    import sys
+
+    handler_a = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_a:HandlerA"
+    handler_b = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_b:HandlerB"
+
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+    unload_plugin("test_shared_modules_plugin")
+    assert handler_a not in LOADED_PLUGINS
+    assert not any(m.startswith("test_shared_modules_plugin") for m in sys.modules)
+
+    # Reload should succeed without stale module interference
+    assert load_or_reload_plugin(install_test_plugin) is True
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_shared_modules_evaluated_once_per_load(
+    install_test_plugin: Path,
+) -> None:
+    """Test that shared modules are only evaluated once when multiple handlers import them."""
+    from unittest.mock import patch as mock_patch
+
+    original_execute = Sandbox.execute
+    execute_calls: list[str] = []
+
+    def tracking_execute(self: Sandbox) -> dict:
+        execute_calls.append(self.namespace)
+        return original_execute(self)
+
+    with mock_patch.object(Sandbox, "execute", tracking_execute):
+        load_plugins()
+
+    # The shared constants module should be sandbox-exec'd exactly once,
+    # not once per handler that imports it.
+    constants_executions = [
+        c for c in execute_calls if c == "test_shared_modules_plugin.common_tools.constants"
+    ]
+    assert len(constants_executions) == 1
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -304,6 +478,36 @@ def test_handle_plugin_event_returns_expected_result(
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Hello, world!"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_none_compute"], indirect=True)
+def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """A plugin returning None from compute() must not produce a Sentry exception.
+
+    Regression test for KOALA-5365 / HOME-APP-RT8 (~256k events / 0 users
+    impacted). Plugin authors sometimes forget to return their effects list;
+    the runner used to iterate ``for effect in _effects`` against ``None`` and
+    raise ``TypeError: 'NoneType' object is not iterable``, which the runner
+    caught and reported to Sentry. The fix treats a ``None`` return as an
+    empty effects list with a warning log instead.
+    """
+    event = EventRequest(type=EventType.UNKNOWN)
+
+    with patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture:
+        result = list(plugin_runner.HandleEvent(event, None))
+
+    assert mock_capture.call_count == 0, (
+        "compute() returning None should be handled gracefully, not reported "
+        "to Sentry as an unhandled exception (KOALA-5365)"
+    )
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
 
 
 @pytest.mark.parametrize(
@@ -535,7 +739,7 @@ def test_simple_api(
     for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
-    expected_response = Response(status_code=status_code).apply()
+    expected_response = Response(status_code=status_code).apply().to_proto()
     if status_code == HTTPStatus.OK:
         expected_response.plugin_name = "test_simple_api"
         expected_response.handler_name = "canvas_sdk.handlers.simple_api.api.SimpleAPIBase.compute"
@@ -560,8 +764,15 @@ def test_simple_api(
                 "headers": {},
             }
         ),
+        (
+            {
+                "plugin_name": "test_simple_api",
+                "channel_name": "multi_handler",
+                "headers": {},
+            }
+        ),
     ],
-    ids=["success", "no handlers"],
+    ids=["success", "no handlers", "multiple handlers error"],
 )
 @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
 def test_simple_api_websocket(
@@ -581,12 +792,13 @@ def test_simple_api_websocket(
     for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
-    expected_response = (
-        AcceptConnection().apply()
-        if context["plugin_name"] == "test_simple_api"
-        else DenyConnection().apply()
+    is_success = (
+        context["plugin_name"] == "test_simple_api" and context["channel_name"] != "multi_handler"
     )
-    if context["plugin_name"] == "test_simple_api":
+    expected_response = (
+        AcceptConnection().apply().to_proto() if is_success else DenyConnection().apply().to_proto()
+    )
+    if is_success:
         expected_response.plugin_name = "test_simple_api"
         expected_response.handler_name = (
             "canvas_sdk.handlers.simple_api.websocket.WebSocketAPI.compute"
@@ -604,7 +816,7 @@ def test_simple_api_websocket(
             [
                 PaymentProcessorMetadata(
                     identifier=base64.b64encode(
-                        b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                        b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                     ).decode("utf-8"),
                     type=PaymentProcessorMetadata.PaymentProcessorType.CARD,
                 ).apply()
@@ -614,7 +826,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
             },
             [
@@ -635,7 +847,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "amount": "1.23",
                 "token": "tok_123",
@@ -655,7 +867,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -687,7 +899,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -709,7 +921,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -775,3 +987,67 @@ def test_payment_processor(
     ]
 
     assert result[0].effects == expected_effects
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_sigterm_on_signal(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs the signal name when terminated by SIGTERM."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+
+    # Simulate SIGTERM: when wait_for_termination is called, invoke the signal handler
+    registered_handlers: dict[int, Any] = {}
+
+    def capture_signal(signum: int, handler: Any) -> None:
+        registered_handlers[signum] = handler
+
+    def fake_wait() -> None:
+        # Trigger the SIGTERM handler
+        registered_handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+    mock_server.wait_for_termination.side_effect = fake_wait
+
+    with (
+        patch("plugin_runner.plugin_runner.signal.signal", side_effect=capture_signal),
+        caplog.at_level(logging.INFO),
+    ):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGTERM)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_keyboard_interrupt(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs SIGINT when terminated by KeyboardInterrupt."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    with caplog.at_level(logging.INFO):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)

@@ -40,29 +40,35 @@ def plugin_name() -> str:
 
 
 @pytest.fixture(scope="session")
-def write_and_install_protocol_and_clean_up(
+def write_and_install_handler_and_clean_up(
     cli_runner: CliRunner,
     first_patient_id: str,
     integration_tests_plugins_dir: Path,
     plugin_name: str,
     token: MaskedValue,
 ) -> Generator[Any, Any, Any]:
-    """Write the protocol code, install the plugin, and clean up after the test."""
+    """Write the handler code, install the plugin, and clean up after the test."""
     if not settings.INTEGRATION_TEST_URL:
         raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
 
-    # write the protocol
+    # write the handler
     with chdir(integration_tests_plugins_dir):
         cli_runner.invoke(app, "init", input=plugin_name)
 
-    protocol_code = f"""
+    handler_code = f"""
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 
-class Protocol(BaseProtocol):
+
+class NewOfficeVisitNoteHandler(BaseHandler):
+    \"\"\"Handler that adds a banner alert for testing purposes.\"\"\"
+
     RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
-    def compute(self):
+
+    def compute(self) -> list[Effect]:
+        \"\"\"This method gets called when an event of the type RESPONDS_TO is fired.\"\"\"
         return [
             AddBannerAlert(
                 patient_id="{first_patient_id}",
@@ -77,8 +83,8 @@ class Protocol(BaseProtocol):
     plugin_dir = integration_tests_plugins_dir / plugin_name
     package_name = plugin_name.replace("-", "_")
 
-    with open(plugin_dir / package_name / "protocols" / "my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    with open(plugin_dir / package_name / "handlers" / "event_handlers.py", "w") as handler_file:
+        handler_file.write(handler_code)
 
     with open(_build_package(plugin_dir / package_name), "rb") as package:
         # install the plugin
@@ -131,12 +137,12 @@ class Protocol(BaseProtocol):
 
 @pytest.mark.integtest
 def test_protocol_that_adds_banner_alert(
-    write_and_install_protocol_and_clean_up: None,
+    write_and_install_handler_and_clean_up: None,
     token: MaskedValue,
     plugin_name: str,
     first_patient_id: str,
 ) -> None:
-    """Test that the protocol adds a banner alert."""
+    """Test that the handler adds a banner alert."""
     # trigger the event
     response = requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/",

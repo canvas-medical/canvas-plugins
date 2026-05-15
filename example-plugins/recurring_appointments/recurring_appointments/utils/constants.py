@@ -2,6 +2,8 @@ from enum import Enum
 
 
 class RecurrenceEnum(Enum):
+    """Enumeration of available recurrence types for appointments."""
+
     DAYS = "Day(s)"
     WEEKS = "Week(s)"
     MONTHS = "Month(s)"

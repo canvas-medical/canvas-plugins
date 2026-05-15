@@ -1,15 +1,16 @@
 from http import HTTPStatus
 
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
+
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.billing_line_item import AddBillingLineItem
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note
-
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 
 class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
+    """API for managing billing line items on notes."""
+
     PREFIX = "/notes"
 
     """
@@ -22,6 +23,7 @@ class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.post("/<id>/billing_line_items/")
     def add_billing_line_item(self) -> list[Response | Effect]:
+        """Add a billing line item to a note."""
         required_attributes = {
             "cpt_code",
         }

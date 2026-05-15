@@ -15,7 +15,7 @@ from canvas_sdk.v1.data.coding import Coding
 
 
 class ObservationQuerySet(
-    ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin
+    CommittableQuerySetMixin, ForPatientQuerySetMixin, ValueSetLookupQuerySet
 ):
     """ObservationQuerySet."""
 

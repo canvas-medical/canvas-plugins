@@ -1,0 +1,21 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]",
+  "pytest-canvas"
+]
+description = "Some description of your project."
+license = "MIT"
+name = "custom_data_room_booking"
+readme = "custom_data_room_booking/README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
+
+[tool.uv.sources]
+canvas = {editable = true, path = "../../"}
+pytest-canvas = {editable = true, path = "../../pytest-canvas"}

@@ -1,6 +1,25 @@
 import factory
 
-from canvas_sdk.v1.data import Claim, ClaimComment, ClaimLabel, ClaimProvider, ClaimQueue
+from canvas_sdk.v1.data import (
+    Claim,
+    ClaimComment,
+    ClaimCoverage,
+    ClaimLabel,
+    ClaimMetadata,
+    ClaimProvider,
+    ClaimQueue,
+    ClaimSubmission,
+)
+
+
+class ClaimCoverageFactory(factory.django.DjangoModelFactory[ClaimCoverage]):
+    """Factory for creating ClaimCoverage."""
+
+    class Meta:
+        model = ClaimCoverage
+
+    claim = factory.SubFactory("canvas_sdk.test_utils.factories.claim.ClaimFactory")
+    coverage = factory.SubFactory("canvas_sdk.test_utils.factories.CoverageFactory")
 
 
 class ClaimQueueFactory(factory.django.DjangoModelFactory[ClaimQueue]):
@@ -51,3 +70,24 @@ class ClaimLabelFactory(factory.django.DjangoModelFactory[ClaimLabel]):
 
     claim = factory.SubFactory(ClaimFactory)
     label = factory.SubFactory("canvas_sdk.test_utils.factories.TaskLabelFactory")
+
+
+class ClaimSubmissionFactory(factory.django.DjangoModelFactory[ClaimSubmission]):
+    """Factory for creating ClaimSubmission."""
+
+    class Meta:
+        model = ClaimSubmission
+
+    claim = factory.SubFactory(ClaimFactory)
+    clearinghouse_claim_id = "123456"
+
+
+class ClaimMetadataFactory(factory.django.DjangoModelFactory[ClaimMetadata]):
+    """Factory for creating ClaimMetadata."""
+
+    class Meta:
+        model = ClaimMetadata
+
+    claim = factory.SubFactory(ClaimFactory)
+    key = "test"
+    value = "testeroo"

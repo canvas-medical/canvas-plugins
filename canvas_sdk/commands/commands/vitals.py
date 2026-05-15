@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import conint, constr
+from pydantic import confloat, conint, constr
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
@@ -41,7 +41,7 @@ class VitalsCommand(BaseCommand):
     weight_lbs: conint(ge=1, le=1500) | None = None  # type: ignore[valid-type]
     weight_oz: int | None = None
     waist_circumference: conint(ge=20, le=200) | None = None  # type: ignore[valid-type]
-    body_temperature: conint(ge=85, le=107) | None = None  # type: ignore[valid-type]
+    body_temperature: confloat(ge=85.0, le=107.0) | None = None  # type: ignore[valid-type]
     body_temperature_site: BodyTemperatureSite | None = None
     blood_pressure_systole: conint(ge=30, le=305) | None = None  # type: ignore[valid-type]
     blood_pressure_diastole: conint(ge=20, le=180) | None = None  # type: ignore[valid-type]

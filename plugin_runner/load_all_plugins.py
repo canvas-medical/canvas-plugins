@@ -17,7 +17,7 @@ import httpretty
 from canvas_generated.messages.events_pb2 import PLUGIN_CREATED
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_sdk.events.base import Event
-from canvas_sdk.protocols.base import BaseProtocol
+from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.plugin_runner import LOADED_PLUGINS, load_or_reload_plugin
 
 ORIGINAL_PATH = sys.path.copy()
@@ -102,7 +102,7 @@ def main() -> None:
     enable_httpretty()
 
     for key, plugin in LOADED_PLUGINS.items():
-        Klass: type[BaseProtocol] = plugin["class"]
+        Klass: type[BaseHandler] = plugin["class"]
 
         if not hasattr(Klass, "compute") or not callable(Klass.compute):
             print(f"Skipping {key} due to no compute method")

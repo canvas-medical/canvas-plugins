@@ -611,6 +611,26 @@ def test_originate_prescribe_output_mutually_exclusive_fields(
 
 @pytest.mark.parametrize(
     "prescription",
+    ("valid_regular_prescription_data",),
+    indirect=True,
+    ids=["regular_medication"],
+)
+def test_originate_prescribe_ignores_commit_flag(
+    mock_db_queries: dict[str, MagicMock], prescription: dict[str, Any]
+) -> None:
+    """Test that originate(commit=True) does not include commit in prescribe payload.
+
+    Prescribe does not support COMMIT, so the flag must not be forwarded.
+    """
+    prescribe_cmd = PrescribeCommand(**prescription)
+    effect = prescribe_cmd.originate(commit=True)
+    payload = json.loads(effect.payload)
+
+    assert "commit" not in payload
+
+
+@pytest.mark.parametrize(
+    "prescription",
     ("valid_regular_prescription_data", "valid_compound_medication_prescription_data"),
     indirect=True,
     ids=["regular_medication", "compound_medication"],
@@ -626,6 +646,49 @@ def test_edit_prescribe_output_mutually_exclusive_fields(
     payload = json.loads(effect.payload)
 
     assert not ("fdb_code" in payload["data"] and "compound_medication_values" in payload["data"])
+
+
+def test_prescribe_with_complete_clinical_quantity(
+    mock_db_queries: dict[str, MagicMock], valid_regular_prescription_data: dict[str, Any]
+) -> None:
+    """Test that a PrescribeCommand serializes a complete ClinicalQuantity (all fields) correctly."""
+    prescribe_cmd = PrescribeCommand(
+        **valid_regular_prescription_data,
+        type_to_dispense={
+            "representative_ndc": "00002024304",
+            "ncpdp_quantity_qualifier_code": "C28254",
+            "description": "0.5 mL vial",
+        },
+    )
+    effect = prescribe_cmd.originate()
+
+    assert effect.type == EffectType.ORIGINATE_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+    type_to_dispense = payload["data"]["type_to_dispense"]
+    assert type_to_dispense["representative_ndc"] == "00002024304"
+    assert type_to_dispense["ncpdp_quantity_qualifier_code"] == "C28254"
+    assert type_to_dispense["description"] == "0.5 mL vial"
+
+
+def test_prescribe_with_partial_clinical_quantity(
+    mock_db_queries: dict[str, MagicMock], valid_regular_prescription_data: dict[str, Any]
+) -> None:
+    """Test that a PrescribeCommand serializes a partial ClinicalQuantity (required fields only) correctly."""
+    prescribe_cmd = PrescribeCommand(
+        **valid_regular_prescription_data,
+        type_to_dispense={
+            "representative_ndc": "00002024304",
+            "ncpdp_quantity_qualifier_code": "C28254",
+        },
+    )
+    effect = prescribe_cmd.originate()
+
+    assert effect.type == EffectType.ORIGINATE_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+    type_to_dispense = payload["data"]["type_to_dispense"]
+    assert type_to_dispense["representative_ndc"] == "00002024304"
+    assert type_to_dispense["ncpdp_quantity_qualifier_code"] == "C28254"
+    assert "display" not in type_to_dispense
 
 
 def test_adjust_prescription_medication_conflict(mock_db_queries: dict[str, MagicMock]) -> None:

@@ -10,23 +10,30 @@ import pytest
 from pydantic_core import ValidationError
 from typer.testing import CliRunner
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands import (
     AllergyCommand,
     AssessCommand,
     ChartSectionReviewCommand,
+    CustomCommand,
     FamilyHistoryCommand,
     GoalCommand,
     InstructCommand,
     MedicationStatementCommand,
     PastSurgicalHistoryCommand,
     PerformCommand,
+    VitalsCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
+<<<<<<< panda-526-sdk-task-priority
 from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.task import TaskCommand
+=======
+from canvas_sdk.commands.commands.review.base import ReportReviewCommunicationMethod
+>>>>>>> main
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -38,7 +45,7 @@ from canvas_sdk.tests.commands.utils import (
     trigger_commit_command,
     trigger_edit_command,
     trigger_originate,
-    write_protocol_code,
+    write_handler_code,
 )
 from canvas_sdk.tests.shared import (
     MaskedValue,
@@ -95,6 +102,51 @@ def chart_section_review() -> dict[str, Any]:
     return {"section": ChartSectionReviewCommand.Sections.MEDICATIONS}
 
 
+def labReview() -> dict[str, Any]:
+    """Lab Review Command for testing."""
+    return {
+        "message_to_patient": "Lab results reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test lab review",
+    }
+
+
+def imagingReview() -> dict[str, Any]:
+    """Imaging Review Command for testing."""
+    return {
+        "message_to_patient": "Imaging results reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test imaging review",
+    }
+
+
+def referralReview() -> dict[str, Any]:
+    """Referral Review Command for testing."""
+    return {
+        "message_to_patient": "Referral reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test referral review",
+    }
+
+
+def uncategorizedDocumentReview() -> dict[str, Any]:
+    """Uncategorized Document Review Command for testing."""
+    return {
+        "message_to_patient": "uncategorized document reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test uncategorized clinical document review",
+    }
+
+
+def customCommand() -> dict[str, Any]:
+    """CustomCommand for testing."""
+    return {
+        "schema_key": "test_schema",
+        "content": "<h1>Hello world</h1>",
+        "print_content": "<p>Hello world</p>",
+    }
+
+
 @pytest.fixture(scope="module", autouse=True)
 def patch_condition() -> Generator[None, None, None]:
     """Patch the Condition model to return a mock queryset."""
@@ -130,7 +182,7 @@ def install_plugin_commands(
         data = extract_return_statement(get_command_data) if get_command_data else "{}"
         commands.append(CommandCode(**{"data": data, "class": command_cls}))
 
-    write_protocol_code(cli_runner, plugin_dir, commands)
+    write_handler_code(cli_runner, plugin_dir, commands)
     install_plugin(plugin_dir / package_name, token)
     sleep(10)  # Wait for the plugin to be installed
 
@@ -582,6 +634,7 @@ def test_immunization_statement_empty_coding_raises_error() -> None:
     assert "system" in str(exc_info.value).lower()
 
 
+<<<<<<< panda-526-sdk-task-priority
 @pytest.mark.parametrize(
     "command_cls,priority",
     [
@@ -617,3 +670,225 @@ def test_commands_reject_invalid_priority(command_class: type, kwargs: dict) -> 
     """Test that all command classes reject invalid priority values."""
     with pytest.raises(ValidationError):
         command_class(**kwargs)
+=======
+def test_custom_command_schema_key_as_instance_attribute() -> None:
+    """Test that CustomCommand can set schema_key as an instance attribute."""
+    # Test setting schema_key at instantiation
+    command = CustomCommand(
+        note_uuid="test_uuid",
+        schema_key="my_custom_schema",
+        content="<h1>Test</h1>",
+    )
+
+    assert command.schema_key == "my_custom_schema"
+
+    # Test that originate works with instance attribute
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+
+    assert payload["data"]["schema_key"] == "my_custom_schema"
+    assert payload["data"]["content"] == "<h1>Test</h1>"
+
+    # Test that schema_key is properly initialized
+    command2 = CustomCommand(
+        note_uuid="test_uuid", schema_key="another_schema", content="<h1>Test2</h1>"
+    )
+
+    assert command2.schema_key == "another_schema"
+
+    effect2 = command2.originate()
+    payload2 = json.loads(effect2.payload)
+
+    assert payload2["data"]["schema_key"] == "another_schema"
+
+
+def test_custom_command_schema_key_in_meta() -> None:
+    """Test that CustomCommand can be extended with schema_key in Meta."""
+
+    # Create a subclass with schema_key in Meta
+    class MyCustomCommand(CustomCommand):
+        class Meta:
+            schema_key = "predefined_schema"
+
+    # Verify Meta.key is always "customCommand"
+    assert MyCustomCommand.Meta.key == "customCommand"  # type: ignore[attr-defined]
+
+    # Test that schema_key is read from Meta
+    command = MyCustomCommand(note_uuid="test_uuid", content="<h1>Custom</h1>")
+
+    assert command.schema_key == "predefined_schema"
+
+    # Test that originate works with Meta schema_key
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+
+    assert payload["data"]["schema_key"] == "predefined_schema"
+    assert payload["data"]["content"] == "<h1>Custom</h1>"
+
+
+def test_custom_command_meta_schema_key_precedence() -> None:
+    """Test that Meta.schema_key cannot be overridden by instance attribute."""
+
+    class MyCustomCommand(CustomCommand):
+        class Meta:
+            key = "myCustomCommand"
+            schema_key = "meta_schema"
+
+    assert MyCustomCommand.Meta.key == "customCommand"
+
+    # Test that we cannot override at instantiation
+    with pytest.raises(AttributeError) as exc_info:
+        MyCustomCommand(
+            note_uuid="test_uuid",
+            schema_key="instance_schema",  # type: ignore[call-arg]
+            content="<h1>Test</h1>",
+        )
+    assert "cannot set schema_key" in str(exc_info.value).lower()
+    assert "already defined in Meta" in str(exc_info.value)
+
+    # Test that Meta.schema_key is used
+    command = MyCustomCommand(note_uuid="test_uuid", content="<h1>Test</h1>")
+    assert command.schema_key == "meta_schema"
+
+    # Verify Meta.schema_key is used in originate
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+    assert payload["data"]["schema_key"] == "meta_schema"
+
+
+def test_custom_command_requires_schema_key_for_originate() -> None:
+    """Test that CustomCommand requires schema_key for origination."""
+    # Test origination without schema_key raises error
+    command = CustomCommand(note_uuid="test_uuid", content="<h1>Test</h1>")
+
+    with pytest.raises(ValidationError) as exc_info:
+        command.originate()
+
+    assert "schema key must be provided" in str(exc_info.value).lower()
+
+
+def test_custom_command_subclasses_use_customcommand_key() -> None:
+    """Test that all CustomCommand subclasses use 'customCommand' as Meta.key."""
+
+    # Create a subclass without specifying Meta.key
+    class MyCustomCommand(CustomCommand):
+        class Meta:
+            schema_key = "my_command"
+
+    # Verify Meta.key is always "customCommand"
+    assert MyCustomCommand.Meta.key == "customCommand"  # type: ignore[attr-defined]
+
+    # Verify the command works correctly
+    command = MyCustomCommand(note_uuid="test_uuid", content="<h1>Test</h1>")
+
+    assert command.schema_key == "my_command"
+
+    effect = command.originate()
+    # All custom commands use the same effect type
+    assert effect.type == EffectType.ORIGINATE_CUSTOM_COMMAND_COMMAND
+
+
+def test_custom_command_overrides_explicit_meta_key() -> None:
+    """Test that explicit Meta.key is overridden to 'customCommand'."""
+
+    # Create a subclass with explicit Meta.key
+    class MyCommand(CustomCommand):
+        class Meta:
+            key = "explicitKey"  # This will be overridden
+            schema_key = "my_schema"
+
+    # Verify explicit key is overridden to "customCommand"
+    assert MyCommand.Meta.key == "customCommand"
+
+    command = MyCommand(note_uuid="test_uuid", content="<h1>Test</h1>")
+    effect = command.originate()
+
+    # Effect type uses "customCommand", not "explicitKey"
+    assert effect.type == EffectType.ORIGINATE_CUSTOM_COMMAND_COMMAND
+
+
+def test_custom_command_subclass_without_meta() -> None:
+    """Test that CustomCommand can be extended without defining a Meta class."""
+
+    # Create a subclass without Meta class
+    class SimpleCustomCommand(CustomCommand):
+        pass
+
+    # Verify Meta.key is inherited/set to "customCommand"
+    assert SimpleCustomCommand.Meta.key == "customCommand"
+
+    # Verify it works with schema_key passed to constructor
+    command = SimpleCustomCommand(
+        note_uuid="test_uuid",
+        schema_key="simple_schema",
+        content="<h1>Simple</h1>",  # type: ignore[call-arg]
+    )
+
+    assert command.schema_key == "simple_schema"
+
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+
+    assert payload["data"]["schema_key"] == "simple_schema"
+    assert payload["data"]["content"] == "<h1>Simple</h1>"
+    assert effect.type == EffectType.ORIGINATE_CUSTOM_COMMAND_COMMAND
+
+
+def test_vitals_body_temperature_accepts_float() -> None:
+    """Test that body_temperature accepts a float value like 98.6."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
+    assert command.body_temperature == 98.6
+
+
+def test_vitals_body_temperature_accepts_integer() -> None:
+    """Test that body_temperature still accepts integer values."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98)
+    assert command.body_temperature == 98.0
+
+
+def test_vitals_body_temperature_accepts_boundary_float_values() -> None:
+    """Test that body_temperature accepts float values at the boundaries."""
+    low = VitalsCommand(note_uuid="test_uuid", body_temperature=85.0)
+    assert low.body_temperature == 85.0
+
+    high = VitalsCommand(note_uuid="test_uuid", body_temperature=107.0)
+    assert high.body_temperature == 107.0
+
+
+def test_vitals_body_temperature_accepts_decimal_precision() -> None:
+    """Test that body_temperature preserves decimal precision."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.64)
+    assert command.body_temperature == 98.64
+
+
+def test_vitals_body_temperature_rejects_below_minimum() -> None:
+    """Test that body_temperature rejects values below 85."""
+    with pytest.raises(ValidationError):
+        VitalsCommand(note_uuid="test_uuid", body_temperature=84.9)
+
+
+def test_vitals_body_temperature_rejects_above_maximum() -> None:
+    """Test that body_temperature rejects values above 107."""
+    with pytest.raises(ValidationError):
+        VitalsCommand(note_uuid="test_uuid", body_temperature=107.1)
+
+
+def test_vitals_body_temperature_allows_none() -> None:
+    """Test that body_temperature can be None."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=None)
+    assert command.body_temperature is None
+
+
+def test_vitals_body_temperature_defaults_to_none() -> None:
+    """Test that body_temperature defaults to None."""
+    command = VitalsCommand(note_uuid="test_uuid")
+    assert command.body_temperature is None
+
+
+def test_vitals_body_temperature_float_in_originate_payload() -> None:
+    """Test that a float body_temperature is preserved in the originate payload."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+    assert payload["data"]["body_temperature"] == 98.6
+>>>>>>> main

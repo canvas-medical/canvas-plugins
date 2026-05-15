@@ -30,6 +30,21 @@ jobs:
       - uses: ./.github/actions/install-python-and-uv
       - uses: ./.github/actions/install-canvas
 
+      - name: Verify patch-only bump on release branches
+        if: startsWith(github.ref_name, 'release/')
+        run: |
+          LAST_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          NEXT_VERSION=$(uv run semantic-release --strict version --print)
+          LAST_MAJOR=$(echo "$LAST_VERSION" | cut -d. -f1)
+          LAST_MINOR=$(echo "$LAST_VERSION" | cut -d. -f2)
+          NEXT_MAJOR=$(echo "$NEXT_VERSION" | cut -d. -f1)
+          NEXT_MINOR=$(echo "$NEXT_VERSION" | cut -d. -f2)
+          if [[ "$LAST_MAJOR" != "$NEXT_MAJOR" || "$LAST_MINOR" != "$NEXT_MINOR" ]]; then
+            echo "::error::Release branches only allow patch bumps. Got $LAST_VERSION -> $NEXT_VERSION"
+            exit 1
+          fi
+          echo "Patch bump verified: $LAST_VERSION -> $NEXT_VERSION"
+
       - name: Python Semantic Release
         id: release
         env:

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import cast
 
 from django.db.models.expressions import Subquery
 from pydantic_core import InitErrorDetails
@@ -13,13 +13,13 @@ class RefillCommand(PrescribeCommand):
     class Meta:
         key = "refill"
 
-    def _get_error_details(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> list[InitErrorDetails]:
+    def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
         if self.fdb_code:
-            subquery = Subquery(Note.objects.filter(id=self.note_uuid).values("patient_id")[:1])
+            subquery = Subquery(
+                Note.objects.filter(id=cast(str, self.note_uuid)).values("patient_id")[:1]
+            )
             if (
                 not Medication.objects.active()
                 .filter(codings__code=self.fdb_code, patient=subquery)

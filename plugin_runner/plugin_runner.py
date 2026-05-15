@@ -4,15 +4,16 @@ import os
 import pathlib
 import pickle
 import pkgutil
+import signal
 import sys
 import threading
-import traceback
+import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from time import sleep
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict, cast
 
 import grpc
 import redis
@@ -24,7 +25,7 @@ from redis.retry import Retry
 from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
-from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginRequest,
     ReloadPluginResponse,
@@ -37,7 +38,6 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
@@ -45,9 +45,17 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
+from canvas_sdk.v1.data.base import IS_SQLITE
+from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
+from logger.logger import plugin_context
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.exceptions import PluginInstallationError, PluginUninstallationError
+from plugin_runner.ddl import generate_plugin_migrations
+from plugin_runner.exceptions import (
+    NamespaceAccessError,
+    PluginInstallationError,
+    PluginUninstallationError,
+)
 from plugin_runner.installation import (
     enabled_plugins,
     install_plugin,
@@ -59,6 +67,7 @@ from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
     ENV,
+    INSTALLATION_TIME_ZONE,
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
@@ -97,10 +106,6 @@ if SENTRY_DSN:
     global_scope.set_tag("source", "plugin-runner")
     global_scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
 
-# when we import plugins we'll use the module name directly so we need to add the plugin
-# directory to the path
-sys.path.append(PLUGIN_DIRECTORY)
-
 Plugin = TypedDict(
     "Plugin",
     {
@@ -109,6 +114,7 @@ Plugin = TypedDict(
         "sandbox": Any,
         "handler": Any,
         "secrets": dict[str, str],
+        "namespace_config": NotRequired[dict[str, str] | None],
     },
 )
 
@@ -118,6 +124,7 @@ LOADED_PLUGINS: dict[str, Plugin] = {}
 # a global dictionary of values made available to all plugins
 ENVIRONMENT: dict = {
     "CUSTOMER_IDENTIFIER": CUSTOMER_IDENTIFIER,
+    "INSTALLATION_TIME_ZONE": INSTALLATION_TIME_ZONE,
 }
 
 # a global dictionary of events to handler class names
@@ -163,6 +170,13 @@ class Components(TypedDict):
     applications: list[ApplicationConfig]
 
 
+class CustomData(TypedDict):
+    """Configuration for custom data storage in a shared namespace."""
+
+    namespace: str  # The namespace schema name (e.g., "acme_org__shared")
+    access: str  # "read" or "read_write"
+
+
 class PluginManifest(TypedDict):
     """PluginManifest."""
 
@@ -177,6 +191,27 @@ class PluginManifest(TypedDict):
     license: str
     diagram: bool
     readme: str
+    custom_data: NotRequired[CustomData]
+
+
+_sqlite_schema_initialized = False
+
+
+def _ensure_sqlite_schema() -> None:
+    """Create the framework tables (custom_attribute, attribute_hub) in the
+    SQLite database if they don't already exist.
+
+    Same as the test database setup and the --reset-db path in run_plugins.
+    Must be called while the writable connection is the default.
+    """
+    global _sqlite_schema_initialized
+    if _sqlite_schema_initialized:
+        return
+
+    from django.core.management import call_command
+
+    call_command("migrate", run_syncdb=True, verbosity=0)
+    _sqlite_schema_initialized = True
 
 
 class PluginRunner(PluginRunnerServicer):
@@ -232,7 +267,7 @@ class PluginRunner(PluginRunnerServicer):
                         p for p in relevant_plugins if p.startswith(f"{plugin_name}:")
                     ]
                 except Exception as ex:
-                    log.error(
+                    log.exception(
                         f"Failed to decode identifier for event {event_name} with context {event.context}"
                     )
                     sentry_sdk.capture_exception(ex)
@@ -241,70 +276,97 @@ class PluginRunner(PluginRunnerServicer):
             effect_list = []
 
             for plugin_name in relevant_plugins:
-                log.debug(f"Processing {plugin_name}")
-                sentry_sdk.set_tag("plugin-name", plugin_name)
-
                 plugin = LOADED_PLUGINS[plugin_name]
                 handler_class = plugin["class"]
-                base_plugin_name = plugin_name.split(":")[0]
+                base_plugin_name, handler_path, handler_classname = plugin_name.split(":")
 
-                secrets = plugin.get("secrets", {})
+                sentry_sdk.set_tag("plugin-name", plugin_name)
 
-                secrets.update(
-                    {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
-                )
+                with plugin_context(f"{handler_path}.{handler_classname}"):
+                    log.debug(f"Processing {plugin_name}")
 
-                try:
-                    handler = handler_class(event, secrets, ENVIRONMENT)
+                    namespace_config = plugin.get("namespace_config")
 
-                    if not handler.accept_event():
-                        continue
-                    relevant_plugin_handlers.append(handler_class)
+                    secrets = plugin.get("secrets", {})
 
-                    classname = (
-                        handler.__class__.__name__
-                        if isinstance(handler, ClinicalQualityMeasure)
-                        else None
+                    secrets.update(
+                        {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
                     )
-                    handler_name = metrics.get_qualified_name(handler.compute)
-                    with metrics.measure(
-                        name=handler_name,
-                        extra_tags={
-                            "plugin": base_plugin_name,
-                            "event": event_name,
-                        },
-                    ):
-                        _effects = handler.compute()
-                        effects = [
-                            Effect(
-                                type=effect.type,
-                                payload=effect.payload,
-                                plugin_name=base_plugin_name,
-                                classname=classname,
-                                handler_name=handler_name,
-                                actor=event.actor.id,
-                                source=event.source,
-                            )
-                            for effect in _effects
-                        ]
 
-                        effects = validate_effects(effects)
+                    try:
+                        handler = handler_class(event, secrets, ENVIRONMENT)
 
-                        apply_effects_to_context(effects, event=event)
+                        if not handler.accept_event():
+                            continue
+                        relevant_plugin_handlers.append(handler_class)
 
-                        log.info(f"{plugin_name}.compute() completed.")
+                        classname = (
+                            handler.__class__.__name__
+                            if isinstance(handler, ClinicalQualityMeasure)
+                            else None
+                        )
 
-                except Exception as e:
-                    log.error(f"Encountered exception in plugin {plugin_name}:")
+                        handler_name = metrics.get_qualified_name(handler.compute)
 
-                    for error_line_with_newlines in traceback.format_exception(e):
-                        for error_line in error_line_with_newlines.split("\n"):
-                            log.error(error_line)
+                        # Determine namespace and access level for database context
+                        db_namespace = namespace_config["namespace"] if namespace_config else None
+                        db_access_level = (
+                            namespace_config["access_level"] if namespace_config else "read"
+                        )
 
-                    sentry_sdk.capture_exception(e)
-                    continue
+                        with (
+                            metrics.measure(
+                                name=handler_name,
+                                track_queries=True,
+                                track_memory_usage=True,
+                                extra_tags={
+                                    "plugin": base_plugin_name,
+                                    "event": event_name,
+                                },
+                            ),
+                            plugin_database_context(
+                                base_plugin_name,
+                                namespace=db_namespace,
+                                access_level=db_access_level,
+                            ),
+                        ):
+                            _effects = handler.compute()
+                            if _effects is None:
+                                # Plugin authors sometimes forget to return their
+                                # effects list. Treat as empty with a warning so
+                                # the author can fix it, instead of raising
+                                # ``TypeError: 'NoneType' object is not iterable``
+                                # (KOALA-5365 / HOME-APP-RT8).
+                                log.warning(
+                                    f"{handler_name} returned None from compute(); "
+                                    "expected an iterable of effects. Treating as "
+                                    "an empty list."
+                                )
+                                _effects = []
+                            effects = [
+                                Effect(
+                                    type=effect.type,
+                                    payload=effect.payload,
+                                    plugin_name=base_plugin_name,
+                                    classname=classname,
+                                    handler_name=handler_name,
+                                    actor=event.actor.id,
+                                    source=event.source,
+                                )
+                                for effect in _effects
+                            ]
+                            effects = validate_effects(effects)
 
-                effect_list += effects
+                            apply_effects_to_context(effects, event=event)
+
+                            log.info(f"{plugin_name}.compute() completed.")
+
+                    except Exception as e:
+                        log.exception(f"Encountered exception in plugin {plugin_name}")
+                        sentry_sdk.capture_exception(e)
+                        continue
+
+                    effect_list += effects
 
             sentry_sdk.set_tag("plugin-name", None)
 
@@ -314,22 +376,24 @@ class PluginRunner(PluginRunnerServicer):
             # effects list to be a single 500 Internal Server Error response effect.
             if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
                         f" {event.context['path']}"
                     )
-                    effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+                    effect_list = [
+                        Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply().to_proto()
+                    ]
             if event.type == EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE)}"
-                        f" {event.context['channel']}"
+                        f" {event.context['channel_name']}"
                     )
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
 
             # Don't log anything if a plugin handler didn't actually run.
             if relevant_plugins:
@@ -458,7 +522,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
             if plugin_name:
                 message += f' for plugin "{plugin_name}"'
 
-            log.error(f"synchronize_plugins: {message}: {e}")
+            log.exception(f"synchronize_plugins: {message}")
             sentry_sdk.capture_exception(e)
 
         if run_once:
@@ -475,7 +539,7 @@ def synchronize_plugins_and_report_errors() -> None:
         try:
             synchronize_plugins()
         except Exception as e:
-            log.error(f"synchronize_plugins: error: {e}")
+            log.exception("synchronize_plugins: error")
             sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
@@ -557,100 +621,301 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
         retry=Retry(backoff=ExponentialBackoff(), retries=10),
         retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
         health_check_interval=1,
+        socket_keepalive=True,
     )
     pubsub = client.pubsub()
 
     return client, pubsub
 
 
+def resolve_namespace_secret(
+    plugin_name: str,
+    namespace_name: str,
+    declared_access: str,
+    secrets_json: dict[str, Any],
+) -> str:
+    """Determine and retrieve the access key secret for namespace verification.
+
+    Maps declared_access to the appropriate secret name and retrieves it from
+    secrets_json. Raises NamespaceAccessError if the secret is not configured.
+
+    Returns the secret value.
+    """
+    secret_name = (
+        "namespace_read_write_access_key"
+        if declared_access == "read_write"
+        else "namespace_read_access_key"
+    )
+
+    secret_value = secrets_json.get(secret_name)
+    if not secret_value:
+        raise NamespaceAccessError(
+            f"Plugin '{plugin_name}' declares namespace '{namespace_name}' with '{declared_access}' access "
+            f"but secret '{secret_name}' is not configured. "
+            f"Ensure the secret is listed in the manifest's 'secrets' array and has a value set."
+        )
+
+    return secret_value
+
+
+def verify_plugin_namespace_access(
+    plugin_name: str,
+    custom_data: CustomData,
+    secrets_json: dict[str, Any],
+) -> dict[str, str]:
+    """Verify a plugin's namespace access and return the namespace config.
+
+    Parses namespace declaration from custom_data, resolves the access key secret,
+    verifies it against the namespace's auth table, and checks access level sufficiency.
+
+    Returns {"namespace": ..., "access_level": ...} on success.
+    Raises NamespaceAccessError on any verification failure.
+    """
+    from plugin_runner.namespace import check_namespace_auth_key
+
+    namespace_name = custom_data["namespace"]
+    declared_access = custom_data["access"]
+
+    try:
+        secret_value = resolve_namespace_secret(
+            plugin_name, namespace_name, declared_access, secrets_json
+        )
+
+        # Verify access against namespace's auth table
+        granted_access = check_namespace_auth_key(namespace_name, secret_value)
+        if granted_access is None:
+            raise NamespaceAccessError(
+                f"Plugin '{plugin_name}' denied access to namespace '{namespace_name}': "
+                f"the secret value is not a valid access key for this namespace. "
+                f"Verify the key matches what was generated when the namespace was created."
+            )
+
+        # Check that declared access doesn't exceed granted access
+        if declared_access == "read_write" and granted_access == "read":
+            raise NamespaceAccessError(
+                f"Plugin '{plugin_name}' requests 'read_write' access to namespace '{namespace_name}' "
+                f"but the provided key only grants 'read' access. "
+                f"Use the 'namespace_read_write_access_key' secret for write access."
+            )
+    except NamespaceAccessError:
+        raise
+    except Exception as e:
+        log.exception(f"Failed to verify namespace access for plugin '{plugin_name}'")
+        sentry_sdk.capture_exception(e)
+        raise NamespaceAccessError(
+            f"Unexpected error verifying namespace access for plugin '{plugin_name}': {e}"
+        ) from e
+
+    return {
+        "namespace": namespace_name,
+        "access_level": declared_access,
+    }
+
+
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
 
-    manifest_file = path / MANIFEST_FILE_NAME
-    manifest_json_str = manifest_file.read_text()
-
     # the name is the folder name underneath the plugins directory
     name = path.name
 
-    try:
-        manifest_json: PluginManifest = json.loads(manifest_json_str)
-    except Exception as e:
-        log.error(f'Unable to load plugin "{name}": {e}')
-        sentry_sdk.capture_exception(e)
+    with metrics.measure(
+        "load_or_reload_plugin",
+        track_memory_usage=True,
+        extra_tags={"plugin": name},
+    ):
+        manifest_file = path / MANIFEST_FILE_NAME
 
-        return False
+        # If installed via `canvas install` we can rely on the manifest file
+        # existing. If installed via another method we still need to avoid crashing
+        # the entire runner if there's no manifest.
+        if not manifest_file.exists():
+            log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
+            return False
 
-    secrets_file = path / SECRETS_FILE_NAME
-    secrets_json = {}
+        manifest_json_str = manifest_file.read_text()
 
-    if secrets_file.exists():
         try:
-            secrets_json = json.load(secrets_file.open())
+            manifest_json: PluginManifest = json.loads(manifest_json_str)
         except Exception as e:
-            log.error(f'Unable to load secrets for plugin "{name}": {str(e)}')
+            log.exception(f'Unable to load plugin "{name}"')
             sentry_sdk.capture_exception(e)
 
-    # TODO add existing schema validation from Michela here
-    try:
-        handlers = manifest_json["components"].get("protocols", []) + manifest_json[
-            "components"
-        ].get("applications", [])
-    except Exception as e:
-        log.error(f'Unable to load plugin "{name}": {str(e)}')
-        sentry_sdk.capture_exception(e)
+            return False
 
-        return False
+        secrets_file = path / SECRETS_FILE_NAME
+        secrets_json = {}
 
-    any_failed = False
+        if secrets_file.exists():
+            try:
+                secrets_json = json.load(secrets_file.open())
+            except Exception as e:
+                log.exception(f'Unable to load secrets for plugin "{name}"')
+                sentry_sdk.capture_exception(e)
 
-    for handler in handlers:
-        # TODO add class colon validation to existing schema validation
-        # TODO when we encounter an exception here, disable the plugin in response
-        try:
-            handler_module, handler_class = handler["class"].split(":")
-            name_and_class = f"{name}:{handler_module}:{handler_class}"
-        except ValueError as e:
-            log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
-            sentry_sdk.capture_exception(e)
-
-            any_failed = True
-
-            continue
-
-        try:
-            sandbox = sandbox_from_module(path.parent, handler_module)
-            result = sandbox.execute()
-
-            if name_and_class in LOADED_PLUGINS:
-                log.info(f"Reloading handler '{name_and_class}'")
-
-                LOADED_PLUGINS[name_and_class]["active"] = True
-
-                LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
-                LOADED_PLUGINS[name_and_class]["sandbox"] = result
-                LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
-            else:
-                log.info(f'Loading handler "{name_and_class}"')
-
-                LOADED_PLUGINS[name_and_class] = {
-                    "active": True,
-                    "class": result[handler_class],
-                    "sandbox": result,
-                    "handler": handler,
-                    "secrets": secrets_json,
+        # Process custom_data configuration
+        namespace_config: dict | None = None
+        custom_data = manifest_json.get("custom_data")
+        if custom_data:
+            if IS_SQLITE:
+                # Local development mode: skip namespace auth verification and
+                # schema creation (no PostgreSQL, no secrets, no namespace_auth table).
+                namespace_name = custom_data["namespace"]
+                namespace_config = {
+                    "namespace": namespace_name,
+                    "access_level": custom_data.get("access", "read"),
                 }
+                log.info(
+                    f"Plugin '{name}' granted local '{namespace_config['access_level']}' "
+                    f"access to namespace '{namespace_name}' (SQLite mode, auth skipped)"
+                )
+
+                # The default SQLite connection is read-only; swap to the writable
+                # one for schema initialisation and plugin migrations.
+                import django.db
+                from django.apps import apps as django_apps
+
+                original_default = django.db.connections["default"]
+                try:
+                    temp_handler = django.db.utils.ConnectionHandler(
+                        {"default": settings.SQLITE_WRITE_MODE_DATABASE}
+                    )
+                    django.db.connections["default"] = temp_handler["default"]
+
+                    # Ensure the framework tables exist (custom_attribute,
+                    # attribute_hub) — same as the test database setup and the
+                    # --reset-db path in run_plugins.
+                    _ensure_sqlite_schema()
+
+                    # install_plugins() is skipped in local mode, so custom data
+                    # tables are never created. Run plugin-specific migrations here.
+                    if namespace_config["access_level"] == "read_write":
+                        generate_plugin_migrations(name, path, schema_name=namespace_name)
+                finally:
+                    django.db.connections["default"] = original_default
+            else:
+                namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
+                log.info(
+                    f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
+                    f"with '{namespace_config['access_level']}' access"
+                )
+
+        # TODO add existing schema validation from Michela here
+        try:
+            components = manifest_json["components"]
+            handlers = (
+                cast(list, components.get("protocols", []))
+                + cast(list, components.get("applications", []))
+                + cast(list, components.get("handlers", []))
+            )
         except Exception as e:
-            log.error(f'Error importing module "{name_and_class}": {e}')
-
-            for error_line in traceback.format_exception(e):
-                log.error(error_line)
-
+            log.exception(f'Unable to load plugin "{name}"')
             sentry_sdk.capture_exception(e)
 
-            any_failed = True
+            return False
 
-    return not any_failed
+        any_failed = False
+        loaded_handler_count = 0
+
+        # Share evaluated_modules across all handlers in this plugin so that common
+        # submodules (like constants.py) are only evaluated and reloaded once, not
+        # once per handler.
+        evaluated_modules: dict[str, bool] = {}
+
+        # Clear stale model registrations before handler sandboxes re-execute model
+        # files.  Without this, lazy_related_operation resolves string references
+        # (e.g. through="StaffSpecialty") to class objects from the prior execution,
+        # causing model-identity mismatches in ManyToManyField through-model resolution.
+        from django.apps import apps as django_apps
+
+        from plugin_runner.installation import register_plugin_app_config
+
+        django_apps.all_models.pop(name, None)
+        django_apps.app_configs.pop(name, None)
+        django_apps.clear_cache()
+
+        for handler in handlers:
+            # TODO add class colon validation to existing schema validation
+            # TODO when we encounter an exception here, disable the plugin in response
+            try:
+                handler_module, handler_class = handler["class"].split(":")
+
+                handler_package = handler_module.split(".")[0]
+                if handler_package != name:
+                    log.error(
+                        f'Plugin "{name}" declares handler from foreign package '
+                        f'"{handler_package}" — skipping'
+                    )
+                    any_failed = True
+                    continue
+
+                name_and_class = f"{name}:{handler_module}:{handler_class}"
+            except ValueError as e:
+                log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
+                sentry_sdk.capture_exception(e)
+
+                any_failed = True
+
+                continue
+
+            try:
+                # Suppress Django's "Model was already registered" RuntimeWarning.
+                # When importlib.reload re-imports model modules, Django's metaclass
+                # calls apps.register_model() again for each model class.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=r"Model '.*' was already registered",
+                        category=RuntimeWarning,
+                    )
+                    sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
+                    result = sandbox.execute()
+
+                if name_and_class in LOADED_PLUGINS:
+                    log.info(f"Reloading handler '{name_and_class}'")
+
+                    LOADED_PLUGINS[name_and_class]["active"] = True
+
+                    LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
+                    LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                    LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
+                    LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
+                else:
+                    log.info(f'Loading handler "{name_and_class}"')
+
+                    LOADED_PLUGINS[name_and_class] = {
+                        "active": True,
+                        "class": result[handler_class],
+                        "sandbox": result,
+                        "handler": handler,
+                        "secrets": secrets_json,
+                        "namespace_config": namespace_config,
+                    }
+
+                loaded_handler_count += 1
+            except Exception as e:
+                log.exception(f"Error importing module '{name_and_class}'")
+                sentry_sdk.capture_exception(e)
+                any_failed = True
+
+        # Re-register the AppConfig so that the freshly-created model classes are
+        # visible to Django's relation graph (needed for select_related, etc.).
+        register_plugin_app_config(name)
+
+        plugin_version = manifest_json.get("plugin_version", "unknown")
+        total_handlers = len(handlers)
+        if any_failed:
+            log.warning(
+                f'Plugin "{name}" version {plugin_version} loaded with errors '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded successfully)"
+            )
+        else:
+            log.info(
+                f'Successfully loaded plugin "{name}", version {plugin_version} '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded)"
+            )
+
+        return not any_failed
 
 
 def unload_plugin(name: str) -> None:
@@ -662,6 +927,13 @@ def unload_plugin(name: str) -> None:
             log.info(f'Unloading handler "{handler_name}"')
             del LOADED_PLUGINS[handler_name]
             handlers_removed = True
+
+    # Remove stale sys.modules entries for this plugin's package so that subsequent
+    # loads do a clean import instead of calling importlib.reload on stale module
+    # objects (which can leave modules in a partially-initialized state).
+    stale_modules = [mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")]
+    for mod in stale_modules:
+        del sys.modules[mod]
 
     if handlers_removed:
         # Refresh the event type map to remove any handlers for the unloaded plugin
@@ -705,6 +977,11 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             path_to_append = pathlib.Path(".") / plugin_path.parent
             sys.path.append(path_to_append.as_posix())
     else:
+        # Add plugin directory to path only when actually loading plugins (not at module import time)
+        # to avoid polluting Python's import cache during test collection
+        if PLUGIN_DIRECTORY not in sys.path:
+            sys.path.append(PLUGIN_DIRECTORY)
+
         candidates = os.listdir(PLUGIN_DIRECTORY)
 
         # convert to Paths
@@ -715,7 +992,14 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 
     # load or reload each plugin
     for plugin_path in plugin_paths:
-        load_or_reload_plugin(plugin_path)
+        try:
+            load_or_reload_plugin(plugin_path)
+        except NamespaceAccessError as e:
+            log.error(f"Namespace access error loading plugin from '{plugin_path}': {e}")
+            sentry_sdk.capture_exception(e)
+        except Exception as e:
+            log.exception(f"Unexpected error loading plugin from '{plugin_path}'")
+            sentry_sdk.capture_exception(e)
 
     # if a plugin has been uninstalled/disabled remove it from LOADED_PLUGINS
     for name, plugin in LOADED_PLUGINS.copy().items():
@@ -728,7 +1012,14 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 @measured
 def load_plugin(path: pathlib.Path) -> None:
     """Load a plugin from the specified path."""
-    load_or_reload_plugin(path)
+    try:
+        load_or_reload_plugin(path)
+    except NamespaceAccessError as e:
+        log.error(f"Namespace access error loading plugin from '{path}': {e}")
+        sentry_sdk.capture_exception(e)
+    except Exception as e:
+        log.exception(f"Unexpected error loading plugin from '{path}'")
+        sentry_sdk.capture_exception(e)
     refresh_event_type_map()
 
 
@@ -764,15 +1055,29 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
 
     server.start()
 
+    shutdown_reason = "unknown"
+
+    def handle_signal(signum: int, _frame: object) -> None:
+        nonlocal shutdown_reason
+        shutdown_reason = signal.Signals(signum).name
+        server.stop(grace=0)
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
-        pass
+        shutdown_reason = "SIGINT"
+    except Exception as ex:
+        shutdown_reason = f"exception: {ex}"
     finally:
+        log.info(f"Server shutting down (reason: {shutdown_reason})")
         executor.shutdown(wait=True, cancel_futures=True)
         if synchronizer_thread.is_alive():
             STOP_SYNCHRONIZER.set()
             synchronizer_thread.join()
+        log.info("Server stopped")
 
 
 if __name__ == "__main__":

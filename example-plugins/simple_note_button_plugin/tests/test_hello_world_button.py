@@ -3,13 +3,15 @@ from unittest.mock import MagicMock, patch
 from simple_note_button_plugin.handlers.hello_world_button import HelloWorldButton
 
 
-def test_hello_world_button_handle():
+def test_hello_world_button_handle() -> None:
     """Test that the HelloWorldButton creates and applies a LaunchModalEffect."""
     # Create a HelloWorldButton instance with a mocked event
     button = HelloWorldButton(event=MagicMock())
 
     # Mock the LaunchModalEffect to verify it's created correctly
-    with patch("simple_note_button_plugin.handlers.hello_world_button.LaunchModalEffect") as mock_effect_class:
+    with patch(
+        "simple_note_button_plugin.handlers.hello_world_button.LaunchModalEffect"
+    ) as mock_effect_class:
         mock_effect_instance = MagicMock()
         mock_applied_effect = MagicMock()
         mock_effect_instance.apply.return_value = mock_applied_effect
@@ -34,7 +36,7 @@ def test_hello_world_button_handle():
         assert result[0] == mock_applied_effect
 
 
-def test_hello_world_button_configuration():
+def test_hello_world_button_configuration() -> None:
     """Test that the HelloWorldButton has the correct configuration."""
     assert HelloWorldButton.BUTTON_TITLE == "Hello World"
     assert HelloWorldButton.BUTTON_KEY == "hello_world_button"

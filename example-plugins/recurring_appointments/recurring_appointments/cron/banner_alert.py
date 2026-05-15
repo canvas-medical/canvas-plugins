@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert
@@ -15,7 +15,6 @@ class CheckPatientAppointmentRecurrence(CronTask):
 
     def execute(self) -> list[Effect]:
         """Get all recurring appointments that have == 1 visit left and add a banner alert to the patient timeline."""
-
         _filter = Q(children__start_time__gt=datetime.now()) & ~Q(children__status="cancelled")
         patients_to_add_banners = (
             Appointment.objects.filter(_filter)

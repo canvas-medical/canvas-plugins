@@ -1,6 +1,8 @@
 from http import HTTPStatus
 from uuid import uuid4
 
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
+
 from canvas_sdk.commands import (
     DiagnoseCommand,
     PhysicalExamCommand,
@@ -10,12 +12,11 @@ from canvas_sdk.commands import (
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note
-
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 
 class CommandAPI(APIKeyAuthMixin, SimpleAPI):
+    """API for managing commands in notes."""
+
     PREFIX = "/notes"
 
     """
@@ -33,6 +34,7 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.post("/<id>/diagnose/")
     def add_diagnose_command(self) -> list[Response | Effect]:
+        """Add a diagnose command to a note."""
         required_attributes = {
             "icd10_code",
         }
@@ -86,7 +88,8 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.post("/<id>/prechart/")
     def add_precharting_commands(self) -> list[Response | Effect]:
-        request_body = self.request.json()
+        """Add precharting commands to a note."""
+        self.request.json()
 
         note = get_note_from_path_params(self.request.path_params)
         if not note:

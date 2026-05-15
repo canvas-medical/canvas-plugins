@@ -16,7 +16,7 @@ from canvas_sdk.v1.data.common import (
     PersonSex,
     TaxIDType,
 )
-from canvas_sdk.v1.data.utils import create_key
+from canvas_sdk.v1.data.utils import create_key, presigned_url
 
 
 class Staff(TimestampedModel):
@@ -66,9 +66,19 @@ class Staff(TimestampedModel):
     tax_id = models.CharField(max_length=25)
     tax_id_type = models.CharField(choices=TaxIDType.choices, max_length=1)
     spi_number = models.CharField(max_length=50)
-    # TODO - uncomment when Language is developed
-    # language = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
-    # language_secondary = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
+    language = models.ForeignKey(
+        "v1.Language",
+        on_delete=models.PROTECT,
+        related_name="staff_speakers",
+    )
+    language_secondary = models.ForeignKey(
+        "v1.Language",
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="staff_secondary_speakers",
+    )
     personal_meeting_room_link = models.URLField(null=True)
     state = models.JSONField(default=dict, blank=True)
     user = models.OneToOneField("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
@@ -76,12 +86,20 @@ class Staff(TimestampedModel):
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
+    signature = models.CharField(max_length=100, null=True, blank=True)
 
     @property
     def photo_url(self) -> str:
         """Return the URL of the staff's first photo."""
         photo = self.photos.first()
         return photo.url if photo else "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
+    @property
+    def signature_url(self) -> str | None:
+        """Return a presigned URL for accessing the staff's signature file."""
+        if self.signature:
+            return presigned_url(self.signature)
+        return None
 
     @cached_property
     def full_name(self) -> str:
@@ -213,7 +231,7 @@ class StaffRole(Model):
     internal_code = models.CharField(max_length=10)
     public_abbreviation = models.CharField(max_length=10, default="", blank=True)
     domain = models.CharField(max_length=3, choices=RoleDomain.choices, db_index=True)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=128)
     domain_privilege_level = models.IntegerField(default=0)
     permissions = models.JSONField(default=dict, blank=True, null=True)
     role_type = models.CharField(max_length=50, choices=RoleType.choices, blank=True)

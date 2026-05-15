@@ -105,6 +105,7 @@ class StaffFactory(factory.django.DjangoModelFactory[Staff]):
     role = factory.RelatedFactory(StaffRoleFactory, "staff")
     license = factory.RelatedFactory(StaffLicenseFactory, "staff")
     birth_date = factory.Faker("date_object")
+    language = factory.SubFactory("canvas_sdk.test_utils.factories.LanguageFactory")
 
     user = factory.SubFactory(
         "canvas_sdk.test_utils.factories.user.CanvasUserFactory",

@@ -1,7 +1,7 @@
 import json
 
-from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect
 
 
 class CreatePatientExternalIdentifier(TrackableFieldsModel):

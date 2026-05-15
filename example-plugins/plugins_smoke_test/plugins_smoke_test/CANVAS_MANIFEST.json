@@ -10,7 +10,7 @@
         }
     ],
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "plugins_smoke_test.applications.my_application:SmokeTestApi",
                 "description": "Provides api for the application",
@@ -35,7 +35,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": [],
+    "variables": [],
     "tags": {},
     "references": [],
     "license": "",

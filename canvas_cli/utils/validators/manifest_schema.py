@@ -5,14 +5,35 @@ manifest_schema = {
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
         "description": {"type": "string"},
-        "secrets": {"type": "array", "items": {"type": "string"}},
+        "variables": {
+            "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "sensitive": {"type": "boolean", "default": False},
+                    "default": {"type": "string"},
+                },
+                "required": ["name"],
+                "additionalProperties": False,
+                "if": {"properties": {"sensitive": {"const": True}}, "required": ["sensitive"]},
+                "then": {"not": {"required": ["default"]}},
+            },
+        },
+        "secrets": {
+            "description": "Deprecated: use 'variables' with sensitive=true instead.",
+            "type": "array",
+            "items": {"type": "string"},
+        },
         "origins": {"$ref": "#/$defs/origins"},
         "url_permissions": {"$ref": "#/$defs/url_permissions"},
         "components": {
             "type": "object",
             "properties": {
-                "commands": {"$ref": "#/$defs/component"},
+                "commands": {"$ref": "#/$defs/commands"},
                 "protocols": {"$ref": "#/$defs/component"},
+                "handlers": {"$ref": "#/$defs/component"},
                 "content": {"$ref": "#/$defs/component"},
                 "effects": {"$ref": "#/$defs/component"},
                 "views": {"$ref": "#/$defs/component"},
@@ -45,6 +66,7 @@ manifest_schema = {
         "license": {"type": "string"},
         "diagram": {"type": ["boolean", "string"]},
         "readme": {"type": ["boolean", "string"]},
+        "custom_data": {"$ref": "#/$defs/custom_data"},
     },
     "required": [
         "sdk_version",
@@ -82,6 +104,8 @@ manifest_schema = {
                                 "ALLOW_SAME_ORIGIN",
                                 "MICROPHONE",
                                 "CAMERA",
+                                "CLIPBOARD_READ",
+                                "CLIPBOARD_WRITE",
                             ],
                         },
                     },
@@ -128,6 +152,10 @@ manifest_schema = {
                             "provider_menu_item",
                             "portal_menu_item",
                             "provider_companion",
+                            "provider_companion_global",
+                            "provider_companion_patient_specific",
+                            "provider_companion_note_specific",
+                            "full_chart",
                         ],
                     },
                     "menu_position": {
@@ -152,6 +180,49 @@ manifest_schema = {
                 "required": ["template"],
                 "additionalProperties": False,
             },
+        },
+        "commands": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "label": {"type": "string"},
+                    "schema_key": {"type": "string"},
+                    "section": {
+                        "type": "string",
+                        "enum": [
+                            "subjective",
+                            "objective",
+                            "assessment",
+                            "plan",
+                            "procedures",
+                            "history",
+                            "internal",
+                        ],
+                    },
+                },
+                "required": ["name", "schema_key"],
+                "additionalProperties": False,
+            },
+        },
+        "custom_data": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$",
+                    "maxLength": 63,
+                    "description": "Namespace name in format 'org__name' (double underscore separator)",
+                },
+                "access": {
+                    "type": "string",
+                    "enum": ["read", "read_write"],
+                    "description": "Access level: 'read' for read-only, 'read_write' for full access",
+                },
+            },
+            "required": ["namespace", "access"],
+            "additionalProperties": False,
         },
     },
 }

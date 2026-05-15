@@ -174,7 +174,7 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
 
         return values
 
-    def originate(self, line_number: int = -1) -> Effect:
+    def originate(self, line_number: int = -1, commit: bool = False) -> Effect:
         """Originate a new command in the note body with explicit compound medication processing."""
         self._validate_before_effect("originate")
 

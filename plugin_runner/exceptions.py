@@ -14,5 +14,25 @@ class PluginInstallationError(PluginError):
     """An exception raised when a plugin fails to install."""
 
 
+class NamespaceWaitTimeout(PluginInstallationError):
+    """Raised when a non-schema-manager times out waiting for the schema manager.
+
+    Distinct from other install failures because it's a transient bootstrap
+    race (the schema manager hasn't created the namespace yet), not a
+    permanent failure. Callers that would otherwise auto-disable a plugin on
+    install failure should leave the plugin enabled when they see this.
+    """
+
+
 class PluginUninstallationError(PluginError):
     """An exception raised when a plugin fails to uninstall."""
+
+
+class NamespaceAccessError(PluginError):
+    """An exception raised when a plugin cannot access its declared namespace.
+
+    This typically occurs when:
+    - The required access key secret is not configured
+    - The access key is not found in the namespace's auth table
+    - The plugin requests write access but only has read access
+    """

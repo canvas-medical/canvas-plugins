@@ -3,10 +3,11 @@ from enum import Enum
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.base import _DelegateCommandMixin, _SignCommandMixin
 from canvas_sdk.commands.constants import ServiceProvider
 
 
-class ImagingOrderCommand(BaseCommand):
+class ImagingOrderCommand(_DelegateCommandMixin, _SignCommandMixin, BaseCommand):
     """A class for managing an Imaging Order command within a specific note."""
 
     class Meta:

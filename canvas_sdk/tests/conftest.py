@@ -1,3 +1,7 @@
+from dataclasses import fields as dataclass_fields
+from dataclasses import is_dataclass as dataclass_is_dataclass
+from typing import get_type_hints
+
 import pytest
 import requests
 from django.conf import settings
@@ -52,3 +56,79 @@ def note(auth_header: dict) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def has_constants(cls: type, constants: dict) -> bool:
+    """Verify a class has expected constant attributes with specific values.
+
+    Validates that a class has all expected constants (uppercase attributes that are not
+    callable and don't start with underscore) with matching values. Prints diagnostic
+    messages for any mismatches.
+
+    Args:
+        cls: Class to verify
+        constants: Dictionary mapping constant names to their expected values
+
+    Returns:
+        True if class has all expected constants with matching values, False otherwise
+    """
+    result = True
+    count = 0
+    tested_keys = set()
+    for attr in dir(cls):
+        if attr.upper() == attr and not (attr.startswith("_") or callable(getattr(cls, attr))):
+            tested_keys.add(attr)
+            count += 1
+            if attr not in constants:
+                print(f"Tested has new attribute not expected: '{attr}'")
+                result = False
+
+    if count != len(constants.keys()):
+        print(f"----> counts: {count} != {len(constants.keys())}")
+        result = False
+
+    for key, value in constants.items():
+        if key not in tested_keys:
+            print(f"Expected attributes not in tested: '{key}'")
+        if getattr(cls, key) != value:
+            print(f"----> {key} value is {getattr(cls, key)}")
+            result = False
+
+    return result
+
+
+def is_dataclass(cls: type, fields: dict) -> bool:
+    """Verify a class is a dataclass with expected fields and types.
+
+    Args:
+        cls: Class to verify
+        fields: Dictionary mapping field names to their expected types
+
+    Returns:
+        True if class is a dataclass with matching fields and types, False otherwise
+    """
+    return (
+        dataclass_is_dataclass(cls)
+        and len([field for field in dataclass_fields(cls) if field.name in fields])
+        == len(fields.keys())
+        and all(fields[field.name] == field.type for field in dataclass_fields(cls))
+    )
+
+
+def is_namedtuple(cls: type, fields: dict) -> bool:
+    """Verify a class is a NamedTuple with expected fields and types.
+
+    Args:
+        cls: Class to verify
+        fields: Dictionary mapping field names to their expected types
+
+    Returns:
+        True if class is a NamedTuple with matching fields and types, False otherwise
+    """
+    return (
+        issubclass(cls, tuple)
+        and hasattr(cls, "_fields")
+        and isinstance(cls._fields, tuple)
+        and len([field for field in cls._fields if field in fields]) == len(fields.keys())
+        and get_type_hints(cls) == fields
+    )

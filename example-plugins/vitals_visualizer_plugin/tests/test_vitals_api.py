@@ -1,6 +1,7 @@
 """Comprehensive tests for vitals_visualizer_plugin vitals_api."""
 
 from datetime import datetime
+from typing import Any
 from unittest.mock import Mock, patch
 
 from vitals_visualizer_plugin.handlers.vitals_api import VitalsVisualizerAPI
@@ -9,33 +10,33 @@ from vitals_visualizer_plugin.handlers.vitals_api import VitalsVisualizerAPI
 class DummyRequest:
     """A dummy request object for testing VitalsVisualizerAPI."""
 
-    def __init__(self, query_params=None):
+    def __init__(self, query_params: dict[str, Any] | None = None) -> None:
         self.query_params = query_params or {}
 
 
 class DummyEvent:
     """A dummy event object for testing API handlers."""
 
-    def __init__(self, context=None):
+    def __init__(self, context: dict[str, Any] | None = None) -> None:
         self.context = context or {}
 
 
 class TestVitalsVisualizerAPI:
     """Test suite for VitalsVisualizerAPI endpoint."""
 
-    def test_api_path_configuration(self):
+    def test_api_path_configuration(self) -> None:
         """Test that the API has correct path configuration."""
         assert VitalsVisualizerAPI.PATH == "/visualize"
 
-    def test_get_without_patient_id_returns_400(self):
+    def test_get_without_patient_id_returns_400(self) -> None:
         """Test GET endpoint returns 400 error when patient_id is missing."""
         # Create API request without patient_id
         request = DummyRequest(query_params={})
 
         # Create API instance with proper context
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
-        api.request = request  # type: ignore[attr-defined]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
+        api.request = request
 
         # Call GET endpoint
         result = api.get()
@@ -46,15 +47,15 @@ class TestVitalsVisualizerAPI:
         assert response.status_code == 400
         assert b"Patient ID is required" in response.content
 
-    def test_get_with_patient_id_returns_html(self):
+    def test_get_with_patient_id_returns_html(self) -> None:
         """Test GET endpoint returns HTML response with vitals data."""
         # Create API request with patient_id
         request = DummyRequest(query_params={"patient_id": "patient-123"})
 
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
-        api.request = request  # type: ignore[attr-defined]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
+        api.request = request
 
         # Mock the private methods
         mock_vitals_data = {
@@ -65,29 +66,33 @@ class TestVitalsVisualizerAPI:
 
         mock_html = "<html><body>Vitals Visualization</body></html>"
 
-        with patch.object(api, "_get_vitals_data", return_value=mock_vitals_data):
-            with patch.object(api, "_generate_visualization_html", return_value=mock_html):
-                result = api.get()
+        with (
+            patch.object(api, "_get_vitals_data", return_value=mock_vitals_data),
+            patch.object(api, "_generate_visualization_html", return_value=mock_html),
+        ):
+            result = api.get()
 
         # Verify HTML response
         assert len(result) == 1
         response = result[0]
         assert response.content == mock_html.encode()
 
-    def test_get_handles_exception_returns_500(self):
+    def test_get_handles_exception_returns_500(self) -> None:
         """Test GET endpoint returns 500 error when exception occurs."""
         # Create API request
         request = DummyRequest(query_params={"patient_id": "patient-123"})
 
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
-        api.request = request  # type: ignore[attr-defined]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
+        api.request = request
 
         # Mock _get_vitals_data to raise exception
-        with patch.object(api, "_get_vitals_data", side_effect=Exception("Database error")):
-            with patch("vitals_visualizer_plugin.handlers.vitals_api.log"):
-                result = api.get()
+        with (
+            patch.object(api, "_get_vitals_data", side_effect=Exception("Database error")),
+            patch("vitals_visualizer_plugin.handlers.vitals_api.log"),
+        ):
+            result = api.get()
 
         # Verify 500 response with error message
         assert len(result) == 1
@@ -95,11 +100,11 @@ class TestVitalsVisualizerAPI:
         assert response.status_code == 500
         assert b"Database error" in response.content
 
-    def test_get_vitals_data_with_observations(self):
+    def test_get_vitals_data_with_observations(self) -> None:
         """Test _get_vitals_data collects and transforms vitals correctly."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Create mock observations
         mock_weight_obs = Mock()
@@ -152,11 +157,11 @@ class TestVitalsVisualizerAPI:
         assert len(result["oxygen_saturation"]) == 1
         assert result["oxygen_saturation"][0]["value"] == 98.0
 
-    def test_get_vitals_data_skips_invalid_observations(self):
+    def test_get_vitals_data_skips_invalid_observations(self) -> None:
         """Test _get_vitals_data skips observations with invalid data."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Create mock observations with various issues
         mock_obs_no_value = Mock()
@@ -202,11 +207,11 @@ class TestVitalsVisualizerAPI:
         assert len(result["weight"]) == 1
         assert result["weight"][0]["value"] == 100.0
 
-    def test_get_vitals_data_handles_exception(self):
+    def test_get_vitals_data_handles_exception(self) -> None:
         """Test _get_vitals_data returns empty data when exception occurs."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Mock Observation to raise exception
         with patch("vitals_visualizer_plugin.handlers.vitals_api.Observation") as mock_obs_class:
@@ -218,11 +223,11 @@ class TestVitalsVisualizerAPI:
         # Verify empty data structure is returned
         assert result == {"weight": [], "body_temperature": [], "oxygen_saturation": []}
 
-    def test_get_vitals_data_handles_invalid_temperature(self):
+    def test_get_vitals_data_handles_invalid_temperature(self) -> None:
         """Test _get_vitals_data skips invalid temperature values."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Create mock observation with invalid temperature
         mock_temp_obs = Mock()
@@ -248,11 +253,11 @@ class TestVitalsVisualizerAPI:
         # Verify temperature data is empty
         assert len(result["body_temperature"]) == 0
 
-    def test_get_vitals_data_handles_invalid_oxygen_saturation(self):
+    def test_get_vitals_data_handles_invalid_oxygen_saturation(self) -> None:
         """Test _get_vitals_data skips invalid oxygen saturation values."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Create mock observation with invalid oxygen saturation
         mock_o2_obs = Mock()
@@ -278,11 +283,11 @@ class TestVitalsVisualizerAPI:
         # Verify oxygen saturation data is empty
         assert len(result["oxygen_saturation"]) == 0
 
-    def test_generate_visualization_html(self):
+    def test_generate_visualization_html(self) -> None:
         """Test _generate_visualization_html renders template with vitals data."""
         # Create API instance
         dummy_context = {"method": "GET", "path": "/visualize"}
-        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = VitalsVisualizerAPI(event=DummyEvent(context=dummy_context))
 
         # Sample vitals data
         vitals_data = {

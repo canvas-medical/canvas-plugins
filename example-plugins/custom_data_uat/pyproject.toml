@@ -1,0 +1,9 @@
+[project]
+dependencies = []
+description = "UAT plugin for custom data features: CustomModel, ModelExtension, proxy_field, AttributeHub"
+name = "custom_data_uat"
+requires-python = ">=3.12"
+version = "0.0.1"
+
+[tool.setuptools.packages.find]
+include = ["handlers*", "models*"]

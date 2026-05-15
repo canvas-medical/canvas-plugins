@@ -27,7 +27,9 @@ class ProtocolCurrentFactory(factory.django.DjangoModelFactory[ProtocolCurrent])
     sources = factory.LazyFunction(lambda: {"conditions": [], "medications": [], "labs": []})
     recommendations = factory.LazyFunction(lambda: {"primary": "Schedule annual checkup"})
     top_recommendation_key = factory.Faker("slug")
-    next_review = factory.Faker("date_time_between", start_date="+1d", end_date="+1y")
+    next_review = factory.Faker(
+        "date_time_between", start_date="+1d", end_date="+1y", tzinfo=datetime.UTC
+    )
     feedback_enabled = factory.Faker("boolean", chance_of_getting_true=30)
     plugin_can_be_snoozed = factory.Faker("boolean", chance_of_getting_true=70)
 

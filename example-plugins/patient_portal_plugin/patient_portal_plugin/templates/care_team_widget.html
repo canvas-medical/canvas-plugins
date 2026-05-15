@@ -1,96 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Your Care Team</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 300px;
-      max-height: 300px;
-    }
-    .care-team-container {
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      background: #fff;
-      font-family: system-ui, sans-serif;
-      padding-bottom: 16px;
-      max-height: calc(300px - 2px - 18px);
-      overflow-y: scroll;
-    }
-    .care-team-header {
-      color: {{title_color}};
-      font-size: 1.25rem;
-      font-weight: 500;
-      padding: 20px 0 8px 20px;
-      border-bottom: 1px solid #f3f4f6;
-      position: sticky;
-      background-color: #fff;
-      top: 0;
-    }
-    .care-team-warning {
-      flex-wrap: wrap;
-      color: #4b5563;
-      font-size: 1rem;
-      font-weight: 500;
-      padding: 16px 20px;
-      text-align: center;
-    }
-    .care-team-list {
-      list-style: none;
-      margin: 0;
-      padding: 0 0 0 0;
-    }
-    .care-team-member {
-      display: flex;
-      align-items: center;
-      padding: 16px 0 0 20px;
-    }
-    .care-team-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-right: 16px;
-      border: 1px solid #e5e7eb;
-    }
-    .care-team-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .care-team-name {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #222;
-      margin-bottom: 2px;
-    }
-    .care-team-role {
-      font-size: 1rem;
-      color: #6b7280;
-      font-weight: 400;
-    }
-  </style>
-</head>
-<body>
-  <div class="care-team-container">
-    <div class="care-team-header">Your Care Team</div>
-    {% if care_team|length == 0 %}
-      <div class="care-team-warning">No active Care Team members found.</div>
-    {% endif %}
-    {% if care_team|length > 0 %}
-      <ul class="care-team-list">
-        {% for member in care_team %}
-        <li class="care-team-member">
-          <img class="care-team-avatar" src="{{member.photo_url}}" alt="{{ member.professional_name }}'s photo">
-          <div class="care-team-info">
-            <span class="care-team-name">{{ member.professional_name }}</span>
-            <span class="care-team-role">{{ member.role }}</span>
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8">
+    <title>Your Care Team</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 300px;
+        max-height: 300px;
+      }
+      .care-team-container {
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        font-family: system-ui, sans-serif;
+        padding-bottom: 16px;
+        max-height: calc(300px - 2px - 18px);
+        overflow-y: scroll;
+      }
+      .care-team-header {
+        color: {{title_color}};
+        font-size: 1.25rem;
+        font-weight: 500;
+        padding: 20px 0 8px 20px;
+        border-bottom: 1px solid #f3f4f6;
+        position: sticky;
+        background-color: #fff;
+        top: 0;
+      }
+      .care-team-warning {
+        flex-wrap: wrap;
+        color: #4b5563;
+        font-size: 1rem;
+        font-weight: 500;
+        padding: 16px 20px;
+        text-align: center;
+      }
+      .care-team-list {
+        list-style: none;
+        margin: 0;
+        padding: 0 0 0 0;
+      }
+      .care-team-member {
+        display: flex;
+        align-items: center;
+        padding: 16px 0 0 20px;
+      }
+      .care-team-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 16px;
+        border: 1px solid #e5e7eb;
+      }
+      .care-team-info {
+        display: flex;
+        flex-direction: column;
+      }
+      .care-team-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #222;
+        margin-bottom: 2px;
+      }
+      .care-team-role {
+        font-size: 1rem;
+        color: #6b7280;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="care-team-container">
+      <div class="care-team-header">Your Care Team</div>
+      {% if care_team|length == 0 %}
+        <div class="care-team-warning">No active Care Team members found.</div>
+      {% endif %}
+      {% if care_team|length > 0 %}
+        <ul class="care-team-list">
+          {% for member in care_team %}
+            <li class="care-team-member">
+              <img class="care-team-avatar" src="{{member.photo_url}}" alt="{{ member.professional_name }}'s photo">
+              <div class="care-team-info">
+                <span class="care-team-name">{{ member.professional_name }}</span>
+                <span class="care-team-role">{{ member.role }}</span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </body>
 </html>

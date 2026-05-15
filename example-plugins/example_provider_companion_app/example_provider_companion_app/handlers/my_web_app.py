@@ -11,33 +11,77 @@ from canvas_sdk.v1.data.staff import Staff
 
 
 class MyWebApp(SimpleAPI):
+    """Web application serving pages for each companion scope level."""
+
     PREFIX = "/app"
 
-    # Using session credentials allows us to ensure only logged in users can
-    # access this.
     def authenticate(self, credentials: SessionCredentials) -> bool:
-        return credentials.logged_in_user != None
+        """Authenticate using session credentials."""
+        return credentials.logged_in_user is not None
 
-    # Serve templated HTML
-    @api.get("/provider-app")
-    def index(self) -> list[Response | Effect]:
+    @api.get("/global")
+    def global_app(self) -> list[Response | Effect]:
+        """Serve the global companion application page."""
         logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
 
         context = {
+            "scope": "Global",
             "first_name": logged_in_user.first_name,
             "last_name": logged_in_user.last_name,
+            "detail": "This app is not tied to any patient or note.",
         }
 
         return [
             HTMLResponse(
-                render_to_string("static/index.html", context),
+                render_to_string("static/app.html", context),
                 status_code=HTTPStatus.OK,
             )
         ]
 
-    # Serve the contents of a js file
+    @api.get("/patient")
+    def patient_app(self) -> list[Response | Effect]:
+        """Serve the patient-specific companion application page."""
+        logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
+        patient_id = self.request.query_params.get("patient_id", "unknown")
+
+        context = {
+            "scope": "Patient-Specific",
+            "first_name": logged_in_user.first_name,
+            "last_name": logged_in_user.last_name,
+            "detail": f"Viewing patient: {patient_id}",
+        }
+
+        return [
+            HTMLResponse(
+                render_to_string("static/app.html", context),
+                status_code=HTTPStatus.OK,
+            )
+        ]
+
+    @api.get("/note")
+    def note_app(self) -> list[Response | Effect]:
+        """Serve the note-specific companion application page."""
+        logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
+        patient_id = self.request.query_params.get("patient_id", "unknown")
+        note_id = self.request.query_params.get("note_id", "unknown")
+
+        context = {
+            "scope": "Note-Specific",
+            "first_name": logged_in_user.first_name,
+            "last_name": logged_in_user.last_name,
+            "detail": f"Viewing note: {note_id} for patient: {patient_id}",
+        }
+
+        return [
+            HTMLResponse(
+                render_to_string("static/app.html", context),
+                status_code=HTTPStatus.OK,
+            )
+        ]
+
     @api.get("/main.js")
     def get_main_js(self) -> list[Response | Effect]:
+        """Serve the main JavaScript file."""
         return [
             Response(
                 render_to_string("static/main.js").encode(),
@@ -46,9 +90,9 @@ class MyWebApp(SimpleAPI):
             )
         ]
 
-    # Serve the contents of a css file
     @api.get("/styles.css")
     def get_css(self) -> list[Response | Effect]:
+        """Serve the CSS styles file."""
         return [
             Response(
                 render_to_string("static/styles.css").encode(),

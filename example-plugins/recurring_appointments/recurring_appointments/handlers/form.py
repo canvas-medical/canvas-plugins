@@ -1,23 +1,26 @@
-from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.appointments_metadata import (
+    AppointmentsMetadataCreateFormEffect,
     FormField,
     InputType,
-    AppointmentsMetadataCreateFormEffect,
 )
 from canvas_sdk.events import EventType
-from canvas_sdk.effects import Effect
+from canvas_sdk.handlers import BaseHandler
 from recurring_appointments.utils.constants import (
-    RecurrenceEnum,
-    FIELD_RECURRENCE_TYPE_KEY,
     FIELD_RECURRENCE_INTERVAL_KEY,
     FIELD_RECURRENCE_STOP_AFTER_KEY,
+    FIELD_RECURRENCE_TYPE_KEY,
+    RecurrenceEnum,
 )
 
 
 class AppointmentFormFields(BaseHandler):
+    """Handler for providing additional appointment form fields for recurring appointments."""
+
     RESPONDS_TO = EventType.Name(EventType.APPOINTMENT__FORM__GET_ADDITIONAL_FIELDS)
 
     def compute(self) -> list[Effect]:
+        """Compute and return form fields for recurring appointment configuration."""
         interval_form_field = FormField(
             key=FIELD_RECURRENCE_INTERVAL_KEY,
             label="Every",

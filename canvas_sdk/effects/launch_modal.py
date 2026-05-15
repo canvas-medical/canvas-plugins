@@ -18,6 +18,7 @@ class LaunchModalEffect(_BaseEffect):
         RIGHT_CHART_PANE = "right_chart_pane"
         RIGHT_CHART_PANE_LARGE = "right_chart_pane_large"
         PAGE = "page"
+        NOTE = "note"
 
     url: str | None = None
     content: str | None = None

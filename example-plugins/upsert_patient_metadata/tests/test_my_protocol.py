@@ -1,12 +1,15 @@
 from unittest.mock import patch
 
 import pytest
-from upsert_patient_metadata.protocols.my_protocol import Protocol
+from pytest import MonkeyPatch
+from upsert_patient_metadata.handlers.my_handler import MyHandler
 
 
 class DummyEvent:
-    """Dummy event for Protocol instantiation in tests."""
+    """Dummy event for Handler instantiation in tests."""
+
     pass
+
 
 @pytest.mark.parametrize(
     "narrative,key,value,should_upsert",
@@ -18,23 +21,31 @@ class DummyEvent:
         ("value=onlyvalue", None, None, False),
     ],
 )
-def test_protocol_compute(monkeypatch, narrative, key, value, should_upsert):
-    """Test Protocol.compute for various narrative patterns and upsert behavior."""
+def test_handler_compute(
+    monkeypatch: MonkeyPatch,
+    narrative: str,
+    key: str | None,
+    value: str | None,
+    should_upsert: bool,
+) -> None:
+    """Test MyHandler.compute for various narrative patterns and upsert behavior."""
     dummy_patient_id = 123
     dummy_context = {
         "patient": {"id": dummy_patient_id},
         "fields": {"narrative": narrative},
     }
     dummy_event = DummyEvent()
-    protocol = Protocol(event=dummy_event)
-    monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+    handler = MyHandler(event=dummy_event)
+    monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
     # Patch PatientMetadata and its upsert method
-    with patch("upsert_patient_metadata.protocols.my_protocol.PatientMetadata") as MockPatientMetadata:
+    with patch(
+        "upsert_patient_metadata.handlers.my_handler.PatientMetadata"
+    ) as MockPatientMetadata:
         mock_instance = MockPatientMetadata.return_value
         mock_upsert = mock_instance.upsert
         mock_upsert.return_value = "upserted-effect"
-        effects = protocol.compute()
+        effects = handler.compute()
         if should_upsert:
             MockPatientMetadata.assert_called_once_with(patient_id=dummy_patient_id, key=key)
             mock_upsert.assert_called_once_with(value)

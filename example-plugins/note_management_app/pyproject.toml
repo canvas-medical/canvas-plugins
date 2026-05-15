@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Application managing notes (i.e. lock/sign) via OAuth 2.0."
+license = "MIT"
+name = "note_management_app"
+readme = "note_management_app/README.md"
+requires-python = ">=3.11"
+version = "0.1.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

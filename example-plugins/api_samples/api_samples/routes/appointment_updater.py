@@ -33,7 +33,11 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
         appointment = appointments.last()
 
         if not appointment:
-            return [JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"})]
+            return [
+                JSONResponse(
+                    status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"}
+                )
+            ]
 
         # set up the meeting effect to update the appointment
         appointment_effect = Appointment(instance_id=appointment.id)

@@ -78,13 +78,13 @@ def test_plugin_successfully_sets_gets_key_value_in_cache(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that the plugin successfully sets and gets a key-value pair in the cache."""
-    plugin = LOADED_PLUGINS["test_caching_api:test_caching_api.protocols.my_protocol:Protocol"]
+    plugin = LOADED_PLUGINS["test_caching_api:test_caching_api.handlers.my_handler:Handler"]
     effects = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
     assert effects[0].payload == "bar"
 
     plugin = LOADED_PLUGINS[
-        "test_caching_api:test_caching_api.protocols.my_secondary_protocol:Protocol"
+        "test_caching_api:test_caching_api.handlers.my_secondary_handler:Handler"
     ]
     effects = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -96,10 +96,11 @@ def test_plugin_access_to_private_properties_cache_is_forbidden(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that plugin access to private properties of the cache api is forbidden."""
-    assert (
-        "test_caching_api:test_caching_api.protocols.my_protocol:ForbiddenProtocol"
-        not in LOADED_PLUGINS
-    )
+    plugin = LOADED_PLUGINS[
+        "test_caching_api:test_caching_api.handlers.invalid_handler:InvalidHandler"
+    ]
+    with pytest.raises(AttributeError, match="invalid attribute name"):
+        plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
 
 def test_plugin_caller_name_cannot_be_set(

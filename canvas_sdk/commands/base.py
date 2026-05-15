@@ -2,14 +2,17 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.protocol_card import Recommendation
+from canvas_sdk.effects.command_metadata.base import _CommandMetadata
+
+if TYPE_CHECKING:
+    from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -22,6 +25,8 @@ class _BaseCommand(TrackableFieldsModel):
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
+        delegate_required_fields = ("command_uuid",)
+        sign_required_fields = ("command_uuid",)
 
     _dirty_excluded_keys = [
         "note_uuid",
@@ -30,11 +35,16 @@ class _BaseCommand(TrackableFieldsModel):
 
     def __init__(self, /, **data: Any) -> None:
         """Initialize the command and mark all provided keys as dirty."""
+        if getattr(self.Meta, "abstract", False):
+            raise TypeError(f"Cannot instantiate abstract class {self.__class__.__name__!r}.")
+
         super().__init__(**data)
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that the command has a key and required fields."""
-        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
+        if (not hasattr(cls.Meta, "key") or not cls.Meta.key) and not getattr(
+            cls.Meta, "abstract", False
+        ):
             raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify Meta.key.")
 
         if hasattr(cls.Meta, "commit_required_fields"):
@@ -104,7 +114,7 @@ class _BaseCommand(TrackableFieldsModel):
             if name not in base_properties
         }
 
-    def originate(self, line_number: int = -1) -> Effect:
+    def originate(self, line_number: int = -1, commit: bool = False) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("originate")
         return Effect(
@@ -115,6 +125,7 @@ class _BaseCommand(TrackableFieldsModel):
                     "note": self.note_uuid,
                     "data": self.values,
                     "line_number": line_number,
+                    "commit": commit,
                 }
             ),
         )
@@ -167,17 +178,40 @@ class _BaseCommand(TrackableFieldsModel):
             payload=json.dumps({"command": self.command_uuid}),
         )
 
-    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """Upsert a metadata record on the command.
+
+        Args:
+            key: The key of the metadata.
+            value: The value of the metadata.
+
+        Returns:
+            An effect that upserts the metadata record on the command.
+
+        Raises:
+            ValueError: If command_uuid is not set.
+        """
+        if not self.command_uuid:
+            raise ValueError("Field 'command_uuid' is required to upsert metadata.")
+
+        return _CommandMetadata(
+            command_id=self.command_uuid, schema_key=self.Meta.key, key=key
+        ).upsert(value=value)
+
+    def recommendation_context(self) -> dict:
+        return {
+            "command": {"type": self.Meta.key},
+            "context": self.values
+            | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
+        }
+
+    def recommend(self, title: str = "", button: str | None = None) -> "Recommendation":
         """Returns a command recommendation to be inserted via Protocol Card."""
+        from canvas_sdk.effects.protocol_card import Recommendation
+
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
-        command = self.Meta.key
-        return Recommendation(
-            title=title,
-            button=button,
-            command=command,
-            context=self.values | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
-        )
+        return Recommendation(title=title, button=button, commands=[self])
 
 
 class _SendableCommandMixin:
@@ -200,4 +234,28 @@ class _ReviewableCommandMixin:
         )
 
 
-__exports__ = ("_BaseCommand", "_SendableCommandMixin", "_ReviewableCommandMixin")
+class _DelegateCommandMixin:
+    def delegate(self) -> Effect:
+        """Fire the delegate effect the command."""
+        self._validate_before_effect("delegate")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"DELEGATE_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+class _SignCommandMixin:
+    def sign(self) -> Effect:
+        """Fire the sign effect the command."""
+        self._validate_before_effect("sign")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"SIGN_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+__exports__ = (
+    "_BaseCommand",
+    "_SendableCommandMixin",
+    "_ReviewableCommandMixin",
+)

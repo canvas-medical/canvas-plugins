@@ -1,6 +1,7 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class TransmissionChannel(models.TextChoices):
@@ -42,6 +43,18 @@ class MessageAttachment(IdentifiableModel):
     message = models.ForeignKey(
         "v1.Message", on_delete=models.DO_NOTHING, related_name="message", null=True
     )
+
+    @property
+    def file_url(self) -> str | None:
+        """
+        Return a presigned URL for accessing the file.
+
+        Returns the presigned S3 URL if a file exists,
+        otherwise returns None.
+        """
+        if self.file:
+            return presigned_url(self.file)
+        return None
 
 
 class MessageTransmission(TimestampedModel, IdentifiableModel):

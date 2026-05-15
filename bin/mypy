@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -e
+
+# Smart mypy runner for pre-commit hooks
+# Runs mypy only on changed files, not entire plugin directories
+#
+# Usage:
+#   ./bin/mypy                                       # Check entire project
+#   ./bin/mypy file1.py file2.py                    # Check specific files
+#   ./bin/mypy --verbose file1.py file2.py          # Verbose mode
+#   ./bin/mypy -v                                    # Verbose mode for entire project
+#   MYPY_VERBOSE=1 ./bin/mypy                       # Verbose via env var
+#   MYPY_VERBOSE=1 pre-commit run mypy --all-files  # Verbose with pre-commit
+
+# Parse arguments and check environment
+VERBOSE=false
+changed_files=()
+# Check for verbose environment variable
+if [ "${MYPY_VERBOSE:-}" = "1" ] || [ "${MYPY_VERBOSE:-}" = "true" ]; then
+    VERBOSE=true
+fi
+
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE=true
+            ;;
+        *)
+            changed_files+=("$arg")
+            ;;
+    esac
+done
+
+
+# Function for verbose output
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo "$@"
+    fi
+}
+
+# Get the mypy executable from root's uv environment once
+log_verbose "Finding mypy executable from root environment..."
+MYPY_PATH=$(uv run which mypy 2>/dev/null)
+if [ -z "$MYPY_PATH" ]; then
+    echo "Error: mypy not found in root environment"
+    exit 1
+fi
+log_verbose "Using mypy: $MYPY_PATH"
+
+if [ ${#changed_files[@]} -eq 0 ]; then
+    log_verbose "No files specified, running mypy on entire project..."
+
+    # Run mypy on non-plugin files (entire project excluding example-plugins and template dirs)
+    log_verbose "Running mypy on non-plugin files (excluding example-plugins/ and template directories)"
+    uv run mypy --show-traceback \
+        --exclude example-plugins \
+        --exclude canvas_cli/templates \
+        --exclude custom-plugins \
+        . || exit 1
+    log_verbose "mypy passed for non-plugin files"
+
+    # Run mypy on each plugin directory separately
+    log_verbose "Running mypy on plugin directories..."
+    plugin_dirs=()
+    while IFS= read -r -d '' dir; do
+        plugin_dirs+=("$dir")
+    done < <(find example-plugins -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null || true)
+
+    for plugin_dir in "${plugin_dirs[@]}"; do
+        log_verbose "Running mypy on plugin: $plugin_dir"
+        (cd "$plugin_dir" && "$MYPY_PATH" --show-traceback .) || {
+            echo "mypy failed for $plugin_dir" >&2
+            exit 1
+        }
+        log_verbose "mypy passed for $plugin_dir"
+    done
+
+    log_verbose "mypy check completed successfully!"
+    exit 0
+fi
+
+log_verbose "Processing ${#changed_files[@]} files..."
+
+# Separate plugin files and other files
+plugin_files=()
+other_files=()
+
+# Process each changed file
+for file in "${changed_files[@]}"; do
+    if [[ "$file" == example-plugins/* ]]; then
+        plugin_files+=("$file")
+        log_verbose "  Plugin file: $file"
+    else
+        # File outside example-plugins
+        other_files+=("$file")
+        log_verbose "  Other file: $file"
+    fi
+done
+
+log_verbose "Found ${#plugin_files[@]} plugin files and ${#other_files[@]} other files"
+
+# Run mypy on plugin files (grouped by plugin but only on specific files)
+if [ ${#plugin_files[@]} -gt 0 ]; then
+    log_verbose "Running mypy on plugin files..."
+
+    # Group files by plugin directory
+    current_plugin=""
+    plugin_file_batch=()
+
+    # Sort files to group by plugin
+    log_verbose "Sorting and grouping plugin files by directory..."
+    sorted_plugin_files=()
+    while IFS= read -r line; do
+        sorted_plugin_files+=("$line")
+    done < <(printf '%s\n' "${plugin_files[@]}" | sort)
+
+    for file in "${sorted_plugin_files[@]}" "END_MARKER"; do
+        if [[ "$file" == "END_MARKER" ]]; then
+            # Process the last batch
+            if [ ${#plugin_file_batch[@]} -gt 0 ]; then
+                # Convert to relative paths and run from plugin directory with root venv
+                relative_files=()
+                for pf in "${plugin_file_batch[@]}"; do
+                    relative_file="${pf#"$current_plugin"/}"
+                    relative_files+=("$relative_file")
+                done
+
+                # Use the mypy from root's venv but run in plugin directory
+                log_verbose "Running mypy on $current_plugin with files: ${relative_files[*]}"
+                (cd "$current_plugin" && "$MYPY_PATH" --show-traceback "${relative_files[@]}") || {
+                    echo "mypy failed for $current_plugin" >&2
+                    exit 1
+                }
+                log_verbose "mypy passed for $current_plugin"
+            fi
+            break
+        fi
+
+        plugin_dir=$(echo "$file" | cut -d'/' -f1-2)
+
+        if [[ "$plugin_dir" != "$current_plugin" ]]; then
+            # Process previous plugin batch if exists
+            if [ ${#plugin_file_batch[@]} -gt 0 ]; then
+                # Convert to relative paths and run from plugin directory with root venv
+                relative_files=()
+                for pf in "${plugin_file_batch[@]}"; do
+                    relative_file="${pf#"$current_plugin"/}"
+                    relative_files+=("$relative_file")
+                done
+
+                # Use the mypy from root's venv but run in plugin directory
+                log_verbose "Running mypy on $current_plugin with files: ${relative_files[*]}"
+                (cd "$current_plugin" && "$MYPY_PATH" --show-traceback "${relative_files[@]}") || {
+                    echo "mypy failed for $current_plugin" >&2
+                    exit 1
+                }
+                log_verbose "mypy passed for $current_plugin"
+            fi
+
+            # Start new plugin batch
+            current_plugin="$plugin_dir"
+            plugin_file_batch=("$file")
+            log_verbose "Starting new batch for plugin: $current_plugin"
+        else
+            # Add to current plugin batch
+            plugin_file_batch+=("$file")
+        fi
+    done
+fi
+
+# Run mypy on other changed files (outside example-plugins)
+if [ ${#other_files[@]} -gt 0 ]; then
+    log_verbose "Running mypy on non-plugin files: ${other_files[*]}"
+    uv run mypy --show-traceback "${other_files[@]}" || exit 1
+    log_verbose "mypy passed for non-plugin files"
+fi
+
+log_verbose "mypy check completed successfully!"

@@ -1,13 +1,17 @@
+import atexit
 import importlib.metadata
+import os
 from pathlib import Path
 
 import typer
 
-from canvas_cli.apps import plugin
+from canvas_cli.apps import namespace, plugin
+from canvas_cli.apps.auth import login, logout
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
+from canvas_cli.utils.update_check import check_for_updates
 
 APP_NAME = "canvas_cli"
 
@@ -22,21 +26,49 @@ app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
-app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
+app.command(
+    short_help="Listen and print log streams or fetches historical logs from a Canvas instance."
+)(logs_command)
 app.command(
     short_help="Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
 
+if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
+    app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
+    app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
+
 # Config app
-config_app = typer.Typer(help="Manage plugin secrets.", rich_markup_mode=None, add_completion=False)
+config_app = typer.Typer(
+    help="Manage plugin variables. Values are write-only; only key names and whether they are set are returned.",
+    rich_markup_mode=None,
+    add_completion=False,
+)
 app.add_typer(config_app, name="config")
-config_app.command(name="list", short_help="List plugin secrets on a Canvas instance.")(
+config_app.command(name="list", short_help="List plugin variables on a Canvas instance.")(
     plugin.list_secrets
 )
-config_app.command(name="set", short_help="Set plugin secrets on a Canvas instance.")(
+config_app.command(name="set", short_help="Set plugin variables on a Canvas instance.")(
     plugin.set_secrets
+)
+
+# Namespace app
+namespace_app = typer.Typer(
+    help="Manage custom data namespaces.", rich_markup_mode=None, add_completion=False
+)
+app.add_typer(namespace_app, name="namespace")
+namespace_app.command(name="list", short_help="List all custom data namespaces.")(
+    namespace.list_namespaces
+)
+namespace_app.command(name="inspect", short_help="Inspect tables in a namespace.")(
+    namespace.inspect
+)
+namespace_app.command(
+    name="reset", short_help="Reset a namespace to initial state (dry-run by default)."
+)(namespace.reset)
+namespace_app.command(name="drop", short_help="Drop a namespace (dry-run by default).")(
+    namespace.drop
 )
 
 # Our current version
@@ -67,6 +99,11 @@ def get_or_create_config_file() -> Path:
             file.write("{}")
 
     return config_path
+
+
+# Register the update check to run at exit so it fires for --version, --help,
+# and all subcommands regardless of how typer/click handles early exits.
+atexit.register(check_for_updates, __version__, get_app_dir())
 
 
 @app.callback()

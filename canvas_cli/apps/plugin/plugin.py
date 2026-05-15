@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import base64
 import builtins
@@ -54,13 +56,17 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
+    default_ignore = ["__pycache__", "*.pyc", "*.pyo"]
+
     ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
     if ignore_file.exists():
-        ignore_patterns = pathspec.PathSpec.from_lines(
-            pathspec.patterns.GitWildMatchPattern, ignore_file.read_text().splitlines()
-        )
+        ignore_lines = default_ignore + ignore_file.read_text().splitlines()
     else:
-        ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
+        ignore_lines = default_ignore
+
+    ignore_patterns = pathspec.PathSpec.from_lines(
+        pathspec.patterns.GitWildMatchPattern, ignore_lines
+    )
 
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
         with tarfile.open(tar_file.name, "w:gz") as tar:
@@ -68,8 +74,10 @@ def _build_package(package: Path) -> Path:
             file_size_total = 0
 
             for path in package.rglob("*"):
+                relative = path.relative_to(package)
+
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in path.parts):
+                if any(part.startswith(".") for part in relative.parts):
                     continue
 
                 # Skip symlinks
@@ -77,7 +85,7 @@ def _build_package(package: Path) -> Path:
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(path):
+                if ignore_patterns.match_file(relative):
                     continue
 
                 file_count += 1
@@ -92,7 +100,7 @@ def _build_package(package: Path) -> Path:
                         "plugin directory"
                     )
 
-                tar.add(path, arcname=path.relative_to(package))
+                tar.add(path, arcname=relative, recursive=False)
 
             if file_count > 100:
                 print(
@@ -178,10 +186,10 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
     return meta
 
 
-def _get_protocols_with_new_cqm_properties(
+def _get_handlers_with_new_cqm_properties(
     protocol_classes: Iterable[dict[str, Any]], plugin: Path
 ) -> Iterable[dict[str, Any]] | None:
-    """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
+    """Extract the meta properties of any ClinicalQualityMeasure handlers included in the plugin if they have changed."""
     has_updates = False
     protocol_props = []
     for p in protocol_classes:
@@ -221,8 +229,8 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
 
 def init(
     plugin_type: str = typer.Argument(
-        "protocol",
-        help="The type of plugin to create. Options are 'application' or 'protocol'.",
+        "handler",
+        help="The type of plugin to create. Options are 'application' or 'handler'.",
     ),
 ) -> None:
     """Create a new plugin."""
@@ -238,7 +246,19 @@ def init(
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
     secrets: builtins.list[str] = typer.Option(
-        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+        [],
+        "--secret",
+        callback=parse_secrets,
+        help="Sensitive variables to set (treated as sensitive=true), e.g. Key=value",
+    ),
+    variables: builtins.list[str] = typer.Option(
+        [],
+        "--variable",
+        callback=parse_secrets,
+        help="Non-sensitive variables to set, e.g. Key=value",
+    ),
+    is_enabled: bool = typer.Option(
+        True, "--enable/--disable", help="Install the plugin in an enabled or disabled state"
     ),
     host: str | None = typer.Option(
         callback=get_default_host,
@@ -261,8 +281,11 @@ def install(
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
+    # Both --secret and --variable values are sent as base64 "secret" pairs
+    # (the sensitive flag is determined by the manifest, not the install command)
+    all_vars = secrets + variables
     encoded_secrets = []
-    for pair in secrets:
+    for pair in all_vars:
         encoded = base64.b64encode(pair.encode()).decode()
         encoded_secrets.append(("secret", encoded))
 
@@ -273,7 +296,7 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
-        data = [("is_enabled", True)] + encoded_secrets
+        data = [("is_enabled", is_enabled)] + encoded_secrets
         with open(built_package_path, "rb") as package:
             r = requests.post(
                 url,
@@ -294,7 +317,7 @@ def install(
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
         print(f"Plugin {package_name} already exists, updating instead...")
-        update(package_name, built_package_path, is_enabled=True, secrets=secrets, host=host)
+        update(package_name, built_package_path, is_enabled=is_enabled, secrets=all_vars, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -477,12 +500,20 @@ def list_secrets(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        secrets = r.json().get("secrets", [])
+        data = r.json()
+        variables_list = data.get("variables", [])
 
-        if secrets:
-            pprint(secrets)
+        if variables_list:
+            for var in variables_list:
+                name = var["name"]
+                display = "[set]" if var.get("is_set") else "[not set]"
+                annotation = "  (sensitive)" if var.get("sensitive") else ""
+                print(f"  {name} = {display}{annotation}")
+        elif secrets_list := data.get("secrets", []):
+            # Legacy fallback: server doesn't return variables yet
+            pprint(secrets_list)
         else:
-            print("No secrets configured.")
+            print("No variables configured.")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -501,6 +532,79 @@ def set_secrets(
 ) -> None:
     """Configure plugin secrets on a Canvas instance."""
     update(name=plugin, package_path=None, secrets=secrets, host=host, is_enabled=None)
+
+
+def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> builtins.list[str]:
+    """Find handler classes that aren't referenced in the manifest.
+
+    Uses AST parsing to avoid executing untrusted code during validation.
+    """
+    # Get all handler/protocol class references from manifest
+    components = manifest_json.get("components", {})
+    referenced_classes = set()
+
+    # Check both "handlers" and "protocols" keys for backwards compatibility
+    for key in ["handlers", "protocols"]:
+        for item in components.get(key, []):
+            class_ref = item.get("class", "")
+            # Store just the class part (module.path:ClassName)
+            referenced_classes.add(class_ref)
+
+    # Find all Python files in the plugin
+    unreferenced = []
+    python_files = builtins.list(plugin_path.rglob("*.py"))
+
+    # Known base class names to look for in inheritance
+    base_handler_names = {"BaseHandler", "BaseProtocol"}
+
+    for py_file in python_files:
+        # Skip test files, __pycache__, and __init__ files
+        # Check if file is in a test directory or is a test file itself
+        parts = py_file.parts
+        if "__pycache__" in str(py_file) or py_file.name == "__init__.py":
+            continue
+        if "tests" in parts or "test" in parts or py_file.stem.startswith("test_"):
+            continue
+
+        # Parse the file using AST to avoid executing code
+        try:
+            tree = ast.parse(py_file.read_text())
+
+            # Find all class definitions
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    # Check if this class inherits from BaseHandler or BaseProtocol
+                    inherits_from_base = False
+                    for base in node.bases:
+                        # Handle direct inheritance: class Foo(BaseHandler)
+                        if isinstance(base, ast.Name) and base.id in base_handler_names:
+                            inherits_from_base = True
+                            break
+                        # Handle module-qualified inheritance: class Foo(handlers.BaseHandler)
+                        elif isinstance(base, ast.Attribute):
+                            if base.attr in base_handler_names:
+                                inherits_from_base = True
+                                break
+
+                    if inherits_from_base:
+                        # Build the class reference string
+                        # Get relative path from plugin root
+                        relative_path = py_file.relative_to(plugin_path)
+                        module_path = str(relative_path.with_suffix("")).replace("/", ".")
+                        # Include package name prefix to match manifest format
+                        package_name = plugin_path.name
+                        class_ref = f"{package_name}.{module_path}:{node.name}"
+
+                        # Check if it's referenced in the manifest
+                        if not any(class_ref in ref for ref in referenced_classes):
+                            unreferenced.append(class_ref)
+
+        except Exception:
+            # Skip files that can't be parsed
+            print(f"Warning: Could not parse file '{py_file}'")
+            pass
+
+    return unreferenced
 
 
 def validate_manifest(
@@ -522,12 +626,14 @@ def validate_manifest(
 
     try:
         manifest_json = json.loads(manifest.read_text())
-        protocols = manifest_json.get("components", {}).get("protocols", [])
-        if new_protocols := _get_protocols_with_new_cqm_properties(protocols, plugin_name):
+        components = manifest_json.get("components", {})
+        handler_key = "handlers" if "handlers" in components else "protocols"
+        handlers = components.get(handler_key, [])
+        if new_handlers := _get_handlers_with_new_cqm_properties(handlers, plugin_name):
             print(
                 f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
             )
-            manifest_json["components"]["protocols"] = new_protocols
+            manifest_json["components"][handler_key] = new_handlers
             manifest.write_text(json.dumps(manifest_json))
             manifest_json = json.loads(manifest.read_text())
 
@@ -536,6 +642,16 @@ def validate_manifest(
         raise typer.Abort() from None
 
     validate_manifest_file(manifest_json)
+
+    # Check for unreferenced handlers
+    unreferenced = _find_unreferenced_handlers(plugin_name, manifest_json)
+    if unreferenced:
+        print(
+            "\nWarning: Found handler classes that are not referenced in the CANVAS_MANIFEST.json:"
+        )
+        for handler in unreferenced:
+            print(f"  - {handler}")
+        print("These handlers will not be loaded unless you add them to the manifest.\n")
 
     print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
 
