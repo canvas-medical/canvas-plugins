@@ -61,6 +61,7 @@ class Condition(IdentifiableModel):
     onset_date = models.DateField()
     resolution_date = models.DateField()
     clinical_status = models.CharField(choices=ClinicalStatus.choices, max_length=20)
+    notes = models.CharField(max_length=1000)
     surgical = models.BooleanField()
 
 

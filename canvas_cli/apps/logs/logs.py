@@ -147,6 +147,8 @@ def search_logs(
     host: str,
     source: str | None,
     levels: list[str],
+    plugins: list[str] | None = None,
+    handlers: list[str] | None = None,
     start_time: str | None,
     end_time: str | None,
     size: int,
@@ -164,6 +166,10 @@ def search_logs(
         params["source"] = source
     if levels:
         params["level"] = levels
+    if plugins:
+        params["plugin"] = plugins
+    if handlers:
+        params["handler"] = handlers
     if start_time:
         params["start_time"] = start_time
     if end_time:
@@ -194,6 +200,8 @@ def iter_history(
     host: str,
     source: str | None,
     levels: list[str],
+    plugins: list[str] | None = None,
+    handlers: list[str] | None = None,
     start_time: str | None,
     end_time: str | None,
     page_size: int,
@@ -226,6 +234,8 @@ def iter_history(
             token=token,
             source=source,
             levels=levels,
+            plugins=plugins,
+            handlers=handlers,
             start_time=start_time,
             end_time=end_time,
             size=min(page_size, int(remaining) if remaining != float("inf") else page_size),
@@ -305,6 +315,11 @@ def logs(
     ),
     level: list[str] = typer.Option([], help="Repeatable. --level ERROR --level WARN"),
     source: str | None = typer.Option(None, help="Filter by source/service."),
+    plugin: list[str] = typer.Option([], help="Repeatable. --plugin foo --plugin bar."),
+    handler: list[str] = typer.Option(
+        [],
+        help="Repeatable. Qualified handler name (e.g. my_plugin.handlers.Foo).",
+    ),
     page_size: int = typer.Option(DEFAULT_PAGE_SIZE, help="Fetch size per page (historical)."),
     limit: int | None = typer.Option(None, help="Max historical logs to print."),
     all_: bool = typer.Option(False, "--all", help="Fetch all pages until exhausted (historical)."),
@@ -327,7 +342,7 @@ def logs(
         raise typer.BadParameter("--since cannot be combined with --start/--end.")
     if all_ and (limit is not None):
         raise typer.BadParameter("--all cannot be combined with --limit.")
-    if cursor_opt and any([since, start, end, level, source]):
+    if cursor_opt and any([since, start, end, level, source, plugin, handler]):
         raise typer.BadParameter(
             "--cursor cannot be combined with filters. "
             "Use --cursor alone to resume, or start a new query without --cursor."
@@ -364,6 +379,8 @@ def logs(
         args = {
             "source": cursor.get("source", source),
             "levels": cursor.get("levels", [lv.upper() for lv in level]),
+            "plugins": cursor.get("plugins", plugin),
+            "handlers": cursor.get("handlers", handler),
             "start_time": cursor.get("start", start_time),
             "end_time": cursor.get("end", end_time),
             "cursor": cursor.get("cursor"),

@@ -1,6 +1,65 @@
 # CHANGELOG
 
 
+## v0.151.0 (2026-05-15)
+
+### Features
+
+- Add approve and deny refill commands events
+  ([#1698](https://github.com/canvas-medical/canvas-plugins/pull/1698),
+  [`426ee34`](https://github.com/canvas-medical/canvas-plugins/commit/426ee349e691c330e01de1004dadc552115ca594))
+
+- Allow clipboard permissions in plugin manifest
+  ([#1699](https://github.com/canvas-medical/canvas-plugins/pull/1699),
+  [`a72d844`](https://github.com/canvas-medical/canvas-plugins/commit/a72d844db61d2fb4b5a99b9e4ed438a7fbbf672a))
+
+Co-authored-by: aaryanxshah <130312042+aaryanxshah@users.noreply.github.com>
+
+- Expose patient photo model and photo_url property in the SDK
+  ([#1690](https://github.com/canvas-medical/canvas-plugins/pull/1690),
+  [`9f66388`](https://github.com/canvas-medical/canvas-plugins/commit/9f6638855e7cf2f37f1c10828081d9c1f6ef0348))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: David Jantzen <david.jantzen@canvasmedical.com>
+
+
+## v0.150.0 (2026-05-14)
+
+### Chores
+
+- Fix integration test ([#1700](https://github.com/canvas-medical/canvas-plugins/pull/1700),
+  [`77b7d29`](https://github.com/canvas-medical/canvas-plugins/commit/77b7d29e44e53da2db9e7de89b1297705c0115b6))
+
+### Features
+
+- Filter plugin logs by plugin and handler
+  ([#1687](https://github.com/canvas-medical/canvas-plugins/pull/1687),
+  [`bfd10ee`](https://github.com/canvas-medical/canvas-plugins/commit/bfd10ee6ad3e6815fd1bc85caf801a2b5f2fb6ab))
+
+
+## v0.149.0 (2026-05-14)
+
+### Features
+
+- Add visual exam finding command events
+  ([#1636](https://github.com/canvas-medical/canvas-plugins/pull/1636),
+  [`954f020`](https://github.com/canvas-medical/canvas-plugins/commit/954f020b37151635cecec01afa245ce1e01e360d))
+
+
+## v0.148.0 (2026-05-14)
+
+### Features
+
+- Expose notes field on condition data model
+  ([#1694](https://github.com/canvas-medical/canvas-plugins/pull/1694),
+  [`7534c6a`](https://github.com/canvas-medical/canvas-plugins/commit/7534c6a333aebd80b1e1fcf068308fb6f4e8a3b9))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
 ## v0.147.0 (2026-05-12)
 
 ### Features

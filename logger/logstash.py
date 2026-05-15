@@ -256,6 +256,15 @@ class LogstashFormatterECS(logging.Formatter):
 
         now = datetime.datetime.now(datetime.UTC)
 
+        plugin_name = fields.get("plugin_name")
+        handler_name = fields.get("handler_name")
+
+        plugin_labels: dict[str, str] = {}
+        if plugin_name:
+            plugin_labels["plugin"] = plugin_name
+        if handler_name:
+            plugin_labels["handler"] = handler_name
+
         log_record = {
             **self.defaults,
             "@timestamp": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
@@ -263,6 +272,11 @@ class LogstashFormatterECS(logging.Formatter):
             "log": {
                 "level": fields.get("levelname", ""),
             },
+            **(
+                {"labels": {**self.defaults.get("labels", {}), **plugin_labels}}
+                if plugin_labels
+                else {}
+            ),
             **(
                 {
                     "error": {
