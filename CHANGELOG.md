@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.152.0 (2026-05-15)
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1701](https://github.com/canvas-medical/canvas-plugins/pull/1701),
+  [`5befc5b`](https://github.com/canvas-medical/canvas-plugins/commit/5befc5bf0c2c30f17578ee59587172dddfb5e326))
+
+### Features
+
+- Add Staff Metadata + Staff External Identifier SDK support
+  ([#1660](https://github.com/canvas-medical/canvas-plugins/pull/1660),
+  [`1ecde7c`](https://github.com/canvas-medical/canvas-plugins/commit/1ecde7c555c90f48bf06abb56b449faadae8cc65))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.151.0 (2026-05-15)
 
 ### Features
