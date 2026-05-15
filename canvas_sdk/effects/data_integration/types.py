@@ -1,40 +1,43 @@
-import sys
+from enum import StrEnum
+from typing import Annotated, TypedDict
 
-if sys.version_info >= (3, 12):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
+from pydantic import StringConstraints
+
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
+
+
+class ReportType(StrEnum):
+    """The category of report for a document type."""
+
+    CLINICAL = "CLINICAL"
+    ADMINISTRATIVE = "ADMINISTRATIVE"
+
+
+class TemplateType(StrEnum):
+    """The template applied to a clinical report document."""
+
+    LAB_REPORT = "LabReportTemplate"
+    IMAGING_REPORT = "ImagingReportTemplate"
+    SPECIALTY_REPORT = "SpecialtyReportTemplate"
 
 
 class AnnotationItem(TypedDict):
-    """
-    Annotation item with text and color for UI display.
-
-    Attributes:
-        text: The annotation label (e.g., "AI 97%", "Auto-detected")
-        color: Hex color code (e.g., "#FF0000" for red)
-    """
+    """UI annotation: `text` is the label (e.g., "AI 97%"); `color` is a hex code (e.g., "#FF0000")."""
 
     text: str
     color: str
 
 
 class DocumentType(TypedDict):
-    """
-    Document type information for categorizing a document.
+    """Document type information for categorizing a document.
 
-    Attributes:
-        key: The unique key identifying the document type (required, non-empty string)
-        name: The human-readable name of the document type (required, non-empty string)
-        report_type: The type of report, must be "CLINICAL" or "ADMINISTRATIVE" (required)
-        template_type: The template type, can be "LabReportTemplate", "ImagingReportTemplate",
-            "SpecialtyReportTemplate", or null for administrative docs (optional)
+    `template_type` is None for administrative documents.
     """
 
-    key: str
-    name: str
-    report_type: str
-    template_type: str | None
+    key: NonEmptyStr
+    name: NonEmptyStr
+    report_type: ReportType
+    template_type: TemplateType | None
 
 
-__exports__ = ("AnnotationItem", "DocumentType")
+__exports__ = ("AnnotationItem", "DocumentType", "ReportType", "TemplateType")

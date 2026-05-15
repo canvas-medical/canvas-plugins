@@ -6,10 +6,13 @@ from .junk_document import JunkDocument as JunkDocument
 from .link_document_to_patient import LinkDocumentToPatient as LinkDocumentToPatient
 from .prefill_document_fields import PrefillDocumentFieldData as PrefillDocumentFieldData
 from .prefill_document_fields import PrefillDocumentFields as PrefillDocumentFields
+from .prefill_document_fields import PrefillTemplate as PrefillTemplate
 from .prefill_document_fields import TemplateFields as TemplateFields
 from .remove_document_from_patient import RemoveDocumentFromPatient as RemoveDocumentFromPatient
 from .types import AnnotationItem as AnnotationItem
 from .types import DocumentType as DocumentType
+from .types import ReportType as ReportType
+from .types import TemplateType as TemplateType
 
 __all__ = __exports__ = (
     "AnnotationItem",
@@ -20,8 +23,11 @@ __all__ = __exports__ = (
     "JunkDocument",
     "LinkDocumentToPatient",
     "PrefillDocumentFields",
+    "PrefillTemplate",
     "Priority",
     "RemoveDocumentFromPatient",
+    "ReportType",
     "ReviewMode",
     "TemplateFields",
+    "TemplateType",
 )

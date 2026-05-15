@@ -535,10 +535,13 @@
     "LinkDocumentToPatient",
     "PrefillDocumentFieldData",
     "PrefillDocumentFields",
+    "PrefillTemplate",
     "Priority",
     "RemoveDocumentFromPatient",
+    "ReportType",
     "ReviewMode",
-    "TemplateFields"
+    "TemplateFields",
+    "TemplateType"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
@@ -548,10 +551,6 @@
   "canvas_sdk.effects.data_integration.categorize_document": [
     "CategorizeDocument"
   ],
-  "canvas_sdk.effects.data_integration.constants": [
-    "VALID_REPORT_TYPES",
-    "VALID_TEMPLATE_TYPES"
-  ],
   "canvas_sdk.effects.data_integration.junk_document": [
     "JunkDocument"
   ],
@@ -560,14 +559,17 @@
   ],
   "canvas_sdk.effects.data_integration.prefill_document_fields": [
     "PrefillDocumentFieldData",
-    "PrefillDocumentFields"
+    "PrefillDocumentFields",
+    "PrefillTemplate"
   ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
     "RemoveDocumentFromPatient"
   ],
   "canvas_sdk.effects.data_integration.types": [
     "AnnotationItem",
-    "DocumentType"
+    "DocumentType",
+    "ReportType",
+    "TemplateType"
   ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
