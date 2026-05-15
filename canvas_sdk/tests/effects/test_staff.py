@@ -24,9 +24,7 @@ def mock_staff_exists() -> Generator[MagicMock]:
 def mock_external_id_targets() -> Generator[tuple[MagicMock, MagicMock]]:
     """Mock the Staff and StaffExternalIdentifier existence checks to return True."""
     with (
-        patch(
-            "canvas_sdk.effects.staff.staff_external_identifier.Staff.objects"
-        ) as mock_staff,
+        patch("canvas_sdk.effects.staff.staff_external_identifier.Staff.objects") as mock_staff,
         patch(
             "canvas_sdk.effects.staff.staff_external_identifier.StaffExternalIdentifierModel.objects"
         ) as mock_identifier,
