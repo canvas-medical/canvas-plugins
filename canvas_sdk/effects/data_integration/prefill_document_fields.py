@@ -3,7 +3,7 @@ from typing import Annotated, Any, NotRequired, TypeAlias, TypedDict
 from pydantic import Field
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
+from canvas_sdk.effects.data_integration.base import _PrefillingDocumentEffect
 from canvas_sdk.effects.data_integration.types import AnnotationItem, NonEmptyStr
 
 
@@ -37,7 +37,7 @@ class PrefillTemplate(TypedDict):
     fields: TemplateFields
 
 
-class PrefillDocumentFields(_BaseDocumentEffect):
+class PrefillDocumentFields(_PrefillingDocumentEffect):
     """Creates or updates an IntegrationTaskPrefill record with field_type=REPORT_TYPE.
 
     When processed, this effect will:

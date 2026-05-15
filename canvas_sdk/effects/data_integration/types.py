@@ -3,7 +3,7 @@ from typing import Annotated, TypedDict
 
 from pydantic import StringConstraints
 
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
 
 class ReportType(StrEnum):

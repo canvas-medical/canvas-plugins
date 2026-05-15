@@ -3,7 +3,8 @@ from typing import Any
 from uuid import UUID
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
+from canvas_sdk.effects.data_integration.base import _PrefillingDocumentEffect
+from canvas_sdk.effects.data_integration.types import NonEmptyStr
 
 
 class Priority(StrEnum):
@@ -21,7 +22,7 @@ class ReviewMode(StrEnum):
     REVIEW_NOT_REQUIRED = "RN"
 
 
-class AssignDocumentReviewer(_BaseDocumentEffect):
+class AssignDocumentReviewer(_PrefillingDocumentEffect):
     """Assigns a staff member or team as reviewer to a document in the Data Integration queue.
 
     When processed, this effect will:
@@ -37,8 +38,8 @@ class AssignDocumentReviewer(_BaseDocumentEffect):
     class Meta:
         effect_type = EffectType.ASSIGN_DOCUMENT_REVIEWER
 
-    reviewer_id: str | None = None
-    team_id: UUID | str | None = None
+    reviewer_id: NonEmptyStr | None = None
+    team_id: UUID | NonEmptyStr | None = None
     priority: Priority = Priority.NORMAL
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
 

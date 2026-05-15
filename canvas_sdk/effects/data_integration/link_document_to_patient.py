@@ -1,11 +1,11 @@
 from typing import Any
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
+from canvas_sdk.effects.data_integration.base import _PrefillingDocumentEffect
 from canvas_sdk.effects.data_integration.types import NonEmptyStr
 
 
-class LinkDocumentToPatient(_BaseDocumentEffect):
+class LinkDocumentToPatient(_PrefillingDocumentEffect):
     """Links a document in the Data Integration queue to a patient by the patient's key.
 
     The plugin is responsible for matching the patient and providing their key — this

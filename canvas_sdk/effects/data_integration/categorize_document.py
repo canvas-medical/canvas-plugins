@@ -1,11 +1,11 @@
 from typing import Any
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
+from canvas_sdk.effects.data_integration.base import _PrefillingDocumentEffect
 from canvas_sdk.effects.data_integration.types import DocumentType
 
 
-class CategorizeDocument(_BaseDocumentEffect):
+class CategorizeDocument(_PrefillingDocumentEffect):
     """Categorizes a document in the Data Integration queue into a specific document type.
 
     When processed, this effect will:
