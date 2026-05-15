@@ -134,15 +134,11 @@ def test_staff_external_identifier_create_requires_value(
 
 def test_staff_external_identifier_create_validates_staff_exists() -> None:
     """create() raises when the referenced staff does not exist."""
-    with patch(
-        "canvas_sdk.effects.staff.staff_external_identifier.Staff.objects"
-    ) as mock_staff:
+    with patch("canvas_sdk.effects.staff.staff_external_identifier.Staff.objects") as mock_staff:
         mock_staff.filter.return_value.exists.return_value = False
 
         with pytest.raises(ValidationError) as exc_info:
-            StaffExternalIdentifier(
-                value="employee-008", staff_id="missing-staff"
-            ).create()
+            StaffExternalIdentifier(value="employee-008", staff_id="missing-staff").create()
 
     assert "Staff with id: missing-staff does not exist." in str(exc_info.value)
 
