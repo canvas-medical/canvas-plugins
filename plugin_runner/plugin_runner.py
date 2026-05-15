@@ -485,8 +485,9 @@ def synchronize_plugins(run_once: bool = False) -> None:
         # from plugins are picked up
         _engine_for_plugin.cache_clear()
         plugin_name = data.get("plugin", None)
+        action = data["action"]
         try:
-            if data["action"] == "reload":
+            if action == "reload":
                 if plugin_name:
                     plugin = enabled_plugins([plugin_name]).get(plugin_name, None)
 
@@ -502,7 +503,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
                     log.info("synchronize_plugins: installing/reloading plugins for action=reload")
                     install_plugins()
                     load_plugins()
-            elif data["action"] == "unload" and plugin_name:
+            elif action == "unload" and plugin_name:
                 log.info(f'synchronize_plugins: uninstalling plugin "{plugin_name}"')
                 unload_plugin(plugin_name)
                 uninstall_plugin(plugin_name)
@@ -519,6 +520,19 @@ def synchronize_plugins(run_once: bool = False) -> None:
 
             log.exception(f"synchronize_plugins: {message}")
             sentry_sdk.capture_exception(e)
+
+        # Publish a JSON completion ack on a dedicated channel so home-app
+        # can stop waiting. Sent on every cycle (success or failure) so
+        # callers don't hold the transaction open longer than necessary.
+        if action in ("reload", "unload"):
+            try:
+                ack: dict[str, Any] = {"action": f"{action}_complete"}
+                if plugin_name:
+                    ack["plugin"] = plugin_name
+                client, _ = get_client()
+                client.publish(f"{CHANNEL_NAME}-ack", json.dumps(ack))
+            except Exception:
+                log.exception("synchronize_plugins: failed to publish completion ack")
 
         if run_once:
             break
