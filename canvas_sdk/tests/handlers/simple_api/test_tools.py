@@ -3,7 +3,11 @@ from typing import TypeVar
 
 import pytest
 
-from canvas_sdk.handlers.simple_api.tools import CaseInsensitiveMultiDict, MultiDict
+from canvas_sdk.handlers.simple_api.tools import (
+    CaseInsensitiveMultiDict,
+    MultiDict,
+    separate_headers,
+)
 from canvas_sdk.tests.shared import params_from_dict
 
 T = TypeVar("T")
@@ -66,3 +70,57 @@ def test_case_insensitive_multidict(
     """Test the methods and functionality of CaseInsensitiveMultiDict."""
     multidict = CaseInsensitiveMultiDict((("a", 1), ("b", 2), ("A", 3)))
     assert func(multidict) == expected_value
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected"),
+    [
+        (
+            {"Accept-Encoding": "gzip, br"},
+            [("Accept-Encoding", "gzip"), ("Accept-Encoding", "br")],
+        ),
+        (
+            {"if-match": '"abc", "def"'},
+            [("if-match", '"abc"'), ("if-match", '"def"')],
+        ),
+        (
+            {"X-Forwarded-For": "192.0.2.1, 192.0.2.2"},
+            [("X-Forwarded-For", "192.0.2.1"), ("X-Forwarded-For", "192.0.2.2")],
+        ),
+        (
+            {"Authorization": "key,with,commas"},
+            [("Authorization", "key,with,commas")],
+        ),
+        (
+            {"User-Agent": "Mozilla/5.0 (compatible), Vendor/1.0"},
+            [("User-Agent", "Mozilla/5.0 (compatible), Vendor/1.0")],
+        ),
+        (
+            {"Date": "Mon, 16 May 2026 12:00:00 GMT"},
+            [("Date", "Mon, 16 May 2026 12:00:00 GMT")],
+        ),
+        (
+            {"X-Custom-Header": "value, with, commas"},
+            [("X-Custom-Header", "value, with, commas")],
+        ),
+        (
+            {},
+            [],
+        ),
+    ],
+    ids=[
+        "Accept-Encoding splits",
+        "If-Match splits (case-insensitive allowlist)",
+        "X-Forwarded-For splits",
+        "Authorization preserves commas",
+        "User-Agent preserves commas",
+        "Date preserves commas",
+        "custom header preserves commas",
+        "empty headers",
+    ],
+)
+def test_separate_headers(
+    headers: dict[str, str], expected: list[tuple[str, str]]
+) -> None:
+    """List-valued headers split on `,`; scalar headers pass through unchanged."""
+    assert separate_headers(headers) == expected

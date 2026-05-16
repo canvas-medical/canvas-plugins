@@ -102,15 +102,54 @@ class CaseInsensitiveMultiDict(MultiDict[str, ValueType]):
         return super().get_list(__key.lower())
 
 
-def separate_headers(headers: Mapping[str, str]) -> list[tuple[str, str]]:
-    """
-    Break apart header values containing comma-separated lists into discrete key-value pairs.
-    """
-    headers_list = []
+# Headers whose grammar permits a comma-separated list of values (RFC 7230
+# §3.2.2 1#element). Other headers — notably Authorization, Set-Cookie, Date,
+# User-Agent, and Cookie — may legitimately contain commas as part of a single
+# scalar value and must not be split.
+LIST_VALUED_HEADERS = frozenset(
+    {
+        "accept",
+        "accept-charset",
+        "accept-encoding",
+        "accept-language",
+        "access-control-allow-headers",
+        "access-control-allow-methods",
+        "access-control-expose-headers",
+        "access-control-request-headers",
+        "allow",
+        "cache-control",
+        "connection",
+        "content-encoding",
+        "content-language",
+        "expect",
+        "forwarded",
+        "if-match",
+        "if-none-match",
+        "pragma",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+        "vary",
+        "via",
+        "warning",
+        "x-forwarded-for",
+        "x-forwarded-host",
+        "x-forwarded-proto",
+    }
+)
 
-    for key, values in headers.items():
-        for value in values.split(","):
-            headers_list.append((key, value.strip()))
+
+def separate_headers(headers: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Split list-valued headers on commas; leave other headers intact."""
+    headers_list: list[tuple[str, str]] = []
+
+    for key, value in headers.items():
+        if key.lower() in LIST_VALUED_HEADERS:
+            for piece in value.split(","):
+                headers_list.append((key, piece.strip()))
+        else:
+            headers_list.append((key, value))
 
     return headers_list
 
@@ -120,5 +159,6 @@ __exports__ = (
     "ValueType",
     "MultiDict",
     "CaseInsensitiveMultiDict",
+    "LIST_VALUED_HEADERS",
     "separate_headers",
 )
