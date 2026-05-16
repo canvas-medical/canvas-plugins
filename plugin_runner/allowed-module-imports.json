@@ -747,6 +747,18 @@
     "PlainTextResponse",
     "Response"
   ],
+  "canvas_sdk.effects.staff": [
+    "StaffExternalIdentifier"
+  ],
+  "canvas_sdk.effects.staff.staff_external_identifier": [
+    "StaffExternalIdentifier"
+  ],
+  "canvas_sdk.effects.staff_metadata": [
+    "StaffMetadata"
+  ],
+  "canvas_sdk.effects.staff_metadata.base": [
+    "StaffMetadata"
+  ],
   "canvas_sdk.effects.surescripts": [
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
@@ -1130,7 +1142,9 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
     "StopMedicationEvent",
@@ -1526,7 +1540,9 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole"
   ],
