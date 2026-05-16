@@ -119,8 +119,6 @@ def test_case_insensitive_multidict(
         "empty headers",
     ],
 )
-def test_separate_headers(
-    headers: dict[str, str], expected: list[tuple[str, str]]
-) -> None:
+def test_separate_headers(headers: dict[str, str], expected: list[tuple[str, str]]) -> None:
     """List-valued headers split on `,`; scalar headers pass through unchanged."""
     assert separate_headers(headers) == expected

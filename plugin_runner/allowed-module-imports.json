@@ -896,6 +896,7 @@
   "canvas_sdk.handlers.simple_api.tools": [
     "CaseInsensitiveMultiDict",
     "KeyType",
+    "LIST_VALUED_HEADERS",
     "MultiDict",
     "ValueType",
     "separate_headers"
