@@ -28,12 +28,9 @@ from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
-<<<<<<< panda-526-sdk-task-priority
 from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.task import TaskCommand
-=======
 from canvas_sdk.commands.commands.review.base import ReportReviewCommunicationMethod
->>>>>>> main
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -633,8 +630,6 @@ def test_immunization_statement_empty_coding_raises_error() -> None:
         )
     assert "system" in str(exc_info.value).lower()
 
-
-<<<<<<< panda-526-sdk-task-priority
 @pytest.mark.parametrize(
     "command_cls,priority",
     [
@@ -670,7 +665,8 @@ def test_commands_reject_invalid_priority(command_class: type, kwargs: dict) -> 
     """Test that all command classes reject invalid priority values."""
     with pytest.raises(ValidationError):
         command_class(**kwargs)
-=======
+
+
 def test_custom_command_schema_key_as_instance_attribute() -> None:
     """Test that CustomCommand can set schema_key as an instance attribute."""
     # Test setting schema_key at instantiation
@@ -891,4 +887,3 @@ def test_vitals_body_temperature_float_in_originate_payload() -> None:
     effect = command.originate()
     payload = json.loads(effect.payload)
     assert payload["data"]["body_temperature"] == 98.6
->>>>>>> main
