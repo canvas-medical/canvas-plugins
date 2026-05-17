@@ -7,6 +7,7 @@ import pkgutil
 import signal
 import sys
 import threading
+import uuid
 import warnings
 from collections import defaultdict
 from collections.abc import Iterable
@@ -45,6 +46,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
+from canvas_sdk.utils.sql_tags import query_tags
 from canvas_sdk.v1.data.base import IS_SQLITE
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
@@ -310,6 +312,12 @@ class PluginRunner(PluginRunnerServicer):
                     )
 
                     with (
+                        query_tags(
+                            plugin=base_plugin_name,
+                            event=event_name,
+                            handler=handler_name,
+                            plugin_execution_id=uuid.uuid4().hex[:16],
+                        ),
                         metrics.measure(
                             name=handler_name,
                             track_queries=True,
