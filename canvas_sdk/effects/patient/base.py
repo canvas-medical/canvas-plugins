@@ -5,8 +5,8 @@ from typing import Any
 
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.metadata import Metadata as PatientMetadata
 from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff

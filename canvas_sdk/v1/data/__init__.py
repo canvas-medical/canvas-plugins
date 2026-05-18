@@ -88,6 +88,8 @@ from .lab import (
     LabOrderReasonCondition,
     LabPartner,
     LabPartnerTest,
+    LabPartnerTestQuestion,
+    LabPartnerTestQuestionChoice,
     LabReport,
     LabReportTemplate,
     LabReportTemplateField,
@@ -130,6 +132,7 @@ from .patient import (
     PatientFacilityAddress,
     PatientIdentificationCard,
     PatientMetadata,
+    PatientPhoto,
     PatientSetting,
 )
 from .patient_consent import (
@@ -175,7 +178,16 @@ from .specialty_report_template import (
     SpecialtyReportTemplateField,
     SpecialtyReportTemplateFieldOption,
 )
-from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
+from .staff import (
+    Staff,
+    StaffAddress,
+    StaffContactPoint,
+    StaffExternalIdentifier,
+    StaffLicense,
+    StaffMetadata,
+    StaffPhoto,
+    StaffRole,
+)
 from .stop_medication_event import StopMedicationEvent
 from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
@@ -277,6 +289,8 @@ __all__ = __exports__ = (
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "LabReport",
     "LabReview",
     "LabTest",
@@ -324,6 +338,7 @@ __all__ = __exports__ = (
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientIdentificationCard",
+    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
@@ -360,10 +375,12 @@ __all__ = __exports__ = (
     "SnapshotImage",
     "Staff",
     "StaffAddress",
+    "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
-    "StaffContactPoint",
     "StopMedicationEvent",
     "Task",
     "TaskComment",

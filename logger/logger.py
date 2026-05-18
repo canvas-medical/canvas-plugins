@@ -1,5 +1,8 @@
 import logging
 import os
+from collections.abc import Generator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from django.conf import settings
@@ -8,6 +11,50 @@ from logstash_async.handler import AsynchronousLogstashHandler
 from logger.logstash import LogstashFormatterECS
 from logger.pubsub import PubSubLogHandler
 
+_current_handler_name: ContextVar[str | None] = ContextVar("_current_handler_name", default=None)
+_current_plugin_name: ContextVar[str | None] = ContextVar("_current_plugin_name", default=None)
+
+
+@contextmanager
+def plugin_context(handler_name: str | None) -> Generator[None, None, None]:
+    """Bind the active plugin's handler name (and derived plugin name)."""
+    if not handler_name:
+        yield
+        return
+    plugin_name = handler_name.split(".", 1)[0] or None
+    handler_token = _current_handler_name.set(handler_name)
+    plugin_token = _current_plugin_name.set(plugin_name)
+    try:
+        yield
+    finally:
+        _current_plugin_name.reset(plugin_token)
+        _current_handler_name.reset(handler_token)
+
+
+class PluginNameFilter(logging.Filter):
+    """Surface active plugin/handler names onto each ``LogRecord``.
+
+    Writes:
+
+    - ``record.plugin_name`` — used by the logstash formatters to emit
+      ``labels.plugin``.
+    - ``record.handler_name`` — used by the logstash formatters to emit
+      ``labels.handler``.
+    - ``record.plugin_name_prefix`` — the literal ``"[<plugin_name>] "``
+      referenced by the streaming/pub-sub format template; empty string
+      when no plugin is active so the template stays interpolation-safe
+      either way.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Populate plugin/handler name fields from the current context vars."""
+        plugin_name = _current_plugin_name.get()
+        handler_name = _current_handler_name.get()
+        record.plugin_name = plugin_name
+        record.handler_name = handler_name
+        record.plugin_name_prefix = f"[{plugin_name}] " if plugin_name else ""
+        return True
+
 
 class PluginLogger:
     """A custom logger for plugins."""
@@ -15,6 +62,7 @@ class PluginLogger:
     def __init__(self) -> None:
         self.logger = logging.getLogger("plugin_runner_logger")
         self.logger.setLevel(logging.INFO)
+        self.logger.addFilter(PluginNameFilter())
 
         log_prefix = f"{os.getenv('HOSTNAME', '?')}: {os.getenv('APTIBLE_PROCESS_INDEX', '?')}"
 
@@ -22,7 +70,7 @@ class PluginLogger:
             log_prefix = f"[{log_prefix}] "
 
         formatter = logging.Formatter(
-            f"plugin-runner {log_prefix}%(levelname)s %(asctime)s %(message)s"
+            f"plugin-runner {log_prefix}%(plugin_name_prefix)s%(levelname)s %(asctime)s %(message)s"
         )
 
         streaming_handler = logging.StreamHandler()

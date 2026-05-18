@@ -2,8 +2,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect
 
 
 @dataclass

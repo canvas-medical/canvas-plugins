@@ -6,8 +6,7 @@ from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import Effect
-from canvas_sdk.effects import EffectType, _BaseEffect
+from canvas_sdk.effects import Effect, EffectType, _BaseEffect
 
 
 class EventRecurrence(StrEnum):

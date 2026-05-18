@@ -34,6 +34,8 @@ from .lab import (
     LabOrderReasonFactory,
     LabPartnerFactory,
     LabPartnerTestFactory,
+    LabPartnerTestQuestionChoiceFactory,
+    LabPartnerTestQuestionFactory,
     LabReportFactory,
     LabReviewFactory,
     LabTestFactory,
@@ -57,7 +59,12 @@ from .organization import (
     OrganizationContactPointFactory,
     OrganizationFactory,
 )
-from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
+from .patient import (
+    PatientAddressFactory,
+    PatientFacilityAddressFactory,
+    PatientFactory,
+    PatientPhotoFactory,
+)
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -125,6 +132,8 @@ __all__ = (
     "LabOrderReasonFactory",
     "LabPartnerFactory",
     "LabPartnerTestFactory",
+    "LabPartnerTestQuestionChoiceFactory",
+    "LabPartnerTestQuestionFactory",
     "LabReportFactory",
     "LabReviewFactory",
     "LabTestFactory",
@@ -151,6 +160,7 @@ __all__ = (
     "PatientFactory",
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
+    "PatientPhotoFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",

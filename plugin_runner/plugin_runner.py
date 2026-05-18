@@ -25,7 +25,7 @@ from redis.retry import Retry
 from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
-from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginRequest,
     ReloadPluginResponse,
@@ -38,7 +38,6 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
@@ -49,6 +48,7 @@ from canvas_sdk.utils.metrics import measured
 from canvas_sdk.v1.data.base import IS_SQLITE
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
+from logger.logger import plugin_context
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.ddl import generate_plugin_migrations
 from plugin_runner.exceptions import (
@@ -67,6 +67,7 @@ from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
     ENV,
+    INSTALLATION_TIME_ZONE,
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
@@ -123,6 +124,7 @@ LOADED_PLUGINS: dict[str, Plugin] = {}
 # a global dictionary of values made available to all plugins
 ENVIRONMENT: dict = {
     "CUSTOMER_IDENTIFIER": CUSTOMER_IDENTIFIER,
+    "INSTALLATION_TIME_ZONE": INSTALLATION_TIME_ZONE,
 }
 
 # a global dictionary of events to handler class names
@@ -274,81 +276,97 @@ class PluginRunner(PluginRunnerServicer):
             effect_list = []
 
             for plugin_name in relevant_plugins:
-                log.debug(f"Processing {plugin_name}")
-                sentry_sdk.set_tag("plugin-name", plugin_name)
-
                 plugin = LOADED_PLUGINS[plugin_name]
                 handler_class = plugin["class"]
-                base_plugin_name = plugin_name.split(":")[0]
-                namespace_config = plugin.get("namespace_config")
+                base_plugin_name, handler_path, handler_classname = plugin_name.split(":")
 
-                secrets = plugin.get("secrets", {})
+                sentry_sdk.set_tag("plugin-name", plugin_name)
 
-                secrets.update(
-                    {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
-                )
+                with plugin_context(f"{handler_path}.{handler_classname}"):
+                    log.debug(f"Processing {plugin_name}")
 
-                try:
-                    handler = handler_class(event, secrets, ENVIRONMENT)
+                    namespace_config = plugin.get("namespace_config")
 
-                    if not handler.accept_event():
+                    secrets = plugin.get("secrets", {})
+
+                    secrets.update(
+                        {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
+                    )
+
+                    try:
+                        handler = handler_class(event, secrets, ENVIRONMENT)
+
+                        if not handler.accept_event():
+                            continue
+                        relevant_plugin_handlers.append(handler_class)
+
+                        classname = (
+                            handler.__class__.__name__
+                            if isinstance(handler, ClinicalQualityMeasure)
+                            else None
+                        )
+
+                        handler_name = metrics.get_qualified_name(handler.compute)
+
+                        # Determine namespace and access level for database context
+                        db_namespace = namespace_config["namespace"] if namespace_config else None
+                        db_access_level = (
+                            namespace_config["access_level"] if namespace_config else "read"
+                        )
+
+                        with (
+                            metrics.measure(
+                                name=handler_name,
+                                track_queries=True,
+                                track_memory_usage=True,
+                                extra_tags={
+                                    "plugin": base_plugin_name,
+                                    "event": event_name,
+                                },
+                            ),
+                            plugin_database_context(
+                                base_plugin_name,
+                                namespace=db_namespace,
+                                access_level=db_access_level,
+                            ),
+                        ):
+                            _effects = handler.compute()
+                            if _effects is None:
+                                # Plugin authors sometimes forget to return their
+                                # effects list. Treat as empty with a warning so
+                                # the author can fix it, instead of raising
+                                # ``TypeError: 'NoneType' object is not iterable``
+                                # (KOALA-5365 / HOME-APP-RT8).
+                                log.warning(
+                                    f"{handler_name} returned None from compute(); "
+                                    "expected an iterable of effects. Treating as "
+                                    "an empty list."
+                                )
+                                _effects = []
+                            effects = [
+                                Effect(
+                                    type=effect.type,
+                                    payload=effect.payload,
+                                    plugin_name=base_plugin_name,
+                                    classname=classname,
+                                    handler_name=handler_name,
+                                    actor=event.actor.id,
+                                    source=event.source,
+                                )
+                                for effect in _effects
+                            ]
+                            effects = validate_effects(effects)
+
+                            apply_effects_to_context(effects, event=event)
+
+                            log.info(f"{plugin_name}.compute() completed.")
+
+                    except Exception as e:
+                        log.exception(f"Encountered exception in plugin {plugin_name}")
+                        sentry_sdk.capture_exception(e)
                         continue
-                    relevant_plugin_handlers.append(handler_class)
 
-                    classname = (
-                        handler.__class__.__name__
-                        if isinstance(handler, ClinicalQualityMeasure)
-                        else None
-                    )
-                    handler_name = metrics.get_qualified_name(handler.compute)
-
-                    # Determine namespace and access level for database context
-                    db_namespace = namespace_config["namespace"] if namespace_config else None
-                    db_access_level = (
-                        namespace_config["access_level"] if namespace_config else "read"
-                    )
-
-                    with (
-                        metrics.measure(
-                            name=handler_name,
-                            track_queries=True,
-                            track_memory_usage=True,
-                            extra_tags={
-                                "plugin": base_plugin_name,
-                                "event": event_name,
-                            },
-                        ),
-                        plugin_database_context(
-                            base_plugin_name,
-                            namespace=db_namespace,
-                            access_level=db_access_level,
-                        ),
-                    ):
-                        _effects = handler.compute()
-                        effects = [
-                            Effect(
-                                type=effect.type,
-                                payload=effect.payload,
-                                plugin_name=base_plugin_name,
-                                classname=classname,
-                                handler_name=handler_name,
-                                actor=event.actor.id,
-                                source=event.source,
-                            )
-                            for effect in _effects
-                        ]
-                        effects = validate_effects(effects)
-
-                        apply_effects_to_context(effects, event=event)
-
-                        log.info(f"{plugin_name}.compute() completed.")
-
-                except Exception as e:
-                    log.exception(f"Encountered exception in plugin {plugin_name}")
-                    sentry_sdk.capture_exception(e)
-                    continue
-
-                effect_list += effects
+                    effect_list += effects
 
             sentry_sdk.set_tag("plugin-name", None)
 
@@ -358,22 +376,24 @@ class PluginRunner(PluginRunnerServicer):
             # effects list to be a single 500 Internal Server Error response effect.
             if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
                         f" {event.context['path']}"
                     )
-                    effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+                    effect_list = [
+                        Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply().to_proto()
+                    ]
             if event.type == EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE:
                 if len(relevant_plugin_handlers) == 0:
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
                 elif len(relevant_plugin_handlers) > 1:
                     log.error(
                         f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE)}"
-                        f" {event.context['channel']}"
+                        f" {event.context['channel_name']}"
                     )
-                    effect_list = [DenyConnection().apply()]
+                    effect_list = [DenyConnection().apply().to_proto()]
 
             # Don't log anything if a plugin handler didn't actually run.
             if relevant_plugins:
@@ -601,6 +621,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
         retry=Retry(backoff=ExponentialBackoff(), retries=10),
         retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
         health_check_interval=1,
+        socket_keepalive=True,
     )
     pubsub = client.pubsub()
 
@@ -794,6 +815,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             return False
 
         any_failed = False
+        loaded_handler_count = 0
 
         # Share evaluated_modules across all handlers in this plugin so that common
         # submodules (like constants.py) are only evaluated and reloaded once, not
@@ -869,6 +891,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                         "secrets": secrets_json,
                         "namespace_config": namespace_config,
                     }
+
+                loaded_handler_count += 1
             except Exception as e:
                 log.exception(f"Error importing module '{name_and_class}'")
                 sentry_sdk.capture_exception(e)
@@ -877,6 +901,19 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         # Re-register the AppConfig so that the freshly-created model classes are
         # visible to Django's relation graph (needed for select_related, etc.).
         register_plugin_app_config(name)
+
+        plugin_version = manifest_json.get("plugin_version", "unknown")
+        total_handlers = len(handlers)
+        if any_failed:
+            log.warning(
+                f'Plugin "{name}" version {plugin_version} loaded with errors '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded successfully)"
+            )
+        else:
+            log.info(
+                f'Successfully loaded plugin "{name}", version {plugin_version} '
+                f"({loaded_handler_count}/{total_handlers} handlers loaded)"
+            )
 
         return not any_failed
 

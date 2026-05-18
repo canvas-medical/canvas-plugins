@@ -1,7 +1,7 @@
 from typing import Self, cast
 
 from django.db import models
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
@@ -26,7 +26,15 @@ from canvas_sdk.v1.data.staff import Staff
 class LabReportQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reports."""
 
-    pass
+    def with_result_tests_and_values(self) -> Self:
+        """Prefetch result tests (with their values) and the report's full value list."""
+        return self.prefetch_related(
+            Prefetch(
+                "tests",
+                queryset=LabTest.objects.filter(order__isnull=True).prefetch_related("values"),
+            ),
+            "values",
+        )
 
 
 LabReportManager = BaseModelManager.from_queryset(LabReportQuerySet)
@@ -66,6 +74,24 @@ class LabReport(AuditedModel, IdentifiableModel):
     original_date = models.DateTimeField()
     date_performed = models.DateTimeField()
     custom_document_name = models.CharField(max_length=500)
+
+    @property
+    def ordered_tests(self) -> "models.QuerySet[LabTest]":
+        """LabTests created when a LabOrder is placed.
+
+        These rows are not associated with any LabValue results.
+        They represent the tests that are ordered.
+        """
+        return self.tests.filter(order__isnull=False)
+
+    @property
+    def result_tests(self) -> "models.QuerySet[LabTest]":
+        """LabTests created for lab results.
+
+        For FHIR DiagnosticReport and Health Gorilla ingested reports,
+        LabValue records are associated with these tests.
+        """
+        return self.tests.filter(order__isnull=True)
 
 
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
@@ -129,6 +155,9 @@ class LabValue(TimestampedModel, IdentifiableModel):
     high_threshold = models.CharField(max_length=30)
     comment = models.TextField()
     observation_status = models.CharField(max_length=24)
+    test = models.ForeignKey(
+        "LabTest", related_name="values", null=True, on_delete=models.DO_NOTHING
+    )
 
 
 class LabValueCoding(TimestampedModel):
@@ -315,6 +344,38 @@ class LabPartnerTest(IdentifiableModel):
     cpt_code = models.CharField(max_length=256, blank=True, null=True)
 
 
+class LabPartnerTestQuestion(TimestampedModel):
+    """A class representing an ask-at-order-entry question for a lab partner test."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_lab_partner_test_question_001"
+
+    objects: models.Manager["LabPartnerTestQuestion"]
+
+    lab_partner_test = models.ForeignKey(
+        "LabPartnerTest", on_delete=models.CASCADE, related_name="questions"
+    )
+    required = models.BooleanField()
+    code = models.CharField(max_length=256)
+    body = models.TextField()
+    type = models.CharField(max_length=256)
+
+
+class LabPartnerTestQuestionChoice(TimestampedModel):
+    """A class representing a choice for a lab partner test question."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_lab_partner_test_question_choice_001"
+
+    objects: models.Manager["LabPartnerTestQuestionChoice"]
+
+    lab_partner_test_question = models.ForeignKey(
+        "LabPartnerTestQuestion", on_delete=models.CASCADE, related_name="choices"
+    )
+    label = models.CharField(max_length=256)
+    value = models.CharField(max_length=256)
+
+
 class FieldType(models.TextChoices):
     """Choices for lab report template field types."""
 
@@ -403,6 +464,8 @@ __exports__ = (
     "LabTest",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "FieldType",
     "LabReportTemplate",
     "LabReportTemplateField",

@@ -510,14 +510,73 @@
   "canvas_sdk.effects.claim_queue": [
     "MoveClaimToQueue"
   ],
+  "canvas_sdk.effects.command_metadata": [
+    "CommandMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.command_metadata.command_metadata_create_form": [
+    "CommandMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.data_integration": [
+    "AnnotationItem",
+    "AssignDocumentReviewer",
+    "CategorizeDocument",
+    "DocumentType",
+    "JunkDocument",
+    "LinkDocumentToPatient",
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
+    "PrefillTemplate",
+    "Priority",
+    "RemoveDocumentFromPatient",
+    "ReportType",
+    "ReviewMode",
+    "TemplateFields",
+    "TemplateType"
+  ],
+  "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "AssignDocumentReviewer",
+    "Priority",
+    "ReviewMode"
+  ],
+  "canvas_sdk.effects.data_integration.categorize_document": [
+    "CategorizeDocument"
+  ],
+  "canvas_sdk.effects.data_integration.junk_document": [
+    "JunkDocument"
+  ],
+  "canvas_sdk.effects.data_integration.link_document_to_patient": [
+    "LinkDocumentToPatient"
+  ],
+  "canvas_sdk.effects.data_integration.prefill_document_fields": [
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
+    "PrefillTemplate"
+  ],
+  "canvas_sdk.effects.data_integration.remove_document_from_patient": [
+    "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.types": [
+    "AnnotationItem",
+    "DocumentType",
+    "ReportType",
+    "TemplateType"
+  ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
+  ],
+  "canvas_sdk.effects.effect": [
+    "Effect",
+    "EffectType"
   ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
@@ -534,6 +593,23 @@
   "canvas_sdk.effects.group": [
     "Group"
   ],
+  "canvas_sdk.effects.http_request": [
+    "HttpMethod",
+    "HttpRequestEffect"
+  ],
+  "canvas_sdk.effects.lab_order": [
+    "HealthGorillaLabOrderIngest",
+    "HealthGorillaLabOrderOverride",
+    "HealthGorillaLabReportIngest"
+  ],
+  "canvas_sdk.effects.lab_order.health_gorilla": [
+    "BillToCode",
+    "HealthGorillaLabOrderOverride"
+  ],
+  "canvas_sdk.effects.lab_order.health_gorilla_ingest": [
+    "HealthGorillaLabOrderIngest",
+    "HealthGorillaLabReportIngest"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
@@ -545,6 +621,8 @@
     "Appointment",
     "AppointmentIdentifier",
     "Note",
+    "NoteRestrictionsEffect",
+    "NoteRestrictionsUpdatedEffect",
     "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
@@ -564,6 +642,10 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
+  ],
+  "canvas_sdk.effects.note.restrictions": [
+    "NoteRestrictionsEffect",
+    "NoteRestrictionsUpdatedEffect"
   ],
   "canvas_sdk.effects.observation": [
     "CodingData",
@@ -610,6 +692,9 @@
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
+  ],
+  "canvas_sdk.effects.patient_chart_summary_custom_section": [
+    "PatientChartSummaryCustomSection"
   ],
   "canvas_sdk.effects.patient_facility_address": [
     "AddressType",
@@ -706,6 +791,18 @@
     "PlainTextResponse",
     "Response"
   ],
+  "canvas_sdk.effects.staff": [
+    "StaffExternalIdentifier"
+  ],
+  "canvas_sdk.effects.staff.staff_external_identifier": [
+    "StaffExternalIdentifier"
+  ],
+  "canvas_sdk.effects.staff_metadata": [
+    "StaffMetadata"
+  ],
+  "canvas_sdk.effects.staff_metadata.base": [
+    "StaffMetadata"
+  ],
   "canvas_sdk.effects.surescripts": [
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
@@ -778,6 +875,9 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
+    "PatientChartSummaryCustomSectionHandler"
   ],
   "canvas_sdk.handlers.payment_processors.base": [
     "PaymentProcessor"
@@ -996,6 +1096,8 @@
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "LabReport",
     "LabReportTemplate",
     "LabReportTemplateField",
@@ -1050,6 +1152,7 @@
     "PatientGroupMember",
     "PatientIdentificationCard",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PaymentCollection",
@@ -1081,7 +1184,9 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
     "StopMedicationEvent",
@@ -1307,6 +1412,8 @@
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
+    "LabPartnerTestQuestion",
+    "LabPartnerTestQuestionChoice",
     "LabReport",
     "LabReportTemplate",
     "LabReportTemplateField",
@@ -1382,6 +1489,7 @@
     "PatientFacilityAddress",
     "PatientIdentificationCard",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
     "SexAtBirth"
@@ -1474,7 +1582,9 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole"
   ],

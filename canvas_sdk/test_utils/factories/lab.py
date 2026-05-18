@@ -9,6 +9,8 @@ from canvas_sdk.v1.data import (
     LabOrderReasonCondition,
     LabPartner,
     LabPartnerTest,
+    LabPartnerTestQuestion,
+    LabPartnerTestQuestionChoice,
     LabReport,
     LabReview,
     LabTest,
@@ -191,3 +193,29 @@ class LabPartnerTestFactory(factory.django.DjangoModelFactory[LabPartnerTest]):
     order_name = factory.Faker("text", max_nb_chars=256)
     keywords = factory.Faker("words", nb=5)
     cpt_code = factory.Faker("bothify", text="#####")
+
+
+class LabPartnerTestQuestionFactory(factory.django.DjangoModelFactory[LabPartnerTestQuestion]):
+    """Factory for creating a LabPartnerTestQuestion."""
+
+    class Meta:
+        model = LabPartnerTestQuestion
+
+    lab_partner_test = factory.SubFactory(LabPartnerTestFactory)
+    required = False
+    code = factory.Faker("bothify", text="AOE-####")
+    body = factory.Faker("sentence")
+    type = factory.Faker("random_element", elements=["text", "select", "date", "numeric"])
+
+
+class LabPartnerTestQuestionChoiceFactory(
+    factory.django.DjangoModelFactory[LabPartnerTestQuestionChoice],
+):
+    """Factory for creating a LabPartnerTestQuestionChoice."""
+
+    class Meta:
+        model = LabPartnerTestQuestionChoice
+
+    lab_partner_test_question = factory.SubFactory(LabPartnerTestQuestionFactory)
+    label = factory.Faker("word")
+    value = factory.Faker("bothify", text="##")

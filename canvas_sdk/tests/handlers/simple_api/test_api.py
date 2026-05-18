@@ -839,8 +839,9 @@ APP_KEY = uuid4().hex
     params=[
         (
             BasicCredentials,
-            lambda _, credentials: credentials.username == USERNAME
-            and credentials.password == PASSWORD,
+            lambda _, credentials: (
+                credentials.username == USERNAME and credentials.password == PASSWORD
+            ),
             basic_headers(USERNAME, PASSWORD),
         ),
         (
@@ -860,8 +861,10 @@ APP_KEY = uuid4().hex
         ),
         (
             Credentials,
-            lambda request, _: request.headers.get("API-Key") == API_KEY
-            and request.headers.get("App-Key") == APP_KEY,
+            lambda request, _: (
+                request.headers.get("API-Key") == API_KEY
+                and request.headers.get("App-Key") == APP_KEY
+            ),
             custom_headers(API_KEY, APP_KEY),
         ),
     ],

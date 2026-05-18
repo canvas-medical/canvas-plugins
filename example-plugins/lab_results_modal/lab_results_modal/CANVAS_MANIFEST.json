@@ -1,0 +1,30 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "lab_results_modal",
+    "description": "Adds a button to the patient chart header that opens a modal showing the patient's lab results.",
+    "components": {
+        "commands": [],
+        "handlers": [
+            {
+                "class": "lab_results_modal.handlers.lab_results_button:LabResultsButton",
+                "description": "Patient chart header button that opens a lab results modal",
+                "data_access": {
+                    "event": "SHOW_CHART_PATIENT_HEADER_BUTTON",
+                    "read": [
+                        "lab_reports",
+                        "lab_values"
+                    ],
+                    "write": []
+                }
+            }
+        ],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": ["lab", "chart", "modal"],
+    "license": "NONE",
+    "readme": "./README.md"
+}

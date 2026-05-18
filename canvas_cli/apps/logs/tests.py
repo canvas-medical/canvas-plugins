@@ -577,6 +577,95 @@ def test_logs_with_source_filter(
 
 
 @patch("canvas_cli.apps.logs.logs.iter_history")
+def test_logs_with_plugin_filters(
+    mock_iter_history: Mock,
+    cli_runner: CliRunner,
+) -> None:
+    """Repeating ``--plugin`` collects multiple values and forwards them."""
+    mock_iter_history.return_value = iter([])
+
+    result = cli_runner.invoke(app, "logs --plugin foo --plugin bar --no-follow --host localhost")
+    assert result.exit_code == 0
+
+    call_args = mock_iter_history.call_args
+    assert call_args.kwargs["plugins"] == ["foo", "bar"]
+    # Handlers default to the typer-provided empty list when unspecified.
+    assert call_args.kwargs["handlers"] == []
+
+
+@patch("canvas_cli.apps.logs.logs.iter_history")
+def test_logs_with_handler_filters(
+    mock_iter_history: Mock,
+    cli_runner: CliRunner,
+) -> None:
+    """Repeating ``--handler`` collects multiple values and forwards them."""
+    mock_iter_history.return_value = iter([])
+
+    result = cli_runner.invoke(
+        app,
+        "logs --handler my_plugin.handlers.foo:MyHandler "
+        "--handler my_plugin.handlers.bar:OtherHandler --no-follow --host localhost",
+    )
+    assert result.exit_code == 0
+
+    call_args = mock_iter_history.call_args
+    assert call_args.kwargs["handlers"] == [
+        "my_plugin.handlers.foo:MyHandler",
+        "my_plugin.handlers.bar:OtherHandler",
+    ]
+    assert call_args.kwargs["plugins"] == []
+
+
+@patch("canvas_cli.apps.logs.logs.requests.get")
+def test_search_logs_includes_plugin_and_handler_params(
+    mock_get: Mock, sample_search_response: dict[str, Any], mock_token: str
+) -> None:
+    """``search_logs`` forwards plugins/handlers as repeated query params.
+
+    ``requests`` serializes a list value as repeated keys (``?plugin=a&plugin=b``)
+    which is exactly what ``request.GET.getlist("plugin")`` reads on the server.
+    """
+    mock_response = Mock()
+    mock_response.json.return_value = sample_search_response
+    mock_response.raise_for_status.return_value = None
+    mock_get.return_value = mock_response
+
+    search_logs(
+        token=mock_token,
+        host="",
+        source=None,
+        levels=[],
+        plugins=["foo", "bar"],
+        handlers=["my_plugin.handlers.X:Handler"],
+        start_time=None,
+        end_time=None,
+        size=10,
+        search_after=None,
+    )
+
+    params = mock_get.call_args.kwargs["params"]
+    assert params["plugin"] == ["foo", "bar"]
+    assert params["handler"] == ["my_plugin.handlers.X:Handler"]
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    (
+        "logs --cursor some-cursor --plugin foo --host localhost",
+        "logs --cursor some-cursor --handler my_plugin.handlers.X:H --host localhost",
+    ),
+)
+def test_logs_cursor_conflicts_with_plugin_and_handler(
+    cmd: str,
+    cli_runner: CliRunner,
+) -> None:
+    """``--cursor`` rejects the new filters too — same shape as --level/--source."""
+    result = cli_runner.invoke(app, cmd)
+    assert result.exit_code != 0
+    assert "--cursor cannot be combined with filters" in result.output
+
+
+@patch("canvas_cli.apps.logs.logs.iter_history")
 def test_logs_with_pagination_parameters(
     mock_iter_history: Mock,
     cli_runner: CliRunner,

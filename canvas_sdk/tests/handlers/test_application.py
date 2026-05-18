@@ -1,5 +1,7 @@
 import pytest
 
+from canvas_generated.messages.effects_pb2 import Effect as _PbEffect
+from canvas_generated.messages.effects_pb2 import EffectType as PbEffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import Event, EventRequest, EventType
@@ -196,3 +198,16 @@ def test_normalize_effects_list_with_invalids() -> None:
     mixed = [{"not": "an effect"}, eff, 123]
     res = normalize_effects(mixed)  # type: ignore[arg-type]
     assert res == [eff]
+
+
+def test_normalize_effects_accepts_raw_pb_effect() -> None:
+    """Legacy plugins returning a raw protobuf Effect must keep working."""
+    raw = _PbEffect(type=PbEffectType.LOG, payload="hello")
+    assert normalize_effects(raw) == [raw]  # type: ignore[arg-type]
+    assert normalize_effects([raw]) == [raw]  # type: ignore[list-item]
+
+
+def test_normalize_effects_unexpected_type_returns_empty_list() -> None:
+    """Unexpected return shapes from on_open() must yield [], not None."""
+    assert normalize_effects("nonsense") == []  # type: ignore[arg-type]
+    assert normalize_effects(42) == []  # type: ignore[arg-type]

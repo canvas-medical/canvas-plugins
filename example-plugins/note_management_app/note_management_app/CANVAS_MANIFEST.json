@@ -28,7 +28,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["client_id"],
+    "variables": [{"name": "client_id", "sensitive": true}],
     "tags": {},
     "references": [],
     "license": "",

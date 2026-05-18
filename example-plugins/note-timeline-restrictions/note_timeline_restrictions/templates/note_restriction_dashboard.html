@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Access Dashboard</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f6fa;
+        color: #2d3436;
+        font-size: 14px;
+      }
+
+      .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+      h1 { font-size: 22px; font-weight: 600; margin-bottom: 20px; color: #1a1a2e; }
+
+      .filters {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .filter-input, .filter-select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+        background: #fff;
+      }
+
+      .filter-input { min-width: 220px; }
+      .filter-select { min-width: 160px; cursor: pointer; }
+
+      .filter-input:focus, .filter-select:focus {
+        border-color: #4a6cf7;
+        box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+      }
+
+      .filter-count { font-size: 13px; color: #636e72; margin-left: auto; }
+
+      .table-wrapper {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        overflow: hidden;
+      }
+
+      table { width: 100%; border-collapse: collapse; }
+
+      thead { background: #f8f9fa; }
+
+      th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #636e72;
+        border-bottom: 1px solid #eee;
+      }
+
+      td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+      }
+
+      tbody tr:hover { background: #f8f9ff; }
+      tbody tr:last-child td { border-bottom: none; }
+
+      .patient-link { color: #4a6cf7; text-decoration: none; font-weight: 500; }
+      .patient-link:hover { text-decoration: underline; }
+
+      .state-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        background: #e9ecef;
+        color: #495057;
+      }
+      .state-badge.NEW { background: #d4edda; color: #155724; }
+      .state-badge.LKD, .state-badge.RLK { background: #f8d7da; color: #721c24; }
+      .state-badge.SGN { background: #cce5ff; color: #004085; }
+
+      .restriction-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .restriction-badge.restricted { background: #fff3cd; color: #856404; }
+      .restriction-badge.unrestricted { background: #f1f1f1; color: #888; }
+
+      .lock-message {
+        display: block;
+        font-size: 11px;
+        color: #636e72;
+        margin-top: 3px;
+        font-style: italic;
+      }
+
+      .lock-age {
+        display: block;
+        font-size: 11px;
+        color: #b2bec3;
+        margin-top: 2px;
+      }
+
+      .btn {
+        padding: 6px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, opacity 0.15s;
+      }
+
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .btn-unrestrict {
+        background: #e74c3c;
+        color: #fff;
+      }
+
+      .btn-unrestrict:hover:not(:disabled) { background: #c0392b; }
+
+      .btn-secondary {
+        background: #ecf0f1;
+        color: #2d3436;
+        border: 1px solid #ddd;
+      }
+
+      .btn-secondary:hover:not(:disabled) { background: #dfe6e9; }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 16px;
+        border-top: 1px solid #f0f0f0;
+      }
+
+      .pagination-btn {
+        padding: 6px 14px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .pagination-btn:hover:not(:disabled) { background: #f8f9fa; }
+      .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .pagination-info { font-size: 13px; color: #636e72; }
+
+      .loading { text-align: center; padding: 40px; color: #888; }
+
+      .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #4a6cf7;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin-bottom: 8px;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+      .empty-state p { font-size: 15px; }
+
+        /* Tabs */
+      .tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; }
+      .tab-btn {
+        padding: 10px 24px;
+        border: none;
+        background: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: #636e72;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: color 0.15s, border-color 0.15s;
+      }
+      .tab-btn.active { color: #4a6cf7; border-bottom-color: #4a6cf7; }
+      .tab-btn:hover:not(.active) { color: #2d3436; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+
+        /* Access control tab */
+      .access-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .staff-select {
+        min-width: 260px;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      .access-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .access-badge.open { background: #d4edda; color: #155724; }
+      .access-badge.restricted { background: #fff3cd; color: #856404; }
+      .allowed-names { font-size: 12px; color: #636e72; margin-top: 3px; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Note Access Dashboard</h1>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('restrictions')">Active Restrictions</button>
+        <button class="tab-btn" onclick="showTab('access-control')">Note Type Access</button>
+      </div>
+
+        <!-- Tab 1: Active Restrictions -->
+      <div id="tab-restrictions" class="tab-panel active">
+        <div class="filters">
+          <input type="text" id="patient-search" class="filter-input" placeholder="Search by patient name...">
+          <select id="state-filter" class="filter-select">
+            <option value="">All States</option>
+          </select>
+          <select id="locked-filter" class="filter-select">
+            <option value="">All Notes</option>
+            <option value="true">Restricted Only</option>
+            <option value="false">Unrestricted Only</option>
+          </select>
+          <span id="result-count" class="filter-count"></span>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Provider</th>
+                <th>Note Type</th>
+                <th>Date of Service</th>
+                <th>State</th>
+                <th>Restriction Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="notes-body">
+              <tr>
+                <td colspan="7">
+                  <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Loading notes...</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div id="pagination" class="pagination" style="display:none;"></div>
+        </div>
+      </div> <!-- /tab-restrictions -->
+
+        <!-- Tab 2: Note Type Access Control -->
+      <div id="tab-access-control" class="tab-panel">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Note Type</th>
+                <th>Category</th>
+                <th>Access</th>
+                <th>Allowed Staff</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="note-types-body">
+              <tr><td colspan="5"><div class="loading"><div class="spinner"></div><div>Loading...</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div> <!-- /tab-access-control -->
+    </div>
+
+    <script>
+      const API_BASE = "/plugin-io/api/note_timeline_restrictions";
+      let currentPage = 1;
+      let debounceTimer = null;
+
+      async function fetchJSON(url, options) {
+        const res = await fetch(url, options);
+        return res.json();
+      }
+
+      async function loadStates() {
+        const data = await fetchJSON(`${API_BASE}/states`);
+        const select = document.getElementById("state-filter");
+        data.states.forEach(function(s) {
+          const opt = document.createElement("option");
+          opt.value = s.value;
+          opt.textContent = s.label;
+          select.appendChild(opt);
+        });
+      }
+
+      async function loadNotes(page) {
+        currentPage = page || 1;
+        const params = new URLSearchParams();
+        params.set("page", currentPage);
+        params.set("page_size", 25);
+
+        const search = document.getElementById("patient-search").value.trim();
+        if (search) params.set("patient_search", search);
+
+        const state = document.getElementById("state-filter").value;
+        if (state) params.set("state", state);
+
+        const locked = document.getElementById("locked-filter").value;
+        if (locked) params.set("locked", locked);
+
+        document.getElementById("notes-body").innerHTML =
+          '<tr><td colspan="7"><div class="loading"><div class="spinner"></div><div>Loading...</div></div></td></tr>';
+
+        const data = await fetchJSON(`${API_BASE}/notes?${params}`);
+        renderNotes(data.notes, data.pagination);
+      }
+
+      function renderNotes(notes, pagination) {
+        const body = document.getElementById("notes-body");
+        document.getElementById("result-count").textContent =
+          `${pagination.total_count} note${pagination.total_count !== 1 ? "s" : ""}`;
+
+        if (notes.length === 0) {
+          body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No notes found.</p></div></td></tr>';
+          document.getElementById("pagination").style.display = "none";
+          return;
+        }
+
+        body.innerHTML = notes.map(function(note) {
+          const lockClass = note.locked ? "restricted" : "unrestricted";
+          const lockLabel = note.locked ? "🔒 Restricted" : "No Restriction";
+          const lockMsg = note.locked && note.message
+            ? `<span class="lock-message">${escapeHtml(note.message)}</span>` : "";
+          const lockAge = note.locked && note.last_edited_at
+            ? `<span class="lock-age">since ${relativeTime(note.last_edited_at)}</span>` : "";
+
+          const actions = note.locked
+            ? `<button class="btn btn-unrestrict" onclick="unrestrict('${note.id}')">Remove Restriction</button>`
+            : `<button class="btn btn-secondary" onclick="restrict('${note.id}')">Apply Restriction</button>`;
+
+          return `<tr>
+                    <td><a class="patient-link" href="/patient/${note.patient_id}" target="_blank">${escapeHtml(note.patient_name)}</a></td>
+                    <td>${escapeHtml(note.provider)}</td>
+                    <td>${escapeHtml(note.note_title)}</td>
+                    <td>${escapeHtml(note.dos)}</td>
+                    <td><span class="state-badge ${note.state || ""}">${escapeHtml(note.state_label)}</span></td>
+                    <td>
+                        <span class="restriction-badge ${lockClass}">${lockLabel}</span>
+                        ${lockMsg}${lockAge}
+                    </td>
+                    <td>${actions}</td>
+                </tr>`;
+        }).join("");
+
+        renderPagination(pagination);
+      }
+
+      function renderPagination(p) {
+        const el = document.getElementById("pagination");
+        if (p.total_pages <= 1) { el.style.display = "none"; return; }
+        el.style.display = "flex";
+        el.innerHTML = `
+                <button class="pagination-btn" onclick="loadNotes(${p.current_page - 1})" ${!p.has_previous ? "disabled" : ""}>Previous</button>
+                <span class="pagination-info">Page ${p.current_page} of ${p.total_pages}</span>
+                <button class="pagination-btn" onclick="loadNotes(${p.current_page + 1})" ${!p.has_next ? "disabled" : ""}>Next</button>
+            `;
+      }
+
+      async function unrestrict(noteId) {
+        await fetchJSON(`${API_BASE}/notes/${noteId}/unrestrict`, { method: "POST" });
+        loadNotes(currentPage);
+      }
+
+      async function restrict(noteId) {
+        await fetchJSON(`${API_BASE}/notes/${noteId}/restrict`, { method: "POST" });
+        loadNotes(currentPage);
+      }
+
+      function relativeTime(iso) {
+        const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+        if (diff < 60) return `${diff}s ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        return `${Math.floor(diff / 3600)}h ago`;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      document.getElementById("patient-search").addEventListener("input", function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { loadNotes(1); }, 400);
+      });
+      document.getElementById("state-filter").addEventListener("change", function() { loadNotes(1); });
+      document.getElementById("locked-filter").addEventListener("change", function() { loadNotes(1); });
+
+      loadStates();
+      loadNotes(1);
+
+        // ------------------------------------------------------------------
+        // Tab switching
+        // ------------------------------------------------------------------
+
+      function showTab(name) {
+        document.querySelectorAll(".tab-panel").forEach(function(el) { el.classList.remove("active"); });
+        document.querySelectorAll(".tab-btn").forEach(function(el) { el.classList.remove("active"); });
+        document.getElementById("tab-" + name).classList.add("active");
+        event.target.classList.add("active");
+        if (name === "access-control") loadNoteTypes();
+      }
+
+        // ------------------------------------------------------------------
+        // Note Type Access Control tab
+        // ------------------------------------------------------------------
+
+      let allStaff = [];
+
+      async function loadNoteTypes() {
+        document.getElementById("note-types-body").innerHTML =
+          '<tr><td colspan="5"><div class="loading"><div class="spinner"></div><div>Loading...</div></div></td></tr>';
+        const [ntData, staffData] = await Promise.all([
+          fetchJSON(`${API_BASE}/note-types`),
+          fetchJSON(`${API_BASE}/staff`),
+        ]);
+        allStaff = staffData.staff || [];
+        renderNoteTypes(ntData.note_types || []);
+      }
+
+      function renderNoteTypes(noteTypes) {
+        const body = document.getElementById("note-types-body");
+        if (!noteTypes.length) {
+          body.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No note types found.</p></div></td></tr>';
+          return;
+        }
+        body.innerHTML = noteTypes.map(function(nt) {
+          const badge = nt.restricted
+            ? `<span class="access-badge restricted">Restricted</span>`
+            : `<span class="access-badge open">Open</span>`;
+
+          const names = nt.restricted && nt.allowed_staff_ids.length
+            ? nt.allowed_staff_ids.map(function(id) {
+              const s = allStaff.find(function(x) { return x.id === id; });
+              return s ? escapeHtml(s.name) : id;
+            }).join(", ")
+            : nt.restricted ? "<em>Nobody (fully blocked)</em>" : "All staff";
+
+          const staffOptions = allStaff.map(function(s) {
+            const sel = nt.allowed_staff_ids.includes(s.id) ? "selected" : "";
+            return `<option value="${s.id}" ${sel}>${escapeHtml(s.name)}</option>`;
+          }).join("");
+
+          return `<tr id="nt-row-${nt.id}">
+                    <td><strong>${escapeHtml(nt.name)}</strong></td>
+                    <td><span style="font-size:12px;color:#636e72">${escapeHtml(nt.category)}</span></td>
+                    <td>${badge}</td>
+                    <td>
+                        <div class="allowed-names" id="nt-names-${nt.id}">${names}</div>
+                        <div id="nt-editor-${nt.id}" style="display:none;margin-top:8px">
+                            <select multiple class="staff-select" id="nt-select-${nt.id}" size="4">
+                                ${staffOptions}
+                            </select>
+                        </div>
+                    </td>
+                    <td>
+                        <div id="nt-actions-${nt.id}">
+                            <button class="btn btn-secondary" onclick="editNoteType('${nt.id}')">Edit</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join("");
+      }
+
+      function editNoteType(noteTypeId) {
+        document.getElementById("nt-editor-" + noteTypeId).style.display = "block";
+        document.getElementById("nt-names-" + noteTypeId).style.display = "none";
+        document.getElementById("nt-actions-" + noteTypeId).innerHTML = `
+                <button class="btn btn-secondary" onclick="saveNoteTypeAccess('${noteTypeId}')">Save</button>
+                <button class="btn btn-secondary" style="margin-left:6px" onclick="clearNoteTypeAccess('${noteTypeId}')">Remove Restriction</button>
+                <button class="btn btn-secondary" style="margin-left:6px;color:#888" onclick="cancelNoteTypeEdit('${noteTypeId}')">Cancel</button>
+            `;
+      }
+
+      async function saveNoteTypeAccess(noteTypeId) {
+        const select = document.getElementById("nt-select-" + noteTypeId);
+        const allowed = Array.from(select.selectedOptions).map(function(o) { return o.value; });
+        await fetchJSON(`${API_BASE}/note-types/${noteTypeId}/access`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allowed_staff_ids: allowed }),
+        });
+        loadNoteTypes();
+      }
+
+      async function clearNoteTypeAccess(noteTypeId) {
+        await fetchJSON(`${API_BASE}/note-types/${noteTypeId}/access`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allowed_staff_ids: null }),
+        });
+        loadNoteTypes();
+      }
+
+      function cancelNoteTypeEdit(noteTypeId) {
+        loadNoteTypes();
+      }
+    </script>
+  </body>
+</html>

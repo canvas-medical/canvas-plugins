@@ -233,6 +233,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
     COMMAND_AVAILABLE_ACTIONS_RESULTS: _ClassVar[EffectType]
     COMMAND_VALIDATION_ERRORS: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_ORDER_OVERRIDE: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_ORDER_INGEST: _ClassVar[EffectType]
+    HEALTH_GORILLA_LAB_REPORT_INGEST: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
@@ -275,6 +278,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
+    NOTE_RESTRICTIONS: _ClassVar[EffectType]
+    NOTE_RESTRICTIONS_UPDATED: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
     LOCK_NOTE: _ClassVar[EffectType]
@@ -305,6 +310,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_OBSERVATION: _ClassVar[EffectType]
     UPDATE_OBSERVATION: _ClassVar[EffectType]
     PATIENT_CHART__GROUP_ITEMS: _ClassVar[EffectType]
+    PATIENT_CHART_SUMMARY__CUSTOM_SECTION: _ClassVar[EffectType]
     APPOINTMENT__FORM__PROVIDERS__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
     APPOINTMENT__FORM__LOCATIONS__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
     APPOINTMENT__FORM__VISIT_TYPES__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
@@ -320,6 +326,12 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     UPSERT_NOTE_METADATA: _ClassVar[EffectType]
     UPSERT_COMMAND_METADATA: _ClassVar[EffectType]
+    COMMAND__FORM__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
+    UPSERT_STAFF_METADATA: _ClassVar[EffectType]
+    CREATE_STAFF_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
+    UPDATE_STAFF_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
+    DELETE_STAFF_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
+    DELETE_STAFF_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
@@ -346,6 +358,13 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_GROUP__ADD_MEMBER: _ClassVar[EffectType]
     PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
+    HTTP_REQUEST: _ClassVar[EffectType]
+    LINK_DOCUMENT_TO_PATIENT: _ClassVar[EffectType]
+    CATEGORIZE_DOCUMENT: _ClassVar[EffectType]
+    ASSIGN_DOCUMENT_REVIEWER: _ClassVar[EffectType]
+    UPDATE_DOCUMENT_FIELDS: _ClassVar[EffectType]
+    JUNK_DOCUMENT: _ClassVar[EffectType]
+    REMOVE_DOCUMENT_FROM_PATIENT: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -572,6 +591,9 @@ COMMIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
 ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
 COMMAND_AVAILABLE_ACTIONS_RESULTS: EffectType
 COMMAND_VALIDATION_ERRORS: EffectType
+HEALTH_GORILLA_LAB_ORDER_OVERRIDE: EffectType
+HEALTH_GORILLA_LAB_ORDER_INGEST: EffectType
+HEALTH_GORILLA_LAB_REPORT_INGEST: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType
@@ -614,6 +636,8 @@ SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
+NOTE_RESTRICTIONS: EffectType
+NOTE_RESTRICTIONS_UPDATED: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
 LOCK_NOTE: EffectType
@@ -644,6 +668,7 @@ UPDATE_COMPOUND_MEDICATION: EffectType
 CREATE_OBSERVATION: EffectType
 UPDATE_OBSERVATION: EffectType
 PATIENT_CHART__GROUP_ITEMS: EffectType
+PATIENT_CHART_SUMMARY__CUSTOM_SECTION: EffectType
 APPOINTMENT__FORM__PROVIDERS__PRE_SEARCH_RESULTS: EffectType
 APPOINTMENT__FORM__LOCATIONS__PRE_SEARCH_RESULTS: EffectType
 APPOINTMENT__FORM__VISIT_TYPES__PRE_SEARCH_RESULTS: EffectType
@@ -659,6 +684,12 @@ UPSERT_APPOINTMENT_METADATA: EffectType
 APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: EffectType
 UPSERT_NOTE_METADATA: EffectType
 UPSERT_COMMAND_METADATA: EffectType
+COMMAND__FORM__CREATE_ADDITIONAL_FIELDS: EffectType
+UPSERT_STAFF_METADATA: EffectType
+CREATE_STAFF_EXTERNAL_IDENTIFIER: EffectType
+UPDATE_STAFF_EXTERNAL_IDENTIFIER: EffectType
+DELETE_STAFF_EXTERNAL_IDENTIFIER: EffectType
+DELETE_STAFF_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
 REDIRECT_CONTEXT: EffectType
@@ -685,6 +716,13 @@ CREATE_CCDA: EffectType
 PATIENT_GROUP__ADD_MEMBER: EffectType
 PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
+HTTP_REQUEST: EffectType
+LINK_DOCUMENT_TO_PATIENT: EffectType
+CATEGORIZE_DOCUMENT: EffectType
+ASSIGN_DOCUMENT_REVIEWER: EffectType
+UPDATE_DOCUMENT_FIELDS: EffectType
+JUNK_DOCUMENT: EffectType
+REMOVE_DOCUMENT_FROM_PATIENT: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

@@ -1,6 +1,362 @@
 # CHANGELOG
 
 
+## v0.153.0 (2026-05-18)
+
+### Features
+
+- [koala-3744] - add SDK data integration effects
+  ([#1517](https://github.com/canvas-medical/canvas-plugins/pull/1517),
+  [`b8ddbcb`](https://github.com/canvas-medical/canvas-plugins/commit/b8ddbcb82c7d02496ac32bf3b83908367b7bc786))
+
+Co-authored-by: irfan-vicert <irfan.cajo@vicert.com>
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.152.0 (2026-05-15)
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1701](https://github.com/canvas-medical/canvas-plugins/pull/1701),
+  [`5befc5b`](https://github.com/canvas-medical/canvas-plugins/commit/5befc5bf0c2c30f17578ee59587172dddfb5e326))
+
+### Features
+
+- Add Staff Metadata + Staff External Identifier SDK support
+  ([#1660](https://github.com/canvas-medical/canvas-plugins/pull/1660),
+  [`1ecde7c`](https://github.com/canvas-medical/canvas-plugins/commit/1ecde7c555c90f48bf06abb56b449faadae8cc65))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
+## v0.151.0 (2026-05-15)
+
+### Features
+
+- Add approve and deny refill commands events
+  ([#1698](https://github.com/canvas-medical/canvas-plugins/pull/1698),
+  [`426ee34`](https://github.com/canvas-medical/canvas-plugins/commit/426ee349e691c330e01de1004dadc552115ca594))
+
+- Allow clipboard permissions in plugin manifest
+  ([#1699](https://github.com/canvas-medical/canvas-plugins/pull/1699),
+  [`a72d844`](https://github.com/canvas-medical/canvas-plugins/commit/a72d844db61d2fb4b5a99b9e4ed438a7fbbf672a))
+
+Co-authored-by: aaryanxshah <130312042+aaryanxshah@users.noreply.github.com>
+
+- Expose patient photo model and photo_url property in the SDK
+  ([#1690](https://github.com/canvas-medical/canvas-plugins/pull/1690),
+  [`9f66388`](https://github.com/canvas-medical/canvas-plugins/commit/9f6638855e7cf2f37f1c10828081d9c1f6ef0348))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: David Jantzen <david.jantzen@canvasmedical.com>
+
+
+## v0.150.0 (2026-05-14)
+
+### Chores
+
+- Fix integration test ([#1700](https://github.com/canvas-medical/canvas-plugins/pull/1700),
+  [`77b7d29`](https://github.com/canvas-medical/canvas-plugins/commit/77b7d29e44e53da2db9e7de89b1297705c0115b6))
+
+### Features
+
+- Filter plugin logs by plugin and handler
+  ([#1687](https://github.com/canvas-medical/canvas-plugins/pull/1687),
+  [`bfd10ee`](https://github.com/canvas-medical/canvas-plugins/commit/bfd10ee6ad3e6815fd1bc85caf801a2b5f2fb6ab))
+
+
+## v0.149.0 (2026-05-14)
+
+### Features
+
+- Add visual exam finding command events
+  ([#1636](https://github.com/canvas-medical/canvas-plugins/pull/1636),
+  [`954f020`](https://github.com/canvas-medical/canvas-plugins/commit/954f020b37151635cecec01afa245ce1e01e360d))
+
+
+## v0.148.0 (2026-05-14)
+
+### Features
+
+- Expose notes field on condition data model
+  ([#1694](https://github.com/canvas-medical/canvas-plugins/pull/1694),
+  [`7534c6a`](https://github.com/canvas-medical/canvas-plugins/commit/7534c6a333aebd80b1e1fcf068308fb6f4e8a3b9))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
+## v0.147.0 (2026-05-12)
+
+### Features
+
+- Charting permissions ([#1645](https://github.com/canvas-medical/canvas-plugins/pull/1645),
+  [`20d51cf`](https://github.com/canvas-medical/canvas-plugins/commit/20d51cf9368fc4588d2cdaea73cc979e1d832ab0))
+
+
+## v0.146.1 (2026-05-12)
+
+### Bug Fixes
+
+- Add socket_keepalive to Redis clients
+  ([#1609](https://github.com/canvas-medical/canvas-plugins/pull/1609),
+  [`7ea1856`](https://github.com/canvas-medical/canvas-plugins/commit/7ea1856a06c04a987daf257a0de5eea1dbfa87a3))
+
+- Don't disable plugins on namespace wait timeout
+  ([#1685](https://github.com/canvas-medical/canvas-plugins/pull/1685),
+  [`70657af`](https://github.com/canvas-medical/canvas-plugins/commit/70657af4b43be8f127af45d556e840f0833fba88))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Stop displaying plugin secret values in canvas config list
+  ([#1692](https://github.com/canvas-medical/canvas-plugins/pull/1692),
+  [`a8c0d96`](https://github.com/canvas-medical/canvas-plugins/commit/a8c0d966a91324b7fc88e076aea96167010ac7af))
+
+
+## v0.146.0 (2026-05-08)
+
+### Bug Fixes
+
+- Include sensitive in PluginSecret raw INSERT (KOALA-5442)
+  ([#1683](https://github.com/canvas-medical/canvas-plugins/pull/1683),
+  [`afd1bf9`](https://github.com/canvas-medical/canvas-plugins/commit/afd1bf906e3c467c592e473131914c77147ea39b))
+
+### Features
+
+- **cli**: Add variables support and Control Room login/logout (KOALA-4601, KOALA-4550)
+  ([#1616](https://github.com/canvas-medical/canvas-plugins/pull/1616),
+  [`18f5e7f`](https://github.com/canvas-medical/canvas-plugins/commit/18f5e7faab3d885c935f7bac18fae4119a262f07))
+
+
+## v0.145.0 (2026-05-08)
+
+### Chores
+
+- Update CODEOWNERS ([#1679](https://github.com/canvas-medical/canvas-plugins/pull/1679),
+  [`3b91005`](https://github.com/canvas-medical/canvas-plugins/commit/3b91005038af5b890655ea40f3e44b1261592f22))
+
+Signed-off-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+### Features
+
+- Add HG overrides, payload event, and external lab ingest (KOALA-4854)
+  ([#1680](https://github.com/canvas-medical/canvas-plugins/pull/1680),
+  [`928ac93`](https://github.com/canvas-medical/canvas-plugins/commit/928ac936a840ce86d8366cf921b091246f811b54))
+
+
+## v0.144.0 (2026-05-07)
+
+### Bug Fixes
+
+- Canvas init generates tests that pass out of the box
+  ([#1635](https://github.com/canvas-medical/canvas-plugins/pull/1635),
+  [`cd47ddb`](https://github.com/canvas-medical/canvas-plugins/commit/cd47ddb757195e753b0d8ee97eef6e0ac347ad98))
+
+Co-authored-by: Ryan Bezman <ryan.bezman@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- Add variables support to CANVAS_MANIFEST.json schema
+  ([#1578](https://github.com/canvas-medical/canvas-plugins/pull/1578),
+  [`8028ed7`](https://github.com/canvas-medical/canvas-plugins/commit/8028ed79cd494ca88151791abf706711014e5ae7))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Adds LabTest foreign key relationship to LabValue in the data module
+  ([#1638](https://github.com/canvas-medical/canvas-plugins/pull/1638),
+  [`8c31bde`](https://github.com/canvas-medical/canvas-plugins/commit/8c31bded9bd56269df87399364523ac53f23ca94))
+
+- Expose INSTALLATION_TIME_ZONE on self.environment
+  ([#1677](https://github.com/canvas-medical/canvas-plugins/pull/1677),
+  [`73d7186`](https://github.com/canvas-medical/canvas-plugins/commit/73d7186294d51d87d2487b05e194c25c14cae744))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
+## v0.143.0 (2026-05-05)
+
+### Bug Fixes
+
+- Fixes a race condition under which non-schema managers could fail to …
+  ([#1674](https://github.com/canvas-medical/canvas-plugins/pull/1674),
+  [`e227699`](https://github.com/canvas-medical/canvas-plugins/commit/e22769966ad03bdfc1fed9cc7e13e85f38d4a713))
+
+- Handle plugin compute() returning None gracefully (KOALA-5365)
+  ([#1672](https://github.com/canvas-medical/canvas-plugins/pull/1672),
+  [`1061fff`](https://github.com/canvas-medical/canvas-plugins/commit/1061fffc1591096bc3b93eae64e4351415131405))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1614](https://github.com/canvas-medical/canvas-plugins/pull/1614),
+  [`c5f10a8`](https://github.com/canvas-medical/canvas-plugins/commit/c5f10a8f7ef8574aca6ddfea8b551fde9b468f2b))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add --disable flag to sdk install command
+  ([#1673](https://github.com/canvas-medical/canvas-plugins/pull/1673),
+  [`f53beb5`](https://github.com/canvas-medical/canvas-plugins/commit/f53beb5773319675788849b367f8b97b1c3cc950))
+
+- Adds staff signature on the Staff model of the SDK
+  ([#1653](https://github.com/canvas-medical/canvas-plugins/pull/1653),
+  [`7100821`](https://github.com/canvas-medical/canvas-plugins/commit/710082109b09ce411f3cf38dfd2deab1a280c13c))
+
+
+## v0.142.0 (2026-05-01)
+
+### Features
+
+- Add HealthGorillaLabOrderOverride effect + LAB_ORDER_COMMAND__PRE_SEND
+  ([#1667](https://github.com/canvas-medical/canvas-plugins/pull/1667),
+  [`4a8a6e1`](https://github.com/canvas-medical/canvas-plugins/commit/4a8a6e1fb9529203adfacd09824f2d7d23db8f0c))
+
+- Log a definitive success line on plugin install and load
+  ([#1666](https://github.com/canvas-medical/canvas-plugins/pull/1666),
+  [`1a7356d`](https://github.com/canvas-medical/canvas-plugins/commit/1a7356dc059ddc7054e2d23ba079f2ca9dc879dc))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
+## v0.141.0 (2026-04-30)
+
+### Features
+
+- Create http request effect ([#1641](https://github.com/canvas-medical/canvas-plugins/pull/1641),
+  [`814b1eb`](https://github.com/canvas-medical/canvas-plugins/commit/814b1eb17345bc81c9625f6a8ab8f6bfe3f50715))
+
+
+## v0.140.1 (2026-04-29)
+
+### Bug Fixes
+
+- Add identifiable model to claimqueue
+  ([#1661](https://github.com/canvas-medical/canvas-plugins/pull/1661),
+  [`3d15e98`](https://github.com/canvas-medical/canvas-plugins/commit/3d15e98482d3d99a227c9cd2afea507199dab596))
+
+
+## v0.140.0 (2026-04-29)
+
+### Bug Fixes
+
+- Trap error on event type mismatches
+  ([#1637](https://github.com/canvas-medical/canvas-plugins/pull/1637),
+  [`b7db08d`](https://github.com/canvas-medical/canvas-plugins/commit/b7db08d210736203d91e11eeb416ae637d23d2e3))
+
+### Features
+
+- Add command custom fields ([#1643](https://github.com/canvas-medical/canvas-plugins/pull/1643),
+  [`3b355d0`](https://github.com/canvas-medical/canvas-plugins/commit/3b355d074e780db17f0710cf532fac574cb54741))
+
+
+## v0.139.0 (2026-04-27)
+
+### Features
+
+- Create thin wrapper around protobuf Effect to add set_async method
+  ([#1652](https://github.com/canvas-medical/canvas-plugins/pull/1652),
+  [`b3597d4`](https://github.com/canvas-medical/canvas-plugins/commit/b3597d45bad42fe9c9014a6b3e0573b60dfdbb88))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.138.0 (2026-04-27)
+
+### Features
+
+- Create PATIENT_PAYMENT_PROCESSED event
+  ([#1651](https://github.com/canvas-medical/canvas-plugins/pull/1651),
+  [`a776d03`](https://github.com/canvas-medical/canvas-plugins/commit/a776d03f8c941f6005d502f56071db602c3ac9a3))
+
+
+## v0.137.0 (2026-04-27)
+
+### Features
+
+- Add lab test questions (aoe) to data module
+  ([#1639](https://github.com/canvas-medical/canvas-plugins/pull/1639),
+  [`d46cfd2`](https://github.com/canvas-medical/canvas-plugins/commit/d46cfd21cb7779761beceeb434a9f411c1ebedb8))
+
+- Add provider companion scopes and update example plugin
+  ([#1623](https://github.com/canvas-medical/canvas-plugins/pull/1623),
+  [`044f9f0`](https://github.com/canvas-medical/canvas-plugins/commit/044f9f0e2a6164dc01f726b319d76382f6504328))
+
+
+## v0.136.0 (2026-04-22)
+
+### Features
+
+- Custom chart sections ([#1626](https://github.com/canvas-medical/canvas-plugins/pull/1626),
+  [`3871bfc`](https://github.com/canvas-medical/canvas-plugins/commit/3871bfc7cbeee1c9b40f60f2f07c23a1f76501dc))
+
+
+## v0.135.0 (2026-04-20)
+
+### Features
+
+- Allow command.upsert_metadata to be chained with command.originate
+  ([#1640](https://github.com/canvas-medical/canvas-plugins/pull/1640),
+  [`1d0e776`](https://github.com/canvas-medical/canvas-plugins/commit/1d0e77688fd8c030c5f5e999bdb95d9925252f8f))
+
+
+## v0.134.0 (2026-04-17)
+
+### Features
+
+- Allow originate and commit with a single effect
+  ([#1632](https://github.com/canvas-medical/canvas-plugins/pull/1632),
+  [`473da5d`](https://github.com/canvas-medical/canvas-plugins/commit/473da5d035364fb856f0c0c0d3e180f5ecfc9e77))
+
+
+## v0.133.0 (2026-04-16)
+
+### Features
+
+- Add address fields to claimprovider model and effect
+  ([#1629](https://github.com/canvas-medical/canvas-plugins/pull/1629),
+  [`3e43b92`](https://github.com/canvas-medical/canvas-plugins/commit/3e43b92297643196278e16e9f1da2f9529cd4045))
+
+
+## v0.132.0 (2026-04-16)
+
+### Bug Fixes
+
+- Grant usage and select on custom data objects to reporting user
+  ([#1622](https://github.com/canvas-medical/canvas-plugins/pull/1622),
+  [`0e20ba2`](https://github.com/canvas-medical/canvas-plugins/commit/0e20ba2fbca85c5bb1178e72fc25b8096f125f68))
+
+force merging because integration tests seem to be failing on other PRs too.
+
+### Features
+
+- Create CLAIM_QUEUE_MOVED event
+  ([#1625](https://github.com/canvas-medical/canvas-plugins/pull/1625),
+  [`90ff2d7`](https://github.com/canvas-medical/canvas-plugins/commit/90ff2d717eb4d1ceccedac91af6e9cbf9a235e2e))
+
+
 ## v0.131.0 (2026-04-13)
 
 ### Features

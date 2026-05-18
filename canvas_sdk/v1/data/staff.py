@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -16,7 +16,7 @@ from canvas_sdk.v1.data.common import (
     PersonSex,
     TaxIDType,
 )
-from canvas_sdk.v1.data.utils import create_key
+from canvas_sdk.v1.data.utils import create_key, presigned_url
 
 
 class Staff(TimestampedModel):
@@ -86,12 +86,20 @@ class Staff(TimestampedModel):
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
+    signature = models.CharField(max_length=100, null=True, blank=True)
 
     @property
     def photo_url(self) -> str:
         """Return the URL of the staff's first photo."""
         photo = self.photos.first()
         return photo.url if photo else "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
+    @property
+    def signature_url(self) -> str | None:
+        """Return a presigned URL for accessing the staff's signature file."""
+        if self.signature:
+            return presigned_url(self.signature)
+        return None
 
     @cached_property
     def full_name(self) -> str:
@@ -257,11 +265,47 @@ class StaffLicense(IdentifiableModel):
     state = models.CharField(max_length=2, blank=True, null=True)
 
 
+class StaffExternalIdentifier(TimestampedModel, IdentifiableModel):
+    """A class representing a staff external identifier."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffexternalidentifier_001"
+
+    staff = models.ForeignKey(
+        "v1.Staff",
+        related_name="external_identifiers",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    use = models.CharField(max_length=255)
+    identifier_type = models.CharField(max_length=255)
+    system = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+    issued_date = models.DateField()
+    expiration_date = models.DateField()
+
+
+class StaffMetadata(MetadataModel):
+    """A class representing staff metadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffmetadata_001"
+
+    staff = models.ForeignKey(
+        "v1.Staff",
+        related_name="metadata",
+        on_delete=models.DO_NOTHING,
+        null=True,
+    )
+
+
 __exports__ = (
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
 )

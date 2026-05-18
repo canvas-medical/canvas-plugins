@@ -293,7 +293,7 @@ def test_list_secrets_success_no_secrets(
 
     list_secrets(plugin=plugin, host=host)
 
-    mock_print.assert_called_once_with("No secrets configured.")
+    mock_print.assert_called_once_with("No variables configured.")
 
 
 @patch("builtins.print")
@@ -333,7 +333,7 @@ def test_install_success_no_secrets(
     plugin_path = Path("/fake/plugin")
     host = "https://example.canvasmesdical.com"
 
-    install(plugin_name=plugin_path, secrets=[], host=host)
+    install(plugin_name=plugin_path, secrets=[], variables=[], is_enabled=True, host=host)
 
     mock_validate.assert_called_once_with(plugin_path)
     mock_build.assert_called_once_with(plugin_path)
@@ -390,7 +390,7 @@ def test_install_success_with_secrets(
     host = "https://example.canvasmedical.com"
     secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword"]
 
-    install(plugin_name=plugin_path, secrets=secrets, host=host)
+    install(plugin_name=plugin_path, secrets=secrets, variables=[], is_enabled=True, host=host)
 
     expected_encoded_secrets = [
         ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
@@ -404,6 +404,220 @@ def test_install_success_with_secrets(
         files={"package": mock_open_file.return_value.__enter__.return_value},
         headers={"Authorization": "Bearer test-token"},
     )
+
+
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_disabled(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+) -> None:
+    """Test installing a plugin in the disabled state."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    mock_build.return_value = Path("/tmp/built-plugin.zip")
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.created
+    mock_post.return_value = mock_response
+
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=[],
+        variables=[],
+        is_enabled=False,
+        host="https://example.canvasmedical.com",
+    )
+
+    mock_post.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins",
+        data=[("is_enabled", False)],
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+@patch("canvas_cli.apps.plugin.plugin.update")
+@patch("canvas_cli.apps.plugin.plugin._get_name_from_metadata")
+@patch("builtins.print")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_conflict_calls_update(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+    mock_print: Mock,
+    mock_get_name: Mock,
+    mock_update: Mock,
+) -> None:
+    """When the install endpoint returns 409, fall back to calling `update` with the package name."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    built_path = Path("/tmp/built-plugin.zip")
+    mock_build.return_value = built_path
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.conflict
+    mock_post.return_value = mock_response
+
+    mock_get_name.return_value = "existing-plugin"
+
+    host = "https://example.canvasmedical.com"
+    secrets = ["API_KEY=secret123"]
+
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=secrets,
+        variables=[],
+        is_enabled=True,
+        host=host,
+    )
+
+    mock_get_name.assert_called_once_with(host, "test-token", built_path)
+    mock_update.assert_called_once_with(
+        "existing-plugin",
+        built_path,
+        is_enabled=True,
+        secrets=secrets,
+        host=host,
+    )
+    mock_print.assert_any_call("Plugin existing-plugin already exists, updating instead...")
+
+
+@patch("canvas_cli.apps.plugin.plugin.update")
+@patch("canvas_cli.apps.plugin.plugin._get_name_from_metadata")
+@patch("builtins.print")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_error_status_exits(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+    mock_print: Mock,
+    mock_get_name: Mock,
+    mock_update: Mock,
+) -> None:
+    """When the install endpoint returns an unexpected error status, print details and exit."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    mock_build.return_value = Path("/tmp/built-plugin.zip")
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.bad_request
+    mock_response.text = "bad request body"
+    mock_post.return_value = mock_response
+
+    with pytest.raises(typer.Exit):
+        install(
+            plugin_name=Path("/fake/plugin"),
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host="https://example.canvasmedical.com",
+        )
+
+    mock_get_name.assert_not_called()
+    mock_update.assert_not_called()
+    mock_print.assert_any_call(f"Status code {requests.codes.bad_request}: bad request body")
+
+
+@patch("canvas_cli.apps.plugin.plugin.update")
+@patch("canvas_cli.apps.plugin.plugin._get_name_from_metadata")
+@patch("builtins.print")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_conflict_without_package_name_exits(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+    mock_print: Mock,
+    mock_get_name: Mock,
+    mock_update: Mock,
+) -> None:
+    """When the install endpoint returns 409 but the package name can't be extracted, exit."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    mock_build.return_value = Path("/tmp/built-plugin.zip")
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.conflict
+    mock_response.text = "conflict"
+    mock_post.return_value = mock_response
+
+    mock_get_name.return_value = None
+
+    with pytest.raises(typer.Exit):
+        install(
+            plugin_name=Path("/fake/plugin"),
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host="https://example.canvasmedical.com",
+        )
+
+    mock_update.assert_not_called()
+    mock_print.assert_any_call(f"Status code {requests.codes.conflict}: conflict")
 
 
 @patch("builtins.print")
@@ -960,3 +1174,143 @@ class Protocol1(BaseHandler):
     # Should only detect Handler2 as unreferenced
     assert len(unreferenced) == 1
     assert "test_plugin.handlers.handler2:Handler2" in unreferenced
+
+
+@patch("canvas_cli.apps.plugin.plugin.print")
+@patch("requests.get")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+def test_list_secrets_with_variables_field(
+    mock_plugin_url: Mock,
+    mock_get_token: Mock,
+    mock_requests_get: Mock,
+    mock_print: Mock,
+) -> None:
+    """list_secrets renders is_set/not-set uniformly and never displays values."""
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins/p/metadata"
+    mock_get_token.return_value = "test-token"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_response.json.return_value = {
+        "variables": [
+            {"name": "API_KEY", "sensitive": True, "is_set": True},
+            {"name": "MISSING_SECRET", "sensitive": True, "is_set": False},
+            {"name": "REGION", "sensitive": False, "is_set": True},
+            {"name": "EMPTY_VAR", "sensitive": False, "is_set": False},
+        ]
+    }
+    mock_requests_get.return_value = mock_response
+
+    list_secrets(plugin="p", host="https://example.canvasmedical.com")
+
+    printed = [c.args[0] for c in mock_print.call_args_list]
+    assert any("API_KEY = [set]  (sensitive)" in p for p in printed)
+    assert any("MISSING_SECRET = [not set]  (sensitive)" in p for p in printed)
+    assert any("REGION = [set]" in p and "(sensitive)" not in p for p in printed)
+    assert any("EMPTY_VAR = [not set]" in p and "(sensitive)" not in p for p in printed)
+
+
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_with_variables_flag(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+) -> None:
+    """Test that --variable values are sent alongside --secret values as base64 secret pairs."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+    mock_build.return_value = Path("/tmp/built-plugin.zip")
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.created
+    mock_post.return_value = mock_response
+
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=["API_KEY=secret123"],
+        variables=["REGION=us-west-2", "FEATURE_FLAG=on"],
+        is_enabled=True,
+        host="https://example.canvasmedical.com",
+    )
+
+    expected_data = [
+        ("is_enabled", True),
+        ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
+        ("secret", base64.b64encode(b"REGION=us-west-2").decode()),
+        ("secret", base64.b64encode(b"FEATURE_FLAG=on").decode()),
+    ]
+    mock_post.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins",
+        data=expected_data,
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+@patch("canvas_cli.apps.plugin.plugin.update")
+@patch("canvas_cli.apps.plugin.plugin._get_name_from_metadata")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_conflict_passes_variables_to_update(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+    mock_get_name: Mock,
+    mock_update: Mock,
+) -> None:
+    """On 409 conflict, update() must receive secrets + variables merged and is_enabled."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+    built = Path("/tmp/built-plugin.zip")
+    mock_build.return_value = built
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.conflict
+    mock_post.return_value = mock_response
+    mock_get_name.return_value = "my-plugin"
+
+    install(
+        plugin_name=Path("/fake/plugin"),
+        secrets=["S=1"],
+        variables=["V=2"],
+        is_enabled=False,
+        host="https://example.canvasmedical.com",
+    )
+
+    mock_update.assert_called_once_with(
+        "my-plugin",
+        built,
+        is_enabled=False,
+        secrets=["S=1", "V=2"],
+        host="https://example.canvasmedical.com",
+    )

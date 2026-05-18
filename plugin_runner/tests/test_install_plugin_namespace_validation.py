@@ -136,6 +136,7 @@ def test_no_namespace_setup_without_custom_data(
 
 
 @patch("plugin_runner.installation.is_schema_manager", return_value=False)
+@patch("plugin_runner.installation.fetch_plugin_secrets", return_value={})
 @patch("plugin_runner.installation.wait_for_namespace")
 @patch("plugin_runner.installation.compute_models_hash", return_value="fakehash123")
 @patch("plugin_runner.installation.install_plugin_secrets")
@@ -147,6 +148,7 @@ def test_non_schema_manager_read_write_waits_for_namespace(
     mock_install_secrets: MagicMock,
     mock_compute_hash: MagicMock,
     mock_wait: MagicMock,
+    mock_fetch_secrets: MagicMock,
     mock_is_sm: MagicMock,
     tmp_path: Path,
 ) -> None:
@@ -235,3 +237,72 @@ def test_non_schema_manager_read_only_raises_when_namespace_missing(
             "my_plugin",
             {"version": "1.0.0", "package": "pkg.tar.gz", "secrets": {}},
         )
+
+
+@patch("plugin_runner.installation.is_schema_manager", return_value=False)
+@patch("plugin_runner.installation.wait_for_namespace")
+@patch("plugin_runner.installation.compute_models_hash", return_value="fakehash123")
+@patch("plugin_runner.installation.extract_plugin")
+@patch("plugin_runner.installation.download_plugin")
+def test_non_schema_manager_secrets_file_contains_namespace_keys_after_install(
+    mock_download: MagicMock,
+    mock_extract: MagicMock,
+    mock_compute_hash: MagicMock,
+    mock_wait: MagicMock,
+    mock_is_sm: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """KOALA-5378: a non-schema-manager's local SECRETS.json must contain the
+    namespace access keys after install_plugin returns, even when
+    attributes['secrets'] was snapshotted before the schema manager populated
+    plugin_io_pluginsecret.
+
+    The race: B's enabled_plugins() snapshot was taken at T (before keys
+    existed), so attributes['secrets'] is empty. The schema manager finishes
+    after T, committing namespace_read_write_access_key to the DB.
+    wait_for_namespace then returns. B's local SECRETS.json must reflect the
+    DB state at that point, not the stale snapshot.
+    """
+    plugin_name = "my_plugin"
+    namespace = "org__data"
+    rw_key = "fresh-uuid-from-schema-manager"
+    manifest = {
+        "custom_data": {"namespace": namespace, "access": "read_write"},
+        "secrets": ["namespace_read_write_access_key"],
+    }
+
+    mock_download.return_value.__enter__ = MagicMock(return_value=Path("/fake.tar.gz"))
+    mock_download.return_value.__exit__ = MagicMock(return_value=False)
+    mock_extract.side_effect = _fake_extract(manifest)
+
+    # By the time wait_for_namespace returns, the schema manager has committed
+    # the namespace key to plugin_io_pluginsecret. Mock the DB cursor that a
+    # post-fix refresh would query.
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [
+        {"key": "namespace_read_write_access_key", "value": rw_key},
+    ]
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("plugin_runner.installation.PLUGIN_DIRECTORY", str(tmp_path)),
+        patch(
+            "plugin_runner.installation.open_database_connection",
+            return_value=mock_conn,
+        ),
+    ):
+        install_plugin(
+            plugin_name,
+            {"version": "1.0.0", "package": "pkg.tar.gz", "secrets": {}},
+        )
+
+    secrets_path = tmp_path / plugin_name / "SECRETS.json"
+    assert secrets_path.exists(), "install_plugin should have written SECRETS.json"
+    on_disk = json.loads(secrets_path.read_text())
+    assert on_disk.get("namespace_read_write_access_key") == rw_key, (
+        f"SECRETS.json should contain the namespace key from the DB, got {on_disk!r}"
+    )

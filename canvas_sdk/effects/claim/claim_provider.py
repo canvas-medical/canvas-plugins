@@ -44,6 +44,11 @@ class ClaimProvider(_PrefixedDict, prefix="provider"):
     tax_id_type: Annotated[str, Field(max_length=1)] | None = None
     taxonomy: Annotated[str, Field(max_length=100)] | None = None
     ptan_identifier: Annotated[str, Field(max_length=50)] | None = None
+    addr1: Annotated[str, Field(max_length=255)] | None = None
+    addr2: Annotated[str, Field(max_length=255)] | None = None
+    city: Annotated[str, Field(max_length=255)] | None = None
+    state: Annotated[str, Field(max_length=2)] | None = None
+    zip: Annotated[str, Field(max_length=255)] | None = None
 
 
 @dataclass

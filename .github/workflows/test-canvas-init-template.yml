@@ -1,0 +1,36 @@
+name: Test canvas init template
+
+on:
+  pull_request:
+    branches: ["main", "release/*"]
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches: ["main", "release/*"]
+
+jobs:
+  test-scaffolded-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install-python-and-uv
+        with:
+          PYTHON_VERSION: "3.13"
+      - uses: ./.github/actions/install-canvas
+
+      - name: Scaffold a new plugin via canvas init
+        env:
+          CUSTOMER_IDENTIFIER: "ci-canvas-init"
+        run: |
+          mkdir -p /tmp/scaffold
+          cd /tmp/scaffold
+          # Feed a newline via stdin so cookiecutter accepts the default
+          # project_name ("My Cool Plugin" -> slug "my-cool-plugin").
+          printf '\n' | uv run --project "$GITHUB_WORKSPACE" canvas init
+
+      - name: Install and test the scaffolded plugin
+        env:
+          CUSTOMER_IDENTIFIER: "ci-canvas-init"
+        run: |
+          uv pip install -e /tmp/scaffold/my-cool-plugin
+          uv run pytest /tmp/scaffold/my-cool-plugin/tests --verbosity 2

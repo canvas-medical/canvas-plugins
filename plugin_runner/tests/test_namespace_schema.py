@@ -557,9 +557,10 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         assert inserted_params["namespace_read_access_key"] == "read-uuid"
         assert inserted_params["namespace_read_write_access_key"] == "write-uuid"
 
-        # All inserts use the same plugin_id
+        # All inserts use the same plugin_id and sensitive=False
         for call in insert_calls:
             assert call[0][1][0] == 42
+            assert call[0][1][3] is False
 
     @patch("builtins.open", new_callable=mock_open, read_data="{}")
     @patch("plugin_runner.namespace.Path")

@@ -1,3 +1,5 @@
+import hashlib
+import json
 import uuid
 
 from django.contrib.postgres.fields import ArrayField
@@ -181,6 +183,10 @@ class Note(TimestampedModel, IdentifiableModel):
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField(default=timezone.now)
     place_of_service = models.CharField(max_length=255)
+
+    def body_checksum(self) -> str:
+        """Compute an MD5 checksum of the note body content only."""
+        return hashlib.md5(json.dumps(self.body, sort_keys=True).encode("utf-8")).hexdigest()
 
     def get_claim(self) -> Claim | None:
         """

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -27,12 +28,22 @@ class PatientChartSummaryConfiguration(_BaseEffect):
         FAMILY_HISTORY = "family_history"
         CODING_GAPS = "coding_gaps"
 
-    sections: list[Section] = Field(min_length=1)
+    @dataclass
+    class CustomSection:
+        name: str
+
+    sections: list[Section | CustomSection] = Field(min_length=1)
 
     @property
     def values(self) -> dict[str, Any]:
         """The PatientChartSummaryConfiguration's values."""
-        return {"sections": [s.value for s in self.sections]}
+        sections = []
+        for s in self.sections:
+            if isinstance(s, PatientChartSummaryConfiguration.CustomSection):
+                sections.append({"custom": True, "key": s.name})
+            else:
+                sections.append({"custom": False, "key": s.value})
+        return {"sections": sections}
 
     @property
     def effect_payload(self) -> dict[str, Any]:

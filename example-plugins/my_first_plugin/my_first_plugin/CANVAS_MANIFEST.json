@@ -25,7 +25,10 @@
         "views": []
     },
     "tags": [],
-    "secrets": ["WEBHOOK_URL", "WEBHOOK_API_KEY"],
+    "variables": [
+        {"name": "WEBHOOK_URL", "default": "https://example.com/webhook"},
+        {"name": "WEBHOOK_API_KEY", "sensitive": true}
+    ],
     "license": "NONE",
     "readme": "NONE"
 }

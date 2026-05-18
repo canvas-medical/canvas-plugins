@@ -142,7 +142,7 @@ def list_plugin_no_secrets(plugin_name: str) -> tuple[str, int, list[str], list[
         f"config list {plugin_name}",
         0,
         [
-            "No secrets configured",
+            "No variables configured.",
         ],
         [],
     )
@@ -203,7 +203,7 @@ def list_plugin_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str
         f"config list {plugin_name}",
         0,
         [
-            "['key']",
+            "key = [set]",
         ],
         [],
     )

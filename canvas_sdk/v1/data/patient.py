@@ -18,6 +18,8 @@ from canvas_sdk.v1.data.common import (
 )
 from canvas_sdk.v1.data.utils import create_key, generate_mrn, presigned_url
 
+DEFAULT_AVATAR_URL = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
 
 class SexAtBirth(TextChoices):
     """SexAtBirth."""
@@ -187,6 +189,22 @@ class Patient(TimestampedModel):
         """Returns the patient's primary phone number, if available."""
         return (self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")).first()
 
+    @property
+    def photo(self) -> PatientPhoto | None:
+        """Return the patient's first uploaded avatar photo, if any."""
+        photo = self.photos.first()
+        if photo and photo.url and str(photo.url).startswith("patient-avatars"):
+            return photo
+        return None
+
+    @property
+    def photo_url(self) -> str:
+        """Return a presigned URL for the patient's photo, or the default avatar."""
+        photo = self.photo
+        if photo:
+            return presigned_url(photo.url)
+        return DEFAULT_AVATAR_URL
+
 
 class PatientContactPoint(IdentifiableModel):
     """A class representing a patient contact point."""
@@ -299,6 +317,17 @@ class PatientFacilityAddress(PatientAddress):
     )
 
 
+class PatientPhoto(TimestampedModel):
+    """PatientPhoto."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientphoto_001"
+
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="photos")
+    url = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, blank=True, default="")
+
+
 class PatientIdentificationCard(TimestampedModel):
     """PatientIdentificationCard model for storing patient ID card images."""
 
@@ -337,6 +366,7 @@ __exports__ = (
     "PatientFacilityAddress",
     "PatientExternalIdentifier",
     "PatientIdentificationCard",
+    "PatientPhoto",
     "PatientSetting",
     "PatientMetadata",
     # not defined here but used by current plugins
