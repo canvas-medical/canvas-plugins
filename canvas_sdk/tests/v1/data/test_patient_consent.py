@@ -15,7 +15,8 @@ def test_patient_consent_coding_document_is_nullable() -> None:
     """PatientConsentCoding.document can be None when no document is uploaded."""
     coding = PatientConsentCoding()
 
-    assert coding.document is None
+    assert not coding.document
+    assert coding.document.name is None
 
 
 def test_document_url_with_document() -> None:
