@@ -1,3 +1,6 @@
+[dependency-groups]
+test = ["pytest-cov>=7.0.0"]
+
 [project]
 authors = [
   {email = "engineering@canvasmedical.com", name = "Canvas Team"}
@@ -13,8 +16,9 @@ requires-python = ">=3.11"
 version = "0.0.1"
 
 [tool.pytest.ini_options]
+addopts = "--cov=example_commands --cov-report=term-missing"
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 pythonpath = ["."]
 
 [tool.uv.sources]
-canvas = { path = "../../", editable = true }
+canvas = {editable = true, path = "../../"}

@@ -1,347 +1,204 @@
-# To run the tests, use the command `pytest` in the terminal or uv run pytest.
-# Each test is wrapped inside a transaction that is rolled back at the end of the test.
-# If you want to modify which files are used for testing, check the [tool.pytest.ini_options] section in pyproject.toml.
-# For more information on testing Canvas plugins, see: https://docs.canvasmedical.com/sdk/testing-utils/
+"""Tests for the example auto-populate command handlers.
 
+Each handler is described by a HandlerCase dataclass and the same set of
+parametrized tests runs against both. See _compute_with_mocks for the shared
+setup that patches the SDK Command class and the logger.
+
+To run: `uv run pytest` (coverage runs automatically — see pyproject.toml).
+"""
+
+from dataclasses import dataclass
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from canvas_sdk.effects import EffectType
+from example_commands.handlers.example_imaging_order import AutoPopulateImagingOrderCommand
+from example_commands.handlers.example_refer import AutoPopulateReferCommand
+
+from canvas_sdk.commands import ImagingOrderCommand
+from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.events import EventType
 from canvas_sdk.test_utils.factories import PatientFactory
 from canvas_sdk.v1.data.discount import Discount
 
-from example_commands.protocols.example_imaging_order import AutoPopulateImagingOrderCommand
-from example_commands.protocols.example_refer import AutoPopulateReferCommand
-
-
-# ============================================================================
-# Tests for AutoPopulateImagingOrderCommand Protocol
-# ============================================================================
-
-
-def test_imaging_order_protocol_configuration() -> None:
-    """Test that the imaging order protocol is configured to respond to the correct event type."""
-    assert EventType.Name(EventType.IMAGING_ORDER_COMMAND__POST_ORIGINATE) in AutoPopulateImagingOrderCommand.RESPONDS_TO
-
-
-def test_imaging_order_protocol_imports() -> None:
-    """Test that the imaging order protocol can be imported and has expected attributes."""
-    assert AutoPopulateImagingOrderCommand is not None
-    assert hasattr(AutoPopulateImagingOrderCommand, "RESPONDS_TO")
-    assert hasattr(AutoPopulateImagingOrderCommand, "compute")
-
-
-def test_imaging_order_protocol_compute_returns_effects() -> None:
-    """Test that the imaging order protocol compute method returns effects."""
-    # Create a mock event with target UUID
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-imaging-order-uuid-123"
-
-    # Instantiate the protocol with the mock event
-    protocol = AutoPopulateImagingOrderCommand(event=mock_event)
-
-    # Mock ImagingOrderCommand to avoid Priority.STAT issue
-    with patch("example_commands.protocols.example_imaging_order.ImagingOrderCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_command_instance.edit.return_value = Mock()
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        # mock_priority = Mock()
-        # mock_priority.ROUTINE = "ROUTINE"
-        # mock_priority.URGENT = "URGENT"
-        # mock_priority.STAT = "STAT"
-        # mock_command_class.Priority = mock_priority
-
-        # Call compute and get the effects
-        with patch("example_commands.protocols.example_imaging_order.log"):
-            effects = protocol.compute()
-
-    # Assert that effects were returned
-    assert len(effects) == 1
-    assert effects[0] is not None
 
+@dataclass
+class HandlerCase:
+    """Per-handler parameters shared across the parametrized tests."""
+
+    name: str
+    handler_cls: type
+    handler_module: str
+    real_command_cls: type
+    expected_event: int
+    expected_priorities: list[Any]
+    expected_kwargs: dict[str, Any]
+    service_provider_fields: dict[str, str]
+
+    @property
+    def command_path(self) -> str:
+        return f"{self.handler_module}.{self.real_command_cls.__name__}"
+
+    @property
+    def log_path(self) -> str:
+        return f"{self.handler_module}.log"
+
+
+REFER_CASE = HandlerCase(
+    name="refer",
+    handler_cls=AutoPopulateReferCommand,
+    handler_module="example_commands.handlers.example_refer",
+    real_command_cls=ReferCommand,
+    expected_event=EventType.REFER_COMMAND__POST_ORIGINATE,
+    expected_priorities=[
+        ReferCommand.Priority.URGENT,
+        ReferCommand.Priority.ROUTINE,
+        ReferCommand.Priority.STAT,
+        None,
+    ],
+    expected_kwargs={
+        "diagnosis_codes": ["E119"],
+        "clinical_question": ReferCommand.ClinicalQuestion.DIAGNOSTIC_UNCERTAINTY,
+        "comment": "this is a comment",
+        "notes_to_specialist": "This is a note to specialist",
+        "include_visit_note": True,
+    },
+    service_provider_fields={
+        "first_name": "Clinic",
+        "last_name": "Acupuncture",
+        "practice_name": "Clinic Acupuncture",
+        "specialty": "Acupuncture",
+        "business_address": "Street Address",
+        "business_phone": "1234569874",
+        "business_fax": "1234569874",
+    },
+)
+
+IMAGING_CASE = HandlerCase(
+    name="imaging_order",
+    handler_cls=AutoPopulateImagingOrderCommand,
+    handler_module="example_commands.handlers.example_imaging_order",
+    real_command_cls=ImagingOrderCommand,
+    expected_event=EventType.IMAGING_ORDER_COMMAND__POST_ORIGINATE,
+    expected_priorities=[
+        ImagingOrderCommand.Priority.ROUTINE,
+        ImagingOrderCommand.Priority.URGENT,
+        ImagingOrderCommand.Priority.STAT,
+        None,
+    ],
+    expected_kwargs={
+        "image_code": "G0204",
+        "diagnosis_codes": ["E119"],
+        "additional_details": "Auto-populated imaging order details",
+        "comment": "Example comment for imaging order",
+    },
+    service_provider_fields={
+        "first_name": "Clinic",
+        "last_name": "Imaging",
+        "practice_name": "Clinic Imaging",
+        "specialty": "Radiology",
+        "business_address": "123 Imaging St",
+        "business_phone": "1234569874",
+        "business_fax": "1234569874",
+    },
+)
+
+CASES = [REFER_CASE, IMAGING_CASE]
+
+
+def _compute_with_mocks(case: HandlerCase, target_id: str = "test-uuid") -> SimpleNamespace:
+    """Run handler.compute() with the SDK Command class and logger patched.
+
+    The real Priority / ClinicalQuestion enums are attached to the mocked
+    Command class so the handler still picks real enum values. Returns a
+    namespace with the effects, the mocks, and the kwargs the command was
+    called with.
+    """
+    event = Mock(target=Mock(id=target_id))
+    handler = case.handler_cls(event=event)
+    with patch(case.command_path) as cmd_cls, patch(case.log_path) as mock_log:
+        cmd_instance = Mock()
+        cmd_instance.edit.return_value = Mock()
+        cmd_cls.return_value = cmd_instance
+        cmd_cls.Priority = case.real_command_cls.Priority
+        if hasattr(case.real_command_cls, "ClinicalQuestion"):
+            cmd_cls.ClinicalQuestion = case.real_command_cls.ClinicalQuestion
+        effects = handler.compute()
+    return SimpleNamespace(
+        effects=effects,
+        cmd_cls=cmd_cls,
+        cmd_instance=cmd_instance,
+        mock_log=mock_log,
+        call_kwargs=cmd_cls.call_args.kwargs,
+    )
 
-def test_imaging_order_protocol_populates_required_fields() -> None:
-    """Test that the imaging order protocol populates all required fields."""
-    # Create a mock event with target UUID
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-imaging-order-uuid-456"
-
-    # Instantiate the protocol
-    protocol = AutoPopulateImagingOrderCommand(event=mock_event)
-
-    # Mock the ImagingOrderCommand to capture what's being set
-    with patch("example_commands.protocols.example_imaging_order.ImagingOrderCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_edit_effect = Mock()
-        mock_command_instance.edit.return_value = mock_edit_effect
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.URGENT = "URGENT"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        with patch("example_commands.protocols.example_imaging_order.log"):
-            effects = protocol.compute()
-
-        # Verify ImagingOrderCommand was called with correct parameters
-        mock_command_class.assert_called_once()
-        call_kwargs = mock_command_class.call_args[1]
-
-        assert call_kwargs["command_uuid"] == "test-imaging-order-uuid-456"
-        assert call_kwargs["image_code"] == "G0204"
-        assert call_kwargs["diagnosis_codes"] == ["E119"]
-        assert call_kwargs["priority"] in ["ROUTINE", "URGENT", "STAT", None]
-        assert call_kwargs["additional_details"] == "Auto-populated imaging order details"
-        assert call_kwargs["comment"] == "Example comment for imaging order"
-        assert call_kwargs["service_provider"] is not None
-
-        # Verify edit() was called
-        mock_command_instance.edit.assert_called_once()
-
-
-def test_imaging_order_protocol_populates_service_provider() -> None:
-    """Test that the imaging order protocol populates service provider information."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-uuid"
-
-    protocol = AutoPopulateImagingOrderCommand(event=mock_event)
-
-    # Mock to capture service provider
-    with patch("example_commands.protocols.example_imaging_order.ImagingOrderCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_command_instance.edit.return_value = Mock()
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.URGENT = "URGENT"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        with patch("example_commands.protocols.example_imaging_order.log"):
-            protocol.compute()
-
-        call_kwargs = mock_command_class.call_args[1]
-        service_provider = call_kwargs["service_provider"]
-
-        # Verify service provider fields
-        assert service_provider.first_name == "Clinic"
-        assert service_provider.last_name == "Imaging"
-        assert service_provider.practice_name == "Clinic Imaging"
-        assert service_provider.specialty == "Radiology"
-        assert service_provider.business_address == "123 Imaging St"
-        assert service_provider.business_phone == "1234569874"
-        assert service_provider.business_fax == "1234569874"
-
-
-# ============================================================================
-# Tests for AutoPopulateReferCommand Protocol
-# ============================================================================
-
-
-def test_refer_protocol_configuration() -> None:
-    """Test that the refer protocol is configured to respond to the correct event type."""
-    assert EventType.Name(EventType.REFER_COMMAND__POST_ORIGINATE) in AutoPopulateReferCommand.RESPONDS_TO
-
-
-def test_refer_protocol_imports() -> None:
-    """Test that the refer protocol can be imported and has expected attributes."""
-    assert AutoPopulateReferCommand is not None
-    assert hasattr(AutoPopulateReferCommand, "RESPONDS_TO")
-    assert hasattr(AutoPopulateReferCommand, "compute")
-
-
-def test_refer_protocol_compute_returns_effects() -> None:
-    """Test that the refer protocol compute method returns effects."""
-    # Create a mock event with target UUID
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refer-uuid-123"
-
-    # Instantiate the protocol with the mock event
-    protocol = AutoPopulateReferCommand(event=mock_event)
-
-    # Mock ReferCommand to avoid Priority.STAT issue
-    with patch("example_commands.protocols.example_refer.ReferCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_command_instance.edit.return_value = Mock()
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.URGENT = "URGENT"
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        # Mock ClinicalQuestion enum
-        mock_clinical_question = Mock()
-        mock_clinical_question.DIAGNOSTIC_UNCERTAINTY = "DIAGNOSTIC_UNCERTAINTY"
-        mock_command_class.ClinicalQuestion = mock_clinical_question
-
-        # Call compute and get the effects
-        with patch("example_commands.protocols.example_refer.log"):
-            effects = protocol.compute()
-
-    # Assert that effects were returned
-    assert len(effects) == 1
-    assert effects[0] is not None
-
-
-def test_refer_protocol_populates_required_fields() -> None:
-    """Test that the refer protocol populates all required fields."""
-    # Create a mock event with target UUID
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refer-uuid-789"
-
-    # Instantiate the protocol
-    protocol = AutoPopulateReferCommand(event=mock_event)
-
-    # Mock the ReferCommand to capture what's being set
-    with patch("example_commands.protocols.example_refer.ReferCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_edit_effect = Mock()
-        mock_command_instance.edit.return_value = mock_edit_effect
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.URGENT = "URGENT"
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        # Mock ClinicalQuestion enum
-        mock_clinical_question = Mock()
-        mock_clinical_question.DIAGNOSTIC_UNCERTAINTY = "DIAGNOSTIC_UNCERTAINTY"
-        mock_command_class.ClinicalQuestion = mock_clinical_question
-
-        with patch("example_commands.protocols.example_refer.log"):
-            effects = protocol.compute()
-
-        # Verify ReferCommand was called with correct parameters
-        mock_command_class.assert_called_once()
-        call_kwargs = mock_command_class.call_args[1]
-
-        assert call_kwargs["command_uuid"] == "test-refer-uuid-789"
-        assert call_kwargs["diagnosis_codes"] == ["E119"]
-        assert call_kwargs["priority"] in ["URGENT", "ROUTINE", "STAT", None]
-        assert call_kwargs["clinical_question"] == "DIAGNOSTIC_UNCERTAINTY"
-        assert call_kwargs["comment"] == "this is a comment"
-        assert call_kwargs["notes_to_specialist"] == "This is a note to specialist"
-        assert call_kwargs["include_visit_note"] is True
-        assert call_kwargs["service_provider"] is not None
-
-        # Verify edit() was called
-        mock_command_instance.edit.assert_called_once()
-
-
-def test_refer_protocol_populates_service_provider() -> None:
-    """Test that the refer protocol populates service provider information."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-uuid"
-
-    protocol = AutoPopulateReferCommand(event=mock_event)
-
-    # Mock to capture service provider
-    with patch("example_commands.protocols.example_refer.ReferCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_command_instance.edit.return_value = Mock()
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.URGENT = "URGENT"
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        # Mock ClinicalQuestion enum
-        mock_clinical_question = Mock()
-        mock_clinical_question.DIAGNOSTIC_UNCERTAINTY = "DIAGNOSTIC_UNCERTAINTY"
-        mock_command_class.ClinicalQuestion = mock_clinical_question
-
-        with patch("example_commands.protocols.example_refer.log"):
-            protocol.compute()
-
-        call_kwargs = mock_command_class.call_args[1]
-        service_provider = call_kwargs["service_provider"]
-
-        # Verify service provider fields
-        assert service_provider.first_name == "Clinic"
-        assert service_provider.last_name == "Acupuncture"
-        assert service_provider.practice_name == "Clinic Acupuncture"
-        assert service_provider.specialty == "Acupuncture"
-        assert service_provider.business_address == "Street Address"
-        assert service_provider.business_phone == "1234569874"
-        assert service_provider.business_fax == "1234569874"
-
-
-def test_refer_protocol_logs_information() -> None:
-    """Test that the refer protocol logs appropriate information."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refer-uuid-log"
-
-    protocol = AutoPopulateReferCommand(event=mock_event)
-
-    # Mock ReferCommand and log
-    with patch("example_commands.protocols.example_refer.ReferCommand") as mock_command_class:
-        mock_command_instance = Mock()
-        mock_command_instance.edit.return_value = Mock()
-        mock_command_class.return_value = mock_command_instance
-
-        # Mock Priority enum
-        mock_priority = Mock()
-        mock_priority.URGENT = "URGENT"
-        mock_priority.ROUTINE = "ROUTINE"
-        mock_priority.STAT = "STAT"
-        mock_command_class.Priority = mock_priority
-
-        # Mock ClinicalQuestion enum
-        mock_clinical_question = Mock()
-        mock_clinical_question.DIAGNOSTIC_UNCERTAINTY = "DIAGNOSTIC_UNCERTAINTY"
-        mock_command_class.ClinicalQuestion = mock_clinical_question
-
-        with patch("example_commands.protocols.example_refer.log") as mock_log:
-            protocol.compute()
-
-            # Verify log.info was called
-            mock_log.info.assert_called_once()
-            log_message = mock_log.info.call_args[0][0]
-            assert "test-refer-uuid-log" in log_message
-            assert "refer command" in log_message.lower()
-
-
-# ============================================================================
-# General Factory and Model Examples
-# ============================================================================
-
-
-# Example: You can use a factory to create a patient instance for testing purposes.
+
+# ---------------------------------------------------------------------------
+# Parametrized handler tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_handler_responds_to_expected_event(case: HandlerCase) -> None:
+    assert EventType.Name(case.expected_event) in case.handler_cls.RESPONDS_TO
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_handler_has_required_attributes(case: HandlerCase) -> None:
+    assert hasattr(case.handler_cls, "RESPONDS_TO")
+    assert hasattr(case.handler_cls, "compute")
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_compute_returns_one_effect(case: HandlerCase) -> None:
+    result = _compute_with_mocks(case)
+    assert len(result.effects) == 1
+    assert result.effects[0] is not None
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_compute_populates_command_kwargs(case: HandlerCase) -> None:
+    result = _compute_with_mocks(case, target_id=f"{case.name}-uuid")
+
+    result.cmd_cls.assert_called_once()
+    assert result.call_kwargs["command_uuid"] == f"{case.name}-uuid"
+    for key, expected in case.expected_kwargs.items():
+        assert result.call_kwargs[key] == expected
+    assert result.call_kwargs["priority"] in case.expected_priorities
+    assert result.call_kwargs["service_provider"] is not None
+    result.cmd_instance.edit.assert_called_once()
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_compute_populates_service_provider(case: HandlerCase) -> None:
+    result = _compute_with_mocks(case)
+    sp = result.call_kwargs["service_provider"]
+    for attr, expected in case.service_provider_fields.items():
+        assert getattr(sp, attr) == expected
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
+def test_compute_logs_command_uuid(case: HandlerCase) -> None:
+    target_id = f"{case.name}-uuid-log"
+    result = _compute_with_mocks(case, target_id=target_id)
+    log_messages = [call.args[0] for call in result.mock_log.info.call_args_list]
+    assert log_messages, "expected at least one log.info call"
+    assert any(target_id in msg for msg in log_messages)
+
+
+# ---------------------------------------------------------------------------
+# Factory and data-model examples (kept from the seed suite)
+# ---------------------------------------------------------------------------
+
+
 def test_factory_example() -> None:
-    """Test that a patient can be created using the PatientFactory."""
+    """A patient can be created via the test factory."""
     patient = PatientFactory.create()
     assert patient.id is not None
 
 
-# Example: If a factory is not available, you can create an instance manually with the data model directly.
 def test_model_example() -> None:
-    """Test that a Discount instance can be created."""
+    """A Discount instance can be created via the ORM."""
     Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)
     assert Discount.objects.first().pk is not None

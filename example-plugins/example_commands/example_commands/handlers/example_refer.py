@@ -1,31 +1,36 @@
-from canvas_sdk.effects import Effect
-from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.commands.commands.refer import ReferCommand
-from canvas_sdk.commands.constants import ServiceProvider
-from logger import log
 from random import choices
 
-class AutoPopulateReferCommand(BaseProtocol):
+from canvas_sdk.commands.commands.refer import ReferCommand
+from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.effects import Effect
+from canvas_sdk.events import EventType
+from canvas_sdk.handlers import BaseHandler
+from logger import log
+
+
+class AutoPopulateReferCommand(BaseHandler):
     """
     Protocol that automatically populates a refer command when a referral command is originated.
     """
+
     RESPONDS_TO = [
         EventType.Name(EventType.REFER_COMMAND__POST_ORIGINATE),
     ]
 
     def compute(self) -> list[Effect]:
-        priority_options = [    
+        priority_options = [
             ReferCommand.Priority.URGENT,
             ReferCommand.Priority.ROUTINE,
             ReferCommand.Priority.STAT,
-            None
+            None,
         ]
         priority = choices(priority_options)[0]
-        log.info(f"Automatically populating a refer command for {self.target} with priority {priority}")
+        log.info(
+            f"Automatically populating a refer command for {self.event.target.id} with priority {priority}"
+        )
         return [
             ReferCommand(
-                command_uuid=self.target,
+                command_uuid=self.event.target.id,
                 diagnosis_codes=["E119"],
                 priority=priority,
                 clinical_question=ReferCommand.ClinicalQuestion.DIAGNOSTIC_UNCERTAINTY,
@@ -39,7 +44,7 @@ class AutoPopulateReferCommand(BaseProtocol):
                     specialty="Acupuncture",
                     business_address="Street Address",
                     business_phone="1234569874",
-                    business_fax="1234569874"
-                )
+                    business_fax="1234569874",
+                ),
             ).edit()
         ]
