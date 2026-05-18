@@ -1,7 +1,8 @@
 from enum import StrEnum
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 from pydantic import StringConstraints
+from typing_extensions import TypedDict
 
 NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 

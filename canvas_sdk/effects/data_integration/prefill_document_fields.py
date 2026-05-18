@@ -1,6 +1,7 @@
-from typing import Annotated, Any, NotRequired, TypeAlias, TypedDict
+from typing import Annotated, Any, NotRequired, TypeAlias
 
 from pydantic import Field
+from typing_extensions import TypedDict
 
 from canvas_sdk.effects.base import EffectType
 from canvas_sdk.effects.data_integration.base import _PrefillingDocumentEffect
