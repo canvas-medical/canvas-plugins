@@ -2,24 +2,36 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "agent_runner_poc",
-    "description": "PoC reference agent for the Canvas Agent Runner Framework (KOALA-5544). Fires ChartSummary on note lock and originates a Plan command.",
+    "description": "PoC reference agents for the Canvas Agent Runner Framework (KOALA-5544). ChartSummary drafts a Plan on note creation; LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via Custom Data.",
     "components": {
         "handlers": [
             {
                 "class": "agent_runner_poc.handlers.trigger:ChartSummaryTrigger",
-                "description": "Emits RunAgentEffect for ChartSummary when a note is locked"
+                "description": "Emits RunAgentEffect for ChartSummary when a note enters the NEW state"
+            },
+            {
+                "class": "agent_runner_poc.handlers.longitudinal_trigger:LongitudinalCareAdvisorTrigger",
+                "description": "Emits RunAgentEffect for LongitudinalCareAdvisor when a note transitions to LOCKED"
             }
         ],
         "agents": [
             {
                 "class": "agent_runner_poc.agents.chart_summary:ChartSummary",
-                "description": "Drafts a Plan command after a note is locked"
+                "description": "Drafts a Plan command on the new mutable note"
+            },
+            {
+                "class": "agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
+                "description": "Reviews the locked encounter against prior visits' open recommendations; creates Tasks for outstanding follow-up"
             }
         ],
         "commands": [],
         "content": [],
         "effects": [],
         "views": []
+    },
+    "custom_data": {
+        "namespace": "custom_data__agent_runner_poc",
+        "access": "read_write"
     },
     "variables": [],
     "tags": {},
