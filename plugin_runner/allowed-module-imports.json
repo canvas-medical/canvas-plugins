@@ -3,7 +3,9 @@
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
-    "LLMGateway"
+    "LLMGateway",
+    "ToolRegistry",
+    "standard_tools"
   ],
   "canvas_sdk.agents.base": [
     "AgentPlugin"
@@ -14,8 +16,14 @@
   "canvas_sdk.agents.result": [
     "AgentRunResult"
   ],
+  "canvas_sdk.agents.standard_tools": [
+    "standard_tools"
+  ],
   "canvas_sdk.agents.state": [
     "AgentState"
+  ],
+  "canvas_sdk.agents.tool_registry": [
+    "ToolRegistry"
   ],
   "canvas_sdk.caching.client": [
     "get_cache"

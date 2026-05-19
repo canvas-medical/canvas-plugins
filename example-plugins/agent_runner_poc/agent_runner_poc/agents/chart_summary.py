@@ -4,7 +4,7 @@ from typing import Any, cast
 from anthropic import Anthropic
 from anthropic.types import ToolUseBlock
 
-from agent_runner_poc.agents.tools import TOOLS, execute_tool
+from agent_runner_poc.agents.tools import tools
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data import Patient
@@ -13,12 +13,13 @@ from logger import log
 SYSTEM_PROMPT = (
     "You are a clinical documentation assistant drafting a follow-up Plan-section "
     "narrative for a newly-created encounter note. You have read tools to inspect "
-    "the patient's active conditions and recent lab results, and one effect tool "
-    "(`originate_plan`) that stages the Plan command. Workflow: read the chart "
-    "with the read tools, draft a concise Plan grounded in what you found, then "
-    "call `originate_plan` exactly once with the narrative as plain text "
-    "(<= 3 sentences, no preamble, no headings, no markdown). After the tool "
-    "returns, you may end your turn — no further text is required."
+    "the patient's chart (active conditions, recent lab results, current "
+    "medications) and one effect tool (`originate_plan`) that stages the Plan "
+    "command. Workflow: read the chart with whichever tools are relevant, draft "
+    "a concise Plan grounded in what you found, then call `originate_plan` "
+    "exactly once with the narrative as plain text (<= 3 sentences, no preamble, "
+    "no headings, no markdown). After the tool returns, you may end your turn — "
+    "no further text is required."
 )
 
 MAX_TURNS = 8
@@ -79,7 +80,7 @@ class ChartSummary(AgentPlugin):
                 system=SYSTEM_PROMPT,
                 # Anthropic SDK stubs expect typed param TypedDicts here; the
                 # runtime accepts our plain-dict shapes equivalently.
-                tools=cast(Any, TOOLS),
+                tools=cast(Any, tools.definitions()),
                 messages=cast(Any, messages),
             )
             log.info(
@@ -99,7 +100,7 @@ class ChartSummary(AgentPlugin):
                     if not isinstance(block, ToolUseBlock):
                         continue
                     try:
-                        result = execute_tool(block.name, dict(block.input), ctx=tool_ctx)
+                        result = tools.execute(block.name, dict(block.input), ctx=tool_ctx)
                         tool_results.append(
                             {
                                 "type": "tool_result",
