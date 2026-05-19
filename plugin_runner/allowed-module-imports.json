@@ -1531,6 +1531,7 @@
   ],
   "canvas_sdk.v1.data.coverage": [
     "Coverage",
+    "CoverageRank",
     "CoverageRelationshipCode",
     "CoverageStack",
     "CoverageState",
