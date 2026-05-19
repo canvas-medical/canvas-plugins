@@ -41,7 +41,6 @@ effect = LinkDocumentToPatient(
         {"text": "AI 95%", "color": "#00AA00"},
         {"text": "Auto-linked", "color": "#2196F3"},
     ],
-    source_protocol="llm_v1",                            # Optional: protocol/plugin identifier
 )
 ```
 
@@ -50,7 +49,6 @@ effect = LinkDocumentToPatient(
 - `document_id` (str/int, required): The IntegrationTask UUID to link
 - `patient_key` (str, required): The patient's key (32-character hex string, not a UUID)
 - `annotations` (list[dict], optional): Display annotations with `text` and `color` fields
-- `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Behavior:**
 
@@ -78,7 +76,6 @@ effect = AssignDocumentReviewer(
         AnnotationItem(text="Auto-assigned", color="#FF9800"),
         AnnotationItem(text="Data integration", color="#2196F3"),
     ],
-    source_protocol="my_plugin", # Optional: protocol/plugin identifier
 )
 ```
 
@@ -90,7 +87,6 @@ effect = AssignDocumentReviewer(
 - `priority` (Priority, optional): Priority level - `Priority.NORMAL` or `Priority.HIGH`, defaults to `Priority.NORMAL`
 - `review_mode` (ReviewMode, optional): Review mode - `ReviewMode.REVIEW_REQUIRED`, `ReviewMode.ALREADY_REVIEWED`, or `ReviewMode.REVIEW_NOT_REQUIRED`, defaults to `ReviewMode.REVIEW_REQUIRED`
 - `annotations` (list[AnnotationItem], optional): Display annotations with `text` and `color` fields
-- `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Review Modes:**
 
@@ -135,7 +131,6 @@ effect = CategorizeDocument(
     document_id="12345",
     document_type=document_type,
     annotations=annotations,
-    source_protocol="data_integration_example",
 )
 ```
 
@@ -148,7 +143,6 @@ effect = CategorizeDocument(
   - `report_type` (ReportType): `ReportType.CLINICAL` or `ReportType.ADMINISTRATIVE`
   - `template_type` (TemplateType | None, optional): `TemplateType.LabReportTemplate`, `TemplateType.ImagingReportTemplate`, `TemplateType.SpecialtyReportTemplate`, or `None` for administrative docs
 - `annotations` (list[AnnotationItem], optional): Display annotations
-- `source_protocol` (str, optional): Protocol/plugin identifier
 
 **Behavior:**
 

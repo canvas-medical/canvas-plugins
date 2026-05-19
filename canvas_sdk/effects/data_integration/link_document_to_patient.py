@@ -29,7 +29,6 @@ class LinkDocumentToPatient(_PrefillingDocumentEffect):
             "document_id": str(self.document_id),
             "patient_key": self.patient_key,
             "annotations": self.annotations,
-            "source_protocol": self.source_protocol,
         }
 
 

@@ -59,7 +59,6 @@ class PrefillDocumentFields(_PrefillingDocumentEffect):
             "document_id": str(self.document_id),
             "templates": self.templates,
             "annotations": self.annotations,
-            "source_protocol": self.source_protocol,
         }
 
 

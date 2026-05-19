@@ -297,7 +297,6 @@ class DataIntegrationHandler(BaseProtocol):
                     AnnotationItem(text="AI 95%", color="#00AA00"),
                     AnnotationItem(text="Auto-linked", color="#2196F3"),
                 ],
-                source_protocol="data_integration_example",
             )
             return effect.apply()
         except ValidationError as e:
@@ -332,7 +331,6 @@ class DataIntegrationHandler(BaseProtocol):
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),
                         AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
-                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned staff {staff.id} to document {document_id}")
             elif team:
@@ -345,7 +343,6 @@ class DataIntegrationHandler(BaseProtocol):
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),
                         AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
-                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned team {team.id} to document {document_id}")
             else:
@@ -403,7 +400,6 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 document_type=document_type,
                 annotations=annotations,
-                source_protocol="data_integration_example",
             )
             return effect.apply()
 
@@ -427,7 +423,6 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 templates=PREFILL_TEMPLATES,
                 annotations=annotations,
-                source_protocol="data_integration_example",
             )
             return effect.apply()
         except ValidationError as e:

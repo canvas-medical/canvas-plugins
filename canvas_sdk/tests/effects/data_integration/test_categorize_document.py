@@ -49,14 +49,12 @@ def test_values_with_all_fields(
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         document_type=valid_document_type,
         annotations=valid_annotations,
-        source_protocol="test_plugin",
     )
     values = effect.values
     assert values == {
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "document_type": valid_document_type,
         "annotations": valid_annotations,
-        "source_protocol": "test_plugin",
     }
 
 
@@ -69,7 +67,6 @@ def test_values_without_optional_fields(valid_document_type: DocumentType) -> No
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "document_type": valid_document_type,
         "annotations": None,
-        "source_protocol": None,
     }
 
 
