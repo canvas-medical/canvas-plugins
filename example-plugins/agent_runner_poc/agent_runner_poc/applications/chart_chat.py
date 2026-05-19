@@ -10,12 +10,13 @@ Opens a right-pane modal that talks to two SimpleAPI endpoints:
   response text. Inline-synchronous (no Celery hop) so the UI gets a
   response within the request's HTTP lifecycle.
 
-For the snapshot pattern demo (and unlike the trigger-based agents that
-read ``ANTHROPIC_DEV_API_KEY`` from the plugin-runner pod env), this
-handler reads the Anthropic key from the plugin's own secrets — declared
-as ``ANTHROPIC_API_KEY`` in the manifest's ``variables`` list. The
-clinician-facing chat surface is configured per-plugin in the home-app
-admin rather than per-pod.
+Like the triggered invocation path, this handler reads the Anthropic
+key from the plugin's own secrets via :meth:`LLMGateway.from_plugin_secrets`
+— declared as ``ANTHROPIC_API_KEY`` in the manifest's ``variables`` list
+and configured per-customer in the home-app admin. The lock primitive
+(:func:`canvas_sdk.agents.agent_lock`) is acquired in-process here just
+as it would be on the plugin-runner during a triggered run; contention
+returns HTTP 409.
 """
 
 from http import HTTPStatus

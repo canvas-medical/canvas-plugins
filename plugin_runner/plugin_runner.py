@@ -415,11 +415,15 @@ class PluginRunner(PluginRunnerServicer):
         database context, and yields the emitted effects in a single
         ``EventResponse``.
 
-        PoC scope (KOALA-5544): no per-``scope_key`` lock, single-process
-        execution, Anthropic developer token sourced from the
-        ``ANTHROPIC_DEV_API_KEY`` environment variable on the plugin-runner
-        pod. The streaming response shape matches ``HandleEvent`` so future
-        V1 work (per-turn effect streaming, etc.) doesn't change the wire
+        PoC scope (KOALA-5544): single-process execution; per-``scope_key``
+        single-flight serialization via :func:`canvas_sdk.agents.agent_lock`
+        (contention surfaces as ``EventResponse(success=False, effects=[])``);
+        Anthropic credentials sourced from the plugin's own ``secrets`` via
+        :meth:`LLMGateway.from_plugin_secrets` (``ANTHROPIC_API_KEY`` /
+        ``ANTHROPIC_MODEL``), declared as ``variables`` on the manifest and
+        configured per-customer in admin. The streaming response shape
+        matches ``HandleEvent`` so future V1 work (per-turn effect streaming,
+        gateway-service session tokens, etc.) doesn't change the wire
         contract.
         """
         with metrics.measure(

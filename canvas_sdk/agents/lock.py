@@ -8,11 +8,12 @@ to handle it — retry-with-backoff for triggered agents (the doc's
 ``autoretry_for=(AgentLocked,)`` pattern), HTTP 409 for interactive
 user-initiated invocations like chat.
 
-Storage is the per-customer "plugins" cache (Caching API) — same Redis
-namespace plugin authors use via :func:`canvas_sdk.caching.plugins.
-get_cache`, but accessed through the lower-level client so this helper
-works from both plugin and platform code paths. Tenant isolation comes
-from the cache backend's ``KEY_PREFIX = CUSTOMER_IDENTIFIER``.
+Storage is the per-customer "plugins" cache (Caching API, backed by
+the EHR instance's Postgres) — same namespace plugin authors use via
+:func:`canvas_sdk.caching.plugins.get_cache`, but accessed through the
+lower-level client so this helper works from both plugin and platform
+code paths. Tenant isolation comes from the cache backend's
+``KEY_PREFIX = CUSTOMER_IDENTIFIER``.
 
 The lock primitive is :meth:`Cache.get_or_set` with a per-acquisition
 sentinel:
