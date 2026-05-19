@@ -219,6 +219,7 @@
     "LabReviewCommand",
     "MedicalHistoryCommand",
     "MedicationStatementCommand",
+    "POCLabTestCommand",
     "PastSurgicalHistoryCommand",
     "PerformCommand",
     "PhysicalExamCommand",
@@ -312,6 +313,10 @@
   ],
   "canvas_sdk.commands.commands.plan": [
     "PlanCommand"
+  ],
+  "canvas_sdk.commands.commands.poc_lab_test": [
+    "POCLabTestCommand",
+    "TestValue"
   ],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
