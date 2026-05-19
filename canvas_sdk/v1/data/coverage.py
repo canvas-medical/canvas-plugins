@@ -334,6 +334,7 @@ class EligibilitySummary(TimestampedModel, IdentifiableModel):
 
 
 __exports__ = (
+    "CoverageRank",
     "CoverageStack",
     "CoverageState",
     "CoverageType",
