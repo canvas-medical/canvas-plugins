@@ -359,6 +359,12 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
     HTTP_REQUEST: _ClassVar[EffectType]
+    LINK_DOCUMENT_TO_PATIENT: _ClassVar[EffectType]
+    CATEGORIZE_DOCUMENT: _ClassVar[EffectType]
+    ASSIGN_DOCUMENT_REVIEWER: _ClassVar[EffectType]
+    UPDATE_DOCUMENT_FIELDS: _ClassVar[EffectType]
+    JUNK_DOCUMENT: _ClassVar[EffectType]
+    REMOVE_DOCUMENT_FROM_PATIENT: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -711,6 +717,12 @@ PATIENT_GROUP__ADD_MEMBER: EffectType
 PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
 HTTP_REQUEST: EffectType
+LINK_DOCUMENT_TO_PATIENT: EffectType
+CATEGORIZE_DOCUMENT: EffectType
+ASSIGN_DOCUMENT_REVIEWER: EffectType
+UPDATE_DOCUMENT_FIELDS: EffectType
+JUNK_DOCUMENT: EffectType
+REMOVE_DOCUMENT_FROM_PATIENT: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

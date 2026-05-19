@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.153.0 (2026-05-18)
+
+### Features
+
+- [koala-3744] - add SDK data integration effects
+  ([#1517](https://github.com/canvas-medical/canvas-plugins/pull/1517),
+  [`b8ddbcb`](https://github.com/canvas-medical/canvas-plugins/commit/b8ddbcb82c7d02496ac32bf3b83908367b7bc786))
+
+Co-authored-by: irfan-vicert <irfan.cajo@vicert.com>
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
 ## v0.152.0 (2026-05-15)
 
 ### Chores
