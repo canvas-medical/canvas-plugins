@@ -17,6 +17,7 @@ from .claim_line_item import (
     ClaimLineItemModifierFactory,
 )
 from .coverage import CoverageFactory
+from .diagnostic_report import DiagnosticReportFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -115,6 +116,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
+    "DiagnosticReportFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
