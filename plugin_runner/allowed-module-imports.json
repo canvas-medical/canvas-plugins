@@ -4,6 +4,7 @@
     "AgentRunResult",
     "AgentState",
     "LLMGateway",
+    "LLMGatewayConfigurationError",
     "ToolRegistry",
     "standard_tools"
   ],
@@ -11,7 +12,8 @@
     "AgentPlugin"
   ],
   "canvas_sdk.agents.gateway": [
-    "LLMGateway"
+    "LLMGateway",
+    "LLMGatewayConfigurationError"
   ],
   "canvas_sdk.agents.result": [
     "AgentRunResult"

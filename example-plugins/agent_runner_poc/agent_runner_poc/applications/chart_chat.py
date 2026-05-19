@@ -23,15 +23,13 @@ from typing import Any
 
 from agent_runner_poc.agents.chart_chat import ChartChatAgent
 from agent_runner_poc.models.conversation import Conversation
-from canvas_sdk.agents import LLMGateway
+from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
-
-DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
 def _scope_key(patient_id: str) -> str:
@@ -86,19 +84,15 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         patient_id: str = body["patient_id"]
         user_message: str = body["message"]
 
-        api_key = self.secrets.get("ANTHROPIC_API_KEY")
-        if not api_key:
+        try:
+            gateway = LLMGateway.from_plugin_secrets(self.secrets)
+        except LLMGatewayConfigurationError as exc:
             return [
                 JSONResponse(
-                    {"error": "ANTHROPIC_API_KEY is not configured for this plugin."},
+                    {"error": str(exc)},
                     status_code=HTTPStatus.SERVICE_UNAVAILABLE,
                 )
             ]
-
-        gateway = LLMGateway(
-            api_key=api_key,
-            model=self.secrets.get("ANTHROPIC_MODEL") or DEFAULT_MODEL,
-        )
 
         # Inline invocation — load_state, run, save_state run in this HTTP
         # request rather than via the run_agent Celery task. Different

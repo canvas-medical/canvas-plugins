@@ -1,5 +1,5 @@
 from canvas_sdk.agents.base import AgentPlugin
-from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.gateway import LLMGateway, LLMGatewayConfigurationError
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.state import AgentState
@@ -10,6 +10,7 @@ __all__ = __exports__ = (
     "AgentRunResult",
     "AgentState",
     "LLMGateway",
+    "LLMGatewayConfigurationError",
     "ToolRegistry",
     "standard_tools",
 )

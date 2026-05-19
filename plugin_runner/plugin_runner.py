@@ -447,23 +447,16 @@ class PluginRunner(PluginRunnerServicer):
             agent_class = plugin["class"]
             namespace_config = plugin.get("namespace_config")
 
-            api_key = os.environ.get("ANTHROPIC_DEV_API_KEY")
-            if not api_key:
-                log.error(
-                    "RunAgent: ANTHROPIC_DEV_API_KEY is not set on the plugin-runner pod; "
-                    "cannot dispatch agent"
-                )
-                yield EventResponse(success=False, effects=[])
-                return
-
             # Late import: canvas_sdk.agents and the SDK Effect wrapper are
             # only meaningful once plugin modules have loaded.
-            from canvas_sdk.agents import LLMGateway
+            from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
 
-            gateway = LLMGateway(
-                api_key=api_key,
-                model=os.environ.get("ANTHROPIC_DEV_MODEL", "claude-sonnet-4-6"),
-            )
+            try:
+                gateway = LLMGateway.from_environment()
+            except LLMGatewayConfigurationError as exc:
+                log.error(f"RunAgent: cannot dispatch agent — {exc}")
+                yield EventResponse(success=False, effects=[])
+                return
 
             try:
                 trigger_payload = (
