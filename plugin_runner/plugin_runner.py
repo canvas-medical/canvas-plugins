@@ -479,6 +479,10 @@ class PluginRunner(PluginRunnerServicer):
                 f"scope_key={request.scope_key} run_id={request.run_id}"
             )
 
+            # Late imports: agent_lock pulls in the plugin's Caching API which
+            # is only reachable inside plugin_context.
+            from canvas_sdk.agents import AgentLocked, agent_lock
+
             try:
                 with (
                     plugin_context(f"{module_path}.{class_name}"),
@@ -487,11 +491,16 @@ class PluginRunner(PluginRunnerServicer):
                         namespace=db_namespace,
                         access_level=db_access_level,
                     ),
+                    agent_lock(request.scope_key, holder_id=request.run_id),
                 ):
                     agent = agent_class()
                     state = agent.load_state(request.scope_key)
                     result = agent.run(state, gateway, trigger_payload)
                     agent.save_state(request.scope_key, result.state)
+            except AgentLocked as exc:
+                log.warning(f"RunAgent: lock contention — {exc}")
+                yield EventResponse(success=False, effects=[])
+                return
             except Exception as exc:
                 log.exception(f"RunAgent: agent {request.agent_id} raised")
                 sentry_sdk.capture_exception(exc)

@@ -1,11 +1,13 @@
 {
   "canvas_sdk.agents": [
+    "AgentLocked",
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
     "LLMGateway",
     "LLMGatewayConfigurationError",
     "ToolRegistry",
+    "agent_lock",
     "standard_tools"
   ],
   "canvas_sdk.agents.base": [
@@ -14,6 +16,10 @@
   "canvas_sdk.agents.gateway": [
     "LLMGateway",
     "LLMGatewayConfigurationError"
+  ],
+  "canvas_sdk.agents.lock": [
+    "AgentLocked",
+    "agent_lock"
   ],
   "canvas_sdk.agents.result": [
     "AgentRunResult"

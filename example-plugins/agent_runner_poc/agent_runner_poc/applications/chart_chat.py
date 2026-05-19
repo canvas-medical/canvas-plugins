@@ -23,7 +23,12 @@ from typing import Any
 
 from agent_runner_poc.agents.chart_chat import ChartChatAgent
 from agent_runner_poc.models.conversation import Conversation
-from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
+from canvas_sdk.agents import (
+    AgentLocked,
+    LLMGateway,
+    LLMGatewayConfigurationError,
+    agent_lock,
+)
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
@@ -97,15 +102,31 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         # Inline invocation — load_state, run, save_state run in this HTTP
         # request rather than via the run_agent Celery task. Different
         # invocation path, same AgentPlugin contract.
+        #
+        # agent_lock prevents two parallel messages on the same scope_key
+        # (same patient's chat) from racing on the snapshot state — without
+        # it, two concurrent POSTs would both load the same baseline and
+        # the last save_state would clobber the other's turn. On contention
+        # we return 409; the UI can surface "the previous message is still
+        # being answered" rather than silently dropping a turn.
         scope_key = _scope_key(patient_id)
-        agent = ChartChatAgent()
-        state = agent.load_state(scope_key)
-        result = agent.run(
-            state,
-            gateway,
-            {"patient_id": patient_id, "user_message": user_message},
-        )
-        agent.save_state(scope_key, result.state)
+        try:
+            with agent_lock(scope_key):
+                agent = ChartChatAgent()
+                state = agent.load_state(scope_key)
+                result = agent.run(
+                    state,
+                    gateway,
+                    {"patient_id": patient_id, "user_message": user_message},
+                )
+                agent.save_state(scope_key, result.state)
+        except AgentLocked:
+            return [
+                JSONResponse(
+                    {"error": "The agent is still responding to a previous message."},
+                    status_code=HTTPStatus.CONFLICT,
+                )
+            ]
 
         return [
             JSONResponse(

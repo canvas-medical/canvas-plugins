@@ -220,3 +220,34 @@ def test_run_agent_handles_agent_exceptions(
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
     assert list(response.effects) == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_serializes_via_scope_key_lock(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two RPC invocations sharing a scope_key serialize: the second sees AgentLocked.
+
+    Sets up a re-entrant scenario: the agent's run() itself tries to
+    acquire the same scope_key lock that the outer RunAgent RPC already
+    holds. The inner attempt raises AgentLocked, which the RunAgent
+    handler catches and reports as success=False — same behavior the
+    real concurrent case produces.
+    """
+    from canvas_sdk.agents import agent_lock as agent_lock_helper
+
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    scope_key = "test_agent_plugin:patient:p1"
+
+    def _re_enter(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        with agent_lock_helper(scope_key):
+            pytest.fail("Inner lock acquisition should have raised AgentLocked")
+
+    monkeypatch.setattr(agent_cls, "run", _re_enter)
+    response = next(iter(plugin_runner.RunAgent(_make_request(scope_key=scope_key), None)))
+    assert response.success is False
+    assert list(response.effects) == []
