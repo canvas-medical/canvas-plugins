@@ -1,0 +1,43 @@
+| Name                                                                                                  |    Stmts |     Miss |   Cover |
+|------------------------------------------------------------------------------------------------------ | -------: | -------: | ------: |
+| abnormal\_lab\_task\_notification/protocols/abnormal\_lab\_protocol.py                                |       31 |        0 |    100% |
+| ai\_note\_titles/handlers/rename\_note.py                                                             |       45 |        0 |    100% |
+| api\_samples/routes/appointment\_updater.py                                                           |       22 |        0 |    100% |
+| api\_samples/routes/email\_bounce.py                                                                  |       15 |        0 |    100% |
+| api\_samples/routes/hello\_world.py                                                                   |        8 |        0 |    100% |
+| appointment\_coverage\_label/protocols/appointment\_labels.py                                         |       68 |        0 |    100% |
+| appointment\_state\_field/handlers/form.py                                                            |       28 |        0 |    100% |
+| appointment\_state\_field/utils/constants.py                                                          |        3 |        0 |    100% |
+| charting\_api\_examples/routes/billing\_line\_items.py                                                |       22 |       10 |     55% |
+| charting\_api\_examples/routes/commands.py                                                            |       39 |       23 |     41% |
+| charting\_api\_examples/routes/notes.py                                                               |       70 |        2 |     97% |
+| charting\_api\_examples/util.py                                                                       |       21 |        0 |    100% |
+| conftest.py                                                                                           |        3 |        0 |    100% |
+| coverage\_metadata\_sync/protocols/metadata\_sync.py                                                  |       38 |        0 |    100% |
+| example\_chart\_app/applications/my\_application.py                                                   |       24 |        5 |     79% |
+| example\_patient\_portal\_page/applications/my\_application.py                                        |        6 |        0 |    100% |
+| example\_patient\_portal\_page/handlers/my\_web\_app.py                                               |       21 |        5 |     76% |
+| example\_patient\_sync/handlers/patient\_sync.py                                                      |       53 |        0 |    100% |
+| example\_provider\_companion\_app/applications/my\_application.py                                     |        6 |        0 |    100% |
+| example\_provider\_page/applications/my\_application.py                                               |        6 |        0 |    100% |
+| my\_first\_plugin/protocols/protocol.py                                                               |       12 |        0 |    100% |
+| patient\_app\_schedule/protocols/filters.py                                                           |       74 |        0 |    100% |
+| patient\_portal\_plugin/handlers/patient\_portal\_handler.py                                          |       42 |       18 |     57% |
+| patient\_portal\_search\_appointments\_slots\_plugin/handlers/search\_appointments\_slots\_handler.py |       16 |        0 |    100% |
+| patient\_summary\_chart\_groups/protocols/my\_protocol.py                                             |       29 |        0 |    100% |
+| plugins\_smoke\_test/applications/my\_application.py                                                  |       23 |        5 |     78% |
+| recurring\_appointments/handlers/form.py                                                              |       12 |        0 |    100% |
+| recurring\_appointments/handlers/recurrence.py                                                        |       68 |        0 |    100% |
+| recurring\_appointments/utils/constants.py                                                            |        9 |        0 |    100% |
+| seed.py                                                                                               |        4 |        4 |      0% |
+| send\_all\_prescriptions/handlers/handler.py                                                          |       17 |        0 |    100% |
+| simple\_note\_button\_plugin/handlers/hello\_world\_button.py                                         |       10 |        0 |    100% |
+| supervising\_provider\_plugin/protocols/my\_protocol.py                                               |       22 |        0 |    100% |
+| supervising\_provider\_prescribe/protocols/my\_protocol.py                                            |       16 |        0 |    100% |
+| supervising\_provider\_prescribe\_protocol/protocols/my\_protocol.py                                  |       19 |        0 |    100% |
+| upsert\_patient\_metadata/protocols/my\_protocol.py                                                   |       20 |        0 |    100% |
+| vitals\_visualizer\_plugin/handlers/vitals\_api.py                                                    |       53 |        0 |    100% |
+| vitals\_visualizer\_plugin/handlers/vitals\_button.py                                                 |       11 |        0 |    100% |
+|                                                                                             **TOTAL** |  **986** |   **72** | **93%** |
+
+53 empty files skipped.
