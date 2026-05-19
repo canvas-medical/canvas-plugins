@@ -25,10 +25,18 @@ def plugin_runner() -> PluginRunner:
 
 
 @pytest.fixture
-def anthropic_dev_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set the dev Anthropic env vars the RunAgent path requires."""
-    monkeypatch.setenv("ANTHROPIC_DEV_API_KEY", "sk-test-runner")
-    monkeypatch.setenv("ANTHROPIC_DEV_MODEL", "claude-sonnet-4-6")
+def anthropic_plugin_secrets(load_test_plugins: None) -> None:
+    """Populate the loaded test agent's secrets dict with the Anthropic key.
+
+    The RunAgent RPC builds the LLMGateway from ``plugin["secrets"]``; in
+    production those values come from the plugin's manifest variables and
+    the customer's admin config. Tests inject them directly into
+    LOADED_PLUGINS after the plugin loads.
+    """
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {
+        "ANTHROPIC_API_KEY": "sk-test-runner",
+        "ANTHROPIC_MODEL": "claude-sonnet-4-6",
+    }
 
 
 def _make_request(
@@ -84,7 +92,7 @@ def test_run_agent_happy_path_returns_emitted_effect(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
 ) -> None:
     """A valid RunAgent invocation produces success=True and the agent's emitted effect."""
     responses = list(plugin_runner.RunAgent(_make_request(), None))
@@ -110,7 +118,7 @@ def test_run_agent_stamps_provenance_on_emitted_effects(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
 ) -> None:
     """Emitted effects carry plugin_name, classname, handler_name, actor, source."""
     request = _make_request(
@@ -134,7 +142,7 @@ def test_run_agent_defaults_source_to_agent_when_request_omits_it(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
 ) -> None:
     """Effects emitted by the agent default source to "agent" when the caller didn't set it."""
     response = next(iter(plugin_runner.RunAgent(_make_request(source=""), None)))
@@ -144,10 +152,8 @@ def test_run_agent_defaults_source_to_agent_when_request_omits_it(
 # RunAgent error paths ----------------------------------------------------------
 
 
-def test_run_agent_invalid_agent_id_format(
-    plugin_runner: PluginRunner, anthropic_dev_env: None
-) -> None:
-    """An agent_id missing the ':' separator is rejected without invoking any agent."""
+def test_run_agent_invalid_agent_id_format(plugin_runner: PluginRunner) -> None:
+    """An agent_id missing the ':' separator is rejected before any plugin lookup."""
     response = next(iter(plugin_runner.RunAgent(_make_request(agent_id="no_colon_here"), None)))
     assert response.success is False
     assert list(response.effects) == []
@@ -158,7 +164,7 @@ def test_run_agent_unknown_agent_id(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
 ) -> None:
     """A well-formed agent_id that isn't in LOADED_PLUGINS yields success=False."""
     request = _make_request(agent_id="test_agent_plugin.agents.echo_agent:NoSuchClass")
@@ -172,10 +178,11 @@ def test_run_agent_missing_api_key_short_circuits(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without ANTHROPIC_DEV_API_KEY the RPC refuses to dispatch."""
-    monkeypatch.delenv("ANTHROPIC_DEV_API_KEY", raising=False)
+    """Without the ANTHROPIC_API_KEY plugin secret, the RPC refuses to dispatch."""
+    # Leave secrets empty — the plugin install path would normally populate
+    # them from the customer's admin config; here we just don't set them.
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {}
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
     assert list(response.effects) == []
@@ -186,7 +193,7 @@ def test_run_agent_invalid_trigger_payload_json(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
 ) -> None:
     """Malformed trigger_payload JSON is reported instead of crashing the worker."""
     request = _make_request(trigger_payload="not-json{{{")
@@ -200,7 +207,7 @@ def test_run_agent_handles_agent_exceptions(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_dev_env: None,
+    anthropic_plugin_secrets: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Exceptions raised by the agent's run() surface as success=False."""

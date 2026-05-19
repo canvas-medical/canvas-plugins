@@ -78,39 +78,3 @@ def test_from_plugin_secrets_empty_string_key_raises() -> None:
     """
     with pytest.raises(LLMGatewayConfigurationError):
         LLMGateway.from_plugin_secrets({"ANTHROPIC_API_KEY": ""})
-
-
-# ---------------------------------------------------------------------------
-# from_environment
-# ---------------------------------------------------------------------------
-
-
-def test_from_environment_reads_supplied_env_dict() -> None:
-    """The ``env`` parameter lets tests bypass os.environ deterministically."""
-    gateway = LLMGateway.from_environment(
-        env={"ANTHROPIC_DEV_API_KEY": "sk-dev", "ANTHROPIC_DEV_MODEL": "claude-opus-4-7"}
-    )
-    assert gateway.api_key == "sk-dev"
-    assert gateway.model == "claude-opus-4-7"
-
-
-def test_from_environment_falls_back_to_default_model() -> None:
-    """When model isn't in env, default_model is used."""
-    gateway = LLMGateway.from_environment(env={"ANTHROPIC_DEV_API_KEY": "sk-dev"})
-    assert gateway.model == "claude-sonnet-4-6"
-
-
-def test_from_environment_missing_key_raises() -> None:
-    """A missing env var surfaces as a typed configuration error."""
-    with pytest.raises(LLMGatewayConfigurationError, match="ANTHROPIC_DEV_API_KEY"):
-        LLMGateway.from_environment(env={})
-
-
-def test_from_environment_reads_os_environ_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without an explicit env, the factory reads os.environ — the production path."""
-    monkeypatch.setenv("ANTHROPIC_DEV_API_KEY", "sk-from-real-env")
-    monkeypatch.setenv("ANTHROPIC_DEV_MODEL", "claude-from-env")
-
-    gateway = LLMGateway.from_environment()
-    assert gateway.api_key == "sk-from-real-env"
-    assert gateway.model == "claude-from-env"

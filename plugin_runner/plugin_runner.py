@@ -446,13 +446,14 @@ class PluginRunner(PluginRunnerServicer):
             plugin = LOADED_PLUGINS[registry_key]
             agent_class = plugin["class"]
             namespace_config = plugin.get("namespace_config")
+            plugin_secrets = plugin.get("secrets") or {}
 
             # Late import: canvas_sdk.agents and the SDK Effect wrapper are
             # only meaningful once plugin modules have loaded.
             from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
 
             try:
-                gateway = LLMGateway.from_environment()
+                gateway = LLMGateway.from_plugin_secrets(plugin_secrets)
             except LLMGatewayConfigurationError as exc:
                 log.error(f"RunAgent: cannot dispatch agent — {exc}")
                 yield EventResponse(success=False, effects=[])
