@@ -39,6 +39,7 @@ manifest_schema = {
                 "views": {"$ref": "#/$defs/component"},
                 "applications": {"$ref": "#/$defs/applications"},
                 "questionnaires": {"$ref": "#/$defs/questionnaires"},
+                "agents": {"$ref": "#/$defs/component"},
             },
             "additionalProperties": False,
             "minProperties": 1,

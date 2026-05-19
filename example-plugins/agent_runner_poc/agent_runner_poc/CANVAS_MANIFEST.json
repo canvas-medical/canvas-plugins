@@ -1,0 +1,30 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "agent_runner_poc",
+    "description": "PoC reference agent for the Canvas Agent Runner Framework (KOALA-5544). Fires ChartSummary on note lock and originates a Plan command.",
+    "components": {
+        "handlers": [
+            {
+                "class": "agent_runner_poc.handlers.trigger:ChartSummaryTrigger",
+                "description": "Emits RunAgentEffect for ChartSummary when a note is locked"
+            }
+        ],
+        "agents": [
+            {
+                "class": "agent_runner_poc.agents.chart_summary:ChartSummary",
+                "description": "Drafts a Plan command after a note is locked"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

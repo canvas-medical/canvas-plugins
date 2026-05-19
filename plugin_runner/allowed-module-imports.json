@@ -400,6 +400,9 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.agent": [
+    "RunAgentEffect"
+  ],
   "canvas_sdk.effects.appointments_metadata": [
     "AppointmentsMetadata",
     "AppointmentsMetadataCreateFormEffect",

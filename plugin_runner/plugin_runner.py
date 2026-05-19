@@ -31,6 +31,7 @@ from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginResponse,
     ReloadPluginsRequest,
     ReloadPluginsResponse,
+    RunAgentRequest,
     UnloadPluginRequest,
     UnloadPluginResponse,
 )
@@ -403,6 +404,128 @@ class PluginRunner(PluginRunnerServicer):
                 log.info(f"Responded to Event {event_name}.")
 
             yield EventResponse(success=True, effects=effect_list)
+
+    def RunAgent(self, request: RunAgentRequest, context: Any) -> Iterable[EventResponse]:
+        """Invoke an AgentPlugin subclass and stream its emitted effects.
+
+        Called by home-app's ``run_agent`` Celery task in response to a
+        ``RunAgentEffect`` from a plugin trigger handler. Resolves the agent
+        class from :data:`LOADED_PLUGINS`, drives
+        ``load_state`` → ``run`` → ``save_state`` inside the plugin's
+        database context, and yields the emitted effects in a single
+        ``EventResponse``.
+
+        PoC scope (KOALA-5544): no per-``scope_key`` lock, single-process
+        execution, Anthropic developer token sourced from the
+        ``ANTHROPIC_DEV_API_KEY`` environment variable on the plugin-runner
+        pod. The streaming response shape matches ``HandleEvent`` so future
+        V1 work (per-turn effect streaming, etc.) doesn't change the wire
+        contract.
+        """
+        with metrics.measure(
+            metrics.get_qualified_name(self.RunAgent),
+            extra_tags={"agent_id": request.agent_id},
+        ):
+            module_path, _, class_name = request.agent_id.partition(":")
+            if not module_path or not class_name:
+                log.error(f"RunAgent: invalid agent_id={request.agent_id!r}")
+                yield EventResponse(success=False, effects=[])
+                return
+
+            base_plugin_name = module_path.split(".", 1)[0]
+            registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
+
+            if registry_key not in LOADED_PLUGINS:
+                log.error(
+                    f"RunAgent: agent class not loaded — "
+                    f"agent_id={request.agent_id} registry_key={registry_key}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            plugin = LOADED_PLUGINS[registry_key]
+            agent_class = plugin["class"]
+            namespace_config = plugin.get("namespace_config")
+
+            api_key = os.environ.get("ANTHROPIC_DEV_API_KEY")
+            if not api_key:
+                log.error(
+                    "RunAgent: ANTHROPIC_DEV_API_KEY is not set on the plugin-runner pod; "
+                    "cannot dispatch agent"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            # Late import: canvas_sdk.agents and the SDK Effect wrapper are
+            # only meaningful once plugin modules have loaded.
+            from canvas_sdk.agents import LLMGateway
+
+            gateway = LLMGateway(
+                api_key=api_key,
+                model=os.environ.get("ANTHROPIC_DEV_MODEL", "claude-sonnet-4-6"),
+            )
+
+            try:
+                trigger_payload = (
+                    json.loads(request.trigger_payload) if request.trigger_payload else {}
+                )
+            except json.JSONDecodeError as exc:
+                log.error(
+                    f"RunAgent: invalid trigger_payload JSON for agent_id={request.agent_id}: {exc}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            db_namespace = namespace_config["namespace"] if namespace_config else None
+            db_access_level = namespace_config["access_level"] if namespace_config else "read"
+
+            sentry_sdk.set_tag("agent-id", request.agent_id)
+            log.info(
+                f"RunAgent: invoking agent_id={request.agent_id} "
+                f"scope_key={request.scope_key} run_id={request.run_id}"
+            )
+
+            try:
+                with (
+                    plugin_context(f"{module_path}.{class_name}"),
+                    plugin_database_context(
+                        base_plugin_name,
+                        namespace=db_namespace,
+                        access_level=db_access_level,
+                    ),
+                ):
+                    agent = agent_class()
+                    state = agent.load_state(request.scope_key)
+                    result = agent.run(state, gateway, trigger_payload)
+                    agent.save_state(request.scope_key, result.state)
+            except Exception as exc:
+                log.exception(f"RunAgent: agent {request.agent_id} raised")
+                sentry_sdk.capture_exception(exc)
+                yield EventResponse(success=False, effects=[])
+                return
+            finally:
+                sentry_sdk.set_tag("agent-id", None)
+
+            emitted_effects = [
+                Effect(
+                    type=effect.type,
+                    payload=effect.payload,
+                    plugin_name=request.plugin_name or base_plugin_name,
+                    classname=class_name,
+                    handler_name=request.handler_name or class_name,
+                    actor=request.actor,
+                    source=request.source or "agent",
+                )
+                for effect in result.effects
+            ]
+            emitted_effects = validate_effects(emitted_effects)
+
+            log.info(
+                f"RunAgent: agent_id={request.agent_id} run_id={request.run_id} "
+                f"completed with {len(emitted_effects)} effect(s)"
+            )
+
+            yield EventResponse(success=True, effects=emitted_effects)
 
     def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
@@ -807,6 +930,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 cast(list, components.get("protocols", []))
                 + cast(list, components.get("applications", []))
                 + cast(list, components.get("handlers", []))
+                + cast(list, components.get("agents", []))
             )
         except Exception as e:
             log.exception(f'Unable to load plugin "{name}"')
