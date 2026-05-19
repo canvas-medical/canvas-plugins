@@ -526,6 +526,18 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageStack",
+    "PhotoSide"
+  ],
+  "canvas_sdk.effects.coverage.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageStack",
+    "PhotoSide"
+  ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
   ],

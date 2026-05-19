@@ -348,6 +348,12 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_CCDA: _ClassVar[EffectType]
     PATIENT_GROUP__ADD_MEMBER: _ClassVar[EffectType]
     PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
+    CREATE_COVERAGE: _ClassVar[EffectType]
+    UPDATE_COVERAGE: _ClassVar[EffectType]
+    EXPIRE_COVERAGE: _ClassVar[EffectType]
+    REMOVE_COVERAGE: _ClassVar[EffectType]
+    REMOVE_COVERAGE_PHOTO: _ClassVar[EffectType]
+    REORDER_COVERAGE: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
     HTTP_REQUEST: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
@@ -691,6 +697,12 @@ DELETE_PATIENT_FACILITY_ADDRESS: EffectType
 CREATE_CCDA: EffectType
 PATIENT_GROUP__ADD_MEMBER: EffectType
 PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
+CREATE_COVERAGE: EffectType
+UPDATE_COVERAGE: EffectType
+EXPIRE_COVERAGE: EffectType
+REMOVE_COVERAGE: EffectType
+REMOVE_COVERAGE_PHOTO: EffectType
+REORDER_COVERAGE: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
 HTTP_REQUEST: EffectType
 
