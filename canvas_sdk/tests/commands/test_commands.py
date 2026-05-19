@@ -29,8 +29,8 @@ from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
 from canvas_sdk.commands.commands.refer import ReferCommand
-from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.commands.review.base import ReportReviewCommunicationMethod
+from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -629,6 +629,7 @@ def test_immunization_statement_empty_coding_raises_error() -> None:
             unstructured={"code": "some immunization"},  # type:ignore [arg-type]
         )
     assert "system" in str(exc_info.value).lower()
+
 
 @pytest.mark.parametrize(
     "command_cls,priority",
