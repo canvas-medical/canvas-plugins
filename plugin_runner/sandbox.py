@@ -408,6 +408,10 @@ THIRD_PARTY_MODULES = {
         "BadRequestError",
         "RateLimitError",
     },
+    "anthropic.types": {
+        "TextBlock",
+        "ToolUseBlock",
+    },
     "arrow": {
         "get",
         "now",

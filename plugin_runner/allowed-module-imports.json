@@ -1,4 +1,22 @@
 {
+  "canvas_sdk.agents": [
+    "AgentPlugin",
+    "AgentRunResult",
+    "AgentState",
+    "LLMGateway"
+  ],
+  "canvas_sdk.agents.base": [
+    "AgentPlugin"
+  ],
+  "canvas_sdk.agents.gateway": [
+    "LLMGateway"
+  ],
+  "canvas_sdk.agents.result": [
+    "AgentRunResult"
+  ],
+  "canvas_sdk.agents.state": [
+    "AgentState"
+  ],
   "canvas_sdk.caching.client": [
     "get_cache"
   ],

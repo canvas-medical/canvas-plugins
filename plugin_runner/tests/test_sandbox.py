@@ -499,6 +499,26 @@ def test_anthropic_disallowed_symbol_import() -> None:
         sandbox.execute()
 
 
+@pytest.mark.parametrize("symbol", ["TextBlock", "ToolUseBlock"])
+def test_anthropic_types_allowed_symbol_import(symbol: str) -> None:
+    """Each allowlisted anthropic.types symbol is importable inside the sandbox."""
+    sandbox = _sandbox_from_code(f"from anthropic.types import {symbol}\nresult = {symbol}")
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, f"{symbol} should be importable from anthropic.types."
+
+
+def test_anthropic_types_disallowed_symbol_import() -> None:
+    """Non-allowlisted anthropic.types attributes are denied (locks the allowed-set)."""
+    # `MessageParam` is a real symbol on anthropic.types that we intentionally
+    # do not expose — locks the boundary the same way `Client` does for
+    # the top-level anthropic module.
+    sandbox = _sandbox_from_code("from anthropic.types import MessageParam")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
 def test_canvas_sdk_agents_importable_in_sandbox() -> None:
     """All four agent SDK exports are reachable from plugin code in the sandbox."""
     sandbox = _sandbox_from_code(
