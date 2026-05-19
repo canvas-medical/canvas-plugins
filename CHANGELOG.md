@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.154.0 (2026-05-19)
+
+### Bug Fixes
+
+- Example plugin for data integration
+  ([#1712](https://github.com/canvas-medical/canvas-plugins/pull/1712),
+  [`5e3df18`](https://github.com/canvas-medical/canvas-plugins/commit/5e3df18b2f52d9da86f935cd2b0b202f14443744))
+
+### Features
+
+- Expose document field on PatientConsentCoding SDK model
+  ([#1624](https://github.com/canvas-medical/canvas-plugins/pull/1624),
+  [`24f7820`](https://github.com/canvas-medical/canvas-plugins/commit/24f782021d2710cc7d54f6ae16874ef829047106))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Hines <andrew.hines@canvasmedical.com>
+
+
 ## v0.153.0 (2026-05-18)
 
 ### Features
