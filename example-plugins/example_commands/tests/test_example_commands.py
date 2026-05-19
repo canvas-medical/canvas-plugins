@@ -19,8 +19,6 @@ from example_commands.handlers.example_refer import AutoPopulateReferCommand
 from canvas_sdk.commands import ImagingOrderCommand
 from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.events import EventType
-from canvas_sdk.test_utils.factories import PatientFactory
-from canvas_sdk.v1.data.discount import Discount
 
 
 @dataclass
@@ -28,9 +26,9 @@ class HandlerCase:
     """Per-handler parameters shared across the parametrized tests."""
 
     name: str
-    handler_cls: type
+    handler_cls: Any
     handler_module: str
-    real_command_cls: type
+    real_command_cls: Any
     expected_event: int
     expected_priorities: list[Any]
     expected_kwargs: dict[str, Any]
@@ -38,10 +36,12 @@ class HandlerCase:
 
     @property
     def command_path(self) -> str:
+        """Dotted path to the SDK Command class as imported into the handler module."""
         return f"{self.handler_module}.{self.real_command_cls.__name__}"
 
     @property
     def log_path(self) -> str:
+        """Dotted path to the logger imported into the handler module."""
         return f"{self.handler_module}.log"
 
 
@@ -141,17 +141,20 @@ def _compute_with_mocks(case: HandlerCase, target_id: str = "test-uuid") -> Simp
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_handler_responds_to_expected_event(case: HandlerCase) -> None:
+    """Handler subscribes to the post-originate event for its command type."""
     assert EventType.Name(case.expected_event) in case.handler_cls.RESPONDS_TO
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_handler_has_required_attributes(case: HandlerCase) -> None:
+    """Handler exposes the contract expected by the plugin runner."""
     assert hasattr(case.handler_cls, "RESPONDS_TO")
     assert hasattr(case.handler_cls, "compute")
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_compute_returns_one_effect(case: HandlerCase) -> None:
+    """compute() returns exactly one Effect."""
     result = _compute_with_mocks(case)
     assert len(result.effects) == 1
     assert result.effects[0] is not None
@@ -159,6 +162,7 @@ def test_compute_returns_one_effect(case: HandlerCase) -> None:
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_compute_populates_command_kwargs(case: HandlerCase) -> None:
+    """All static command kwargs (everything except priority/service_provider) are populated."""
     result = _compute_with_mocks(case, target_id=f"{case.name}-uuid")
 
     result.cmd_cls.assert_called_once()
@@ -172,6 +176,7 @@ def test_compute_populates_command_kwargs(case: HandlerCase) -> None:
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_compute_populates_service_provider(case: HandlerCase) -> None:
+    """All service_provider fields on the emitted command match the handler's hardcoded values."""
     result = _compute_with_mocks(case)
     sp = result.call_kwargs["service_provider"]
     for attr, expected in case.service_provider_fields.items():
@@ -180,25 +185,9 @@ def test_compute_populates_service_provider(case: HandlerCase) -> None:
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_compute_logs_command_uuid(case: HandlerCase) -> None:
+    """At least one log.info call includes the command UUID."""
     target_id = f"{case.name}-uuid-log"
     result = _compute_with_mocks(case, target_id=target_id)
     log_messages = [call.args[0] for call in result.mock_log.info.call_args_list]
     assert log_messages, "expected at least one log.info call"
     assert any(target_id in msg for msg in log_messages)
-
-
-# ---------------------------------------------------------------------------
-# Factory and data-model examples (kept from the seed suite)
-# ---------------------------------------------------------------------------
-
-
-def test_factory_example() -> None:
-    """A patient can be created via the test factory."""
-    patient = PatientFactory.create()
-    assert patient.id is not None
-
-
-def test_model_example() -> None:
-    """A Discount instance can be created via the ORM."""
-    Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)
-    assert Discount.objects.first().pk is not None

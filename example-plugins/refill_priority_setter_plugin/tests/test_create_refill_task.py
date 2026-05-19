@@ -1,227 +1,191 @@
+"""Tests for CreateRefillTaskHandler.
+
+The handler reacts to PRESCRIPTION_PENDING events. When the prescription is a
+refill (``prescription.is_refill``), it creates a follow-up task assigned to a
+team with PROCESS_REFILL_REQUESTS responsibility, skipping duplicates.
+
+Each test patches the SDK data queries (Prescription / Task / Team) and the
+AddTask effect; ``_run_compute`` is the shared setup. New scenarios should
+generally fit into the parametrized happy/skip pattern below — only break out
+into a dedicated test when the scenario needs to inspect the kwargs AddTask was
+called with.
+"""
+
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
+
+from refill_priority_setter_plugin.handlers.create_refill_task import CreateRefillTaskHandler
 
 from canvas_sdk.effects.task import TaskStatus
 from canvas_sdk.events import EventType
 from canvas_sdk.v1.data.task import TaskPriority
 
-from refill_priority_setter_plugin.protocols.create_refill_task import CreateRefillTaskProtocol
+HANDLER_MODULE = "refill_priority_setter_plugin.handlers.create_refill_task"
 
 
-def test_create_refill_task_protocol_configuration() -> None:
-    """Test that the protocol is configured to respond to the correct event type."""
-    assert EventType.Name(EventType.REFILL_COMMAND__POST_COMMIT) in CreateRefillTaskProtocol.RESPONDS_TO
+def _run_compute(
+    *,
+    prescription: Any | None,
+    patient_id: str = "patient-123",
+    target_id: str = "rx-uuid-1",
+    existing_task: bool = False,
+    team_id: str | None = "team-1",
+) -> SimpleNamespace:
+    """Invoke the handler with all external lookups patched.
+
+    Returns a namespace with the effects list and every mock the tests want to
+    assert against (AddTask class + the patched queryset filters).
+    """
+    event = Mock(target=Mock(id=target_id))
+    handler = CreateRefillTaskHandler(event=event)
+    test_context = {"patient": {"id": patient_id}}
+
+    with (
+        patch.object(type(handler), "context", property(lambda self: test_context)),
+        patch(f"{HANDLER_MODULE}.Prescription.objects.filter") as rx_filter,
+        patch(f"{HANDLER_MODULE}.Task.objects.filter") as task_filter,
+        patch(f"{HANDLER_MODULE}.Team.objects.filter") as team_filter,
+        patch(f"{HANDLER_MODULE}.AddTask") as add_task_cls,
+        patch(f"{HANDLER_MODULE}.log"),
+    ):
+        rx_filter.return_value.first.return_value = prescription
+        task_filter.return_value.exists.return_value = existing_task
+        team_filter.return_value.values_list.return_value.first.return_value = team_id
+
+        add_task_instance = Mock()
+        add_task_instance.apply.return_value = Mock(name="AddTaskEffect")
+        add_task_cls.return_value = add_task_instance
+
+        effects = handler.compute()
+
+    return SimpleNamespace(
+        effects=effects,
+        add_task_cls=add_task_cls,
+        add_task_instance=add_task_instance,
+        task_filter=task_filter,
+    )
 
 
-def test_create_refill_task_protocol_imports() -> None:
-    """Test that the protocol can be imported and has expected attributes."""
-    assert CreateRefillTaskProtocol is not None
-    assert hasattr(CreateRefillTaskProtocol, "RESPONDS_TO")
-    assert hasattr(CreateRefillTaskProtocol, "compute")
+def _refill(medication: str = "Lisinopril 10mg") -> Mock:
+    """Build a mock Prescription that looks like a refill.
+
+    Note: ``name`` is a reserved kwarg on ``Mock``, so we assign it after
+    construction; otherwise it would set the mock's internal name instead of a
+    ``.name`` attribute on the mocked Prescription.
+    """
+    prescription = Mock(is_refill=True, display_name=medication)
+    prescription.name = medication
+    return prescription
 
 
-def test_create_refill_task_creates_task_for_new_refill() -> None:
-    """Test that a task is created when a refill command is committed."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refill-uuid-123"
-
-    # Create protocol instance with mock context
-    protocol = CreateRefillTaskProtocol(event=mock_event)
-
-    # Mock context
-    test_context = {
-        'fields': {
-            'prescribe': {
-                'text': 'Lisinopril 10mg'
-            }
-        },
-        'patient': {
-            'id': 'patient-123'
-        }
-    }
-
-    with patch.object(type(protocol), 'context', property(lambda self: test_context)):
-        # Mock Task.objects.filter to return no existing tasks
-        with patch('refill_priority_setter_plugin.protocols.create_refill_task.Task.objects.filter') as mock_task_filter:
-            mock_queryset = Mock()
-            mock_queryset.exists.return_value = False
-            mock_task_filter.return_value = mock_queryset
-
-            # Mock Team.objects.filter to return a team
-            with patch('refill_priority_setter_plugin.protocols.create_refill_task.Team.objects.filter') as mock_team_filter:
-                mock_team_queryset = Mock()
-                mock_team_queryset.values_list.return_value.first.return_value = 'team-456'
-                mock_team_filter.return_value = mock_team_queryset
-
-                # Mock AddTask
-                with patch('refill_priority_setter_plugin.protocols.create_refill_task.AddTask') as mock_add_task_class:
-                    mock_add_task_instance = Mock()
-                    mock_applied_effect = Mock()
-                    mock_add_task_instance.apply.return_value = mock_applied_effect
-                    mock_add_task_class.return_value = mock_add_task_instance
-
-                    with patch('refill_priority_setter_plugin.protocols.create_refill_task.log'):
-                        effects = protocol.compute()
-
-                    # Verify AddTask was called with correct parameters
-                    mock_add_task_class.assert_called_once_with(
-                        title='Follow up on refill of Lisinopril 10mg',
-                        priority=TaskPriority.URGENT,
-                        patient_id='patient-123',
-                        team_id='team-456'
-                    )
-
-                    # Verify apply() was called
-                    mock_add_task_instance.apply.assert_called_once()
-
-                    # Verify effects were returned
-                    assert len(effects) == 1
-                    assert effects[0] == mock_applied_effect
+# ---------------------------------------------------------------------------
+# Handler contract
+# ---------------------------------------------------------------------------
 
 
-def test_create_refill_task_skips_duplicate_task() -> None:
-    """Test that no task is created if one already exists for the same medication."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refill-uuid-456"
-
-    # Create protocol instance
-    protocol = CreateRefillTaskProtocol(event=mock_event)
-
-    # Mock context
-    test_context = {
-        'fields': {
-            'prescribe': {
-                'text': 'Metformin 500mg'
-            }
-        },
-        'patient': {
-            'id': 'patient-789'
-        }
-    }
-
-    with patch.object(type(protocol), 'context', property(lambda self: test_context)):
-        # Mock Task.objects.filter to return an existing task
-        with patch('refill_priority_setter_plugin.protocols.create_refill_task.Task.objects.filter') as mock_task_filter:
-            mock_queryset = Mock()
-            mock_queryset.exists.return_value = True
-            mock_task_filter.return_value = mock_queryset
-
-            with patch('refill_priority_setter_plugin.protocols.create_refill_task.log'):
-                effects = protocol.compute()
-
-            # Verify no effects were returned
-            assert len(effects) == 0
-
-            # Verify Task.objects.filter was called with correct parameters
-            mock_task_filter.assert_called_once_with(
-                title='Follow up on refill of Metformin 500mg',
-                status=TaskStatus.OPEN.value,
-                patient__id='patient-789'
-            )
+def test_responds_to_prescription_pending() -> None:
+    """Handler subscribes to PRESCRIPTION_PENDING."""
+    assert EventType.Name(EventType.PRESCRIPTION_PENDING) in CreateRefillTaskHandler.RESPONDS_TO
 
 
-def test_create_refill_task_handles_no_team() -> None:
-    """Test that task is created with None team_id when no team is found."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refill-uuid-789"
-
-    # Create protocol instance
-    protocol = CreateRefillTaskProtocol(event=mock_event)
-
-    # Mock context
-    test_context = {
-        'fields': {
-            'prescribe': {
-                'text': 'Aspirin 81mg'
-            }
-        },
-        'patient': {
-            'id': 'patient-999'
-        }
-    }
-
-    with patch.object(type(protocol), 'context', property(lambda self: test_context)):
-        # Mock Task.objects.filter to return no existing tasks
-        with patch('refill_priority_setter_plugin.protocols.create_refill_task.Task.objects.filter') as mock_task_filter:
-            mock_queryset = Mock()
-            mock_queryset.exists.return_value = False
-            mock_task_filter.return_value = mock_queryset
-
-            # Mock Team.objects.filter to return None (no team found)
-            with patch('refill_priority_setter_plugin.protocols.create_refill_task.Team.objects.filter') as mock_team_filter:
-                mock_team_queryset = Mock()
-                mock_team_queryset.values_list.return_value.first.return_value = None
-                mock_team_filter.return_value = mock_team_queryset
-
-                # Mock AddTask
-                with patch('refill_priority_setter_plugin.protocols.create_refill_task.AddTask') as mock_add_task_class:
-                    mock_add_task_instance = Mock()
-                    mock_applied_effect = Mock()
-                    mock_add_task_instance.apply.return_value = mock_applied_effect
-                    mock_add_task_class.return_value = mock_add_task_instance
-
-                    with patch('refill_priority_setter_plugin.protocols.create_refill_task.log'):
-                        effects = protocol.compute()
-
-                    # Verify AddTask was called with team_id=None
-                    mock_add_task_class.assert_called_once_with(
-                        title='Follow up on refill of Aspirin 81mg',
-                        priority=TaskPriority.URGENT,
-                        patient_id='patient-999',
-                        team_id=None
-                    )
-
-                    # Verify effects were returned
-                    assert len(effects) == 1
+def test_has_required_attributes() -> None:
+    """Handler exposes the contract expected by the plugin runner."""
+    assert hasattr(CreateRefillTaskHandler, "RESPONDS_TO")
+    assert hasattr(CreateRefillTaskHandler, "compute")
 
 
-def test_create_refill_task_extracts_medication_from_context() -> None:
-    """Test that medication name is correctly extracted from the context."""
-    # Create a mock event
-    mock_event = Mock()
-    mock_event.target = Mock()
-    mock_event.target.id = "test-refill-uuid"
+# ---------------------------------------------------------------------------
+# Short-circuit paths (handler returns [])
+# ---------------------------------------------------------------------------
 
-    # Create protocol instance
-    protocol = CreateRefillTaskProtocol(event=mock_event)
 
-    # Mock context with specific medication
-    test_context = {
-        'fields': {
-            'prescribe': {
-                'text': 'Atorvastatin 20mg'
-            }
-        },
-        'patient': {
-            'id': 'patient-123'
-        }
-    }
+def test_returns_empty_when_prescription_missing() -> None:
+    """No effect when the prescription lookup returns nothing."""
+    result = _run_compute(prescription=None)
+    assert result.effects == []
+    result.add_task_cls.assert_not_called()
 
-    with patch.object(type(protocol), 'context', property(lambda self: test_context)):
-        with patch('refill_priority_setter_plugin.protocols.create_refill_task.Task.objects.filter') as mock_task_filter:
-            mock_queryset = Mock()
-            mock_queryset.exists.return_value = False
-            mock_task_filter.return_value = mock_queryset
 
-            with patch('refill_priority_setter_plugin.protocols.create_refill_task.Team.objects.filter') as mock_team_filter:
-                mock_team_queryset = Mock()
-                mock_team_queryset.values_list.return_value.first.return_value = 'team-123'
-                mock_team_filter.return_value = mock_team_queryset
+def test_returns_empty_for_non_refill_prescription() -> None:
+    """No effect for original (non-refill) prescriptions."""
+    prescription = Mock(is_refill=False, display_name="Atorvastatin 20mg")
+    result = _run_compute(prescription=prescription)
+    assert result.effects == []
+    result.add_task_cls.assert_not_called()
 
-                with patch('refill_priority_setter_plugin.protocols.create_refill_task.AddTask') as mock_add_task_class:
-                    mock_add_task_instance = Mock()
-                    mock_add_task_instance.apply.return_value = Mock()
-                    mock_add_task_class.return_value = mock_add_task_instance
 
-                    with patch('refill_priority_setter_plugin.protocols.create_refill_task.log'):
-                        protocol.compute()
+def test_returns_empty_when_duplicate_task_already_exists() -> None:
+    """No effect when a follow-up task already exists for the same medication/patient."""
+    result = _run_compute(
+        prescription=_refill("Metformin 500mg"),
+        patient_id="patient-789",
+        existing_task=True,
+    )
+    assert result.effects == []
+    result.add_task_cls.assert_not_called()
+    # Duplicate check used the correct filter args.
+    result.task_filter.assert_called_once_with(
+        title="Follow up on refill of Metformin 500mg",
+        status=TaskStatus.OPEN.value,
+        patient__id="patient-789",
+    )
 
-                    # Verify the medication name was used in the task title
-                    call_kwargs = mock_add_task_class.call_args[1]
-                    assert 'Atorvastatin 20mg' in call_kwargs['title']
-                    assert call_kwargs['title'] == 'Follow up on refill of Atorvastatin 20mg'
+
+# ---------------------------------------------------------------------------
+# Happy paths (handler emits one AddTask effect)
+# ---------------------------------------------------------------------------
+
+
+def test_creates_task_for_refill_with_team() -> None:
+    """Creates an AddTask effect assigned to the refill-processing team."""
+    result = _run_compute(
+        prescription=_refill("Lisinopril 10mg"),
+        patient_id="patient-123",
+        team_id="team-456",
+    )
+
+    assert len(result.effects) == 1
+    result.add_task_cls.assert_called_once_with(
+        title="Follow up on refill of Lisinopril 10mg",
+        priority=TaskPriority.URGENT,
+        patient_id="patient-123",
+        team_id="team-456",
+    )
+    result.add_task_instance.apply.assert_called_once()
+
+
+def test_creates_task_with_no_team_when_responsibility_unfilled() -> None:
+    """Still creates a task (unassigned) when no team carries the responsibility."""
+    result = _run_compute(
+        prescription=_refill("Aspirin 81mg"),
+        patient_id="patient-999",
+        team_id=None,
+    )
+
+    assert len(result.effects) == 1
+    result.add_task_cls.assert_called_once_with(
+        title="Follow up on refill of Aspirin 81mg",
+        priority=TaskPriority.URGENT,
+        patient_id="patient-999",
+        team_id=None,
+    )
+
+
+def test_medication_name_uses_display_name() -> None:
+    """display_name is preferred over name when both are present."""
+    prescription = Mock(is_refill=True, display_name="Atorvastatin 20mg", name="atorvastatin")
+    result = _run_compute(prescription=prescription)
+
+    call_kwargs = result.add_task_cls.call_args.kwargs
+    assert call_kwargs["title"] == "Follow up on refill of Atorvastatin 20mg"
+
+
+def test_medication_name_falls_back_to_name() -> None:
+    """Falls back to .name when display_name is missing."""
+    prescription = Mock(is_refill=True, display_name=None)
+    prescription.name = "generic-med"
+    result = _run_compute(prescription=prescription)
+
+    call_kwargs = result.add_task_cls.call_args.kwargs
+    assert call_kwargs["title"] == "Follow up on refill of generic-med"

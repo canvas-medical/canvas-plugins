@@ -18,6 +18,7 @@ class AutoPopulateImagingOrderCommand(BaseHandler):
     ]
 
     def compute(self) -> list[Effect]:
+        """Edit the newly-originated imaging order command with auto-populated example values."""
         log.info(f"Enriching imaging order command {self.event.target.id}")
 
         priorities = [

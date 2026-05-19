@@ -4,13 +4,13 @@
     "name": "refill_priority_setter_plugin",
     "description": "Sets task priority to URGENT for teams with refill processing responsibilities.",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "refill_priority_setter_plugin.protocols.priority_setter:RefillTaskPriorityProtocol",
+                "class": "refill_priority_setter_plugin.handlers.priority_setter:RefillTaskPriorityHandler",
                 "description": "Sets task priority to URGENT when assigned to teams with refill processing responsibilities."
             },
             {
-                "class": "refill_priority_setter_plugin.protocols.create_refill_task:CreateRefillTaskProtocol",
+                "class": "refill_priority_setter_plugin.handlers.create_refill_task:CreateRefillTaskHandler",
                 "description": "Creates a refill task when a refill command is committed."
             }
         ],

@@ -2,20 +2,19 @@ from canvas_sdk.commands import TaskCommand
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.task import AddTask, TaskStatus, UpdateTask
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.v1.data import Task, Team
 from canvas_sdk.v1.data.task import TaskPriority
 from canvas_sdk.v1.data.team import TeamResponsibility
 from logger import log
 
 
-class RefillTaskPriorityProtocol(BaseProtocol):
+class RefillTaskPriorityHandler(BaseHandler):
     """
-    Protocol that automatically updates task priorities based on team responsibilities.
+    Handler that automatically updates task priorities based on team responsibilities.
 
-    This protocol listens for task creation and update events and automatically
-    sets the priority to URGENT for tasks assigned to teams with refill processing
-    responsibilities.
+    Listens for task creation and update events and sets the priority to URGENT for
+    tasks assigned to teams with refill processing responsibilities.
     """
 
     RESPONDS_TO = [
@@ -25,6 +24,7 @@ class RefillTaskPriorityProtocol(BaseProtocol):
     ]
 
     def compute(self) -> list[Effect]:
+        """Dispatch to the command-context path or the task-update path based on the event type."""
         if self.event.type == EventType.TASK_COMMAND__POST_UPDATE:
             return self.update_task_priority_command()
         else:
@@ -54,7 +54,7 @@ class RefillTaskPriorityProtocol(BaseProtocol):
         """
         Updates the task priority based on the task.
         """
-        task = Task.objects.get(id=self.target)
+        task = Task.objects.get(id=self.event.target.id)
 
         if task.status != TaskStatus.OPEN.value:
             return []
@@ -98,15 +98,17 @@ class RefillTaskPriorityProtocol(BaseProtocol):
             return []
 
         log.info(
-            f"Updating task {self.target} priority from '{current_priority}' to '{desired_priority_value}'."
+            f"Updating task {self.event.target.id} priority from '{current_priority}' to '{desired_priority_value}'."
         )
 
         if use_command:
-            return [TaskCommand(command_uuid=self.target, priority=desired_priority).edit()]
+            return [
+                TaskCommand(command_uuid=self.event.target.id, priority=desired_priority).edit()
+            ]
         else:
             return [
-                UpdateTask(id=self.target, priority=desired_priority).apply(),
-                AddTask(title=f"New-{self.target}", priority=desired_priority).apply(),
+                UpdateTask(id=self.event.target.id, priority=desired_priority).apply(),
+                AddTask(title=f"New-{self.event.target.id}", priority=desired_priority).apply(),
             ]
 
     def _get_desired_priority(self, team: Team | None) -> TaskPriority | None:

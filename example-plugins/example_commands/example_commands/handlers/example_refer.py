@@ -18,6 +18,7 @@ class AutoPopulateReferCommand(BaseHandler):
     ]
 
     def compute(self) -> list[Effect]:
+        """Edit the newly-originated refer command with auto-populated example values."""
         priority_options = [
             ReferCommand.Priority.URGENT,
             ReferCommand.Priority.ROUTINE,
