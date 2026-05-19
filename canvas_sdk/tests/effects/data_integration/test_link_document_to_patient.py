@@ -20,7 +20,6 @@ def test_create_effect_with_all_required_fields() -> None:
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "patient_key": "patient-key-67890",
         "annotations": None,
-        "source_protocol": None,
     }
 
 
@@ -43,19 +42,6 @@ def test_create_effect_with_annotations() -> None:
     ]
 
 
-def test_create_effect_with_source_protocol() -> None:
-    """Test creating effect with source_protocol succeeds."""
-    effect = LinkDocumentToPatient(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        patient_key="patient-key-67890",
-        source_protocol="llm_v1",
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["source_protocol"] == "llm_v1"
-
-
 def test_create_effect_with_all_optional_fields() -> None:
     """Test creating effect with all optional fields succeeds."""
     effect = LinkDocumentToPatient(
@@ -66,7 +52,6 @@ def test_create_effect_with_all_optional_fields() -> None:
             AnnotationItem(text="DOB matched", color="#2196F3"),
             AnnotationItem(text="Name verified", color="#4CAF50"),
         ],
-        source_protocol="llm_v1",
     )
     applied = effect.apply()
 
@@ -78,7 +63,6 @@ def test_create_effect_with_all_optional_fields() -> None:
         {"text": "DOB matched", "color": "#2196F3"},
         {"text": "Name verified", "color": "#4CAF50"},
     ]
-    assert payload["data"]["source_protocol"] == "llm_v1"
 
 
 def test_values_property_returns_correct_structure() -> None:
@@ -94,7 +78,6 @@ def test_values_property_returns_correct_structure() -> None:
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "patient_key": "patient-key-67890",
         "annotations": None,
-        "source_protocol": None,
     }
 
 

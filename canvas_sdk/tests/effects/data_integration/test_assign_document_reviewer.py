@@ -24,7 +24,6 @@ def test_create_effect_with_document_id_only() -> None:
         "reviewer_id": None,
         "team_id": None,
         "annotations": None,
-        "source_protocol": None,
     }
 
 
@@ -109,19 +108,6 @@ def test_create_effect_with_annotations() -> None:
     ]
 
 
-def test_create_effect_with_source_protocol() -> None:
-    """Test creating effect with source_protocol succeeds."""
-    effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        reviewer_id="staff-key-123",
-        source_protocol="llm_v1",
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["source_protocol"] == "llm_v1"
-
-
 def test_create_effect_with_all_fields() -> None:
     """Test creating effect with all fields succeeds."""
     effect = AssignDocumentReviewer(
@@ -134,7 +120,6 @@ def test_create_effect_with_all_fields() -> None:
             AnnotationItem(text="Team lead", color="#FF0000"),
             AnnotationItem(text="Primary care", color="#00FF00"),
         ],
-        source_protocol="llm_v1",
     )
     applied = effect.apply()
 
@@ -148,7 +133,6 @@ def test_create_effect_with_all_fields() -> None:
         {"text": "Team lead", "color": "#FF0000"},
         {"text": "Primary care", "color": "#00FF00"},
     ]
-    assert payload["data"]["source_protocol"] == "llm_v1"
 
 
 def test_values_property_returns_correct_structure() -> None:
@@ -176,7 +160,6 @@ def test_values_emits_none_for_unset_optional_fields() -> None:
         "reviewer_id": None,
         "team_id": None,
         "annotations": None,
-        "source_protocol": None,
     }
 
 
@@ -249,24 +232,3 @@ def test_annotations_none_when_not_provided() -> None:
 
     payload = json.loads(applied.payload)
     assert payload["data"]["annotations"] is None
-
-
-def test_source_protocol_included_in_payload() -> None:
-    """Test source_protocol is included in payload."""
-    effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        source_protocol="llm_v1",
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["source_protocol"] == "llm_v1"
-
-
-def test_source_protocol_none_when_not_provided() -> None:
-    """Test source_protocol is None in payload when not provided."""
-    effect = AssignDocumentReviewer(document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["source_protocol"] is None

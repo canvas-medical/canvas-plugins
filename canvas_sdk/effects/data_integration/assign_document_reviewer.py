@@ -53,7 +53,6 @@ class AssignDocumentReviewer(_PrefillingDocumentEffect):
             "reviewer_id": self.reviewer_id,
             "team_id": str(self.team_id) if self.team_id is not None else None,
             "annotations": self.annotations,
-            "source_protocol": self.source_protocol,
         }
 
 
