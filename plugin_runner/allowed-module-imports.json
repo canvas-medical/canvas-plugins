@@ -214,14 +214,11 @@
     "HistoryOfPresentIllnessCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
-    "ImmunizationStatementCommand",
-    "ImmunizeCommand",
     "InstructCommand",
     "LabOrderCommand",
     "LabReviewCommand",
     "MedicalHistoryCommand",
     "MedicationStatementCommand",
-    "POCLabTestCommand",
     "PastSurgicalHistoryCommand",
     "PerformCommand",
     "PhysicalExamCommand",
@@ -230,7 +227,6 @@
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "ReferCommand",
-    "ReferenceCommand",
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
@@ -243,9 +239,6 @@
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand"
-  ],
-  "canvas_sdk.commands.api": [
-    "CommandAPI"
   ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
@@ -299,9 +292,6 @@
   "canvas_sdk.commands.commands.immunization_statement": [
     "ImmunizationStatementCommand"
   ],
-  "canvas_sdk.commands.commands.immunize": [
-    "ImmunizeCommand"
-  ],
   "canvas_sdk.commands.commands.instruct": [
     "InstructCommand"
   ],
@@ -323,10 +313,6 @@
   "canvas_sdk.commands.commands.plan": [
     "PlanCommand"
   ],
-  "canvas_sdk.commands.commands.poc_lab_test": [
-    "POCLabTestCommand",
-    "TestValue"
-  ],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
     "CompoundMedicationData",
@@ -334,10 +320,8 @@
     "PrescribeCommand"
   ],
   "canvas_sdk.commands.commands.questionnaire": [
-    "Answer",
     "QUESTION_CLASSES",
-    "QuestionnaireCommand",
-    "Selection"
+    "QuestionnaireCommand"
   ],
   "canvas_sdk.commands.commands.questionnaire.question": [
     "BaseQuestion",
@@ -352,9 +336,6 @@
   ],
   "canvas_sdk.commands.commands.refer": [
     "ReferCommand"
-  ],
-  "canvas_sdk.commands.commands.reference": [
-    "ReferenceCommand"
   ],
   "canvas_sdk.commands.commands.refill": [
     "RefillCommand"
@@ -393,8 +374,7 @@
   "canvas_sdk.commands.commands.task": [
     "AssigneeType",
     "TaskAssigner",
-    "TaskCommand",
-    "TaskPriority"
+    "TaskCommand"
   ],
   "canvas_sdk.commands.commands.update_diagnosis": [
     "UpdateDiagnosisCommand"
@@ -419,13 +399,6 @@
     "Effect",
     "EffectType",
     "_BaseEffect"
-  ],
-  "canvas_sdk.effects.action_button": [
-    "ReloadNoteActionButtonsEffect",
-    "ReloadPatientActionButtonsEffect"
-  ],
-  "canvas_sdk.effects.application_notification_badge": [
-    "ApplicationNotificationBadge"
   ],
   "canvas_sdk.effects.appointments_metadata": [
     "AppointmentsMetadata",
@@ -504,7 +477,6 @@
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
-    "ClaimSupervisingProvider",
     "ColorEnum",
     "Label",
     "LineItemTransaction",
@@ -518,14 +490,10 @@
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
-    "ClaimSupervisingProvider",
     "ColorEnum",
     "Label",
     "LineItemTransaction",
     "PaymentMethod"
-  ],
-  "canvas_sdk.effects.claim.claim_supervising_provider": [
-    "ClaimSupervisingProvider"
   ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
@@ -558,51 +526,17 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
-  "canvas_sdk.effects.configure_command_buttons": [
-    "ConfigureCommandButtons"
+  "canvas_sdk.effects.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageStack",
+    "PhotoSide"
   ],
-  "canvas_sdk.effects.data_integration": [
-    "AnnotationItem",
-    "AssignDocumentReviewer",
-    "CategorizeDocument",
-    "DocumentType",
-    "JunkDocument",
-    "LinkDocumentToPatient",
-    "PrefillDocumentFieldData",
-    "PrefillDocumentFields",
-    "PrefillTemplate",
-    "RemoveDocumentFromPatient",
-    "ReportType",
-    "ReviewMode",
-    "TemplateFields",
-    "TemplateType"
-  ],
-  "canvas_sdk.effects.data_integration.assign_document_reviewer": [
-    "AssignDocumentReviewer",
-    "ReviewMode"
-  ],
-  "canvas_sdk.effects.data_integration.categorize_document": [
-    "CategorizeDocument"
-  ],
-  "canvas_sdk.effects.data_integration.junk_document": [
-    "JunkDocument"
-  ],
-  "canvas_sdk.effects.data_integration.link_document_to_patient": [
-    "LinkDocumentToPatient"
-  ],
-  "canvas_sdk.effects.data_integration.prefill_document_fields": [
-    "PrefillDocumentFieldData",
-    "PrefillDocumentFields",
-    "PrefillTemplate"
-  ],
-  "canvas_sdk.effects.data_integration.remove_document_from_patient": [
-    "RemoveDocumentFromPatient"
-  ],
-  "canvas_sdk.effects.data_integration.types": [
-    "AnnotationItem",
-    "DocumentType",
-    "ReportType",
-    "TemplateType"
+  "canvas_sdk.effects.coverage.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageStack",
+    "PhotoSide"
   ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
@@ -631,33 +565,11 @@
     "HttpRequestEffect"
   ],
   "canvas_sdk.effects.lab_order": [
-    "HealthGorillaLabOrderIngest",
-    "HealthGorillaLabOrderOverride",
-    "HealthGorillaLabReportIngest"
+    "HealthGorillaLabOrderOverride"
   ],
   "canvas_sdk.effects.lab_order.health_gorilla": [
     "BillToCode",
     "HealthGorillaLabOrderOverride"
-  ],
-  "canvas_sdk.effects.lab_order.health_gorilla_ingest": [
-    "HealthGorillaLabOrderIngest",
-    "HealthGorillaLabReportIngest"
-  ],
-  "canvas_sdk.effects.lab_report": [
-    "AbnormalFlag",
-    "LabReport",
-    "LabTest",
-    "LabValue",
-    "ObservationStatus"
-  ],
-  "canvas_sdk.effects.lab_report.attach_results": [
-    "AbnormalFlag",
-    "LabTest",
-    "LabValue",
-    "ObservationStatus"
-  ],
-  "canvas_sdk.effects.lab_report.base": [
-    "LabReport"
   ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
@@ -670,8 +582,6 @@
     "Appointment",
     "AppointmentIdentifier",
     "Note",
-    "NoteRestrictionsEffect",
-    "NoteRestrictionsUpdatedEffect",
     "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
@@ -692,13 +602,6 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
-  "canvas_sdk.effects.note.restrictions": [
-    "NoteRestrictionsEffect",
-    "NoteRestrictionsUpdatedEffect"
-  ],
-  "canvas_sdk.effects.note_footer_configuration": [
-    "NoteFooterConfiguration"
-  ],
   "canvas_sdk.effects.observation": [
     "CodingData",
     "Observation",
@@ -717,24 +620,18 @@
     "CreatePatientPreferredPharmacies",
     "Patient",
     "PatientAddress",
-    "PatientContact",
-    "PatientContactCategory",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientMetadata",
-    "PatientPreferredPharmacy",
-    "generate_patient_id"
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
     "PatientAddress",
-    "PatientContact",
-    "PatientContactCategory",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientMetadata",
-    "PatientPreferredPharmacy",
-    "generate_patient_id"
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
@@ -824,23 +721,14 @@
     "ProtocolCard",
     "Recommendation"
   ],
-  "canvas_sdk.effects.provider_menu_configuration": [
-    "ProviderMenuConfiguration"
-  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
-  ],
-  "canvas_sdk.effects.redirect": [
-    "RedirectEffect"
   ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
-  ],
-  "canvas_sdk.effects.service_provider": [
-    "ServiceProvider"
   ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
@@ -858,18 +746,6 @@
     "PlainTextResponse",
     "Response"
   ],
-  "canvas_sdk.effects.staff": [
-    "StaffExternalIdentifier"
-  ],
-  "canvas_sdk.effects.staff.staff_external_identifier": [
-    "StaffExternalIdentifier"
-  ],
-  "canvas_sdk.effects.staff_metadata": [
-    "StaffMetadata"
-  ],
-  "canvas_sdk.effects.staff_metadata.base": [
-    "StaffMetadata"
-  ],
   "canvas_sdk.effects.surescripts": [
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
@@ -884,7 +760,6 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
-    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -892,7 +767,6 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
-    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -925,36 +799,18 @@
     "Event",
     "TargetType"
   ],
-  "canvas_sdk.events.surescripts": [
-    "BenefitCoverage",
-    "EligibilityPlan",
-    "SurescriptsBenefitsResponse",
-    "SurescriptsEligibilityResponse",
-    "TherapeuticAlternative"
-  ],
-  "canvas_sdk.events.surescripts.surescripts_messages": [
-    "BenefitCoverage",
-    "EligibilityPlan",
-    "SurescriptsBenefitsResponse",
-    "SurescriptsEligibilityResponse",
-    "TherapeuticAlternative"
-  ],
   "canvas_sdk.handlers": [
     "BaseHandler"
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
-    "LockNoteActionButton",
-    "NoteStateActionButton",
-    "SHOW_BUTTON_REGEX",
-    "SignNoteActionButton"
+    "SHOW_BUTTON_REGEX"
   ],
   "canvas_sdk.handlers.application": [
     "Application",
     "ApplicationScope",
     "EmbeddedApplication",
-    "NoteApplication",
-    "SchedulingApplication"
+    "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
     "BaseHandler",
@@ -987,8 +843,8 @@
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
-    "StoredFilePart",
     "StringFormPart",
+    "UploadedFilePart",
     "api"
   ],
   "canvas_sdk.handlers.simple_api.api": [
@@ -1001,8 +857,8 @@
     "SimpleAPIBase",
     "SimpleAPIRoute",
     "SimpleAPIType",
-    "StoredFilePart",
     "StringFormPart",
+    "UploadedFilePart",
     "delete",
     "get",
     "parse_multipart_form",
@@ -1033,7 +889,6 @@
   "canvas_sdk.handlers.simple_api.tools": [
     "CaseInsensitiveMultiDict",
     "KeyType",
-    "LIST_VALUED_HEADERS",
     "MultiDict",
     "ValueType",
     "separate_headers"
@@ -1121,10 +976,7 @@
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
-    "ChangeMedication",
     "ChargeDescriptionMaster",
-    "ChartSectionReview",
-    "ChartSectionReviewSection",
     "Claim",
     "ClaimBannerAlert",
     "ClaimComment",
@@ -1139,14 +991,11 @@
     "ClaimProvider",
     "ClaimQueue",
     "ClaimSubmission",
-    "ClaimSupervisingProvider",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
-    "ContactCategory",
-    "ContentType",
     "Coverage",
     "CoveragePosting",
     "CurrentNoteStateEvent",
@@ -1156,36 +1005,22 @@
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
-    "DiagnosticReport",
-    "DiagnosticReportStatus",
-    "DiagnosticView",
     "Discount",
-    "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
-    "DocumentReviewDelegation",
-    "EducationalMaterial",
-    "EligibilityRequest",
-    "EligibilityResponse",
-    "EligibilityResponseStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
-    "FamilyHistory",
-    "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
-    "FollowUp",
     "Goal",
-    "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",
-    "ImagingReportCoding",
     "ImagingReportTemplate",
     "ImagingReportTemplateField",
     "ImagingReportTemplateFieldOption",
@@ -1196,8 +1031,6 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
-    "Instruction",
-    "InstructionCoding",
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
@@ -1214,7 +1047,6 @@
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
-    "LabReportRemark",
     "LabReportTemplate",
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
@@ -1256,15 +1088,11 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
-    "OrganizationalEntity",
     "Patient",
     "PatientAddress",
-    "PatientAdministrativeDocument",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
-    "PatientContactCategory",
-    "PatientContactPerson",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
@@ -1272,13 +1100,10 @@
     "PatientGroupMember",
     "PatientIdentificationCard",
     "PatientMetadata",
-    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
-    "Plan",
-    "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
@@ -1286,25 +1111,15 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus",
-    "Procedure",
-    "ProcedureCoding",
-    "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
-    "ReasonForVisit",
-    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
-    "ReferralReportCoding",
     "ReferralReview",
-    "RefillRequest",
-    "RefillRequestCoding",
-    "RemoveAllergyEvent",
-    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1316,9 +1131,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
-    "StaffExternalIdentifier",
     "StaffLicense",
-    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
     "StopMedicationEvent",
@@ -1334,13 +1147,6 @@
     "TransactorPhone",
     "UncategorizedClinicalDocument",
     "UncategorizedClinicalDocumentReview",
-    "UpdateGoal",
-    "Vaccine",
-    "VaccineLot",
-    "VaccineManufacturer",
-    "VisualExamFinding",
-    "VitalSign",
-    "VitalSignReading",
     "proxy_field"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
@@ -1392,15 +1198,8 @@
     "CareTeamMembershipStatus",
     "CareTeamRole"
   ],
-  "canvas_sdk.v1.data.change_medication": [
-    "ChangeMedication"
-  ],
   "canvas_sdk.v1.data.charge_description_master": [
     "ChargeDescriptionMaster"
-  ],
-  "canvas_sdk.v1.data.chart_section_review": [
-    "ChartSectionReview",
-    "ChartSectionReviewSection"
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
@@ -1415,7 +1214,6 @@
     "ClaimQueueColumns",
     "ClaimQueues",
     "ClaimSubmission",
-    "ClaimSupervisingProvider",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"
@@ -1493,35 +1291,14 @@
   "canvas_sdk.v1.data.device": [
     "Device"
   ],
-  "canvas_sdk.v1.data.diagnostic_report": [
-    "DiagnosticReport",
-    "DiagnosticReportStatus"
-  ],
-  "canvas_sdk.v1.data.diagnostic_view": [
-    "DiagnosticView"
-  ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
-  ],
-  "canvas_sdk.v1.data.django_content_type": [
-    "ContentType"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus"
-  ],
-  "canvas_sdk.v1.data.document_review_delegation": [
-    "DocumentReviewDelegation"
-  ],
-  "canvas_sdk.v1.data.educational_material": [
-    "EducationalMaterial"
-  ],
-  "canvas_sdk.v1.data.eligibility_response": [
-    "EligibilityRequest",
-    "EligibilityResponse",
-    "EligibilityResponseStatus"
   ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
@@ -1535,28 +1312,15 @@
   "canvas_sdk.v1.data.facility": [
     "Facility"
   ],
-  "canvas_sdk.v1.data.family_history": [
-    "FamilyHistory",
-    "FamilyHistoryCoding"
-  ],
-  "canvas_sdk.v1.data.follow_up": [
-    "FollowUp"
-  ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
     "GoalAchievementStatus",
     "GoalLifecycleStatus",
-    "GoalPriority",
-    "UpdateGoal"
-  ],
-  "canvas_sdk.v1.data.history_present_illness": [
-    "HistoryOfPresentIllness"
+    "GoalPriority"
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
-    "ImagingReportCoding",
-    "ImagingReportQuerySet",
     "ImagingReportTemplate",
     "ImagingReportTemplateField",
     "ImagingReportTemplateFieldOption",
@@ -1570,10 +1334,6 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
-  ],
-  "canvas_sdk.v1.data.instruction": [
-    "Instruction",
-    "InstructionCoding"
   ],
   "canvas_sdk.v1.data.integration_task": [
     "IntegrationTask",
@@ -1600,7 +1360,6 @@
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
-    "LabReportRemark",
     "LabReportTemplate",
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
@@ -1665,30 +1424,19 @@
     "OrganizationAddress",
     "OrganizationContactPoint"
   ],
-  "canvas_sdk.v1.data.organizational_entity": [
-    "OrganizationalEntity"
-  ],
   "canvas_sdk.v1.data.patient": [
-    "ContactCategory",
     "ContactPointState",
     "ContactPointSystem",
     "Patient",
     "PatientAddress",
-    "PatientContactCategory",
-    "PatientContactPerson",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientIdentificationCard",
     "PatientMetadata",
-    "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
     "SexAtBirth"
-  ],
-  "canvas_sdk.v1.data.patient_administrative_document": [
-    "DocumentCoding",
-    "PatientAdministrativeDocument"
   ],
   "canvas_sdk.v1.data.patient_consent": [
     "PatientConsent",
@@ -1705,12 +1453,6 @@
   ],
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
-  ],
-  "canvas_sdk.v1.data.plan": [
-    "Plan"
-  ],
-  "canvas_sdk.v1.data.plugin_command": [
-    "PluginCommand"
   ],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
@@ -1730,11 +1472,6 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus"
-  ],
-  "canvas_sdk.v1.data.procedure": [
-    "Procedure",
-    "ProcedureCoding",
-    "ProcedureStatus"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",
@@ -1761,31 +1498,17 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
-    "ReasonForVisit",
-    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
-    "ReferralReport",
-    "ReferralReportCoding",
-    "ReferralReportQuerySet"
-  ],
-  "canvas_sdk.v1.data.refill_request": [
-    "RefillRequest",
-    "RefillRequestCoding"
-  ],
-  "canvas_sdk.v1.data.remove_allergy_event": [
-    "RemoveAllergyEvent"
+    "ReferralReport"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
-  ],
-  "canvas_sdk.v1.data.resolve_condition_event": [
-    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
@@ -1803,9 +1526,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
-    "StaffExternalIdentifier",
     "StaffLicense",
-    "StaffMetadata",
     "StaffPhoto",
     "StaffRole"
   ],
@@ -1820,7 +1541,6 @@
     "TaskLabel",
     "TaskLabelModule",
     "TaskMetadata",
-    "TaskPriority",
     "TaskStatus",
     "TaskTaskLabel",
     "TaskType"
@@ -1836,18 +1556,6 @@
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"
-  ],
-  "canvas_sdk.v1.data.vaccine": [
-    "Vaccine",
-    "VaccineLot",
-    "VaccineManufacturer"
-  ],
-  "canvas_sdk.v1.data.visual_exam_finding": [
-    "VisualExamFinding"
-  ],
-  "canvas_sdk.v1.data.vitals": [
-    "VitalSign",
-    "VitalSignReading"
   ],
   "canvas_sdk.v1.plugin_database_context": [
     "get_access_level",
