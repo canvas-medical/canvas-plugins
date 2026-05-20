@@ -5,6 +5,7 @@ from anthropic import Anthropic
 from anthropic.types import ToolUseBlock
 
 from agent_runner_poc.agents.longitudinal_advisor_tools import tools
+from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.models.recommendation import Recommendation
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.effects import Effect
@@ -125,7 +126,7 @@ def _format_recommendation_context(patient_id: str) -> str:
     return "\n".join(lines)
 
 
-class LongitudinalCareAdvisor(AgentPlugin):
+class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
     """Reviews each locked encounter against the patient's history of open recommendations.
 
     State lives in the plugin's :class:`Recommendation` Custom Data table, not
@@ -179,6 +180,9 @@ class LongitudinalCareAdvisor(AgentPlugin):
         ]
 
         for turn in range(MAX_TURNS):
+            # Plain assignment — RestrictedPython forbids augmented attribute
+            # assignment (`self.x += 1`) in the sandbox.
+            self._llm_turn_count = self._llm_turn_count + 1
             response = client.messages.create(
                 model=gateway.model,
                 max_tokens=1024,

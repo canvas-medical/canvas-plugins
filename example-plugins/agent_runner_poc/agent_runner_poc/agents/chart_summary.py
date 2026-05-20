@@ -4,6 +4,7 @@ from typing import Any, cast
 from anthropic import Anthropic
 from anthropic.types import ToolUseBlock
 
+from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.agents.tools import tools
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.effects import Effect
@@ -25,7 +26,7 @@ SYSTEM_PROMPT = (
 MAX_TURNS = 8
 
 
-class ChartSummary(AgentPlugin):
+class ChartSummary(RunLoggingMixin, AgentPlugin):
     """Drafts a Plan command for a new note via tool-driven chart reads.
 
     The model owns the action: it calls ``originate_plan`` to stage the Plan
@@ -74,6 +75,9 @@ class ChartSummary(AgentPlugin):
         ]
 
         for turn in range(MAX_TURNS):
+            # Plain assignment — RestrictedPython forbids augmented attribute
+            # assignment (`self.x += 1`) in the sandbox.
+            self._llm_turn_count = self._llm_turn_count + 1
             response = client.messages.create(
                 model=gateway.model,
                 max_tokens=1024,

@@ -26,6 +26,7 @@ from anthropic import Anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
 from agent_runner_poc.agents.chart_chat_tools import tools
+from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
@@ -85,7 +86,7 @@ def _serialize_assistant_blocks(content: Any) -> list[dict[str, Any]]:
     return serialized
 
 
-class ChartChatAgent(AgentPlugin):
+class ChartChatAgent(RunLoggingMixin, AgentPlugin):
     """Chat agent backing the in-chart conversation surface.
 
     Snapshot state pattern: the full message history lives in a single
@@ -135,6 +136,9 @@ class ChartChatAgent(AgentPlugin):
         final_text = ""
 
         for turn in range(MAX_TURNS):
+            # Plain assignment — RestrictedPython forbids augmented attribute
+            # assignment (`self.x += 1`) in the sandbox.
+            self._llm_turn_count = self._llm_turn_count + 1
             response = client.messages.create(
                 model=gateway.model,
                 max_tokens=1024,

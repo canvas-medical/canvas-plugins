@@ -215,6 +215,22 @@ def _ensure_sqlite_schema() -> None:
     _sqlite_schema_initialized = True
 
 
+def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
+    """Invoke an :class:`AgentPlugin` lifecycle hook, swallowing any exception.
+
+    Lifecycle hooks (``on_run_start``, ``on_run_end``, ``on_run_error``) are
+    observability seams — they emit telemetry, log timings, etc. — not core
+    logic. A hook that raises is a bug in the plugin's *observability* code,
+    and must not prevent the agent's actual ``load_state`` → ``run`` →
+    ``save_state`` lifecycle from completing (or its error from propagating).
+    Anything thrown by the hook is logged and discarded.
+    """
+    try:
+        getattr(agent, hook_name)(*args)
+    except Exception:
+        log.exception(f"RunAgent: agent hook {hook_name!r} raised; ignoring")
+
+
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -498,9 +514,20 @@ class PluginRunner(PluginRunnerServicer):
                     agent_lock(request.scope_key, holder_id=request.run_id),
                 ):
                     agent = agent_class()
-                    state = agent.load_state(request.scope_key)
-                    result = agent.run(state, gateway, trigger_payload)
-                    agent.save_state(request.scope_key, result.state)
+                    # Lifecycle hooks (doc §6.3): on_run_start before
+                    # load_state, on_run_end after a successful save_state,
+                    # on_run_error if anything in between raises. Hook
+                    # failures are swallowed by `_invoke_agent_hook` so a
+                    # botched hook can't crash the underlying run.
+                    _invoke_agent_hook(agent, "on_run_start", request.scope_key)
+                    try:
+                        state = agent.load_state(request.scope_key)
+                        result = agent.run(state, gateway, trigger_payload)
+                        agent.save_state(request.scope_key, result.state)
+                        _invoke_agent_hook(agent, "on_run_end", result)
+                    except Exception as run_exc:
+                        _invoke_agent_hook(agent, "on_run_error", run_exc)
+                        raise
             except AgentLocked as exc:
                 # Contention is an expected outcome (another invocation holds
                 # the lock for this scope_key). Tag the response with

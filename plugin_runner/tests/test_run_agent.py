@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -278,4 +279,148 @@ def test_run_agent_does_not_set_error_kind_on_generic_failure(
     monkeypatch.setattr(agent_cls, "run", _boom)
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
+    assert response.error_kind == ""
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle hooks (on_run_start / on_run_end / on_run_error)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_fires_on_run_start_and_on_run_end_in_order(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Successful runs invoke on_run_start then on_run_end (no on_run_error)."""
+    from canvas_sdk.agents import AgentRunResult
+
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    call_log: list[tuple[str, Any]] = []
+
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_start",
+        lambda self, scope_key: call_log.append(("on_run_start", scope_key)),
+    )
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_end",
+        lambda self, result: call_log.append(("on_run_end", result)),
+    )
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_error",
+        lambda self, exc: call_log.append(("on_run_error", exc)),
+    )
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    assert response.success is True
+
+    assert [name for name, _ in call_log] == ["on_run_start", "on_run_end"]
+    assert call_log[0][1] == "test_agent_plugin:patient:p1"
+    assert isinstance(call_log[1][1], AgentRunResult)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_fires_on_run_error_when_run_raises(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An exception in ``run`` triggers on_run_error and skips on_run_end."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    call_log: list[tuple[str, Any]] = []
+
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_start",
+        lambda self, scope_key: call_log.append(("on_run_start", scope_key)),
+    )
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_end",
+        lambda self, result: call_log.append(("on_run_end", result)),
+    )
+    monkeypatch.setattr(
+        agent_cls,
+        "on_run_error",
+        lambda self, exc: call_log.append(("on_run_error", type(exc).__name__)),
+    )
+
+    def _boom(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        raise RuntimeError("agent code bug")
+
+    monkeypatch.setattr(agent_cls, "run", _boom)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    assert response.success is False
+
+    names = [name for name, _ in call_log]
+    assert names == ["on_run_start", "on_run_error"], (
+        f"on_run_end must NOT fire on failure; got {names}"
+    )
+    assert call_log[1][1] == "RuntimeError"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_does_not_fire_hooks_on_lock_contention(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Lock contention shouldn't fire lifecycle hooks — the agent never started."""
+    from canvas_sdk.agents import agent_lock as agent_lock_helper
+
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    scope_key = "test_agent_plugin:patient:p1"
+    call_log: list[str] = []
+
+    monkeypatch.setattr(agent_cls, "on_run_start", lambda self, sk: call_log.append("on_run_start"))
+    monkeypatch.setattr(agent_cls, "on_run_end", lambda self, r: call_log.append("on_run_end"))
+    monkeypatch.setattr(agent_cls, "on_run_error", lambda self, e: call_log.append("on_run_error"))
+
+    def _re_enter(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        # Inner lock acquisition raises AgentLocked because the outer
+        # RunAgent already holds it. The contention path returns before
+        # any of the hooks fire on the inner attempt.
+        with agent_lock_helper(scope_key):
+            pass
+
+    monkeypatch.setattr(agent_cls, "run", _re_enter)
+    response = next(iter(plugin_runner.RunAgent(_make_request(scope_key=scope_key), None)))
+    assert response.success is False
+    assert response.error_kind == "AGENT_LOCKED"
+    # on_run_start fired for the outer run; on_run_error fired when its
+    # run() (the re-entry attempt) raised. on_run_end must NOT have fired.
+    assert "on_run_end" not in call_log
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_hook_failures_do_not_crash_the_run(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hook that raises is logged and ignored — the agent's run still completes."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+
+    def _hook_boom(self, *args):  # type: ignore[no-untyped-def]
+        raise RuntimeError("observability bug")
+
+    monkeypatch.setattr(agent_cls, "on_run_start", _hook_boom)
+    monkeypatch.setattr(agent_cls, "on_run_end", _hook_boom)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    # Run completed successfully despite both hooks raising.
+    assert response.success is True
     assert response.error_kind == ""
