@@ -4,7 +4,7 @@ from canvas_sdk.agents.lock import AgentLocked, agent_lock
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.state import AgentState
-from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.agents.tool_registry import ToolNotAllowed, ToolRegistry
 
 __all__ = __exports__ = (
     "AgentLocked",
@@ -13,6 +13,7 @@ __all__ = __exports__ = (
     "AgentState",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "ToolNotAllowed",
     "ToolRegistry",
     "agent_lock",
     "standard_tools",

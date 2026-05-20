@@ -514,6 +514,18 @@ class PluginRunner(PluginRunnerServicer):
                     agent_lock(request.scope_key, holder_id=request.run_id),
                 ):
                     agent = agent_class()
+                    # Inject the per-agent tool allowlist from the manifest
+                    # (components.agents[].tools.allowed) onto the instance
+                    # so run() can honor it via `tools.definitions(allowed=
+                    # self.tools_allowed)` / `.execute(..., allowed=...)`.
+                    # None means no declaration → no filtering. PoC: the
+                    # agent applies the filter itself; V1 will filter the
+                    # registry platform-side (doc §6.7).
+                    manifest_entry = plugin.get("handler") or {}
+                    allowed_list = (manifest_entry.get("tools") or {}).get("allowed")
+                    agent.tools_allowed = (
+                        frozenset(allowed_list) if allowed_list is not None else None
+                    )
                     # Lifecycle hooks (doc §6.3): on_run_start before
                     # load_state, on_run_end after a successful save_state,
                     # on_run_error if anything in between raises. Hook

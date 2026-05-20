@@ -187,7 +187,9 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
                 model=gateway.model,
                 max_tokens=1024,
                 system=SYSTEM_PROMPT,
-                tools=cast(Any, tools.definitions()),
+                # `self.tools_allowed` is sourced from the manifest entry's
+                # `tools.allowed` and set by the platform before run() fired.
+                tools=cast(Any, tools.definitions(allowed=self.tools_allowed)),
                 messages=cast(Any, messages),
             )
             log.info(
@@ -206,7 +208,12 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
                     if not isinstance(block, ToolUseBlock):
                         continue
                     try:
-                        result = tools.execute(block.name, dict(block.input), ctx=tool_ctx)
+                        result = tools.execute(
+                            block.name,
+                            dict(block.input),
+                            ctx=tool_ctx,
+                            allowed=self.tools_allowed,
+                        )
                         tool_results.append(
                             {
                                 "type": "tool_result",

@@ -40,13 +40,12 @@ SYSTEM_PROMPT = (
     "through their care, and stage actions for the clinician to review. You "
     "have read tools (demographics, conditions with onset dates, medications, "
     "recent labs, recent assessments) and write tools (create_task; "
-    "originate—but never commit—prescriptions, lab orders, and diagnoses). "
-    "Originated commands land in draft form on the patient's current open "
-    "note for the clinician to review, edit, and commit; you never commit "
-    "anything yourself. Use the write tools only when the clinician "
-    "explicitly asks; for discussion or summary, stay read-only. Keep "
-    "responses concise and clinically focused. Plain text only — no "
-    "markdown headings."
+    "originate—but never commit—prescriptions and lab orders). Originated "
+    "commands land in draft form on the patient's current open note for the "
+    "clinician to review, edit, and commit; you never commit anything "
+    "yourself. Use the write tools only when the clinician explicitly asks; "
+    "for discussion or summary, stay read-only. Keep responses concise and "
+    "clinically focused. Plain text only — no markdown headings."
 )
 
 MAX_TURNS = 8
@@ -143,7 +142,9 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
                 model=gateway.model,
                 max_tokens=1024,
                 system=SYSTEM_PROMPT,
-                tools=cast(Any, tools.definitions()),
+                # `self.tools_allowed` is sourced from the manifest entry's
+                # `tools.allowed` and set by the platform before run() fired.
+                tools=cast(Any, tools.definitions(allowed=self.tools_allowed)),
                 messages=cast(Any, messages),
             )
             log.info(
@@ -171,7 +172,12 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
                     if not isinstance(block, ToolUseBlock):
                         continue
                     try:
-                        result = tools.execute(block.name, dict(block.input), ctx=tool_ctx)
+                        result = tools.execute(
+                            block.name,
+                            dict(block.input),
+                            ctx=tool_ctx,
+                            allowed=self.tools_allowed,
+                        )
                         tool_results.append(
                             {
                                 "type": "tool_result",

@@ -84,7 +84,9 @@ class ChartSummary(RunLoggingMixin, AgentPlugin):
                 system=SYSTEM_PROMPT,
                 # Anthropic SDK stubs expect typed param TypedDicts here; the
                 # runtime accepts our plain-dict shapes equivalently.
-                tools=cast(Any, tools.definitions()),
+                # `self.tools_allowed` is sourced from the manifest entry's
+                # `tools.allowed` and set by the platform before run() fired.
+                tools=cast(Any, tools.definitions(allowed=self.tools_allowed)),
                 messages=cast(Any, messages),
             )
             log.info(
@@ -104,7 +106,12 @@ class ChartSummary(RunLoggingMixin, AgentPlugin):
                     if not isinstance(block, ToolUseBlock):
                         continue
                     try:
-                        result = tools.execute(block.name, dict(block.input), ctx=tool_ctx)
+                        result = tools.execute(
+                            block.name,
+                            dict(block.input),
+                            ctx=tool_ctx,
+                            allowed=self.tools_allowed,
+                        )
                         tool_results.append(
                             {
                                 "type": "tool_result",

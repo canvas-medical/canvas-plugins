@@ -21,15 +21,53 @@
         "agents": [
             {
                 "class": "agent_runner_poc.agents.chart_summary:ChartSummary",
-                "description": "Drafts a Plan command on the new mutable note"
+                "description": "Drafts a Plan command on the new mutable note",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "originate_plan"
+                    ]
+                }
             },
             {
                 "class": "agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
-                "description": "Reviews the locked encounter against prior visits' open recommendations; creates Tasks for outstanding follow-up"
+                "description": "Reviews the locked encounter against prior visits' open recommendations; creates Tasks for outstanding follow-up",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "propose_recommendation"
+                    ]
+                }
             },
             {
                 "class": "agent_runner_poc.agents.chart_chat:ChartChatAgent",
-                "description": "Conversational chart-side agent; uses the snapshot state pattern over a Conversation CustomModel"
+                "description": "Conversational chart-side agent; uses the snapshot state pattern over a Conversation CustomModel",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "create_task",
+                        "originate_prescribe_medication",
+                        "originate_lab_order"
+                    ]
+                }
             }
         ],
         "applications": [

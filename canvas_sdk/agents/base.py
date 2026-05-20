@@ -18,6 +18,21 @@ class AgentPlugin(ABC):
     per-``scope_key`` lock held the entire time.
     """
 
+    # Per-run tool allowlist. Sourced from the manifest's
+    # ``components.agents[].tools.allowed`` at load time and set by the
+    # platform on the agent instance before ``run()`` fires (see
+    # ``PluginRunner.RunAgent``). When ``None`` (no manifest
+    # declaration), no filtering is applied — the agent sees every tool
+    # it has registered. When set, the agent passes it to
+    # :meth:`ToolRegistry.definitions(allowed=...)` and
+    # :meth:`ToolRegistry.execute(..., allowed=...)` so the model only
+    # sees / can only invoke tools the manifest authorizes.
+    #
+    # PoC: the agent's ``run()`` is responsible for honoring this. V1
+    # will filter the registry platform-side so the agent can't bypass
+    # (doc §6.7).
+    tools_allowed: frozenset[str] | None = None
+
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:
         """Load this run's starting state from per-EHR storage."""

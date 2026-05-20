@@ -6,6 +6,7 @@
     "AgentState",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "ToolNotAllowed",
     "ToolRegistry",
     "agent_lock",
     "standard_tools"
@@ -31,6 +32,7 @@
     "AgentState"
   ],
   "canvas_sdk.agents.tool_registry": [
+    "ToolNotAllowed",
     "ToolRegistry"
   ],
   "canvas_sdk.caching.client": [

@@ -403,6 +403,68 @@ def test_run_agent_does_not_fire_hooks_on_lock_contention(
     assert "on_run_end" not in call_log
 
 
+# ---------------------------------------------------------------------------
+# tools_allowed injection from the manifest
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_sets_tools_allowed_from_manifest(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``components.agents[].tools.allowed`` lands on the agent as a frozenset."""
+    # Splice tools.allowed into the loaded manifest entry. Real plugins
+    # declare this statically in CANVAS_MANIFEST.json; we mutate at runtime
+    # so the test doesn't need its own fixture plugin.
+    LOADED_PLUGINS[AGENT_KEY]["handler"]["tools"] = {"allowed": ["find_medications", "create_task"]}
+
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    captured: dict[str, Any] = {}
+
+    def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        from canvas_sdk.agents import AgentRunResult
+
+        captured["tools_allowed"] = self.tools_allowed
+        return AgentRunResult(state=state, effects=[])
+
+    monkeypatch.setattr(agent_cls, "run", _capture)
+    next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert captured["tools_allowed"] == frozenset({"find_medications", "create_task"})
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_leaves_tools_allowed_none_when_manifest_omits_it(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No manifest declaration → tools_allowed is None (= no filtering)."""
+    # Test fixture's manifest declares no ``tools`` key. Make sure we don't
+    # invent a filter when the author didn't ask for one.
+    LOADED_PLUGINS[AGENT_KEY]["handler"].pop("tools", None)
+
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    captured: dict[str, Any] = {}
+
+    def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        from canvas_sdk.agents import AgentRunResult
+
+        captured["tools_allowed"] = self.tools_allowed
+        return AgentRunResult(state=state, effects=[])
+
+    monkeypatch.setattr(agent_cls, "run", _capture)
+    next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert captured["tools_allowed"] is None
+
+
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_run_agent_hook_failures_do_not_crash_the_run(
     install_test_plugin: Path,
