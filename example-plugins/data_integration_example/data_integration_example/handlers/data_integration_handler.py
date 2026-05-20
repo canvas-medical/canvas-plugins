@@ -6,7 +6,6 @@ from canvas_sdk.effects.data_integration import (
     CategorizeDocument,
     LinkDocumentToPatient,
     PrefillDocumentFields,
-    Priority,
     ReviewMode,
 )
 from canvas_sdk.effects.data_integration.types import (
@@ -325,7 +324,6 @@ class DataIntegrationHandler(BaseProtocol):
                     document_id=str(document_id),
                     reviewer_id=str(staff.id),
                     team_id=str(team.id) if team else None,
-                    priority=Priority.HIGH,
                     review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                     annotations=[
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),
@@ -337,7 +335,6 @@ class DataIntegrationHandler(BaseProtocol):
                 effect = AssignDocumentReviewer(
                     document_id=str(document_id),
                     team_id=str(team.id),
-                    priority=Priority.HIGH,
                     review_mode=ReviewMode.ALREADY_REVIEWED,
                     annotations=[
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),

@@ -3,7 +3,6 @@ import json
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
-    Priority,
     ReviewMode,
 )
 from canvas_sdk.effects.data_integration.types import AnnotationItem
@@ -19,7 +18,6 @@ def test_create_effect_with_document_id_only() -> None:
     payload = json.loads(applied.payload)
     assert payload["data"] == {
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "priority": False,
         "review_mode": "RR",
         "reviewer_id": None,
         "team_id": None,
@@ -65,30 +63,6 @@ def test_create_effect_with_both_reviewer_and_team() -> None:
     assert payload["data"]["team_id"] == "team-uuid-456"
 
 
-def test_create_effect_with_high_priority() -> None:
-    """Test creating effect with HIGH priority succeeds."""
-    effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        priority=Priority.HIGH,
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["priority"] is True
-
-
-def test_create_effect_with_normal_priority() -> None:
-    """Test creating effect with NORMAL priority succeeds."""
-    effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        priority=Priority.NORMAL,
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["priority"] is False
-
-
 def test_create_effect_with_annotations() -> None:
     """Test creating effect with annotations succeeds."""
     effect = AssignDocumentReviewer(
@@ -114,7 +88,6 @@ def test_create_effect_with_all_fields() -> None:
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         reviewer_id="staff-key-123",
         team_id="team-uuid-456",
-        priority=Priority.HIGH,
         review_mode=ReviewMode.REVIEW_REQUIRED,
         annotations=[
             AnnotationItem(text="Team lead", color="#FF0000"),
@@ -127,7 +100,6 @@ def test_create_effect_with_all_fields() -> None:
     assert payload["data"]["document_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     assert payload["data"]["reviewer_id"] == "staff-key-123"
     assert payload["data"]["team_id"] == "team-uuid-456"
-    assert payload["data"]["priority"] is True
     assert payload["data"]["review_mode"] == "RR"
     assert payload["data"]["annotations"] == [
         {"text": "Team lead", "color": "#FF0000"},
@@ -145,7 +117,6 @@ def test_values_property_returns_correct_structure() -> None:
     values = effect.values
     assert values["document_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     assert values["reviewer_id"] == "staff-key-123"
-    assert values["priority"] is False
     assert values["review_mode"] == "RR"
 
 
@@ -155,7 +126,6 @@ def test_values_emits_none_for_unset_optional_fields() -> None:
 
     assert effect.values == {
         "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "priority": False,
         "review_mode": "RR",
         "reviewer_id": None,
         "team_id": None,
