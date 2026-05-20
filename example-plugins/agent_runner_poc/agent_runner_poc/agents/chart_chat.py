@@ -29,16 +29,23 @@ from agent_runner_poc.agents.chart_chat_tools import tools
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
+from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data import Patient
 from logger import log
 
 SYSTEM_PROMPT = (
     "You are a clinical assistant embedded in the chart of a single patient. "
-    "A clinician is chatting with you to learn about this patient and reason "
-    "through their care. You have read tools to inspect the patient's chart "
-    "(active conditions, recent labs, medications). Keep responses concise and "
-    "clinically focused. When relevant, ground your answers in tool results "
-    "rather than speculating. Plain text only — no markdown headings."
+    "A clinician is chatting with you to learn about this patient, reason "
+    "through their care, and stage actions for the clinician to review. You "
+    "have read tools (demographics, conditions with onset dates, medications, "
+    "recent labs, recent assessments) and write tools (create_task; "
+    "originate—but never commit—prescriptions, lab orders, and diagnoses). "
+    "Originated commands land in draft form on the patient's current open "
+    "note for the clinician to review, edit, and commit; you never commit "
+    "anything yourself. Use the write tools only when the clinician "
+    "explicitly asks; for discussion or summary, stay read-only. Keep "
+    "responses concise and clinically focused. Plain text only — no "
+    "markdown headings."
 )
 
 MAX_TURNS = 8
@@ -117,9 +124,12 @@ class ChartChatAgent(AgentPlugin):
         messages: list[dict[str, Any]] = list(state.data.get("messages") or [])
         messages.append({"role": "user", "content": user_message})
 
-        # Shared context for the tool dispatcher. Chat is read-only here, so
-        # no effects accumulator (would be needed if we added effect tools).
-        tool_ctx: dict[str, Any] = {"patient_id": patient_id}
+        # Shared context for the tool dispatcher. The effects accumulator
+        # collects originated commands / Tasks from write tools (create_task,
+        # originate_prescribe_medication, etc.); the platform dispatches each
+        # exactly once after run() returns via AgentRunResult.effects.
+        effects: list[Effect] = []
+        tool_ctx: dict[str, Any] = {"patient_id": patient_id, "effects": effects}
 
         client = Anthropic(api_key=gateway.api_key)
         final_text = ""
@@ -198,7 +208,7 @@ class ChartChatAgent(AgentPlugin):
             f"({len(messages)} total messages)"
         )
 
-        return AgentRunResult(state=state, effects=[])
+        return AgentRunResult(state=state, effects=effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
         """Persist the updated message snapshot back to the Conversation row."""
