@@ -39,6 +39,7 @@ manifest_schema = {
                 "views": {"$ref": "#/$defs/component"},
                 "applications": {"$ref": "#/$defs/applications"},
                 "questionnaires": {"$ref": "#/$defs/questionnaires"},
+                "agents": {"$ref": "#/$defs/agent"},
             },
             "additionalProperties": False,
             "minProperties": 1,
@@ -127,6 +128,36 @@ manifest_schema = {
                             "event": {"type": "string"},
                             "read": {"type": "array", "items": {"type": "string"}},
                             "write": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "required": ["class", "description"],
+                "additionalProperties": False,
+            },
+        },
+        "agent": {
+            # Same shape as `component` plus an optional `tools.allowed`
+            # filter. PoC: the platform accepts the field but doesn't enforce
+            # it — the agent's `run()` applies the filter itself via
+            # `ToolRegistry.definitions(allowed=...)` and
+            # `ToolRegistry.execute(..., allowed=...)`. V1 will plumb the
+            # value through the `RunAgent` RPC and enforce platform-side
+            # before the agent sees its tool catalog (doc §6.7).
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "class": {"type": "string"},
+                    "description": {"type": "string"},
+                    "meta": {"type": "object"},
+                    "tools": {
+                        "type": "object",
+                        "properties": {
+                            "allowed": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "additionalProperties": False,
                     },

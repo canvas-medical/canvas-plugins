@@ -31,6 +31,7 @@ from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginResponse,
     ReloadPluginsRequest,
     ReloadPluginsResponse,
+    RunAgentRequest,
     UnloadPluginRequest,
     UnloadPluginResponse,
 )
@@ -212,6 +213,22 @@ def _ensure_sqlite_schema() -> None:
 
     call_command("migrate", run_syncdb=True, verbosity=0)
     _sqlite_schema_initialized = True
+
+
+def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
+    """Invoke an :class:`AgentPlugin` lifecycle hook, swallowing any exception.
+
+    Lifecycle hooks (``on_run_start``, ``on_run_end``, ``on_run_error``) are
+    observability seams — they emit telemetry, log timings, etc. — not core
+    logic. A hook that raises is a bug in the plugin's *observability* code,
+    and must not prevent the agent's actual ``load_state`` → ``run`` →
+    ``save_state`` lifecycle from completing (or its error from propagating).
+    Anything thrown by the hook is logged and discarded.
+    """
+    try:
+        getattr(agent, hook_name)(*args)
+    except Exception:
+        log.exception(f"RunAgent: agent hook {hook_name!r} raised; ignoring")
 
 
 class PluginRunner(PluginRunnerServicer):
@@ -403,6 +420,162 @@ class PluginRunner(PluginRunnerServicer):
                 log.info(f"Responded to Event {event_name}.")
 
             yield EventResponse(success=True, effects=effect_list)
+
+    def RunAgent(self, request: RunAgentRequest, context: Any) -> Iterable[EventResponse]:
+        """Invoke an AgentPlugin subclass and stream its emitted effects.
+
+        Called by home-app's ``run_agent`` Celery task in response to a
+        ``RunAgentEffect`` from a plugin trigger handler. Resolves the agent
+        class from :data:`LOADED_PLUGINS`, drives
+        ``load_state`` → ``run`` → ``save_state`` inside the plugin's
+        database context, and yields the emitted effects in a single
+        ``EventResponse``.
+
+        PoC scope (KOALA-5544): single-process execution; per-``scope_key``
+        single-flight serialization via :func:`canvas_sdk.agents.agent_lock`
+        (contention surfaces as ``EventResponse(success=False, effects=[])``);
+        Anthropic credentials sourced from the plugin's own ``secrets`` via
+        :meth:`LLMGateway.from_plugin_secrets` (``ANTHROPIC_API_KEY`` /
+        ``ANTHROPIC_MODEL``), declared as ``variables`` on the manifest and
+        configured per-customer in admin. The streaming response shape
+        matches ``HandleEvent`` so future V1 work (per-turn effect streaming,
+        gateway-service session tokens, etc.) doesn't change the wire
+        contract.
+        """
+        with metrics.measure(
+            metrics.get_qualified_name(self.RunAgent),
+            extra_tags={"agent_id": request.agent_id},
+        ):
+            module_path, _, class_name = request.agent_id.partition(":")
+            if not module_path or not class_name:
+                log.error(f"RunAgent: invalid agent_id={request.agent_id!r}")
+                yield EventResponse(success=False, effects=[])
+                return
+
+            base_plugin_name = module_path.split(".", 1)[0]
+            registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
+
+            if registry_key not in LOADED_PLUGINS:
+                log.error(
+                    f"RunAgent: agent class not loaded — "
+                    f"agent_id={request.agent_id} registry_key={registry_key}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            plugin = LOADED_PLUGINS[registry_key]
+            agent_class = plugin["class"]
+            namespace_config = plugin.get("namespace_config")
+            plugin_secrets = plugin.get("secrets") or {}
+
+            # Late import: canvas_sdk.agents and the SDK Effect wrapper are
+            # only meaningful once plugin modules have loaded.
+            from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
+
+            try:
+                gateway = LLMGateway.from_plugin_secrets(plugin_secrets)
+            except LLMGatewayConfigurationError as exc:
+                log.error(f"RunAgent: cannot dispatch agent — {exc}")
+                yield EventResponse(success=False, effects=[])
+                return
+
+            try:
+                trigger_payload = (
+                    json.loads(request.trigger_payload) if request.trigger_payload else {}
+                )
+            except json.JSONDecodeError as exc:
+                log.error(
+                    f"RunAgent: invalid trigger_payload JSON for agent_id={request.agent_id}: {exc}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            db_namespace = namespace_config["namespace"] if namespace_config else None
+            db_access_level = namespace_config["access_level"] if namespace_config else "read"
+
+            sentry_sdk.set_tag("agent-id", request.agent_id)
+            log.info(
+                f"RunAgent: invoking agent_id={request.agent_id} "
+                f"scope_key={request.scope_key} run_id={request.run_id}"
+            )
+
+            # Late imports: agent_lock pulls in the plugin's Caching API which
+            # is only reachable inside plugin_context.
+            from canvas_sdk.agents import AgentLocked, agent_lock
+
+            try:
+                with (
+                    plugin_context(f"{module_path}.{class_name}"),
+                    plugin_database_context(
+                        base_plugin_name,
+                        namespace=db_namespace,
+                        access_level=db_access_level,
+                    ),
+                    agent_lock(request.scope_key, holder_id=request.run_id),
+                ):
+                    agent = agent_class()
+                    # Inject the per-agent tool allowlist from the manifest
+                    # (components.agents[].tools.allowed) onto the instance
+                    # so run() can honor it via `tools.definitions(allowed=
+                    # self.tools_allowed)` / `.execute(..., allowed=...)`.
+                    # None means no declaration → no filtering. PoC: the
+                    # agent applies the filter itself; V1 will filter the
+                    # registry platform-side (doc §6.7).
+                    manifest_entry = plugin.get("handler") or {}
+                    allowed_list = (manifest_entry.get("tools") or {}).get("allowed")
+                    agent.tools_allowed = (
+                        frozenset(allowed_list) if allowed_list is not None else None
+                    )
+                    # Lifecycle hooks (doc §6.3): on_run_start before
+                    # load_state, on_run_end after a successful save_state,
+                    # on_run_error if anything in between raises. Hook
+                    # failures are swallowed by `_invoke_agent_hook` so a
+                    # botched hook can't crash the underlying run.
+                    _invoke_agent_hook(agent, "on_run_start", request.scope_key)
+                    try:
+                        state = agent.load_state(request.scope_key)
+                        result = agent.run(state, gateway, trigger_payload)
+                        agent.save_state(request.scope_key, result.state)
+                        _invoke_agent_hook(agent, "on_run_end", result)
+                    except Exception as run_exc:
+                        _invoke_agent_hook(agent, "on_run_error", run_exc)
+                        raise
+            except AgentLocked as exc:
+                # Contention is an expected outcome (another invocation holds
+                # the lock for this scope_key). Tag the response with
+                # error_kind so the home-app side can recognize this as a
+                # retryable-with-backoff failure rather than a generic crash.
+                log.warning(f"RunAgent: lock contention — {exc}")
+                yield EventResponse(success=False, effects=[], error_kind="AGENT_LOCKED")
+                return
+            except Exception as exc:
+                log.exception(f"RunAgent: agent {request.agent_id} raised")
+                sentry_sdk.capture_exception(exc)
+                yield EventResponse(success=False, effects=[])
+                return
+            finally:
+                sentry_sdk.set_tag("agent-id", None)
+
+            emitted_effects = [
+                Effect(
+                    type=effect.type,
+                    payload=effect.payload,
+                    plugin_name=request.plugin_name or base_plugin_name,
+                    classname=class_name,
+                    handler_name=request.handler_name or class_name,
+                    actor=request.actor,
+                    source=request.source or "agent",
+                )
+                for effect in result.effects
+            ]
+            emitted_effects = validate_effects(emitted_effects)
+
+            log.info(
+                f"RunAgent: agent_id={request.agent_id} run_id={request.run_id} "
+                f"completed with {len(emitted_effects)} effect(s)"
+            )
+
+            yield EventResponse(success=True, effects=emitted_effects)
 
     def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
@@ -807,6 +980,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 cast(list, components.get("protocols", []))
                 + cast(list, components.get("applications", []))
                 + cast(list, components.get("handlers", []))
+                + cast(list, components.get("agents", []))
             )
         except Exception as e:
             log.exception(f'Unable to load plugin "{name}"')

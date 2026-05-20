@@ -1,0 +1,100 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "agent_runner_poc",
+    "description": "PoC reference agents for the Canvas Agent Runner Framework (KOALA-5544). ChartSummary drafts a Plan on note creation; LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via Custom Data; ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern.",
+    "components": {
+        "handlers": [
+            {
+                "class": "agent_runner_poc.handlers.trigger:ChartSummaryTrigger",
+                "description": "Emits RunAgentEffect for ChartSummary when a note enters the NEW state"
+            },
+            {
+                "class": "agent_runner_poc.handlers.longitudinal_trigger:LongitudinalCareAdvisorTrigger",
+                "description": "Emits RunAgentEffect for LongitudinalCareAdvisor when a note transitions to LOCKED"
+            },
+            {
+                "class": "agent_runner_poc.applications.chart_chat:ChartChatAPI",
+                "description": "HTTP API backing the in-chart chat UI"
+            }
+        ],
+        "agents": [
+            {
+                "class": "agent_runner_poc.agents.chart_summary:ChartSummary",
+                "description": "Drafts a Plan command on the new mutable note",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "originate_plan"
+                    ]
+                }
+            },
+            {
+                "class": "agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
+                "description": "Reviews the locked encounter against prior visits' open recommendations; creates Tasks for outstanding follow-up",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "propose_recommendation"
+                    ]
+                }
+            },
+            {
+                "class": "agent_runner_poc.agents.chart_chat:ChartChatAgent",
+                "description": "Conversational chart-side agent; uses the snapshot state pattern over a Conversation CustomModel",
+                "tools": {
+                    "allowed": [
+                        "find_medications",
+                        "find_conditions",
+                        "find_lab_results",
+                        "find_assessments",
+                        "get_patient_demographics",
+                        "list_active_conditions",
+                        "recent_lab_results",
+                        "create_task",
+                        "originate_prescribe_medication",
+                        "originate_lab_order"
+                    ]
+                }
+            }
+        ],
+        "applications": [
+            {
+                "class": "agent_runner_poc.applications.chart_chat:ChartChatApplication",
+                "name": "Chart chat",
+                "description": "Open a chat with an agent that can read this patient's chart",
+                "scope": "patient_specific",
+                "icon": "assets/chart_chat.png"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "custom_data": {
+        "namespace": "custom_data__agent_runner_poc",
+        "access": "read_write"
+    },
+    "variables": [
+        {"name": "ANTHROPIC_API_KEY", "sensitive": true},
+        {"name": "ANTHROPIC_MODEL", "sensitive": false}
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
