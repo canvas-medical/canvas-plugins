@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.154.1 (2026-05-20)
+
+### Bug Fixes
+
+- Remove priority from assign document reviewer effect
+  ([#1719](https://github.com/canvas-medical/canvas-plugins/pull/1719),
+  [`a89c33e`](https://github.com/canvas-medical/canvas-plugins/commit/a89c33eeddf79d440130f423b9c16be8ca16b4c6))
+
+
 ## v0.154.0 (2026-05-19)
 
 ### Bug Fixes
