@@ -62,7 +62,7 @@ effect = LinkDocumentToPatient(
 Assigns a reviewer (staff member or team) to a document in the Data Integration queue.
 
 ```python
-from canvas_sdk.effects.data_integration import AssignDocumentReviewer, Priority, ReviewMode
+from canvas_sdk.effects.data_integration import AssignDocumentReviewer, ReviewMode
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
@@ -70,7 +70,6 @@ effect = AssignDocumentReviewer(
     document_id="12345",         # Required: IntegrationTask ID
     reviewer_id="staff-uuid",    # Optional: Staff member key to assign as reviewer
     team_id="team-uuid",         # Optional: Team UUID to assign as reviewer
-    priority=Priority.HIGH,      # Optional: Priority level (NORMAL or HIGH), defaults to NORMAL
     review_mode=ReviewMode.REVIEW_REQUIRED,  # Optional: Review mode, defaults to REVIEW_REQUIRED
     annotations=[                # Optional: display annotations
         AnnotationItem(text="Auto-assigned", color="#FF9800"),
@@ -84,7 +83,6 @@ effect = AssignDocumentReviewer(
 - `document_id` (str/int, required): The IntegrationTask ID to assign a reviewer to
 - `reviewer_id` (str, optional): Staff member key to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
 - `team_id` (str, optional): Team UUID to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
-- `priority` (Priority, optional): Priority level - `Priority.NORMAL` or `Priority.HIGH`, defaults to `Priority.NORMAL`
 - `review_mode` (ReviewMode, optional): Review mode - `ReviewMode.REVIEW_REQUIRED`, `ReviewMode.ALREADY_REVIEWED`, or `ReviewMode.REVIEW_NOT_REQUIRED`, defaults to `ReviewMode.REVIEW_REQUIRED`
 - `annotations` (list[AnnotationItem], optional): Display annotations with `text` and `color` fields
 
@@ -98,7 +96,6 @@ effect = AssignDocumentReviewer(
 
 - Validates the document exists
 - Assigns either a staff member or team as the reviewer
-- Sets the priority level for the review
 - Configures the review mode based on document status
 - At least one of `reviewer_id` or `team_id` must be provided
 
@@ -246,7 +243,6 @@ This is an **example plugin** that demonstrates the structure and usage of Data 
 4. **Assign Reviewers** (for `AssignDocumentReviewer`):
    - Determine appropriate reviewer based on document type, specialty, or workload
    - Assign to staff member or team based on routing rules
-   - Set priority level based on document urgency
    - Configure review mode based on document status
 
 ## Annotations

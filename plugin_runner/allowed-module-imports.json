@@ -536,7 +536,6 @@
     "PrefillDocumentFieldData",
     "PrefillDocumentFields",
     "PrefillTemplate",
-    "Priority",
     "RemoveDocumentFromPatient",
     "ReportType",
     "ReviewMode",
@@ -545,7 +544,6 @@
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
-    "Priority",
     "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.categorize_document": [
