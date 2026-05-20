@@ -84,10 +84,26 @@ def test_create_includes_upload_keys(
     assert data["card_image_back_upload_key"] == back_key
 
 
+def test_create_accepts_upload_key_with_customer_prefix(
+    mock_db: dict[str, MagicMock], valid_create_kwargs: dict[str, Any]
+) -> None:
+    """Real upload keys land at ``<customer>/plugin-uploads/<plugin>/...``;
+    the SDK sanity-check accepts that, leaving the strict
+    customer+plugin-name match to the interpreter.
+    """
+    Coverage(
+        **valid_create_kwargs,
+        card_image_front_upload_key=(
+            "local/plugin-uploads/patient_coverage_companion/"
+            "20260520T013207Z-abc-front.png"
+        ),
+    ).create()  # should not raise
+
+
 def test_create_rejects_upload_key_outside_plugin_uploads_prefix(
     mock_db: dict[str, MagicMock], valid_create_kwargs: dict[str, Any]
 ) -> None:
-    """Keys that don't start with plugin-uploads/ are rejected at validate
+    """Keys that don't contain /plugin-uploads/ are rejected at validate
     time rather than at the platform boundary.
     """
     bad = Coverage(
