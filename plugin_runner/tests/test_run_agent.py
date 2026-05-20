@@ -230,13 +230,14 @@ def test_run_agent_serializes_via_scope_key_lock(
     anthropic_plugin_secrets: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Two RPC invocations sharing a scope_key serialize: the second sees AgentLocked.
+    """Two RPC invocations sharing a scope_key serialize; the loser tags the response.
 
     Sets up a re-entrant scenario: the agent's run() itself tries to
     acquire the same scope_key lock that the outer RunAgent RPC already
     holds. The inner attempt raises AgentLocked, which the RunAgent
-    handler catches and reports as success=False — same behavior the
-    real concurrent case produces.
+    handler catches and reports as success=False with
+    error_kind='AGENT_LOCKED' so the home-app side can recognize it as
+    retryable-with-backoff (doc §6.2).
     """
     from canvas_sdk.agents import agent_lock as agent_lock_helper
 
@@ -251,3 +252,30 @@ def test_run_agent_serializes_via_scope_key_lock(
     response = next(iter(plugin_runner.RunAgent(_make_request(scope_key=scope_key), None)))
     assert response.success is False
     assert list(response.effects) == []
+    assert response.error_kind == "AGENT_LOCKED"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_does_not_set_error_kind_on_generic_failure(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    anthropic_plugin_secrets: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic exception inside the agent leaves error_kind empty.
+
+    error_kind is reserved for *expected* failure modes the caller should
+    react to specifically (currently just AGENT_LOCKED). Unstructured
+    exceptions still surface as success=False, but error_kind must stay
+    empty so the caller doesn't mistake them for retryable contention.
+    """
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+
+    def _boom(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        raise RuntimeError("agent code bug")
+
+    monkeypatch.setattr(agent_cls, "run", _boom)
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    assert response.success is False
+    assert response.error_kind == ""

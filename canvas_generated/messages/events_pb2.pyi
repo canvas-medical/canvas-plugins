@@ -2342,9 +2342,11 @@ class Event(_message.Message):
     def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
-    __slots__ = ("success", "effects")
+    __slots__ = ("success", "effects", "error_kind")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     EFFECTS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_KIND_FIELD_NUMBER: _ClassVar[int]
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
-    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
+    error_kind: str
+    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ..., error_kind: _Optional[str] = ...) -> None: ...

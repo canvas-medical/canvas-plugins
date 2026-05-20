@@ -502,8 +502,12 @@ class PluginRunner(PluginRunnerServicer):
                     result = agent.run(state, gateway, trigger_payload)
                     agent.save_state(request.scope_key, result.state)
             except AgentLocked as exc:
+                # Contention is an expected outcome (another invocation holds
+                # the lock for this scope_key). Tag the response with
+                # error_kind so the home-app side can recognize this as a
+                # retryable-with-backoff failure rather than a generic crash.
                 log.warning(f"RunAgent: lock contention — {exc}")
-                yield EventResponse(success=False, effects=[])
+                yield EventResponse(success=False, effects=[], error_kind="AGENT_LOCKED")
                 return
             except Exception as exc:
                 log.exception(f"RunAgent: agent {request.agent_id} raised")
