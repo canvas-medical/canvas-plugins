@@ -39,20 +39,25 @@ class PhotoSide(StrEnum):
     BACK = "BACK"
 
 
-_PLUGIN_UPLOAD_PREFIX = "plugin-uploads/"
+_PLUGIN_UPLOAD_SEGMENT = "/plugin-uploads/"
 
 
 def _check_upload_key(key: str | None) -> str | None:
     """Return an error message if the upload key is malformed, else None.
 
-    A valid key starts with ``plugin-uploads/`` so the platform can route
-    the server-side copy. The platform enforces the per-plugin prefix when
-    the effect is applied.
+    The S3 keys returned by an ``upload_files=True`` SimpleAPI route always
+    contain the segment ``/plugin-uploads/<plugin>/...`` somewhere after the
+    customer prefix. We just sanity-check that the segment is present here;
+    the platform enforces the *strict* full prefix (customer + plugin) when
+    the effect is interpreted.
     """
     if key is None:
         return None
-    if not key.startswith(_PLUGIN_UPLOAD_PREFIX):
-        return f"Card image upload key must start with '{_PLUGIN_UPLOAD_PREFIX}'. Got: {key!r}"
+    if _PLUGIN_UPLOAD_SEGMENT not in ("/" + key):
+        return (
+            f"Card image upload key must contain '{_PLUGIN_UPLOAD_SEGMENT}'. "
+            f"Got: {key!r}"
+        )
     return None
 
 
