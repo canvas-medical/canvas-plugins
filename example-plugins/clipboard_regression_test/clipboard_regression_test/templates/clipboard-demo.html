@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Clipboard Regression Test</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 1.5rem; max-width: 640px; }
+      h2 { margin-top: 0; }
+      button { margin: 0 0.5rem 0.5rem 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+      pre { background: #f4f4f4; padding: 1rem; min-height: 4rem; white-space: pre-wrap; border-radius: 4px; }
+      .ok { color: #0a7f2e; }
+      .fail { color: #b00020; }
+    </style>
+  </head>
+  <body>
+    <h2>Clipboard Regression Test</h2>
+    <p>
+      Verifies the iframe receives <code>allow="clipboard-read clipboard-write"</code>
+      based on the plugin's <code>url_permissions</code> declarations.
+      Expected: both buttons log a success line.
+    </p>
+    <button id="write-btn">Write "hello from canvas"</button>
+    <button id="read-btn">Read clipboard</button>
+    <button id="clear-btn">Clear log</button>
+    <pre id="log"></pre>
+    <script>
+      const logEl = document.getElementById('log');
+      const log = (msg, cls) => {
+        const line = document.createElement('div');
+        if (cls) line.className = cls;
+        line.textContent = msg;
+        logEl.appendChild(line);
+      };
+      document.getElementById('write-btn').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText('hello from canvas');
+          log('write ok', 'ok');
+        } catch (e) {
+          log('write FAILED: ' + e.name + ' — ' + e.message, 'fail');
+        }
+      });
+      document.getElementById('read-btn').addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          log('read ok: ' + JSON.stringify(text), 'ok');
+        } catch (e) {
+          log('read FAILED: ' + e.name + ' — ' + e.message, 'fail');
+        }
+      });
+      document.getElementById('clear-btn').addEventListener('click', () => {
+        logEl.textContent = '';
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,44 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "clipboard_regression_test",
+    "description": "Regression test plugin: verifies CLIPBOARD_READ / CLIPBOARD_WRITE iframe permissions.",
+    "url_permissions": [
+        {
+            "url": "/plugin-io/api/clipboard_regression_test/app/clipboard-demo",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS", "CLIPBOARD_READ", "CLIPBOARD_WRITE"]
+        }
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "clipboard_regression_test.applications.my_application:MyApplication",
+                "name": "Clipboard Regression Test",
+                "description": "Smoke test for clipboard iframe permissions.",
+                "scope": "provider_menu_item",
+                "icon": "assets/icon.png"
+            }
+        ],
+        "handlers": [
+            {
+                "class": "clipboard_regression_test.handlers.my_web_app:MyWebApp",
+                "description": "Serves the clipboard demo iframe.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
