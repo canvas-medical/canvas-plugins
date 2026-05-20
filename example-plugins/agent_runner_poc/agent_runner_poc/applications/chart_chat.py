@@ -1,41 +1,40 @@
 """ChartChatApplication — patient-chart embedded chat UI.
 
-Opens a right-pane modal that talks to two SimpleAPI endpoints:
+Opens a right-pane modal backed by three SimpleAPI endpoints:
 
 - ``GET /chart-chat-ui?patient={id}`` — serves the chat HTML.
 - ``GET /chart-chat-history?patient={id}`` — returns existing conversation
-  messages as JSON for the UI to render on load.
+  messages as JSON for the UI to render on load and to poll while a
+  response is in flight.
 - ``POST /chart-chat-message`` — accepts ``{patient_id, message}``,
-  synchronously invokes :class:`ChartChatAgent`, and returns the agent's
-  response text. Inline-synchronous (no Celery hop) so the UI gets a
-  response within the request's HTTP lifecycle.
+  emits a :class:`RunAgentEffect` for :class:`ChartChatAgent`, and
+  returns ``202 Accepted`` immediately. The agent runs asynchronously
+  on the plugin-runner (Celery → ``RunAgent`` RPC, same path as
+  triggered agents); the UI polls ``/chart-chat-history`` until the
+  assistant turn lands.
 
-Like the triggered invocation path, this handler reads the Anthropic
-key from the plugin's own secrets via :meth:`LLMGateway.from_plugin_secrets`
-— declared as ``ANTHROPIC_API_KEY`` in the manifest's ``variables`` list
-and configured per-customer in the home-app admin. The lock primitive
-(:func:`canvas_sdk.agents.agent_lock`) is acquired in-process here just
-as it would be on the plugin-runner during a triggered run; contention
-returns HTTP 409.
+Going through the standard ``RunAgentEffect`` path means the agent's
+``load_state`` → ``run`` → ``save_state`` lifecycle runs inside the
+plugin-runner's ``agent_lock`` for the patient's scope_key — concurrent
+messages on the same patient serialize naturally, the read-modify-write
+of the conversation snapshot stays atomic, and the SimpleAPI request
+thread is freed immediately (no long-lived plugin-runner worker held
+for the LLM round-trip).
 """
 
 from http import HTTPStatus
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat import ChartChatAgent
 from agent_runner_poc.models.conversation import Conversation
-from canvas_sdk.agents import (
-    AgentLocked,
-    LLMGateway,
-    LLMGatewayConfigurationError,
-    agent_lock,
-)
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
+
+CHART_CHAT_AGENT_ID = "agent_runner_poc.agents.chart_chat:ChartChatAgent"
 
 
 def _scope_key(patient_id: str) -> str:
@@ -72,7 +71,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
 
     @api.get("/chart-chat-history")
     def chart_chat_history(self) -> list[Response | Effect]:
-        """Return existing conversation messages so the UI can render on load."""
+        """Return existing conversation messages so the UI can render and poll."""
         patient_id = self.request.query_params["patient"]
         conversation = Conversation.objects.filter(patient__id=patient_id).first()
         messages = list(conversation.messages or []) if conversation else []
@@ -85,55 +84,29 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/chart-chat-message")
     def chart_chat_message(self) -> list[Response | Effect]:
-        """Invoke the agent synchronously and return the assistant's response."""
+        """Enqueue the agent run; return 202 and let the UI poll for the reply.
+
+        Dispatch goes through the same ``RunAgentEffect`` →
+        ``RunAgentEffectInterpreter`` → Celery → plugin-runner ``RunAgent``
+        path as triggered agents. ``user_message`` rides on
+        ``trigger_payload``; the agent appends it to the conversation
+        snapshot inside the ``agent_lock`` so the read-modify-write stays
+        atomic with any concurrent run.
+        """
         body = self.request.json()
         patient_id: str = body["patient_id"]
         user_message: str = body["message"]
 
-        try:
-            gateway = LLMGateway.from_plugin_secrets(self.secrets)
-        except LLMGatewayConfigurationError as exc:
-            return [
-                JSONResponse(
-                    {"error": str(exc)},
-                    status_code=HTTPStatus.SERVICE_UNAVAILABLE,
-                )
-            ]
-
-        # Inline invocation — load_state, run, save_state run in this HTTP
-        # request rather than via the run_agent Celery task. Different
-        # invocation path, same AgentPlugin contract.
-        #
-        # agent_lock prevents two parallel messages on the same scope_key
-        # (same patient's chat) from racing on the snapshot state — without
-        # it, two concurrent POSTs would both load the same baseline and
-        # the last save_state would clobber the other's turn. On contention
-        # we return 409; the UI can surface "the previous message is still
-        # being answered" rather than silently dropping a turn.
-        scope_key = _scope_key(patient_id)
-        try:
-            with agent_lock(scope_key):
-                agent = ChartChatAgent()
-                state = agent.load_state(scope_key)
-                result = agent.run(
-                    state,
-                    gateway,
-                    {"patient_id": patient_id, "user_message": user_message},
-                )
-                agent.save_state(scope_key, result.state)
-        except AgentLocked:
-            return [
-                JSONResponse(
-                    {"error": "The agent is still responding to a previous message."},
-                    status_code=HTTPStatus.CONFLICT,
-                )
-            ]
-
         return [
             JSONResponse(
-                {"response": result.state.data.get("last_response", "")},
-                status_code=HTTPStatus.OK,
-            )
+                {"status": "queued"},
+                status_code=HTTPStatus.ACCEPTED,
+            ),
+            RunAgentEffect(
+                agent_id=CHART_CHAT_AGENT_ID,
+                scope_key=_scope_key(patient_id),
+                trigger_payload={"patient_id": patient_id, "user_message": user_message},
+            ).apply(),
         ]
 
 

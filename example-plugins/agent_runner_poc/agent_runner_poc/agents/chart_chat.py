@@ -5,12 +5,15 @@ Demonstrates the snapshot state pattern from doc §6.12:
   full message history into ``state.data["messages"]``.
 - ``run()`` appends the user's new message, drives a tool-use loop over
   the chart, appends the assistant's response, and stashes the text in
-  ``state.data["last_response"]`` for the caller to relay.
+  ``state.data["last_response"]``.
 - ``save_state`` writes the updated message list back to the same row.
 
-The trigger here isn't an event — it's the SimpleAPI handler invoking
-the agent synchronously inside an HTTP request. ``trigger_payload``
-carries ``patient_id`` and the new ``user_message`` text.
+Dispatched via the standard ``RunAgent`` path: the chat UI's POST
+handler emits a :class:`RunAgentEffect` with ``{patient_id, user_message}``
+in ``trigger_payload``, the home-app ``RunAgentEffectInterpreter`` enqueues
+a Celery task, and the plugin-runner's ``RunAgent`` RPC drives the
+lifecycle inside the per-``scope_key`` ``agent_lock``. The UI polls
+``/chart-chat-history`` to surface the assistant turn when it lands.
 
 For phase 1 the agent has read tools only. Effect tools could be added
 later (e.g. ``propose_task`` so the chat can stage actions inline).
