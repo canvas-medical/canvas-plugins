@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.155.0 (2026-05-21)
+
+### Features
+
+- Enter in error custom commands
+  ([#1697](https://github.com/canvas-medical/canvas-plugins/pull/1697),
+  [`a42e76a`](https://github.com/canvas-medical/canvas-plugins/commit/a42e76a076601adf7cbcc0aff8faed7c8ef39a04))
+
+
 ## v0.154.1 (2026-05-20)
 
 ### Bug Fixes
