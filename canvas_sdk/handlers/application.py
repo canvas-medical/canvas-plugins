@@ -5,6 +5,7 @@ from enum import StrEnum
 import deprecation
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.application_notification_badge import SetApplicationNotificationBadge
 from canvas_sdk.effects.show_application import ShowApplicationEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
@@ -20,6 +21,7 @@ class Application(BaseHandler, ABC):
         EventType.Name(EventType.APPLICATION__ON_OPEN),
         EventType.Name(EventType.APPLICATION__ON_CONTEXT_CHANGE),
         EventType.Name(EventType.APPLICATION__ON_GET),
+        EventType.Name(EventType.APPLICATION__GET_NOTIFICATION_BADGE),
     ]
 
     def compute(self) -> list[Effect]:
@@ -31,6 +33,29 @@ class Application(BaseHandler, ABC):
                 return normalize_effects(self.on_open())
             case EventType.APPLICATION__ON_CONTEXT_CHANGE:
                 return normalize_effects(self.on_context_change())
+            case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
+                count = self.compute_notification_badge()
+                if count is None:
+                    return []
+                staff_key = self.event.context.get("staff_key")
+                patient_key = self.event.context.get("patient_key")
+                if staff_key:
+                    staff_ids = [staff_key]
+                    patient_ids: list[str] = []
+                elif patient_key:
+                    staff_ids = []
+                    patient_ids = [patient_key]
+                else:
+                    staff_ids = []
+                    patient_ids = []
+                return [
+                    SetApplicationNotificationBadge(
+                        application_identifier=self.identifier,
+                        count=count,
+                        staff_ids=staff_ids,
+                        patient_ids=patient_ids,
+                    ).apply()
+                ]
             case _:
                 return []
 
@@ -41,6 +66,15 @@ class Application(BaseHandler, ABC):
 
     def on_context_change(self) -> Effect | list[Effect] | None:
         """Handle the application context change event."""
+        return None
+
+    def compute_notification_badge(self) -> int | None:
+        """Return the current notification badge count for this application.
+
+        Override to expose a count on the application icon. Return ``None`` (the
+        default) to emit no badge. ``0`` is a valid value and clears an existing
+        badge.
+        """
         return None
 
     @property
