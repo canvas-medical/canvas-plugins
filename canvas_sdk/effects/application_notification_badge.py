@@ -3,20 +3,79 @@ from typing import Any
 from pydantic import Field
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.base import _BaseEffect
 
 
-class SetApplicationNotificationBadge(_BaseEffect):
-    """An Effect that sets the notification badge count for an Application icon.
+class ApplicationNotificationBadge:
+    """Fluent builder for updating an Application's notification badge.
 
-    Targets are specified as two parallel lists:
+    Usage:
+        ApplicationNotificationBadge("my_plugin__inbox").broadcast(count=3, staff_ids=["s-1"])
+        ApplicationNotificationBadge("my_plugin__inbox").filter(patient_ids=["p-1"]).broadcast(count=5)
+        ApplicationNotificationBadge("my_plugin__inbox").broadcast(count=0)  # clears for everyone
 
-    - ``staff_ids``: staff keys whose EMR badge should update.
-    - ``patient_ids``: patient keys whose portal badge should update.
+    Call ``.broadcast(...)`` to emit the badge update as an ``Effect``. ``.filter(...)``
+    is optional and chains before ``.broadcast(...)`` to target patient recipients.
 
-    Both lists may be combined in a single effect (e.g., a message between a staff
-    member and a patient updates both sides at once). When both lists are empty the
-    update is broadcast to every connected user.
+    When both ``staff_ids`` (passed to ``.broadcast``) and ``patient_ids`` (set via
+    ``.filter``) are empty, the update is broadcast to every connected user.
+    """
+
+    application_identifier: str
+    _filters: dict[str, Any] = {}
+
+    def __init__(self, application_identifier: str) -> None:
+        """Bind this builder to the target application's identifier.
+
+        ``application_identifier`` must match the ``class`` string declared for the
+        application in ``CANVAS_MANIFEST.json`` (and the runtime
+        ``Application.identifier`` produced by the SDK base class).
+        """
+        self.application_identifier = application_identifier
+
+    def filter(self, *, patient_ids: list[str] | None = None) -> "ApplicationNotificationBadge":
+        """Restrict the broadcast to specific patient recipients.
+
+        ``patient_ids``: list of patient keys that should receive the badge update.
+        The keys must be patient externally-exposable identifiers (matching the SDK's
+        ``Patient.id`` convention).
+
+        Returns ``self`` so the call chains into ``.broadcast(...)``.
+        """
+        filters = {}
+        if patient_ids is not None:
+            filters["patient_ids"] = patient_ids
+        self._filters = filters
+        return self
+
+    def broadcast(self, count: int, staff_ids: list[str] | None = None) -> Effect:
+        """Emit the badge update as an ``Effect``.
+
+        ``count``: the new badge value. Must be ``>= 0``; ``0`` clears the badge.
+
+        ``staff_ids``: list of staff keys that should receive the update. Combined
+        with any ``patient_ids`` previously set via ``.filter(...)``. When both
+        lists are empty/omitted, the update is broadcast to every connected user
+        (the home-app ``applications.badge.all_users`` channel).
+
+        Returns the wrapped ``Effect`` ready to be appended to a handler's
+        ``compute()`` return value.
+        """
+        return _SetApplicationNotificationBadge(
+            application_identifier=self.application_identifier,
+            count=count,
+            patient_ids=self._filters.get("patient_ids") or [],
+            staff_ids=staff_ids or [],
+        ).apply()
+
+
+class _SetApplicationNotificationBadge(_BaseEffect):
+    """Internal effect model produced by ``ApplicationNotificationBadge.broadcast``.
+
+    Not part of the public SDK surface; plugin authors should always go through
+    the ``ApplicationNotificationBadge`` builder. This class only exists to
+    serialize the payload into the protobuf ``Effect`` consumed by home-app.
     """
 
     class Meta:
@@ -29,7 +88,7 @@ class SetApplicationNotificationBadge(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """The SetApplicationNotificationBadge effect's values."""
+        """Serialize this effect's targeting + count into the JSON payload shape."""
         return {
             "application_identifier": self.application_identifier,
             "count": self.count,
@@ -37,10 +96,5 @@ class SetApplicationNotificationBadge(_BaseEffect):
             "patient_ids": self.patient_ids,
         }
 
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
 
-
-__exports__ = ("SetApplicationNotificationBadge",)
+__exports__ = ("ApplicationNotificationBadge",)

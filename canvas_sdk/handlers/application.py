@@ -5,7 +5,7 @@ from enum import StrEnum
 import deprecation
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.application_notification_badge import SetApplicationNotificationBadge
+from canvas_sdk.effects.application_notification_badge import ApplicationNotificationBadge
 from canvas_sdk.effects.show_application import ShowApplicationEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
@@ -37,24 +37,21 @@ class Application(BaseHandler, ABC):
                 count = self.compute_notification_badge()
                 if count is None:
                     return []
-                staff_key = self.event.context.get("staff_key")
-                patient_key = self.event.context.get("patient_key")
-                if staff_key:
-                    staff_ids = [staff_key]
+                staff_id = self.event.context.get("staff_key")
+                patient_id = self.event.context.get("patient_key")
+                if staff_id:
+                    staff_ids = [str(staff_id)]
                     patient_ids: list[str] = []
-                elif patient_key:
+                elif patient_id:
                     staff_ids = []
-                    patient_ids = [patient_key]
+                    patient_ids = [str(patient_id)]
                 else:
                     staff_ids = []
                     patient_ids = []
                 return [
-                    SetApplicationNotificationBadge(
-                        application_identifier=self.identifier,
-                        count=count,
-                        staff_ids=staff_ids,
-                        patient_ids=patient_ids,
-                    ).apply()
+                    ApplicationNotificationBadge(application_identifier=self.identifier)
+                    .filter(patient_ids=patient_ids)
+                    .broadcast(count, staff_ids=staff_ids)
                 ]
             case _:
                 return []
