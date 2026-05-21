@@ -39,15 +39,8 @@ class Application(BaseHandler, ABC):
                     return []
                 staff_id = self.event.context.get("staff_key")
                 patient_id = self.event.context.get("patient_key")
-                if staff_id:
-                    staff_ids = [str(staff_id)]
-                    patient_ids: list[str] = []
-                elif patient_id:
-                    staff_ids = []
-                    patient_ids = [str(patient_id)]
-                else:
-                    staff_ids = []
-                    patient_ids = []
+                staff_ids = [str(staff_id)] if staff_id else []
+                patient_ids = [str(patient_id)] if patient_id else []
                 return [
                     ApplicationNotificationBadge(application_identifier=self.identifier)
                     .filter(patient_ids=patient_ids)

@@ -142,8 +142,12 @@ def test_missing_user_keys_in_context_yields_both_lists_empty() -> None:
     assert data["patient_ids"] == []
 
 
-def test_staff_key_takes_precedence_when_both_keys_present() -> None:
-    """If both staff_key and patient_key are present, staff_key wins (one or the other, not both)."""
+def test_combined_keys_produce_both_lists() -> None:
+    """When both staff_key and patient_key are present, the effect carries both lists.
+
+    This is the patient-chart resolver path: home-app emits the event with both keys
+    so the auto-wrapped effect routes to the composite staff.{s}.patient.{p} channel.
+    """
     identifier = f"{_BadgeApp.__module__}:{_BadgeApp.__qualname__}"
     app = _BadgeApp(
         _make_badge_event(
@@ -156,4 +160,4 @@ def test_staff_key_takes_precedence_when_both_keys_present() -> None:
 
     data = json.loads(result[0].payload)["data"]
     assert data["staff_ids"] == ["s1"]
-    assert data["patient_ids"] == []
+    assert data["patient_ids"] == ["p1"]
