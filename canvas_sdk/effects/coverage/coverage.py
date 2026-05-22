@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects._upload_key import check_upload_key
 from canvas_sdk.v1.data.coverage import (
     Coverage as CoverageModel,
 )
@@ -39,26 +40,6 @@ class PhotoSide(StrEnum):
     BACK = "BACK"
 
 
-_PLUGIN_UPLOAD_SEGMENT = "/plugin-uploads/"
-
-
-def _check_upload_key(key: str | None) -> str | None:
-    """Return an error message if the upload key is malformed, else None.
-
-    The S3 keys returned by an ``upload_files=True`` SimpleAPI route always
-    contain the segment ``/plugin-uploads/<plugin>/...`` somewhere after the
-    customer prefix. We just sanity-check that the segment is present here;
-    the platform enforces the *strict* full prefix (customer + plugin) when
-    the effect is interpreted.
-    """
-    if key is None:
-        return None
-    if _PLUGIN_UPLOAD_SEGMENT not in ("/" + key):
-        return (
-            f"Card image upload key must contain '{_PLUGIN_UPLOAD_SEGMENT}'. "
-            f"Got: {key!r}"
-        )
-    return None
 
 
 class Coverage(TrackableFieldsModel):
@@ -200,7 +181,9 @@ class Coverage(TrackableFieldsModel):
     def _validate_upload_keys(self) -> list[InitErrorDetails]:
         errors: list[InitErrorDetails] = []
         for field_name in ("card_image_front_upload_key", "card_image_back_upload_key"):
-            err = _check_upload_key(getattr(self, field_name))
+            err = check_upload_key(
+                getattr(self, field_name), field_label="Card image upload key"
+            )
             if err:
                 errors.append(self._create_error_detail("value", err, getattr(self, field_name)))
         return errors

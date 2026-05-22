@@ -7,6 +7,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects._upload_key import check_upload_key
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
@@ -14,6 +15,12 @@ from canvas_sdk.v1.data import Patient, Staff
 class Message(TrackableFieldsModel):
     """
     Effect to create and/or send a message.
+
+    File attachments are added by passing S3 keys under your plugin's uploads
+    prefix (``plugin-uploads/<your-plugin-name>/...``) on
+    ``attachment_upload_keys``. Each key becomes a ``MessageAttachment`` row;
+    Canvas server-side-copies the file into message attachment storage when
+    the effect is applied.
     """
 
     class Meta:
@@ -24,9 +31,19 @@ class Message(TrackableFieldsModel):
     sender_id: str | UUID
     recipient_id: str | UUID
     read: datetime | None = None
+    attachment_upload_keys: list[str] | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+
+        for index, key in enumerate(self.attachment_upload_keys or []):
+            err = check_upload_key(key, field_label="Attachment upload key")
+            if err:
+                errors.append(
+                    self._create_error_detail(
+                        "value", f"attachment_upload_keys[{index}]: {err}", key
+                    )
+                )
 
         if (
             not Patient.objects.filter(id=self.sender_id).exists()
