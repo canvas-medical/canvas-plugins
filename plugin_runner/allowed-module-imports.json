@@ -382,6 +382,9 @@
   "canvas_sdk.commands.commands.update_goal": [
     "UpdateGoalCommand"
   ],
+  "canvas_sdk.commands.commands.visual_exam_finding": [
+    "VisualExamFindingCommand"
+  ],
   "canvas_sdk.commands.commands.vitals": [
     "VitalsCommand"
   ],
@@ -661,6 +664,12 @@
   ],
   "canvas_sdk.effects.patient_group": [
     "PatientGroupEffect"
+  ],
+  "canvas_sdk.effects.patient_identification_card": [
+    "PatientIdentificationCard"
+  ],
+  "canvas_sdk.effects.patient_identification_card.patient_identification_card": [
+    "PatientIdentificationCard"
   ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",
