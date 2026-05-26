@@ -236,6 +236,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     HEALTH_GORILLA_LAB_ORDER_OVERRIDE: _ClassVar[EffectType]
     HEALTH_GORILLA_LAB_ORDER_INGEST: _ClassVar[EffectType]
     HEALTH_GORILLA_LAB_REPORT_INGEST: _ClassVar[EffectType]
+    SET_COMMAND_CUSTOM_HTML: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
@@ -601,6 +602,7 @@ COMMAND_VALIDATION_ERRORS: EffectType
 HEALTH_GORILLA_LAB_ORDER_OVERRIDE: EffectType
 HEALTH_GORILLA_LAB_ORDER_INGEST: EffectType
 HEALTH_GORILLA_LAB_REPORT_INGEST: EffectType
+SET_COMMAND_CUSTOM_HTML: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType

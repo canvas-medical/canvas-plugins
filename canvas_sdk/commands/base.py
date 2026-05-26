@@ -9,6 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.command_custom_html import _CommandCustomHtml
 from canvas_sdk.effects.command_metadata.base import _CommandMetadata
 
 if TYPE_CHECKING:
@@ -153,6 +154,16 @@ class _BaseCommand(TrackableFieldsModel):
                 }
             ),
         )
+
+    def set_custom_html(self, custom_html: str | None) -> Effect:
+        """Set or clear custom_html on a command."""
+        if not self.command_uuid:
+            raise ValueError("Field 'command_uuid' is required to set custom html.")
+
+        return _CommandCustomHtml(
+            command_id=self.command_uuid,
+            custom_html=custom_html,
+        ).apply()
 
     def delete(self) -> Effect:
         """Delete the command."""
