@@ -37,8 +37,10 @@ class Application(BaseHandler, ABC):
                 count = self.compute_notification_badge()
                 if count is None:
                     return []
-                staff_id = self.event.context.get("staff_key")
-                patient_id = self.event.context.get("patient_key")
+                staff = self.event.context.get("staff") or {}
+                patient = self.event.context.get("patient") or {}
+                staff_id = staff.get("id")
+                patient_id = patient.get("id")
                 staff_ids = [str(staff_id)] if staff_id else []
                 patient_ids = [str(patient_id)] if patient_id else []
                 return [
@@ -100,6 +102,9 @@ class EmbeddedApplication(Application, ABC):
                             priority=self.PRIORITY,
                         ).apply()
                     ]
+                return []
+            case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
+                # Explicitly ignore the event here in case it's emitted directly.
                 return []
             case _:
                 return super().compute()

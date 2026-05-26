@@ -1,12 +1,28 @@
 """Tests for the ApplicationNotificationBadge fluent builder."""
 
 import json
+from collections.abc import Iterator
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.application_notification_badge import ApplicationNotificationBadge
+
+
+@pytest.fixture(autouse=True)
+def _stub_application_exists() -> Iterator[MagicMock]:
+    """Stub Application.objects.filter().exists() to True so .broadcast() doesn't hit the DB.
+
+    Individual tests that want to exercise the missing-Application path override
+    this by patching ``Application.objects.filter`` themselves.
+    """
+    with patch(
+        "canvas_sdk.effects.application_notification_badge.Application.objects.filter"
+    ) as mock_filter:
+        mock_filter.return_value.exists.return_value = True
+        yield mock_filter
 
 
 def test_broadcast_returns_effect_with_correct_type() -> None:
@@ -116,3 +132,29 @@ def test_filter_with_none_patient_ids_is_a_noop() -> None:
 
     data = json.loads(effect.payload)["data"]
     assert data["patient_ids"] == []
+
+
+# --- Application-existence validation ----------------------------------------
+
+
+def test_broadcast_rejects_unknown_application_identifier(
+    _stub_application_exists: MagicMock,
+) -> None:
+    """If the application_identifier doesn't match an installed Application, .broadcast() raises."""
+    _stub_application_exists.return_value.exists.return_value = False
+
+    with pytest.raises(ValidationError) as exc_info:
+        ApplicationNotificationBadge("typo__not_installed").broadcast(count=1, staff_ids=["s1"])
+
+    assert any(
+        "Application 'typo__not_installed' not found" in str(e) for e in exc_info.value.errors()
+    )
+
+
+def test_broadcast_queries_application_table_by_identifier(
+    _stub_application_exists: MagicMock,
+) -> None:
+    """The existence check queries the Application table filtering by identifier."""
+    ApplicationNotificationBadge("my_plugin__my_app").broadcast(count=1, staff_ids=["s1"])
+
+    _stub_application_exists.assert_called_with(identifier="my_plugin__my_app")

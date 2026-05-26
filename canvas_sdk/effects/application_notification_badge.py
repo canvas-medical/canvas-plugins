@@ -1,10 +1,12 @@
 from typing import Any
 
 from pydantic import Field
+from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.base import _BaseEffect
+from canvas_sdk.v1.data.application import Application
 
 
 class ApplicationNotificationBadge:
@@ -85,6 +87,24 @@ class _SetApplicationNotificationBadge(_BaseEffect):
     count: int = Field(ge=0)
     staff_ids: list[str] = Field(default_factory=list)
     patient_ids: list[str] = Field(default_factory=list)
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Reject identifiers that don't match an installed Application row."""
+        errors = super()._get_error_details(method)
+
+        if (
+            self.application_identifier
+            and not Application.objects.filter(identifier=self.application_identifier).exists()
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Application '{self.application_identifier}' not found.",
+                    self.application_identifier,
+                )
+            )
+
+        return errors
 
     @property
     def values(self) -> dict[str, Any]:
