@@ -41,7 +41,7 @@ class PatientConsentCoding(Coding):
         otherwise returns None.
         """
         if self.document:
-            return presigned_url(self.document)
+            return presigned_url(self.document.name)
         return None
 
 
