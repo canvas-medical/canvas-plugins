@@ -456,6 +456,17 @@ class PluginRunner(PluginRunnerServicer):
 
 STOP_SYNCHRONIZER = threading.Event()
 
+# HOME-APP-11Y5 / KOALA-5359 — set after the synchronizer has successfully
+# psubscribed at least once. Distinguishes startup race (redis DNS not yet
+# resolvable on container cold start) from genuine mid-run failure.
+SYNCHRONIZER_HAS_CONNECTED = threading.Event()
+
+# Cap on connection-error retries before escalating to Sentry even during
+# startup. 60 retries x ~0.5s sleep ≈ 30s grace window — enough for any
+# realistic CI cold-start DNS race; short enough that a real misconfiguration
+# still surfaces.
+STARTUP_RETRY_LIMIT = 60
+
 
 def synchronize_plugins(run_once: bool = False) -> None:
     """
@@ -467,6 +478,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
     _, pubsub = get_client()
 
     pubsub.psubscribe(CHANNEL_NAME)
+    SYNCHRONIZER_HAS_CONNECTED.set()
 
     while not STOP_SYNCHRONIZER.is_set():
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
@@ -532,15 +544,35 @@ def synchronize_plugins(run_once: bool = False) -> None:
 def synchronize_plugins_and_report_errors() -> None:
     """
     Run synchronize_plugins() in perpetuity and report any encountered errors.
+
+    HOME-APP-11Y5 / KOALA-5359: connection errors before the synchronizer has
+    ever connected are an expected race during container cold start — redis
+    DNS is briefly unresolvable while the docker network attaches. Suppress
+    them from Sentry until either the synchronizer connects successfully or
+    STARTUP_RETRY_LIMIT retries have elapsed. After that, escalate as before.
     """
     log.info("synchronize_plugins: starting loop...")
+
+    startup_retries = 0
 
     while not STOP_SYNCHRONIZER.is_set():
         try:
             synchronize_plugins()
         except Exception as e:
-            log.exception("synchronize_plugins: error")
-            sentry_sdk.capture_exception(e)
+            in_startup_grace = (
+                not SYNCHRONIZER_HAS_CONNECTED.is_set()
+                and isinstance(e, ConnectionError)
+                and startup_retries < STARTUP_RETRY_LIMIT
+            )
+            if in_startup_grace:
+                startup_retries += 1
+                log.warning(
+                    "synchronize_plugins: redis not yet reachable "
+                    f"(startup retry {startup_retries}/{STARTUP_RETRY_LIMIT})"
+                )
+            else:
+                log.exception("synchronize_plugins: error")
+                sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
         sleep(0.5)

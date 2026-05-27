@@ -5,6 +5,7 @@ import pickle
 import shutil
 import signal
 from base64 import b64encode
+from collections.abc import Callable, Iterator
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
@@ -32,11 +33,14 @@ from plugin_runner.plugin_runner import (
     ENVIRONMENT,
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
+    STARTUP_RETRY_LIMIT,
+    SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
     load_or_reload_plugin,
     load_plugin,
     load_plugins,
     synchronize_plugins,
+    synchronize_plugins_and_report_errors,
     unload_plugin,
 )
 from plugin_runner.sandbox import Sandbox
@@ -638,6 +642,158 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 
         mock_install_plugins.assert_not_called()
         mock_load_plugins.assert_not_called()
+
+
+# HOME-APP-11Y5 / KOALA-5359 — on container cold start in CI, redis DNS is
+# briefly unresolvable and the synchronizer thread's `pubsub.psubscribe` raises
+# a redis ConnectionError. The wrapping retry loop captured every exception to
+# Sentry, producing tens of events per CI run (~10,000+ events/week).
+# Earlier workflow-side fixes (#18970, #19041) removed restart-driven
+# amplifiers, but the fundamental race remained on any cold-start path.
+# These tests pin the suppress-during-startup-grace behavior.
+
+
+@pytest.fixture
+def _reset_synchronizer_state() -> Iterator[None]:
+    """Module-level Event persists across tests; reset before/after each."""
+    SYNCHRONIZER_HAS_CONNECTED.clear()
+    yield
+    SYNCHRONIZER_HAS_CONNECTED.clear()
+
+
+def _stop_after(n: int) -> Callable[[], bool]:
+    """Return a side_effect that lets the report-errors loop run `n` iterations
+    before STOP_SYNCHRONIZER.is_set() trips. The loop calls is_set() once per
+    iteration (the `while not STOP_SYNCHRONIZER.is_set():` check).
+    """
+    counter = {"i": 0}
+
+    def _is_set() -> bool:
+        counter["i"] += 1
+        return counter["i"] > n
+
+    return _is_set
+
+
+def test_synchronize_plugins_and_report_errors_suppresses_sentry_during_startup_grace(
+    _reset_synchronizer_state: None,
+) -> None:
+    """Connection errors before the synchronizer has ever connected should NOT
+    be captured to Sentry — they're an expected race during container cold
+    start, not a real error.
+    """
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    with (
+        patch("plugin_runner.plugin_runner.synchronize_plugins") as mock_sync,
+        patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture,
+        patch("plugin_runner.plugin_runner.sleep"),
+        patch.object(
+            __import__(
+                "plugin_runner.plugin_runner", fromlist=["STOP_SYNCHRONIZER"]
+            ).STOP_SYNCHRONIZER,
+            "is_set",
+            side_effect=_stop_after(3),
+        ),
+    ):
+        mock_sync.side_effect = RedisConnectionError(
+            "Error -3 connecting to redis:6379. Temporary failure in name resolution."
+        )
+
+        synchronize_plugins_and_report_errors()
+
+        # Three iterations all raised connection errors during startup grace.
+        # None should have escalated to Sentry.
+        mock_capture.assert_not_called()
+
+
+def test_synchronize_plugins_and_report_errors_captures_after_grace_window_expires(
+    _reset_synchronizer_state: None,
+) -> None:
+    """If redis is genuinely unreachable for longer than the grace window,
+    escalate to Sentry — silence is wrong for a real prod misconfiguration.
+    """
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    with (
+        patch("plugin_runner.plugin_runner.synchronize_plugins") as mock_sync,
+        patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture,
+        patch("plugin_runner.plugin_runner.sleep"),
+        patch.object(
+            __import__(
+                "plugin_runner.plugin_runner", fromlist=["STOP_SYNCHRONIZER"]
+            ).STOP_SYNCHRONIZER,
+            "is_set",
+            side_effect=_stop_after(STARTUP_RETRY_LIMIT + 2),
+        ),
+    ):
+        mock_sync.side_effect = RedisConnectionError(
+            "Error -3 connecting to redis:6379. Temporary failure in name resolution."
+        )
+
+        synchronize_plugins_and_report_errors()
+
+        # Once the retry limit is exceeded we escalate — at least one Sentry
+        # capture happens after grace expires.
+        assert mock_capture.call_count >= 1
+
+
+def test_synchronize_plugins_and_report_errors_captures_after_first_successful_connect(
+    _reset_synchronizer_state: None,
+) -> None:
+    """A connection error AFTER the synchronizer has connected once is a real
+    mid-run failure, not a startup race — it should always be captured.
+    """
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    # Simulate: first call connects successfully (sets the event), second call
+    # raises a connection error.
+    def _sync_side_effect(*args: Any, **kwargs: Any) -> None:
+        if not SYNCHRONIZER_HAS_CONNECTED.is_set():
+            SYNCHRONIZER_HAS_CONNECTED.set()
+            return None
+        raise RedisConnectionError("redis disappeared mid-run")
+
+    with (
+        patch("plugin_runner.plugin_runner.synchronize_plugins", side_effect=_sync_side_effect),
+        patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture,
+        patch("plugin_runner.plugin_runner.sleep"),
+        patch.object(
+            __import__(
+                "plugin_runner.plugin_runner", fromlist=["STOP_SYNCHRONIZER"]
+            ).STOP_SYNCHRONIZER,
+            "is_set",
+            side_effect=_stop_after(2),
+        ),
+    ):
+        synchronize_plugins_and_report_errors()
+
+        mock_capture.assert_called_once()
+
+
+def test_synchronize_plugins_and_report_errors_captures_non_connection_errors_immediately(
+    _reset_synchronizer_state: None,
+) -> None:
+    """Non-connection exceptions (e.g. ValueError from bad config) are always
+    captured, even during the startup window — they are not a startup race.
+    """
+    with (
+        patch("plugin_runner.plugin_runner.synchronize_plugins") as mock_sync,
+        patch("plugin_runner.plugin_runner.sentry_sdk.capture_exception") as mock_capture,
+        patch("plugin_runner.plugin_runner.sleep"),
+        patch.object(
+            __import__(
+                "plugin_runner.plugin_runner", fromlist=["STOP_SYNCHRONIZER"]
+            ).STOP_SYNCHRONIZER,
+            "is_set",
+            side_effect=_stop_after(1),
+        ),
+    ):
+        mock_sync.side_effect = ValueError("unexpected config shape")
+
+        synchronize_plugins_and_report_errors()
+
+        mock_capture.assert_called_once()
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
