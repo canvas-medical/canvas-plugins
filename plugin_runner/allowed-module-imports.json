@@ -1081,6 +1081,8 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
@@ -1387,6 +1389,10 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.instruction": [
+    "Instruction",
+    "InstructionCoding"
   ],
   "canvas_sdk.v1.data.integration_task": [
     "IntegrationTask",
