@@ -1,6 +1,80 @@
 # CHANGELOG
 
 
+## v0.155.0 (2026-05-21)
+
+### Features
+
+- Enter in error custom commands
+  ([#1697](https://github.com/canvas-medical/canvas-plugins/pull/1697),
+  [`a42e76a`](https://github.com/canvas-medical/canvas-plugins/commit/a42e76a076601adf7cbcc0aff8faed7c8ef39a04))
+
+
+## v0.154.1 (2026-05-20)
+
+### Bug Fixes
+
+- Remove priority from assign document reviewer effect
+  ([#1719](https://github.com/canvas-medical/canvas-plugins/pull/1719),
+  [`a89c33e`](https://github.com/canvas-medical/canvas-plugins/commit/a89c33eeddf79d440130f423b9c16be8ca16b4c6))
+
+
+## v0.154.0 (2026-05-19)
+
+### Bug Fixes
+
+- Example plugin for data integration
+  ([#1712](https://github.com/canvas-medical/canvas-plugins/pull/1712),
+  [`5e3df18`](https://github.com/canvas-medical/canvas-plugins/commit/5e3df18b2f52d9da86f935cd2b0b202f14443744))
+
+### Features
+
+- Expose document field on PatientConsentCoding SDK model
+  ([#1624](https://github.com/canvas-medical/canvas-plugins/pull/1624),
+  [`24f7820`](https://github.com/canvas-medical/canvas-plugins/commit/24f782021d2710cc7d54f6ae16874ef829047106))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Hines <andrew.hines@canvasmedical.com>
+
+
+## v0.153.0 (2026-05-18)
+
+### Features
+
+- [koala-3744] - add SDK data integration effects
+  ([#1517](https://github.com/canvas-medical/canvas-plugins/pull/1517),
+  [`b8ddbcb`](https://github.com/canvas-medical/canvas-plugins/commit/b8ddbcb82c7d02496ac32bf3b83908367b7bc786))
+
+Co-authored-by: irfan-vicert <irfan.cajo@vicert.com>
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.152.0 (2026-05-15)
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1701](https://github.com/canvas-medical/canvas-plugins/pull/1701),
+  [`5befc5b`](https://github.com/canvas-medical/canvas-plugins/commit/5befc5bf0c2c30f17578ee59587172dddfb5e326))
+
+### Features
+
+- Add Staff Metadata + Staff External Identifier SDK support
+  ([#1660](https://github.com/canvas-medical/canvas-plugins/pull/1660),
+  [`1ecde7c`](https://github.com/canvas-medical/canvas-plugins/commit/1ecde7c555c90f48bf06abb56b449faadae8cc65))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.151.0 (2026-05-15)
 
 ### Features

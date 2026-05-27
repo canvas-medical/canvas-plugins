@@ -74,6 +74,7 @@ from .immunization import (
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .instruction import Instruction, InstructionCoding
 from .integration_task import (
     IntegrationTask,
     IntegrationTaskChannel,
@@ -178,7 +179,16 @@ from .specialty_report_template import (
     SpecialtyReportTemplateField,
     SpecialtyReportTemplateFieldOption,
 )
-from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
+from .staff import (
+    Staff,
+    StaffAddress,
+    StaffContactPoint,
+    StaffExternalIdentifier,
+    StaffLicense,
+    StaffMetadata,
+    StaffPhoto,
+    StaffRole,
+)
 from .stop_medication_event import StopMedicationEvent
 from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
@@ -267,6 +277,8 @@ __all__ = __exports__ = (
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
@@ -366,10 +378,12 @@ __all__ = __exports__ = (
     "SnapshotImage",
     "Staff",
     "StaffAddress",
+    "StaffContactPoint",
+    "StaffExternalIdentifier",
     "StaffLicense",
+    "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
-    "StaffContactPoint",
     "StopMedicationEvent",
     "Task",
     "TaskComment",
