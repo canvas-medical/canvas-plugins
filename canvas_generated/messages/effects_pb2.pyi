@@ -367,6 +367,80 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_DOCUMENT_FIELDS: _ClassVar[EffectType]
     JUNK_DOCUMENT: _ClassVar[EffectType]
     REMOVE_DOCUMENT_FROM_PATIENT: _ClassVar[EffectType]
+    UPDATE_ORGANIZATION: _ClassVar[EffectType]
+    UPDATE_ORGANIZATION_BRANDING: _ClassVar[EffectType]
+    UPSERT_ORGANIZATION_SETTING: _ClassVar[EffectType]
+    CREATE_PRACTICE_LOCATION: _ClassVar[EffectType]
+    UPDATE_PRACTICE_LOCATION: _ClassVar[EffectType]
+    DELETE_PRACTICE_LOCATION: _ClassVar[EffectType]
+    UPSERT_PRACTICE_LOCATION_SETTING: _ClassVar[EffectType]
+    CREATE_ADDRESS: _ClassVar[EffectType]
+    UPDATE_ADDRESS: _ClassVar[EffectType]
+    DELETE_ADDRESS: _ClassVar[EffectType]
+    CREATE_STAFF: _ClassVar[EffectType]
+    UPDATE_STAFF: _ClassVar[EffectType]
+    DELETE_STAFF: _ClassVar[EffectType]
+    ACTIVATE_STAFF: _ClassVar[EffectType]
+    DEACTIVATE_STAFF: _ClassVar[EffectType]
+    CREATE_STAFF_LICENSE: _ClassVar[EffectType]
+    UPDATE_STAFF_LICENSE: _ClassVar[EffectType]
+    DELETE_STAFF_LICENSE: _ClassVar[EffectType]
+    CREATE_ROLE: _ClassVar[EffectType]
+    UPDATE_ROLE: _ClassVar[EffectType]
+    DELETE_ROLE: _ClassVar[EffectType]
+    ASSIGN_STAFF_ROLE: _ClassVar[EffectType]
+    REMOVE_STAFF_ROLE: _ClassVar[EffectType]
+    CREATE_PERMISSION_GROUP: _ClassVar[EffectType]
+    UPDATE_PERMISSION_GROUP: _ClassVar[EffectType]
+    DELETE_PERMISSION_GROUP: _ClassVar[EffectType]
+    ASSIGN_ROLE_PERMISSION_GROUP: _ClassVar[EffectType]
+    REMOVE_ROLE_PERMISSION_GROUP: _ClassVar[EffectType]
+    CREATE_TEAM: _ClassVar[EffectType]
+    UPDATE_TEAM: _ClassVar[EffectType]
+    DELETE_TEAM: _ClassVar[EffectType]
+    ASSIGN_TEAM_MEMBER: _ClassVar[EffectType]
+    REMOVE_TEAM_MEMBER: _ClassVar[EffectType]
+    CREATE_CARE_TEAM_ROLE: _ClassVar[EffectType]
+    UPDATE_CARE_TEAM_ROLE: _ClassVar[EffectType]
+    DELETE_CARE_TEAM_ROLE: _ClassVar[EffectType]
+    CREATE_NOTE_TYPE: _ClassVar[EffectType]
+    UPDATE_NOTE_TYPE: _ClassVar[EffectType]
+    DELETE_NOTE_TYPE: _ClassVar[EffectType]
+    CREATE_PATIENT_CONSENT_CODING: _ClassVar[EffectType]
+    UPDATE_PATIENT_CONSENT_CODING: _ClassVar[EffectType]
+    DELETE_PATIENT_CONSENT_CODING: _ClassVar[EffectType]
+    CREATE_PATIENT_CONSENT_REJECTION_CODING: _ClassVar[EffectType]
+    UPDATE_PATIENT_CONSENT_REJECTION_CODING: _ClassVar[EffectType]
+    DELETE_PATIENT_CONSENT_REJECTION_CODING: _ClassVar[EffectType]
+    CREATE_REASON_FOR_VISIT_SETTING_CODING: _ClassVar[EffectType]
+    UPDATE_REASON_FOR_VISIT_SETTING_CODING: _ClassVar[EffectType]
+    DELETE_REASON_FOR_VISIT_SETTING_CODING: _ClassVar[EffectType]
+    CREATE_FEE_SCHEDULE: _ClassVar[EffectType]
+    UPDATE_FEE_SCHEDULE: _ClassVar[EffectType]
+    DELETE_FEE_SCHEDULE: _ClassVar[EffectType]
+    CREATE_POSTING_RULE: _ClassVar[EffectType]
+    UPDATE_POSTING_RULE: _ClassVar[EffectType]
+    DELETE_POSTING_RULE: _ClassVar[EffectType]
+    CREATE_PAYOR_CHARGE: _ClassVar[EffectType]
+    UPDATE_PAYOR_CHARGE: _ClassVar[EffectType]
+    DELETE_PAYOR_CHARGE: _ClassVar[EffectType]
+    CREATE_DISCOUNT: _ClassVar[EffectType]
+    UPDATE_DISCOUNT: _ClassVar[EffectType]
+    DELETE_DISCOUNT: _ClassVar[EffectType]
+    CREATE_INSURER: _ClassVar[EffectType]
+    UPDATE_INSURER: _ClassVar[EffectType]
+    DELETE_INSURER: _ClassVar[EffectType]
+    CREATE_VACCINE: _ClassVar[EffectType]
+    UPDATE_VACCINE: _ClassVar[EffectType]
+    DELETE_VACCINE: _ClassVar[EffectType]
+    CREATE_VACCINE_LOT: _ClassVar[EffectType]
+    UPDATE_VACCINE_LOT: _ClassVar[EffectType]
+    DELETE_VACCINE_LOT: _ClassVar[EffectType]
+    SET_CONSTANCE_VALUE: _ClassVar[EffectType]
+    WRITE_AUDIT_LOG: _ClassVar[EffectType]
+    UPLOAD_FILE: _ClassVar[EffectType]
+    UPSERT_SETUP_COMPLETION: _ClassVar[EffectType]
+    SHOW_SETTINGS_PAGE_FORM: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -727,6 +801,80 @@ ASSIGN_DOCUMENT_REVIEWER: EffectType
 UPDATE_DOCUMENT_FIELDS: EffectType
 JUNK_DOCUMENT: EffectType
 REMOVE_DOCUMENT_FROM_PATIENT: EffectType
+UPDATE_ORGANIZATION: EffectType
+UPDATE_ORGANIZATION_BRANDING: EffectType
+UPSERT_ORGANIZATION_SETTING: EffectType
+CREATE_PRACTICE_LOCATION: EffectType
+UPDATE_PRACTICE_LOCATION: EffectType
+DELETE_PRACTICE_LOCATION: EffectType
+UPSERT_PRACTICE_LOCATION_SETTING: EffectType
+CREATE_ADDRESS: EffectType
+UPDATE_ADDRESS: EffectType
+DELETE_ADDRESS: EffectType
+CREATE_STAFF: EffectType
+UPDATE_STAFF: EffectType
+DELETE_STAFF: EffectType
+ACTIVATE_STAFF: EffectType
+DEACTIVATE_STAFF: EffectType
+CREATE_STAFF_LICENSE: EffectType
+UPDATE_STAFF_LICENSE: EffectType
+DELETE_STAFF_LICENSE: EffectType
+CREATE_ROLE: EffectType
+UPDATE_ROLE: EffectType
+DELETE_ROLE: EffectType
+ASSIGN_STAFF_ROLE: EffectType
+REMOVE_STAFF_ROLE: EffectType
+CREATE_PERMISSION_GROUP: EffectType
+UPDATE_PERMISSION_GROUP: EffectType
+DELETE_PERMISSION_GROUP: EffectType
+ASSIGN_ROLE_PERMISSION_GROUP: EffectType
+REMOVE_ROLE_PERMISSION_GROUP: EffectType
+CREATE_TEAM: EffectType
+UPDATE_TEAM: EffectType
+DELETE_TEAM: EffectType
+ASSIGN_TEAM_MEMBER: EffectType
+REMOVE_TEAM_MEMBER: EffectType
+CREATE_CARE_TEAM_ROLE: EffectType
+UPDATE_CARE_TEAM_ROLE: EffectType
+DELETE_CARE_TEAM_ROLE: EffectType
+CREATE_NOTE_TYPE: EffectType
+UPDATE_NOTE_TYPE: EffectType
+DELETE_NOTE_TYPE: EffectType
+CREATE_PATIENT_CONSENT_CODING: EffectType
+UPDATE_PATIENT_CONSENT_CODING: EffectType
+DELETE_PATIENT_CONSENT_CODING: EffectType
+CREATE_PATIENT_CONSENT_REJECTION_CODING: EffectType
+UPDATE_PATIENT_CONSENT_REJECTION_CODING: EffectType
+DELETE_PATIENT_CONSENT_REJECTION_CODING: EffectType
+CREATE_REASON_FOR_VISIT_SETTING_CODING: EffectType
+UPDATE_REASON_FOR_VISIT_SETTING_CODING: EffectType
+DELETE_REASON_FOR_VISIT_SETTING_CODING: EffectType
+CREATE_FEE_SCHEDULE: EffectType
+UPDATE_FEE_SCHEDULE: EffectType
+DELETE_FEE_SCHEDULE: EffectType
+CREATE_POSTING_RULE: EffectType
+UPDATE_POSTING_RULE: EffectType
+DELETE_POSTING_RULE: EffectType
+CREATE_PAYOR_CHARGE: EffectType
+UPDATE_PAYOR_CHARGE: EffectType
+DELETE_PAYOR_CHARGE: EffectType
+CREATE_DISCOUNT: EffectType
+UPDATE_DISCOUNT: EffectType
+DELETE_DISCOUNT: EffectType
+CREATE_INSURER: EffectType
+UPDATE_INSURER: EffectType
+DELETE_INSURER: EffectType
+CREATE_VACCINE: EffectType
+UPDATE_VACCINE: EffectType
+DELETE_VACCINE: EffectType
+CREATE_VACCINE_LOT: EffectType
+UPDATE_VACCINE_LOT: EffectType
+DELETE_VACCINE_LOT: EffectType
+SET_CONSTANCE_VALUE: EffectType
+WRITE_AUDIT_LOG: EffectType
+UPLOAD_FILE: EffectType
+UPSERT_SETUP_COMPLETION: EffectType
+SHOW_SETTINGS_PAGE_FORM: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

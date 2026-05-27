@@ -1,3 +1,10 @@
+from .admin_catalog import (
+    AdminCommandType,
+    AdminDiagnosticView,
+    AdminLabel,
+    AdminProtocolTemplate,
+    AdminQueue,
+)
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .application import Application
 from .appointment import (
@@ -58,6 +65,7 @@ from .document_reference import (
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
+from .fee_schedule import FeeSchedule
 from .goal import Goal
 from .imaging import (
     ImagingOrder,
@@ -102,6 +110,7 @@ from .lab import (
     LabValueCoding,
 )
 from .letter import Language, Letter, LetterActionEvent
+from .letter_template import LetterTemplate
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -125,6 +134,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
+from .organization_setting import OrganizationSetting
 from .patient import (
     Patient,
     PatientAddress,
@@ -144,6 +154,8 @@ from .patient_consent import (
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
+from .permission_group import PermissionGroup, RolePermissionGroup
+from .poc_lab_template import POCLabTemplate
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -151,6 +163,7 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
+from .posting_rule import PostingRule
 from .practicelocation import (
     PracticeLocation,
     PracticeLocationAddress,
@@ -172,6 +185,8 @@ from .questionnaire import (
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
+from .role import Role, RoleDomain
+from .schedule_duration import ScheduleDuration
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -197,6 +212,7 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReview,
 )
 from .user import CanvasUser
+from .vaccine_lot import VaccineCatalog, VaccineLot
 
 __all__ = __exports__ = (
     "Application",
@@ -397,5 +413,23 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    # Instance Configuration data models
+    "AdminCommandType",
+    "AdminDiagnosticView",
+    "AdminLabel",
+    "AdminProtocolTemplate",
+    "AdminQueue",
+    "FeeSchedule",
+    "LetterTemplate",
+    "OrganizationSetting",
+    "PermissionGroup",
+    "POCLabTemplate",
+    "PostingRule",
+    "Role",
+    "RoleDomain",
+    "RolePermissionGroup",
+    "ScheduleDuration",
+    "VaccineCatalog",
+    "VaccineLot",
     "proxy_field",
 )
