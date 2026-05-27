@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## v0.156.0 (2026-05-27)
+
+### Bug Fixes
+
+- Pass document name string to presigned_url in PatientConsentCoding
+  ([#1726](https://github.com/canvas-medical/canvas-plugins/pull/1726),
+  [`4ab7a1e`](https://github.com/canvas-medical/canvas-plugins/commit/4ab7a1ee0dc47ee4dd77f9a4ba4e68deb6bcc3c2))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Suppress Sentry noise during plugin-runner cold-start redis race (KOALA-5359)
+  ([#1705](https://github.com/canvas-medical/canvas-plugins/pull/1705),
+  [`5c496ff`](https://github.com/canvas-medical/canvas-plugins/commit/5c496ff18952e6dcb8ffed75b8a00d65aa8d2fda))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1723](https://github.com/canvas-medical/canvas-plugins/pull/1723),
+  [`319d774`](https://github.com/canvas-medical/canvas-plugins/commit/319d77459a1125b7729f3e88159dbac130c3aebd))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add Instruction and InstructionCoding to canvas_sdk.v1.data
+  ([#1722](https://github.com/canvas-medical/canvas-plugins/pull/1722),
+  [`50ccaee`](https://github.com/canvas-medical/canvas-plugins/commit/50ccaee805f215d8be76a030fa5379065809c607))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+- Patient chart command buttons configuration
+  ([#1678](https://github.com/canvas-medical/canvas-plugins/pull/1678),
+  [`2a62c44`](https://github.com/canvas-medical/canvas-plugins/commit/2a62c4441412f7eb1d4bf0aaf1a164722f4326d2))
+
+
 ## v0.155.0 (2026-05-21)
 
 ### Features
