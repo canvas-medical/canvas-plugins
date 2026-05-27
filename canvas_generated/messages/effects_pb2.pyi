@@ -287,6 +287,10 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SIGN_NOTE: _ClassVar[EffectType]
     CHECK_IN_NOTE: _ClassVar[EffectType]
     NO_SHOW_NOTE: _ClassVar[EffectType]
+    DELETE_NOTE: _ClassVar[EffectType]
+    UNDELETE_NOTE: _ClassVar[EffectType]
+    DISCHARGE_NOTE: _ClassVar[EffectType]
+    REVERT_APPOINTMENT: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
     UPDATE_APPOINTMENT: _ClassVar[EffectType]
     RESCHEDULE_APPOINTMENT: _ClassVar[EffectType]
@@ -647,6 +651,10 @@ UNLOCK_NOTE: EffectType
 SIGN_NOTE: EffectType
 CHECK_IN_NOTE: EffectType
 NO_SHOW_NOTE: EffectType
+DELETE_NOTE: EffectType
+UNDELETE_NOTE: EffectType
+DISCHARGE_NOTE: EffectType
+REVERT_APPOINTMENT: EffectType
 CREATE_APPOINTMENT: EffectType
 UPDATE_APPOINTMENT: EffectType
 RESCHEDULE_APPOINTMENT: EffectType

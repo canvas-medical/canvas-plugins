@@ -203,6 +203,29 @@ def test_appointment_cancel_missing_instance_id(mock_db_queries: dict[str, Magic
     assert any("instance_id' is required" in str(e) for e in errors)
 
 
+def test_appointment_revert(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test reverting a booked or checked-in appointment."""
+    instance_id = str(uuid4())
+    appointment = Appointment(instance_id=instance_id)
+
+    effect = appointment.revert()
+
+    assert effect.type == EffectType.REVERT_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert payload["data"]["instance_id"] == instance_id
+
+
+def test_appointment_revert_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that revert without instance_id raises error."""
+    appointment = Appointment(practice_location_id=str(uuid4()), provider_id=str(uuid4()))
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.revert()
+
+    errors = exc_info.value.errors()
+    assert any("instance_id' is required" in str(e) for e in errors)
+
+
 def test_appointment_invalid_note_type_category(
     mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
 ) -> None:
