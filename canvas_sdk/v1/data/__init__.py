@@ -48,6 +48,7 @@ from .custom_attribute import (
 )
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
+from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .document_reference import (
     DocumentReference,
@@ -251,6 +252,7 @@ __all__ = __exports__ = (
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "DiagnosticView",
     "Discount",
     "DocumentReference",
     "DocumentReferenceCategory",

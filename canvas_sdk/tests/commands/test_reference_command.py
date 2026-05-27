@@ -16,7 +16,7 @@ def test_meta_key() -> None:
 
 def test_originate_returns_originate_effect() -> None:
     """originate() builds an ORIGINATE_REFERENCE_COMMAND effect with the right payload."""
-    cmd = ReferenceCommand(diagnostic_view_id=42)
+    cmd = ReferenceCommand(diagnostic_view_id="dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0")
     cmd.note_uuid = "note-1"
     cmd.command_uuid = "cmd-1"
 
@@ -27,7 +27,7 @@ def test_originate_returns_originate_effect() -> None:
     assert payload == {
         "command": "cmd-1",
         "note": "note-1",
-        "data": {"diagnostic_view_id": 42},
+        "data": {"diagnostic_view_id": "dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0"},
         "line_number": -1,
         "commit": False,
     }
@@ -41,21 +41,24 @@ def test_originate_renames_field_via_commands_api_name() -> None:
 
 def test_originate_requires_note_uuid() -> None:
     """originate() raises ValidationError when note_uuid is missing."""
-    cmd = ReferenceCommand(diagnostic_view_id=42)
+    cmd = ReferenceCommand(diagnostic_view_id="dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0")
     with pytest.raises(ValidationError):
         cmd.originate()
 
 
 def test_edit_emits_edit_effect() -> None:
     """edit() builds an EDIT_REFERENCE_COMMAND effect with the data payload."""
-    cmd = ReferenceCommand(diagnostic_view_id=99)
+    cmd = ReferenceCommand(diagnostic_view_id="11111111-2222-3333-4444-555555555555")
     cmd.command_uuid = "cmd-2"
 
     effect = cmd.edit()
 
     assert effect.type == EffectType.EDIT_REFERENCE_COMMAND
     payload = json.loads(effect.payload)
-    assert payload == {"command": "cmd-2", "data": {"diagnostic_view_id": 99}}
+    assert payload == {
+        "command": "cmd-2",
+        "data": {"diagnostic_view_id": "11111111-2222-3333-4444-555555555555"},
+    }
 
 
 def test_delete_emits_delete_effect() -> None:
@@ -93,7 +96,7 @@ def test_enter_in_error_emits_enter_in_error_effect() -> None:
 
 def test_edit_requires_command_uuid() -> None:
     """edit() raises ValidationError when command_uuid is missing."""
-    cmd = ReferenceCommand(diagnostic_view_id=1)
+    cmd = ReferenceCommand(diagnostic_view_id="11111111-2222-3333-4444-555555555555")
     with pytest.raises(ValidationError):
         cmd.edit()
 
