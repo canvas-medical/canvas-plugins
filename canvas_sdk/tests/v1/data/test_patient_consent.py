@@ -30,6 +30,8 @@ def test_document_url_with_document() -> None:
     ) as mock:
         assert coding.document_url == "https://s3.example.com/presigned"
         mock.assert_called_once_with("consents/my-consent.pdf")
+        called_arg = mock.call_args.args[0]
+        assert type(called_arg) is str
 
 
 def test_document_url_returns_none_when_no_document() -> None:
