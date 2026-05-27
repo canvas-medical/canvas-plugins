@@ -6,7 +6,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any, ClassVar, Protocol, TypeVar, cast, runtime_checkable
+from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
 from urllib.parse import parse_qsl
 
 import sentry_sdk
@@ -22,6 +22,11 @@ from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
+# Whether file parts are passed through to the plugin as bytes (``"passthrough"``) or
+#: pre-uploaded to S3 by home-app and surfaced as :class:`StoredFilePart` references
+#: (``"stored"``). See :func:`post` for the semantics.
+FileUploadsMode: TypeAlias = Literal["passthrough", "stored"]
+
 
 @runtime_checkable
 class FormPart(Protocol):
@@ -33,8 +38,8 @@ class FormPart(Protocol):
     The protocol is ``@runtime_checkable`` so plugin code can use
     ``isinstance(part, FormPart)`` to detect any form-part variant. To distinguish
     files from strings prefer ``part.is_file()`` over ``isinstance(part, FileFormPart)``
-    — the latter only matches the legacy passthrough type and silently misses
-    :class:`UploadedFilePart` from ``upload_files=True`` routes.
+    — the latter only matches the passthrough variant and silently misses
+    :class:`StoredFilePart` from ``file_uploads="stored"`` routes.
     """
 
     @staticmethod
@@ -98,15 +103,15 @@ class FileFormPart(FormPart):
         )
 
 
-class UploadedFilePart(FormPart):
-    """Form part for a file that home-app uploaded to S3 before invoking the plugin.
+class StoredFilePart(FormPart):
+    """Form part for a file that home-app stored in S3 before invoking the plugin.
 
     The bytes are not available — they live in S3 only. Use ``key`` to reference the
     file in subsequent effects. Consumer code (FHIR, message viewer, etc.) generates a
     fresh presigned URL on read.
 
     Returned by ``Request.form_data()`` for file fields when the matched route was
-    declared with ``upload_files=True`` on its decorator.
+    declared with ``file_uploads="stored"`` on its decorator.
     """
 
     def __init__(
@@ -129,7 +134,7 @@ class UploadedFilePart(FormPart):
         return True
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, UploadedFilePart):
+        if not isinstance(other, StoredFilePart):
             return NotImplemented
         return (
             self.name == other.name
@@ -137,6 +142,51 @@ class UploadedFilePart(FormPart):
             and self.content_type == other.content_type
             and self.size == other.size
             and self.key == other.key
+        )
+
+
+class FailedFilePart(FormPart):
+    """Form part for a file that Canvas tried to upload to S3 but couldn't.
+
+    The bytes are not available — Canvas attempted the upload and recorded the failure
+    in the envelope. ``error`` is a stable code (e.g. ``"s3_upload_failed"``) the plugin
+    can act on: either fail the whole request (atomic semantics) or proceed with the
+    parts that succeeded.
+
+    Returned by ``Request.form_data()`` for file fields when the matched route was
+    declared with ``file_uploads="stored"`` and the upload failed. Surfacing failures
+    alongside successes (rather than via a separate method) means a developer iterating
+    parts can't accidentally ignore them.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        filename: str,
+        content_type: str | None,
+        size: int,
+        error: str,
+    ) -> None:
+        self.name = name
+        self.filename = filename
+        self.content_type = content_type
+        self.size = size
+        self.error = error
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FailedFilePart):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.filename == other.filename
+            and self.content_type == other.content_type
+            and self.size == other.size
+            and self.error == other.error
         )
 
 
@@ -210,14 +260,14 @@ class Request:
         self,
         event: Event,
         path_pattern: re.Pattern,
-        upload_files: bool = False,
+        file_uploads: FileUploadsMode = "passthrough",
     ) -> None:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
-        self._upload_files = upload_files
+        self._file_uploads = file_uploads
 
         match = path_pattern.fullmatch(event.context["path"])
         self.path_params = match.groupdict() if match else {}
@@ -251,7 +301,7 @@ class Request:
 
     @cached_property
     def _upload_envelope(self) -> dict[str, Any]:
-        """Parsed JSON envelope produced by home-app when ``upload_files=True``.
+        """Parsed JSON envelope produced by home-app when ``file_uploads="stored"``.
 
         Defends against a malformed envelope: a non-JSON body or a non-object root
         becomes a clean :class:`RuntimeError` rather than a cryptic ``KeyError`` /
@@ -260,38 +310,42 @@ class Request:
         try:
             envelope = json.loads(self.body)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                "upload_files route received a non-JSON body; expected a JSON envelope"
-            ) from exc
+            raise RuntimeError("Canvas built a malformed upload envelope (non-JSON body)") from exc
         if not isinstance(envelope, dict):
             raise RuntimeError(
-                f"upload_files envelope must be a JSON object; got {type(envelope).__name__}"
+                "Canvas built a malformed upload envelope "
+                f"(not a JSON object, got {type(envelope).__name__})"
             )
         return envelope
 
     def form_data(self) -> MultiDict[str, FormPart]:
         """Return the response body as a dict of string to list of FormPart objects.
 
-        When the matched route was declared with ``upload_files=True`` on its decorator,
-        home-app has already uploaded any file fields to S3 and replaced the body with a
-        JSON envelope. In that case file fields are returned as :class:`UploadedFilePart`
-        (with ``key`` instead of ``content``); non-file fields stay as
-        :class:`StringFormPart`.
+        When the matched route was declared with ``file_uploads="stored"`` on its
+        decorator, Canvas has already uploaded any file fields to S3 and replaced the
+        body with a JSON envelope. File fields come back as either:
 
-        Per-file S3 failures are **not** included in this MultiDict — they don't carry a
-        ``key`` and surfacing them here would tempt callers to dereference a missing
-        attribute. Use :meth:`upload_failures` to inspect them.
+        * :class:`StoredFilePart` — upload succeeded; use ``part.key`` to reference the
+          file in subsequent effects.
+        * :class:`FailedFilePart` — Canvas tried to upload but couldn't; ``part.error``
+          carries a stable code. Plugin code can detect these via
+          ``isinstance(part, FailedFilePart)`` and decide whether to fail the request or
+          continue with the successful parts.
+
+        Non-file fields stay as :class:`StringFormPart` in both modes. Successful and
+        failed file parts are returned in the same MultiDict so a developer iterating
+        parts can't accidentally ignore failures.
 
         Otherwise the body is parsed as ``application/x-www-form-urlencoded`` or
         ``multipart/form-data`` and file fields are returned as :class:`FileFormPart`.
 
-        Raises :class:`RuntimeError` if ``upload_files=True`` but the envelope is
-        unparseable or missing a required field on a successful entry.
+        Raises :class:`RuntimeError` if ``file_uploads="stored"`` but the envelope is
+        malformed.
         """
         form_data: MultiDict[str, FormPart]
 
-        if self._upload_files:
-            # Home-app intercepted the multipart, uploaded files to S3, and rewrote the body
+        if self._file_uploads == "stored":
+            # Canvas intercepted the multipart, uploaded files to S3, and rewrote the body
             # as a JSON envelope. Each file entry has a ``status`` discriminator —
             # ``"ok"`` (with ``key``) or ``"failed"`` (with ``error``).
             envelope = self._upload_envelope
@@ -301,28 +355,56 @@ class Request:
                     entries.append((field["name"], StringFormPart(field["name"], field["value"])))
                 except (KeyError, TypeError) as exc:
                     raise RuntimeError(
-                        "upload_files envelope has malformed form_fields entry"
+                        "Canvas built a malformed upload envelope (bad form_fields entry)"
                     ) from exc
             for upload in envelope.get("files") or []:
-                if not isinstance(upload, dict) or upload.get("status") != "ok":
-                    continue
-                try:
-                    entries.append(
-                        (
-                            upload["name"],
-                            UploadedFilePart(
-                                name=upload["name"],
-                                filename=upload["filename"],
-                                content_type=upload.get("content_type"),
-                                size=upload["size"],
-                                key=upload["key"],
-                            ),
-                        )
-                    )
-                except KeyError as exc:
+                if not isinstance(upload, dict):
                     raise RuntimeError(
-                        f"upload_files envelope has ok entry missing required field {exc.args[0]!r}"
-                    ) from exc
+                        "Canvas built a malformed upload envelope (non-object files entry)"
+                    )
+                status = upload.get("status")
+                if status == "ok":
+                    try:
+                        entries.append(
+                            (
+                                upload["name"],
+                                StoredFilePart(
+                                    name=upload["name"],
+                                    filename=upload["filename"],
+                                    content_type=upload.get("content_type"),
+                                    size=upload["size"],
+                                    key=upload["key"],
+                                ),
+                            )
+                        )
+                    except KeyError as exc:
+                        raise RuntimeError(
+                            "Canvas built a malformed upload envelope "
+                            f"(ok entry missing required field {exc.args[0]!r})"
+                        ) from exc
+                elif status == "failed":
+                    try:
+                        entries.append(
+                            (
+                                upload["name"],
+                                FailedFilePart(
+                                    name=upload["name"],
+                                    filename=upload["filename"],
+                                    content_type=upload.get("content_type"),
+                                    size=upload["size"],
+                                    error=upload["error"],
+                                ),
+                            )
+                        )
+                    except KeyError as exc:
+                        raise RuntimeError(
+                            "Canvas built a malformed upload envelope "
+                            f"(failed entry missing required field {exc.args[0]!r})"
+                        ) from exc
+                else:
+                    raise RuntimeError(
+                        f"Canvas built a malformed upload envelope (unknown file status {status!r})"
+                    )
             form_data = MultiDict(entries)
         elif self.content_type == "application/x-www-form-urlencoded":
             # For request bodies that are URL-encoded, just parse them and return them as simple
@@ -338,28 +420,6 @@ class Request:
 
         return form_data
 
-    def upload_failures(self) -> list[dict[str, Any]]:
-        """Return file parts that home-app attempted to upload to S3 but failed.
-
-        Only meaningful for routes declared with ``upload_files=True`` — outside of that
-        mode there is no upload step and this returns an empty list.
-
-        Each entry has ``name``, ``filename``, ``content_type``, ``size``, and a stable
-        ``error`` code (e.g. ``"s3_upload_failed"``). Plugin handlers that need atomic
-        upload semantics should check this and either delete the successful keys via the
-        SDK or return a 4xx/5xx to their caller.
-
-        Raises :class:`RuntimeError` if ``upload_files=True`` but the envelope is
-        unparseable.
-        """
-        if not self._upload_files:
-            return []
-        return [
-            upload
-            for upload in self._upload_envelope.get("files") or []
-            if isinstance(upload, dict) and upload.get("status") != "ok"
-        ]
-
 
 SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
 
@@ -371,49 +431,54 @@ def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
     return _handler_decorator("GET", path)
 
 
-def post(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
+def post(
+    path: str, *, file_uploads: FileUploadsMode = "passthrough"
+) -> Callable[[RouteHandler], RouteHandler]:
     """Decorator for adding API POST routes.
 
-    When ``upload_files=True``, home-app intercepts ``multipart/form-data`` requests:
-    file parts are uploaded to S3 before the plugin runs, and the plugin receives an
-    :class:`UploadedFilePart` (with ``key`` instead of ``content``) for each file
-    field via ``request.form_data()``. Default is ``False`` — file bytes flow through
-    to the plugin as today.
+    When ``file_uploads="stored"``, home-app intercepts ``multipart/form-data`` requests:
+    file parts are uploaded to S3 before the plugin runs, and the plugin receives a
+    :class:`StoredFilePart` (with ``key`` instead of ``content``) for each file field
+    via ``request.form_data()``. Default is ``"passthrough"`` — file bytes flow through to
+    the plugin as today. ``file_uploads`` is only supported on POST and PUT routes;
+    DELETE and PATCH cannot intercept file uploads.
 
-    **Migration note:** when upgrading an existing route to ``upload_files=True``,
+    **Migration note:** when upgrading an existing route to ``file_uploads="stored"``,
     replace any ``isinstance(part, FileFormPart)`` checks with ``part.is_file()`` (or
     ``isinstance(part, FormPart)`` when you want to match every variant). The two file
     types do not share a concrete base class — files would otherwise be silently
     skipped after the upgrade.
     """
-    return _handler_decorator("POST", path, upload_files=upload_files)
+    return _handler_decorator("POST", path, file_uploads=file_uploads)
 
 
-def put(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PUT routes. See :func:`post` for ``upload_files`` semantics."""
-    return _handler_decorator("PUT", path, upload_files=upload_files)
+def put(
+    path: str, *, file_uploads: FileUploadsMode = "passthrough"
+) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API PUT routes. See :func:`post` for ``file_uploads`` semantics."""
+    return _handler_decorator("PUT", path, file_uploads=file_uploads)
 
 
-def delete(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
+def delete(path: str) -> Callable[[RouteHandler], RouteHandler]:
     """Decorator for adding API DELETE routes."""
-    return _handler_decorator("DELETE", path, upload_files=upload_files)
+    return _handler_decorator("DELETE", path)
 
 
-def patch(path: str, *, upload_files: bool = False) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PATCH routes. See :func:`post` for ``upload_files`` semantics."""
-    return _handler_decorator("PATCH", path, upload_files=upload_files)
+def patch(path: str) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API PATCH routes."""
+    return _handler_decorator("PATCH", path)
 
 
 def _handler_decorator(
-    method: str, path: str, *, upload_files: bool = False
+    method: str, path: str, *, file_uploads: FileUploadsMode = "passthrough"
 ) -> Callable[[RouteHandler], RouteHandler]:
     if not path.startswith("/"):
         raise PluginError(f"Route path '{path}' must start with a forward slash")
 
     def decorator(handler: RouteHandler) -> RouteHandler:
-        """Mark the handler with the HTTP method, path, and upload-mode flag."""
+        """Mark the handler with the HTTP method, path, and file-uploads mode."""
         handler.route = (method, path)  # type: ignore[attr-defined]
-        handler.upload_files = upload_files  # type: ignore[attr-defined]
+        handler.file_uploads = file_uploads  # type: ignore[attr-defined]
 
         return handler
 
@@ -474,11 +539,14 @@ class SimpleAPIBase(BaseHandler, ABC):
     @cached_property
     def request(self) -> Request:
         """Return the request object from the event."""
-        upload_files = bool(getattr(self._handler, "upload_files", False))
+        file_uploads = cast(
+            FileUploadsMode,
+            getattr(self._handler, "file_uploads", "passthrough"),
+        )
         return Request(
             self.event,
             cast(re.Pattern, self._path_pattern),
-            upload_files=upload_files,
+            file_uploads=file_uploads,
         )
 
     def compute(self) -> list[Effect]:
@@ -516,16 +584,18 @@ class SimpleAPIBase(BaseHandler, ABC):
             # authentication succeeds, return a 200 back to home-app, otherwise return a response
             # with the error.
             #
-            # The auth-success effect carries the matched route's ``upload_files`` flag in its
-            # JSON payload (alongside the standard headers/body/status_code). home-app reads it
+            # The auth-success effect carries preflight metadata for the matched route under
+            # ``handling_options`` (currently just the ``file_uploads`` mode). Canvas reads it
             # to decide whether to intercept multipart uploads before sending the request event.
+            # The dict is intentionally nested so it's clearly separate from the HTTP response
+            # fields (headers/body/status_code) and leaves room for future preflight options.
             if self.authenticate(credentials):
-                upload_files = bool(getattr(self._handler, "upload_files", False))
-                payload = {
+                file_uploads = getattr(self._handler, "file_uploads", "passthrough")
+                payload: dict[str, Any] = {
                     "headers": {},
                     "body": "",
                     "status_code": int(HTTPStatus.OK),
-                    "upload_files": upload_files,
+                    "handling_options": {"file_uploads": file_uploads},
                 }
                 return [Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))]
             else:
@@ -631,8 +701,10 @@ class SimpleAPI(SimpleAPIBase, ABC):
 class SimpleAPIRoute(SimpleAPIBase, ABC):
     """Base class for HTTP API routes.
 
-    Set ``UPLOAD_FILES = True`` as a class attribute to opt this route into multipart
-    upload interception. See :func:`post` for the semantics.
+    Set ``FILE_UPLOADS = "stored"`` as a class attribute to opt this route into
+    multipart upload interception. See :func:`post` for the semantics. The setting
+    only applies to ``post`` and ``put`` methods on the class; other verbs register
+    as normal.
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -642,7 +714,10 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
                 f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
             )
 
-        upload_files = bool(getattr(cls, "UPLOAD_FILES", False))
+        file_uploads = cast(
+            FileUploadsMode,
+            getattr(cls, "FILE_UPLOADS", "passthrough"),
+        )
 
         for attr_name, attr_value in cls.__dict__.items():
             decorator: Callable | None
@@ -676,14 +751,16 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             if not path:
                 raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
 
-            # GET routes are body-less by HTTP semantics, so the @get decorator does not
-            # accept upload_files. Skip the kwarg for GET; pass it through for the rest.
-            # mypy can't narrow the union-typed `decorator` past the ``is get`` check, so
-            # the call-arg ignore is required on the else branch.
-            if decorator is get:
-                decorator(path)(attr_value)
+            # file_uploads is only supported on POST and PUT. GET is body-less by HTTP
+            # semantics; DELETE and PATCH have no realistic file-upload use case. On a
+            # SimpleAPIRoute with ``FILE_UPLOADS = "stored"`` and a mix of verbs, the
+            # setting applies only to the post/put methods — other verbs register as
+            # normal. mypy can't narrow the union-typed `decorator`, so the call-arg
+            # ignore is required on the post/put branch.
+            if attr_name in ("post", "put"):
+                decorator(path, file_uploads=file_uploads)(attr_value)  # type: ignore[call-arg]
             else:
-                decorator(path, upload_files=upload_files)(attr_value)  # type: ignore[call-arg]
+                decorator(path)(attr_value)
 
         super().__init_subclass__(**kwargs)
 
@@ -712,7 +789,8 @@ __exports__ = (
     "FormPart",
     "StringFormPart",
     "FileFormPart",
-    "UploadedFilePart",
+    "StoredFilePart",
+    "FailedFilePart",
     "parse_multipart_form",
     "Request",
     "SimpleAPIType",

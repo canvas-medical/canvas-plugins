@@ -22,14 +22,15 @@ from canvas_sdk.effects.simple_api import (
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import (
+    FailedFilePart,
     FileFormPart,
     FormPart,
     Request,
     SimpleAPI,
     SimpleAPIBase,
     SimpleAPIRoute,
+    StoredFilePart,
     StringFormPart,
-    UploadedFilePart,
 )
 from canvas_sdk.handlers.simple_api.security import (
     APIKeyAuthMixin,
@@ -1114,50 +1115,52 @@ def test_authentication_mixins(
 # ---------------------------------------------------------------------------
 
 
-def test_upload_files_decorator_default_false() -> None:
-    """A route declared without upload_files defaults to False."""
+def test_file_uploads_decorator_default_passthrough() -> None:
+    """A route declared without file_uploads defaults to "passthrough"."""
 
     @api.post("/route")
     def handler(self: Any) -> list[Response | Effect]:
         return []
 
-    # The decorator stashes route + upload_files as attributes on the handler at runtime;
+    # The decorator stashes route + file_uploads as attributes on the handler at runtime;
     # mypy sees only the static Callable type, so attr-defined ignores are required.
     assert handler.route == ("POST", "/route")  # type: ignore[attr-defined]
-    assert handler.upload_files is False  # type: ignore[attr-defined]
+    assert handler.file_uploads == "passthrough"  # type: ignore[attr-defined]
 
 
-def test_upload_files_decorator_opt_in() -> None:
-    """A route can opt in to upload-files interception."""
+def test_file_uploads_decorator_opt_in_stored() -> None:
+    """A route can opt in to stored-file-uploads interception."""
 
-    @api.post("/upload", upload_files=True)
+    @api.post("/upload", file_uploads="stored")
     def handler(self: Any) -> list[Response | Effect]:
         return []
 
-    assert handler.upload_files is True  # type: ignore[attr-defined]
+    assert handler.file_uploads == "stored"  # type: ignore[attr-defined]
 
 
-def test_uploaded_file_part_equality() -> None:
-    """UploadedFilePart compares equal field-by-field, and is_file() returns True."""
-    a = UploadedFilePart(
+def test_stored_file_part_equality() -> None:
+    """StoredFilePart compares equal field-by-field, and is_file() returns True."""
+    a = StoredFilePart(
         name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
     )
-    b = UploadedFilePart(
+    b = StoredFilePart(
         name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
     )
-    c = UploadedFilePart(
+    c = StoredFilePart(
         name="file", filename="x.pdf", content_type="application/pdf", size=10, key="other"
     )
     assert a == b
     assert a != c
-    assert UploadedFilePart.is_file() is True
+    assert StoredFilePart.is_file() is True
 
 
-def test_authenticate_response_includes_upload_files() -> None:
-    """The auth-success response payload carries the matched route's upload_files flag."""
+def test_authenticate_response_includes_file_uploads() -> None:
+    """The auth-success response payload nests the matched route's file_uploads mode
+    under ``handling_options`` so it's clearly preflight metadata, not an HTTP response field.
+    """
 
     class API(APINoAuth):
-        @api.post("/upload", upload_files=True)
+        @api.post("/upload", file_uploads="stored")
         def upload(self) -> list[Response | Effect]:
             return [Response(status_code=HTTPStatus.OK)]
 
@@ -1168,16 +1171,16 @@ def test_authenticate_response_includes_upload_files() -> None:
     handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/upload"))
     payload = json.loads(handler.compute()[0].payload)
     assert payload["status_code"] == HTTPStatus.OK
-    assert payload["upload_files"] is True
+    assert payload["handling_options"]["file_uploads"] == "stored"
 
     handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/regular"))
     payload = json.loads(handler.compute()[0].payload)
     assert payload["status_code"] == HTTPStatus.OK
-    assert payload["upload_files"] is False
+    assert payload["handling_options"]["file_uploads"] == "passthrough"
 
 
-def test_request_form_data_upload_mode() -> None:
-    """In upload mode, form_data() parses the JSON envelope and returns UploadedFilePart for files."""
+def test_request_form_data_stored_mode() -> None:
+    """In upload mode, form_data() parses the JSON envelope and returns StoredFilePart for files."""
     envelope = json.dumps(
         {
             "form_fields": [{"name": "title", "value": "My Document"}],
@@ -1203,7 +1206,7 @@ def test_request_form_data_upload_mode() -> None:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
 
     expected = MultiDict(
@@ -1211,7 +1214,7 @@ def test_request_form_data_upload_mode() -> None:
             ("title", StringFormPart(name="title", value="My Document")),
             (
                 "attachment",
-                UploadedFilePart(
+                StoredFilePart(
                     name="attachment",
                     filename="invoice.pdf",
                     content_type="application/pdf",
@@ -1224,8 +1227,8 @@ def test_request_form_data_upload_mode() -> None:
     assert request.form_data() == expected
 
 
-def test_request_form_data_upload_mode_multiple_files() -> None:
-    """An envelope with multiple ok files yields one UploadedFilePart per entry."""
+def test_request_form_data_stored_mode_multiple_files() -> None:
+    """An envelope with multiple ok files yields one StoredFilePart per entry."""
     envelope = json.dumps(
         {
             "form_fields": [],
@@ -1259,7 +1262,7 @@ def test_request_form_data_upload_mode_multiple_files() -> None:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
 
     parts = list(request.form_data().multi_items())
@@ -1267,10 +1270,10 @@ def test_request_form_data_upload_mode_multiple_files() -> None:
     names = [name for name, _ in parts]
     assert names == ["first", "second"]
     for _name, part in parts:
-        assert isinstance(part, UploadedFilePart)
+        assert isinstance(part, StoredFilePart)
 
 
-def test_request_form_data_upload_mode_empty_envelope() -> None:
+def test_request_form_data_stored_mode_empty_envelope() -> None:
     """An envelope with no form_fields or files yields an empty MultiDict."""
     envelope = json.dumps({"form_fields": [], "files": []}).encode()
     request = Request(
@@ -1282,22 +1285,22 @@ def test_request_form_data_upload_mode_empty_envelope() -> None:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
     assert list(request.form_data().items()) == []
 
 
 def test_simple_api_full_upload_flow() -> None:
-    """End-to-end: authenticate -> request handler receives UploadedFilePart via form_data."""
+    """End-to-end: authenticate -> request handler receives StoredFilePart via form_data."""
     captured: dict[str, Any] = {}
 
     class API(APINoAuth):
-        @api.post("/upload", upload_files=True)
+        @api.post("/upload", file_uploads="stored")
         def upload(self) -> list[Response | Effect]:
             forms = self.request.form_data()
             captured["title"] = forms["title"]
             attachment = forms["attachment"]
-            assert isinstance(attachment, UploadedFilePart)
+            assert isinstance(attachment, StoredFilePart)
             captured["attachment"] = attachment
             return [JSONResponse({"key": attachment.key})]
 
@@ -1329,26 +1332,26 @@ def test_simple_api_full_upload_flow() -> None:
     assert captured["title"] == StringFormPart(name="title", value="Hello")
     assert captured["attachment"].filename == "test.pdf"
     assert captured["attachment"].size == 7
-    assert isinstance(captured["attachment"], UploadedFilePart)
+    assert isinstance(captured["attachment"], StoredFilePart)
 
 
-def test_simple_api_route_upload_files_class_attribute() -> None:
-    """Setting UPLOAD_FILES = True on a SimpleAPIRoute opts the route into upload mode."""
+def test_simple_api_route_file_uploads_class_attribute() -> None:
+    """Setting FILE_UPLOADS = "stored" on a SimpleAPIRoute opts the route into stored mode."""
 
     class Route(NoAuthMixin, SimpleAPIRoute):
         PATH = "/route"
-        UPLOAD_FILES = True
+        FILE_UPLOADS = "stored"
 
         def post(self) -> list[Response | Effect]:
             return [Response(status_code=HTTPStatus.OK)]
 
     handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
     payload = json.loads(handler.compute()[0].payload)
-    assert payload["upload_files"] is True
+    assert payload["handling_options"]["file_uploads"] == "stored"
 
 
-def test_simple_api_route_upload_files_default_false() -> None:
-    """SimpleAPIRoute without UPLOAD_FILES defaults to upload_files=False (regression fence)."""
+def test_simple_api_route_file_uploads_default_passthrough() -> None:
+    """SimpleAPIRoute without FILE_UPLOADS defaults to file_uploads="passthrough" (regression fence)."""
 
     class Route(NoAuthMixin, SimpleAPIRoute):
         PATH = "/route"
@@ -1358,12 +1361,28 @@ def test_simple_api_route_upload_files_default_false() -> None:
 
     handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
     payload = json.loads(handler.compute()[0].payload)
-    assert payload["upload_files"] is False
+    assert payload["handling_options"]["file_uploads"] == "passthrough"
 
 
-def test_request_form_data_upload_mode_skips_failed_entries() -> None:
-    """form_data() yields only ok entries; failed uploads are excluded so plugin code
-    can't accidentally dereference a missing ``key``.
+def test_failed_file_part_equality() -> None:
+    """FailedFilePart compares equal field-by-field, and is_file() returns True."""
+    a = FailedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="e1"
+    )
+    b = FailedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="e1"
+    )
+    c = FailedFilePart(
+        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="other"
+    )
+    assert a == b
+    assert a != c
+    assert FailedFilePart.is_file() is True
+
+
+def test_request_form_data_stored_mode_includes_failed_entries() -> None:
+    """form_data() surfaces ok files as StoredFilePart and failed files as FailedFilePart,
+    in the same MultiDict, so iterating handlers can't accidentally ignore failures.
     """
     envelope = json.dumps(
         {
@@ -1397,37 +1416,31 @@ def test_request_form_data_upload_mode_skips_failed_entries() -> None:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
 
     parts = list(request.form_data().multi_items())
-    assert [name for name, _ in parts] == ["good"]
-    assert isinstance(parts[0][1], UploadedFilePart)
+    assert [name for name, _ in parts] == ["good", "bad"]
+    assert isinstance(parts[0][1], StoredFilePart)
     assert parts[0][1].key == "plugin-uploads/p/k-a.txt"
+    assert isinstance(parts[1][1], FailedFilePart)
+    assert parts[1][1].error == "s3_upload_failed"
 
 
-def test_request_upload_failures_returns_failed_entries() -> None:
-    """upload_failures() returns the failed entries with their stable error code."""
+def test_request_form_data_stored_mode_failed_entry_missing_error_raises() -> None:
+    """A ``failed`` entry without an ``error`` field surfaces a clean RuntimeError."""
     envelope = json.dumps(
         {
             "form_fields": [],
             "files": [
-                {
-                    "name": "good",
-                    "filename": "a.txt",
-                    "content_type": "text/plain",
-                    "size": 3,
-                    "status": "ok",
-                    "key": "plugin-uploads/p/k-a.txt",
-                },
                 {
                     "name": "bad",
                     "filename": "b.txt",
                     "content_type": "text/plain",
                     "size": 8,
                     "status": "failed",
-                    "error": "s3_upload_failed",
-                },
+                    # ``error`` intentionally absent
+                }
             ],
         }
     ).encode()
@@ -1440,30 +1453,41 @@ def test_request_upload_failures_returns_failed_entries() -> None:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
-
-    failures = request.upload_failures()
-    assert len(failures) == 1
-    assert failures[0]["name"] == "bad"
-    assert failures[0]["filename"] == "b.txt"
-    assert failures[0]["error"] == "s3_upload_failed"
+    with pytest.raises(RuntimeError, match="missing required field 'error'"):
+        request.form_data()
 
 
-def test_request_upload_failures_empty_when_not_upload_mode() -> None:
-    """Routes without ``upload_files=True`` see no upload step — upload_failures() is empty."""
+def test_request_form_data_stored_mode_unknown_status_raises() -> None:
+    """A file entry with an unrecognized ``status`` value surfaces a clean RuntimeError."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "weird",
+                    "filename": "x.txt",
+                    "content_type": "text/plain",
+                    "size": 1,
+                    "status": "pending",
+                }
+            ],
+        }
+    ).encode()
     request = Request(
         make_event(
             EventType.SIMPLE_API_REQUEST,
             method="POST",
-            path="/route",
-            body=b"raw body",
+            path="/upload",
+            body=envelope,
             headers={"Content-Type": "application/json"},
         ),
-        path_pattern=re.compile("/route"),
-        upload_files=False,
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
     )
-    assert request.upload_failures() == []
+    with pytest.raises(RuntimeError, match="unknown file status 'pending'"):
+        request.form_data()
 
 
 def _request_with_envelope_body(body: bytes) -> Request:
@@ -1477,25 +1501,25 @@ def _request_with_envelope_body(body: bytes) -> Request:
             headers={"Content-Type": "application/json"},
         ),
         path_pattern=re.compile("/upload"),
-        upload_files=True,
+        file_uploads="stored",
     )
 
 
-def test_request_form_data_upload_mode_raises_on_non_json_body() -> None:
+def test_request_form_data_stored_mode_raises_on_non_json_body() -> None:
     """A non-JSON body in upload mode raises a clean RuntimeError, not JSONDecodeError."""
     request = _request_with_envelope_body(b"not json at all")
     with pytest.raises(RuntimeError, match="non-JSON body"):
         request.form_data()
 
 
-def test_request_form_data_upload_mode_raises_on_non_object_envelope() -> None:
+def test_request_form_data_stored_mode_raises_on_non_object_envelope() -> None:
     """A JSON envelope that isn't an object (e.g. a list) raises a clean RuntimeError."""
     request = _request_with_envelope_body(b'["not", "an", "object"]')
-    with pytest.raises(RuntimeError, match="must be a JSON object"):
+    with pytest.raises(RuntimeError, match="not a JSON object"):
         request.form_data()
 
 
-def test_request_form_data_upload_mode_raises_on_missing_required_field() -> None:
+def test_request_form_data_stored_mode_raises_on_missing_required_field() -> None:
     """An ok entry missing a required field (e.g. ``key``) raises a clean RuntimeError."""
     envelope = json.dumps(
         {
@@ -1516,15 +1540,8 @@ def test_request_form_data_upload_mode_raises_on_missing_required_field() -> Non
         request.form_data()
 
 
-def test_request_upload_failures_raises_on_non_json_body() -> None:
-    """upload_failures() also surfaces a clean RuntimeError on a non-JSON body."""
-    request = _request_with_envelope_body(b"definitely not json")
-    with pytest.raises(RuntimeError, match="non-JSON body"):
-        request.upload_failures()
-
-
 def test_request_upload_envelope_is_cached_across_calls() -> None:
-    """form_data() and upload_failures() share a parsed envelope — only one json.loads call."""
+    """Repeated form_data() calls share a parsed envelope — only one json.loads call."""
     envelope = json.dumps(
         {
             "form_fields": [],
@@ -1552,7 +1569,6 @@ def test_request_upload_envelope_is_cached_across_calls() -> None:
 
     with patch("canvas_sdk.handlers.simple_api.api.json.loads", wraps=json.loads) as loads:
         request.form_data()
-        request.upload_failures()
         request.form_data()
     assert loads.call_count == 1
 
@@ -1560,7 +1576,7 @@ def test_request_upload_envelope_is_cached_across_calls() -> None:
 def test_form_part_protocol_is_runtime_checkable_for_all_variants() -> None:
     """isinstance(part, FormPart) returns True for every concrete form-part type so plugins
     that match generically don't silently skip uploads after a route is upgraded to
-    ``upload_files=True`` (the previous trap with ``isinstance(part, FileFormPart)``).
+    ``file_uploads="stored"`` (the previous trap with ``isinstance(part, FileFormPart)``).
     """
     assert isinstance(StringFormPart(name="f", value="v"), FormPart)
     assert isinstance(
@@ -1568,6 +1584,10 @@ def test_form_part_protocol_is_runtime_checkable_for_all_variants() -> None:
         FormPart,
     )
     assert isinstance(
-        UploadedFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, key="k"),
+        StoredFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, key="k"),
+        FormPart,
+    )
+    assert isinstance(
+        FailedFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, error="e"),
         FormPart,
     )

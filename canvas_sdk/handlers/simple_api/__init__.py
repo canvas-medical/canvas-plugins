@@ -1,10 +1,11 @@
 from .api import (
+    FailedFilePart,
     FileFormPart,
     FormPart,
     SimpleAPI,
     SimpleAPIRoute,
+    StoredFilePart,
     StringFormPart,
-    UploadedFilePart,
 )
 from .security import (
     APIKeyAuthMixin,
@@ -28,6 +29,7 @@ __all__ = __exports__ = (
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "FailedFilePart",
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
@@ -35,6 +37,6 @@ __all__ = __exports__ = (
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
+    "StoredFilePart",
     "StringFormPart",
-    "UploadedFilePart",
 )
