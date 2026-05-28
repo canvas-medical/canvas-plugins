@@ -20,21 +20,26 @@ Appointment state transition exposed by the SDK:
 ## How it works
 
 Each button is an `ActionButton` subclass with `BUTTON_LOCATION = NOTE_FOOTER`.
-When clicked, the handler calls the matching SDK method on the current note.
+When clicked, the handler resolves the note from the `note_id` (db pk) passed
+in the action button context, then calls the matching SDK method.
 
 - **If the transition is valid for the note's current state and type**, the
-  transition effect is returned alongside a `CustomCommand` originated on the
-  same note with content like `Lock transition applied.`.
+  transition effect is returned and a success message is written to the
+  plugin-runner log.
 - **If the SDK rejects the call** (e.g. discharging a non-inpatient note,
-  signing a note that doesn't require a signature, a state-matrix violation),
-  the `pydantic.ValidationError` is caught and the error text is logged to the
-  note via the same `CustomCommand` originator instead. The transition effect
-  itself is dropped.
+  signing a note that doesn't require a signature, a state-matrix violation,
+  or — for the appointment buttons — no appointment is associated with the
+  note), the error is caught and logged. No effect is emitted.
 
-The logging command uses `schema_key = "note_state_transition_log"` and is
-committed on origination so the message is immediately visible in the note
-body. The schema key is plugin-local — it doesn't need to be registered
-anywhere in Canvas.
+All log lines are prefixed with `[NSTL]` so you can filter for them, e.g.:
+
+```bash
+docker logs home-app-web 2>&1 | grep '\[NSTL\]'
+```
+
+Logging is used in place of a `CustomCommand` originator because commands
+cannot be inserted in many note states (locked, signed, deleted, etc.), but
+log statements are always available.
 
 ## Installing
 
@@ -45,8 +50,8 @@ canvas install /path/to/note_state_transition_buttons
 ## Using it
 
 1. Open any note. Eleven `Test: …` buttons appear in the footer.
-2. Click one to attempt that transition. The note will gain a custom command
-   with the outcome (success or validation error) — useful for verifying that
-   the new `Delete` / `Undelete` / `Discharge` / `Revert` effects added in the
-   parent PR behave as expected, and that the existing transitions still
-   work.
+2. Click one to attempt that transition.
+3. Tail the plugin-runner logs (filtering on `[NSTL]`) to see the outcome —
+   useful for verifying that the `Lock` / `Unlock` / `Sign` / `Push charges` /
+   `Check in` / `No show` / `Delete` / `Undelete` / `Discharge` /
+   `Cancel appointment` / `Revert appointment` effects behave as expected.

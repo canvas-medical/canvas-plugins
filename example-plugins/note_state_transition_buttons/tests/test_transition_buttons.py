@@ -1,20 +1,14 @@
-import json
 from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
-from pytest import MonkeyPatch
-
-from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 from note_state_transition_buttons.handlers.transition_buttons import (
+    LOG_PREFIX,
     CancelAppointmentButton,
     CheckInNoteButton,
     DeleteNoteButton,
     DischargeNoteButton,
     LockNoteButton,
-    LOG_SCHEMA_KEY,
     NoShowNoteButton,
     PushChargesNoteButton,
     RevertAppointmentButton,
@@ -23,7 +17,12 @@ from note_state_transition_buttons.handlers.transition_buttons import (
     UnlockNoteButton,
     _TransitionButton,
 )
+from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
+from pytest import LogCaptureFixture, MonkeyPatch
 
+from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.effects import Effect
+from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 ALL_BUTTONS = [
     LockNoteButton,
@@ -53,9 +52,11 @@ def _validation_error(message: str) -> ValidationError:
     )
 
 
-def _make_handler(cls: type[_TransitionButton], monkeypatch: MonkeyPatch, note_uuid: str | None):
+def _make_handler(
+    cls: type[_TransitionButton], monkeypatch: MonkeyPatch, note_id: int | None
+) -> _TransitionButton:
     handler = cls(event=MagicMock())
-    monkeypatch.setattr(type(handler), "context", property(lambda self: {"note_id": note_uuid}))
+    monkeypatch.setattr(type(handler), "context", property(lambda self: {"note_id": note_id}))
     return handler
 
 
@@ -68,30 +69,42 @@ _REQUIRED_CATEGORY: dict[str, NoteTypeCategories] = {
 }
 
 
-@pytest.fixture
-def mock_sdk_db_queries(request: pytest.FixtureRequest) -> Generator[None]:
-    """Stub out the DB calls that `Note(...).method()` validators make so the
-    parametrized test can run without a real Django DB. Pick the note category
-    based on the button under test so the transition matrix passes."""
-    button_key = getattr(request, "param", None)
-    category = _REQUIRED_CATEGORY.get(button_key, NoteTypeCategories.INPATIENT)
+def _make_fake_note(category: NoteTypeCategories) -> MagicMock:
     fake_note = MagicMock()
+    fake_note.id = "33333333-3333-3333-3333-333333333333"
     fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
     fake_note.note_type_version = MagicMock(
         is_sig_required=True,
         is_billable=True,
         category=category,
     )
+    return fake_note
+
+
+@pytest.fixture
+def mock_sdk_db_queries(request: pytest.FixtureRequest) -> Generator[None]:
+    """Stub out the DB calls that `Note(...).method()` validators make so the
+    parametrized test can run without a real Django DB. Pick the note category
+    based on the button under test so the transition matrix passes.
+    """
+    button_key: str | None = getattr(request, "param", None)
+    category = _REQUIRED_CATEGORY.get(button_key or "", NoteTypeCategories.INPATIENT)
+    fake_note = _make_fake_note(category)
+    fake_appointment = MagicMock(id="44444444-4444-4444-4444-444444444444")
     with (
         patch("canvas_sdk.v1.data.PracticeLocation.objects") as mock_pl,
         patch("canvas_sdk.v1.data.Staff.objects") as mock_staff,
         patch("canvas_sdk.v1.data.Patient.objects") as mock_patient,
         patch("canvas_sdk.v1.data.Note.objects") as mock_note,
         patch("canvas_sdk.v1.data.appointment.Appointment.objects") as mock_appt,
+        patch(
+            "note_state_transition_buttons.handlers.transition_buttons.AppointmentModel.objects"
+        ) as mock_appt_lookup,
     ):
         for mock in (mock_pl, mock_staff, mock_patient, mock_note, mock_appt):
             mock.filter.return_value.exists.return_value = True
         mock_note.filter.return_value.first.return_value = fake_note
+        mock_appt_lookup.filter.return_value.first.return_value = fake_appointment
         yield
 
 
@@ -104,51 +117,90 @@ def test_every_button_is_a_note_footer_button() -> None:
 
 
 def test_handle_returns_empty_when_no_note_id(monkeypatch: MonkeyPatch) -> None:
-    handler = _make_handler(LockNoteButton, monkeypatch, note_uuid=None)
+    """Missing note_id in context yields no effects."""
+    handler = _make_handler(LockNoteButton, monkeypatch, note_id=None)
     assert handler.handle() == []
 
 
-def test_handle_logs_validation_error_when_sdk_rejects(monkeypatch: MonkeyPatch) -> None:
-    """A discharge call against an encounter note raises ValidationError before
-    the transition effect is emitted; the handler should emit a single log
-    command containing the error text."""
-    note_uuid = "11111111-1111-1111-1111-111111111111"
-    handler = _make_handler(DischargeNoteButton, monkeypatch, note_uuid=note_uuid)
+def test_handle_returns_empty_when_note_not_found(monkeypatch: MonkeyPatch) -> None:
+    """A note_id that doesn't resolve to a Note yields no effects."""
+    handler = _make_handler(LockNoteButton, monkeypatch, note_id=9)
+    with patch(
+        "note_state_transition_buttons.handlers.transition_buttons.NoteModel.objects"
+    ) as mock_note:
+        mock_note.filter.return_value.first.return_value = None
+        assert handler.handle() == []
 
-    def _raise(self, note_uuid: str):
+
+def test_handle_logs_validation_error_when_sdk_rejects(
+    monkeypatch: MonkeyPatch, caplog: LogCaptureFixture
+) -> None:
+    """A discharge call against an encounter note raises ValidationError before
+    the transition effect is emitted; the handler should emit no effects and
+    log a message with the standard prefix.
+    """
+    note_uuid = "11111111-1111-1111-1111-111111111111"
+    handler = _make_handler(DischargeNoteButton, monkeypatch, note_id=9)
+
+    def _raise(self: _TransitionButton, note: MagicMock) -> Effect:
         raise _validation_error("discharge rejected")
 
     monkeypatch.setattr(DischargeNoteButton, "_build_transition_effect", _raise)
 
-    effects = handler.handle()
+    fake_note = _make_fake_note(NoteTypeCategories.INPATIENT)
+    fake_note.id = note_uuid
+    with (
+        caplog.at_level("INFO"),
+        patch(
+            "note_state_transition_buttons.handlers.transition_buttons.NoteModel.objects"
+        ) as mock_note,
+    ):
+        mock_note.filter.return_value.first.return_value = fake_note
+        effects = handler.handle()
 
-    assert len(effects) == 1
-    log = effects[0]
-    payload = json.loads(log.payload)
-    assert payload["data"]["schema_key"] == LOG_SCHEMA_KEY
-    assert "Discharge failed validation" in payload["data"]["content"]
-    assert payload["note"] == note_uuid
+    assert effects == []
+    assert any(
+        LOG_PREFIX in record.message
+        and "Discharge failed" in record.message
+        and note_uuid in record.message
+        for record in caplog.records
+    )
 
 
-def test_handle_emits_transition_plus_success_log(monkeypatch: MonkeyPatch) -> None:
-    """A valid transition is emitted alongside a success log command."""
+def test_handle_emits_transition_and_logs_success(
+    monkeypatch: MonkeyPatch, caplog: LogCaptureFixture
+) -> None:
+    """A valid transition is emitted; a success message is logged with the
+    standard prefix.
+    """
     note_uuid = "22222222-2222-2222-2222-222222222222"
-    handler = _make_handler(LockNoteButton, monkeypatch, note_uuid=note_uuid)
+    handler = _make_handler(LockNoteButton, monkeypatch, note_id=9)
 
     sentinel = MagicMock(name="lock_effect")
 
-    def _ok(self, note_uuid: str):
+    def _ok(self: _TransitionButton, note: MagicMock) -> Effect:
         return sentinel
 
     monkeypatch.setattr(LockNoteButton, "_build_transition_effect", _ok)
 
-    effects = handler.handle()
+    fake_note = _make_fake_note(NoteTypeCategories.INPATIENT)
+    fake_note.id = note_uuid
+    with (
+        caplog.at_level("INFO"),
+        patch(
+            "note_state_transition_buttons.handlers.transition_buttons.NoteModel.objects"
+        ) as mock_note,
+    ):
+        mock_note.filter.return_value.first.return_value = fake_note
+        effects = handler.handle()
 
-    assert effects[0] is sentinel
-    log_payload = json.loads(effects[1].payload)
-    assert log_payload["data"]["schema_key"] == LOG_SCHEMA_KEY
-    assert log_payload["data"]["content"] == "Lock transition applied."
-    assert log_payload["note"] == note_uuid
+    assert effects == [sentinel]
+    assert any(
+        LOG_PREFIX in record.message
+        and "Lock transition applied" in record.message
+        and note_uuid in record.message
+        for record in caplog.records
+    )
 
 
 @pytest.mark.parametrize(
@@ -163,8 +215,16 @@ def test_handle_emits_transition_plus_success_log(monkeypatch: MonkeyPatch) -> N
         (DeleteNoteButton, EffectType.DELETE_NOTE, DeleteNoteButton.BUTTON_KEY),
         (UndeleteNoteButton, EffectType.UNDELETE_NOTE, UndeleteNoteButton.BUTTON_KEY),
         (DischargeNoteButton, EffectType.DISCHARGE_NOTE, DischargeNoteButton.BUTTON_KEY),
-        (CancelAppointmentButton, EffectType.CANCEL_APPOINTMENT, CancelAppointmentButton.BUTTON_KEY),
-        (RevertAppointmentButton, EffectType.REVERT_APPOINTMENT, RevertAppointmentButton.BUTTON_KEY),
+        (
+            CancelAppointmentButton,
+            EffectType.CANCEL_APPOINTMENT,
+            CancelAppointmentButton.BUTTON_KEY,
+        ),
+        (
+            RevertAppointmentButton,
+            EffectType.REVERT_APPOINTMENT,
+            RevertAppointmentButton.BUTTON_KEY,
+        ),
     ],
     indirect=["mock_sdk_db_queries"],
 )
@@ -175,7 +235,9 @@ def test_each_button_targets_its_effect_type(
     mock_sdk_db_queries: None,
 ) -> None:
     """Each button's `_build_transition_effect` returns the matching SDK effect."""
-    note_uuid = "33333333-3333-3333-3333-333333333333"
-    handler = _make_handler(button_cls, monkeypatch, note_uuid=note_uuid)
-    effect = handler._build_transition_effect(note_uuid)
+    handler = _make_handler(button_cls, monkeypatch, note_id=9)
+    fake_note = _make_fake_note(
+        _REQUIRED_CATEGORY.get(button_cls.BUTTON_KEY, NoteTypeCategories.INPATIENT)
+    )
+    effect = handler._build_transition_effect(fake_note)
     assert effect.type == expected_effect
