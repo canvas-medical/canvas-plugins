@@ -143,7 +143,9 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
             for method in payment_methods
         ]
 
-    def add_payment_method(self, token: str, patient: Patient) -> AddPaymentMethodResponse:
+    def add_payment_method(
+        self, token: str, patient: Patient, **kwargs: Any
+    ) -> AddPaymentMethodResponse:
         """Add a new payment method for the patient."""
         return AddPaymentMethodResponse(success=True)
 
