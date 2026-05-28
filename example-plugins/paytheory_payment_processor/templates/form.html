@@ -20,6 +20,12 @@
   .custom-fields {
     display: {% if intent == "pay" %}flex{% else %}block{% endif %};
   }
+  .error {
+    color: #b00020;
+    margin: 8px 5px 0;
+    font-size: 0.9em;
+    min-height: 1.2em;
+  }
 </style>
 <div>
   <div id="custom-payment-fields" class="custom-fields">
@@ -32,26 +38,53 @@
 
 
   <script>
-    if (!document.querySelector('script[src="{{ sdk_url }}"]')) {
-      var s = document.createElement('script');
-      s.src = '{{ sdk_url }}';
-      document.head.appendChild(s);
+    var cleanUpReady, cleanUpValid, cleanUpState, cleanUpError;
+
+    var ERROR_MESSAGES = {
+      SOCKET_ERROR: 'Your card could not be processed. Please contact your card issuer or try a different card.',
+      TRANSACTING_FIELD_ERROR: 'Please check your card details and try again.',
+      FIELD_ERROR: 'Please check your card details and try again.',
+      NOT_VALID: 'Please check your card details and try again.',
+      INVALID_PARAM: 'Please check your card details and try again.',
+      SESSION_EXPIRED: 'Your session has expired. Please refresh the page and try again.',
+      NOT_READY: 'The payment form is not ready yet. Please wait a moment and try again.',
+      NO_TOKEN: 'The payment form is not ready yet. Please wait a moment and try again.',
+      NO_FIELDS: 'The payment form is not ready yet. Please wait a moment and try again.'
+    };
+    var DEFAULT_ERROR_MESSAGE = 'We could not process your card. Please try again or use a different card.';
+
+    function formatPayTheoryError(rawError) {
+      var prefix = (rawError || '').split(':')[0].trim();
+      return ERROR_MESSAGES[prefix] || DEFAULT_ERROR_MESSAGE;
     }
-  </script>
-  <script>
-    var cleanUpReady, cleanUpValid, cleanUpState;
+
+    function showError(rawError) {
+      if (rawError) {
+        console.error('PayTheory error:', rawError);
+      }
+      var message = formatPayTheoryError(rawError);
+      var errorEl = document.querySelector('.error');
+      if (errorEl) {
+        errorEl.textContent = message;
+      }
+      parentSetError(message);
+    }
+
+    function clearError() {
+      var errorEl = document.querySelector('.error');
+      if (errorEl) {
+        errorEl.textContent = '';
+      }
+    }
 
     function setupPayTheory() {
-
-        if (!paytheory) {
-            console.log('PayTheory SDK not loaded yet, retrying...');
-            setTimeout(() => setupPayTheory(), 100);
-            return;
-        }
-
       cleanUpReady = paytheory.readyObserver(ready => {
         parentFormIsReady(ready);
       })
+
+      cleanUpError = paytheory.errorObserver(error => {
+        showError(error);
+      });
 
       cleanUpState = paytheory.stateObserver(state => {
         if (state['billing-zip'].isDirty) {
@@ -79,6 +112,7 @@
       const submit = document.getElementById('submit');
       submit.addEventListener('click', async (e) => {
         e.preventDefault();
+        clearError();
 
         const tokenizeParams = {};
         {% if payor_id %}
@@ -86,20 +120,42 @@
         {% endif %}
         const result = await paytheory.tokenizePaymentMethod(tokenizeParams);
 
+        if (result.type === 'ERROR') {
+          showError(result.error);
+          return;
+        }
+
         if (result.body && result.body.payment_method_id) {
           parentSetToken(result.body.payment_method_id);
         } else {
-          parentSetError(result.error || 'Tokenization failed');
+          showError(result.error);
         }
       });
     }
 
-    setTimeout(() => setupPayTheory(), 100);
+    function loadSDKAndSetup() {
+      if (typeof paytheory !== 'undefined') {
+        setupPayTheory();
+        return;
+      }
+      var existing = document.querySelector('script[src="{{ sdk_url }}"]');
+      if (existing) {
+        existing.addEventListener('load', setupPayTheory);
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = '{{ sdk_url }}';
+      s.onload = setupPayTheory;
+      document.head.appendChild(s);
+    }
+
+    loadSDKAndSetup();
 
     window.teardown = function() {
       cleanUpReady?.();
       cleanUpValid?.();
       cleanUpState?.();
+      cleanUpError?.();
     };
 
     function parentFormIsReady(ready) {
