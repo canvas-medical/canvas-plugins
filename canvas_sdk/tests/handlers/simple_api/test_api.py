@@ -1394,6 +1394,26 @@ def test_simple_api_route_file_uploads_stored_without_post_or_put_raises() -> No
                 return [Response(status_code=HTTPStatus.OK)]
 
 
+def test_file_uploads_decorator_rejects_invalid_value() -> None:
+    """An invalid file_uploads value (e.g. a typo) raises PluginError at decoration time."""
+    with pytest.raises(PluginError, match="Invalid file_uploads value 'stoerd'"):
+        api.post("/upload", file_uploads="stoerd")  # type: ignore[arg-type]
+
+
+def test_simple_api_route_file_uploads_rejects_invalid_value() -> None:
+    """A typo'd FILE_UPLOADS on a SimpleAPIRoute (with a post method to enter the decorator
+    funnel) raises PluginError via the underlying decorator validation.
+    """
+    with pytest.raises(PluginError, match="Invalid file_uploads value 'stoerd'"):
+
+        class Route(NoAuthMixin, SimpleAPIRoute):
+            PATH = "/route"
+            FILE_UPLOADS = "stoerd"
+
+            def post(self) -> list[Response | Effect]:
+                return [Response(status_code=HTTPStatus.OK)]
+
+
 def test_stored_file_part_failure_equality() -> None:
     """A StoredFilePart constructed in the failure state (key=None, error=...) compares
     equal field-by-field and is distinct from a success-state part with a different error.

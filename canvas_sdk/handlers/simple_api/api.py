@@ -321,8 +321,10 @@ class Request:
                         "Canvas built a malformed upload envelope (non-object files entry)"
                     )
                 status = upload.get("status")
-                if status == "ok":
+                if status in {"ok", "failed"}:
                     try:
+                        key = upload["key"] if status == "ok" else None
+                        error = None if status == "ok" else upload["error"]
                         entries.append(
                             (
                                 upload["name"],
@@ -331,35 +333,15 @@ class Request:
                                     filename=upload["filename"],
                                     content_type=upload.get("content_type"),
                                     content_length=upload["content_length"],
-                                    key=upload["key"],
-                                    error=None,
+                                    key=key,
+                                    error=error,
                                 ),
                             )
                         )
                     except KeyError as exc:
                         raise RuntimeError(
                             "Canvas built a malformed upload envelope "
-                            f"(ok entry missing required field {exc.args[0]!r})"
-                        ) from exc
-                elif status == "failed":
-                    try:
-                        entries.append(
-                            (
-                                upload["name"],
-                                StoredFilePart(
-                                    name=upload["name"],
-                                    filename=upload["filename"],
-                                    content_type=upload.get("content_type"),
-                                    content_length=upload["content_length"],
-                                    key=None,
-                                    error=upload["error"],
-                                ),
-                            )
-                        )
-                    except KeyError as exc:
-                        raise RuntimeError(
-                            "Canvas built a malformed upload envelope "
-                            f"(failed entry missing required field {exc.args[0]!r})"
+                            f"({status} entry missing required field {exc.args[0]!r})"
                         ) from exc
                 else:
                     raise RuntimeError(
@@ -434,6 +416,11 @@ def _handler_decorator(
 ) -> Callable[[RouteHandler], RouteHandler]:
     if not path.startswith("/"):
         raise PluginError(f"Route path '{path}' must start with a forward slash")
+
+    if file_uploads not in ("passthrough", "stored"):
+        raise PluginError(
+            f'Invalid file_uploads value {file_uploads!r}; expected "passthrough" or "stored"'
+        )
 
     def decorator(handler: RouteHandler) -> RouteHandler:
         """Mark the handler with the HTTP method, path, and file-uploads mode."""
@@ -724,10 +711,10 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             else:
                 decorator(path)(attr_value)
 
-        if file_uploads == "stored" and not registered_upload_verb:
+        if hasattr(cls, "FILE_UPLOADS") and not registered_upload_verb:
             raise PluginError(
-                f'Setting FILE_UPLOADS = "stored" on a {SimpleAPIRoute.__name__} requires a '
-                "post or put method; the setting has no effect on other verbs"
+                f"Setting FILE_UPLOADS on a {SimpleAPIRoute.__name__} requires a post or "
+                "put method; the setting has no effect on other verbs"
             )
         super().__init_subclass__(**kwargs)
 
