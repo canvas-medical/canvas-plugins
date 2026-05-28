@@ -1,0 +1,75 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "1.0.0",
+    "name": "note_state_transition_buttons",
+    "description": "Adds a note-footer button for every Note and Appointment state transition exposed by the SDK. Each button attempts the transition and logs the outcome (or pydantic validation error) to the note via a custom command.",
+    "components": {
+        "handlers": [
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:LockNoteButton",
+                "description": "Footer button that invokes Note.lock().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:UnlockNoteButton",
+                "description": "Footer button that invokes Note.unlock().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:SignNoteButton",
+                "description": "Footer button that invokes Note.sign().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:PushChargesNoteButton",
+                "description": "Footer button that invokes Note.push_charges().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:CheckInNoteButton",
+                "description": "Footer button that invokes Note.check_in().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:NoShowNoteButton",
+                "description": "Footer button that invokes Note.no_show().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:DeleteNoteButton",
+                "description": "Footer button that invokes Note.delete().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:UndeleteNoteButton",
+                "description": "Footer button that invokes Note.undelete().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:DischargeNoteButton",
+                "description": "Footer button that invokes Note.discharge().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:CancelAppointmentButton",
+                "description": "Footer button that invokes Appointment.cancel().",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "note_state_transition_buttons.handlers.transition_buttons:RevertAppointmentButton",
+                "description": "Footer button that invokes Appointment.revert().",
+                "data_access": {"event": "", "read": [], "write": []}
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": ["https://docs.canvasmedical.com/sdk/handlers-action-buttons/", "https://docs.canvasmedical.com/sdk/effect-notes/"],
+    "license": "MIT",
+    "diagram": false,
+    "readme": "./README.md"
+}
