@@ -894,7 +894,6 @@
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
-    "FailedFilePart",
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
@@ -908,7 +907,6 @@
   ],
   "canvas_sdk.handlers.simple_api.api": [
     "Credentials",
-    "FailedFilePart",
     "FileFormPart",
     "FormPart",
     "Request",

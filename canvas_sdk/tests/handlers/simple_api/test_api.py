@@ -22,7 +22,6 @@ from canvas_sdk.effects.simple_api import (
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import (
-    FailedFilePart,
     FileFormPart,
     FormPart,
     Request,
@@ -1141,13 +1140,28 @@ def test_file_uploads_decorator_opt_in_stored() -> None:
 def test_stored_file_part_equality() -> None:
     """StoredFilePart compares equal field-by-field, and is_file() returns True."""
     a = StoredFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="k1",
+        error=None,
     )
     b = StoredFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="k1"
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="k1",
+        error=None,
     )
     c = StoredFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, key="other"
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="other",
+        error=None,
     )
     assert a == b
     assert a != c
@@ -1189,7 +1203,7 @@ def test_request_form_data_stored_mode() -> None:
                     "name": "attachment",
                     "filename": "invoice.pdf",
                     "content_type": "application/pdf",
-                    "size": 12345,
+                    "content_length": 12345,
                     "status": "ok",
                     "key": "customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
                 }
@@ -1218,8 +1232,9 @@ def test_request_form_data_stored_mode() -> None:
                     name="attachment",
                     filename="invoice.pdf",
                     content_type="application/pdf",
-                    size=12345,
+                    content_length=12345,
                     key="customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
+                    error=None,
                 ),
             ),
         )
@@ -1237,7 +1252,7 @@ def test_request_form_data_stored_mode_multiple_files() -> None:
                     "name": "first",
                     "filename": "a.txt",
                     "content_type": "text/plain",
-                    "size": 4,
+                    "content_length": 4,
                     "status": "ok",
                     "key": "plugin-uploads/p/k1.txt",
                 },
@@ -1245,7 +1260,7 @@ def test_request_form_data_stored_mode_multiple_files() -> None:
                     "name": "second",
                     "filename": "b.bin",
                     "content_type": "application/octet-stream",
-                    "size": 16,
+                    "content_length": 16,
                     "status": "ok",
                     "key": "plugin-uploads/p/k2.bin",
                 },
@@ -1312,7 +1327,7 @@ def test_simple_api_full_upload_flow() -> None:
                     "name": "attachment",
                     "filename": "test.pdf",
                     "content_type": "application/pdf",
-                    "size": 7,
+                    "content_length": 7,
                     "status": "ok",
                     "key": "customer/plugin-uploads/p/ts-uuid-test.pdf",
                 }
@@ -1331,7 +1346,7 @@ def test_simple_api_full_upload_flow() -> None:
     assert response_payload == {"key": "customer/plugin-uploads/p/ts-uuid-test.pdf"}
     assert captured["title"] == StringFormPart(name="title", value="Hello")
     assert captured["attachment"].filename == "test.pdf"
-    assert captured["attachment"].size == 7
+    assert captured["attachment"].content_length == 7
     assert isinstance(captured["attachment"], StoredFilePart)
 
 
@@ -1364,25 +1379,57 @@ def test_simple_api_route_file_uploads_default_passthrough() -> None:
     assert payload["handling_options"]["file_uploads"] == "passthrough"
 
 
-def test_failed_file_part_equality() -> None:
-    """FailedFilePart compares equal field-by-field, and is_file() returns True."""
-    a = FailedFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="e1"
+def test_simple_api_route_file_uploads_stored_without_post_or_put_raises() -> None:
+    """Setting FILE_UPLOADS="stored" on a SimpleAPIRoute with no post or put method is a
+    silent footgun — the setting only applies to post/put. Raise a PluginError so the
+    developer notices their setup doesn't do what they intended.
+    """
+    with pytest.raises(PluginError, match="requires a post or put method"):
+
+        class Route(NoAuthMixin, SimpleAPIRoute):
+            PATH = "/route"
+            FILE_UPLOADS = "stored"
+
+            def get(self) -> list[Response | Effect]:
+                return [Response(status_code=HTTPStatus.OK)]
+
+
+def test_stored_file_part_failure_equality() -> None:
+    """A StoredFilePart constructed in the failure state (key=None, error=...) compares
+    equal field-by-field and is distinct from a success-state part with a different error.
+    """
+    a = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="e1",
     )
-    b = FailedFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="e1"
+    b = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="e1",
     )
-    c = FailedFilePart(
-        name="file", filename="x.pdf", content_type="application/pdf", size=10, error="other"
+    c = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="other",
     )
     assert a == b
     assert a != c
-    assert FailedFilePart.is_file() is True
 
 
 def test_request_form_data_stored_mode_includes_failed_entries() -> None:
-    """form_data() surfaces ok files as StoredFilePart and failed files as FailedFilePart,
-    in the same MultiDict, so iterating handlers can't accidentally ignore failures.
+    """form_data() surfaces both ok and failed uploads as StoredFilePart in the same
+    MultiDict; failed entries have ``key=None`` and a populated ``error`` so iterating
+    handlers can't accidentally ignore failures.
     """
     envelope = json.dumps(
         {
@@ -1392,7 +1439,7 @@ def test_request_form_data_stored_mode_includes_failed_entries() -> None:
                     "name": "good",
                     "filename": "a.txt",
                     "content_type": "text/plain",
-                    "size": 3,
+                    "content_length": 3,
                     "status": "ok",
                     "key": "plugin-uploads/p/k-a.txt",
                 },
@@ -1400,7 +1447,7 @@ def test_request_form_data_stored_mode_includes_failed_entries() -> None:
                     "name": "bad",
                     "filename": "b.txt",
                     "content_type": "text/plain",
-                    "size": 8,
+                    "content_length": 8,
                     "status": "failed",
                     "error": "s3_upload_failed",
                 },
@@ -1423,7 +1470,9 @@ def test_request_form_data_stored_mode_includes_failed_entries() -> None:
     assert [name for name, _ in parts] == ["good", "bad"]
     assert isinstance(parts[0][1], StoredFilePart)
     assert parts[0][1].key == "plugin-uploads/p/k-a.txt"
-    assert isinstance(parts[1][1], FailedFilePart)
+    assert parts[0][1].error is None
+    assert isinstance(parts[1][1], StoredFilePart)
+    assert parts[1][1].key is None
     assert parts[1][1].error == "s3_upload_failed"
 
 
@@ -1437,7 +1486,7 @@ def test_request_form_data_stored_mode_failed_entry_missing_error_raises() -> No
                     "name": "bad",
                     "filename": "b.txt",
                     "content_type": "text/plain",
-                    "size": 8,
+                    "content_length": 8,
                     "status": "failed",
                     # ``error`` intentionally absent
                 }
@@ -1469,7 +1518,7 @@ def test_request_form_data_stored_mode_unknown_status_raises() -> None:
                     "name": "weird",
                     "filename": "x.txt",
                     "content_type": "text/plain",
-                    "size": 1,
+                    "content_length": 1,
                     "status": "pending",
                 }
             ],
@@ -1528,7 +1577,7 @@ def test_request_form_data_stored_mode_raises_on_missing_required_field() -> Non
                 {
                     "name": "f",
                     "filename": "x.txt",
-                    "size": 1,
+                    "content_length": 1,
                     "status": "ok",
                     # ``key`` intentionally absent
                 }
@@ -1550,7 +1599,7 @@ def test_request_upload_envelope_is_cached_across_calls() -> None:
                     "name": "good",
                     "filename": "a.txt",
                     "content_type": "text/plain",
-                    "size": 3,
+                    "content_length": 3,
                     "status": "ok",
                     "key": "k",
                 },
@@ -1558,7 +1607,7 @@ def test_request_upload_envelope_is_cached_across_calls() -> None:
                     "name": "bad",
                     "filename": "b.txt",
                     "content_type": "text/plain",
-                    "size": 8,
+                    "content_length": 8,
                     "status": "failed",
                     "error": "s3_upload_failed",
                 },
@@ -1584,10 +1633,13 @@ def test_form_part_protocol_is_runtime_checkable_for_all_variants() -> None:
         FormPart,
     )
     assert isinstance(
-        StoredFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, key="k"),
-        FormPart,
-    )
-    assert isinstance(
-        FailedFilePart(name="f", filename="x.txt", content_type="text/plain", size=1, error="e"),
+        StoredFilePart(
+            name="f",
+            filename="x.txt",
+            content_type="text/plain",
+            content_length=1,
+            key="k",
+            error=None,
+        ),
         FormPart,
     )

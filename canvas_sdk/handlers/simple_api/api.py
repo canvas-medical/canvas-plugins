@@ -104,11 +104,17 @@ class FileFormPart(FormPart):
 
 
 class StoredFilePart(FormPart):
-    """Form part for a file that home-app stored in S3 before invoking the plugin.
+    """Form part for a file that Canvas attempted to store in S3 before invoking the plugin.
 
-    The bytes are not available — they live in S3 only. Use ``key`` to reference the
-    file in subsequent effects. Consumer code (FHIR, message viewer, etc.) generates a
-    fresh presigned URL on read.
+    Carries two mutually-exclusive states:
+
+    * **Success** — ``error`` is ``None`` and ``key`` is the S3 key. Reference the key
+      in subsequent effects (e.g. a message-attachment effect or a custom data record).
+      Canvas generates a fresh short-lived presigned URL on read.
+    * **Failure** — ``error`` is a stable code (e.g. ``"s3_upload_failed"``) and ``key``
+      is ``None``. Failures are surfaced alongside successes so a developer iterating
+      parts can't accidentally ignore them. Discriminate with ``if part.error:`` before
+      reading ``part.key``.
 
     Returned by ``Request.form_data()`` for file fields when the matched route was
     declared with ``file_uploads="stored"`` on its decorator.
@@ -119,14 +125,16 @@ class StoredFilePart(FormPart):
         name: str,
         filename: str,
         content_type: str | None,
-        size: int,
-        key: str,
+        content_length: int,
+        key: str | None,
+        error: str | None,
     ) -> None:
         self.name = name
         self.filename = filename
         self.content_type = content_type
-        self.size = size
+        self.content_length = content_length
         self.key = key
+        self.error = error
 
     @staticmethod
     def is_file() -> bool:
@@ -140,52 +148,8 @@ class StoredFilePart(FormPart):
             self.name == other.name
             and self.filename == other.filename
             and self.content_type == other.content_type
-            and self.size == other.size
+            and self.content_length == other.content_length
             and self.key == other.key
-        )
-
-
-class FailedFilePart(FormPart):
-    """Form part for a file that Canvas tried to upload to S3 but couldn't.
-
-    The bytes are not available — Canvas attempted the upload and recorded the failure
-    in the envelope. ``error`` is a stable code (e.g. ``"s3_upload_failed"``) the plugin
-    can act on: either fail the whole request (atomic semantics) or proceed with the
-    parts that succeeded.
-
-    Returned by ``Request.form_data()`` for file fields when the matched route was
-    declared with ``file_uploads="stored"`` and the upload failed. Surfacing failures
-    alongside successes (rather than via a separate method) means a developer iterating
-    parts can't accidentally ignore them.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        filename: str,
-        content_type: str | None,
-        size: int,
-        error: str,
-    ) -> None:
-        self.name = name
-        self.filename = filename
-        self.content_type = content_type
-        self.size = size
-        self.error = error
-
-    @staticmethod
-    def is_file() -> bool:
-        """Return True or False depending on whether the form part represents a file."""
-        return True
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, FailedFilePart):
-            return NotImplemented
-        return (
-            self.name == other.name
-            and self.filename == other.filename
-            and self.content_type == other.content_type
-            and self.size == other.size
             and self.error == other.error
         )
 
@@ -322,19 +286,13 @@ class Request:
         """Return the response body as a dict of string to list of FormPart objects.
 
         When the matched route was declared with ``file_uploads="stored"`` on its
-        decorator, Canvas has already uploaded any file fields to S3 and replaced the
-        body with a JSON envelope. File fields come back as either:
+        decorator, Canvas has already attempted to upload any file fields to S3 and
+        replaced the body with a JSON envelope. File fields come back as
+        :class:`StoredFilePart`, which carries both successful and failed uploads in
+        the same MultiDict so a developer iterating parts can't accidentally ignore
+        failures. Discriminate with ``if part.error:`` before reading ``part.key``.
 
-        * :class:`StoredFilePart` — upload succeeded; use ``part.key`` to reference the
-          file in subsequent effects.
-        * :class:`FailedFilePart` — Canvas tried to upload but couldn't; ``part.error``
-          carries a stable code. Plugin code can detect these via
-          ``isinstance(part, FailedFilePart)`` and decide whether to fail the request or
-          continue with the successful parts.
-
-        Non-file fields stay as :class:`StringFormPart` in both modes. Successful and
-        failed file parts are returned in the same MultiDict so a developer iterating
-        parts can't accidentally ignore failures.
+        Non-file fields stay as :class:`StringFormPart` in both modes.
 
         Otherwise the body is parsed as ``application/x-www-form-urlencoded`` or
         ``multipart/form-data`` and file fields are returned as :class:`FileFormPart`.
@@ -372,8 +330,9 @@ class Request:
                                     name=upload["name"],
                                     filename=upload["filename"],
                                     content_type=upload.get("content_type"),
-                                    size=upload["size"],
+                                    content_length=upload["content_length"],
                                     key=upload["key"],
+                                    error=None,
                                 ),
                             )
                         )
@@ -387,11 +346,12 @@ class Request:
                         entries.append(
                             (
                                 upload["name"],
-                                FailedFilePart(
+                                StoredFilePart(
                                     name=upload["name"],
                                     filename=upload["filename"],
                                     content_type=upload.get("content_type"),
-                                    size=upload["size"],
+                                    content_length=upload["content_length"],
+                                    key=None,
                                     error=upload["error"],
                                 ),
                             )
@@ -719,6 +679,7 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             getattr(cls, "FILE_UPLOADS", "passthrough"),
         )
 
+        registered_upload_verb = False
         for attr_name, attr_value in cls.__dict__.items():
             decorator: Callable | None
             match attr_name:
@@ -759,9 +720,15 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             # ignore is required on the post/put branch.
             if attr_name in ("post", "put"):
                 decorator(path, file_uploads=file_uploads)(attr_value)  # type: ignore[call-arg]
+                registered_upload_verb = True
             else:
                 decorator(path)(attr_value)
 
+        if file_uploads == "stored" and not registered_upload_verb:
+            raise PluginError(
+                f'Setting FILE_UPLOADS = "stored" on a {SimpleAPIRoute.__name__} requires a '
+                "post or put method; the setting has no effect on other verbs"
+            )
         super().__init_subclass__(**kwargs)
 
     def get(self) -> list[Response | Effect]:
@@ -790,7 +757,6 @@ __exports__ = (
     "StringFormPart",
     "FileFormPart",
     "StoredFilePart",
-    "FailedFilePart",
     "parse_multipart_form",
     "Request",
     "SimpleAPIType",

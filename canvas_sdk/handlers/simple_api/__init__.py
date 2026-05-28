@@ -1,5 +1,4 @@
 from .api import (
-    FailedFilePart,
     FileFormPart,
     FormPart,
     SimpleAPI,
@@ -29,7 +28,6 @@ __all__ = __exports__ = (
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
-    "FailedFilePart",
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
