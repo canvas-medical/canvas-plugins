@@ -28,6 +28,9 @@ ACTION_STATE_MATRIX = {
     "push_charges": NoteStates.PUSHED,
     "check_in": NoteStates.CONVERTED,
     "no_show": NoteStates.NOSHOW,
+    "delete": NoteStates.DELETED,
+    "undelete": NoteStates.UNDELETED,
+    "discharge": NoteStates.DISCHARGED,
 }
 
 
@@ -98,6 +101,30 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
+    def delete(self) -> Effect:
+        """Deletes the note."""
+        self._validate_before_effect("delete")
+        return Effect(
+            type=EffectType.DELETE_NOTE,
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
+        )
+
+    def undelete(self) -> Effect:
+        """Restores a previously deleted note."""
+        self._validate_before_effect("undelete")
+        return Effect(
+            type=EffectType.UNDELETE_NOTE,
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
+        )
+
+    def discharge(self) -> Effect:
+        """Locks and discharges an inpatient note."""
+        self._validate_before_effect("discharge")
+        return Effect(
+            type=EffectType.DISCHARGE_NOTE,
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
+        )
+
     def upsert_metadata(self, key: str, value: str) -> Effect:
         """
         Upserts a metadata record to the note.
@@ -139,6 +166,16 @@ class Note(NoteOrAppointmentABC):
             return False, self._create_error_detail(
                 "value",
                 "Only appointments can be checked in or marked as no-show.",
+                next_state,
+            )
+
+        if (
+            next_state == NoteStates.DISCHARGED
+            and note.note_type_version.category != NoteTypeCategories.INPATIENT
+        ):
+            return False, self._create_error_detail(
+                "value",
+                "Only inpatient notes can be discharged.",
                 next_state,
             )
 

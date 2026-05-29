@@ -687,3 +687,108 @@ def test_update_note_related_data(mock_db_queries: dict[str, MagicMock]) -> None
     payload = json.loads(effect.payload)
     assert payload["data"]["related_data"] == related_data
     assert payload["data"]["instance_id"] == instance_id
+
+
+def test_delete_note_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that delete requires an instance_id."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.delete()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required." in msgs
+
+
+def test_delete_note_does_not_exist(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that delete fails when the note does not exist."""
+    instance_id = str(uuid4())
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.delete()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_delete_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note delete."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.delete()
+
+    assert effect.type == EffectType.DELETE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_undelete_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note undelete."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.DELETED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.undelete()
+
+    assert effect.type == EffectType.UNDELETE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_discharge_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful inpatient note discharge."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Inpatient Note", category=NoteTypeCategories.INPATIENT
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.discharge()
+
+    assert effect.type == EffectType.DISCHARGE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_discharge_note_not_inpatient(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that discharge raises an error when the note is not an inpatient note."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.discharge()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Only inpatient notes can be discharged." in msgs

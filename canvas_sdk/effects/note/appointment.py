@@ -275,6 +275,14 @@ class Appointment(AppointmentABC):
             ),
         )
 
+    def revert(self) -> Effect:
+        """Reverts a booked or checked-in appointment back to a revertible state."""
+        self._validate_before_effect("revert")
+        return Effect(
+            type=EffectType.REVERT_APPOINTMENT,
+            payload=json.dumps({"data": {"instance_id": str(self.instance_id)}}),
+        )
+
 
 class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
     """
