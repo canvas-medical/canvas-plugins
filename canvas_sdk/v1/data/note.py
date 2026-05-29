@@ -172,7 +172,6 @@ class Note(TimestampedModel, IdentifiableModel):
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes"
     )
     title = models.TextField(default="", blank=True)
-    body = models.JSONField(default=empty_note_body)
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField(max_length=32)
@@ -183,6 +182,34 @@ class Note(TimestampedModel, IdentifiableModel):
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField(default=timezone.now)
     place_of_service = models.CharField(max_length=255)
+
+    # properties that shouldn't be directly exposed in the API
+    # but are needed for legacy note handling and other internal logic
+    _body = models.JSONField(default=empty_note_body, db_column="body")
+    _body_content = models.JSONField(default=dict, db_column="body_content")
+    _body_order = ArrayField(models.UUIDField(), default=[], blank=True, db_column="body_order")
+    _version = models.IntegerField(null=True, db_column="version")
+
+    @property
+    def body(self) -> list[dict]:
+        """Return the note body content, handling any necessary transformations for v2 notes."""
+        if self._version == 2:
+            # For version 2 notes, we need to reconstruct the body using the content and order fields
+            legacy_body: list[dict] = []
+            for line_uuid in self._body_order:
+                line_uuid_str = str(line_uuid)
+                line = self._body_content.get(line_uuid_str)
+
+                if line is None:
+                    legacy_body.append({"type": "text", "value": ""})
+                elif line.get("type") == "command":
+                    legacy_body.append({"type": "command", "value": line["value"]})
+                else:
+                    legacy_body.append({"type": "text", "value": line.get("value", "")})
+            return legacy_body
+        else:
+            # for legacy notes we can return the body directly, as it is already in the expected format
+            return self._body
 
     def body_checksum(self) -> str:
         """Compute an MD5 checksum of the note body content only."""
