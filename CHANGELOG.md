@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.157.0 (2026-05-29)
+
+### Features
+
+- Add missing note state change effects to sdk
+  ([#1729](https://github.com/canvas-medical/canvas-plugins/pull/1729),
+  [`233d3f2`](https://github.com/canvas-medical/canvas-plugins/commit/233d3f2d1f74de0f71ef8aa9bafb1064616dc6f3))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.156.0 (2026-05-27)
 
 ### Bug Fixes
