@@ -9,7 +9,7 @@ class _CommandCustomHtml(_BaseEffect):
     class Meta:
         effect_type = EffectType.SET_COMMAND_CUSTOM_HTML
 
-    command_id: str
+    command_id: UUID = Field(strict=False)
     custom_html: str | None
 
     @property
