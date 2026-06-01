@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.158.0 (2026-06-01)
+
+### Bug Fixes
+
+- Scope simple-api header splitting to list-valued headers
+  ([#1709](https://github.com/canvas-medical/canvas-plugins/pull/1709),
+  [`4934028`](https://github.com/canvas-medical/canvas-plugins/commit/4934028c62b43c4bd7dba320fb4f5a348b7002f3))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+### Features
+
+- Enter in error observations effect
+  ([#1696](https://github.com/canvas-medical/canvas-plugins/pull/1696),
+  [`b94141e`](https://github.com/canvas-medical/canvas-plugins/commit/b94141ed0e2a4191ba89c567d7e9c344df4a0d01))
+
+
 ## v0.157.0 (2026-05-29)
 
 ### Features
