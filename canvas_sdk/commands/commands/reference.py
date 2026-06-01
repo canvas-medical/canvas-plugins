@@ -11,8 +11,8 @@ class ReferenceCommand(_BaseCommand):
     class Meta:
         key = "reference"
 
-    diagnostic_view_id: UUID | str | None = Field(
-        default=None, json_schema_extra={"commands_api_name": "diagnostic_view"}
+    diagnostic_view_id: UUID | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "diagnostic_view"}, strict=False
     )
 
 
