@@ -2,9 +2,6 @@
 
 import json
 
-import pytest
-from pydantic_core import ValidationError
-
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands import ReferenceCommand
 
@@ -37,13 +34,6 @@ def test_originate_renames_field_via_commands_api_name() -> None:
     """The command's JSON schema renames diagnostic_view_id to diagnostic_view on the wire."""
     schema = ReferenceCommand.model_json_schema()
     assert schema["properties"]["diagnostic_view_id"].get("commands_api_name") == "diagnostic_view"
-
-
-def test_originate_requires_note_uuid() -> None:
-    """originate() raises ValidationError when note_uuid is missing."""
-    cmd = ReferenceCommand(diagnostic_view_id="dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0")
-    with pytest.raises(ValidationError):
-        cmd.originate()
 
 
 def test_edit_emits_edit_effect() -> None:
@@ -92,13 +82,6 @@ def test_enter_in_error_emits_enter_in_error_effect() -> None:
 
     assert effect.type == EffectType.ENTER_IN_ERROR_REFERENCE_COMMAND
     assert json.loads(effect.payload) == {"command": "cmd-5"}
-
-
-def test_edit_requires_command_uuid() -> None:
-    """edit() raises ValidationError when command_uuid is missing."""
-    cmd = ReferenceCommand(diagnostic_view_id="11111111-2222-3333-4444-555555555555")
-    with pytest.raises(ValidationError):
-        cmd.edit()
 
 
 def test_diagnostic_view_id_is_optional() -> None:

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
@@ -9,7 +11,7 @@ class ReferenceCommand(_BaseCommand):
     class Meta:
         key = "reference"
 
-    diagnostic_view_id: str | None = Field(
+    diagnostic_view_id: UUID | str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "diagnostic_view"}
     )
 
