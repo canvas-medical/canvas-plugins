@@ -52,6 +52,7 @@ REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 HEADERS_RAW = {
     "Canvas-Plugins-Test-Header-1": "test header 1",
     "Canvas-Plugins-Test-Header-2": "test header 2a, test header 2b",
+    "Accept-Encoding": "gzip, br",
 }
 HEADERS = CaseInsensitiveMultiDict(separate_headers(HEADERS_RAW))
 
@@ -185,12 +186,15 @@ def test_request(
 
     assert request.headers == CaseInsensitiveMultiDict(separate_headers(headers))
     assert request.headers["canvas-plugins-test-header-1"] == "test header 1"
-    assert request.headers["canvas-plugins-test-header-2"] == "test header 2a"
+    # Custom (non-allowlisted) headers preserve commas in their value.
+    assert request.headers["canvas-plugins-test-header-2"] == "test header 2a, test header 2b"
+    # Accept-Encoding is in the allowlist and splits into discrete values.
+    assert request.headers["accept-encoding"] == "gzip"
     assert request.headers.get_list("canvas-plugins-test-header-1") == ["test header 1"]
     assert request.headers.get_list("canvas-plugins-test-header-2") == [
-        "test header 2a",
-        "test header 2b",
+        "test header 2a, test header 2b",
     ]
+    assert request.headers.get_list("accept-encoding") == ["gzip", "br"]
 
     assert request.query_params == MultiDict((("value1", "a"), ("value2", "b")))
 
@@ -651,7 +655,8 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 content_type="application/pdf",
             ),
             '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "application/pdf"}, '
+            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+            '"accept-encoding": "gzip", "Content-Type": "application/pdf"}, '
             '"body": "JVBERi0xLjQKJdPr6eE=", "status_code": 202}',
         ),
         (
@@ -661,7 +666,8 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 headers=HEADERS,
             ),
             '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "application/json"},'
+            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+            '"accept-encoding": "gzip", "Content-Type": "application/json"},'
             ' "body": "eyJtZXNzYWdlIjogIkpTT04gcmVzcG9uc2UifQ==", "status_code": 202}',
         ),
         (
@@ -669,19 +675,22 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 content="plain text response", status_code=HTTPStatus.ACCEPTED, headers=HEADERS
             ),
             '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "text/plain"}, '
+            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+            '"accept-encoding": "gzip", "Content-Type": "text/plain"}, '
             '"body": "cGxhaW4gdGV4dCByZXNwb25zZQ==", "status_code": 202}',
         ),
         (
             HTMLResponse(content="<html></html>", status_code=HTTPStatus.ACCEPTED, headers=HEADERS),
             '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "text/html"}, '
+            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+            '"accept-encoding": "gzip", "Content-Type": "text/html"}, '
             '"body": "PGh0bWw+PC9odG1sPg==", "status_code": 202}',
         ),
         (
             Response(status_code=HTTPStatus.NO_CONTENT, headers=HEADERS),
             '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a"}, "body": "", "status_code": 204}',
+            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+            '"accept-encoding": "gzip"}, "body": "", "status_code": 204}',
         ),
     ],
     ids=["binary", "JSON", "plain text", "HTML", "no content"],
