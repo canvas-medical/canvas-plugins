@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.158.1 (2026-06-01)
+
+### Bug Fixes
+
+- Scope reporting default privileges to canvas_sdk_read_only (SUPPORT-2188)
+  ([#1733](https://github.com/canvas-medical/canvas-plugins/pull/1733),
+  [`7200e80`](https://github.com/canvas-medical/canvas-plugins/commit/7200e80576d71ee5c8656e3c593f6fffa72a8412))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.158.0 (2026-06-01)
 
 ### Bug Fixes
