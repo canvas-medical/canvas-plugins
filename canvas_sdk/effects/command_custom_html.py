@@ -1,4 +1,7 @@
 from typing import Any
+from uuid import UUID
+
+from pydantic import Field
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
