@@ -18,7 +18,7 @@ class _CommandCustomHtml(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         return {
-            "command_id": self.command_id,
+            "command_id": str(self.command_id),
             "custom_html": self.custom_html,
         }
 

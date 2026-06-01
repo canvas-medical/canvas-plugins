@@ -268,6 +268,7 @@ def test_set_custom_html_emits_dedicated_effect(
     dummy_command_instance: DummyCommand,
 ) -> None:
     """set_custom_html(html) emits a SET_COMMAND_CUSTOM_HTML effect with both fields nested in data."""
+    dummy_command_instance.command_uuid = "71d20b55-8696-4d04-a848-ce5e0180e00e"
     effect = dummy_command_instance.set_custom_html("<div>plugin html</div>")
 
     assert effect.type == EffectType.SET_COMMAND_CUSTOM_HTML
@@ -283,6 +284,7 @@ def test_set_custom_html_transmits_none_to_clear(
     dummy_command_instance: DummyCommand,
 ) -> None:
     """set_custom_html(None) clears the field."""
+    dummy_command_instance.command_uuid = "71d20b55-8696-4d04-a848-ce5e0180e00e"
     payload = json.loads(dummy_command_instance.set_custom_html(None).payload)
 
     assert payload["data"]["custom_html"] is None
