@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.160.0 (2026-06-02)
+
+### Features
+
+- Upload files to s3 with simple api
+  ([#1675](https://github.com/canvas-medical/canvas-plugins/pull/1675),
+  [`5d41655`](https://github.com/canvas-medical/canvas-plugins/commit/5d41655f74d58260b40f9675781ebb7d046a52bb))
+
+
 ## v0.159.0 (2026-06-02)
 
 ### Features
