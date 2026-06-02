@@ -1,5 +1,4 @@
 from .assign_document_reviewer import AssignDocumentReviewer as AssignDocumentReviewer
-from .assign_document_reviewer import Priority as Priority
 from .assign_document_reviewer import ReviewMode as ReviewMode
 from .categorize_document import CategorizeDocument as CategorizeDocument
 from .junk_document import JunkDocument as JunkDocument
@@ -24,7 +23,6 @@ __all__ = __exports__ = (
     "LinkDocumentToPatient",
     "PrefillDocumentFields",
     "PrefillTemplate",
-    "Priority",
     "RemoveDocumentFromPatient",
     "ReportType",
     "ReviewMode",

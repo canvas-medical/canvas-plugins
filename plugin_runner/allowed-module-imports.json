@@ -527,6 +527,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.configure_command_buttons": [
+    "ConfigureCommandButtons"
+  ],
   "canvas_sdk.effects.data_integration": [
     "AnnotationItem",
     "AssignDocumentReviewer",
@@ -537,7 +540,6 @@
     "PrefillDocumentFieldData",
     "PrefillDocumentFields",
     "PrefillTemplate",
-    "Priority",
     "RemoveDocumentFromPatient",
     "ReportType",
     "ReviewMode",
@@ -546,7 +548,6 @@
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
-    "Priority",
     "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.categorize_document": [
@@ -896,11 +897,15 @@
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "FileFormPart",
+    "FormPart",
     "PatientSessionAuthMixin",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
+    "StoredFilePart",
+    "StringFormPart",
     "api"
   ],
   "canvas_sdk.handlers.simple_api.api": [
@@ -913,6 +918,7 @@
     "SimpleAPIBase",
     "SimpleAPIRoute",
     "SimpleAPIType",
+    "StoredFilePart",
     "StringFormPart",
     "delete",
     "get",
@@ -944,6 +950,7 @@
   "canvas_sdk.handlers.simple_api.tools": [
     "CaseInsensitiveMultiDict",
     "KeyType",
+    "LIST_VALUED_HEADERS",
     "MultiDict",
     "ValueType",
     "separate_headers"
@@ -1086,6 +1093,8 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
@@ -1392,6 +1401,10 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.instruction": [
+    "Instruction",
+    "InstructionCoding"
   ],
   "canvas_sdk.v1.data.integration_task": [
     "IntegrationTask",

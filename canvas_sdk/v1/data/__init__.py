@@ -74,6 +74,7 @@ from .immunization import (
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .instruction import Instruction, InstructionCoding
 from .integration_task import (
     IntegrationTask,
     IntegrationTaskChannel,
@@ -276,6 +277,8 @@ __all__ = __exports__ = (
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",

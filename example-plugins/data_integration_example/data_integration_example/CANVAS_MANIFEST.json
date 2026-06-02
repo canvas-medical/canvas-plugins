@@ -1,0 +1,22 @@
+{
+    "sdk_version": "0.136.0",
+    "plugin_version": "0.1.0",
+    "name": "data_integration_example",
+    "description": "Example plugin demonstrating Data Integration effects and document lifecycle events",
+    "components": {
+        "protocols": [
+            {
+                "class": "data_integration_example.handlers.data_integration_handler:DataIntegrationHandler",
+                "description": "Protocol that demonstrates Data Integration effects on DOCUMENT_RECEIVED and logs all document lifecycle events"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": [],
+    "secrets": [],
+    "license": "NONE",
+    "readme": "./README.md"
+}

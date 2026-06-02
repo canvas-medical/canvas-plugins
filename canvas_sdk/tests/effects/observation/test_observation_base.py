@@ -526,3 +526,65 @@ def test_observation_create_with_category_as_list(
     # Test the payload data includes the category as a list
     payload_data = json.loads(call_args.kwargs["payload"])
     assert payload_data["data"]["category"] == ["vital-signs", "exam"]
+
+
+def test_observation_enter_in_error_requires_observation_id(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that enter_in_error() fails when observation_id is missing."""
+    observation = Observation()
+
+    with pytest.raises(ValidationError):
+        observation.enter_in_error()
+
+
+def test_observation_enter_in_error_raises_if_observation_not_found(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that enter_in_error() fails when observation does not exist."""
+    mock_db_queries["observation"].filter.return_value.exists.return_value = False
+
+    observation = Observation(observation_id="nonexistent")
+
+    with pytest.raises(ValidationError):
+        observation.enter_in_error()
+
+
+def test_observation_enter_in_error_rejects_other_set_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that enter_in_error() fails when fields other than observation_id are set."""
+    observation = Observation(observation_id="obs-123", patient_id="patient-456")
+
+    with pytest.raises(ValidationError):
+        observation.enter_in_error()
+
+
+@patch("canvas_sdk.effects.observation.base.Effect")
+def test_observation_enter_in_error_emits_correct_effect_type(
+    mock_effect: MagicMock,
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that enter_in_error() generates effect with the right type."""
+    observation = Observation(observation_id="obs-123")
+
+    observation.enter_in_error()
+
+    mock_effect.assert_called_once()
+    call_args = mock_effect.call_args
+    assert call_args.kwargs["type"] == "ENTER_IN_ERROR_OBSERVATION"
+
+
+@patch("canvas_sdk.effects.observation.base.Effect")
+def test_observation_enter_in_error_payload_contains_only_observation_id(
+    mock_effect: MagicMock,
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that enter_in_error() payload contains only observation_id."""
+    observation = Observation(observation_id="obs-123")
+
+    observation.enter_in_error()
+
+    call_args = mock_effect.call_args
+    payload_data = json.loads(call_args.kwargs["payload"])
+    assert payload_data == {"data": {"observation_id": "obs-123"}}

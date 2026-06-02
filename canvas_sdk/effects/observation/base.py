@@ -157,6 +157,34 @@ class Observation(TrackableFieldsModel):
                     )
                 )
 
+        # Validate enter_in_error-specific requirements
+        if method == "enter_in_error":
+            if not self.observation_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Observation ID is required to enter an observation in error.",
+                        self.observation_id,
+                    )
+                )
+            elif not ObservationModel.objects.filter(id=self.observation_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Observation with ID {self.observation_id} does not exist.",
+                        self.observation_id,
+                    )
+                )
+            other_fields = sorted(k for k in self.values if k != "observation_id")
+            if other_fields:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Only observation_id is allowed when entering an observation in error. Got: {other_fields}",
+                        other_fields,
+                    )
+                )
+
         # Validate foreign key references
         if (
             self.is_member_of_id
@@ -194,6 +222,23 @@ class Observation(TrackableFieldsModel):
             payload=json.dumps(
                 {
                     "data": self.values,
+                }
+            ),
+        )
+
+    def enter_in_error(self) -> Effect:
+        """Mark an existing Observation as entered in error.
+
+        Only ``observation_id`` is honored; other fields raise a validation
+        error if set.
+        """
+        self._validate_before_effect("enter_in_error")
+
+        return Effect(
+            type=f"ENTER_IN_ERROR_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": {"observation_id": str(self.observation_id)},
                 }
             ),
         )

@@ -26,7 +26,6 @@ class CategorizeDocument(_PrefillingDocumentEffect):
             "document_id": str(self.document_id),
             "document_type": self.document_type,
             "annotations": self.annotations,
-            "source_protocol": self.source_protocol,
         }
 
 

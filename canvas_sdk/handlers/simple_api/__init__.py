@@ -1,4 +1,11 @@
-from .api import SimpleAPI, SimpleAPIRoute
+from .api import (
+    FileFormPart,
+    FormPart,
+    SimpleAPI,
+    SimpleAPIRoute,
+    StoredFilePart,
+    StringFormPart,
+)
 from .security import (
     APIKeyAuthMixin,
     APIKeyCredentials,
@@ -21,9 +28,13 @@ __all__ = __exports__ = (
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "FileFormPart",
+    "FormPart",
     "PatientSessionAuthMixin",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
+    "StoredFilePart",
+    "StringFormPart",
 )

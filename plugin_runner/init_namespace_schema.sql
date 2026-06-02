@@ -79,7 +79,15 @@ BEGIN
         EXECUTE 'GRANT USAGE ON SCHEMA {namespace} TO reporting';
         EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA {namespace} TO reporting';
         -- Ensure future tables created in this schema are also readable.
-        EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA {namespace} GRANT SELECT ON TABLES TO reporting';
+        -- ALTER DEFAULT PRIVILEGES is per-creating-role: pg_default_acl is
+        -- keyed on (schema, defaclrole), so we must target the role that
+        -- actually creates plugin tables. Plugin custom-model tables are
+        -- created by ddl.py:execute_create_table_sql via the Django
+        -- connection, which authenticates as canvas_sdk_read_only — not the
+        -- role running this init script. Without FOR ROLE, the default
+        -- silently attaches to current_user (e.g. aptible in prod) and
+        -- never fires for plugin tables. SUPPORT-2188.
+        EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE canvas_sdk_read_only IN SCHEMA {namespace} GRANT SELECT ON TABLES TO reporting';
     END IF;
 END
 $$;

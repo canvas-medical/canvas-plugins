@@ -22,15 +22,13 @@ class _BaseDocumentEffect(_BaseEffect):
 class _PrefillingDocumentEffect(_BaseDocumentEffect):
     """Document effect that creates an IntegrationTaskPrefill record.
 
-    Adds optional `annotations` (UI display) and `source_protocol` (audit tag)
-    that the interpreter writes onto the prefill record. Effects that only
-    mutate the task itself (e.g. status, patient link) should inherit from
-    `_BaseDocumentEffect` directly so they don't expose fields the interpreter
-    would ignore.
+    Adds optional `annotations` (UI display) that the interpreter writes onto the
+    prefill record. The source is derived automatically from the plugin name.
+    Effects that only mutate the task itself (e.g. status, patient link) should
+    inherit from `_BaseDocumentEffect` directly.
     """
 
     annotations: list[AnnotationItem] | None = None
-    source_protocol: str | None = None
 
 
 __exports__ = ()

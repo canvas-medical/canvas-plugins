@@ -105,7 +105,6 @@ def test_values_property_returns_correct_structure() -> None:
             }
         ],
         "annotations": None,
-        "source_protocol": None,
     }
 
 

@@ -1,6 +1,142 @@
 # CHANGELOG
 
 
+## v0.160.0 (2026-06-02)
+
+### Features
+
+- Upload files to s3 with simple api
+  ([#1675](https://github.com/canvas-medical/canvas-plugins/pull/1675),
+  [`5d41655`](https://github.com/canvas-medical/canvas-plugins/commit/5d41655f74d58260b40f9675781ebb7d046a52bb))
+
+
+## v0.159.0 (2026-06-02)
+
+### Features
+
+- Add custom html to commands ([#1727](https://github.com/canvas-medical/canvas-plugins/pull/1727),
+  [`812331a`](https://github.com/canvas-medical/canvas-plugins/commit/812331a0c557a15b4fc929ee83a1472eb5fbca47))
+
+
+## v0.158.1 (2026-06-01)
+
+### Bug Fixes
+
+- Scope reporting default privileges to canvas_sdk_read_only (SUPPORT-2188)
+  ([#1733](https://github.com/canvas-medical/canvas-plugins/pull/1733),
+  [`7200e80`](https://github.com/canvas-medical/canvas-plugins/commit/7200e80576d71ee5c8656e3c593f6fffa72a8412))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
+## v0.158.0 (2026-06-01)
+
+### Bug Fixes
+
+- Scope simple-api header splitting to list-valued headers
+  ([#1709](https://github.com/canvas-medical/canvas-plugins/pull/1709),
+  [`4934028`](https://github.com/canvas-medical/canvas-plugins/commit/4934028c62b43c4bd7dba320fb4f5a348b7002f3))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+### Features
+
+- Enter in error observations effect
+  ([#1696](https://github.com/canvas-medical/canvas-plugins/pull/1696),
+  [`b94141e`](https://github.com/canvas-medical/canvas-plugins/commit/b94141ed0e2a4191ba89c567d7e9c344df4a0d01))
+
+
+## v0.157.0 (2026-05-29)
+
+### Features
+
+- Add missing note state change effects to sdk
+  ([#1729](https://github.com/canvas-medical/canvas-plugins/pull/1729),
+  [`233d3f2`](https://github.com/canvas-medical/canvas-plugins/commit/233d3f2d1f74de0f71ef8aa9bafb1064616dc6f3))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
+## v0.156.0 (2026-05-27)
+
+### Bug Fixes
+
+- Pass document name string to presigned_url in PatientConsentCoding
+  ([#1726](https://github.com/canvas-medical/canvas-plugins/pull/1726),
+  [`4ab7a1e`](https://github.com/canvas-medical/canvas-plugins/commit/4ab7a1ee0dc47ee4dd77f9a4ba4e68deb6bcc3c2))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Suppress Sentry noise during plugin-runner cold-start redis race (KOALA-5359)
+  ([#1705](https://github.com/canvas-medical/canvas-plugins/pull/1705),
+  [`5c496ff`](https://github.com/canvas-medical/canvas-plugins/commit/5c496ff18952e6dcb8ffed75b8a00d65aa8d2fda))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+### Chores
+
+- Auto-update pre-commit hooks ([#1723](https://github.com/canvas-medical/canvas-plugins/pull/1723),
+  [`319d774`](https://github.com/canvas-medical/canvas-plugins/commit/319d77459a1125b7729f3e88159dbac130c3aebd))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add Instruction and InstructionCoding to canvas_sdk.v1.data
+  ([#1722](https://github.com/canvas-medical/canvas-plugins/pull/1722),
+  [`50ccaee`](https://github.com/canvas-medical/canvas-plugins/commit/50ccaee805f215d8be76a030fa5379065809c607))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+- Patient chart command buttons configuration
+  ([#1678](https://github.com/canvas-medical/canvas-plugins/pull/1678),
+  [`2a62c44`](https://github.com/canvas-medical/canvas-plugins/commit/2a62c4441412f7eb1d4bf0aaf1a164722f4326d2))
+
+
+## v0.155.0 (2026-05-21)
+
+### Features
+
+- Enter in error custom commands
+  ([#1697](https://github.com/canvas-medical/canvas-plugins/pull/1697),
+  [`a42e76a`](https://github.com/canvas-medical/canvas-plugins/commit/a42e76a076601adf7cbcc0aff8faed7c8ef39a04))
+
+
+## v0.154.1 (2026-05-20)
+
+### Bug Fixes
+
+- Remove priority from assign document reviewer effect
+  ([#1719](https://github.com/canvas-medical/canvas-plugins/pull/1719),
+  [`a89c33e`](https://github.com/canvas-medical/canvas-plugins/commit/a89c33eeddf79d440130f423b9c16be8ca16b4c6))
+
+
+## v0.154.0 (2026-05-19)
+
+### Bug Fixes
+
+- Example plugin for data integration
+  ([#1712](https://github.com/canvas-medical/canvas-plugins/pull/1712),
+  [`5e3df18`](https://github.com/canvas-medical/canvas-plugins/commit/5e3df18b2f52d9da86f935cd2b0b202f14443744))
+
+### Features
+
+- Expose document field on PatientConsentCoding SDK model
+  ([#1624](https://github.com/canvas-medical/canvas-plugins/pull/1624),
+  [`24f7820`](https://github.com/canvas-medical/canvas-plugins/commit/24f782021d2710cc7d54f6ae16874ef829047106))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Andrew Hines <andrew.hines@canvasmedical.com>
+
+
 ## v0.153.0 (2026-05-18)
 
 ### Features

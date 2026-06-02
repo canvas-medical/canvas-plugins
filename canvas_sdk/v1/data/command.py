@@ -27,6 +27,7 @@ class Command(TimestampedModel, IdentifiableModel):
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="commands")
     schema_key = models.TextField()
     data = models.JSONField()
+    custom_html = models.TextField(null=True)
     origination_source = models.CharField(max_length=20)
     anchor_object_type = models.CharField(max_length=100)
     anchor_object_dbid = models.BigIntegerField()
