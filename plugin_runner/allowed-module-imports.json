@@ -374,7 +374,8 @@
   "canvas_sdk.commands.commands.task": [
     "AssigneeType",
     "TaskAssigner",
-    "TaskCommand"
+    "TaskCommand",
+    "TaskPriority"
   ],
   "canvas_sdk.commands.commands.update_diagnosis": [
     "UpdateDiagnosisCommand"
@@ -818,6 +819,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -825,6 +827,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -1612,6 +1615,7 @@
     "TaskLabel",
     "TaskLabelModule",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "TaskTaskLabel",
     "TaskType"

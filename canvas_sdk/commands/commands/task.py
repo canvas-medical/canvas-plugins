@@ -5,6 +5,7 @@ from typing import NotRequired
 from typing_extensions import TypedDict
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.v1.data.task import TaskPriority
 
 
 class AssigneeType(StrEnum):
@@ -32,6 +33,7 @@ class TaskCommand(BaseCommand):
     title: str = ""
     assign_to: TaskAssigner | None = None
     due_date: date | None = None
+    priority: TaskPriority | None = None
     comment: str | None = None
     labels: list[str] | None = None
     linked_items_urns: list[str] | None = None
@@ -41,4 +43,5 @@ __exports__ = (
     "AssigneeType",
     "TaskAssigner",
     "TaskCommand",
+    "TaskPriority",
 )
