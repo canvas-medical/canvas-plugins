@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any, TypeVar
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -27,6 +28,7 @@ from canvas_sdk.handlers.simple_api.api import (
     SimpleAPI,
     SimpleAPIBase,
     SimpleAPIRoute,
+    StoredFilePart,
     StringFormPart,
 )
 from canvas_sdk.handlers.simple_api.security import (
@@ -1105,3 +1107,559 @@ def test_authentication_mixins(
 
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
     assert effects == expected_effects
+
+
+# ---------------------------------------------------------------------------
+# Upload-files mode
+# ---------------------------------------------------------------------------
+
+
+def test_file_uploads_decorator_default_passthrough() -> None:
+    """A route declared without file_uploads defaults to "passthrough"."""
+
+    @api.post("/route")
+    def handler(self: Any) -> list[Response | Effect]:
+        return []
+
+    # The decorator stashes route + file_uploads as attributes on the handler at runtime;
+    # mypy sees only the static Callable type, so attr-defined ignores are required.
+    assert handler.route == ("POST", "/route")  # type: ignore[attr-defined]
+    assert handler.file_uploads == "passthrough"  # type: ignore[attr-defined]
+
+
+def test_file_uploads_decorator_opt_in_stored() -> None:
+    """A route can opt in to stored-file-uploads interception."""
+
+    @api.post("/upload", file_uploads="stored")
+    def handler(self: Any) -> list[Response | Effect]:
+        return []
+
+    assert handler.file_uploads == "stored"  # type: ignore[attr-defined]
+
+
+def test_stored_file_part_equality() -> None:
+    """StoredFilePart compares equal field-by-field, and is_file() returns True."""
+    a = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="k1",
+        error=None,
+    )
+    b = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="k1",
+        error=None,
+    )
+    c = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key="other",
+        error=None,
+    )
+    assert a == b
+    assert a != c
+    assert StoredFilePart.is_file() is True
+
+
+def test_authenticate_response_includes_file_uploads() -> None:
+    """The auth-success response payload nests the matched route's file_uploads mode
+    under ``handling_options`` so it's clearly preflight metadata, not an HTTP response field.
+    """
+
+    class API(APINoAuth):
+        @api.post("/upload", file_uploads="stored")
+        def upload(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+        @api.post("/regular")
+        def regular(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/upload"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["status_code"] == HTTPStatus.OK
+    assert payload["handling_options"]["file_uploads"] == "stored"
+
+    handler = API(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/regular"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["status_code"] == HTTPStatus.OK
+    assert payload["handling_options"]["file_uploads"] == "passthrough"
+
+
+def test_request_form_data_stored_mode() -> None:
+    """In upload mode, form_data() parses the JSON envelope and returns StoredFilePart for files."""
+    envelope = json.dumps(
+        {
+            "form_fields": [{"name": "title", "value": "My Document"}],
+            "files": [
+                {
+                    "name": "attachment",
+                    "filename": "invoice.pdf",
+                    "content_type": "application/pdf",
+                    "content_length": 12345,
+                    "status": "ok",
+                    "key": "customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
+                }
+            ],
+        }
+    ).encode()
+
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+
+    expected = MultiDict(
+        (
+            ("title", StringFormPart(name="title", value="My Document")),
+            (
+                "attachment",
+                StoredFilePart(
+                    name="attachment",
+                    filename="invoice.pdf",
+                    content_type="application/pdf",
+                    content_length=12345,
+                    key="customer_abc/plugin-uploads/my_plugin/2026-04-30T17:05:00Z-uuid-invoice.pdf",
+                    error=None,
+                ),
+            ),
+        )
+    )
+    assert request.form_data() == expected
+
+
+def test_request_form_data_stored_mode_multiple_files() -> None:
+    """An envelope with multiple ok files yields one StoredFilePart per entry."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "first",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "content_length": 4,
+                    "status": "ok",
+                    "key": "plugin-uploads/p/k1.txt",
+                },
+                {
+                    "name": "second",
+                    "filename": "b.bin",
+                    "content_type": "application/octet-stream",
+                    "content_length": 16,
+                    "status": "ok",
+                    "key": "plugin-uploads/p/k2.bin",
+                },
+            ],
+        }
+    ).encode()
+
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+
+    parts = list(request.form_data().multi_items())
+    assert len(parts) == 2
+    names = [name for name, _ in parts]
+    assert names == ["first", "second"]
+    for _name, part in parts:
+        assert isinstance(part, StoredFilePart)
+
+
+def test_request_form_data_stored_mode_empty_envelope() -> None:
+    """An envelope with no form_fields or files yields an empty MultiDict."""
+    envelope = json.dumps({"form_fields": [], "files": []}).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+    assert list(request.form_data().items()) == []
+
+
+def test_simple_api_full_upload_flow() -> None:
+    """End-to-end: authenticate -> request handler receives StoredFilePart via form_data."""
+    captured: dict[str, Any] = {}
+
+    class API(APINoAuth):
+        @api.post("/upload", file_uploads="stored")
+        def upload(self) -> list[Response | Effect]:
+            forms = self.request.form_data()
+            captured["title"] = forms["title"]
+            attachment = forms["attachment"]
+            assert isinstance(attachment, StoredFilePart)
+            captured["attachment"] = attachment
+            return [JSONResponse({"key": attachment.key})]
+
+    envelope = json.dumps(
+        {
+            "form_fields": [{"name": "title", "value": "Hello"}],
+            "files": [
+                {
+                    "name": "attachment",
+                    "filename": "test.pdf",
+                    "content_type": "application/pdf",
+                    "content_length": 7,
+                    "status": "ok",
+                    "key": "customer/plugin-uploads/p/ts-uuid-test.pdf",
+                }
+            ],
+        }
+    ).encode()
+
+    effects = handle_request(
+        API,
+        method="POST",
+        path="/upload",
+        body=envelope,
+        headers={"Content-Type": "application/json"},
+    )
+    response_payload = json_response_body(effects)
+    assert response_payload == {"key": "customer/plugin-uploads/p/ts-uuid-test.pdf"}
+    assert captured["title"] == StringFormPart(name="title", value="Hello")
+    assert captured["attachment"].filename == "test.pdf"
+    assert captured["attachment"].content_length == 7
+    assert isinstance(captured["attachment"], StoredFilePart)
+
+
+def test_simple_api_route_file_uploads_class_attribute() -> None:
+    """Setting FILE_UPLOADS = "stored" on a SimpleAPIRoute opts the route into stored mode."""
+
+    class Route(NoAuthMixin, SimpleAPIRoute):
+        PATH = "/route"
+        FILE_UPLOADS = "stored"
+
+        def post(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["handling_options"]["file_uploads"] == "stored"
+
+
+def test_simple_api_route_file_uploads_default_passthrough() -> None:
+    """SimpleAPIRoute without FILE_UPLOADS defaults to file_uploads="passthrough" (regression fence)."""
+
+    class Route(NoAuthMixin, SimpleAPIRoute):
+        PATH = "/route"
+
+        def post(self) -> list[Response | Effect]:
+            return [Response(status_code=HTTPStatus.OK)]
+
+    handler = Route(make_event(EventType.SIMPLE_API_AUTHENTICATE, "POST", "/route"))
+    payload = json.loads(handler.compute()[0].payload)
+    assert payload["handling_options"]["file_uploads"] == "passthrough"
+
+
+def test_simple_api_route_file_uploads_stored_without_post_or_put_raises() -> None:
+    """Setting FILE_UPLOADS="stored" on a SimpleAPIRoute with no post or put method is a
+    silent footgun — the setting only applies to post/put. Raise a PluginError so the
+    developer notices their setup doesn't do what they intended.
+    """
+    with pytest.raises(PluginError, match="requires a post or put method"):
+
+        class Route(NoAuthMixin, SimpleAPIRoute):
+            PATH = "/route"
+            FILE_UPLOADS = "stored"
+
+            def get(self) -> list[Response | Effect]:
+                return [Response(status_code=HTTPStatus.OK)]
+
+
+def test_file_uploads_decorator_rejects_invalid_value() -> None:
+    """An invalid file_uploads value (e.g. a typo) raises PluginError at decoration time."""
+    with pytest.raises(PluginError, match="Invalid file_uploads value 'stoerd'"):
+        api.post("/upload", file_uploads="stoerd")  # type: ignore[arg-type]
+
+
+def test_simple_api_route_file_uploads_rejects_invalid_value() -> None:
+    """A typo'd FILE_UPLOADS on a SimpleAPIRoute (with a post method to enter the decorator
+    funnel) raises PluginError via the underlying decorator validation.
+    """
+    with pytest.raises(PluginError, match="Invalid file_uploads value 'stoerd'"):
+
+        class Route(NoAuthMixin, SimpleAPIRoute):
+            PATH = "/route"
+            FILE_UPLOADS = "stoerd"
+
+            def post(self) -> list[Response | Effect]:
+                return [Response(status_code=HTTPStatus.OK)]
+
+
+def test_stored_file_part_failure_equality() -> None:
+    """A StoredFilePart constructed in the failure state (key=None, error=...) compares
+    equal field-by-field and is distinct from a success-state part with a different error.
+    """
+    a = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="e1",
+    )
+    b = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="e1",
+    )
+    c = StoredFilePart(
+        name="file",
+        filename="x.pdf",
+        content_type="application/pdf",
+        content_length=10,
+        key=None,
+        error="other",
+    )
+    assert a == b
+    assert a != c
+
+
+def test_request_form_data_stored_mode_includes_failed_entries() -> None:
+    """form_data() surfaces both ok and failed uploads as StoredFilePart in the same
+    MultiDict; failed entries have ``key=None`` and a populated ``error`` so iterating
+    handlers can't accidentally ignore failures.
+    """
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "good",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "content_length": 3,
+                    "status": "ok",
+                    "key": "plugin-uploads/p/k-a.txt",
+                },
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "content_length": 8,
+                    "status": "failed",
+                    "error": "s3_upload_failed",
+                },
+            ],
+        }
+    ).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+
+    parts = list(request.form_data().multi_items())
+    assert [name for name, _ in parts] == ["good", "bad"]
+    assert isinstance(parts[0][1], StoredFilePart)
+    assert parts[0][1].key == "plugin-uploads/p/k-a.txt"
+    assert parts[0][1].error is None
+    assert isinstance(parts[1][1], StoredFilePart)
+    assert parts[1][1].key is None
+    assert parts[1][1].error == "s3_upload_failed"
+
+
+def test_request_form_data_stored_mode_failed_entry_missing_error_raises() -> None:
+    """A ``failed`` entry without an ``error`` field surfaces a clean RuntimeError."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "content_length": 8,
+                    "status": "failed",
+                    # ``error`` intentionally absent
+                }
+            ],
+        }
+    ).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+    with pytest.raises(RuntimeError, match="missing required field 'error'"):
+        request.form_data()
+
+
+def test_request_form_data_stored_mode_unknown_status_raises() -> None:
+    """A file entry with an unrecognized ``status`` value surfaces a clean RuntimeError."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "weird",
+                    "filename": "x.txt",
+                    "content_type": "text/plain",
+                    "content_length": 1,
+                    "status": "pending",
+                }
+            ],
+        }
+    ).encode()
+    request = Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=envelope,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+    with pytest.raises(RuntimeError, match="unknown file status 'pending'"):
+        request.form_data()
+
+
+def _request_with_envelope_body(body: bytes) -> Request:
+    """Helper: Request configured for upload mode with the given body bytes."""
+    return Request(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="POST",
+            path="/upload",
+            body=body,
+            headers={"Content-Type": "application/json"},
+        ),
+        path_pattern=re.compile("/upload"),
+        file_uploads="stored",
+    )
+
+
+def test_request_form_data_stored_mode_raises_on_non_json_body() -> None:
+    """A non-JSON body in upload mode raises a clean RuntimeError, not JSONDecodeError."""
+    request = _request_with_envelope_body(b"not json at all")
+    with pytest.raises(RuntimeError, match="non-JSON body"):
+        request.form_data()
+
+
+def test_request_form_data_stored_mode_raises_on_non_object_envelope() -> None:
+    """A JSON envelope that isn't an object (e.g. a list) raises a clean RuntimeError."""
+    request = _request_with_envelope_body(b'["not", "an", "object"]')
+    with pytest.raises(RuntimeError, match="not a JSON object"):
+        request.form_data()
+
+
+def test_request_form_data_stored_mode_raises_on_missing_required_field() -> None:
+    """An ok entry missing a required field (e.g. ``key``) raises a clean RuntimeError."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "f",
+                    "filename": "x.txt",
+                    "content_length": 1,
+                    "status": "ok",
+                    # ``key`` intentionally absent
+                }
+            ],
+        }
+    ).encode()
+    request = _request_with_envelope_body(envelope)
+    with pytest.raises(RuntimeError, match="missing required field 'key'"):
+        request.form_data()
+
+
+def test_request_upload_envelope_is_cached_across_calls() -> None:
+    """Repeated form_data() calls share a parsed envelope — only one json.loads call."""
+    envelope = json.dumps(
+        {
+            "form_fields": [],
+            "files": [
+                {
+                    "name": "good",
+                    "filename": "a.txt",
+                    "content_type": "text/plain",
+                    "content_length": 3,
+                    "status": "ok",
+                    "key": "k",
+                },
+                {
+                    "name": "bad",
+                    "filename": "b.txt",
+                    "content_type": "text/plain",
+                    "content_length": 8,
+                    "status": "failed",
+                    "error": "s3_upload_failed",
+                },
+            ],
+        }
+    ).encode()
+    request = _request_with_envelope_body(envelope)
+
+    with patch("canvas_sdk.handlers.simple_api.api.json.loads", wraps=json.loads) as loads:
+        request.form_data()
+        request.form_data()
+    assert loads.call_count == 1
+
+
+def test_form_part_protocol_is_runtime_checkable_for_all_variants() -> None:
+    """isinstance(part, FormPart) returns True for every concrete form-part type so plugins
+    that match generically don't silently skip uploads after a route is upgraded to
+    ``file_uploads="stored"`` (the previous trap with ``isinstance(part, FileFormPart)``).
+    """
+    assert isinstance(StringFormPart(name="f", value="v"), FormPart)
+    assert isinstance(
+        FileFormPart(name="f", filename="x.txt", content=b"x", content_type="text/plain"),
+        FormPart,
+    )
+    assert isinstance(
+        StoredFilePart(
+            name="f",
+            filename="x.txt",
+            content_type="text/plain",
+            content_length=1,
+            key="k",
+            error=None,
+        ),
+        FormPart,
+    )
