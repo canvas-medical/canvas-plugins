@@ -161,7 +161,7 @@ class _BaseCommand(TrackableFieldsModel):
             raise ValueError("Field 'command_uuid' is required to set custom html.")
 
         return _CommandCustomHtml(
-            command_id=self.command_uuid,
+            command_id=self.command_uuid,  # type:ignore[arg-type]
             custom_html=custom_html,
         ).apply()
 
