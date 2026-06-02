@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.159.0 (2026-06-02)
+
+### Features
+
+- Add custom html to commands ([#1727](https://github.com/canvas-medical/canvas-plugins/pull/1727),
+  [`812331a`](https://github.com/canvas-medical/canvas-plugins/commit/812331a0c557a15b4fc929ee83a1472eb5fbca47))
+
+
 ## v0.158.1 (2026-06-01)
 
 ### Bug Fixes
