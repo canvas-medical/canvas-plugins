@@ -262,3 +262,37 @@ def test_init__raises_error_when_abstract_class() -> None:
 
     with pytest.raises(TypeError, match="Cannot instantiate abstract class 'AbstractCommand'"):
         AbstractCommand()
+
+
+def test_set_custom_html_emits_dedicated_effect(
+    dummy_command_instance: DummyCommand,
+) -> None:
+    """set_custom_html(html) emits a SET_COMMAND_CUSTOM_HTML effect with both fields nested in data."""
+    dummy_command_instance.command_uuid = "71d20b55-8696-4d04-a848-ce5e0180e00e"
+    effect = dummy_command_instance.set_custom_html("<div>plugin html</div>")
+
+    assert effect.type == EffectType.SET_COMMAND_CUSTOM_HTML
+    assert json.loads(effect.payload) == {
+        "data": {
+            "command_id": dummy_command_instance.command_uuid,
+            "custom_html": "<div>plugin html</div>",
+        },
+    }
+
+
+def test_set_custom_html_transmits_none_to_clear(
+    dummy_command_instance: DummyCommand,
+) -> None:
+    """set_custom_html(None) clears the field."""
+    dummy_command_instance.command_uuid = "71d20b55-8696-4d04-a848-ce5e0180e00e"
+    payload = json.loads(dummy_command_instance.set_custom_html(None).payload)
+
+    assert payload["data"]["custom_html"] is None
+
+
+def test_set_custom_html_requires_command_uuid() -> None:
+    """set_custom_html() raises if command_uuid is missing."""
+    cmd = DummyCommand()
+
+    with pytest.raises(ValueError, match="command_uuid"):
+        cmd.set_custom_html("<p>hi</p>")
