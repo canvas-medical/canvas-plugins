@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.161.0 (2026-06-02)
+
+### Features
+
+- Panda-526 add support for task priority
+  ([#929](https://github.com/canvas-medical/canvas-plugins/pull/929),
+  [`cb95132`](https://github.com/canvas-medical/canvas-plugins/commit/cb9513278e925377892f057f4970db39a9c54a8e))
+
+Signed-off-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.160.0 (2026-06-02)
 
 ### Features
