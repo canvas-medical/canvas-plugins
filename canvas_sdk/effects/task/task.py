@@ -3,7 +3,7 @@ from enum import Enum, StrEnum
 from typing import Any, Self, cast
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import PrivateAttr, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -17,6 +17,20 @@ class TaskStatus(Enum):
     COMPLETED = "COMPLETED"
     CLOSED = "CLOSED"
     OPEN = "OPEN"
+
+
+class LinkedItemType(StrEnum):
+    """Types of items that can be linked to a Task."""
+
+    COMMAND = "COMMAND"
+    NOTE = "NOTE"
+    TASK = "TASK"
+    CLAIM = "CLAIM"
+    PATIENT_ADMINISTRATIVE_DOCUMENT = "PATIENT_ADMINISTRATIVE_DOCUMENT"
+    UNCATEGORIZED_CLINICAL_DOCUMENT = "UNCATEGORIZED_CLINICAL_DOCUMENT"
+    IMAGING_REPORT = "IMAGING_REPORT"
+    REFERRAL_REPORT = "REFERRAL_REPORT"
+    LAB_REPORT = "LAB_REPORT"
 
 
 class AddTask(_BaseEffect):
@@ -45,6 +59,7 @@ class AddTask(_BaseEffect):
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
     author_id: str | UUID | None = None
+    _linked_items: list[tuple[LinkedItemType, str]] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")
     def check_needed_together_fields(self) -> Self:
@@ -60,9 +75,28 @@ class AddTask(_BaseEffect):
 
         return self
 
+    def add_linked_item(self, item_type: LinkedItemType, item_id: str) -> Self:
+        """
+        Add a linked item to the task.
+
+        Args:
+            item_type: The type of item to link (e.g., COMMAND, NOTE, TASK, CLAIM, etc.)
+            item_id: The URN or ID of the item to link
+
+        Returns:
+            Self for method chaining
+        """
+        self._linked_items.append((item_type, item_id))
+        return self
+
     @property
     def values(self) -> dict[str, Any]:
         """The values for Task addition."""
+        # Generate linked_items_urns from the _linked_items list
+        linked_items_urns = (
+            [item_id for _, item_id in self._linked_items] if self._linked_items else []
+        )
+
         return {
             "id": str(self.id) if self.id else None,
             "patient": {"id": self.patient_id},
@@ -77,6 +111,7 @@ class AddTask(_BaseEffect):
                 "id": str(self.linked_object_id) if self.linked_object_id else None,
                 "type": self.linked_object_type.value if self.linked_object_type else None,
             },
+            "linked_items_urns": linked_items_urns,
         }
 
 
@@ -123,6 +158,21 @@ class UpdateTask(_BaseEffect):
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
     labels: list[str] = []
+    _linked_items: list[tuple[LinkedItemType, str]] = PrivateAttr(default_factory=list)
+
+    def add_linked_item(self, item_type: LinkedItemType, item_id: str) -> Self:
+        """
+        Add a linked item to the task.
+
+        Args:
+            item_type: The type of item to link (e.g., COMMAND, NOTE, TASK, CLAIM, etc.)
+            item_id: The URN or ID of the item to link
+
+        Returns:
+            Self for method chaining
+        """
+        self._linked_items.append((item_type, item_id))
+        return self
 
     @property
     def values(self) -> dict[str, Any]:
@@ -140,6 +190,11 @@ class UpdateTask(_BaseEffect):
                 value_dict[field] = cast(TaskStatus, val).value
             else:
                 value_dict[field] = getattr(self, field)
+
+        # Add linked_items_urns if any linked items have been added
+        if self._linked_items:
+            value_dict["linked_items_urns"] = [item_id for _, item_id in self._linked_items]
+
         return value_dict
 
 
@@ -172,6 +227,7 @@ class TaskMetadata(BaseMetadata):
 __exports__ = (
     "AddTask",
     "AddTaskComment",
+    "LinkedItemType",
     "TaskStatus",
     "TaskMetadata",
     "UpdateTask",
