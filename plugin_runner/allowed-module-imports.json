@@ -406,6 +406,9 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.application_notification_badge": [
+    "ApplicationNotificationBadge"
+  ],
   "canvas_sdk.effects.appointments_metadata": [
     "AppointmentsMetadata",
     "AppointmentsMetadataCreateFormEffect",
