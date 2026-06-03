@@ -22,6 +22,7 @@ from canvas_sdk.commands.commands.past_surgical_history import (
 )
 from canvas_sdk.commands.commands.perform import PerformCommand
 from canvas_sdk.commands.commands.plan import PlanCommand
+from canvas_sdk.commands.commands.poc_lab_test import POCLabTestCommand
 from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
@@ -65,6 +66,7 @@ __all__ = __exports__ = (
     "PastSurgicalHistoryCommand",
     "PerformCommand",
     "PlanCommand",
+    "POCLabTestCommand",
     "PrescribeCommand",
     "PhysicalExamCommand",
     "QuestionnaireCommand",
