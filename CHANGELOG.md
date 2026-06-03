@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.163.0 (2026-06-03)
+
+### Features
+
+- Add application badges ([#1720](https://github.com/canvas-medical/canvas-plugins/pull/1720),
+  [`754894f`](https://github.com/canvas-medical/canvas-plugins/commit/754894f51c13f74ff2bb24763124c08ddfce9323))
+
+
 ## v0.162.0 (2026-06-03)
 
 ### Features
