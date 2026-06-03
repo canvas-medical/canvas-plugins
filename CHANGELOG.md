@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.162.0 (2026-06-03)
+
+### Features
+
+- Implement PocLabTest command ([#1716](https://github.com/canvas-medical/canvas-plugins/pull/1716),
+  [`e7f744c`](https://github.com/canvas-medical/canvas-plugins/commit/e7f744cffeb08412c58af79c7d0a0d2f44f4a1e3))
+
+
 ## v0.161.0 (2026-06-02)
 
 ### Features
