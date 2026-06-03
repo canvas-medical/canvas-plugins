@@ -24,6 +24,7 @@ COMMANDS_TO_SKIP = [
     "LabReviewCommand",
     "ReferralReviewCommand",
     "ImagingReviewCommand",
+    "POCLabTestCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
 ]
