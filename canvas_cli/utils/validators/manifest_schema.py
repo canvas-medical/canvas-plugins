@@ -156,6 +156,7 @@ manifest_schema = {
                             "provider_companion_patient_specific",
                             "provider_companion_note_specific",
                             "full_chart",
+                            "scheduling",
                         ],
                     },
                     "menu_position": {
