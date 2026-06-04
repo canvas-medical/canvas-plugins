@@ -24,6 +24,7 @@ from .plugin import (
     validate_manifest,
     validate_package,
 )
+from .plugin import list as plugin_list
 
 
 def test_validate_package_unexistant_path() -> None:
@@ -294,6 +295,63 @@ def test_list_secrets_success_no_secrets(
     list_secrets(plugin=plugin, host=host)
 
     mock_print.assert_called_once_with("No variables configured.")
+
+
+@patch("canvas_cli.apps.plugin.plugin.print")
+@patch("requests.get")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+def test_list_follows_pagination(
+    mock_plugin_url: Mock, mock_get_token: Mock, mock_requests_get: Mock, mock_print: Mock
+) -> None:
+    """Test that list follows the paginated `next` link until every plugin is returned."""
+    host = "https://example.canvasmedical.com"
+    mock_plugin_url.return_value = f"{host}/plugin-io/plugins/"
+    mock_get_token.return_value = "test-token"
+
+    next_url = f"{host}/plugin-io/plugins/?page=2"
+    page_one = Mock()
+    page_one.status_code = requests.codes.ok
+    page_one.json.return_value = {
+        "next": next_url,
+        "results": [{"name": "alpha", "version": "1.0", "is_enabled": True}],
+    }
+    page_two = Mock()
+    page_two.status_code = requests.codes.ok
+    page_two.json.return_value = {
+        "next": None,
+        "results": [{"name": "beta", "version": "2.0", "is_enabled": False}],
+    }
+    mock_requests_get.side_effect = [page_one, page_two]
+
+    plugin_list(host=host)
+
+    assert mock_requests_get.call_count == 2
+    mock_requests_get.assert_any_call(next_url, headers={"Authorization": "Bearer test-token"})
+    mock_print.assert_any_call("alpha@1.0\tenabled")
+    mock_print.assert_any_call("beta@2.0\tdisabled")
+
+
+@patch("canvas_cli.apps.plugin.plugin.print")
+@patch("requests.get")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+def test_list_no_plugins(
+    mock_plugin_url: Mock, mock_get_token: Mock, mock_requests_get: Mock, mock_print: Mock
+) -> None:
+    """Test that list reports when no plugins are installed."""
+    host = "https://example.canvasmedical.com"
+    mock_plugin_url.return_value = f"{host}/plugin-io/plugins/"
+    mock_get_token.return_value = "test-token"
+
+    response = Mock()
+    response.status_code = requests.codes.ok
+    response.json.return_value = {"next": None, "results": []}
+    mock_requests_get.return_value = response
+
+    plugin_list(host=host)
+
+    mock_print.assert_called_once_with(f"No plugins are currently installed on {host}")
 
 
 @patch("builtins.print")
