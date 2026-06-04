@@ -448,30 +448,33 @@ def list(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    url = plugin_url(host)
-
     token = get_or_request_api_token(host)
+    headers = {"Authorization": f"Bearer {token}"}
 
-    try:
-        r = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {token}"},
+    plugins = []
+    next_url: str | None = plugin_url(host)
+
+    while next_url:
+        try:
+            r = requests.get(next_url, headers=headers)
+        except requests.exceptions.RequestException:
+            print(f"Failed to connect to {host}")
+            raise typer.Exit(1) from None
+
+        if r.status_code != requests.codes.ok:
+            print(f"Status code {r.status_code}: {r.text}")
+            raise typer.Exit(1)
+
+        body = r.json()
+        plugins.extend(body.get("results", []))
+        next_url = body.get("next")
+
+    if not plugins:
+        print(f"No plugins are currently installed on {host}")
+    for plugin in plugins:
+        print(
+            f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'disabled'}"
         )
-    except requests.exceptions.RequestException:
-        print(f"Failed to connect to {host}")
-        raise typer.Exit(1) from None
-
-    if r.status_code == requests.codes.ok:
-        plugins = r.json().get("results", [])
-        if not plugins:
-            print(f"No plugins are currently installed on {host}")
-        for plugin in plugins:
-            print(
-                f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'disabled'}"
-            )
-    else:
-        print(f"Status code {r.status_code}: {r.text}")
-        raise typer.Exit(1)
 
 
 def list_secrets(
