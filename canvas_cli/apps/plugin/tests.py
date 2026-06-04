@@ -309,17 +309,21 @@ def test_list_follows_pagination(
     mock_plugin_url.return_value = f"{host}/plugin-io/plugins/"
     mock_get_token.return_value = "test-token"
 
-    next_url = f"{host}/plugin-io/plugins/?page=2"
+    next_url = f"{host}/plugin-io/plugins/?limit=100&offset=100"
     page_one = Mock()
     page_one.status_code = requests.codes.ok
     page_one.json.return_value = {
+        "count": 150,
         "next": next_url,
+        "previous": None,
         "results": [{"name": "alpha", "version": "1.0", "is_enabled": True}],
     }
     page_two = Mock()
     page_two.status_code = requests.codes.ok
     page_two.json.return_value = {
+        "count": 150,
         "next": None,
+        "previous": f"{host}/plugin-io/plugins/?limit=100",
         "results": [{"name": "beta", "version": "2.0", "is_enabled": False}],
     }
     mock_requests_get.side_effect = [page_one, page_two]
@@ -346,7 +350,7 @@ def test_list_no_plugins(
 
     response = Mock()
     response.status_code = requests.codes.ok
-    response.json.return_value = {"next": None, "results": []}
+    response.json.return_value = {"count": 0, "next": None, "previous": None, "results": []}
     mock_requests_get.return_value = response
 
     plugin_list(host=host)
