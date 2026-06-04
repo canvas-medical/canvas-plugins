@@ -8,7 +8,7 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
-description = "Automatically populates command values with defaults when a command originates in a note"
+description = "Examples of reacting to command lifecycle events: auto-populating commands on originate, and blocking a command commit on pre-commit"
 license = "MIT"
 name = "example_commands"
 readme = "example_commands/README.md"
