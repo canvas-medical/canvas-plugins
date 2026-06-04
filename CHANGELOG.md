@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.163.1 (2026-06-04)
+
+### Bug Fixes
+
+- Paginate canvas list to return all plugins
+  ([#1737](https://github.com/canvas-medical/canvas-plugins/pull/1737),
+  [`1fb25e6`](https://github.com/canvas-medical/canvas-plugins/commit/1fb25e606e169a10d45944417d477632268908e4))
+
+
 ## v0.163.0 (2026-06-03)
 
 ### Features
