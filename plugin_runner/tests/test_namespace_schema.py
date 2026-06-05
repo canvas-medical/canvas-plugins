@@ -180,6 +180,199 @@ class TestCreateNamespaceSchemaNew:
         mock_conn.commit.assert_called()
 
 
+class TestCreateNamespaceSchemaSuppliedKeys:
+    """KOALA-5738: create_namespace_schema accepts caller-supplied keys.
+
+    When Control Room drives the install, CR mints the namespace auth keys
+    itself and supplies them through to create_namespace_schema instead of
+    letting the schema-manager generate fresh UUIDs. This lets CR persist the
+    keys before the install begins so they survive plugin uninstall (the
+    failure mode in KOALA-5407).
+    """
+
+    @patch("plugin_runner.namespace.uuid")
+    @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
+    @patch("plugin_runner.namespace.open_database_connection")
+    def test_supplied_keys_are_used_instead_of_generated(
+        self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
+    ) -> None:
+        """Supplied keys must be returned verbatim and uuid.uuid4 must not be called."""
+        from plugin_runner.namespace import create_namespace_schema
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        supplied = {
+            "namespace_read_access_key": "cr-supplied-read",
+            "namespace_read_write_access_key": "cr-supplied-write",
+        }
+        result = create_namespace_schema("org__data", supplied_keys=supplied)
+
+        assert result == supplied
+        mock_uuid.uuid4.assert_not_called()
+
+    @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
+    @patch("plugin_runner.namespace.open_database_connection")
+    def test_supplied_keys_are_hashed_into_namespace_auth(
+        self, mock_open_conn: MagicMock, mock_file: MagicMock
+    ) -> None:
+        """SHA256(supplied_key) must land in namespace_auth, not a random UUID's hash."""
+        import hashlib
+
+        from plugin_runner.namespace import create_namespace_schema
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        supplied = {
+            "namespace_read_access_key": "cr-supplied-read",
+            "namespace_read_write_access_key": "cr-supplied-write",
+        }
+        create_namespace_schema("org__data", supplied_keys=supplied)
+
+        insert_calls = [
+            c for c in mock_cursor.execute.call_args_list if "namespace_auth" in str(c[0][0])
+        ]
+        assert len(insert_calls) == 1
+        params = insert_calls[0][0][1]
+
+        expected_read_hash = hashlib.sha256(b"cr-supplied-read").hexdigest()
+        expected_write_hash = hashlib.sha256(b"cr-supplied-write").hexdigest()
+        assert expected_read_hash in params
+        assert expected_write_hash in params
+
+    @patch("plugin_runner.namespace.open_database_connection")
+    def test_partial_supply_raises_plugin_installation_error(
+        self, mock_open_conn: MagicMock
+    ) -> None:
+        """Supplying only one of the two keys must raise PluginInstallationError."""
+        from plugin_runner.namespace import create_namespace_schema
+
+        with pytest.raises(PluginInstallationError):
+            create_namespace_schema(
+                "org__data",
+                supplied_keys={"namespace_read_access_key": "only-read"},
+            )
+
+        # DB must not have been touched
+        mock_open_conn.assert_not_called()
+
+    @patch("plugin_runner.namespace.open_database_connection")
+    def test_empty_string_supply_raises_plugin_installation_error(
+        self, mock_open_conn: MagicMock
+    ) -> None:
+        """Empty-string values must be rejected before any DB work."""
+        from plugin_runner.namespace import create_namespace_schema
+
+        with pytest.raises(PluginInstallationError):
+            create_namespace_schema(
+                "org__data",
+                supplied_keys={
+                    "namespace_read_access_key": "",
+                    "namespace_read_write_access_key": "valid-write",
+                },
+            )
+        mock_open_conn.assert_not_called()
+
+    @patch("plugin_runner.namespace.uuid")
+    @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
+    @patch("plugin_runner.namespace.open_database_connection")
+    def test_no_supplied_keys_preserves_uuid_generation(
+        self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
+    ) -> None:
+        """When supplied_keys is None, fall back to uuid.uuid4 (existing behavior)."""
+        from plugin_runner.namespace import create_namespace_schema
+
+        mock_uuid.uuid4.side_effect = [
+            MagicMock(__str__=lambda self: "gen-read-uuid"),
+            MagicMock(__str__=lambda self: "gen-write-uuid"),
+        ]
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        result = create_namespace_schema("org__data")
+
+        assert result == {
+            "namespace_read_access_key": "gen-read-uuid",
+            "namespace_read_write_access_key": "gen-write-uuid",
+        }
+        assert mock_uuid.uuid4.call_count == 2
+
+    @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.namespace.create_namespace_schema")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=False)
+    def test_setup_read_write_namespace_forwards_both_supplied_keys(
+        self,
+        mock_exists: MagicMock,
+        mock_create: MagicMock,
+        mock_store: MagicMock,
+    ) -> None:
+        """When both keys are in secrets, setup_read_write_namespace must forward them."""
+        from plugin_runner.namespace import (
+            READ_ACCESS_KEY,
+            READ_WRITE_ACCESS_KEY,
+            setup_read_write_namespace,
+        )
+
+        supplied = {READ_ACCESS_KEY: "cr-read", READ_WRITE_ACCESS_KEY: "cr-write"}
+        mock_create.return_value = supplied
+
+        result = setup_read_write_namespace("my_plugin", "org__data", supplied)
+
+        assert result is True
+        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=supplied)
+
+    @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.namespace.create_namespace_schema")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=False)
+    def test_setup_read_write_namespace_omits_supplied_keys_when_absent(
+        self,
+        mock_exists: MagicMock,
+        mock_create: MagicMock,
+        mock_store: MagicMock,
+    ) -> None:
+        """No supplied keys in secrets → create_namespace_schema called without supplied_keys."""
+        from plugin_runner.namespace import setup_read_write_namespace
+
+        mock_create.return_value = {
+            "namespace_read_access_key": "gen",
+            "namespace_read_write_access_key": "gen2",
+        }
+
+        result = setup_read_write_namespace("my_plugin", "org__data", {})
+
+        assert result is True
+        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=None)
+
+
 class TestReadOnlyAccessSkipsModelCreation:
     """Tests for ensuring read-only access plugins don't create custom tables."""
 
@@ -657,7 +850,7 @@ class TestSetupReadWriteNamespace:
         result = setup_read_write_namespace("my_plugin", "org__data", {})
 
         assert result is True
-        mock_create.assert_called_once_with(namespace="org__data")
+        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=None)
         mock_store.assert_called_once_with("my_plugin", {"key_a": "val_a", "key_b": "val_b"})
 
     @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
