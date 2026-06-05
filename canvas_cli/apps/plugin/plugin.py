@@ -56,7 +56,7 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
-    default_ignore = ["__pycache__", "*.pyc", "*.pyo"]
+    default_ignore = ["__pycache__", "*.pyc", "*.pyo", "node_modules"]
 
     ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
     if ignore_file.exists():
