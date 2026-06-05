@@ -1,6 +1,7 @@
 """Unit tests for the Reference SDK command."""
 
 import json
+from uuid import UUID
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands import ReferenceCommand
@@ -13,7 +14,7 @@ def test_meta_key() -> None:
 
 def test_originate_returns_originate_effect() -> None:
     """originate() builds an ORIGINATE_REFERENCE_COMMAND effect with the right payload."""
-    cmd = ReferenceCommand(diagnostic_view_id="dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0")
+    cmd = ReferenceCommand(diagnostic_view_id=UUID("dca3a3c5-0a8e-4f7b-9c6a-1b9bf3a6e5e0"))
     cmd.note_uuid = "note-1"
     cmd.command_uuid = "cmd-1"
 
@@ -38,7 +39,7 @@ def test_originate_renames_field_via_commands_api_name() -> None:
 
 def test_edit_emits_edit_effect() -> None:
     """edit() builds an EDIT_REFERENCE_COMMAND effect with the data payload."""
-    cmd = ReferenceCommand(diagnostic_view_id="11111111-2222-3333-4444-555555555555")
+    cmd = ReferenceCommand(diagnostic_view_id=UUID("11111111-2222-3333-4444-555555555555"))
     cmd.command_uuid = "cmd-2"
 
     effect = cmd.edit()
