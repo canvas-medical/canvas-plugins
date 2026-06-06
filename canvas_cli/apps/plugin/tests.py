@@ -79,6 +79,8 @@ def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Path:
     (plugin_dir / "__pycache__" / "module.cpython-312.pyc").write_bytes(b"\x00")
     (plugin_dir / "handlers" / ".crush").mkdir()
     (plugin_dir / "handlers" / ".crush" / "cache.json").write_text("{}")
+    (plugin_dir / "node_modules").mkdir()
+    (plugin_dir / "node_modules" / "left-pad.js").write_text("module.exports = {}")
 
     return plugin_dir
 
@@ -134,6 +136,8 @@ def test_build_package(init_plugin: Path) -> None:
         assert not any("__pycache__" in name for name in names)
         # hidden directories nested inside subdirectories should be excluded
         assert not any(".crush" in name for name in names)
+        # node_modules should be excluded by default
+        assert not any("node_modules" in name for name in names)
 
 
 @pytest.mark.parametrize(
@@ -143,7 +147,7 @@ def test_build_package(init_plugin: Path) -> None:
         (
             [],
             ["CANVAS_MANIFEST.json", "handlers"],
-            [".hidden-dir", ".hidden.file", "symlink", "__pycache__"],
+            [".hidden-dir", ".hidden.file", "symlink", "__pycache__", "node_modules"],
         ),
         # 2. Relative path
         (["*.md"], ["CANVAS_MANIFEST.json", "handlers"], ["README.md"]),
