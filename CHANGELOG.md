@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.164.0 (2026-06-08)
+
+### Bug Fixes
+
+- Exclude node_modules when bundling plugins
+  ([#1742](https://github.com/canvas-medical/canvas-plugins/pull/1742),
+  [`fe9fe65`](https://github.com/canvas-medical/canvas-plugins/commit/fe9fe65ef104a3b7e253b034146ade98a6c0e167))
+
+### Chores
+
+- Update codecov version ([#1751](https://github.com/canvas-medical/canvas-plugins/pull/1751),
+  [`85b06c0`](https://github.com/canvas-medical/canvas-plugins/commit/85b06c01bc623ec79c7e40c3efc40a8e23b1f62a))
+
+### Features
+
+- Add Reference sdk command ([#1704](https://github.com/canvas-medical/canvas-plugins/pull/1704),
+  [`4487abd`](https://github.com/canvas-medical/canvas-plugins/commit/4487abd6652bb2db0710e362c00b7a61ed7a4bcb))
+
+
 ## v0.163.1 (2026-06-04)
 
 ### Bug Fixes
