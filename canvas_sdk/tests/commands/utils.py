@@ -27,6 +27,7 @@ COMMANDS_TO_SKIP = [
     "POCLabTestCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
+    "ReferenceCommand",
 ]
 
 
