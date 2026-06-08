@@ -110,7 +110,7 @@ jobs:
           ls -la coverage-py*.xml 2>/dev/null || echo "No coverage files found"
 
       - name: Upload per-version coverage to Codecov (informational only)
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-py3.11.xml
@@ -118,7 +118,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload per-version coverage to Codecov (informational only)
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-py3.12.xml
@@ -126,7 +126,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload merged coverage to Codecov (commit status)
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-py3.11.xml,./coverage-py3.12.xml
@@ -198,7 +198,7 @@ jobs:
 
       - name: Upload coverage to Codecov (per-plugin)
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./example-plugins/${{ matrix.plugin }}/coverage.xml
