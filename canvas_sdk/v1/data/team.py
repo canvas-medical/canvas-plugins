@@ -54,6 +54,7 @@ class Team(TimestampedModel, IdentifiableModel):
         related_name="teams",
         db_table="canvas_sdk_data_api_team_members_001",
     )
+    group_id = models.UUIDField(null=True)
 
 
 class TeamContactPoint(IdentifiableModel):
