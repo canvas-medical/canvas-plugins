@@ -8,6 +8,7 @@ from factory.fuzzy import FuzzyDate
 from canvas_sdk.v1.data import (
     ImagingOrder,
     ImagingReport,
+    ImagingReportCoding,
     ImagingReportTemplate,
     ImagingReportTemplateField,
     ImagingReportTemplateFieldOption,
@@ -80,6 +81,19 @@ class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
         end_date=datetime.date.today(),
     )
     review = None  # Optional field
+
+
+class ImagingReportCodingFactory(factory.django.DjangoModelFactory[ImagingReportCoding]):
+    """Factory for creating an ImagingReportCoding."""
+
+    class Meta:
+        model = ImagingReportCoding
+
+    report = factory.SubFactory(ImagingReportFactory)
+    system = factory.Faker("random_element", elements=["LOINC", "SNOMED", "CPT"])
+    code = factory.Faker("bothify", text="#####-#")
+    display = factory.Faker("text", max_nb_chars=200)
+    value = factory.Faker("text", max_nb_chars=200)
 
 
 class ImagingReportTemplateFactory(factory.django.DjangoModelFactory[ImagingReportTemplate]):

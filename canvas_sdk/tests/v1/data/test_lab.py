@@ -5,6 +5,7 @@ from django.test.utils import CaptureQueriesContext
 from canvas_sdk.test_utils.factories import (
     LabOrderFactory,
     LabReportFactory,
+    LabReportRemarkFactory,
     LabTestFactory,
     LabValueFactory,
 )
@@ -123,3 +124,26 @@ def test_with_result_tests_and_values_prefetches_report_values() -> None:
         values = list(fetched.values.all())
     assert len(values) == 1
     assert len(ctx.captured_queries) == 0
+
+
+@pytest.mark.django_db
+def test_remarks_returns_only_remarks_for_the_report() -> None:
+    """Test the remarks reverse accessor returns only remarks linked to the report."""
+    report = LabReportFactory.create()
+    remark = LabReportRemarkFactory.create(report=report)
+    LabReportRemarkFactory.create(report=LabReportFactory.create())
+
+    remarks = list(report.remarks.all())
+
+    assert [r.dbid for r in remarks] == [remark.dbid]
+
+
+@pytest.mark.django_db
+def test_remark_comment_is_persisted() -> None:
+    """Test a remark's comment round-trips through the database."""
+    report = LabReportFactory.create()
+    LabReportRemarkFactory.create(report=report, comment="Specimen hemolyzed")
+
+    fetched = report.remarks.get()
+
+    assert fetched.comment == "Specimen hemolyzed"

@@ -8,6 +8,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
@@ -118,6 +119,18 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
+class ImagingReportCoding(Coding):
+    """Model to read ImagingReportCoding data."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_imagingreportcoding_001"
+
+    report = models.ForeignKey(
+        ImagingReport, on_delete=models.DO_NOTHING, related_name="codings", null=True
+    )
+    value = models.CharField(max_length=1000)
+
+
 class ImagingReportTemplateQuerySet(BaseReportTemplateQuerySet):
     """QuerySet for ImagingReportTemplate with filtering methods."""
 
@@ -164,6 +177,7 @@ __exports__ = (
     "ImagingOrder",
     "ImagingReview",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReportTemplate",
     "ImagingReportTemplateQuerySet",
     "ImagingReportTemplateField",
