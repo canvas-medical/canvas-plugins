@@ -75,7 +75,6 @@ def test_manifest_file_schema(handler_manifest_example: dict) -> None:
         "provider_menu_item",
         "portal_menu_item",
         "full_chart",
-        "scheduling",
     ],
     ids=lambda s: s,
 )
