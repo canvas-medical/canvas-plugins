@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.165.0 (2026-06-09)
+
+### Features
+
+- Adds group_id to the SDK Team model
+  ([#1756](https://github.com/canvas-medical/canvas-plugins/pull/1756),
+  [`e68cb8e`](https://github.com/canvas-medical/canvas-plugins/commit/e68cb8e329a1499dcbd5f2b9ad7cfb8da864d981))
+
+
 ## v0.164.0 (2026-06-08)
 
 ### Bug Fixes
