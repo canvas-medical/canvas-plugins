@@ -25,6 +25,7 @@ from canvas_sdk.effects.claim.claim_provider import (
     ClaimProvider,
     ClaimReferringProvider,
 )
+from canvas_sdk.effects.claim.claim_supervising_provider import ClaimSupervisingProvider
 
 
 @pytest.fixture
@@ -41,6 +42,12 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch(
             "canvas_sdk.effects.claim.claim_provider.ClaimProviderModel"
         ) as mock_claim_provider_model,
+        patch(
+            "canvas_sdk.effects.claim.claim_supervising_provider.Claim"
+        ) as mock_claim_supervising,
+        patch(
+            "canvas_sdk.effects.claim.claim_supervising_provider.Staff"
+        ) as mock_supervising_staff,
         patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
         patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli,
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
@@ -57,6 +64,10 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_provider_claim_obj = MagicMock()
         mock_claim_provider.objects.filter.return_value.first.return_value = mock_provider_claim_obj
         mock_claim_provider_model.objects.filter.return_value.exists.return_value = True
+
+        # Setup supervising provider mocks - claim and staff exist by default
+        mock_claim_supervising.objects.filter.return_value.exists.return_value = True
+        mock_supervising_staff.objects.filter.return_value.exists.return_value = True
 
         # Setup payment-related mocks
         mock_claim_obj = MagicMock()
@@ -95,6 +106,8 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
             "claim_provider": mock_claim_provider,
             "claim_provider_model": mock_claim_provider_model,
             "claim_provider_obj": mock_provider_claim_obj,
+            "claim_supervising": mock_claim_supervising,
+            "supervising_staff": mock_supervising_staff,
             "payment_claim": mock_payment_claim,
             "payment_claim_obj": mock_claim_obj,
             "payment_cli": mock_cli,
@@ -822,3 +835,97 @@ def test_update_provider_requires_existing_provider_info(
 
     err_msg = repr(e.value)
     assert "does not have any existing provider information to update." in err_msg
+
+
+def test_set_supervising_provider_from_staff(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that set_supervising_provider with staff_id emits the staff link payload."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.update_supervising_provider(staff_id="staff-key")
+
+    assert effect.type == EffectType.UPDATE_CLAIM_SUPERVISING_PROVIDER
+    payload = json.loads(effect.payload)["data"]
+    assert payload == {"claim_id": "claim-id", "staff_id": "staff-key"}
+
+
+def test_set_supervising_provider_free_text(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that set_supervising_provider with a dataclass emits the snapshot fields."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.update_supervising_provider(
+        ClaimSupervisingProvider(
+            first_name="Jane", last_name="Doe", npi="1234567890", taxonomy="207Q00000X"
+        )
+    )
+
+    assert effect.type == EffectType.UPDATE_CLAIM_SUPERVISING_PROVIDER
+    payload = json.loads(effect.payload)["data"]
+    assert payload == {
+        "claim_id": "claim-id",
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "npi": "1234567890",
+        "taxonomy": "207Q00000X",
+    }
+    assert "staff_id" not in payload
+
+
+def test_set_supervising_provider_requires_exactly_one_mode(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that providing neither or both modes raises a validation error."""
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as none_err:
+        claim.update_supervising_provider()
+    assert "Exactly one of 'staff_id' or 'supervising_provider'" in repr(none_err.value)
+
+    with pytest.raises(ValidationError) as both_err:
+        claim.update_supervising_provider(
+            ClaimSupervisingProvider(first_name="Jane"), staff_id="staff-key"
+        )
+    assert "Exactly one of 'staff_id' or 'supervising_provider'" in repr(both_err.value)
+
+
+def test_set_supervising_provider_requires_existing_claim(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that set_supervising_provider validates the claim exists."""
+    mock_db_queries["claim_supervising"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="invalid-claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.update_supervising_provider(staff_id="staff-key")
+
+    assert "Claim with id invalid-claim-id does not exist." in repr(e.value)
+
+
+def test_set_supervising_provider_requires_existing_staff(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that set_supervising_provider validates the Staff exists when staff_id is given."""
+    mock_db_queries["supervising_staff"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.update_supervising_provider(staff_id="missing-staff")
+
+    assert "Staff with id missing-staff does not exist." in repr(e.value)
+
+
+def test_set_incident_to(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that set_incident_to emits the correct effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.set_incident_to(True)
+
+    assert effect.type == EffectType.SET_CLAIM_INCIDENT_TO
+    assert json.loads(effect.payload)["data"] == {"claim_id": "claim-id", "incident_to": True}
+
+
+def test_set_incident_to_requires_existing_claim(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that set_incident_to validates the claim exists."""
+    mock_db_queries["claim_supervising"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="invalid-claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.set_incident_to(False)
+
+    assert "Claim with id invalid-claim-id does not exist." in repr(e.value)
