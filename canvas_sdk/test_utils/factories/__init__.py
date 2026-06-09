@@ -92,6 +92,7 @@ from .task import (
     TaskMetadataFactory,
     TaskTaskLabelFactory,
 )
+from .team import TeamFactory
 from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentFactory,
     UncategorizedClinicalDocumentReviewFactory,
@@ -183,6 +184,7 @@ __all__ = (
     "TaskLabelFactory",
     "TaskMetadataFactory",
     "TaskTaskLabelFactory",
+    "TeamFactory",
     "UncategorizedClinicalDocumentFactory",
     "UncategorizedClinicalDocumentReviewFactory",
 )
