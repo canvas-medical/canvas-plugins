@@ -126,7 +126,7 @@ class ImagingReportCoding(Coding):
         db_table = "canvas_sdk_data_api_imagingreportcoding_001"
 
     report = models.ForeignKey(
-        ImagingReport, on_delete=models.DO_NOTHING, related_name="codings", null=True
+        ImagingReport, on_delete=models.DO_NOTHING, related_name="codings"
     )
     value = models.CharField(max_length=1000)
 
