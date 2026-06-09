@@ -10,7 +10,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
-from canvas_sdk.v1.data import NoteType, Patient
+from canvas_sdk.v1.data import NoteType, Patient, Staff
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 TRANSITION_STATE_MATRIX = {
@@ -52,6 +52,7 @@ class Note(NoteOrAppointmentABC):
     patient_id: str | None = None
     title: str | None = None
     related_data: dict | None = None
+    supervising_provider_id: str | None = None
 
     def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
@@ -345,6 +346,18 @@ class Note(NoteOrAppointmentABC):
                     "value",
                     f"Patient with ID {self.patient_id} does not exist.",
                     self.patient_id,
+                )
+            )
+
+        if (
+            self.supervising_provider_id
+            and not Staff.objects.filter(id=self.supervising_provider_id).exists()
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Supervising provider with ID {self.supervising_provider_id} does not exist.",
+                    self.supervising_provider_id,
                 )
             )
 

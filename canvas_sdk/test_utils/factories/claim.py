@@ -9,6 +9,7 @@ from canvas_sdk.v1.data import (
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
+    ClaimSupervisingProvider,
 )
 
 
@@ -60,6 +61,19 @@ class ClaimProviderFactory(factory.django.DjangoModelFactory[ClaimProvider]):
         model = ClaimProvider
 
     claim = factory.SubFactory(ClaimFactory)
+
+
+class ClaimSupervisingProviderFactory(factory.django.DjangoModelFactory[ClaimSupervisingProvider]):
+    """Factory for creating ClaimSupervisingProvider."""
+
+    class Meta:
+        model = ClaimSupervisingProvider
+
+    claim = factory.SubFactory(ClaimFactory)
+    first_name = "Gregory"
+    last_name = "House"
+    npi = "1234567890"
+    taxonomy = "207Q00000X"
 
 
 class ClaimLabelFactory(factory.django.DjangoModelFactory[ClaimLabel]):
