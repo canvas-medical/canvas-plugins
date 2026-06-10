@@ -18,7 +18,7 @@ class VisualExamFinding(AuditedModel, IdentifiableModel):
     )
     image = models.CharField(max_length=255, null=True, blank=True)
     title = models.CharField(max_length=255, default="", blank=True)
-    narrative = models.TextField()
+    narrative = models.TextField(default="", blank=True)
 
     @property
     def image_url(self) -> str | None:
