@@ -31,7 +31,7 @@ class ChartSectionReview(AuditedModel):
         choices=ChartSectionReviewSection.choices, max_length=20, blank=True, default=""
     )
     entries = ArrayField(base_field=models.IntegerField(), default=list, blank=True)
-    content = models.TextField()
+    content = models.TextField(blank=True, default="")
 
 
 __exports__ = ("ChartSectionReviewSection", "ChartSectionReview")
