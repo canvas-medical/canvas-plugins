@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
 
 
 class ChartSectionReviewSection(models.TextChoices):
@@ -15,7 +15,7 @@ class ChartSectionReviewSection(models.TextChoices):
     IMMUNIZATIONS = "immunizations", "Immunizations"
 
 
-class ChartSectionReview(AuditedModel):
+class ChartSectionReview(AuditedModel, IdentifiableModel):
     """A reviewed chart section captured on a note, with its pre-rendered content."""
 
     class Meta:
