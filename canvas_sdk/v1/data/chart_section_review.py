@@ -27,7 +27,9 @@ class ChartSectionReview(AuditedModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="chart_section_reviews"
     )
-    section = models.CharField(choices=ChartSectionReviewSection.choices, max_length=20)
+    section = models.CharField(
+        choices=ChartSectionReviewSection.choices, max_length=20, blank=True, default=""
+    )
     entries = ArrayField(base_field=models.IntegerField(), default=list, blank=True)
     content = models.TextField()
 
