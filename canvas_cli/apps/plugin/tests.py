@@ -17,6 +17,7 @@ from canvas_cli.main import app
 from .plugin import (
     _build_package,
     _find_unreferenced_handlers,
+    _find_unresolvable_handlers,
     install,
     list_secrets,
     parse_secrets,
@@ -842,10 +843,21 @@ def plugin_with_manifest(tmp_path: Path) -> Path:
     manifest_file = plugin_dir / "CANVAS_MANIFEST.json"
     manifest_file.write_text(__import__("json").dumps(manifest))
 
-    # Create handlers directory
+    # Create handlers directory with the referenced handler file, so the
+    # handler resolves where the runner will look for it.
     handlers_dir = plugin_dir / "handlers"
     handlers_dir.mkdir()
     (handlers_dir / "__init__.py").touch()
+    (handlers_dir / "my_handler.py").write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class MyHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
 
     return plugin_dir
 
@@ -1240,6 +1252,109 @@ class Protocol1(BaseHandler):
     # Should only detect Handler2 as unreferenced
     assert len(unreferenced) == 1
     assert "test_plugin.handlers.handler2:Handler2" in unreferenced
+
+
+def test_find_unresolvable_handlers_all_resolve(tmp_path: Path) -> None:
+    """All declared handlers resolve to files where the runner will look."""
+    plugin_dir = tmp_path / "test_plugin"
+    (plugin_dir / "routes").mkdir(parents=True)
+    (plugin_dir / "routes" / "api.py").touch()
+    (plugin_dir / "apps").mkdir()
+    (plugin_dir / "apps" / "chart.py").touch()
+    (plugin_dir / "protocols").mkdir()
+    (plugin_dir / "protocols" / "hook.py").touch()
+
+    manifest = {
+        "name": "test_plugin",
+        "components": {
+            "protocols": [{"class": "test_plugin.protocols.hook:Hook"}],
+            "applications": [{"class": "test_plugin.apps.chart:ChartApp"}],
+            "handlers": [{"class": "test_plugin.routes.api:API"}],
+        },
+    }
+
+    assert _find_unresolvable_handlers(plugin_dir, manifest) == []
+
+
+def test_find_unresolvable_handlers_detects_misplaced_manifest(tmp_path: Path) -> None:
+    """A manifest above the package directory (so the package is nested one
+    level too deep) is flagged — this is the spruce failure mode.
+    """
+    project_root = tmp_path / "project"
+    # Package nested under project_root/test_plugin/ while the manifest lives at
+    # project_root/, so the handler file is one directory too deep.
+    package = project_root / "test_plugin" / "routes"
+    package.mkdir(parents=True)
+    (package / "api.py").touch()
+
+    manifest = {
+        "name": "test_plugin",
+        "components": {
+            "handlers": [{"class": "test_plugin.routes.api:API"}],
+        },
+    }
+
+    # validate_manifest is run against project_root (where CANVAS_MANIFEST.json
+    # sits), so the runner would look for project_root/routes/api.py — missing.
+    unresolvable = _find_unresolvable_handlers(project_root, manifest)
+
+    assert len(unresolvable) == 1
+    class_ref, expected = unresolvable[0]
+    assert class_ref == "test_plugin.routes.api:API"
+    assert expected == "routes/api.py"
+
+
+def test_find_unresolvable_handlers_detects_wrong_package_name(tmp_path: Path) -> None:
+    """A handler whose leading module segment isn't the manifest name can't be
+    loaded by the runner and is flagged.
+    """
+    plugin_dir = tmp_path / "test_plugin"
+    (plugin_dir / "routes").mkdir(parents=True)
+    (plugin_dir / "routes" / "api.py").touch()
+
+    manifest = {
+        "name": "test_plugin",
+        "components": {
+            "handlers": [{"class": "other_package.routes.api:API"}],
+        },
+    }
+
+    unresolvable = _find_unresolvable_handlers(plugin_dir, manifest)
+
+    assert len(unresolvable) == 1
+    assert unresolvable[0][0] == "other_package.routes.api:API"
+
+
+def test_validate_manifest_misplaced_manifest_exits(tmp_path: Path) -> None:
+    """validate_manifest fails when a handler won't resolve at runtime."""
+    project_root = tmp_path / "test_plugin"
+    # Doubled package nesting: handler file is one level too deep.
+    package = project_root / "test_plugin" / "routes"
+    package.mkdir(parents=True)
+    (package / "api.py").touch()
+
+    manifest = {
+        "sdk_version": "0.1.4",
+        "plugin_version": "0.0.1",
+        "name": "test_plugin",
+        "description": "Test plugin",
+        "components": {
+            "handlers": [{"class": "test_plugin.routes.api:API", "description": "x"}],
+            "commands": [],
+            "content": [],
+            "effects": [],
+            "views": [],
+        },
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "./README.md",
+    }
+    (project_root / "CANVAS_MANIFEST.json").write_text(__import__("json").dumps(manifest))
+
+    with pytest.raises(typer.Exit):
+        validate_manifest(project_root)
 
 
 @patch("canvas_cli.apps.plugin.plugin.print")

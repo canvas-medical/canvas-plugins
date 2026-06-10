@@ -610,6 +610,61 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
     return unreferenced
 
 
+def _find_unresolvable_handlers(
+    plugin_path: Path, manifest_json: dict
+) -> builtins.list[tuple[str, str]]:
+    """Find manifest handler classes whose module file won't resolve at runtime.
+
+    The plugin runner loads each handler by mapping its dotted module path to a
+    file *relative to the parent of the install directory*: a plugin installed
+    at ``plugins/<name>/`` loads handler ``<name>.routes.api`` from
+    ``plugins/<name>/routes/api.py`` (see
+    ``plugin_runner.sandbox.sandbox_from_module``). The leading module segment
+    is therefore the plugin's own package (which must equal the manifest
+    ``name``) and the remaining segments are a path *inside* the plugin
+    directory — the same directory that holds ``CANVAS_MANIFEST.json``.
+
+    A common mistake is leaving ``CANVAS_MANIFEST.json`` in a parent directory
+    above the package (so ``<name>/routes/api.py`` actually lives at
+    ``<name>/<name>/routes/api.py`` once installed). That passes schema
+    validation and imports fine locally via ``sys.path``, then fails on the
+    instance with ``ModuleNotFoundError``. This check mirrors the runner's
+    resolution against the on-disk layout so the problem surfaces here instead.
+
+    Returns ``(class_ref, expected_relative_path)`` for each handler that won't
+    resolve, where ``expected_relative_path`` is where the runner will look,
+    relative to the plugin directory.
+    """
+    name = manifest_json.get("name")
+    components = manifest_json.get("components", {})
+
+    # The runner loads protocols + applications + handlers; mirror that exact
+    # set (see plugin_runner.load_or_reload_plugin).
+    class_refs = []
+    for key in ("protocols", "applications", "handlers"):
+        for item in components.get(key, []):
+            if class_ref := item.get("class", ""):
+                class_refs.append(class_ref)
+
+    unresolvable = []
+    for class_ref in class_refs:
+        module_path = class_ref.split(":", 1)[0]
+        segments = module_path.split(".")
+
+        # The leading segment must be the plugin's own package and there must be
+        # at least one submodule segment for the handler to live in a file
+        # inside the plugin directory.
+        if len(segments) < 2 or segments[0] != name:
+            unresolvable.append((class_ref, f"{module_path.replace('.', '/')}.py"))
+            continue
+
+        relative = "/".join(segments[1:]) + ".py"
+        if not plugin_path.joinpath(*segments[1:]).with_suffix(".py").exists():
+            unresolvable.append((class_ref, relative))
+
+    return unresolvable
+
+
 def validate_manifest(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
@@ -645,6 +700,25 @@ def validate_manifest(
         raise typer.Abort() from None
 
     validate_manifest_file(manifest_json)
+
+    # Check that every declared handler resolves to a file where the runner
+    # will look for it. This catches a misplaced CANVAS_MANIFEST.json (e.g. one
+    # sitting above the package directory) that would otherwise pass validation
+    # and fail to load on the instance with a ModuleNotFoundError.
+    unresolvable = _find_unresolvable_handlers(plugin_name, manifest_json)
+    if unresolvable:
+        print(
+            "\nError: these handler classes won't be found by the plugin runner "
+            "with the current directory layout:"
+        )
+        for class_ref, expected in unresolvable:
+            print(f"  - {class_ref}\n      runner expects: {plugin_name.name}/{expected}")
+        print(
+            "\nCANVAS_MANIFEST.json must live inside the plugin's package directory "
+            '(the directory whose name matches the manifest "name"), alongside the '
+            "handler packages — not in a parent directory above them.\n"
+        )
+        raise typer.Exit(code=1)
 
     # Check for unreferenced handlers
     unreferenced = _find_unreferenced_handlers(plugin_name, manifest_json)
