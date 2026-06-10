@@ -17,7 +17,7 @@ class VisualExamFinding(AuditedModel, IdentifiableModel):
         "v1.Note", on_delete=models.DO_NOTHING, related_name="visual_exam_findings"
     )
     image = models.CharField(max_length=255, null=True, blank=True)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, default="", blank=True)
     narrative = models.TextField()
 
     @property
