@@ -1,4 +1,5 @@
 from .calendar import CalendarFactory, EventFactory
+from .chart_section_review import ChartSectionReviewFactory
 from .claim import (
     ClaimCommentFactory,
     ClaimCoverageFactory,
@@ -98,10 +99,12 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReviewFactory,
 )
 from .user import CanvasUserFactory
+from .visual_exam_finding import VisualExamFindingFactory
 
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
+    "ChartSectionReviewFactory",
     "ClaimBannerAlertFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
@@ -187,4 +190,5 @@ __all__ = (
     "TeamFactory",
     "UncategorizedClinicalDocumentFactory",
     "UncategorizedClinicalDocumentReviewFactory",
+    "VisualExamFindingFactory",
 )
