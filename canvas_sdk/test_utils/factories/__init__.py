@@ -22,6 +22,7 @@ from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
     ImagingOrderFactory,
+    ImagingReportCodingFactory,
     ImagingReportFactory,
     ImagingReportTemplateFactory,
     ImagingReportTemplateFieldFactory,
@@ -38,6 +39,7 @@ from .lab import (
     LabPartnerTestQuestionChoiceFactory,
     LabPartnerTestQuestionFactory,
     LabReportFactory,
+    LabReportRemarkFactory,
     LabReviewFactory,
     LabTestFactory,
     LabValueCodingFactory,
@@ -123,6 +125,7 @@ __all__ = (
     "ExternalVisitFactory",
     "FacilityFactory",
     "ImagingOrderFactory",
+    "ImagingReportCodingFactory",
     "ImagingReportFactory",
     "ImagingReportTemplateFactory",
     "ImagingReportTemplateFieldFactory",
@@ -138,6 +141,7 @@ __all__ = (
     "LabPartnerTestQuestionChoiceFactory",
     "LabPartnerTestQuestionFactory",
     "LabReportFactory",
+    "LabReportRemarkFactory",
     "LabReviewFactory",
     "LabTestFactory",
     "LabValueCodingFactory",

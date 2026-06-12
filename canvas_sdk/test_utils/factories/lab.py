@@ -12,6 +12,7 @@ from canvas_sdk.v1.data import (
     LabPartnerTestQuestion,
     LabPartnerTestQuestionChoice,
     LabReport,
+    LabReportRemark,
     LabReview,
     LabTest,
     LabValue,
@@ -45,6 +46,16 @@ class LabReportFactory(factory.django.DjangoModelFactory[LabReport]):
     original_date = factory.LazyFunction(lambda: timezone.now())
     date_performed = factory.LazyFunction(lambda: timezone.now())
     custom_document_name = factory.Faker("text", max_nb_chars=500)
+
+
+class LabReportRemarkFactory(factory.django.DjangoModelFactory[LabReportRemark]):
+    """Factory for creating a LabReportRemark."""
+
+    class Meta:
+        model = LabReportRemark
+
+    report = factory.SubFactory(LabReportFactory)
+    comment = factory.Faker("sentence")
 
 
 class LabReviewFactory(factory.django.DjangoModelFactory[LabReview]):
