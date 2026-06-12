@@ -22,6 +22,7 @@ from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, fin
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     Sandbox,
+    _FilteredDict,
     sandbox_from_module,
 )
 
@@ -1193,6 +1194,81 @@ def test_sandbox_filters_private_attrs_from_external_dict_and_vars(code: str) ->
 )
 def test_sandbox_allows_unfiltered_dict_and_vars_on_plugin_objects(code: str) -> None:
     """Test that __dict__ and vars() on plugin-defined objects include private attributes."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
+def test_filtered_dict_hides_private_keys() -> None:
+    """_FilteredDict is a read-only view that excludes underscore-prefixed keys."""
+    view = _FilteredDict({"public": 1, "_private": 2})
+
+    assert view["public"] == 1
+    with pytest.raises(KeyError):
+        view["_private"]
+
+    assert "public" in view
+    assert "_private" not in view
+    assert 1 not in view
+
+    assert view.get("public") == 1
+    assert view.get("_private") is None
+    assert view.get("_private", "fallback") == "fallback"
+
+    assert list(view) == ["public"]
+    assert list(view.keys()) == ["public"]
+    assert list(view.values()) == [1]
+    assert list(view.items()) == [("public", 1)]
+    assert len(view) == 1
+
+    assert repr(view) == "{'public': 1}"
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "vars_on_external_module_filters_private": """
+                import json
+
+                d = vars(json)
+                assert "loads" in d
+                assert "__name__" not in d
+            """,
+            "vars_on_external_class": """
+                from canvas_sdk.utils import Http
+
+                d = vars(Http)
+                assert "_session" not in d
+            """,
+            "subscript_private_key_on_external_module": """
+                import json
+
+                try:
+                    json["_private"]
+                    assert False, "underscore item access should be blocked"
+                except (AttributeError, KeyError):
+                    pass
+            """,
+            "subscript_private_key_on_external_class": """
+                from canvas_sdk.utils import Http
+
+                try:
+                    Http["_session"]
+                    assert False, "underscore item access should be blocked"
+                except (AttributeError, KeyError):
+                    pass
+            """,
+            "dict_on_external_class_hides_private": """
+                from canvas_sdk.utils import Http
+
+                d = Http.__dict__
+                assert "_session" not in d
+            """,
+        }
+    ),
+)
+def test_sandbox_filters_private_attrs_on_external_modules_and_classes(code: str) -> None:
+    """Test that vars()/__dict__/item access on external modules and classes hide private keys."""
     sandbox = _sandbox_from_code(code)
     sandbox.execute()
 
