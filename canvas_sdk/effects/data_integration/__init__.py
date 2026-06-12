@@ -1,10 +1,10 @@
 from .assign_document_reviewer import AssignDocumentReviewer as AssignDocumentReviewer
-from .base import _BaseDocumentEffect as _BaseDocumentEffect
 from .assign_document_reviewer import (
     AssignDocumentReviewerConfidenceScores as AssignDocumentReviewerConfidenceScores,
 )
 from .assign_document_reviewer import Priority as Priority
 from .assign_document_reviewer import ReviewMode as ReviewMode
+from .base import _BaseDocumentEffect as _BaseDocumentEffect
 from .junk_document import JunkDocument as JunkDocument
 from .junk_document import JunkDocumentConfidenceScores as JunkDocumentConfidenceScores
 from .link_document_to_patient import (

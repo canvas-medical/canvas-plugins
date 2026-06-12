@@ -9,11 +9,12 @@ import json
 from typing import Any
 from unittest.mock import Mock, patch
 
-from canvas_sdk.effects.simple_api import JSONResponse
-from canvas_sdk.v1.data import SpecialtyReportTemplate
 from speciality_report_explorer.protocols.specialty_report_template_api import (
     SpecialtyReportTemplateAPI,
 )
+
+from canvas_sdk.effects.simple_api import JSONResponse
+from canvas_sdk.v1.data import SpecialtyReportTemplate
 
 
 # Test Fixtures and Helpers
@@ -193,8 +194,8 @@ def create_mock_queryset(templates: list[Mock]) -> Mock:
     mock_queryset.by_specialty.return_value = mock_queryset
     mock_queryset.prefetch_related.return_value = mock_queryset
     mock_queryset.__iter__ = lambda self: iter(templates)
-    mock_queryset.__getitem__ = (
-        lambda self, key: templates[:key] if isinstance(key, int) else templates[key]
+    mock_queryset.__getitem__ = lambda self, key: (
+        templates[:key] if isinstance(key, int) else templates[key]
     )
 
     return mock_queryset

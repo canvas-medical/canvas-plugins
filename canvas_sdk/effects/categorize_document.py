@@ -121,7 +121,9 @@ class CategorizeDocument(_BaseDocumentEffect):
             if isinstance(scores, dict) and "document_type" in scores:
                 doc_type_scores = scores["document_type"]
                 if isinstance(doc_type_scores, dict):
-                    invalid_doc_type_keys = set(doc_type_scores.keys()) - _DOCUMENT_TYPE_CONFIDENCE_KEYS
+                    invalid_doc_type_keys = (
+                        set(doc_type_scores.keys()) - _DOCUMENT_TYPE_CONFIDENCE_KEYS
+                    )
                     if invalid_doc_type_keys:
                         raise ValueError(
                             f"confidence_scores.document_type contains invalid keys: {sorted(invalid_doc_type_keys)}. "

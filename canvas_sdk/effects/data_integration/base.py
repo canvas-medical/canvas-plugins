@@ -56,15 +56,18 @@ class _BaseDocumentEffect(_BaseEffect):
 
         Call this from _get_error_details() in subclasses that have document_id.
         """
-        if hasattr(self, "document_id"):
-            if isinstance(self.document_id, str) and not self.document_id.strip():
-                errors.append(
-                    self._create_error_detail(
-                        "value_error",
-                        "document_id must be a non-empty string",
-                        self.document_id,
-                    )
+        if (
+            hasattr(self, "document_id")
+            and isinstance(self.document_id, str)
+            and not self.document_id.strip()
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value_error",
+                    "document_id must be a non-empty string",
+                    self.document_id,
                 )
+            )
 
 
 __exports__ = ("_BaseDocumentEffect",)

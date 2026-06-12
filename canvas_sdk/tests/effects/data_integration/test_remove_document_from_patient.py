@@ -200,10 +200,7 @@ class TestRemoveDocumentFromPatientMeta:
 
     def test_meta_effect_type(self) -> None:
         """Test that Meta.effect_type is correct."""
-        assert (
-            RemoveDocumentFromPatient.Meta.effect_type
-            == EffectType.REMOVE_DOCUMENT_FROM_PATIENT
-        )
+        assert RemoveDocumentFromPatient.Meta.effect_type == EffectType.REMOVE_DOCUMENT_FROM_PATIENT
 
     def test_meta_apply_required_fields(self) -> None:
         """Test that Meta.apply_required_fields includes document_id."""
@@ -349,7 +346,10 @@ class TestRemoveDocumentFromPatientConstants:
 
     def test_confidence_score_keys_derived_from_typeddict(self) -> None:
         """Test CONFIDENCE_SCORE_KEYS matches RemoveDocumentConfidenceScores TypedDict annotations."""
-        assert frozenset(RemoveDocumentConfidenceScores.__annotations__.keys()) == CONFIDENCE_SCORE_KEYS
+        assert (
+            frozenset(RemoveDocumentConfidenceScores.__annotations__.keys())
+            == CONFIDENCE_SCORE_KEYS
+        )
 
 
 class TestRemoveDocumentConfidenceScoresTypedDict:

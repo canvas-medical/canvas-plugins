@@ -492,7 +492,7 @@ This test data covers the following test scenarios:
 
 2. **Active Filter**: 4 active templates (TEST_CARD001, TEST_CARD002, TEST_DERM001, TEST_EMPTY001)
 
-3. **Search Filter**: 
+3. **Search Filter**:
    - "cardiology" → TEST_CARD001, TEST_CARD003
    - "cardiac" → TEST_CARD001, TEST_CARD002
    - "heart" → TEST_CARD001, TEST_CARD002
@@ -507,7 +507,7 @@ This test data covers the following test scenarios:
 
 6. **Fields and Options**: TEST_CARD001 has 6 fields, 2 fields have options (6 total options)
 
-7. **Edge Cases**: 
+7. **Edge Cases**:
    - TEST_EMPTY001 (no fields)
    - Select Without Options field (select type with no options)
 

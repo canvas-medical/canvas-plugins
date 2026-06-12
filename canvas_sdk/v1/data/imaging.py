@@ -1,5 +1,5 @@
 import json
-from typing import Self, cast
+from typing import cast
 
 from django.db import models
 

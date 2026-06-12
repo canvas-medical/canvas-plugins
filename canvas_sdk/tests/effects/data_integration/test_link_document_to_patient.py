@@ -478,7 +478,9 @@ class TestLinkDocumentToPatientConstants:
 
     def test_confidence_score_keys_derived_from_typeddict(self) -> None:
         """Test CONFIDENCE_SCORE_KEYS matches LinkDocumentConfidenceScores TypedDict annotations."""
-        assert frozenset(LinkDocumentConfidenceScores.__annotations__.keys()) == CONFIDENCE_SCORE_KEYS
+        assert (
+            frozenset(LinkDocumentConfidenceScores.__annotations__.keys()) == CONFIDENCE_SCORE_KEYS
+        )
 
 
 class TestLinkDocumentConfidenceScoresTypedDict:
