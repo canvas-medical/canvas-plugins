@@ -23,8 +23,9 @@ class MedicationStatementCommand(_BaseCommand):
             isinstance(self.fdb_code, dict)
             and self.fdb_code["system"] != CodeSystems.FDB
             and self.fdb_code["system"] != CodeSystems.UNSTRUCTURED
+            and self.fdb_code["system"] != CodeSystems.FULLSCRIPT
         ):
-            message = f"The 'coding.system' field must be '{CodeSystems.FDB}' or '{CodeSystems.UNSTRUCTURED}'."
+            message = f"The 'coding.system' field must be '{CodeSystems.FDB}', '{CodeSystems.UNSTRUCTURED}' or '{CodeSystems.FULLSCRIPT}'."
             errors.append(self._create_error_detail("value", message, self.fdb_code))
 
         return errors
