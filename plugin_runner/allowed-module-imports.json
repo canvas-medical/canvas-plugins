@@ -1079,6 +1079,8 @@
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "DiagnosticReport",
+    "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
     "DocumentReference",
@@ -1370,6 +1372,10 @@
   ],
   "canvas_sdk.v1.data.device": [
     "Device"
+  ],
+  "canvas_sdk.v1.data.diagnostic_report": [
+    "DiagnosticReport",
+    "DiagnosticReportStatus"
   ],
   "canvas_sdk.v1.data.diagnostic_view": [
     "DiagnosticView"

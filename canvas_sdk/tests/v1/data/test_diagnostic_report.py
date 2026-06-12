@@ -28,6 +28,7 @@ def test_diagnostic_report_resolves_to_linked_lab_report() -> None:
     fetched = DiagnosticReport.objects.get(id=diagnostic_report.id)
 
     assert fetched.lab_id == report.dbid
+    assert fetched.lab is not None
     assert fetched.lab.id == report.id
     assert fetched.status == DiagnosticReportStatus.FINAL
 
@@ -39,6 +40,7 @@ def test_diagnostic_report_for_patient_filters_by_subject() -> None:
     matching = DiagnosticReportFactory.create(subject=report.patient, lab=report)
     DiagnosticReportFactory.create(lab=None)
 
+    assert report.patient is not None
     results = list(DiagnosticReport.objects.for_patient(report.patient.id))
 
     assert [r.id for r in results] == [matching.id]
