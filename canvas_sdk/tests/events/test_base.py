@@ -208,3 +208,35 @@ def test_event_init_source() -> None:
     event = Event(event_request)
 
     assert event.source == "api"
+
+
+@pytest.mark.parametrize(
+    ("event_type", "target_type", "expected_name"),
+    [
+        (EventType.CALENDAR_CREATED, "Calendar", "CALENDAR_CREATED"),
+        (EventType.CALENDAR_UPDATED, "Calendar", "CALENDAR_UPDATED"),
+        (EventType.CALENDAR_DELETED, "Calendar", "CALENDAR_DELETED"),
+        (EventType.CALENDAR_EVENT_CREATED, "Event", "CALENDAR_EVENT_CREATED"),
+        (EventType.CALENDAR_EVENT_UPDATED, "Event", "CALENDAR_EVENT_UPDATED"),
+        (EventType.CALENDAR_EVENT_DELETED, "Event", "CALENDAR_EVENT_DELETED"),
+    ],
+)
+@patch("canvas_sdk.events.base.apps.get_model")
+def test_event_init_for_calendar_lifecycle_events(
+    mock_get_model: Mock, event_type: int, target_type: str, expected_name: str
+) -> None:
+    """Calendar and calendar-event lifecycle events resolve to their names and v1 targets."""
+    mock_model = Mock(spec=models.Model)
+    mock_get_model.return_value = mock_model
+
+    event_request = EventRequest()
+    event_request.type = event_type
+    event_request.target_type = target_type
+    event_request.target = "1"
+
+    event = Event(event_request)
+
+    assert event.type == event_type
+    assert event.name == expected_name
+    assert event.target.type == mock_model
+    mock_get_model.assert_called_once_with(app_label="v1", model_name=target_type)
