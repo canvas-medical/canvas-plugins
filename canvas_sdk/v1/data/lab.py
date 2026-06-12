@@ -94,6 +94,18 @@ class LabReport(AuditedModel, IdentifiableModel):
         return self.tests.filter(order__isnull=True)
 
 
+class LabReportRemark(TimestampedModel):
+    """A class representing a report-level remark on a lab report."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labreportremark_001"
+
+    report = models.ForeignKey(
+        LabReport, on_delete=models.DO_NOTHING, related_name="remarks", null=True
+    )
+    comment = models.CharField(max_length=512)
+
+
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
 
@@ -454,6 +466,7 @@ class LabReportTemplateFieldOption(BaseReportTemplateFieldOption):
 __exports__ = (
     "TransmissionType",
     "LabReport",
+    "LabReportRemark",
     "LabReviewQuerySet",
     "LabReview",
     "LabValue",

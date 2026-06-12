@@ -49,6 +49,7 @@ from .custom_attribute import (
 )
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
+from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .document_reference import (
@@ -64,6 +65,7 @@ from .goal import Goal
 from .imaging import (
     ImagingOrder,
     ImagingReport,
+    ImagingReportCoding,
     ImagingReportTemplate,
     ImagingReportTemplateField,
     ImagingReportTemplateFieldOption,
@@ -94,6 +96,7 @@ from .lab import (
     LabPartnerTestQuestion,
     LabPartnerTestQuestionChoice,
     LabReport,
+    LabReportRemark,
     LabReportTemplate,
     LabReportTemplateField,
     LabReportTemplateFieldOption,
@@ -256,6 +259,8 @@ __all__ = __exports__ = (
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "DiagnosticReport",
+    "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
     "DocumentReference",
@@ -273,6 +278,7 @@ __all__ = __exports__ = (
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReportTemplate",
     "ImagingReportTemplateField",
     "ImagingReportTemplateFieldOption",
@@ -301,6 +307,7 @@ __all__ = __exports__ = (
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
+    "LabReportRemark",
     "LabReview",
     "LabTest",
     "LabValue",
