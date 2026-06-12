@@ -13,6 +13,7 @@ class PluginCommand(IdentifiableModel):
     schema_key = models.CharField(max_length=320, null=False, unique=True)
     label = models.CharField(max_length=256, null=True)
     section = models.CharField(max_length=256, null=True)
+    plugin_name = models.CharField(max_length=256)
 
 
 __exports__ = ("PluginCommand",)
