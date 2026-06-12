@@ -12,7 +12,7 @@ class PluginCommand(IdentifiableModel):
     objects: models.Manager["PluginCommand"]
 
     name = models.CharField(max_length=256, null=False)
-    schema_key = models.CharField(max_length=320)
+    schema_key = models.CharField(max_length=320, null=False, unique=True)
     label = models.CharField(max_length=256, null=True)
     section = models.CharField(max_length=256, null=True)
 
