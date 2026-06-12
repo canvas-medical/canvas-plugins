@@ -40,6 +40,7 @@ from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLin
 from .command import Command, CommandMetadata
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
+from .content_type import ContentType
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
 from .custom_attribute import (
     AttributeHub,
@@ -51,7 +52,6 @@ from .device import Device
 from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
-from .django_content_type import DjangoContentType
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -247,6 +247,7 @@ __all__ = __exports__ = (
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
+    "ContentType",
     "Coverage",
     "CustomAttribute",
     "CustomAttributeAwareManager",
@@ -261,7 +262,6 @@ __all__ = __exports__ = (
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
-    "DjangoContentType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
