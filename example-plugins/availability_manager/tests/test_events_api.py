@@ -4,6 +4,7 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 from availability_manager.api.events import CalendarEventsAPI
+
 from canvas_sdk.effects.calendar import DaysOfWeek, EventRecurrence
 
 

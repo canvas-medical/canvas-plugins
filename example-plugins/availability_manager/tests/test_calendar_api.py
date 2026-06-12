@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from uuid import UUID
 
 from availability_manager.api.calendar import CalendarAPI
+
 from canvas_sdk.effects.calendar import CalendarType
 
 
