@@ -18,6 +18,7 @@ from .claim_line_item import (
 )
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
+from .django_content_type import DjangoContentTypeFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -121,6 +122,7 @@ __all__ = (
     "ClaimSubmissionFactory",
     "CoverageFactory",
     "DiagnosticReportFactory",
+    "DjangoContentTypeFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
