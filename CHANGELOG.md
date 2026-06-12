@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v0.166.0 (2026-06-12)
+
+### Features
+
+- [koala-1912] - Add fullscript code system
+  ([#1689](https://github.com/canvas-medical/canvas-plugins/pull/1689),
+  [`dda906b`](https://github.com/canvas-medical/canvas-plugins/commit/dda906bf2987884838c435b2d6d288b1a535e06a))
+
+- **data**: Expose DiagnosticReport linkage on LabReport
+  ([#1717](https://github.com/canvas-medical/canvas-plugins/pull/1717),
+  [`b7b08d3`](https://github.com/canvas-medical/canvas-plugins/commit/b7b08d3a9b7b30d43c3ef9325b5894a265a75b61))
+
+Co-authored-by: Beau Gunderson <beau.gunderson@canvasmedical.com>
+
+- **data**: Expose LabReportRemark and ImagingReportCoding in the data module
+  ([#1754](https://github.com/canvas-medical/canvas-plugins/pull/1754),
+  [`e1c8c53`](https://github.com/canvas-medical/canvas-plugins/commit/e1c8c530c75502dec8e10c7d5d1df7cbb6b0631c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.165.0 (2026-06-09)
 
 ### Features
