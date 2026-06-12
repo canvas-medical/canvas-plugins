@@ -123,6 +123,11 @@ class Patient(TrackableFieldsModel):
     clinical_note: str | None = None
     default_location_id: str | None = None
     default_provider_id: str | None = None
+    active: bool | None = None
+    deceased: bool | None = None
+    deceased_datetime: datetime.datetime | None = None
+    deceased_cause: str | None = None
+    deceased_comment: str | None = None
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
