@@ -6,9 +6,9 @@ from canvas_sdk.v1.data.chart_section_review import (
 
 def test_section_choices() -> None:
     """The section choices mirror the chart sections home-app exposes."""
-    assert ChartSectionReviewSection.CONDITIONS == "conditions"
-    assert ChartSectionReviewSection.MEDICATIONS == "medications"
-    assert ChartSectionReviewSection.FAMILY_HISTORIES == "family_histories"
+    assert ChartSectionReviewSection.CONDITIONS.value == "conditions"
+    assert ChartSectionReviewSection.MEDICATIONS.value == "medications"
+    assert ChartSectionReviewSection.FAMILY_HISTORIES.value == "family_histories"
 
 
 def test_review_fields() -> None:
