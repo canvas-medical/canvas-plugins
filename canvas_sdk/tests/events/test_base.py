@@ -223,7 +223,7 @@ def test_event_init_source() -> None:
 )
 @patch("canvas_sdk.events.base.apps.get_model")
 def test_event_init_for_calendar_lifecycle_events(
-    mock_get_model: Mock, event_type: int, target_type: str, expected_name: str
+    mock_get_model: Mock, event_type: EventType, target_type: str, expected_name: str
 ) -> None:
     """Calendar and calendar-event lifecycle events resolve to their names and v1 targets."""
     mock_model = Mock(spec=models.Model)
