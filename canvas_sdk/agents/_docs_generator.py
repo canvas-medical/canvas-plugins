@@ -34,6 +34,10 @@ from typing import Any
 
 from canvas_sdk.agents import standard_tools
 
+# Internal docs-generation CLI; nothing here is part of the plugin-facing SDK
+# surface, so no symbols are exported into the sandbox.
+__exports__ = ()
+
 # Sentinel markers. Each block has a START and END comment; the
 # generator replaces the contents between them, preserving the
 # surrounding prose verbatim.
