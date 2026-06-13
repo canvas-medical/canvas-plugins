@@ -425,3 +425,43 @@ def test_patient_update_validation_allows_optional_names(
     # Should not raise validation error
     effect = patient.update()
     assert effect is not None
+
+
+def test_patient_update_with_status_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update() includes active and deceased fields in the payload."""
+    deceased_at = datetime.datetime(2025, 3, 14, 12, 0, 0)
+    patient = Patient(
+        patient_id="123",
+        active=False,
+        deceased=True,
+        deceased_datetime=deceased_at,
+        deceased_cause="Natural causes",
+        deceased_comment="Pronounced at home.",
+    )
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["active"] is False
+    assert payload_data["data"]["deceased"] is True
+    assert payload_data["data"]["deceased_datetime"] == deceased_at.isoformat()
+    assert payload_data["data"]["deceased_cause"] == "Natural causes"
+    assert payload_data["data"]["deceased_comment"] == "Pronounced at home."
+
+
+def test_patient_status_fields_omitted_when_not_set(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that status fields are not included in the payload when not set."""
+    patient = Patient(patient_id="123", **valid_patient_data)
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert "active" not in payload_data["data"]
+    assert "deceased" not in payload_data["data"]
+    assert "deceased_datetime" not in payload_data["data"]
+    assert "deceased_cause" not in payload_data["data"]
+    assert "deceased_comment" not in payload_data["data"]
