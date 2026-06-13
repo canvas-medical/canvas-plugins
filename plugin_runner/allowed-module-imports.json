@@ -1,4 +1,59 @@
 {
+  "canvas_sdk.agents": [
+    "AgentLocked",
+    "AgentPlugin",
+    "AgentRunResult",
+    "AgentState",
+    "EffectField",
+    "FilterSpec",
+    "LLMGateway",
+    "LLMGatewayConfigurationError",
+    "SubAgentSpec",
+    "ToolNotAllowed",
+    "ToolRegistry",
+    "agent_lock",
+    "find_open_note",
+    "find_open_note_uuid_from_ctx",
+    "run_subagent",
+    "run_subagents",
+    "standard_tools"
+  ],
+  "canvas_sdk.agents.base": [
+    "AgentPlugin"
+  ],
+  "canvas_sdk.agents.gateway": [
+    "LLMGateway",
+    "LLMGatewayConfigurationError"
+  ],
+  "canvas_sdk.agents.lock": [
+    "AgentLocked",
+    "agent_lock"
+  ],
+  "canvas_sdk.agents.note_helpers": [
+    "OPEN_NOTE_STATES",
+    "find_open_note",
+    "find_open_note_uuid_from_ctx"
+  ],
+  "canvas_sdk.agents.result": [
+    "AgentRunResult"
+  ],
+  "canvas_sdk.agents.standard_tools": [
+    "standard_tools"
+  ],
+  "canvas_sdk.agents.state": [
+    "AgentState"
+  ],
+  "canvas_sdk.agents.subagent": [
+    "SubAgentSpec",
+    "run_subagent",
+    "run_subagents"
+  ],
+  "canvas_sdk.agents.tool_registry": [
+    "EffectField",
+    "FilterSpec",
+    "ToolNotAllowed",
+    "ToolRegistry"
+  ],
   "canvas_sdk.caching.client": [
     "get_cache"
   ],
@@ -409,6 +464,9 @@
     "Effect",
     "EffectType",
     "_BaseEffect"
+  ],
+  "canvas_sdk.effects.agent": [
+    "RunAgentEffect"
   ],
   "canvas_sdk.effects.application_notification_badge": [
     "ApplicationNotificationBadge"

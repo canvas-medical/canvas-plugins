@@ -592,6 +592,47 @@ def test_is_schema_manager_worker_index_nonzero() -> None:
         assert is_schema_manager() is False
 
 
+def test_is_schema_manager_explicit_false_overrides_aptible_primary() -> None:
+    """PLUGIN_RUNNER_IS_SCHEMA_MANAGER='false' wins over Aptible primary detection.
+
+    Multi-container local-dev setups (e.g. home-app's web + worker) nominate
+    exactly one schema manager via this env var; the override must beat
+    whatever the Aptible heuristic would say.
+    """
+    with patch.dict(
+        os.environ,
+        {
+            "PLUGIN_RUNNER_IS_SCHEMA_MANAGER": "false",
+            "APTIBLE_PROCESS_TYPE": "cmd",
+            "APTIBLE_PROCESS_INDEX": "0",
+        },
+    ):
+        assert is_schema_manager() is False
+
+
+def test_is_schema_manager_explicit_true_overrides_aptible_nonprimary() -> None:
+    """PLUGIN_RUNNER_IS_SCHEMA_MANAGER='true' wins over non-primary Aptible status."""
+    with patch.dict(
+        os.environ,
+        {
+            "PLUGIN_RUNNER_IS_SCHEMA_MANAGER": "true",
+            "APTIBLE_PROCESS_TYPE": "worker",
+            "APTIBLE_PROCESS_INDEX": "1",
+        },
+    ):
+        assert is_schema_manager() is True
+
+
+def test_is_schema_manager_explicit_truthy_variants() -> None:
+    """The truthy parser accepts '1', 'true', 'yes' (case-insensitive)."""
+    for value in ("1", "true", "True", "TRUE", "yes", "YES"):
+        with patch.dict(os.environ, {"PLUGIN_RUNNER_IS_SCHEMA_MANAGER": value}, clear=True):
+            assert is_schema_manager() is True, f"{value!r} should parse truthy"
+    for value in ("0", "false", "False", "no", ""):
+        with patch.dict(os.environ, {"PLUGIN_RUNNER_IS_SCHEMA_MANAGER": value}, clear=True):
+            assert is_schema_manager() is False, f"{value!r} should parse falsy"
+
+
 # ===========================================================================
 # Tests for wait_for_namespace
 # ===========================================================================
