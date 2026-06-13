@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.167.0 (2026-06-13)
+
+### Features
+
+- **cli**: Pre-deploy plugin validation (manifest layout check + handler sandbox-load)
+  ([#1758](https://github.com/canvas-medical/canvas-plugins/pull/1758),
+  [`e02b984`](https://github.com/canvas-medical/canvas-plugins/commit/e02b98424b37a9d12daf4e4f4b474429da1b7e42))
+
+
 ## v0.166.0 (2026-06-12)
 
 ### Features
