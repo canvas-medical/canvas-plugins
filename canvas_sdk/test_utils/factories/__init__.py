@@ -16,6 +16,7 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .content_type import ContentTypeFactory
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
@@ -69,6 +70,7 @@ from .patient import (
     PatientPhotoFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .plugin_command import PluginCommandFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
     PracticeLocationContactPointFactory,
@@ -118,6 +120,7 @@ __all__ = (
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "ContentTypeFactory",
     "CoverageFactory",
     "DiagnosticReportFactory",
     "EventFactory",
@@ -168,6 +171,7 @@ __all__ = (
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
     "PatientPhotoFactory",
+    "PluginCommandFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
