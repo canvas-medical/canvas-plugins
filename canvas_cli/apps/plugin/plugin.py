@@ -4,6 +4,7 @@ import ast
 import base64
 import builtins
 import json
+import sys
 import tarfile
 import tempfile
 from collections.abc import Iterable
@@ -21,6 +22,7 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
+from plugin_runner.plugin_runner import load_plugin_handlers
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
@@ -277,6 +279,7 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
@@ -731,6 +734,65 @@ def validate_manifest(
         print("These handlers will not be loaded unless you add them to the manifest.\n")
 
     print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
+
+
+def _validate_plugin_loads(plugin_name: Path) -> None:
+    """Sandbox-load every handler declared in the manifest and report failures.
+
+    Surfaces sandbox violations (disallowed imports, restricted syntax, import
+    errors) at validation time instead of at runtime on the instance. Uses the
+    same loader as the plugin runner, so a pass here means the handlers' modules
+    import cleanly under the sandbox. Raises ``typer.Exit(1)`` on any failure.
+
+    Note: this exercises module-level code only — violations that occur inside a
+    handler's ``compute()`` at request time are not caught here.
+    """
+    plugin_path = plugin_name.resolve()
+    manifest_json = json.loads((plugin_path / "CANVAS_MANIFEST.json").read_text())
+    components = manifest_json.get("components", {})
+    handlers = (
+        components.get("protocols", [])
+        + components.get("applications", [])
+        + components.get("handlers", [])
+    )
+
+    if not handlers:
+        return
+
+    # Make the plugin's package importable, mirroring what the runner does when
+    # it loads installed plugins from PLUGIN_DIRECTORY (see plugin_runner). This
+    # lets intra-package imports and Django model registration resolve the way
+    # they will on the instance.
+    parent_dir = str(plugin_path.parent)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    print(f"Loading {len(handlers)} handler(s) in the sandbox:")
+
+    results = load_plugin_handlers(plugin_path.name, plugin_path, handlers)
+
+    failures = [r for r in results if r.error is not None]
+    for r in results:
+        label = r.handler.get("class", "<unknown>")
+        if r.error is None:
+            print(f"  ✓ {label}")
+        else:
+            print(f"  ✗ {label}")
+            print(f"      {type(r.error).__name__}: {r.error}")
+
+    if failures:
+        print(f"\n{len(failures)} of {len(results)} handler(s) failed to load in the sandbox.")
+        raise typer.Exit(1)
+
+    print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
+
+
+def validate(
+    plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
+) -> None:
+    """Validate a plugin's manifest and that all its handlers load in the sandbox."""
+    validate_manifest(plugin_name)
+    _validate_plugin_loads(plugin_name)
 
 
 def update(

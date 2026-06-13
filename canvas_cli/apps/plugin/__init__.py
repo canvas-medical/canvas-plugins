@@ -7,6 +7,7 @@ from canvas_cli.apps.plugin.plugin import (
     list_secrets,
     set_secrets,
     uninstall,
+    validate,
     validate_manifest,
 )
 
@@ -19,5 +20,6 @@ __all__ = (
     "install",
     "list",
     "uninstall",
+    "validate",
     "validate_manifest",
 )

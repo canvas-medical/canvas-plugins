@@ -142,14 +142,14 @@ jobs:
           PYTHON_VERSION: "3.13"
       - uses: ./.github/actions/install-canvas
 
-      - name: Validate every example plugin manifest
+      - name: Validate every example plugin
         run: |
           failed=0
           for manifest in example-plugins/*/CANVAS_MANIFEST.json; do
             plugin_dir="$(dirname "$manifest")"
-            echo "::group::validate-manifest $plugin_dir"
-            if ! uv run canvas validate-manifest "$plugin_dir"; then
-              echo "::error::validate-manifest failed for $plugin_dir"
+            echo "::group::validate $plugin_dir"
+            if ! uv run canvas validate "$plugin_dir"; then
+              echo "::error::validate failed for $plugin_dir"
               failed=1
             fi
             echo "::endgroup::"

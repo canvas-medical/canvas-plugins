@@ -1,4 +1,5 @@
 import base64
+import json
 import shutil
 import tarfile
 from collections.abc import Generator
@@ -18,6 +19,7 @@ from .plugin import (
     _build_package,
     _find_unreferenced_handlers,
     _find_unresolvable_handlers,
+    _validate_plugin_loads,
     install,
     list_secrets,
     parse_secrets,
@@ -368,6 +370,7 @@ def test_list_no_plugins(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -377,6 +380,7 @@ def test_install_success_no_secrets(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -425,6 +429,7 @@ def test_install_success_no_secrets(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -434,6 +439,7 @@ def test_install_success_with_secrets(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -477,6 +483,7 @@ def test_install_success_with_secrets(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -486,6 +493,7 @@ def test_install_disabled(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -527,6 +535,7 @@ def test_install_disabled(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -536,6 +545,7 @@ def test_install_conflict_calls_update(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -589,6 +599,7 @@ def test_install_conflict_calls_update(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -598,6 +609,7 @@ def test_install_error_status_exits(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -641,6 +653,7 @@ def test_install_error_status_exits(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -650,6 +663,7 @@ def test_install_conflict_without_package_name_exits(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -1396,6 +1410,7 @@ def test_list_secrets_with_variables_field(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -1405,6 +1420,7 @@ def test_install_with_variables_flag(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -1450,6 +1466,7 @@ def test_install_with_variables_flag(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
 @patch("pathlib.Path.is_dir")
@@ -1459,6 +1476,7 @@ def test_install_conflict_passes_variables_to_update(
     mock_is_dir: Mock,
     mock_get_token: Mock,
     mock_validate: Mock,
+    mock_validate_loads: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -1495,3 +1513,131 @@ def test_install_conflict_passes_variables_to_update(
         secrets=["S=1", "V=2"],
         host="https://example.canvasmedical.com",
     )
+
+
+_CLEAN_HANDLER = """
+from canvas_sdk.handlers import BaseHandler
+
+
+class Handler(BaseHandler):
+    def compute(self):
+        return []
+"""
+
+_FORBIDDEN_IMPORT_HANDLER = """
+import subprocess
+
+from canvas_sdk.handlers import BaseHandler
+
+
+class Handler(BaseHandler):
+    def compute(self):
+        return []
+"""
+
+
+def _scaffold_plugin(plugin_dir: Path, handler_body: str) -> Path:
+    """Write a minimal, schema-valid plugin whose single handler module contains
+    ``handler_body``. Returns the plugin directory.
+    """
+    name = plugin_dir.name
+    (plugin_dir / "handlers").mkdir(parents=True)
+    (plugin_dir / "__init__.py").touch()
+    (plugin_dir / "handlers" / "__init__.py").touch()
+    (plugin_dir / "README.md").write_text("readme")
+    (plugin_dir / "handlers" / "my_handler.py").write_text(handler_body)
+
+    manifest = {
+        "sdk_version": "0.1.4",
+        "plugin_version": "0.0.1",
+        "name": name,
+        "description": "test",
+        "components": {
+            "protocols": [
+                {
+                    "class": f"{name}.handlers.my_handler:Handler",
+                    "description": "a handler",
+                }
+            ]
+        },
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "./README.md",
+    }
+    (plugin_dir / "CANVAS_MANIFEST.json").write_text(json.dumps(manifest))
+    return plugin_dir
+
+
+def test_validate_plugin_loads_success(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    """A plugin whose handlers import cleanly under the sandbox passes."""
+    plugin = _scaffold_plugin(tmp_path / "clean_loads_plugin", _CLEAN_HANDLER)
+
+    _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "✓ clean_loads_plugin.handlers.my_handler:Handler" in captured.out
+    assert "load cleanly" in captured.out
+
+
+def test_validate_plugin_loads_surfaces_sandbox_violation(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A disallowed import surfaces as a failure and exits non-zero."""
+    plugin = _scaffold_plugin(tmp_path / "bad_loads_plugin", _FORBIDDEN_IMPORT_HANDLER)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        _validate_plugin_loads(plugin)
+
+    assert exc_info.value.exit_code == 1
+    captured = capsys.readouterr()
+    assert "✗ bad_loads_plugin.handlers.my_handler:Handler" in captured.out
+    assert "'subprocess' is not an allowed import" in captured.out
+
+
+def test_validate_command_passes_for_clean_plugin(tmp_path: Path, cli_runner: CliRunner) -> None:
+    """`canvas validate` exits 0 when manifest and sandbox-load both succeed."""
+    plugin = _scaffold_plugin(tmp_path / "clean_cmd_plugin", _CLEAN_HANDLER)
+
+    result = cli_runner.invoke(app, ["validate", str(plugin)])
+
+    assert result.exit_code == 0
+
+
+def test_validate_command_fails_for_sandbox_violation(
+    tmp_path: Path, cli_runner: CliRunner
+) -> None:
+    """`canvas validate` exits 1 when a handler fails to load in the sandbox."""
+    plugin = _scaffold_plugin(tmp_path / "bad_cmd_plugin", _FORBIDDEN_IMPORT_HANDLER)
+
+    result = cli_runner.invoke(app, ["validate", str(plugin)])
+
+    assert result.exit_code == 1
+
+
+def test_validate_plugin_loads_resolves_intra_package_imports(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A handler that imports from a sibling module in its own package loads
+    cleanly — validation must make the plugin's package importable (mirroring
+    how the runner loads installed plugins from PLUGIN_DIRECTORY).
+    """
+    handler_body = """
+from multimod_plugin.constants import GREETING
+
+from canvas_sdk.handlers import BaseHandler
+
+
+class Handler(BaseHandler):
+    def compute(self):
+        return [GREETING]
+"""
+    plugin = _scaffold_plugin(tmp_path / "multimod_plugin", handler_body)
+    (plugin / "constants.py").write_text('GREETING = "hello"\n')
+
+    _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "✓ multimod_plugin.handlers.my_handler:Handler" in captured.out
+    assert "load cleanly" in captured.out
