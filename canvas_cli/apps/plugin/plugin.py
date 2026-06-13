@@ -4,6 +4,7 @@ import ast
 import base64
 import builtins
 import json
+import sys
 import tarfile
 import tempfile
 from collections.abc import Iterable
@@ -21,6 +22,7 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
+from plugin_runner.plugin_runner import load_plugin_handlers
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
@@ -277,6 +279,7 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
@@ -610,6 +613,61 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
     return unreferenced
 
 
+def _find_unresolvable_handlers(
+    plugin_path: Path, manifest_json: dict
+) -> builtins.list[tuple[str, str]]:
+    """Find manifest handler classes whose module file won't resolve at runtime.
+
+    The plugin runner loads each handler by mapping its dotted module path to a
+    file *relative to the parent of the install directory*: a plugin installed
+    at ``plugins/<name>/`` loads handler ``<name>.routes.api`` from
+    ``plugins/<name>/routes/api.py`` (see
+    ``plugin_runner.sandbox.sandbox_from_module``). The leading module segment
+    is therefore the plugin's own package (which must equal the manifest
+    ``name``) and the remaining segments are a path *inside* the plugin
+    directory — the same directory that holds ``CANVAS_MANIFEST.json``.
+
+    A common mistake is leaving ``CANVAS_MANIFEST.json`` in a parent directory
+    above the package (so ``<name>/routes/api.py`` actually lives at
+    ``<name>/<name>/routes/api.py`` once installed). That passes schema
+    validation and imports fine locally via ``sys.path``, then fails on the
+    instance with ``ModuleNotFoundError``. This check mirrors the runner's
+    resolution against the on-disk layout so the problem surfaces here instead.
+
+    Returns ``(class_ref, expected_relative_path)`` for each handler that won't
+    resolve, where ``expected_relative_path`` is where the runner will look,
+    relative to the plugin directory.
+    """
+    name = manifest_json.get("name")
+    components = manifest_json.get("components", {})
+
+    # The runner loads protocols + applications + handlers; mirror that exact
+    # set (see plugin_runner.load_or_reload_plugin).
+    class_refs = []
+    for key in ("protocols", "applications", "handlers"):
+        for item in components.get(key, []):
+            if class_ref := item.get("class", ""):
+                class_refs.append(class_ref)
+
+    unresolvable = []
+    for class_ref in class_refs:
+        module_path = class_ref.split(":", 1)[0]
+        segments = module_path.split(".")
+
+        # The leading segment must be the plugin's own package and there must be
+        # at least one submodule segment for the handler to live in a file
+        # inside the plugin directory.
+        if len(segments) < 2 or segments[0] != name:
+            unresolvable.append((class_ref, f"{module_path.replace('.', '/')}.py"))
+            continue
+
+        relative = "/".join(segments[1:]) + ".py"
+        if not plugin_path.joinpath(*segments[1:]).with_suffix(".py").exists():
+            unresolvable.append((class_ref, relative))
+
+    return unresolvable
+
+
 def validate_manifest(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
@@ -646,6 +704,25 @@ def validate_manifest(
 
     validate_manifest_file(manifest_json)
 
+    # Check that every declared handler resolves to a file where the runner
+    # will look for it. This catches a misplaced CANVAS_MANIFEST.json (e.g. one
+    # sitting above the package directory) that would otherwise pass validation
+    # and fail to load on the instance with a ModuleNotFoundError.
+    unresolvable = _find_unresolvable_handlers(plugin_name, manifest_json)
+    if unresolvable:
+        print(
+            "\nError: these handler classes won't be found by the plugin runner "
+            "with the current directory layout:"
+        )
+        for class_ref, expected in unresolvable:
+            print(f"  - {class_ref}\n      runner expects: {plugin_name.name}/{expected}")
+        print(
+            "\nCANVAS_MANIFEST.json must live inside the plugin's package directory "
+            '(the directory whose name matches the manifest "name"), alongside the '
+            "handler packages — not in a parent directory above them.\n"
+        )
+        raise typer.Exit(code=1)
+
     # Check for unreferenced handlers
     unreferenced = _find_unreferenced_handlers(plugin_name, manifest_json)
     if unreferenced:
@@ -657,6 +734,65 @@ def validate_manifest(
         print("These handlers will not be loaded unless you add them to the manifest.\n")
 
     print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
+
+
+def _validate_plugin_loads(plugin_name: Path) -> None:
+    """Sandbox-load every handler declared in the manifest and report failures.
+
+    Surfaces sandbox violations (disallowed imports, restricted syntax, import
+    errors) at validation time instead of at runtime on the instance. Uses the
+    same loader as the plugin runner, so a pass here means the handlers' modules
+    import cleanly under the sandbox. Raises ``typer.Exit(1)`` on any failure.
+
+    Note: this exercises module-level code only — violations that occur inside a
+    handler's ``compute()`` at request time are not caught here.
+    """
+    plugin_path = plugin_name.resolve()
+    manifest_json = json.loads((plugin_path / "CANVAS_MANIFEST.json").read_text())
+    components = manifest_json.get("components", {})
+    handlers = (
+        components.get("protocols", [])
+        + components.get("applications", [])
+        + components.get("handlers", [])
+    )
+
+    if not handlers:
+        return
+
+    # Make the plugin's package importable, mirroring what the runner does when
+    # it loads installed plugins from PLUGIN_DIRECTORY (see plugin_runner). This
+    # lets intra-package imports and Django model registration resolve the way
+    # they will on the instance.
+    parent_dir = str(plugin_path.parent)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    print(f"Loading {len(handlers)} handler(s) in the sandbox:")
+
+    results = load_plugin_handlers(plugin_path.name, plugin_path, handlers)
+
+    failures = [r for r in results if r.error is not None]
+    for r in results:
+        label = r.handler.get("class", "<unknown>")
+        if r.error is None:
+            print(f"  ✓ {label}")
+        else:
+            print(f"  ✗ {label}")
+            print(f"      {type(r.error).__name__}: {r.error}")
+
+    if failures:
+        print(f"\n{len(failures)} of {len(results)} handler(s) failed to load in the sandbox.")
+        raise typer.Exit(1)
+
+    print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
+
+
+def validate(
+    plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
+) -> None:
+    """Validate a plugin's manifest and that all its handlers load in the sandbox."""
+    validate_manifest(plugin_name)
+    _validate_plugin_loads(plugin_name)
 
 
 def update(

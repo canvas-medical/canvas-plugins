@@ -11,6 +11,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from http import HTTPStatus
 from time import sleep
 from typing import Any, NotRequired, TypedDict, cast
@@ -18,6 +19,7 @@ from typing import Any, NotRequired, TypedDict, cast
 import grpc
 import redis
 import sentry_sdk
+from django.apps import apps as django_apps
 from django.core.signals import request_finished, request_started
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import ConnectionError, TimeoutError
@@ -60,6 +62,7 @@ from plugin_runner.installation import (
     enabled_plugins,
     install_plugin,
     install_plugins,
+    register_plugin_app_config,
     uninstall_plugin,
 )
 from plugin_runner.sandbox import Sandbox, sandbox_from_module
@@ -744,6 +747,110 @@ def verify_plugin_namespace_access(
     }
 
 
+@dataclass
+class HandlerLoadResult:
+    """Outcome of sandbox-loading a single declared handler.
+
+    Pure data — carries either the executed sandbox ``scope`` (success) or the
+    ``error`` that was raised. ``report`` indicates whether the error warrants
+    Sentry reporting at runtime (false for developer-fault cases like a handler
+    declared from a foreign package).
+    """
+
+    handler: dict[str, Any]
+    name_and_class: str | None
+    handler_class: str | None
+    scope: dict[str, Any] | None
+    error: Exception | None
+    report: bool
+
+
+def load_plugin_handlers(
+    name: str,
+    path: pathlib.Path,
+    handlers: list[dict[str, Any]],
+    evaluated_modules: dict[str, bool] | None = None,
+) -> list[HandlerLoadResult]:
+    """Sandbox-load each declared handler for a plugin.
+
+    Runs the exact sandbox path used at runtime (``sandbox_from_module`` +
+    ``execute``) plus the Django model-registration reset, but mutates no global
+    plugin state (``LOADED_PLUGINS``) and does no logging or Sentry reporting —
+    callers decide what to do with the returned results. Shared by
+    ``load_or_reload_plugin`` and the ``canvas validate`` pre-flight so the two
+    cannot drift on sandbox semantics.
+    """
+    if evaluated_modules is None:
+        # Share evaluated_modules across all handlers in this plugin so that
+        # common submodules (like constants.py) are only evaluated and reloaded
+        # once, not once per handler.
+        evaluated_modules = {}
+
+    # Clear stale model registrations before handler sandboxes re-execute model
+    # files.  Without this, lazy_related_operation resolves string references
+    # (e.g. through="StaffSpecialty") to class objects from the prior execution,
+    # causing model-identity mismatches in ManyToManyField through-model resolution.
+    django_apps.all_models.pop(name, None)
+    django_apps.app_configs.pop(name, None)
+    django_apps.clear_cache()
+
+    results: list[HandlerLoadResult] = []
+
+    for handler in handlers:
+        # TODO add class colon validation to existing schema validation
+        try:
+            handler_module, handler_class = handler["class"].split(":")
+        except ValueError as e:
+            results.append(HandlerLoadResult(handler, None, None, None, e, report=True))
+            continue
+
+        handler_package = handler_module.split(".")[0]
+        if handler_package != name:
+            results.append(
+                HandlerLoadResult(
+                    handler,
+                    None,
+                    handler_class,
+                    None,
+                    ValueError(
+                        f'Plugin "{name}" declares handler from foreign package "{handler_package}"'
+                    ),
+                    report=False,
+                )
+            )
+            continue
+
+        name_and_class = f"{name}:{handler_module}:{handler_class}"
+
+        try:
+            # Suppress Django's "Model was already registered" RuntimeWarning.
+            # When importlib.reload re-imports model modules, Django's metaclass
+            # calls apps.register_model() again for each model class.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r"Model '.*' was already registered",
+                    category=RuntimeWarning,
+                )
+                sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
+                scope = sandbox.execute()
+        except Exception as e:
+            results.append(
+                HandlerLoadResult(handler, name_and_class, handler_class, None, e, report=True)
+            )
+            continue
+
+        results.append(
+            HandlerLoadResult(handler, name_and_class, handler_class, scope, None, report=False)
+        )
+
+    # Re-register the AppConfig so that the freshly-created model classes are
+    # visible to Django's relation graph (needed for select_related, etc.).
+    register_plugin_app_config(name)
+
+    return results
+
+
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
@@ -805,7 +912,6 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 # The default SQLite connection is read-only; swap to the writable
                 # one for schema initialisation and plugin migrations.
                 import django.db
-                from django.apps import apps as django_apps
 
                 original_default = django.db.connections["default"]
                 try:
@@ -846,93 +952,54 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
 
             return False
 
+        # TODO when we encounter an exception here, disable the plugin in response
+        results = load_plugin_handlers(name, path, handlers)
+
         any_failed = False
         loaded_handler_count = 0
 
-        # Share evaluated_modules across all handlers in this plugin so that common
-        # submodules (like constants.py) are only evaluated and reloaded once, not
-        # once per handler.
-        evaluated_modules: dict[str, bool] = {}
-
-        # Clear stale model registrations before handler sandboxes re-execute model
-        # files.  Without this, lazy_related_operation resolves string references
-        # (e.g. through="StaffSpecialty") to class objects from the prior execution,
-        # causing model-identity mismatches in ManyToManyField through-model resolution.
-        from django.apps import apps as django_apps
-
-        from plugin_runner.installation import register_plugin_app_config
-
-        django_apps.all_models.pop(name, None)
-        django_apps.app_configs.pop(name, None)
-        django_apps.clear_cache()
-
-        for handler in handlers:
-            # TODO add class colon validation to existing schema validation
-            # TODO when we encounter an exception here, disable the plugin in response
-            try:
-                handler_module, handler_class = handler["class"].split(":")
-
-                handler_package = handler_module.split(".")[0]
-                if handler_package != name:
-                    log.error(
-                        f'Plugin "{name}" declares handler from foreign package '
-                        f'"{handler_package}" — skipping'
-                    )
-                    any_failed = True
-                    continue
-
-                name_and_class = f"{name}:{handler_module}:{handler_class}"
-            except ValueError as e:
-                log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
-                sentry_sdk.capture_exception(e)
-
+        for r in results:
+            if r.error is not None:
                 any_failed = True
-
+                if not r.report:
+                    log.error(f"{r.error} — skipping")
+                elif r.name_and_class is None:
+                    log.error(
+                        f'Unable to parse class for plugin "{name}": "{r.handler["class"]}"',
+                        exc_info=r.error,
+                    )
+                    sentry_sdk.capture_exception(r.error)
+                else:
+                    log.error(f"Error importing module '{r.name_and_class}'", exc_info=r.error)
+                    sentry_sdk.capture_exception(r.error)
                 continue
 
-            try:
-                # Suppress Django's "Model was already registered" RuntimeWarning.
-                # When importlib.reload re-imports model modules, Django's metaclass
-                # calls apps.register_model() again for each model class.
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore",
-                        message=r"Model '.*' was already registered",
-                        category=RuntimeWarning,
-                    )
-                    sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
-                    result = sandbox.execute()
+            name_and_class = cast(str, r.name_and_class)
+            handler_class = cast(str, r.handler_class)
+            result = cast(dict, r.scope)
 
-                if name_and_class in LOADED_PLUGINS:
-                    log.info(f"Reloading handler '{name_and_class}'")
+            if name_and_class in LOADED_PLUGINS:
+                log.info(f"Reloading handler '{name_and_class}'")
 
-                    LOADED_PLUGINS[name_and_class]["active"] = True
+                LOADED_PLUGINS[name_and_class]["active"] = True
 
-                    LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
-                    LOADED_PLUGINS[name_and_class]["sandbox"] = result
-                    LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
-                    LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
-                else:
-                    log.info(f'Loading handler "{name_and_class}"')
+                LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
+                LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
+                LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
+            else:
+                log.info(f'Loading handler "{name_and_class}"')
 
-                    LOADED_PLUGINS[name_and_class] = {
-                        "active": True,
-                        "class": result[handler_class],
-                        "sandbox": result,
-                        "handler": handler,
-                        "secrets": secrets_json,
-                        "namespace_config": namespace_config,
-                    }
+                LOADED_PLUGINS[name_and_class] = {
+                    "active": True,
+                    "class": result[handler_class],
+                    "sandbox": result,
+                    "handler": r.handler,
+                    "secrets": secrets_json,
+                    "namespace_config": namespace_config,
+                }
 
-                loaded_handler_count += 1
-            except Exception as e:
-                log.exception(f"Error importing module '{name_and_class}'")
-                sentry_sdk.capture_exception(e)
-                any_failed = True
-
-        # Re-register the AppConfig so that the freshly-created model classes are
-        # visible to Django's relation graph (needed for select_related, etc.).
-        register_plugin_app_config(name)
+            loaded_handler_count += 1
 
         plugin_version = manifest_json.get("plugin_version", "unknown")
         total_handlers = len(handlers)
