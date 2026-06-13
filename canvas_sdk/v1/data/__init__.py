@@ -22,6 +22,7 @@ from .business_line import BusinessLine
 from .calendar import Calendar, Event
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
+from .chart_section_review import ChartSectionReview, ChartSectionReviewSection
 from .claim import (
     Claim,
     ClaimComment,
@@ -201,6 +202,7 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReview,
 )
 from .user import CanvasUser
+from .visual_exam_finding import VisualExamFinding
 
 __all__ = __exports__ = (
     "Application",
@@ -224,6 +226,8 @@ __all__ = __exports__ = (
     "CareTeamMembership",
     "CareTeamRole",
     "ChargeDescriptionMaster",
+    "ChartSectionReview",
+    "ChartSectionReviewSection",
     "Claim",
     "ClaimBannerAlert",
     "BannerAlertStatus",
@@ -406,5 +410,6 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    "VisualExamFinding",
     "proxy_field",
 )
