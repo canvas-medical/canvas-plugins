@@ -21,6 +21,11 @@ from canvas_sdk.effects.claim.claim_provider import (
     _UpdateClaimProvider,
 )
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
+from canvas_sdk.effects.claim.claim_supervising_provider import (
+    ClaimSupervisingProvider,
+    _SetClaimIncidentTo,
+    _UpdateClaimSupervisingProvider,
+)
 from canvas_sdk.effects.claim.payment.base import (
     ClaimAllocation,
     LineItemTransaction,
@@ -68,6 +73,47 @@ class ClaimEffect(Model):
             ordering_provider=ordering_provider,
             facility=facility,
         ).apply()
+
+    def update_supervising_provider(
+        self,
+        supervising_provider: ClaimSupervisingProvider | None = None,
+        *,
+        staff_id: str | None = None,
+    ) -> Effect:
+        """
+        Sets the claim's supervising provider snapshot.
+
+        Provide exactly one of:
+
+        Args:
+            supervising_provider (ClaimSupervisingProvider | None): A free-text
+                override. The snapshot fields are written directly and the Staff
+                association is cleared.
+            staff_id (str | None): A Staff identifier. The snapshot is populated
+                from that Staff record (name, NPI, taxonomy, tax id) and remains
+                linked to it.
+
+        Returns:
+            Effect: An effect that updates the claim's supervising provider snapshot.
+        """
+        return _UpdateClaimSupervisingProvider(
+            claim_id=self.claim_id,
+            staff_id=staff_id,
+            supervising_provider=supervising_provider,
+        ).apply()
+
+    def set_incident_to(self, value: bool) -> Effect:
+        """
+        Toggles the claim's incident_to billing flag.
+
+        Args:
+            value (bool): Whether the claim is billed incident-to the supervising
+                physician.
+
+        Returns:
+            Effect: An effect that sets the claim's incident_to flag.
+        """
+        return _SetClaimIncidentTo(claim_id=self.claim_id, incident_to=value).apply()
 
     def upsert_metadata(self, key: str, value: str) -> Effect:
         """
@@ -219,4 +265,5 @@ __all__ = __exports__ = (
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
+    "ClaimSupervisingProvider",
 )
