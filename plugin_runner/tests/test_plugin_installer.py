@@ -298,15 +298,7 @@ def test_install_plugins_does_not_disable_on_transient_download_failure(
     mocker: MockerFixture,
     transient_exc: Exception,
 ) -> None:
-    """KOALA-5810: transient HTTP failures during S3 download must not auto-disable.
-
-    Both vida (`vitals_visualizer` v0.35.1, urllib3 HTTP-retry traceback) and
-    doctronic (`note_webhook_notification` v0.0.1, ConnectionResetError during
-    S3 download) hit this path: `download_plugin` raised a transient transport
-    error, `install_plugin` wrapped it to PluginInstallationError, and the
-    `install_plugins` loop hard-disabled the plugin via raw SQL — leaving it
-    disabled for ~32h (vida) and ~8 days (doctronic) until a human re-enabled.
-    """
+    """Ensures that transient download errors do not result in a plugin being disabled."""
     mock_plugins = {
         "transient_plugin": PluginAttributes(
             version="1.0", package="plugins/transient_plugin.tar.gz", secrets={}
@@ -330,14 +322,7 @@ def test_install_plugins_does_not_disable_on_transient_download_failure(
 def test_install_plugins_does_not_disable_on_transient_db_interface_error(
     mocker: MockerFixture,
 ) -> None:
-    """KOALA-5810: transient psycopg InterfaceError must not auto-disable.
-
-    Mirrors the vida (production) trigger: `InterfaceError('connection already
-    closed')` surfaced from a DB op during install. `install_plugin`'s catch-all
-    wraps it to PluginInstallationError and the loop disables the plugin. A
-    transient DB connection blip should be retried, not turned into a sticky
-    `is_enabled=False` that requires manual intervention.
-    """
+    """Ensures that transient database errors do not result in a plugin being disabled."""
     plugin_name = "db_blip_plugin"
     mock_plugins = {
         plugin_name: PluginAttributes(
@@ -385,7 +370,7 @@ def test_install_plugins_does_not_disable_on_transient_db_interface_error(
 def test_install_plugin_preserves_existing_files_on_transient_download_failure(
     mocker: MockerFixture,
 ) -> None:
-    """KOALA-5810: a transient download failure must not destroy the working version.
+    """A transient download failure must not destroy the working version.
 
     `install_plugin` defers the rmtree of the existing plugin directory until
     after the new package is on local disk. So when `download_plugin` raises
