@@ -24,6 +24,18 @@ class NamespaceWaitTimeout(PluginInstallationError):
     """
 
 
+class TransientPluginInstallationError(PluginInstallationError):
+    """Raised when install fails for a non-deterministic infra-level reason.
+
+    Wraps network errors during S3 download (e.g. ``requests.ConnectionError``,
+    ``requests.Timeout``) and database connection blips (e.g.
+    ``psycopg.InterfaceError``, ``psycopg.OperationalError``) — the kind of
+    failure that should clear up on a retry. Callers should retry with backoff
+    and must not auto-disable the plugin when they see this, because the
+    plugin's code itself is fine.
+    """
+
+
 class PluginUninstallationError(PluginError):
     """An exception raised when a plugin fails to uninstall."""
 
