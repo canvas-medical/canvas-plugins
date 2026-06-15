@@ -3,7 +3,7 @@ from django.db import models
 from canvas_sdk.v1.data.base import Model
 
 
-class DjangoContentType(Model):
+class ContentType(Model):
     """A Django ContentType, exposing the content type id used for generic relations and permalinks."""
 
     class Meta:
@@ -13,4 +13,4 @@ class DjangoContentType(Model):
     model = models.CharField(max_length=100)
 
 
-__exports__ = ("DjangoContentType",)
+__exports__ = ("ContentType",)

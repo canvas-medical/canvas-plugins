@@ -51,7 +51,7 @@ from .device import Device
 from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
-from .django_content_type import DjangoContentType
+from .django_content_type import ContentType
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -261,7 +261,7 @@ __all__ = __exports__ = (
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
-    "DjangoContentType",
+    "ContentType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",

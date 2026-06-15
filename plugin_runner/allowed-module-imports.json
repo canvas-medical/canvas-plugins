@@ -1348,9 +1348,6 @@
     "Condition",
     "ConditionCoding"
   ],
-  "canvas_sdk.v1.data.content_type": [
-    "ContentType"
-  ],
   "canvas_sdk.v1.data.coverage": [
     "Coverage",
     "CoverageRelationshipCode",
@@ -1391,7 +1388,7 @@
     "Discount"
   ],
   "canvas_sdk.v1.data.django_content_type": [
-    "DjangoContentType"
+    "ContentType"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
