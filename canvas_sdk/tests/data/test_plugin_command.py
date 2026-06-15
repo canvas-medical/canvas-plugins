@@ -9,7 +9,7 @@ from canvas_sdk.v1.data import PluginCommand
 @pytest.mark.django_db
 def test_plugin_command_exposes_uuid_id_and_registered_fields() -> None:
     """A PluginCommand is readable with a UUID id and the registered command metadata."""
-    command = PluginCommandFactory(
+    command = PluginCommandFactory.create(
         name="myCommand",
         schema_key="my_command_abcd1234",
         label="My Command",
