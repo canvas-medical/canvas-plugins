@@ -1070,6 +1070,7 @@
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
+    "ContentType",
     "Coverage",
     "CoveragePosting",
     "CurrentNoteStateEvent",
@@ -1186,6 +1187,7 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
@@ -1346,6 +1348,9 @@
     "Condition",
     "ConditionCoding"
   ],
+  "canvas_sdk.v1.data.content_type": [
+    "ContentType"
+  ],
   "canvas_sdk.v1.data.coverage": [
     "Coverage",
     "CoverageRelationshipCode",
@@ -1384,6 +1389,9 @@
   ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
+  ],
+  "canvas_sdk.v1.data.django_content_type": [
+    "DjangoContentType"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
@@ -1551,6 +1559,9 @@
   ],
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
+  ],
+  "canvas_sdk.v1.data.plugin_command": [
+    "PluginCommand"
   ],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
