@@ -38,6 +38,7 @@ from plugin_runner.plugin_runner import (
     PluginRunner,
     load_or_reload_plugin,
     load_plugin,
+    load_plugin_handlers,
     load_plugins,
     synchronize_plugins,
     synchronize_plugins_and_report_errors,
@@ -303,6 +304,67 @@ def test_load_plugin_logs_warning_when_handler_fails(
     # cross_plugin_thief declares one handler from a foreign package, so 0/1 should load.
     assert "cross_plugin_thief" in warning_messages[0]
     assert "0/1 handlers loaded successfully" in warning_messages[0]
+
+
+def _manifest_handlers(path: Path) -> list[dict[str, Any]]:
+    """Read the declared handlers from a plugin's manifest, as the runner does."""
+    components = json.loads((path / "CANVAS_MANIFEST.json").read_text())["components"]
+    return (
+        components.get("protocols", [])
+        + components.get("applications", [])
+        + components.get("handlers", [])
+    )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_handlers_returns_success_results(install_test_plugin: Path) -> None:
+    """load_plugin_handlers returns a success result, with its executed scope, per handler."""
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert len(results) == len(handlers)
+    assert all(r.error is None for r in results)
+    assert all(r.scope is not None for r in results)
+    assert all(r.name_and_class is not None for r in results)
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_module_forbidden_imports_plugin"], indirect=True
+)
+def test_load_plugin_handlers_reports_forbidden_import(install_test_plugin: Path) -> None:
+    """A forbidden module-level import surfaces as a reportable error result, and
+    load_plugin_handlers does not mutate global LOADED_PLUGINS.
+    """
+    before = set(LOADED_PLUGINS)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    failures = [r for r in results if r.error is not None]
+    assert failures
+    assert all(isinstance(r.error, ImportError) for r in failures)
+    assert all(r.report for r in failures)
+    assert all(r.scope is None for r in failures)
+    # purely diagnostic: no runtime registration side effects
+    assert set(LOADED_PLUGINS) == before
+
+
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_handlers_flags_foreign_package_without_reporting(
+    install_test_plugin: Path,
+) -> None:
+    """A handler declared from a foreign package is flagged as an error but not
+    marked for Sentry reporting (developer fault, not a runtime fault).
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    foreign = [r for r in results if r.error is not None and not r.report]
+    assert foreign
+    assert all("foreign package" in str(r.error) for r in foreign)
+    assert all(r.name_and_class is None for r in foreign)
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
