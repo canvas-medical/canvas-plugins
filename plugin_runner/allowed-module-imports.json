@@ -1051,6 +1051,8 @@
     "CareTeamMembership",
     "CareTeamRole",
     "ChargeDescriptionMaster",
+    "ChartSectionReview",
+    "ChartSectionReviewSection",
     "Claim",
     "ClaimBannerAlert",
     "ClaimComment",
@@ -1231,6 +1233,7 @@
     "TransactorPhone",
     "UncategorizedClinicalDocument",
     "UncategorizedClinicalDocumentReview",
+    "VisualExamFinding",
     "proxy_field"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
@@ -1284,6 +1287,10 @@
   ],
   "canvas_sdk.v1.data.charge_description_master": [
     "ChargeDescriptionMaster"
+  ],
+  "canvas_sdk.v1.data.chart_section_review": [
+    "ChartSectionReview",
+    "ChartSectionReviewSection"
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
@@ -1657,6 +1664,9 @@
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"
+  ],
+  "canvas_sdk.v1.data.visual_exam_finding": [
+    "VisualExamFinding"
   ],
   "canvas_sdk.v1.plugin_database_context": [
     "get_access_level",
