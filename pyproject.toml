@@ -49,7 +49,7 @@ dependencies = [
   "rapidfuzz>=3.10.1,<4",
   "redis>=5.0.4,<6",
   "requests",
-  "restrictedpython>=8.0",
+  "restrictedpython>=8.0,<8.3",
   "sentry-sdk>=2.33.2",
   "statsd>=4.0.1,<5",
   "stripe>=14.1.0",

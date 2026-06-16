@@ -857,9 +857,13 @@ class Sandbox:
             # they are NOT used by the implementation => No need to worry here.
             # Instead ast.c creates 'AugAssign' nodes, which can be visited.
             if isinstance(node.ctx, ast.Load):
+                # `node.slice` is already a plain `ast.expr` on Python 3.9+
+                # (we require >=3.11), so no `transform_slice` wrapper is
+                # needed — RestrictedPython 8.2 removed the helper for the
+                # same reason. See the upstream `visit_Subscript` for parity.
                 new_node = ast.Call(
                     func=ast.Name("_getitem_", ast.Load()),
-                    args=[node.value, self.transform_slice(node.slice)],
+                    args=[node.value, node.slice],
                     keywords=[],
                 )
 
