@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v0.169.0 (2026-06-16)
+
+### Features
+
+- Add PluginCommand and DjangoContentType SDK data models
+  ([#1760](https://github.com/canvas-medical/canvas-plugins/pull/1760),
+  [`1aeeb1a`](https://github.com/canvas-medical/canvas-plugins/commit/1aeeb1a02547fe86392240608b4c84b679b96e0b))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.168.0 (2026-06-16)
 
 ### Features
