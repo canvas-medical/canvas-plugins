@@ -62,7 +62,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "0.167.1"
+version = "0.168.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas"]
