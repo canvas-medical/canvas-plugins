@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.167.1 (2026-06-16)
+
+### Bug Fixes
+
+- **sandbox**: Make sandbox compatible with RestrictedPython 8.2
+  ([#1766](https://github.com/canvas-medical/canvas-plugins/pull/1766),
+  [`ea4c375`](https://github.com/canvas-medical/canvas-plugins/commit/ea4c3754cc518bf369e9e359d896815a4b3186d5))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.167.0 (2026-06-13)
 
 ### Features
