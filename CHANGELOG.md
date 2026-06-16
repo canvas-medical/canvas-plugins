@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.168.0 (2026-06-16)
+
+### Features
+
+- Add ChartSectionReview and VisualExamFinding SDK data models
+  ([#1759](https://github.com/canvas-medical/canvas-plugins/pull/1759),
+  [`95bc678`](https://github.com/canvas-medical/canvas-plugins/commit/95bc678b713b81676fc92eca35dd0937d24b81bb))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.167.1 (2026-06-16)
+
+### Bug Fixes
+
+- **sandbox**: Make sandbox compatible with RestrictedPython 8.2
+  ([#1766](https://github.com/canvas-medical/canvas-plugins/pull/1766),
+  [`ea4c375`](https://github.com/canvas-medical/canvas-plugins/commit/ea4c3754cc518bf369e9e359d896815a4b3186d5))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.167.0 (2026-06-13)
 
 ### Features
