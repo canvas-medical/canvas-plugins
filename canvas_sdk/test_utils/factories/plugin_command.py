@@ -10,6 +10,7 @@ class PluginCommandFactory(factory.django.DjangoModelFactory[PluginCommand]):
         model = PluginCommand
 
     name = factory.Faker("word")
+    command_key = factory.Faker("word")
     schema_key = factory.Sequence(lambda n: f"command_schema_key_{n}")
     label = factory.Faker("word")
     section = "subjective"

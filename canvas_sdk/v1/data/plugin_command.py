@@ -10,6 +10,7 @@ class PluginCommand(IdentifiableModel):
         db_table = "canvas_sdk_data_plugin_io_plugincommand_001"
 
     name = models.CharField(max_length=256, null=False)
+    command_key = models.CharField(max_length=256, null=False)
     schema_key = models.CharField(max_length=320, null=False, unique=True)
     label = models.CharField(max_length=256, null=True)
     section = models.CharField(max_length=256, null=True)
