@@ -52,6 +52,7 @@ from .device import Device
 from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
+from .django_content_type import ContentType
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -149,6 +150,7 @@ from .patient_consent import (
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
+from .plugin_command import PluginCommand
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -263,6 +265,7 @@ __all__ = __exports__ = (
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
+    "ContentType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -365,6 +368,7 @@ __all__ = __exports__ = (
     "PatientGroupMember",
     "PayorSpecificCharge",
     "PaymentCollection",
+    "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
