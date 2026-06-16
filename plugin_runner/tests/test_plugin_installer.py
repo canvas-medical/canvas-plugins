@@ -343,6 +343,28 @@ def test_download_gives_up_after_exhausting_retries(mocker: MockerFixture) -> No
     assert mock_request.call_count == installation.MAX_DOWNLOAD_ATTEMPTS
 
 
+def test_download_single_attempt_raises_real_error(mocker: MockerFixture) -> None:
+    """With a single attempt the loop still runs once and surfaces the real error.
+
+    Guards the boundary behind the max(1, ...) clamp on MAX_DOWNLOAD_ATTEMPTS: an
+    empty retry loop must never reach `raise last_error` with last_error unbound
+    (which would raise a confusing UnboundLocalError instead).
+    """
+    mocker.patch.object(installation, "MAX_DOWNLOAD_ATTEMPTS", 1)
+    mocker.patch("time.sleep")
+
+    transient = requests.exceptions.ConnectionError("Connection reset by peer")
+
+    with (
+        patch("requests.request", side_effect=transient) as mock_request,
+        pytest.raises(requests.exceptions.ConnectionError),
+        download_plugin("plugins/plugin1.tar.gz"),
+    ):
+        pass
+
+    assert mock_request.call_count == 1
+
+
 def test_download_retries_on_s3_5xx(mocker: MockerFixture) -> None:
     """An S3 5xx (e.g. "503 Service Unavailable"/SlowDown throttle) is transient (KOALA-4328).
 

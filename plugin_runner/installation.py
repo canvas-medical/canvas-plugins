@@ -51,8 +51,10 @@ UPLOAD_TO_PREFIX = "plugins"
 # PluginInstallationError, and disable the customer's plugin with no retry. We
 # now retry the download a few times with exponential backoff before treating
 # the failure as terminal.
-MAX_DOWNLOAD_ATTEMPTS = int(os.getenv("PLUGIN_DOWNLOAD_MAX_ATTEMPTS", "3"))
-DOWNLOAD_RETRY_BACKOFF_SECONDS = float(os.getenv("PLUGIN_DOWNLOAD_RETRY_BACKOFF", "0.5"))
+# Clamp the env-driven knobs: at least one attempt (so the retry loop always
+# runs and `last_error` is always bound) and a non-negative backoff.
+MAX_DOWNLOAD_ATTEMPTS = max(1, int(os.getenv("PLUGIN_DOWNLOAD_MAX_ATTEMPTS", "3")))
+DOWNLOAD_RETRY_BACKOFF_SECONDS = max(0.0, float(os.getenv("PLUGIN_DOWNLOAD_RETRY_BACKOFF", "0.5")))
 
 # Transient network failures worth retrying. requests surfaces a connection
 # reset as a ConnectionError, e.g.
