@@ -6,8 +6,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from pytest_mock import MockerFixture
 
+from plugin_runner import installation
 from plugin_runner.exceptions import NamespaceWaitTimeout, PluginInstallationError
 from plugin_runner.installation import (
     PluginAttributes,
@@ -286,3 +288,141 @@ def test_download() -> None:
             assert plugin_path.exists()
             assert plugin_path.read_bytes() == b"some content in a file"
         mock_request.assert_called_once()
+
+
+def test_download_retries_on_transient_connection_error(mocker: MockerFixture) -> None:
+    """A transient connection reset during download must be retried, not fatal (KOALA-4328).
+
+    Before the fix a single ConnectionResetError (surfaced by requests as a
+    ConnectionError) during a deploy/restart would propagate, get wrapped in
+    PluginInstallationError, and disable the customer's plugin. The download
+    should instead retry and recover when the next attempt succeeds.
+    """
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"recovered content"
+
+    transient = requests.exceptions.ConnectionError(
+        "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    )
+
+    # Don't actually sleep between retries.
+    mocker.patch("time.sleep")
+
+    with patch(
+        "requests.request",
+        side_effect=[transient, mock_response],
+    ) as mock_request:
+        with download_plugin("plugins/plugin1.tar.gz") as plugin_path:
+            assert plugin_path.exists()
+            assert plugin_path.read_bytes() == b"recovered content"
+
+        # First attempt reset the connection; the retry succeeded.
+        assert mock_request.call_count == 2
+
+
+def test_download_gives_up_after_exhausting_retries(mocker: MockerFixture) -> None:
+    """When every download attempt resets, the error propagates after the configured retries.
+
+    Exhausting retries is the only path that should still fail the install (and
+    ultimately disable the plugin) — but only after we've genuinely tried.
+    """
+    transient = requests.exceptions.ConnectionError(
+        "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    )
+
+    mocker.patch("time.sleep")
+
+    with (
+        patch("requests.request", side_effect=transient) as mock_request,
+        pytest.raises(requests.exceptions.ConnectionError),
+        download_plugin("plugins/plugin1.tar.gz"),
+    ):
+        pass
+
+    assert mock_request.call_count == installation.MAX_DOWNLOAD_ATTEMPTS
+
+
+def test_download_retries_on_s3_5xx(mocker: MockerFixture) -> None:
+    """An S3 5xx (e.g. "503 Service Unavailable"/SlowDown throttle) is transient (KOALA-4328).
+
+    Observed in production: a deploy-time 503 from S3 surfaced via
+    raise_for_status as an HTTPError and disabled the customer's plugin.
+    """
+    failing = MagicMock()
+    failing.status_code = 503
+    failing.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        "503 Server Error: Service Unavailable", response=failing
+    )
+
+    ok = MagicMock()
+    ok.status_code = 200
+    ok.content = b"recovered content"
+    ok.raise_for_status.return_value = None
+
+    mocker.patch("time.sleep")
+
+    with patch("requests.request", side_effect=[failing, ok]) as mock_request:
+        with download_plugin("plugins/plugin1.tar.gz") as plugin_path:
+            assert plugin_path.read_bytes() == b"recovered content"
+
+        assert mock_request.call_count == 2
+
+
+def test_download_does_not_retry_on_4xx(mocker: MockerFixture) -> None:
+    """A 4xx (e.g. expired signature, missing object) is deterministic and must fail fast."""
+    forbidden = MagicMock()
+    forbidden.status_code = 403
+    forbidden.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        "403 Client Error: Forbidden", response=forbidden
+    )
+
+    mocker.patch("time.sleep")
+
+    with (
+        patch("requests.request", side_effect=[forbidden, forbidden]) as mock_request,
+        pytest.raises(requests.exceptions.HTTPError),
+        download_plugin("plugins/plugin1.tar.gz"),
+    ):
+        pass
+
+    # No retry — we gave up after the first deterministic failure.
+    assert mock_request.call_count == 1
+
+
+def test_install_plugins_keeps_plugin_enabled_when_download_recovers(
+    mocker: MockerFixture,
+) -> None:
+    """End-to-end (KOALA-4328): a transient download reset that recovers must not disable the plugin.
+
+    This is the customer-facing guarantee — a connection reset during a deploy
+    should never silently disable an otherwise-healthy plugin.
+    """
+    plugin_name = "resilient_plugin"
+    mock_plugins = {
+        plugin_name: PluginAttributes(
+            version="1.0", package=f"plugins/{plugin_name}.tar.gz", secrets={}
+        ),
+    }
+    tarball = _create_tarball(plugin_name)
+
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mocker.patch("time.sleep")
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = tarball.read_bytes()
+
+    transient = requests.exceptions.ConnectionError(
+        "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    )
+
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+
+    try:
+        with patch("requests.request", side_effect=[transient, mock_response]):
+            install_plugins()
+
+        mock_disable.assert_not_called()
+    finally:
+        uninstall_plugin(plugin_name)

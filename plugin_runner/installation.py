@@ -3,6 +3,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -44,6 +45,65 @@ from settings import (
 
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
 UPLOAD_TO_PREFIX = "plugins"
+
+# KOALA-4328: a single transient connection reset while downloading a plugin
+# package (e.g. during a deploy/restart) used to bubble up, get wrapped in a
+# PluginInstallationError, and disable the customer's plugin with no retry. We
+# now retry the download a few times with exponential backoff before treating
+# the failure as terminal.
+MAX_DOWNLOAD_ATTEMPTS = int(os.getenv("PLUGIN_DOWNLOAD_MAX_ATTEMPTS", "3"))
+DOWNLOAD_RETRY_BACKOFF_SECONDS = float(os.getenv("PLUGIN_DOWNLOAD_RETRY_BACKOFF", "0.5"))
+
+# Transient network failures worth retrying. requests surfaces a connection
+# reset as a ConnectionError, e.g.
+# "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))",
+# and a body read interrupted mid-stream as a ChunkedEncodingError. This mirrors
+# the transient set the Redis client already retries on (see
+# plugin_runner.get_client). HTTP 5xx responses are also transient but are
+# handled separately because they surface via raise_for_status as HTTPError.
+_TRANSIENT_DOWNLOAD_ERRORS = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
+)
+
+
+def _download_request_with_retries(
+    method: str, url: str, headers: dict[str, str]
+) -> requests.Response:
+    """Perform the plugin download request, retrying transient network failures.
+
+    Retries cover connection-level errors and S3 5xx responses (e.g. the
+    "503 Service Unavailable"/"SlowDown" S3 throttles during a deploy). A 4xx is
+    deterministic (expired signature, missing object), so it fails fast rather
+    than burning the retry budget. After ``MAX_DOWNLOAD_ATTEMPTS`` the last
+    transient error is re-raised so the install genuinely fails (and the plugin
+    is disabled) — but only once we've actually tried.
+    """
+    last_error: Exception
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        try:
+            response = requests.request(method=method, url=url, headers=headers)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            if status is None or status < 500:
+                raise  # deterministic client error — retrying won't help
+            last_error = e
+        except _TRANSIENT_DOWNLOAD_ERRORS as e:
+            last_error = e
+
+        if attempt < MAX_DOWNLOAD_ATTEMPTS:
+            backoff = DOWNLOAD_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
+            log.warning(
+                f"Transient error downloading plugin package "
+                f"(attempt {attempt}/{MAX_DOWNLOAD_ATTEMPTS}): {last_error}; "
+                f"retrying in {backoff:.1f}s"
+            )
+            time.sleep(backoff)
+
+    raise last_error
 
 
 def clear_registered_models(plugin_name: str) -> None:
@@ -196,10 +256,9 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
         download_path = Path(temp_dir) / plugin_package
 
-        with open(download_path, "wb") as download_file:
-            response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
-            response.raise_for_status()
+        response = _download_request_with_retries(method, f"https://{host}{path}", headers)
 
+        with open(download_path, "wb") as download_file:
             download_file.write(response.content)
 
         yield download_path
