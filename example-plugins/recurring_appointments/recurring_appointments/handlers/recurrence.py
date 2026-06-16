@@ -2,7 +2,7 @@ import datetime
 
 from dateutil.relativedelta import relativedelta
 
-from canvas_sdk.effects.base import Effect
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note import ScheduleEvent
 from canvas_sdk.effects.note.appointment import Appointment
 from canvas_sdk.events import EventType
