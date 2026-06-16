@@ -26,6 +26,9 @@ app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
+app.command(short_help="Validate a plugin's manifest and that its handlers load in the sandbox.")(
+    plugin.validate
+)
 app.command(
     short_help="Listen and print log streams or fetches historical logs from a Canvas instance."
 )(logs_command)

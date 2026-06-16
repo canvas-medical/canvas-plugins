@@ -133,6 +133,29 @@ jobs:
           flags: sdk-core
           fail_ci_if_error: true
 
+  validate-example-plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install-python-and-uv
+        with:
+          PYTHON_VERSION: "3.13"
+      - uses: ./.github/actions/install-canvas
+
+      - name: Validate every example plugin
+        run: |
+          failed=0
+          for manifest in example-plugins/*/CANVAS_MANIFEST.json; do
+            plugin_dir="$(dirname "$manifest")"
+            echo "::group::validate $plugin_dir"
+            if ! uv run canvas validate "$plugin_dir"; then
+              echo "::error::validate failed for $plugin_dir"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed
+
   discover-plugins:
     runs-on: ubuntu-latest
     outputs:

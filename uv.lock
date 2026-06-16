@@ -74,7 +74,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.166.0"
+version = "0.167.0"
 source = { editable = "." }
 dependencies = [
     { name = "cookiecutter" },
@@ -163,7 +163,7 @@ requires-dist = [
     { name = "rapidfuzz", specifier = ">=3.10.1,<4" },
     { name = "redis", specifier = ">=5.0.4,<6" },
     { name = "requests" },
-    { name = "restrictedpython", specifier = ">=8.0" },
+    { name = "restrictedpython", specifier = ">=8.0,<8.3" },
     { name = "sentry-sdk", specifier = ">=2.33.2" },
     { name = "statsd", specifier = ">=4.0.1,<5" },
     { name = "stripe", specifier = ">=14.1.0" },
@@ -1941,11 +1941,11 @@ wheels = [
 
 [[package]]
 name = "restrictedpython"
-version = "8.0"
+version = "8.2"
 source = { registry = "https://pypi.org/simple/" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/f3/3cfd684abf456f536a842e4fabe1ca360a8e94d1fc329f261c34c1d98825/restrictedpython-8.0.tar.gz", hash = "sha256:3af2312bc67e5fced887fb85b006c89861da72488128b155beea81eb6a0a9b24", size = 448747, upload-time = "2025-01-23T07:15:53.14Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/04/7314639eab9edd57b5c8f6e158a558f5a5a65453c37a51fb8f9ecc1d112e/restrictedpython-8.2.tar.gz", hash = "sha256:b835c2ff87d71b76f6d8b129096cc5a1e893bf01839ab802ba47a4129f1bdfe4", size = 449323, upload-time = "2026-05-29T06:27:57.285Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/31/b33804f873742ab20c8ed82a75652bf60a6205116dfec8bb092a6ebef084/RestrictedPython-8.0-py3-none-any.whl", hash = "sha256:ed3d894efd7d6cac0a5f13f75583b8458378d400d7dd4c083b59233eba85fe69", size = 27238, upload-time = "2025-01-23T07:15:50.428Z" },
+    { url = "https://files.pythonhosted.org/packages/35/59/b2778bfafcc37fdfd87c02702bbfc5753c58c28c7eb82999b7b49ec6e0e7/restrictedpython-8.2-py3-none-any.whl", hash = "sha256:6ff69e2fe06674bfe88943f17f2ce8353a9bc743ee37ea7bec38ff8b4851afd1", size = 27176, upload-time = "2026-05-29T06:27:55.651Z" },
 ]
 
 [[package]]
