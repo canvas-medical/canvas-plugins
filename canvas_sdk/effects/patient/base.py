@@ -143,6 +143,8 @@ class Patient(TrackableFieldsModel):
     deceased_datetime: datetime.datetime | None = None
     deceased_cause: str | None = None
     deceased_comment: str | None = None
+    biological_race_codes: list[str] | None = None
+    cultural_ethnicity_codes: list[str] | None = None
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
