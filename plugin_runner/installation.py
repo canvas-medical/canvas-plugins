@@ -55,11 +55,13 @@ MAX_TRANSIENT_INSTALL_ATTEMPTS = 3
 TRANSIENT_INSTALL_BACKOFF_SECONDS = 1.0
 
 # Exception classes treated as transient infra failures: network blips during
-# S3 download and database connection resets. The plugin's code is fine — a
-# retry should clear the failure.
+# S3 download (including streams interrupted mid-pull) and database connection
+# resets. The plugin's code is fine — a retry should clear the failure.
+# HTTPError is handled separately because it's only transient on 5xx status.
 _TRANSIENT_INSTALL_EXCEPTIONS: tuple[type[Exception], ...] = (
     requests.exceptions.ConnectionError,
     requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
     psycopg.InterfaceError,
     psycopg.OperationalError,
 )
@@ -356,6 +358,20 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             f'Transient failure installing plugin "{plugin_name}", version '
             f"{attributes['version']}: {type(e).__name__}: {e}"
         ) from e
+    except requests.exceptions.HTTPError as e:
+        # 5xx from S3 (e.g. 503 SlowDown, 500 InternalError, 502/504) is a
+        # service-side blip — retry. 4xx (404 missing object, 403 forbidden)
+        # is deterministic and falls through to the PluginInstallationError
+        # path so the plugin is disabled as usual.
+        status = e.response.status_code if e.response is not None else None
+        if status is not None and status >= 500:
+            raise TransientPluginInstallationError(
+                f'Transient failure installing plugin "{plugin_name}", version '
+                f"{attributes['version']}: HTTP {status}: {e}"
+            ) from e
+        log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
+        sentry_sdk.capture_exception(e)
+        raise PluginInstallationError() from e
     except PluginInstallationError:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise

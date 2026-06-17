@@ -281,6 +281,13 @@ def test_install_plugins_disables_on_other_install_errors(
     mock_disable.assert_called_once_with("broken_plugin")
 
 
+def _http_error(status: int) -> requests.exceptions.HTTPError:
+    """Build a requests.HTTPError carrying a response with the given status."""
+    response = MagicMock()
+    response.status_code = status
+    return requests.exceptions.HTTPError(f"{status} Server Error", response=response)
+
+
 @pytest.mark.parametrize(
     "transient_exc",
     [
@@ -291,6 +298,20 @@ def test_install_plugins_disables_on_other_install_errors(
         pytest.param(
             requests.exceptions.Timeout("Read timed out"),
             id="http-timeout-during-s3-download",
+        ),
+        pytest.param(
+            requests.exceptions.ChunkedEncodingError(
+                "Connection broken: InvalidChunkLength(got length b'', 0 bytes read)"
+            ),
+            id="chunked-encoding-error-mid-stream",
+        ),
+        pytest.param(
+            _http_error(503),
+            id="s3-503-slow-down",
+        ),
+        pytest.param(
+            _http_error(500),
+            id="s3-500-internal-error",
         ),
     ],
 )
@@ -431,6 +452,42 @@ def test_install_plugins_retries_and_succeeds_after_transient_failure(
 
     assert mock_install.call_count == 2
     mock_disable.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        pytest.param(403, id="forbidden"),
+        pytest.param(404, id="not-found"),
+    ],
+)
+def test_install_plugins_disables_on_4xx_http_error_without_retry(
+    mocker: MockerFixture,
+    status: int,
+) -> None:
+    """4xx HTTP errors from S3 are deterministic — disable on first try.
+
+    Regression guard: only 5xx responses count as transient. A 403 or 404
+    from S3 means the package object is missing or unauthorized — retrying
+    won't help, and we shouldn't keep the plugin enabled in that state.
+    """
+    mock_plugins = {
+        "broken_plugin": PluginAttributes(
+            version="1.0", package="plugins/broken_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mock_download = mocker.patch(
+        "plugin_runner.installation.download_plugin",
+        side_effect=_http_error(status),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    install_plugins()
+
+    assert mock_download.call_count == 1
+    mock_disable.assert_called_once_with("broken_plugin")
 
 
 def test_install_plugins_disables_on_deterministic_install_error_without_retry(
