@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.169.1 (2026-06-17)
+
+### Bug Fixes
+
+- **plugin-runner**: Retry transient install failures instead of disabling [KOALA-5810]
+  ([#1765](https://github.com/canvas-medical/canvas-plugins/pull/1765),
+  [`bb10d40`](https://github.com/canvas-medical/canvas-plugins/commit/bb10d402422dbd08d8c3fc936413a8b4ed8ab613))
+
+Signed-off-by: David Jantzen <david.jantzen@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.169.0 (2026-06-16)
 
 ### Features
