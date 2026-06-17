@@ -3,11 +3,13 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TypedDict
 
+import psycopg
 import requests
 import sentry_sdk
 from psycopg.rows import dict_row
@@ -20,6 +22,7 @@ from plugin_runner.exceptions import (
     NamespaceWaitTimeout,
     PluginInstallationError,
     PluginUninstallationError,
+    TransientPluginInstallationError,
 )
 from plugin_runner.namespace import (
     compute_models_hash,  # noqa: F401 — re-export
@@ -44,6 +47,24 @@ from settings import (
 
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
 UPLOAD_TO_PREFIX = "plugins"
+
+# Retry budget for transient infra-level install failures (KOALA-5810).
+# 3 attempts at 1s/2s/4s backoff = 7s worst-case per plugin before giving up
+# and leaving the plugin enabled for the next sync pass to retry.
+MAX_TRANSIENT_INSTALL_ATTEMPTS = 3
+TRANSIENT_INSTALL_BACKOFF_SECONDS = 1.0
+
+# Exception classes treated as transient infra failures: network blips during
+# S3 download (including streams interrupted mid-pull) and database connection
+# resets. The plugin's code is fine — a retry should clear the failure.
+# HTTPError is handled separately because it's only transient on 5xx status.
+_TRANSIENT_INSTALL_EXCEPTIONS: tuple[type[Exception], ...] = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
+    psycopg.InterfaceError,
+    psycopg.OperationalError,
+)
 
 
 def clear_registered_models(plugin_name: str) -> None:
@@ -212,11 +233,13 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         plugin_installation_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
-        # if plugin exists, first uninstall it
-        if plugin_installation_path.exists():
-            uninstall_plugin(plugin_name)
-
         with download_plugin(attributes["package"]) as plugin_file_path:
+            # Defer uninstalling the existing version until the new package is
+            # safely on local disk. A transient S3/network failure during
+            # download then leaves the running version in place (KOALA-5810).
+            if plugin_installation_path.exists():
+                uninstall_plugin(plugin_name)
+
             extract_plugin(plugin_file_path, plugin_installation_path)
 
         # Read the manifest first so we can decide whether to defer the
@@ -327,6 +350,28 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         # Transient bootstrap race — install_plugins logs this at WARNING.
         # Skip the ERROR-level traceback here to avoid contradictory severity.
         raise
+    except _TRANSIENT_INSTALL_EXCEPTIONS as e:
+        # Network blip during S3 download or DB connection reset. install_plugins
+        # logs this at WARNING and retries with backoff — skip the ERROR-level
+        # traceback here to avoid implying a permanent failure.
+        raise TransientPluginInstallationError(
+            f'Transient failure installing plugin "{plugin_name}", version '
+            f"{attributes['version']}: {type(e).__name__}: {e}"
+        ) from e
+    except requests.exceptions.HTTPError as e:
+        # 5xx from S3 (e.g. 503 SlowDown, 500 InternalError, 502/504) is a
+        # service-side blip — retry. 4xx (404 missing object, 403 forbidden)
+        # is deterministic and falls through to the PluginInstallationError
+        # path so the plugin is disabled as usual.
+        status = e.response.status_code if e.response is not None else None
+        if status is not None and status >= 500:
+            raise TransientPluginInstallationError(
+                f'Transient failure installing plugin "{plugin_name}", version '
+                f"{attributes['version']}: HTTP {status}: {e}"
+            ) from e
+        log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
+        sentry_sdk.capture_exception(e)
+        raise PluginInstallationError() from e
     except PluginInstallationError:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise
@@ -415,29 +460,52 @@ def install_plugins() -> None:
         ) from e
 
     for plugin_name, attributes in enabled_plugins().items():
-        try:
-            install_plugin(plugin_name, attributes)
-        except NamespaceWaitTimeout as e:
-            # Bootstrap race: the schema manager hasn't created the namespace
-            # yet (e.g. index-1 container booted before index-0). Leave the
-            # plugin enabled so the next install pass — triggered by a
-            # pubsub event or a container restart — can complete the install.
-            log.warning(
-                f'Namespace wait timed out for plugin "{plugin_name}", version'
-                f" {attributes['version']}; plugin remains enabled and will be retried"
-            )
-            sentry_sdk.capture_exception(e)
-            continue
-        except PluginInstallationError as e:
-            disable_plugin(plugin_name)
+        for attempt in range(1, MAX_TRANSIENT_INSTALL_ATTEMPTS + 1):
+            try:
+                install_plugin(plugin_name, attributes)
+                break
+            except NamespaceWaitTimeout as e:
+                # Bootstrap race: the schema manager hasn't created the namespace
+                # yet (e.g. index-1 container booted before index-0). Leave the
+                # plugin enabled so the next install pass — triggered by a
+                # pubsub event or a container restart — can complete the install.
+                log.warning(
+                    f'Namespace wait timed out for plugin "{plugin_name}", version'
+                    f" {attributes['version']}; plugin remains enabled and will be retried"
+                )
+                sentry_sdk.capture_exception(e)
+                break
+            except TransientPluginInstallationError as e:
+                if attempt < MAX_TRANSIENT_INSTALL_ATTEMPTS:
+                    backoff = TRANSIENT_INSTALL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+                    log.warning(
+                        f'Transient failure installing plugin "{plugin_name}", version'
+                        f" {attributes['version']} (attempt {attempt}/"
+                        f"{MAX_TRANSIENT_INSTALL_ATTEMPTS}); retrying in {backoff}s: {e}"
+                    )
+                    time.sleep(backoff)
+                    continue
+                # Retries exhausted. Leave the plugin enabled so the next sync
+                # pass picks it up — a transient failure shouldn't require a
+                # human to re-enable the plugin.
+                log.warning(
+                    f'Transient failure installing plugin "{plugin_name}", version'
+                    f" {attributes['version']} after {MAX_TRANSIENT_INSTALL_ATTEMPTS}"
+                    f" attempts; plugin remains enabled and will be retried on the"
+                    f" next sync: {e}"
+                )
+                sentry_sdk.capture_exception(e)
+                break
+            except PluginInstallationError as e:
+                disable_plugin(plugin_name)
 
-            log.error(
-                f'Installation failed for plugin "{plugin_name}", version {attributes["version"]};'
-                " the plugin has been disabled"
-            )
+                log.error(
+                    f'Installation failed for plugin "{plugin_name}", version'
+                    f" {attributes['version']}; the plugin has been disabled"
+                )
 
-            sentry_sdk.capture_exception(e)
+                sentry_sdk.capture_exception(e)
 
-            continue
+                break
 
     return None

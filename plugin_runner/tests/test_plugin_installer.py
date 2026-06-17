@@ -5,10 +5,16 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import psycopg
 import pytest
+import requests
 from pytest_mock import MockerFixture
 
-from plugin_runner.exceptions import NamespaceWaitTimeout, PluginInstallationError
+from plugin_runner.exceptions import (
+    NamespaceWaitTimeout,
+    PluginInstallationError,
+    TransientPluginInstallationError,
+)
 from plugin_runner.installation import (
     PluginAttributes,
     _extract_rows_to_dict,
@@ -272,6 +278,243 @@ def test_install_plugins_disables_on_other_install_errors(
 
     install_plugins()
 
+    mock_disable.assert_called_once_with("broken_plugin")
+
+
+def _http_error(status: int) -> requests.exceptions.HTTPError:
+    """Build a requests.HTTPError carrying a response with the given status."""
+    response = MagicMock()
+    response.status_code = status
+    return requests.exceptions.HTTPError(f"{status} Server Error", response=response)
+
+
+@pytest.mark.parametrize(
+    "transient_exc",
+    [
+        pytest.param(
+            requests.exceptions.ConnectionError("[Errno 104] Connection reset by peer"),
+            id="connection-reset-during-s3-download",
+        ),
+        pytest.param(
+            requests.exceptions.Timeout("Read timed out"),
+            id="http-timeout-during-s3-download",
+        ),
+        pytest.param(
+            requests.exceptions.ChunkedEncodingError(
+                "Connection broken: InvalidChunkLength(got length b'', 0 bytes read)"
+            ),
+            id="chunked-encoding-error-mid-stream",
+        ),
+        pytest.param(
+            _http_error(503),
+            id="s3-503-slow-down",
+        ),
+        pytest.param(
+            _http_error(500),
+            id="s3-500-internal-error",
+        ),
+    ],
+)
+def test_install_plugins_does_not_disable_on_transient_download_failure(
+    mocker: MockerFixture,
+    transient_exc: Exception,
+) -> None:
+    """Ensures that transient download errors do not result in a plugin being disabled."""
+    mock_plugins = {
+        "transient_plugin": PluginAttributes(
+            version="1.0", package="plugins/transient_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mock_download = mocker.patch(
+        "plugin_runner.installation.download_plugin",
+        side_effect=transient_exc,
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    install_plugins()
+
+    mock_disable.assert_not_called()
+    # Retried up to the configured budget before giving up.
+    assert mock_download.call_count == 3
+
+
+def test_install_plugins_does_not_disable_on_transient_db_interface_error(
+    mocker: MockerFixture,
+) -> None:
+    """Ensures that transient database errors do not result in a plugin being disabled."""
+    plugin_name = "db_blip_plugin"
+    mock_plugins = {
+        plugin_name: PluginAttributes(
+            version="1.0", package=f"plugins/{plugin_name}.tar.gz", secrets={}
+        ),
+    }
+
+    def fake_extract(plugin_file_path: Path, plugin_installation_path: Path) -> None:
+        plugin_installation_path.mkdir(parents=True, exist_ok=True)
+        (plugin_installation_path / "CANVAS_MANIFEST.json").write_text(
+            json.dumps(
+                {
+                    "name": plugin_name,
+                    "custom_data": {"namespace": "org__blip", "access": "read_write"},
+                }
+            )
+        )
+
+    mock_download = MagicMock()
+    mock_download.__enter__ = MagicMock(return_value=Path("unused.tar.gz"))
+    mock_download.__exit__ = MagicMock(return_value=None)
+
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mocker.patch("plugin_runner.installation.download_plugin", return_value=mock_download)
+    mocker.patch("plugin_runner.installation.extract_plugin", side_effect=fake_extract)
+    mocker.patch("plugin_runner.installation.install_plugin_secrets")
+    mocker.patch("plugin_runner.installation.clear_registered_models")
+    mocker.patch("plugin_runner.installation.is_schema_manager", return_value=True)
+    mock_setup = mocker.patch(
+        "plugin_runner.installation.setup_read_write_namespace",
+        side_effect=psycopg.InterfaceError("connection already closed"),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    try:
+        install_plugins()
+        mock_disable.assert_not_called()
+        # Retried up to the configured budget before giving up.
+        assert mock_setup.call_count == 3
+    finally:
+        uninstall_plugin(plugin_name)
+
+
+def test_install_plugin_preserves_existing_files_on_transient_download_failure(
+    mocker: MockerFixture,
+) -> None:
+    """A transient download failure must not destroy the working version.
+
+    `install_plugin` defers the rmtree of the existing plugin directory until
+    after the new package is on local disk. So when `download_plugin` raises
+    `requests.ConnectionError`, the previously-loaded plugin remains intact
+    and the worker keeps serving it until the next install pass retries.
+    """
+    from settings import PLUGIN_DIRECTORY
+
+    plugin_name = "preserved_plugin"
+    plugins_dir = Path(PLUGIN_DIRECTORY)
+    plugins_dir.mkdir(parents=True, exist_ok=True)
+    plugin_path = plugins_dir / plugin_name
+    plugin_path.mkdir(parents=True, exist_ok=True)
+    sentinel = plugin_path / "PLUGIN.py"
+    sentinel.write_text("# old version still running")
+
+    mocker.patch(
+        "plugin_runner.installation.download_plugin",
+        side_effect=requests.exceptions.ConnectionError("[Errno 104] Connection reset by peer"),
+    )
+
+    try:
+        with pytest.raises(PluginInstallationError):
+            install_plugin(
+                plugin_name,
+                PluginAttributes(
+                    version="2.0", package=f"plugins/{plugin_name}.tar.gz", secrets={}
+                ),
+            )
+
+        assert plugin_path.exists(), "old plugin directory must remain on disk"
+        assert sentinel.read_text() == "# old version still running"
+    finally:
+        uninstall_plugin(plugin_name)
+
+
+def test_install_plugins_retries_and_succeeds_after_transient_failure(
+    mocker: MockerFixture,
+) -> None:
+    """A transient failure on attempt N should be retried and recover on attempt N+1."""
+    mock_plugins = {
+        "flaky_plugin": PluginAttributes(
+            version="1.0", package="plugins/flaky_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mock_install = mocker.patch(
+        "plugin_runner.installation.install_plugin",
+        side_effect=[
+            TransientPluginInstallationError("connection reset"),
+            None,
+        ],
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    install_plugins()
+
+    assert mock_install.call_count == 2
+    mock_disable.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        pytest.param(403, id="forbidden"),
+        pytest.param(404, id="not-found"),
+    ],
+)
+def test_install_plugins_disables_on_4xx_http_error_without_retry(
+    mocker: MockerFixture,
+    status: int,
+) -> None:
+    """4xx HTTP errors from S3 are deterministic — disable on first try.
+
+    Regression guard: only 5xx responses count as transient. A 403 or 404
+    from S3 means the package object is missing or unauthorized — retrying
+    won't help, and we shouldn't keep the plugin enabled in that state.
+    """
+    mock_plugins = {
+        "broken_plugin": PluginAttributes(
+            version="1.0", package="plugins/broken_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mock_download = mocker.patch(
+        "plugin_runner.installation.download_plugin",
+        side_effect=_http_error(status),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    install_plugins()
+
+    assert mock_download.call_count == 1
+    mock_disable.assert_called_once_with("broken_plugin")
+
+
+def test_install_plugins_disables_on_deterministic_install_error_without_retry(
+    mocker: MockerFixture,
+) -> None:
+    """Deterministic failures (bad manifest, invalid format) still disable on first try.
+
+    Regression guard: the new retry budget for transient errors must not extend
+    to deterministic failures, which would waste time before the inevitable
+    disable.
+    """
+    mock_plugins = {
+        "broken_plugin": PluginAttributes(
+            version="1.0", package="plugins/broken_plugin.tar.gz", secrets={}
+        ),
+    }
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
+    mock_install = mocker.patch(
+        "plugin_runner.installation.install_plugin",
+        side_effect=PluginInstallationError("manifest invalid"),
+    )
+    mock_disable = mocker.patch("plugin_runner.installation.disable_plugin")
+    mocker.patch("plugin_runner.installation.time.sleep")
+
+    install_plugins()
+
+    assert mock_install.call_count == 1
     mock_disable.assert_called_once_with("broken_plugin")
 
 
