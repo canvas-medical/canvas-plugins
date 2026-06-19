@@ -629,6 +629,18 @@
     "HealthGorillaLabOrderIngest",
     "HealthGorillaLabReportIngest"
   ],
+  "canvas_sdk.effects.lab_report": [
+    "LabReport",
+    "LabReportAttachResults",
+    "LabValue"
+  ],
+  "canvas_sdk.effects.lab_report.attach_results": [
+    "LabReportAttachResults",
+    "LabValue"
+  ],
+  "canvas_sdk.effects.lab_report.base": [
+    "LabReport"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
