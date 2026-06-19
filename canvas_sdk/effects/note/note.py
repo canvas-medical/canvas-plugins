@@ -14,12 +14,71 @@ from canvas_sdk.v1.data import NoteType, Patient, Staff
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 TRANSITION_STATE_MATRIX = {
-    NoteStates.NEW: [NoteStates.LOCKED, NoteStates.PUSHED],
-    NoteStates.LOCKED: [NoteStates.SIGNED, NoteStates.UNLOCKED],
-    NoteStates.UNLOCKED: [NoteStates.LOCKED, NoteStates.PUSHED],
-    NoteStates.SIGNED: [NoteStates.UNLOCKED, NoteStates.SIGNED],
-    NoteStates.PUSHED: [NoteStates.LOCKED, NoteStates.PUSHED],
+    NoteStates.NEW: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.CONVERTED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.LOCKED: [NoteStates.UNLOCKED],
+    NoteStates.UNLOCKED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.SIGNED: [NoteStates.UNLOCKED],
+    NoteStates.PUSHED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.DELETED: [NoteStates.UNDELETED],
+    NoteStates.UNDELETED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
 }
+
+APPOINTMENT_TRANSITION_MATRIX = {
+    NoteStates.SCHEDULING: [NoteStates.BOOKED, NoteStates.DELETED],
+    NoteStates.BOOKED: [
+        NoteStates.CONVERTED,
+        NoteStates.SCHEDULING,
+        NoteStates.CANCELLED,
+        NoteStates.NOSHOW,
+    ],
+    NoteStates.REVERTED: [
+        NoteStates.CONVERTED,
+        NoteStates.SCHEDULING,
+        NoteStates.CANCELLED,
+        NoteStates.NOSHOW,
+    ],
+    NoteStates.CANCELLED: [NoteStates.REVERTED],
+    NoteStates.NOSHOW: [NoteStates.LOCKED, NoteStates.CONVERTED],
+    NoteStates.LOCKED: [NoteStates.UNLOCKED],
+}
+
+
+def transition_matrix_for(category: str | None) -> dict[NoteStates, list[NoteStates]]:
+    """Return the state-transition matrix for a note type ``category``."""
+    if category == NoteTypeCategories.APPOINTMENT:
+        return APPOINTMENT_TRANSITION_MATRIX
+    return TRANSITION_STATE_MATRIX
+
 
 ACTION_STATE_MATRIX = {
     "lock": NoteStates.LOCKED,
