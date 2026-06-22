@@ -211,13 +211,16 @@ class TestCreateNamespaceSchemaSuppliedKeys:
 
         mock_open_conn.return_value = mock_conn
 
-        supplied = {
+        result = create_namespace_schema(
+            "org__data",
+            read_key="cr-supplied-read",
+            read_write_key="cr-supplied-write",
+        )
+
+        assert result == {
             "namespace_read_access_key": "cr-supplied-read",
             "namespace_read_write_access_key": "cr-supplied-write",
         }
-        result = create_namespace_schema("org__data", supplied_keys=supplied)
-
-        assert result == supplied
         mock_uuid.uuid4.assert_not_called()
 
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
@@ -242,11 +245,11 @@ class TestCreateNamespaceSchemaSuppliedKeys:
 
         mock_open_conn.return_value = mock_conn
 
-        supplied = {
-            "namespace_read_access_key": "cr-supplied-read",
-            "namespace_read_write_access_key": "cr-supplied-write",
-        }
-        create_namespace_schema("org__data", supplied_keys=supplied)
+        create_namespace_schema(
+            "org__data",
+            read_key="cr-supplied-read",
+            read_write_key="cr-supplied-write",
+        )
 
         insert_calls = [
             c for c in mock_cursor.execute.call_args_list if "namespace_auth" in str(c[0][0])
@@ -267,10 +270,7 @@ class TestCreateNamespaceSchemaSuppliedKeys:
         from plugin_runner.namespace import create_namespace_schema
 
         with pytest.raises(PluginInstallationError):
-            create_namespace_schema(
-                "org__data",
-                supplied_keys={"namespace_read_access_key": "only-read"},
-            )
+            create_namespace_schema("org__data", read_key="only-read")
 
         # DB must not have been touched
         mock_open_conn.assert_not_called()
@@ -285,10 +285,8 @@ class TestCreateNamespaceSchemaSuppliedKeys:
         with pytest.raises(PluginInstallationError):
             create_namespace_schema(
                 "org__data",
-                supplied_keys={
-                    "namespace_read_access_key": "",
-                    "namespace_read_write_access_key": "valid-write",
-                },
+                read_key="",
+                read_write_key="valid-write",
             )
         mock_open_conn.assert_not_called()
 
@@ -298,7 +296,7 @@ class TestCreateNamespaceSchemaSuppliedKeys:
     def test_no_supplied_keys_preserves_uuid_generation(
         self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
     ) -> None:
-        """When supplied_keys is None, fall back to uuid.uuid4 (existing behavior)."""
+        """When no keys are supplied, fall back to uuid.uuid4 (existing behavior)."""
         from plugin_runner.namespace import create_namespace_schema
 
         mock_uuid.uuid4.side_effect = [
@@ -348,7 +346,11 @@ class TestCreateNamespaceSchemaSuppliedKeys:
         result = setup_read_write_namespace("my_plugin", "org__data", supplied)
 
         assert result is True
-        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=supplied)
+        mock_create.assert_called_once_with(
+            namespace="org__data",
+            read_key="cr-read",
+            read_write_key="cr-write",
+        )
 
     @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
     @patch("plugin_runner.namespace.create_namespace_schema")
@@ -359,7 +361,7 @@ class TestCreateNamespaceSchemaSuppliedKeys:
         mock_create: MagicMock,
         mock_store: MagicMock,
     ) -> None:
-        """No supplied keys in secrets → create_namespace_schema called without supplied_keys."""
+        """No supplied keys in secrets → create_namespace_schema called without key args."""
         from plugin_runner.namespace import setup_read_write_namespace
 
         mock_create.return_value = {
@@ -370,7 +372,7 @@ class TestCreateNamespaceSchemaSuppliedKeys:
         result = setup_read_write_namespace("my_plugin", "org__data", {})
 
         assert result is True
-        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=None)
+        mock_create.assert_called_once_with(namespace="org__data")
 
 
 class TestReadOnlyAccessSkipsModelCreation:
@@ -850,7 +852,7 @@ class TestSetupReadWriteNamespace:
         result = setup_read_write_namespace("my_plugin", "org__data", {})
 
         assert result is True
-        mock_create.assert_called_once_with(namespace="org__data", supplied_keys=None)
+        mock_create.assert_called_once_with(namespace="org__data")
         mock_store.assert_called_once_with("my_plugin", {"key_a": "val_a", "key_b": "val_b"})
 
     @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
