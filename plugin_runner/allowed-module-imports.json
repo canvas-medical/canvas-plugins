@@ -410,6 +410,10 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.action_button": [
+    "ReloadNoteActionButtonsEffect",
+    "ReloadPatientActionButtonsEffect"
+  ],
   "canvas_sdk.effects.application_notification_badge": [
     "ApplicationNotificationBadge"
   ],
@@ -661,6 +665,9 @@
     "NoteRestrictionsEffect",
     "NoteRestrictionsUpdatedEffect"
   ],
+  "canvas_sdk.effects.note_footer_configuration": [
+    "NoteFooterConfiguration"
+  ],
   "canvas_sdk.effects.observation": [
     "CodingData",
     "Observation",
@@ -877,6 +884,7 @@
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
+    "NoteStateActionButton",
     "SHOW_BUTTON_REGEX"
   ],
   "canvas_sdk.handlers.application": [
