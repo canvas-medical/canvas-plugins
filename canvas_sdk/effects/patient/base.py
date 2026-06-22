@@ -105,17 +105,17 @@ class PatientAddress:
         }
 
 
-_PATIENT_KEY_RE = re.compile(r"\A[0-9a-f]{32}\Z")
+_PATIENT_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
 
 
-def generate_patient_key() -> str:
-    """Generate a patient key (a UUID4 hex string without hyphens) for Patient(patient_id=...)."""
+def generate_patient_id() -> str:
+    """Generate a patient id (a UUID4 hex string without hyphens) for Patient(patient_id=...)."""
     return uuid.uuid4().hex
 
 
-def _is_valid_patient_key(value: str) -> bool:
-    """Return True if value is a well-formed patient key (32-character lowercase hex)."""
-    return bool(_PATIENT_KEY_RE.match(value))
+def _is_valid_patient_id(value: str) -> bool:
+    """Return True if value is a well-formed patient id (32-character lowercase hex)."""
+    return bool(_PATIENT_ID_RE.match(value))
 
 
 class Patient(TrackableFieldsModel):
@@ -188,12 +188,12 @@ class Patient(TrackableFieldsModel):
 
         # Validate create-specific requirements
         if method == "create":
-            if self.patient_id is not None and not _is_valid_patient_key(self.patient_id):
+            if self.patient_id is not None and not _is_valid_patient_id(self.patient_id):
                 errors.append(
                     self._create_error_detail(
                         "value",
                         "Patient ID must be a 32-character hex string (a UUID4 without "
-                        "hyphens); use generate_patient_key() to generate one.",
+                        "hyphens); use generate_patient_id() to generate one.",
                         self.patient_id,
                     )
                 )
@@ -296,5 +296,5 @@ __exports__ = (
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",
-    "generate_patient_key",
+    "generate_patient_id",
 )

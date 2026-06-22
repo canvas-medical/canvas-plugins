@@ -13,7 +13,7 @@ from canvas_sdk.effects.patient.base import (
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientMetadata,
-    generate_patient_key,
+    generate_patient_id,
 )
 from canvas_sdk.v1.data.common import (
     AddressType,
@@ -226,7 +226,7 @@ def test_patient_values_handles_none_collections(
 def test_patient_create_validation_with_invalid_patient_id(
     mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
 ) -> None:
-    """Test that create validation fails when patient_id is not a valid patient key."""
+    """Test that create validation fails when patient_id is not a valid patient id."""
     patient = Patient(patient_id="123", **valid_patient_data)
 
     with pytest.raises(ValidationError):
@@ -236,23 +236,23 @@ def test_patient_create_validation_with_invalid_patient_id(
 def test_patient_create_with_valid_patient_id(
     mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
 ) -> None:
-    """Test that create() accepts a plugin-defined patient key and includes it in the payload."""
-    key = generate_patient_key()
-    patient = Patient(patient_id=key, **valid_patient_data)
+    """Test that create() accepts a plugin-defined patient id and includes it in the payload."""
+    patient_id = generate_patient_id()
+    patient = Patient(patient_id=patient_id, **valid_patient_data)
 
     effect = patient.create()
 
     payload_data = json.loads(effect.payload)
-    assert payload_data["data"]["patient_id"] == key
+    assert payload_data["data"]["patient_id"] == patient_id
 
 
-def test_generate_patient_key_returns_valid_key() -> None:
-    """Test that generate_patient_key() returns a unique 32-character lowercase hex key."""
-    key = generate_patient_key()
+def test_generate_patient_id_returns_valid_id() -> None:
+    """Test that generate_patient_id() returns a unique 32-character lowercase hex id."""
+    patient_id = generate_patient_id()
 
-    assert len(key) == 32
-    assert all(character in "0123456789abcdef" for character in key)
-    assert generate_patient_key() != key
+    assert len(patient_id) == 32
+    assert all(character in "0123456789abcdef" for character in patient_id)
+    assert generate_patient_id() != patient_id
 
 
 def test_patient_update_validation_missing_patient_id(
