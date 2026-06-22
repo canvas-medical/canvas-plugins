@@ -12,6 +12,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
     ValueSetLookupByNameQuerySet,
+    ValueSetLookupByNameQuerySetMixin,
 )
 
 
@@ -107,10 +108,22 @@ class QuestionnaireQuestionMap(TimestampedModel):
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, null=True)
 
 
-class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
+class InterviewQuerySet(
+    ForPatientQuerySetMixin,
+    CommittableQuerySetMixin,
+    ValueSetLookupByNameQuerySetMixin,
+    BaseQuerySet,
+):
     """InterviewQuerySet."""
 
-    pass
+    @staticmethod
+    def q_object(system: str, codes: Container[str]) -> Q:
+        """Match interviews whose questionnaire has a code in the value set.
+
+        Code system names (e.g. "LOINC") and codes live on the related
+        Questionnaire, so the lookup goes through the ``questionnaires`` M2M.
+        """
+        return Q(questionnaires__code_system=system, questionnaires__code__in=codes)
 
 
 InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)

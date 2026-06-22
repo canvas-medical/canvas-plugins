@@ -11,7 +11,9 @@ from canvas_sdk.v1.data.base import (
     ForPatientQuerySetMixin,
     IdentifiableModel,
     TimestampedModel,
+    ValueSetLookupQuerySetMixin,
 )
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.task import Task
 
 
@@ -97,11 +99,17 @@ class ReferralReview(AuditedModel, IdentifiableModel):
     patient_communication_method = models.CharField(max_length=30)
 
 
+class ReferralReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
+    """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
+
+
 class ReferralReport(TimestampedModel, IdentifiableModel):
     """ReferralReport."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referralreport_001"
+
+    objects = cast(ReferralReportQuerySet, models.Manager.from_queryset(ReferralReportQuerySet)())
 
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -131,4 +139,14 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
     priority = models.BooleanField(default=False)
 
 
-__exports__ = ("Referral", "ReferralReport")
+class ReferralReportCoding(Coding):
+    """ReferralReportCoding."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralreportcoding_001"
+
+    report = models.ForeignKey(ReferralReport, on_delete=models.DO_NOTHING, related_name="codings")
+    value = models.CharField(max_length=1000)
+
+
+__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding", "ReferralReportQuerySet")
