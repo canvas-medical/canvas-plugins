@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "create_patient_with_key",
+    "description": "Create a Patient with a plugin-defined patient key (a UUID4 hex string) via a SimpleAPI endpoint.",
+    "components": {
+        "handlers": [
+            {
+                "class": "create_patient_with_key.routes.create_patient:CreateTestPatientAPI",
+                "description": "POST endpoint that creates a patient with a plugin-generated key and returns that key"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [{"name": "pre-shared-key", "sensitive": true}],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
