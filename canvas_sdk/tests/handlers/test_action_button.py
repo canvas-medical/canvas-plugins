@@ -458,3 +458,84 @@ def test_transition_matrix_for_selects_by_category() -> None:
     assert transition_matrix_for(NoteTypeCategories.APPOINTMENT) is APPOINTMENT_TRANSITION_MATRIX
     assert transition_matrix_for(NoteTypeCategories.ENCOUNTER) is TRANSITION_STATE_MATRIX
     assert transition_matrix_for(None) is TRANSITION_STATE_MATRIX
+
+
+# --- compute() ordering + defensive-path tests ---
+
+
+class _UnsupportedButton(NoteStateActionButton):
+    STATE_ACTION = NoteStates.BOOKED  # no SDK transition targets this state
+
+
+def test_note_state_button_compute_sets_priority_from_matrix_order(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """compute() orders the button by its target's index in the current state's transitions."""
+    event = Event(EventRequest(type=EventType.SHOW_NOTE_FOOTER_BUTTON))
+    handler = _DeleteButton(event)
+    monkeypatch.setattr(type(handler), "context", property(lambda self: {"note_id": 5}))
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.first.return_value = _fake_note(NoteStates.NEW)
+        effects = handler.compute()
+
+    assert len(effects) == 1
+    payload = json.loads(effects[0].payload)["data"]
+    assert payload["key"] == _DeleteButton.BUTTON_KEY
+    # NEW -> [LOCKED, SIGNED, PUSHED, DISCHARGED, DELETED]; Delete sorts last.
+    assert payload["priority"] == TRANSITION_STATE_MATRIX[NoteStates.NEW].index(NoteStates.DELETED)
+
+
+def test_note_state_button_compute_without_note_returns_empty(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """With no note in context the button is neither ordered nor shown."""
+    event = Event(EventRequest(type=EventType.SHOW_NOTE_FOOTER_BUTTON))
+    handler = _LockButton(event)
+    monkeypatch.setattr(type(handler), "context", property(lambda self: {"note_id": None}))
+    assert handler.compute() == []
+
+
+def test_note_state_button_not_visible_when_note_missing(monkeypatch: MonkeyPatch) -> None:
+    """A note id that no longer resolves to a row hides the button."""
+    handler = _make_state_handler(_LockButton, monkeypatch, note_id=5)
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.first.return_value = None
+        assert handler.visible() is False
+
+
+def test_note_state_button_not_visible_for_unknown_state(monkeypatch: MonkeyPatch) -> None:
+    """A note in a state the SDK doesn't recognise hides the button instead of raising."""
+    handler = _make_state_handler(_LockButton, monkeypatch, note_id=5)
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.first.return_value = _fake_note("NOT_A_REAL_STATE")
+        assert handler.visible() is False
+
+
+def test_note_state_button_handle_without_resolvable_note(monkeypatch: MonkeyPatch) -> None:
+    """A click whose note id no longer resolves produces no effects."""
+    handler = _make_state_handler(_LockButton, monkeypatch, note_id=5)
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.values_list.return_value.first.return_value = None
+        assert handler.handle() == []
+
+
+def test_note_state_button_handle_ignores_unsupported_transition(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """A target state with no SDK transition is swallowed (no effects), not raised."""
+    handler = _make_state_handler(_UnsupportedButton, monkeypatch, note_id=5)
+    with (
+        patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note,
+        patch("canvas_sdk.handlers.action_button.AppointmentModel.objects") as mock_appt,
+    ):
+        mock_note.filter.return_value.values_list.return_value.first.return_value = "note-ext-id"
+        mock_appt.filter.return_value.values_list.return_value.first.return_value = None
+        assert handler.handle() == []
+
+
+def test_note_state_button_base_class_is_inert(monkeypatch: MonkeyPatch) -> None:
+    """The base class (STATE_ACTION unset) is never visible and refuses to transition."""
+    handler = _make_state_handler(NoteStateActionButton, monkeypatch, note_id=5)
+    assert handler.visible() is False
+    with pytest.raises(ValueError):
+        handler.transition("note-ext-id")
