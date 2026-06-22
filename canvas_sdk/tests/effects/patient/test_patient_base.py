@@ -13,6 +13,7 @@ from canvas_sdk.effects.patient.base import (
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientMetadata,
+    generate_patient_key,
 )
 from canvas_sdk.v1.data.common import (
     AddressType,
@@ -222,14 +223,36 @@ def test_patient_values_handles_none_collections(
     assert values.get("metadata") is None
 
 
-def test_patient_create_validation_with_patient_id_error(
+def test_patient_create_validation_with_invalid_patient_id(
     mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
 ) -> None:
-    """Test that create validation fails when patient_id is provided."""
+    """Test that create validation fails when patient_id is not a valid patient key."""
     patient = Patient(patient_id="123", **valid_patient_data)
 
     with pytest.raises(ValidationError):
         patient.create()
+
+
+def test_patient_create_with_valid_patient_id(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that create() accepts a plugin-defined patient key and includes it in the payload."""
+    key = generate_patient_key()
+    patient = Patient(patient_id=key, **valid_patient_data)
+
+    effect = patient.create()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["patient_id"] == key
+
+
+def test_generate_patient_key_returns_valid_key() -> None:
+    """Test that generate_patient_key() returns a unique 32-character lowercase hex key."""
+    key = generate_patient_key()
+
+    assert len(key) == 32
+    assert all(character in "0123456789abcdef" for character in key)
+    assert generate_patient_key() != key
 
 
 def test_patient_update_validation_missing_patient_id(
