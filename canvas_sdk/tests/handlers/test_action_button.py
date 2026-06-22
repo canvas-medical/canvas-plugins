@@ -6,7 +6,7 @@ from pytest import MonkeyPatch
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.note import (
+from canvas_sdk.effects.note.note import (
     ACTION_STATE_MATRIX,
     APPOINTMENT_TRANSITION_MATRIX,
     TRANSITION_STATE_MATRIX,
