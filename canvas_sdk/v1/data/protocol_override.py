@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Self, cast
 
 from django.db import models
 
@@ -30,7 +30,17 @@ class Status(models.TextChoices):
 class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
     """ProtocolOverrideQuerySet."""
 
-    pass
+    def active(self) -> Self:
+        """Filter to overrides with status == 'active'."""
+        return self.filter(status=Status.ACTIVE)
+
+    def adjustments(self, protocol_key: str) -> Self:
+        """Filter to active-adjustment rows for ``protocol_key``."""
+        return self.filter(protocol_key=protocol_key, is_adjustment=True)
+
+    def snoozes(self, protocol_key: str) -> Self:
+        """Filter to snooze rows for ``protocol_key``."""
+        return self.filter(protocol_key=protocol_key, is_snooze=True)
 
 
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)

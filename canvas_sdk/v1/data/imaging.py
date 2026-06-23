@@ -1,12 +1,14 @@
 import json
-from typing import Self
+from typing import Self, cast
 
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
+    BaseQuerySet,
     IdentifiableModel,
     TimestampedModel,
+    ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
@@ -86,6 +88,10 @@ class ImagingReview(AuditedModel, IdentifiableModel):
     )
 
 
+class ImagingReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
+    """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
+
+
 class ImagingReport(TimestampedModel, IdentifiableModel):
     """Model to read ImagingReport data."""
 
@@ -96,6 +102,8 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreport_001"
+
+    objects = cast(ImagingReportQuerySet, models.Manager.from_queryset(ImagingReportQuerySet)())
 
     review_mode = models.CharField(choices=DocumentReviewMode.choices, max_length=2)
     junked = models.BooleanField()
@@ -176,6 +184,7 @@ __exports__ = (
     "ImagingReview",
     "ImagingReport",
     "ImagingReportCoding",
+    "ImagingReportQuerySet",
     "ImagingReportTemplate",
     "ImagingReportTemplateQuerySet",
     "ImagingReportTemplateField",

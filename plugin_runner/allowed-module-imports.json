@@ -1213,6 +1213,7 @@
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
@@ -1434,6 +1435,7 @@
     "ImagingOrder",
     "ImagingReport",
     "ImagingReportCoding",
+    "ImagingReportQuerySet",
     "ImagingReportTemplate",
     "ImagingReportTemplateField",
     "ImagingReportTemplateFieldOption",
@@ -1624,7 +1626,9 @@
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
-    "ReferralReport"
+    "ReferralReport",
+    "ReferralReportCoding",
+    "ReferralReportQuerySet"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
