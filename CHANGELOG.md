@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.173.0 (2026-06-23)
+
+### Features
+
+- Accept caller-supplied namespace auth keys (KOALA-5738)
+  ([#1746](https://github.com/canvas-medical/canvas-plugins/pull/1746),
+  [`fd808b9`](https://github.com/canvas-medical/canvas-plugins/commit/fd808b9c7ec4bfe45b8dcdf09c47e5e245368b02))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+- **data**: Add ValueSet find() to Interview/Imaging/Referral + ProtocolOverride helpers
+  [KOALA-5892] ([#1773](https://github.com/canvas-medical/canvas-plugins/pull/1773),
+  [`bdb7bf1`](https://github.com/canvas-medical/canvas-plugins/commit/bdb7bf1119673afe5a83feb22711ccb91fdc7539))
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
 ## v0.172.0 (2026-06-23)
 
 ### Features
