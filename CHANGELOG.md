@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.170.0 (2026-06-23)
+
+### Features
+
+- Add support for supervising provider and incident_to
+  ([#1757](https://github.com/canvas-medical/canvas-plugins/pull/1757),
+  [`32926d3`](https://github.com/canvas-medical/canvas-plugins/commit/32926d33359ac8f676aa99e11e26eddb2508b97c))
+
+
 ## v0.169.1 (2026-06-17)
 
 ### Bug Fixes

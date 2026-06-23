@@ -773,6 +773,53 @@ def test_discharge_success(mock_db_queries: dict[str, MagicMock]) -> None:
     assert payload["data"]["note"] == instance_id
 
 
+def test_update_note_supervising_provider(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test updating a note's supervising provider."""
+    instance_id = str(uuid4())
+    supervising_provider_id = str(uuid4())
+
+    note = Note(instance_id=instance_id)
+    note.supervising_provider_id = supervising_provider_id
+
+    effect = note.update()
+
+    assert effect.type == EffectType.UPDATE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["supervising_provider_id"] == supervising_provider_id
+    assert payload["data"]["instance_id"] == instance_id
+
+
+def test_create_note_with_supervising_provider(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test creating a note with a supervising provider."""
+    supervising_provider_id = str(uuid4())
+    valid_note_data["supervising_provider_id"] = supervising_provider_id
+
+    note = Note(**valid_note_data)
+    effect = note.create()
+
+    assert effect.type == EffectType.CREATE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["supervising_provider_id"] == supervising_provider_id
+
+
+def test_note_nonexistent_supervising_provider(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test validation when the supervising provider does not exist."""
+    mock_db_queries["staff"].filter.return_value.exists.return_value = False
+    valid_note_data["supervising_provider_id"] = str(uuid4())
+
+    note = Note(**valid_note_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.create()
+
+    errors = exc_info.value.errors()
+    assert any("Supervising provider with ID" in str(e) for e in errors)
+
+
 def test_discharge_note_not_inpatient(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that discharge raises an error when the note is not an inpatient note."""
     instance_id = str(uuid4())

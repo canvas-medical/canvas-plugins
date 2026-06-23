@@ -490,6 +490,7 @@
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
+    "ClaimSupervisingProvider",
     "ColorEnum",
     "Label",
     "LineItemTransaction",
@@ -503,10 +504,14 @@
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
+    "ClaimSupervisingProvider",
     "ColorEnum",
     "Label",
     "LineItemTransaction",
     "PaymentMethod"
+  ],
+  "canvas_sdk.effects.claim.claim_supervising_provider": [
+    "ClaimSupervisingProvider"
   ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
@@ -1069,6 +1074,7 @@
     "ClaimProvider",
     "ClaimQueue",
     "ClaimSubmission",
+    "ClaimSupervisingProvider",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -1309,6 +1315,7 @@
     "ClaimQueueColumns",
     "ClaimQueues",
     "ClaimSubmission",
+    "ClaimSupervisingProvider",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"
