@@ -448,3 +448,90 @@ def test_patient_update_validation_allows_optional_names(
     # Should not raise validation error
     effect = patient.update()
     assert effect is not None
+
+
+def test_patient_update_with_status_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update() includes active and deceased fields in the payload."""
+    deceased_at = datetime.datetime(2025, 3, 14, 12, 0, 0)
+    patient = Patient(
+        patient_id="123",
+        active=False,
+        deceased=True,
+        deceased_datetime=deceased_at,
+        deceased_cause="Natural causes",
+        deceased_comment="Pronounced at home.",
+    )
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["active"] is False
+    assert payload_data["data"]["deceased"] is True
+    assert payload_data["data"]["deceased_datetime"] == deceased_at.isoformat()
+    assert payload_data["data"]["deceased_cause"] == "Natural causes"
+    assert payload_data["data"]["deceased_comment"] == "Pronounced at home."
+
+
+def test_patient_status_fields_omitted_when_not_set(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that status fields are not included in the payload when not set."""
+    patient = Patient(patient_id="123", **valid_patient_data)
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert "active" not in payload_data["data"]
+    assert "deceased" not in payload_data["data"]
+    assert "deceased_datetime" not in payload_data["data"]
+    assert "deceased_cause" not in payload_data["data"]
+    assert "deceased_comment" not in payload_data["data"]
+
+
+def test_patient_update_with_race_and_ethnicity(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update() includes race and ethnicity codes in the payload."""
+    patient = Patient(
+        patient_id="123",
+        biological_race_codes=["2106-3"],
+        cultural_ethnicity_codes=["2186-5"],
+    )
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["biological_race_codes"] == ["2106-3"]
+    assert payload_data["data"]["cultural_ethnicity_codes"] == ["2186-5"]
+
+
+def test_patient_create_with_race_and_ethnicity(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that create() includes race and ethnicity codes in the payload."""
+    patient = Patient(
+        **valid_patient_data,
+        biological_race_codes=["2106-3", "2028-9"],
+        cultural_ethnicity_codes=["2186-5"],
+    )
+
+    effect = patient.create()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["biological_race_codes"] == ["2106-3", "2028-9"]
+    assert payload_data["data"]["cultural_ethnicity_codes"] == ["2186-5"]
+
+
+def test_patient_race_and_ethnicity_omitted_when_not_set(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that race and ethnicity codes are not included in the payload when not set."""
+    patient = Patient(patient_id="123", **valid_patient_data)
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    assert "biological_race_codes" not in payload_data["data"]
+    assert "cultural_ethnicity_codes" not in payload_data["data"]
