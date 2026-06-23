@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.171.0 (2026-06-23)
+
+### Features
+
+- Support a caller-supplied key when creating a patient
+  ([#1771](https://github.com/canvas-medical/canvas-plugins/pull/1771),
+  [`4f7e03f`](https://github.com/canvas-medical/canvas-plugins/commit/4f7e03f039e3bab139703a973e11883039d54273))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.170.0 (2026-06-23)
 
 ### Features
