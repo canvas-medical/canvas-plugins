@@ -33,6 +33,7 @@ from .claim import (
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
+    ClaimSupervisingProvider,
     InstallmentPlan,
 )
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
@@ -246,6 +247,7 @@ __all__ = __exports__ = (
     "ClaimProvider",
     "ClaimQueue",
     "ClaimSubmission",
+    "ClaimSupervisingProvider",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
