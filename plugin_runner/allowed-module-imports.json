@@ -687,8 +687,7 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientMetadata",
-    "PatientPreferredPharmacy",
-    "generate_patient_id"
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
@@ -696,8 +695,7 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientMetadata",
-    "PatientPreferredPharmacy",
-    "generate_patient_id"
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
@@ -1150,6 +1148,9 @@
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
@@ -1492,7 +1493,10 @@
   "canvas_sdk.v1.data.letter": [
     "Language",
     "Letter",
-    "LetterActionEvent"
+    "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
