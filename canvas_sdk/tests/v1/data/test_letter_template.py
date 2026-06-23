@@ -53,8 +53,10 @@ def test_letter_language_template_fields() -> None:
 @pytest.mark.django_db
 def test_template_languages_reverse_relation() -> None:
     """A template reaches its language content through the template_languages relation."""
-    template = LetterTemplateFactory()
-    language_template = LetterLanguageTemplateFactory(template=template, content="Dear patient")
+    template = LetterTemplateFactory.create()
+    language_template = LetterLanguageTemplateFactory.create(
+        template=template, content="Dear patient"
+    )
 
     assert list(template.template_languages.all()) == [language_template]
     assert template.template_languages.get().content == "Dear patient"
