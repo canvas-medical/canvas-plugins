@@ -1,7 +1,6 @@
 import datetime
 import json
 import re
-import uuid
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +18,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointUse,
     PersonSex,
 )
+from canvas_sdk.v1.data.utils import create_key
 
 
 @dataclass
@@ -110,7 +110,7 @@ _PATIENT_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
 
 def generate_patient_id() -> str:
     """Generate a patient id (a UUID4 hex string without hyphens) for Patient(patient_id=...)."""
-    return uuid.uuid4().hex
+    return create_key()
 
 
 def _is_valid_patient_id(value: str) -> bool:
