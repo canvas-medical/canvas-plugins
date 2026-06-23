@@ -131,6 +131,8 @@ enum EventType {
   NOTE_OPENED = 125;
   NOTE_CLOSED = 126;
 
+  NOTE_SUPERVISING_PROVIDER_CHANGED = 127;
+
   // General Command Events
 
   PRE_COMMAND_ORIGINATE = 100;
@@ -178,6 +180,11 @@ enum EventType {
   // Claim lifecycle events
 
   CLAIM_QUEUE_MOVED = 400;
+
+  // Fired when a claim's supervising provider snapshot is set or changed.
+  CLAIM_SUPERVISING_PROVIDER_CHANGED = 401;
+  // Fired when a claim's incident_to billing flag is toggled.
+  CLAIM_INCIDENT_TO_CHANGED = 402;
 
   // Payment events
 
