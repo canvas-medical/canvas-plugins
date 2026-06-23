@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "note_header_assignee_options",
+    "description": "Reorders the note header assignee dropdown so teams appear before individual staff",
+    "components": {
+        "handlers": [
+            {
+                "class": "note_header_assignee_options.handlers.reorder:Handler",
+                "description": "Reorders the note header assignee dropdown so teams appear before individual staff",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
