@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.172.0 (2026-06-23)
+
+### Features
+
+- **patient**: Add status, race, and ethnicity fields to patient effect
+  ([#1695](https://github.com/canvas-medical/canvas-plugins/pull/1695),
+  [`2c72879`](https://github.com/canvas-medical/canvas-plugins/commit/2c72879eb05765e65e9544722c59546fca749497))
+
+
 ## v0.171.0 (2026-06-23)
 
 ### Features
