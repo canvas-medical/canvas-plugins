@@ -6,6 +6,8 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
 class AssigneeType(Enum):
+    """The kind of assignee shown in the note header dropdown."""
+
     STAFF = "staff"
     TEAM = "team"
 
@@ -32,7 +34,9 @@ class NoteHeaderAssigneeOptions(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The NoteHeaderAssigneeOptions's values."""
-        return {"options": [{"id": option.id, "type": option.type.value} for option in self.options]}
+        return {
+            "options": [{"id": option.id, "type": option.type.value} for option in self.options]
+        }
 
 
 __exports__ = ("AssigneeOption", "AssigneeType", "NoteHeaderAssigneeOptions")
