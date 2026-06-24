@@ -890,7 +890,8 @@
     "Application",
     "ApplicationScope",
     "EmbeddedApplication",
-    "NoteApplication"
+    "NoteApplication",
+    "SchedulingApplication"
   ],
   "canvas_sdk.handlers.base": [
     "BaseHandler",

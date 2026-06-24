@@ -79,6 +79,7 @@ class ApplicationScope(StrEnum):
     """Available scopes for embedded applications."""
 
     NOTE = "note"
+    SCHEDULING = "scheduling"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -153,9 +154,40 @@ class NoteApplication(EmbeddedApplication):
         return []
 
 
+class SchedulingApplication(EmbeddedApplication):
+    """An Application that replaces the built-in scheduling modal.
+
+    Implement ``on_open`` to return a ``LaunchModalEffect``. The following keys
+    may be present on ``self.event.context``, each only when the originating
+    entry point supplies it. Entities are delivered as ``{"id": <external id>}``
+    objects, resolvable with the conventional ``.objects.get(id=...)``:
+
+    * ``patient``: ``{"id": <patient key>}`` — patient chart and reschedule flows.
+    * ``provider``: ``{"id": <staff key>}`` — calendar and chart.
+    * ``location``: ``{"id": <practice location id>}`` — the current location.
+    * ``appointment``: ``{"id": <appointment id>}`` — reschedule flows.
+    * ``note``: ``{"id": <note id>}`` — note reschedule flow.
+
+    And the following scalars:
+
+    * ``start``: ISO-8601 datetime of the selected slot (all entry points).
+    * ``end`` / ``duration``: the slot length arrives as *one or the other*
+      depending on ``origin``, never both — ``end`` (ISO-8601) from the calendar
+      drag-and-drop, ``duration`` (minutes) from the reschedule flows, and
+      neither from the schedule-page / patient-chart buttons. Derive a missing
+      end as ``start + duration``.
+    * ``mode``: one of ``schedule``, ``reschedule``, ``followup``.
+    * ``origin``: the launching surface — ``schedule_page``, ``patient_chart``,
+      ``calendar``, ``calendar_reschedule``, or ``note_reschedule``.
+    """
+
+    SCOPE = ApplicationScope.SCHEDULING
+
+
 __exports__ = (
     "Application",
     "ApplicationScope",
     "EmbeddedApplication",
     "NoteApplication",
+    "SchedulingApplication",
 )
