@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.174.0 (2026-06-24)
+
+### Features
+
+- Scheduling application ([#1752](https://github.com/canvas-medical/canvas-plugins/pull/1752),
+  [`51f8806`](https://github.com/canvas-medical/canvas-plugins/commit/51f8806584154428e6838dec0c681ca86856046d))
+
+
 ## v0.173.0 (2026-06-23)
 
 ### Features
