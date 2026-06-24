@@ -69,6 +69,12 @@ class SendSurescriptsMedicationHistoryRequestEffect(_BaseEffect):
 class SendSurescriptsBenefitsRequestEffect(_BaseEffect):
     """
     An effect that sends a Surescripts Benefits Request.
+
+    A `correlation_id` is auto-generated on instantiation. Read it
+    (`effect.correlation_id`) and stash it so your
+    SURESCRIPTS_BENEFITS_RESPONSE handler can match the response back to the
+    originating request. Pass an explicit `correlation_id` if you want to
+    control the value (for tests, or to thread external state through).
     """
 
     class Meta:
@@ -86,6 +92,7 @@ class SendSurescriptsBenefitsRequestEffect(_BaseEffect):
     medication_description: str | None = None
     medication_ndc: str | None = None
     plan: str | None = None
+    correlation_id: str = Field(default_factory=lambda: uuid4().hex)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -96,6 +103,7 @@ class SendSurescriptsBenefitsRequestEffect(_BaseEffect):
             "medication_description": self.medication_description,
             "medication_ndc": self.medication_ndc,
             "plan": self.plan,
+            "correlation_id": self.correlation_id,
         }
 
     @property

@@ -180,6 +180,7 @@ enum EventType {
   // Surescripts response events (paired with SEND_SURESCRIPTS_*_REQUEST effects)
 
   SURESCRIPTS_ELIGIBILITY_RESPONSE = 320;
+  SURESCRIPTS_BENEFITS_RESPONSE = 321;
 
   // Claim lifecycle events
 

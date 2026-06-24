@@ -880,12 +880,18 @@
     "TargetType"
   ],
   "canvas_sdk.events.surescripts": [
+    "BenefitCoverage",
     "EligibilityPlan",
-    "SurescriptsEligibilityResponse"
+    "SurescriptsBenefitsResponse",
+    "SurescriptsEligibilityResponse",
+    "TherapeuticAlternative"
   ],
   "canvas_sdk.events.surescripts.surescripts_messages": [
+    "BenefitCoverage",
     "EligibilityPlan",
-    "SurescriptsEligibilityResponse"
+    "SurescriptsBenefitsResponse",
+    "SurescriptsEligibilityResponse",
+    "TherapeuticAlternative"
   ],
   "canvas_sdk.handlers": [
     "BaseHandler"
