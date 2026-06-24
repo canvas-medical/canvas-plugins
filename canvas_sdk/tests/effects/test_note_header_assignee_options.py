@@ -51,4 +51,4 @@ def test_values_property() -> None:
 def test_invalid_type_raises_validation_error() -> None:
     """Test that an option with an unrecognized type raises a validation error."""
     with pytest.raises(ValidationError):
-        AssigneeOption(id="s1", type="nurse")
+        AssigneeOption(id="s1", type="nurse")  # type: ignore[arg-type]
