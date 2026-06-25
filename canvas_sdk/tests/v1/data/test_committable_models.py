@@ -18,22 +18,22 @@ from canvas_sdk.v1.data.task import NoteTask
 from canvas_sdk.v1.data.visual_exam_finding import VisualExamFinding
 
 COMMITTABLE_COMMAND_MODELS = [
-    Immunization,
-    ImmunizationStatement,
-    Goal,
-    MedicationStatement,
     Assessment,
-    StopMedicationEvent,
-    Device,
-    DetectedIssue,
     ChartSectionReview,
-    VisualExamFinding,
+    DetectedIssue,
+    Device,
+    Goal,
     ImagingOrder,
     ImagingReview,
+    Immunization,
+    ImmunizationStatement,
     LabOrder,
     LabOrderReason,
+    MedicationStatement,
     NoteTask,
     Referral,
+    StopMedicationEvent,
+    VisualExamFinding,
 ]
 
 
