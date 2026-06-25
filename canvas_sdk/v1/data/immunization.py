@@ -78,6 +78,12 @@ class Immunization(IdentifiableModel):
     route = models.CharField(max_length=255, blank=True, default="")
     frequency_normalized_per_day = models.FloatField(null=True)
     deleted = models.BooleanField()
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
 
 
 class ImmunizationCoding(Coding):
@@ -128,6 +134,12 @@ class ImmunizationStatement(IdentifiableModel):
         default=ImmunizationReasonsNotGiven.NA,
     )
     deleted = models.BooleanField()
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
 
 
 class ImmunizationStatementCoding(Coding):

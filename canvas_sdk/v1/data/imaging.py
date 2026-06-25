@@ -5,7 +5,9 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
+    BaseModelManager,
     BaseQuerySet,
+    CommittableQuerySetMixin,
     IdentifiableModel,
     TimestampedModel,
     ValueSetLookupQuerySetMixin,
@@ -26,11 +28,22 @@ from canvas_sdk.v1.data.report_template_base import (
 from canvas_sdk.v1.data.task import Task
 
 
+class ImagingOrderQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for imaging orders."""
+
+    pass
+
+
+ImagingOrderManager = BaseModelManager.from_queryset(ImagingOrderQuerySet)
+
+
 class ImagingOrder(AuditedModel, IdentifiableModel):
     """Model to read ImagingOrder data."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingorder_001"
+
+    objects = cast(ImagingOrderQuerySet, ImagingOrderManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
@@ -69,11 +82,22 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
         return list(self.get_task_objects())
 
 
+class ImagingReviewQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for imaging reviews."""
+
+    pass
+
+
+ImagingReviewManager = BaseModelManager.from_queryset(ImagingReviewQuerySet)
+
+
 class ImagingReview(AuditedModel, IdentifiableModel):
     """Model to read ImagingReview data."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreview_001"
+
+    objects = cast(ImagingReviewQuerySet, ImagingReviewManager())
 
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30

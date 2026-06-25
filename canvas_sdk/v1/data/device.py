@@ -1,6 +1,23 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    IdentifiableModel,
+)
+
+
+class DeviceQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for devices."""
+
+    pass
+
+
+DeviceManager = BaseModelManager.from_queryset(DeviceQuerySet)
 
 
 class Device(AuditedModel, IdentifiableModel):
@@ -8,6 +25,8 @@ class Device(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_device_001"
+
+    objects = cast(DeviceQuerySet, DeviceManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="devices", null=True

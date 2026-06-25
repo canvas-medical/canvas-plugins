@@ -1,6 +1,23 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    IdentifiableModel,
+)
+
+
+class MedicationStatementQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for medication statements."""
+
+    pass
+
+
+MedicationStatementManager = BaseModelManager.from_queryset(MedicationStatementQuerySet)
 
 
 class MedicationStatement(AuditedModel, IdentifiableModel):
@@ -8,6 +25,8 @@ class MedicationStatement(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_medicationstatement_001"
+
+    objects = cast(MedicationStatementQuerySet, MedicationStatementManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="medication_statements"

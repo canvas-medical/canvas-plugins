@@ -1,6 +1,14 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    IdentifiableModel,
+)
 
 
 class GoalLifecycleStatus(models.TextChoices):
@@ -38,11 +46,22 @@ class GoalPriority(models.TextChoices):
     LOW = "low-priority", "Low Priority"
 
 
+class GoalQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for goals."""
+
+    pass
+
+
+GoalManager = BaseModelManager.from_queryset(GoalQuerySet)
+
+
 class Goal(AuditedModel, IdentifiableModel):
     """Goal."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_goal_001"
+
+    objects = cast(GoalQuerySet, GoalManager())
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="goals")
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="goals")

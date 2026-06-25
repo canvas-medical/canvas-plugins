@@ -1,6 +1,14 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    IdentifiableModel,
+)
 
 
 class AssessmentStatus(models.TextChoices):
@@ -11,11 +19,22 @@ class AssessmentStatus(models.TextChoices):
     STATUS_DETERIORATING = "deteriorated", "Deteriorated"
 
 
+class AssessmentQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for assessments."""
+
+    pass
+
+
+AssessmentManager = BaseModelManager.from_queryset(AssessmentQuerySet)
+
+
 class Assessment(AuditedModel, IdentifiableModel):
     """Assessment."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_assessment_001"
+
+    objects = cast(AssessmentQuerySet, AssessmentManager())
 
     patient = models.ForeignKey(
         "v1.Patient",

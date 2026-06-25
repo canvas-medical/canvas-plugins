@@ -17,11 +17,22 @@ from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.task import Task
 
 
+class ReferralQuerySet(CommittableQuerySetMixin, BaseQuerySet):
+    """A queryset for referrals."""
+
+    pass
+
+
+ReferralManager = BaseModelManager.from_queryset(ReferralQuerySet)
+
+
 class Referral(AuditedModel, IdentifiableModel):
     """Referral."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referral_001"
+
+    objects = cast(ReferralQuerySet, ReferralManager())
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING)
