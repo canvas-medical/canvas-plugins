@@ -7,6 +7,8 @@ from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
     BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
@@ -186,15 +188,6 @@ class LabValueCoding(TimestampedModel):
     system = models.CharField(max_length=128)
 
 
-class LabOrderQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for lab orders."""
-
-    pass
-
-
-LabOrderManager = BaseModelManager.from_queryset(LabOrderQuerySet)
-
-
 class LabOrder(AuditedModel, IdentifiableModel):
     """A class representing a lab order."""
 
@@ -223,7 +216,7 @@ class LabOrder(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborder_001"
 
-    objects = cast(LabOrderQuerySet, LabOrderManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
@@ -259,15 +252,6 @@ class LabOrder(AuditedModel, IdentifiableModel):
     reports = models.ManyToManyField("v1.LabReport", through="v1.LabTest")
 
 
-class LabOrderReasonQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for lab order reasons."""
-
-    pass
-
-
-LabOrderReasonManager = BaseModelManager.from_queryset(LabOrderReasonQuerySet)
-
-
 class LabOrderReason(AuditedModel):
     """A class representing a lab order reason."""
 
@@ -282,7 +266,7 @@ class LabOrderReason(AuditedModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborderreason_001"
 
-    objects = cast(LabOrderReasonQuerySet, LabOrderReasonManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     order = models.ForeignKey(
         LabOrder, on_delete=models.DO_NOTHING, related_name="reasons", null=True

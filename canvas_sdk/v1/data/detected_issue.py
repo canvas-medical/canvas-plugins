@@ -4,21 +4,11 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
-    BaseQuerySet,
-    CommittableQuerySetMixin,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
 )
 from canvas_sdk.v1.data.coding import Coding
-
-
-class DetectedIssueQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for detected issues."""
-
-    pass
-
-
-DetectedIssueManager = BaseModelManager.from_queryset(DetectedIssueQuerySet)
 
 
 class DetectedIssue(AuditedModel, IdentifiableModel):
@@ -27,7 +17,7 @@ class DetectedIssue(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_detectedissue_001"
 
-    objects = cast(DetectedIssueQuerySet, DetectedIssueManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     class Status(models.TextChoices):
         REGISTERED = "registered", "Registered"

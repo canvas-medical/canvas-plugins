@@ -5,9 +5,8 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
-    BaseQuerySet,
-    CommittableQuerySetMixin,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
 )
 
@@ -23,22 +22,13 @@ class ChartSectionReviewSection(models.TextChoices):
     IMMUNIZATIONS = "immunizations", "Immunizations"
 
 
-class ChartSectionReviewQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for chart section reviews."""
-
-    pass
-
-
-ChartSectionReviewManager = BaseModelManager.from_queryset(ChartSectionReviewQuerySet)
-
-
 class ChartSectionReview(AuditedModel, IdentifiableModel):
     """A reviewed chart section captured on a note, with its pre-rendered content."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_chartsectionreview_001"
 
-    objects = cast(ChartSectionReviewQuerySet, ChartSectionReviewManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="chart_section_reviews"

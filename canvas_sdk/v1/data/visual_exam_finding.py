@@ -4,21 +4,11 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
-    BaseQuerySet,
-    CommittableQuerySetMixin,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
 )
 from canvas_sdk.v1.data.utils import presigned_url
-
-
-class VisualExamFindingQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for visual exam findings."""
-
-    pass
-
-
-VisualExamFindingManager = BaseModelManager.from_queryset(VisualExamFindingQuerySet)
 
 
 class VisualExamFinding(AuditedModel, IdentifiableModel):
@@ -27,7 +17,7 @@ class VisualExamFinding(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_visualexamfinding_001"
 
-    objects = cast(VisualExamFindingQuerySet, VisualExamFindingManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="visual_exam_findings"

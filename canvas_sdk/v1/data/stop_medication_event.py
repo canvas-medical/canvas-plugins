@@ -4,20 +4,10 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
-    BaseQuerySet,
-    CommittableQuerySetMixin,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
 )
-
-
-class StopMedicationEventQuerySet(CommittableQuerySetMixin, BaseQuerySet):
-    """A queryset for stop medication events."""
-
-    pass
-
-
-StopMedicationEventManager = BaseModelManager.from_queryset(StopMedicationEventQuerySet)
 
 
 class StopMedicationEvent(AuditedModel, IdentifiableModel):
@@ -26,7 +16,7 @@ class StopMedicationEvent(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_stopmedicationevent_001"
 
-    objects = cast(StopMedicationEventQuerySet, StopMedicationEventManager())
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="stopped_medications"
