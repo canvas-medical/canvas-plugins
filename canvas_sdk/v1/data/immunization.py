@@ -3,6 +3,7 @@ from typing import Self, cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
@@ -46,7 +47,7 @@ class ImmunizationQuerySet(
 ImmunizationManager = BaseModelManager.from_queryset(ImmunizationQuerySet)
 
 
-class Immunization(IdentifiableModel):
+class Immunization(AuditedModel, IdentifiableModel):
     """Immunization."""
 
     class Meta:
@@ -77,13 +78,6 @@ class Immunization(IdentifiableModel):
     dose_form = models.CharField(max_length=255, blank=True, default="")
     route = models.CharField(max_length=255, blank=True, default="")
     frequency_normalized_per_day = models.FloatField(null=True)
-    deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
 
 
 class ImmunizationCoding(Coding):
@@ -110,7 +104,7 @@ class ImmunizationStatementQuerySet(
 ImmunizationStatementManager = BaseModelManager.from_queryset(ImmunizationStatementQuerySet)
 
 
-class ImmunizationStatement(IdentifiableModel):
+class ImmunizationStatement(AuditedModel, IdentifiableModel):
     """ImmunizationStatement."""
 
     class Meta:
@@ -132,13 +126,6 @@ class ImmunizationStatement(IdentifiableModel):
         max_length=20,
         choices=ImmunizationReasonsNotGiven.choices,
         default=ImmunizationReasonsNotGiven.NA,
-    )
-    deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
 
 
