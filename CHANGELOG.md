@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.175.0 (2026-06-26)
+
+### Features
+
+- Add eligibility checks to the sdk
+  ([#1688](https://github.com/canvas-medical/canvas-plugins/pull/1688),
+  [`bd2e860`](https://github.com/canvas-medical/canvas-plugins/commit/bd2e860e5d26ddc0ef0c504556b016ad39aca796))
+
+
 ## v0.174.0 (2026-06-24)
 
 ### Features
