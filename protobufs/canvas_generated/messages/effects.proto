@@ -476,6 +476,9 @@ enum EffectType {
 
   HTTP_REQUEST = 10000;
 
+  // Agent Runner Framework
+  RUN_AGENT = 11000;
+
   // Data Integration Effects
   LINK_DOCUMENT_TO_PATIENT = 9100;
   CATEGORIZE_DOCUMENT = 9101;

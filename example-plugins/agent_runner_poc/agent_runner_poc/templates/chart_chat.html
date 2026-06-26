@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Chart chat</title>
+    <!-- Vega-Lite renderer for inline ```vega-lite fenced blocks the agent
+         emits. CDN-loaded; if blocked by CSP the chart bubble falls back to
+         showing the spec as text plus an inline error. -->
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f7f8;
+        --bubble-user: #2563eb;
+        --bubble-user-fg: #ffffff;
+        --bubble-assistant: #ffffff;
+        --bubble-assistant-fg: #111827;
+        --border: #e5e7eb;
+        --muted: #6b7280;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 95%; margin: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: #111827;
+        display: flex;
+        flex-direction: column;
+      }
+      #log {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .bubble {
+        max-width: 85%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 14px;
+      }
+      .user {
+        align-self: flex-end;
+        background: var(--bubble-user);
+        color: var(--bubble-user-fg);
+        border-bottom-right-radius: 4px;
+      }
+      .assistant {
+        align-self: flex-start;
+        background: var(--bubble-assistant);
+        color: var(--bubble-assistant-fg);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+      }
+      .meta {
+        font-size: 12px;
+        color: var(--muted);
+        align-self: flex-start;
+        padding: 4px 8px;
+      }
+      #composer {
+        display: flex;
+        gap: 8px;
+        padding: 12px;
+        background: #ffffff;
+        border-top: 1px solid var(--border);
+      }
+      #composer textarea {
+        flex: 1;
+        min-height: 44px;
+        max-height: 160px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        resize: vertical;
+        font: inherit;
+      }
+      #composer textarea:focus {
+        outline: 2px solid var(--bubble-user);
+        outline-offset: -1px;
+        border-color: var(--bubble-user);
+      }
+      #composer button {
+        padding: 0 16px;
+        background: var(--bubble-user);
+        color: var(--bubble-user-fg);
+        border: 0;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #composer button[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .error {
+        color: #b91c1c;
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+      .chart-embed {
+        margin: 8px 0;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      .chart-embed canvas, .chart-embed svg { max-width: 100%; height: auto; }
+      .text-segment { white-space: pre-wrap; }
+      .text-segment + .text-segment { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="log" aria-live="polite"></div>
+    <form id="composer" autocomplete="off">
+      <textarea id="message" name="message" placeholder="Ask about this patient..." aria-label="Message" required></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+    <script>
+      const PATIENT_ID = "{{ patient_id|escapejs }}";
+      const HISTORY_URL = `/plugin-io/api/agent_runner_poc/chart-chat-history?patient=${encodeURIComponent(PATIENT_ID)}`;
+      const MESSAGE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-message';
+      const POLL_INTERVAL_MS = 1500;
+      const POLL_TIMEOUT_MS = 90000;
+
+      const log = document.getElementById('log');
+      const composer = document.getElementById('composer');
+      const messageEl = document.getElementById('message');
+      const sendBtn = document.getElementById('send');
+
+      // Count of assistant turns already rendered. Polling uses this as the
+      // baseline to detect when the agent's reply has landed in Conversation.
+      let assistantCount = 0;
+
+      // Navigation markers the agent embeds in its replies so the chat UI
+      // can drive the parent chart timeline (scroll the user to a note).
+      // Format: [[scroll-to-note:<integer_dbid>]]. Multiple markers are
+      // possible per message; we fire postMessage for each but the parent
+      // typically reacts to the last one (window settles on a final target).
+      const NAV_MARKER_RE = /\[\[scroll-to-note:(\d+)\]\]/g;
+
+      function parseNavMarkers(text) {
+        // Strips markers from displayed text and returns the noteIds.
+        const noteIds = [];
+        const cleanText = text.replace(NAV_MARKER_RE, (_match, idStr) => {
+          const id = parseInt(idStr, 10);
+          if (Number.isFinite(id)) noteIds.push(id);
+          return '';
+        }).replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+        return { cleanText, noteIds };
+      }
+
+      function fireNavigations(noteIds) {
+        // Cross-frame postMessage to the parent home-app window. The chat-
+        // chat Application is iframed; the parent listens for these events
+        // and drives the chart timeline. Using '*' as targetOrigin is fine
+        // for v1; the parent does its own origin check.
+        noteIds.forEach(noteId => {
+          try {
+            window.parent.postMessage({ type: 'canvas.scrollToNote', noteId }, '*');
+          } catch (err) {
+            console.warn('chart-chat: postMessage failed', err);
+          }
+        });
+      }
+
+      // Vega-Lite fenced code block — same delimiter convention as Markdown.
+      // The agent emits ```vega-lite\n<spec json>\n``` in its reply; we
+      // split the message into text + chart segments and render each chart
+      // via vega-embed. JSON inside the fence is preserved as-is (no
+      // escaping needed by the agent).
+      const CHART_FENCE_RE = /```vega-lite\s*\n([\s\S]*?)\n```/g;
+
+      function parseAssistantContent(text) {
+        // Strip nav markers first so noteIds aren't lost when we split on chart fences.
+        const { cleanText, noteIds } = parseNavMarkers(text);
+        const segments = [];
+        let lastIndex = 0;
+        CHART_FENCE_RE.lastIndex = 0;
+        let match;
+        while ((match = CHART_FENCE_RE.exec(cleanText)) !== null) {
+          if (match.index > lastIndex) {
+            const before = cleanText.slice(lastIndex, match.index).trim();
+            if (before) segments.push({ type: 'text', value: before });
+          }
+          try {
+            segments.push({ type: 'chart', spec: JSON.parse(match[1]) });
+          } catch (err) {
+            segments.push({
+              type: 'text',
+              value: '(malformed chart spec: ' + err.message + ')\n' + match[1]
+            });
+          }
+          lastIndex = CHART_FENCE_RE.lastIndex;
+        }
+        if (lastIndex < cleanText.length) {
+          const tail = cleanText.slice(lastIndex).trim();
+          if (tail) segments.push({ type: 'text', value: tail });
+        }
+        if (!segments.length) segments.push({ type: 'text', value: '' });
+        return { segments, noteIds };
+      }
+
+      function renderAssistantBubble(div, text) {
+        // Clear any prior content (e.g. the "…" placeholder) before
+        // appending segment nodes.
+        div.textContent = '';
+        const { segments, noteIds } = parseAssistantContent(text);
+        for (const seg of segments) {
+          if (seg.type === 'text') {
+            const p = document.createElement('div');
+            p.className = 'text-segment';
+            p.textContent = seg.value;
+            div.appendChild(p);
+          } else {
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'chart-embed';
+            div.appendChild(chartDiv);
+            if (window.vegaEmbed) {
+              window.vegaEmbed(chartDiv, seg.spec, { actions: false }).catch(err => {
+                chartDiv.classList.add('error');
+                chartDiv.textContent = 'Failed to render chart: ' + err.message;
+              });
+            } else {
+              chartDiv.classList.add('error');
+              chartDiv.textContent = 'Vega-Lite renderer not loaded (CDN blocked?).';
+            }
+          }
+        }
+        return noteIds;
+      }
+
+      function appendBubble(role, text, opts) {
+        const div = document.createElement('div');
+        div.className = 'bubble ' + role + (opts && opts.error ? ' error' : '');
+        // Assistant bubbles may contain chart fences and nav markers; route
+        // through renderAssistantBubble so they render the same way on
+        // history-replay and on fresh polled replies. Don't FIRE navigations
+        // from here — that's pollForAssistantReply's job, since history
+        // shouldn't auto-scroll the timeline.
+        if (role === 'assistant') {
+          renderAssistantBubble(div, text);
+        } else {
+          div.textContent = text;
+        }
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+        return div;
+      }
+
+      function appendMeta(text) {
+        const div = document.createElement('div');
+        div.className = 'meta';
+        div.textContent = text;
+        log.appendChild(div);
+      }
+
+      async function loadHistory() {
+        try {
+          const res = await fetch(HISTORY_URL, { cache: 'no-store' });
+          if (!res.ok) throw new Error('history fetch failed: ' + res.status);
+          const data = await res.json();
+          const messages = data.messages || [];
+          messages.forEach(m => appendBubble(m.role, m.text));
+          assistantCount = messages.filter(m => m.role === 'assistant').length;
+          if (!messages.length) {
+            appendMeta('Start the conversation. The agent can read this patient’s conditions, recent labs, and medications.');
+          }
+        } catch (err) {
+          appendBubble('assistant', 'Failed to load conversation history: ' + err.message, { error: true });
+        }
+      }
+
+      async function pollForAssistantReply(baseline, placeholder) {
+        // Poll /chart-chat-history at a fixed cadence until the assistant
+        // count grows past the baseline (the agent's save_state wrote the
+        // new turn) or we exceed the wall-clock budget.
+        const deadline = Date.now() + POLL_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+          try {
+            const res = await fetch(HISTORY_URL, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const data = await res.json();
+            const messages = data.messages || [];
+            const assistants = messages.filter(m => m.role === 'assistant');
+            console.debug('chart-chat poll: messages=' + messages.length + ' assistants=' + assistants.length + ' baseline=' + baseline);
+            if (assistants.length > baseline) {
+              const reply = assistants[assistants.length - 1];
+              const noteIds = renderAssistantBubble(placeholder, reply.text || '');
+              if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
+              // Fire navigation directives only for NEW replies, not when
+              // appending history — re-opening a chat shouldn't auto-scroll.
+              if (noteIds.length) fireNavigations(noteIds);
+              assistantCount = assistants.length;
+              return;
+            }
+          } catch (err) {
+            // Transient network blip — keep polling until the deadline.
+          }
+        }
+        placeholder.classList.add('error');
+        placeholder.textContent = 'No response after ' + (POLL_TIMEOUT_MS / 1000) + 's; the agent may have crashed. Check the plugin-runner logs.';
+      }
+
+      async function sendMessage(text) {
+        // Optimistic render: user bubble + "thinking…" placeholder go up
+        // immediately so the UI feels responsive. The placeholder gets
+        // replaced with the agent's reply once polling sees the new turn.
+        appendBubble('user', text);
+        const placeholder = appendBubble('assistant', '…');
+        const baseline = assistantCount;
+        sendBtn.disabled = true;
+        try {
+          const res = await fetch(MESSAGE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_id: PATIENT_ID, message: text }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            placeholder.classList.add('error');
+            placeholder.textContent = data.error || ('Request failed: ' + res.status);
+            return;
+          }
+          await pollForAssistantReply(baseline, placeholder);
+        } catch (err) {
+          placeholder.classList.add('error');
+          placeholder.textContent = 'Request failed: ' + err.message;
+        } finally {
+          sendBtn.disabled = false;
+          messageEl.focus();
+        }
+      }
+
+      composer.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = messageEl.value.trim();
+        if (!text) return;
+        messageEl.value = '';
+        sendMessage(text);
+      });
+
+      messageEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          composer.requestSubmit();
+        }
+      });
+
+      loadHistory();
+    </script>
+  </body>
+</html>
