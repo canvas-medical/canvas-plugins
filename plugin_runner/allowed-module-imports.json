@@ -827,12 +827,14 @@
   "canvas_sdk.effects.surescripts": [
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
-    "SendSurescriptsMedicationHistoryRequestEffect"
+    "SendSurescriptsMedicationHistoryRequestEffect",
+    "SurescriptsBenefitsCoordinationOverride"
   ],
   "canvas_sdk.effects.surescripts.surescripts_messages": [
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
-    "SendSurescriptsMedicationHistoryRequestEffect"
+    "SendSurescriptsMedicationHistoryRequestEffect",
+    "SurescriptsBenefitsCoordinationOverride"
   ],
   "canvas_sdk.effects.task": [
     "AddTask",
