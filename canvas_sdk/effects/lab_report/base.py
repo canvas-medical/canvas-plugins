@@ -1,4 +1,4 @@
-"""Fluent ``LabReport`` SDK effect: create / update / enter-in-error.
+"""Fluent ``LabReport`` SDK effect: create / update / enter-in-error / attach-results.
 
 A report is identified by a plugin-supplied ``external_id`` handle (stable
 across the asynchronous OCR lifecycle — create the report now, attach
@@ -6,45 +6,37 @@ values days later) or, once known, the Canvas ``report_id`` (the report's
 externally-exposable id, recoverable via the ``LAB_REPORT_CREATED`` event
 or a ``LabReport`` data query).
 
-Mirrors the shipped ``Observation`` CRUD effect. Results are attached via
-the separate :class:`~canvas_sdk.effects.lab_report.attach_results.LabReportAttachResults`
-effect.
+Mirrors the shipped ``Observation`` CRUD effect.
 """
 
 import datetime
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
-from canvas_sdk.v1.data.lab import LabReport as LabReportModel
 
-_HANDLE_FIELDS = ("report_id", "external_id")
+if TYPE_CHECKING:
+    from canvas_sdk.effects.lab_report.attach_results import LabValue
+
 _MUTABLE_FIELDS = ("report_name", "date_performed")
 
 
 class LabReport(TrackableFieldsModel):
-    """Effect to create, update, or enter-in-error a ``LabReport``."""
+    """Effect to create, update, enter-in-error, or attach results to a ``LabReport``."""
 
     class Meta:
         effect_type = "LAB_REPORT"
 
-    report_id: str | UUID | None = None  # Canvas externally-exposable id (update/EIE)
-    external_id: str | None = None  # plugin-supplied handle
+    report_id: UUID | None = Field(default=None, strict=False)  # Canvas externally-exposable id
+    external_id: Annotated[str, Field(max_length=40)] | None = None  # plugin-supplied handle
     patient_id: str | None = None
     report_name: str | None = None  # maps to LabReport.custom_document_name
     date_performed: datetime.datetime | None = None
-
-    def _report_exists(self) -> bool:
-        """Return True if a report matches the supplied handle."""
-        if self.report_id:
-            return LabReportModel.objects.filter(id=self.report_id).exists()
-        if self.external_id:
-            return LabReportModel.objects.filter(external_id=self.external_id).exists()
-        return False
 
     def _handle_payload(self) -> dict[str, str]:
         """Serialize just the handle (used by enter_in_error)."""
@@ -83,23 +75,14 @@ class LabReport(TrackableFieldsModel):
                     )
                 )
 
-        if method in ("update", "enter_in_error"):
-            if not (self.report_id or self.external_id):
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "report_id or external_id is required to reference a lab report.",
-                        None,
-                    )
+        if method in ("update", "enter_in_error") and not (self.report_id or self.external_id):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "report_id or external_id is required to reference a lab report.",
+                    None,
                 )
-            elif not self._report_exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"LabReport not found for {self.report_id or self.external_id}.",
-                        self.report_id or self.external_id,
-                    )
-                )
+            )
 
         if method == "update" and all(getattr(self, f) is None for f in _MUTABLE_FIELDS):
             errors.append(
@@ -110,18 +93,6 @@ class LabReport(TrackableFieldsModel):
                     None,
                 )
             )
-
-        if method == "enter_in_error":
-            other_fields = sorted(k for k in self.values if k not in _HANDLE_FIELDS)
-            if other_fields:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Only a report handle is allowed when entering a lab report in "
-                        f"error. Got: {other_fields}",
-                        other_fields,
-                    )
-                )
 
         return errors
 
@@ -144,14 +115,27 @@ class LabReport(TrackableFieldsModel):
     def enter_in_error(self) -> Effect:
         """Mark the report as entered-in-error.
 
-        Only a handle (``report_id`` or ``external_id``) is honored; any
-        other field raises a validation error if set.
+        Only the report handle (``report_id`` or ``external_id``) is sent;
+        any other field on the instance is ignored.
         """
         self._validate_before_effect("enter_in_error")
         return Effect(
             type=f"ENTER_IN_ERROR_{self.Meta.effect_type}",
             payload=json.dumps({"data": self._handle_payload()}),
         )
+
+    def attach_results(self, lab_values: list["LabValue"]) -> Effect:
+        """Additively attach lab tests/values to this report.
+
+        Uses this instance's handle (``report_id`` or ``external_id``).
+        """
+        from canvas_sdk.effects.lab_report.attach_results import _LabReportAttachResults
+
+        return _LabReportAttachResults(
+            report_id=self.report_id,
+            external_id=self.external_id or "",
+            lab_values=lab_values,
+        ).apply()
 
 
 __exports__ = ("LabReport",)

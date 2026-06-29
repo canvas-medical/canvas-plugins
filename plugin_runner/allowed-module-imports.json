@@ -631,12 +631,12 @@
   ],
   "canvas_sdk.effects.lab_report": [
     "LabReport",
-    "LabReportAttachResults",
-    "LabValue"
+    "LabValue",
+    "ObservationStatus"
   ],
   "canvas_sdk.effects.lab_report.attach_results": [
-    "LabReportAttachResults",
-    "LabValue"
+    "LabValue",
+    "ObservationStatus"
   ],
   "canvas_sdk.effects.lab_report.base": [
     "LabReport"
