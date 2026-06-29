@@ -1,16 +1,31 @@
-"""``LabReportAttachResults`` effect: attach tests/values to a report.
+"""Attach lab tests/values to an existing lab report.
 
-Additive — appends lab tests/values to an existing report (the async-OCR
-case where the report is created first and values arrive later). Mirrors
-the nested-children shape of the Health Gorilla lab ingest effect.
+The effect itself is private — plugin authors use the fluent
+``LabReport(report_id=...).attach_results([...])`` method
+(:mod:`canvas_sdk.effects.lab_report.base`). Attaching is additive: it
+appends tests/values to the report without removing existing ones.
 """
 
-from typing import Any
+from enum import StrEnum
+from typing import Annotated, Any, Self
+from uuid import UUID
 
-from pydantic import BaseModel
-from pydantic_core import InitErrorDetails
+from pydantic import BaseModel, Field, model_validator
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+
+class ObservationStatus(StrEnum):
+    """FHIR observation status for a lab value."""
+
+    AMENDED = "amended"
+    CANCELLED = "cancelled"
+    CORRECTED = "corrected"
+    ENTERED_IN_ERROR = "entered-in-error"
+    FINAL = "final"
+    PRELIMINARY = "preliminary"
+    REGISTERED = "registered"
+    UNKNOWN = "unknown"
 
 
 class LabValue(BaseModel):
@@ -22,62 +37,46 @@ class LabValue(BaseModel):
     units: str = ""
     reference_range: str = ""
     abnormal_flag: str = ""
-    observation_status: str = "final"
+    observation_status: ObservationStatus = ObservationStatus.FINAL
     comment: str = ""
 
     @property
     def values(self) -> dict[str, Any]:
         """Serialize the value into the proto payload dict."""
-        return self.model_dump()
+        return self.model_dump(mode="json")
 
 
-class LabReportAttachResults(_BaseEffect):
+class _LabReportAttachResults(_BaseEffect):
     """Attach lab tests/values to an existing report, identified by handle.
 
-    Exactly one of ``report_id`` (Canvas externally-exposable id) or
-    ``external_id`` (the plugin's handle) must be supplied.
+    Private — constructed by ``LabReport.attach_results``. Exactly one of
+    ``report_id`` (Canvas externally-exposable id) or ``external_id`` (the
+    plugin's handle) must be supplied.
     """
 
     class Meta:
         effect_type = EffectType.ATTACH_LAB_REPORT_RESULTS
 
-    report_id: str = ""
-    external_id: str = ""
-    lab_values: list[LabValue]
+    report_id: UUID | None = Field(default=None, strict=False)
+    external_id: Annotated[str, Field(max_length=40)] = ""
+    lab_values: list[LabValue] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _exactly_one_handle(self) -> Self:
+        """Require exactly one of report_id / external_id."""
+        handles = [handle for handle in (self.report_id, self.external_id) if handle]
+        if len(handles) != 1:
+            raise ValueError("Exactly one of report_id or external_id is required.")
+        return self
 
     @property
     def values(self) -> dict[str, Any]:
         """Serialize the effect's fields into the proto payload dict."""
         return {
-            "report_id": self.report_id,
+            "report_id": str(self.report_id) if self.report_id else "",
             "external_id": self.external_id,
             "lab_values": [value.values for value in self.lab_values],
         }
 
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        """Require exactly one handle and at least one value."""
-        errors = super()._get_error_details(method)
 
-        if method == "apply":
-            handles = [handle for handle in (self.report_id, self.external_id) if handle]
-            if len(handles) != 1:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Exactly one of report_id or external_id is required.",
-                        handles,
-                    )
-                )
-            if not self.lab_values:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "At least one lab value is required to attach results.",
-                        self.lab_values,
-                    )
-                )
-
-        return errors
-
-
-__exports__ = ("LabReportAttachResults", "LabValue")
+__exports__ = ("LabValue", "ObservationStatus")
