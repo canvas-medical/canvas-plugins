@@ -41,7 +41,7 @@ The plugin dynamically constructs Pay Theory URLs based on the `paytheory_partne
 
 ## Testing
 
-In the sandbox environment, use these amounts (in dollars) to trigger specific failure scenarios:
+In the sandbox environment, use these amounts (in dollars) to trigger specific failure scenarios (see Pay Theory's [testing reference](https://docs.paytheory.com/docs/main/testing) for the full, authoritative list):
 
 | Amount | Error |
 |---|---|
