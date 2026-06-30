@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.176.0 (2026-06-30)
+
+### Features
+
+- Support committed() on all committable command models
+  ([#1776](https://github.com/canvas-medical/canvas-plugins/pull/1776),
+  [`affe606`](https://github.com/canvas-medical/canvas-plugins/commit/affe60660c05890860de44ac98426a147982cc73))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.175.0 (2026-06-26)
 
 ### Features
