@@ -23,6 +23,11 @@ from paytheory_payment_processor.paytheory.environment import (
 )
 from paytheory_payment_processor.paytheory.exceptions import TransactionError
 
+# Statuses PayTheory may return for a charge that should be treated as successful.
+# Settlement happens asynchronously, so PENDING/SETTLED are successes for booking
+# purposes; SUCCESS and SUCCEEDED are both observed depending on the flow.
+SUCCESS_STATUSES = frozenset({"SUCCESS", "SUCCEEDED", "PENDING", "SETTLED"})
+
 
 class PayTheoryPaymentProcessor(CardPaymentProcessor):
     """Custom payment processor for handling credit card payments with PayTheory."""
@@ -102,9 +107,11 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
                 TransactionInput(payment_method_id=token, amount=amount)
             )
 
-            status = transaction["status"]
-            success = status in ["PENDING", "SUCCEEDED"]
-            error_code = transaction.get("failure_reasons", [])[0] if not success else None
+            status = (transaction.get("status") or "").upper()
+            success = status in SUCCESS_STATUSES
+            # failure_reasons may be absent or an empty list; never index blindly.
+            reasons = transaction.get("failure_reasons") or []
+            error_code = (reasons[0] if reasons else status or "declined") if not success else None
 
             return CardTransaction(
                 success=success,
@@ -129,19 +136,33 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
 
         payment_methods = self.api.get_payment_methods(payor_id=payor_id)
 
-        return [
-            PaymentMethod(
-                payment_method_id=method["payment_method_id"],
-                card_holder_name=method["full_name"],
-                brand=method["card_brand"],
-                postal_code=method["postal_code"],
-                country=method["country"],
-                expiration_month=int(method["exp_date"][:2]),
-                expiration_year=int(f"20{method['exp_date'][-2:]}"),
-                card_last_four_digits=method["last_four"],
-            )
-            for method in payment_methods
-        ]
+        return [self._to_payment_method(method) for method in payment_methods]
+
+    @staticmethod
+    def _to_payment_method(method: dict) -> PaymentMethod:
+        """Map a PayTheory payment method to Canvas's PaymentMethod effect.
+
+        Canvas's GraphQL schema treats these card fields as non-nullable, so we
+        coerce every value to a string (or 0) — a None would make the Collect
+        Payment modal error with "Cannot return null for ... postalCode".
+        """
+        exp_date = method.get("exp_date") or ""
+        try:
+            expiration_month = int(exp_date[:2]) if len(exp_date) >= 2 else 0
+            expiration_year = int(f"20{exp_date[-2:]}") if len(exp_date) >= 2 else 0
+        except ValueError:
+            expiration_month = expiration_year = 0
+
+        return PaymentMethod(
+            payment_method_id=method.get("payment_method_id") or "",
+            card_holder_name=method.get("full_name") or "",
+            brand=method.get("card_brand") or "Card",
+            postal_code=method.get("postal_code") or "",
+            country=method.get("country") or "US",
+            expiration_month=expiration_month,
+            expiration_year=expiration_year,
+            card_last_four_digits=method.get("last_four") or "",
+        )
 
     def add_payment_method(
         self, token: str, patient: Patient, **kwargs: Any

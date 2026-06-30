@@ -5,7 +5,11 @@ ENVIRONMENT_DOMAINS = {
 }
 
 DEFAULT_ENVIRONMENT = "production"
-DEFAULT_PARTNER = "start"
+# Canvas's PayTheory integration is provisioned under the "canvas" partner prefix;
+# URLs resolve to https://canvas.sdk.<domain> / https://api.canvas.<domain>. The
+# generic "start" prefix does not resolve for Canvas merchants. Override via the
+# "paytheory_partner" secret only if your merchant is provisioned elsewhere.
+DEFAULT_PARTNER = "canvas"
 
 
 def get_domain(environment: str) -> str:

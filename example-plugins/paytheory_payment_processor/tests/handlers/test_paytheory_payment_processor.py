@@ -79,7 +79,7 @@ class TestInit:
             }
             instance.__init__()
 
-            assert instance.sdk_url == "https://start.sdk.paytheory.com/index.js"
+            assert instance.sdk_url == "https://canvas.sdk.paytheory.com/index.js"
 
 
 class TestPaymentForm:
@@ -185,6 +185,40 @@ class TestCharge:
         assert result.success is True
         assert result.transaction_id == "txn-2"
 
+    def test_success_status_success(self, processor):
+        processor.api.create_transaction.return_value = {
+            "status": "SUCCESS",
+            "transaction_id": "txn-s",
+            "failure_reasons": [],
+        }
+
+        result = processor.charge(Decimal("5.00"), "pm-token")
+
+        assert result.success is True
+        assert result.error_code is None
+
+    def test_success_status_settled(self, processor):
+        processor.api.create_transaction.return_value = {
+            "status": "SETTLED",
+            "transaction_id": "txn-st",
+            "failure_reasons": [],
+        }
+
+        result = processor.charge(Decimal("5.00"), "pm-token")
+
+        assert result.success is True
+
+    def test_success_status_is_case_insensitive(self, processor):
+        processor.api.create_transaction.return_value = {
+            "status": "succeeded",
+            "transaction_id": "txn-lc",
+            "failure_reasons": [],
+        }
+
+        result = processor.charge(Decimal("5.00"), "pm-token")
+
+        assert result.success is True
+
     def test_failure_status(self, processor):
         processor.api.create_transaction.return_value = {
             "status": "FAILED",
@@ -196,6 +230,31 @@ class TestCharge:
 
         assert result.success is False
         assert result.error_code == "INSUFFICIENT_FUNDS"
+
+    def test_failure_with_empty_reasons_falls_back_to_status(self, processor):
+        # An empty failure_reasons list must not raise IndexError.
+        processor.api.create_transaction.return_value = {
+            "status": "DECLINED",
+            "transaction_id": "txn-4",
+            "failure_reasons": [],
+        }
+
+        result = processor.charge(Decimal("1.93"), "pm-token")
+
+        assert result.success is False
+        assert result.error_code == "DECLINED"
+
+    def test_failure_with_missing_reasons_key(self, processor):
+        # No failure_reasons key at all must not raise either.
+        processor.api.create_transaction.return_value = {
+            "status": "DECLINED",
+            "transaction_id": "txn-5",
+        }
+
+        result = processor.charge(Decimal("1.93"), "pm-token")
+
+        assert result.success is False
+        assert result.error_code == "DECLINED"
 
     def test_transaction_error(self, processor):
         processor.api.create_transaction.side_effect = TransactionError(
@@ -239,6 +298,35 @@ class TestPaymentMethods:
         assert result[0].expiration_month == 12
         assert result[0].expiration_year == 2025
         assert result[0].card_last_four_digits == "4242"
+
+    def test_coerces_null_fields_to_empty_strings(self, processor, mock_patient):
+        # Canvas's schema is non-nullable for these fields; None would error the
+        # Collect Payment modal, so they must come back as "" / 0 defaults.
+        processor.api.get_payor_id.return_value = "payor-123"
+        processor.api.get_payment_methods.return_value = [
+            {
+                "payment_method_id": "pm-1",
+                "full_name": None,
+                "card_brand": None,
+                "postal_code": None,
+                "country": None,
+                "exp_date": None,
+                "last_four": None,
+                "is_active": True,
+            }
+        ]
+
+        result = processor.payment_methods(mock_patient)
+
+        assert len(result) == 1
+        method = result[0]
+        assert method.card_holder_name == ""
+        assert method.brand == "Card"
+        assert method.postal_code == ""
+        assert method.country == "US"
+        assert method.expiration_month == 0
+        assert method.expiration_year == 0
+        assert method.card_last_four_digits == ""
 
 
 class TestAddPaymentMethod:

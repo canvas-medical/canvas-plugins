@@ -1,8 +1,9 @@
 import json
 from decimal import Decimal
-from typing import NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 import requests
+from requests import RequestException
 
 from logger import log
 from paytheory_payment_processor.paytheory.exceptions import TransactionError
@@ -10,6 +11,9 @@ from paytheory_payment_processor.paytheory.exceptions import TransactionError
 from paytheory_payment_processor.paytheory.environment import DEFAULT_ENVIRONMENT, DEFAULT_PARTNER, get_api_url
 
 PAYTHEORY_GRAPHQL_URL = get_api_url(DEFAULT_PARTNER, DEFAULT_ENVIRONMENT)
+
+# Network calls to PayTheory must never hang a worker indefinitely.
+REQUEST_TIMEOUT_SECONDS = 20
 
 
 class PayorInput(TypedDict):
@@ -98,6 +102,33 @@ class PayTheoryAPI:
             "Content-Type": "application/json",
         }
 
+    def _post(self, payload: dict) -> tuple[Any, dict]:
+        """POST a GraphQL payload, returning ``(response, parsed_json)``.
+
+        Applies a request timeout so a hung endpoint can't block the worker, and
+        tolerates non-JSON bodies (e.g. a 502 HTML page) by returning ``{}`` rather
+        than raising. Transport failures (connection reset, timeout, DNS) are
+        surfaced as ``TransactionError`` so callers can handle them like any other
+        PayTheory failure instead of leaking a raw ``requests`` exception.
+        """
+        try:
+            response = requests.post(
+                self.endpoint,
+                json=payload,
+                headers=self._headers,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except RequestException as ex:
+            log.error(f"PayTheory API: transport error posting to {self.endpoint}: {ex}")
+            raise TransactionError(api_response={"error": str(ex)}) from ex
+
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+
+        return response, data
+
     def create_payor(self, input_data: PayorInput) -> str:
         """Create a payor in PayTheory using the provided input data."""
         query = """
@@ -128,14 +159,14 @@ class PayTheoryAPI:
         }
 
         log.info(f"PayTheory API: creating payor at {self.endpoint}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
+        response, data = self._post(payload)
         log.info(f"PayTheory API: create_payor response status={response.status_code}")
 
-        if response.status_code != 200 or "errors" in response.json():
+        if response.status_code != 200 or "errors" in data:
             log.error(f"PayTheory API: create_payor error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
-        payor_id = response.json().get("data", {}).get("createPayor", {}).get("payor_id")
+        payor_id = data.get("data", {}).get("createPayor", {}).get("payor_id")
         log.info(f"PayTheory API: created payor_id={payor_id}")
 
         return payor_id
@@ -164,8 +195,7 @@ class PayTheoryAPI:
         payload = {"query": query, "variables": {"limit": 1}}
 
         log.info(f"PayTheory API: looking up guest payor at {self.endpoint}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: get_guest_payor response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
@@ -208,8 +238,7 @@ class PayTheoryAPI:
         payload = {"query": query, "variables": {"limit": 1}}
 
         log.info(f"PayTheory API: looking up payor for patient_id={patient_id} at {self.endpoint}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: get_payor_id response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
@@ -279,8 +308,7 @@ class PayTheoryAPI:
         payload = {"query": query, "variables": variables}
 
         log.info(f"PayTheory API: fetching payment methods for payor_id={payor_id}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: get_payment_methods response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
@@ -351,8 +379,7 @@ class PayTheoryAPI:
         payload = {"query": query, "variables": variables}
 
         log.info(f"PayTheory API: fetching payment method {payment_method_id} for payor_id={payor_id}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: get_payment_method response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
@@ -373,12 +400,16 @@ class PayTheoryAPI:
         if "metadata" in input_data and isinstance(input_data["metadata"], dict):
             input_data["metadata"] = json.dumps(input_data["metadata"])
 
+        # NOTE: PayTheory types `metadata` as the AWSJSON scalar (a JSON-encoded
+        # string), NOT String. Declaring it String triggers a VariableTypeMismatch
+        # and the transaction is rejected before the card is ever evaluated.
         query = """
-        mutation CreateTransaction($amount: Int!, $payment_method_id: String!, $merchant_uid: String!) {
+        mutation CreateTransaction($amount: Int!, $payment_method_id: String!, $merchant_uid: String!, $metadata: AWSJSON) {
           createTransaction(
             amount: $amount,
             payment_method_id: $payment_method_id,
-            merchant_uid: $merchant_uid
+            merchant_uid: $merchant_uid,
+            metadata: $metadata
           ) {
             account_code
             currency
@@ -424,12 +455,13 @@ class PayTheoryAPI:
                 "amount": amount_cents,
                 "payment_method_id": input_data["payment_method_id"],
                 "merchant_uid": self.merchant_id,
+                # Already serialized to a JSON string above if it was a dict.
+                "metadata": input_data.get("metadata"),
             },
         }
 
         log.info(f"PayTheory API: creating transaction amount={amount_cents} payment_method_id={input_data['payment_method_id']}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: create_transaction response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
@@ -455,8 +487,7 @@ class PayTheoryAPI:
         }
 
         log.info(f"PayTheory API: disabling payment method {payment_method_id}")
-        response = requests.post(self.endpoint, json=payload, headers=self._headers)
-        data = response.json()
+        response, data = self._post(payload)
         log.info(f"PayTheory API: disable_payment_method response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:

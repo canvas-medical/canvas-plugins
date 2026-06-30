@@ -15,7 +15,7 @@ class TestDefaults:
         assert DEFAULT_ENVIRONMENT == "production"
 
     def test_default_partner(self):
-        assert DEFAULT_PARTNER == "start"
+        assert DEFAULT_PARTNER == "canvas"
 
     def test_environment_domains(self):
         assert ENVIRONMENT_DOMAINS == {

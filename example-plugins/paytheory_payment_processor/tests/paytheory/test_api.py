@@ -2,8 +2,14 @@ from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from requests import RequestException
 
-from paytheory_payment_processor.paytheory.api import PayTheoryAPI, PayorInput, TransactionInput
+from paytheory_payment_processor.paytheory.api import (
+    REQUEST_TIMEOUT_SECONDS,
+    PayTheoryAPI,
+    PayorInput,
+    TransactionInput,
+)
 from paytheory_payment_processor.paytheory.exceptions import TransactionError
 
 API_KEY = "test-api-key"
@@ -28,6 +34,38 @@ class TestInit:
             "Authorization": f"{MERCHANT_ID};{API_KEY}",
             "Content-Type": "application/json",
         }
+
+
+class TestPost:
+    @patch("paytheory_payment_processor.paytheory.api.requests")
+    def test_passes_timeout(self, mock_requests, api):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": {"createPayor": {"payor_id": "p-1"}}}
+        mock_requests.post.return_value = mock_response
+
+        api.create_payor(PayorInput(full_name="Test"))
+
+        assert mock_requests.post.call_args.kwargs["timeout"] == REQUEST_TIMEOUT_SECONDS
+
+    @patch("paytheory_payment_processor.paytheory.api.requests")
+    def test_transport_error_raises_transaction_error(self, mock_requests, api):
+        mock_requests.post.side_effect = RequestException("connection reset")
+
+        with pytest.raises(TransactionError):
+            api.create_payor(PayorInput(full_name="Test"))
+
+    @patch("paytheory_payment_processor.paytheory.api.requests")
+    def test_non_json_body_tolerated(self, mock_requests, api):
+        # A 502 returning an HTML body must not blow up on response.json().
+        mock_response = MagicMock()
+        mock_response.status_code = 502
+        mock_response.json.side_effect = ValueError("no json")
+        mock_response.text = "<html>Bad Gateway</html>"
+        mock_requests.post.return_value = mock_response
+
+        with pytest.raises(Exception, match="GraphQL error"):
+            api.create_payor(PayorInput(full_name="Test"))
 
 
 class TestCreatePayor:
@@ -401,6 +439,24 @@ class TestCreateTransaction:
         )
 
         assert mock_requests.post.call_count == 1
+        # metadata must be sent as a JSON-encoded string (AWSJSON scalar).
+        posted_json = mock_requests.post.call_args.kwargs["json"]
+        assert posted_json["variables"]["metadata"] == '{"order": "123"}'
+        assert "$metadata: AWSJSON" in posted_json["query"]
+
+    @patch("paytheory_payment_processor.paytheory.api.requests")
+    def test_omits_metadata_when_not_provided(self, mock_requests, api):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {"createTransaction": {"transaction_id": "t", "status": "PENDING"}}
+        }
+        mock_requests.post.return_value = mock_response
+
+        api.create_transaction(TransactionInput(amount=Decimal("1.00"), payment_method_id="pm-1"))
+
+        posted_json = mock_requests.post.call_args.kwargs["json"]
+        assert posted_json["variables"]["metadata"] is None
 
 
 class TestDisablePaymentMethod:
