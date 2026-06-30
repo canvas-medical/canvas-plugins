@@ -6,6 +6,8 @@ from django.db import models
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     TimestampedModel,
     ValueSetLookupQuerySetMixin,
@@ -31,6 +33,8 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingorder_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
@@ -74,6 +78,8 @@ class ImagingReview(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreview_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30

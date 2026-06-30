@@ -555,6 +555,9 @@ class CommittableQuerySet(CommittableQuerySetMixin, BaseQuerySet):
     pass
 
 
+CommittableModelManager = BaseModelManager.from_queryset(CommittableQuerySet)
+
+
 class ValueSetLookupQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """A class that includes methods for looking up value sets."""
 

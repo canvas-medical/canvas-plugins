@@ -7,6 +7,8 @@ from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
     BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
@@ -214,6 +216,8 @@ class LabOrder(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborder_001"
 
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
     )
@@ -261,6 +265,8 @@ class LabOrderReason(AuditedModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_laborderreason_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     order = models.ForeignKey(
         LabOrder, on_delete=models.DO_NOTHING, related_name="reasons", null=True
