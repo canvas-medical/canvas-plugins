@@ -167,6 +167,7 @@ from .patient_consent import (
     PatientConsentRejectionCoding,
 )
 from .patient_group import PatientGroup, PatientGroupMember
+from .payment_card import PaymentCard
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
@@ -422,6 +423,7 @@ __all__ = __exports__ = (
     "PatientGroup",
     "PatientGroupMember",
     "PayorSpecificCharge",
+    "PaymentCard",
     "PaymentCollection",
     "Plan",
     "PluginCommand",

@@ -89,6 +89,7 @@ from .patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .payment_card import PaymentCardFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
@@ -227,6 +228,7 @@ __all__ = (
     "PatientFactory",
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
+    "PaymentCardFactory",
     "PatientPhotoFactory",
     "PlanFactory",
     "PluginCommandFactory",
