@@ -758,6 +758,7 @@
     "PatientProfileConfiguration"
   ],
   "canvas_sdk.effects.payment": [
+    "ChargeStoredCard",
     "ClaimAllocation",
     "LineItemTransaction",
     "PaymentMethod",
@@ -770,6 +771,9 @@
   ],
   "canvas_sdk.effects.payment.post_claim_payment": [
     "PostClaimPayment"
+  ],
+  "canvas_sdk.effects.payment.stored_card_charge": [
+    "ChargeStoredCard"
   ],
   "canvas_sdk.effects.payment_processor": [
     "AddPaymentMethodResponse",
@@ -1210,6 +1214,7 @@
     "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
+    "PaymentCard",
     "PaymentCollection",
     "PayorSpecificCharge",
     "PluginCommand",
@@ -1582,6 +1587,9 @@
   "canvas_sdk.v1.data.patient_group": [
     "PatientGroup",
     "PatientGroupMember"
+  ],
+  "canvas_sdk.v1.data.payment_card": [
+    "PaymentCard"
   ],
   "canvas_sdk.v1.data.payment_collection": [
     "PaymentCollection",
