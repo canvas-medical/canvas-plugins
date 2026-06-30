@@ -58,6 +58,26 @@
       return ERROR_MESSAGES[prefix] || DEFAULT_ERROR_MESSAGE;
     }
 
+    // PayTheory's errorObserver fires for many NON-fatal conditions during normal
+    // interaction: live field validation while the user types ("Invalid card exp",
+    // "Invalid card security code", "Invalid postal code"), transient connection
+    // states, and "Hosted Field not found" during mount. None of these should reach
+    // the Canvas shell as a payment error. We therefore allowlist only genuinely
+    // terminal errors — chiefly SOCKET_ERROR (an issuer decline that fires
+    // asynchronously OUTSIDE the tokenizePaymentMethod() promise and would otherwise
+    // leave the user no feedback) and an expired session. Everything else is
+    // log-only; the stateObserver paints field borders and the submit/tokenize path
+    // surfaces real charge failures.
+    var TERMINAL_ERROR_PREFIXES = {
+      SOCKET_ERROR: true,
+      SESSION_EXPIRED: true
+    };
+
+    function isTerminalError(rawError) {
+      var prefix = (rawError || '').split(':')[0].trim();
+      return !!TERMINAL_ERROR_PREFIXES[prefix];
+    }
+
     function showError(rawError) {
       if (rawError) {
         console.error('PayTheory error:', rawError);
@@ -83,7 +103,15 @@
       })
 
       cleanUpError = paytheory.errorObserver(error => {
-        showError(error);
+        // Only genuinely terminal errors (issuer decline, expired session) reach the
+        // Canvas shell. Field validation, mount, and connection noise is log-only —
+        // the stateObserver paints field borders and the submit path surfaces real
+        // tokenization failures.
+        if (isTerminalError(error)) {
+          showError(error);
+        } else if (error) {
+          console.warn('PayTheory (non-fatal):', error);
+        }
       });
 
       cleanUpState = paytheory.stateObserver(state => {
