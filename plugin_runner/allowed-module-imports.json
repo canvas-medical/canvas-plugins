@@ -1165,6 +1165,9 @@
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
@@ -1509,7 +1512,10 @@
   "canvas_sdk.v1.data.letter": [
     "Language",
     "Letter",
-    "LetterActionEvent"
+    "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
