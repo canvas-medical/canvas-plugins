@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "1.0.0",
+    "plugin_version": "1.0.1",
     "name": "recurring_appointments",
     "description": "Adds configurable recurring appointment functionality with customizable intervals, recurrence types (days/weeks/months), and flexible end conditions that automatically creates follow-up appointments",
     "components": {
