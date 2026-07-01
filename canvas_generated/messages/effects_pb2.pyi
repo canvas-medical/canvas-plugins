@@ -767,7 +767,7 @@ JUNK_DOCUMENT: EffectType
 REMOVE_DOCUMENT_FROM_PATIENT: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
+    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source", "id")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -775,6 +775,7 @@ class Effect(_message.Message):
     HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
     ACTOR_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
@@ -782,4 +783,5 @@ class Effect(_message.Message):
     handler_name: str
     actor: str
     source: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
+    id: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ..., id: _Optional[str] = ...) -> None: ...
