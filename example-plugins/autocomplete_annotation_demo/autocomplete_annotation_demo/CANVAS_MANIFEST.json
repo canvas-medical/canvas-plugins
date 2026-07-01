@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1a",
+    "name": "autocomplete_annotation_demo",
+    "description": "Annotate every Diagnose and Assess Condition search result so the autocomplete annotation chips always render.",
+    "components": {
+        "handlers": [
+            {
+                "class": "autocomplete_annotation_demo.handlers.annotate_search_results:Handler",
+                "description": "Attach demo annotations to Diagnose and Assess Condition search results.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

@@ -1,0 +1,11 @@
+pyproject.toml
+autocomplete_annotation_demo/README.md
+autocomplete_annotation_demo/__init__.py
+autocomplete_annotation_demo.egg-info/PKG-INFO
+autocomplete_annotation_demo.egg-info/SOURCES.txt
+autocomplete_annotation_demo.egg-info/dependency_links.txt
+autocomplete_annotation_demo.egg-info/requires.txt
+autocomplete_annotation_demo.egg-info/top_level.txt
+autocomplete_annotation_demo/handlers/__init__.py
+autocomplete_annotation_demo/handlers/annotate_search_results.py
+tests/test_annotate_search_results.py
