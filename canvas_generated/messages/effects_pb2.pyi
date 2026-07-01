@@ -285,6 +285,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
+    REDIRECT: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
@@ -664,6 +665,7 @@ UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
+REDIRECT: EffectType
 SIMPLE_API_RESPONSE: EffectType
 SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
 SIMPLE_API_WEBSOCKET_DENY: EffectType
