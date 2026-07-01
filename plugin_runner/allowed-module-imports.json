@@ -1213,6 +1213,7 @@
     "PaymentCollection",
     "PayorSpecificCharge",
     "PluginCommand",
+    "PluginData",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
