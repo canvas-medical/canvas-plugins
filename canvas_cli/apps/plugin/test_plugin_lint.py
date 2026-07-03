@@ -171,6 +171,117 @@ def test_clean_plugin_no_findings() -> None:
     assert lint_plugin(root, _CUSTOM_DATA) == []
 
 
+# ── lint-logic: file traversal & edge cases ───────────────────────────────────
+
+
+def test_non_directory_root_yields_no_findings() -> None:
+    """A plugin path that isn't a directory traverses to nothing (not an error)."""
+    assert lint_plugin(Path("/no/such/plugin/dir"), {}) == []
+
+
+def test_files_under_skipped_dirs_are_ignored() -> None:
+    """Source under a SKIP_DIRS directory (e.g. `tests/`) is never linted."""
+    root = _plugin({"tests/h.py": "setattr(obj, 'x', 1)\n"})
+    assert lint_plugin(root, {}) == []
+
+
+def test_files_under_dot_dirs_are_ignored() -> None:
+    """Source under any dot-directory (e.g. a stray `.tox/`) is never linted."""
+    root = _plugin({".tox/h.py": "setattr(obj, 'x', 1)\n"})
+    assert lint_plugin(root, {}) == []
+
+
+def test_unparseable_file_is_skipped() -> None:
+    """A file that fails to parse is skipped, not crashed on."""
+    root = _plugin({"handlers/broken.py": "def oops(:\n"})
+    assert lint_plugin(root, {}) == []
+
+
+def test_custom_model_with_dotted_base_detected() -> None:
+    """A CustomModel declared via a dotted base (`base.CustomModel`) is still
+    recognized — here it's outside `models/`, so it's flagged for location.
+    """
+    root = _plugin(
+        {
+            "handlers/widget.py": """
+                from canvas_sdk.v1.data import base
+
+                class Widget(base.CustomModel):
+                    pass
+                """
+        },
+        _CUSTOM_DATA,
+    )
+    assert "custom-model-wrong-dir" in _codes(lint_plugin(root, _CUSTOM_DATA), "error")
+
+
+def test_class_with_subscripted_base_is_not_a_custom_model() -> None:
+    """A top-level class whose base is neither a name nor an attribute (e.g. a
+    subscripted generic) is scanned without error and isn't treated as a model.
+    """
+    root = _plugin(
+        {
+            "handlers/h.py": """
+                from collections.abc import Sequence
+
+                class NotAModel(Sequence[int]):
+                    pass
+                """
+        }
+    )
+    assert lint_plugin(root, {}) == []
+
+
+def test_call_on_non_name_non_attr_is_ignored() -> None:
+    """A call whose callable is neither a name nor an attribute (e.g. `funcs[0]()`)
+    is handled gracefully and flags nothing.
+    """
+    root = _plugin({"handlers/h.py": "funcs = []\nfuncs[0]()\n"})
+    assert lint_plugin(root, {}) == []
+
+
+def test_fk_direct_class_reference_not_flagged() -> None:
+    """A ForeignKey to a directly-referenced class (not a string) is fine — only
+    lazy *string* refs to local CustomModels warn.
+    """
+    root = _plugin(
+        {
+            "models/widget.py": _MODEL_SRC,
+            "models/thing.py": """
+                from canvas_sdk.v1.data.base import CustomModel
+                from django.db.models import CASCADE, ForeignKey
+
+                from .widget import Widget
+
+                class Thing(CustomModel):
+                    widget = ForeignKey(Widget, on_delete=CASCADE)
+                """,
+        },
+        _CUSTOM_DATA,
+    )
+    assert "lazy-fk-string-ref" not in _codes(lint_plugin(root, _CUSTOM_DATA))
+
+
+def test_fk_string_ref_to_external_model_not_flagged() -> None:
+    """A lazy FK string ref to a model NOT defined in this plugin doesn't warn —
+    the rule targets only locally-defined CustomModels.
+    """
+    root = _plugin(
+        {
+            "models/widget.py": _MODEL_SRC,
+            "models/thing.py": """
+                from canvas_sdk.v1.data.base import CustomModel
+                from django.db.models import CASCADE, ForeignKey
+
+                class Thing(CustomModel):
+                    patient = ForeignKey("canvas_sdk.Patient", on_delete=CASCADE)
+                """,
+        },
+        _CUSTOM_DATA,
+    )
+    assert "lazy-fk-string-ref" not in _codes(lint_plugin(root, _CUSTOM_DATA))
+
+
 # ── tripwires: pin each construct rule to real sandbox behavior ───────────────
 
 
