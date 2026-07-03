@@ -1,21 +1,21 @@
 {
   "sdk_version": "0.85.0",
   "plugin_version": "0.0.1",
-  "name": "email_sender",
+  "name": "sendgrid_email",
   "description": "use Sendgrid to send emails, retrieve sent emails, manage inbound and outbound webhooks",
   "components": {
     "handlers": [
       {
-        "class": "email_sender.handlers.email_manip:EmailManip",
+        "class": "sendgrid_email.handlers.email_manip:EmailManip",
         "description": "Emails with Sendgrid"
       }
     ],
     "applications": [
       {
-        "class": "email_sender.handlers.email_form_app:EmailFormApp",
+        "class": "sendgrid_email.handlers.email_form_app:EmailFormApp",
         "name": "Emails Sendgrid",
         "description": "Emails with Sendgrid",
-        "icon": "static/email_sender.png",
+        "icon": "static/sendgrid_email.png",
         "scope": "patient_specific",
         "show_in_panel": false
       }

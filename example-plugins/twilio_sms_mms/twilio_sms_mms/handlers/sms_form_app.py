@@ -2,8 +2,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.templates import render_to_string
-
-from ..constants.constants import Constants
+from twilio_sms_mms.constants.constants import Constants
 
 
 class SmsFormApp(Application):
