@@ -144,8 +144,20 @@ jobs:
 
       - name: Validate every example plugin
         run: |
+          # Example plugins live at two depths: a few at
+          # example-plugins/<name>/CANVAS_MANIFEST.json, most at
+          # example-plugins/<name>/<package>/CANVAS_MANIFEST.json. Discover both
+          # (maxdepth 3) and exclude build/venv artifacts so every plugin is
+          # validated — a plain depth-1 glob silently skipped the nested majority.
+          manifests="$(find example-plugins -maxdepth 3 -name CANVAS_MANIFEST.json \
+            -not -path '*/.venv/*' -not -path '*/dist/*' -not -path '*/build/*' \
+            -not -path '*/*.egg-info/*')"
+          if [ -z "$manifests" ]; then
+            echo "::error::no example plugin manifests found"
+            exit 1
+          fi
           failed=0
-          for manifest in example-plugins/*/CANVAS_MANIFEST.json; do
+          for manifest in $manifests; do
             plugin_dir="$(dirname "$manifest")"
             echo "::group::validate $plugin_dir"
             if ! uv run canvas validate "$plugin_dir"; then
