@@ -370,6 +370,7 @@ def test_list_no_plugins(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -381,6 +382,7 @@ def test_install_success_no_secrets(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -425,10 +427,46 @@ def test_install_success_no_secrets(
     mock_print.assert_any_call(f"Plugin {plugin_path} uploaded! Check logs for more details.")
 
 
+@patch("canvas_cli.apps.plugin.plugin.requests.post")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+def test_install_blocks_on_sandbox_violation(
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_post: Mock,
+    tmp_path: Path,
+) -> None:
+    """`canvas install` runs the static sandbox lint and aborts before building
+    or uploading when a plugin has a sandbox-rejected construct.
+    """
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    plugin = tmp_path / "bad_plugin"
+    (plugin / "handlers").mkdir(parents=True)
+    (plugin / "CANVAS_MANIFEST.json").write_text('{"name": "bad_plugin"}')
+    (plugin / "handlers" / "h.py").write_text("setattr(object(), 'x', 1)\n")
+
+    with pytest.raises(typer.Exit):
+        install(
+            plugin_name=plugin,
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host="https://example.canvasmedical.com",
+        )
+
+    mock_build.assert_not_called()
+    mock_post.assert_not_called()
+
+
 @patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -440,6 +478,7 @@ def test_install_success_with_secrets(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -483,6 +522,7 @@ def test_install_success_with_secrets(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -494,6 +534,7 @@ def test_install_disabled(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -535,6 +576,7 @@ def test_install_disabled(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -546,6 +588,7 @@ def test_install_conflict_calls_update(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -599,6 +642,7 @@ def test_install_conflict_calls_update(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -610,6 +654,7 @@ def test_install_error_status_exits(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -653,6 +698,7 @@ def test_install_error_status_exits(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -664,6 +710,7 @@ def test_install_conflict_without_package_name_exits(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -1410,6 +1457,7 @@ def test_list_secrets_with_variables_field(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -1421,6 +1469,7 @@ def test_install_with_variables_flag(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,
@@ -1466,6 +1515,7 @@ def test_install_with_variables_flag(
 @patch("requests.post")
 @patch("canvas_cli.apps.plugin.plugin.plugin_url")
 @patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin._lint_plugin_static")
 @patch("canvas_cli.apps.plugin.plugin._validate_plugin_loads")
 @patch("canvas_cli.apps.plugin.plugin.validate_manifest")
 @patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
@@ -1477,6 +1527,7 @@ def test_install_conflict_passes_variables_to_update(
     mock_get_token: Mock,
     mock_validate: Mock,
     mock_validate_loads: Mock,
+    mock_lint: Mock,
     mock_build: Mock,
     mock_plugin_url: Mock,
     mock_post: Mock,

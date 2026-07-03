@@ -280,6 +280,7 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        _lint_plugin_static(plugin_name)
         _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
