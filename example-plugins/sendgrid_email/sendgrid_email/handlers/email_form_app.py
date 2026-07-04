@@ -1,9 +1,8 @@
-from email_sender.constants.constants import Constants
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.templates import render_to_string
+from sendgrid_email.constants.constants import Constants
 
 
 class EmailFormApp(Application):
