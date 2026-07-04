@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v0.177.0 (2026-07-04)
+
+### Bug Fixes
+
+- Import Effect from canvas_sdk.effects in recurring_appointments handler
+  ([#1767](https://github.com/canvas-medical/canvas-plugins/pull/1767),
+  [`448c489`](https://github.com/canvas-medical/canvas-plugins/commit/448c489d095a445fef3b4934504a5a755261ce3c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+### Features
+
+- Static sandbox + Custom Data lint in `canvas validate`
+  ([#1784](https://github.com/canvas-medical/canvas-plugins/pull/1784),
+  [`07fd7e1`](https://github.com/canvas-medical/canvas-plugins/commit/07fd7e1de3f662ba19269598fd19231a0eebea79))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.176.0 (2026-06-30)
 
 ### Features
