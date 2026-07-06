@@ -1,6 +1,7 @@
 import re
 from abc import abstractmethod
 from enum import StrEnum
+from functools import cached_property
 
 from pydantic import ValidationError
 
@@ -147,8 +148,13 @@ class NoteStateActionButton(ActionButton):
                 cls.STATE_ACTION, cls.STATE_ACTION.label
             )
 
+    @cached_property
     def _note_context(self) -> tuple[NoteStates, bool, str] | None:
-        """The context note's (current state, is_sig_required, note type category), or None."""
+        """The context note's (current state, is_sig_required, note type category), or None.
+
+        Cached per handler instance so ``visible()`` and ``compute()`` share a single note
+        query per button render.
+        """
         note_id = self.context.get("note_id")
         if not note_id:
             return None
@@ -215,7 +221,7 @@ class NoteStateActionButton(ActionButton):
         """
         if not self.STATE_ACTION:
             return False
-        note_context = self._note_context()
+        note_context = self._note_context
         if not note_context:
             return False
         current_state, is_sig_required, category = note_context
@@ -229,7 +235,7 @@ class NoteStateActionButton(ActionButton):
 
     def compute(self) -> list[Effect]:
         """Order this button by its position in the current state's allowed transitions."""
-        note_context = self._note_context()
+        note_context = self._note_context
         if note_context:
             current_state, _is_sig_required, category = note_context
             matrix = transition_matrix_for(category)
@@ -251,7 +257,7 @@ class NoteStateActionButton(ActionButton):
             transition_effects = self.transition(str(note_id))
         except (ValueError, ValidationError):
             return []
-        return [*transition_effects, ReloadNoteActionButtonsEffect(id=str(note_id)).apply()]
+        return [*transition_effects, ReloadNoteActionButtonsEffect(id=note_id).apply()]
 
 
 __exports__ = (

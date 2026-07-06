@@ -28,7 +28,7 @@ TRANSITION_STATE_MATRIX = {
         NoteStates.DISCHARGED,
         NoteStates.DELETED,
     ],
-    NoteStates.LOCKED: [NoteStates.UNLOCKED],
+    NoteStates.LOCKED: [NoteStates.SIGNED, NoteStates.UNLOCKED],
     NoteStates.UNLOCKED: [
         NoteStates.LOCKED,
         NoteStates.SIGNED,

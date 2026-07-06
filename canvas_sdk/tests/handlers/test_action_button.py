@@ -288,10 +288,10 @@ def test_note_state_button_is_footer_button_and_clickable() -> None:
         # Lock and Sign are the same transition, split by is_sig_required.
         (_LockButton, NoteStates.NEW, False, True),  # non-sig note shows Lock
         (_LockButton, NoteStates.NEW, True, False),  # sig note shows Sign, not Lock
-        (_LockButton, NoteStates.LOCKED, False, False),  # LOCKED -> [UNLOCKED] only
+        (_LockButton, NoteStates.LOCKED, False, False),  # LOCKED -> [SIGNED, UNLOCKED], not Lock
         (_SignButton, NoteStates.NEW, True, True),  # sig note shows Sign
         (_SignButton, NoteStates.NEW, False, False),  # non-sig note shows Lock, not Sign
-        (_SignButton, NoteStates.LOCKED, True, False),  # LOCKED -> [UNLOCKED] only
+        (_SignButton, NoteStates.LOCKED, True, True),  # LOCKED -> [SIGNED, UNLOCKED] allows Sign
     ],
 )
 def test_note_state_button_visibility_follows_matrix(
@@ -327,6 +327,7 @@ def test_note_state_button_handle_returns_transition_and_reload(
         patch("canvas_sdk.v1.data.Note.objects") as mock_note,
     ):
         mock_note.filter.return_value.first.return_value = fake_note
+        mock_note.filter.return_value.values_list.return_value.first.return_value = fake_note.id
         effects = handler.handle()
 
     assert len(effects) == 2
@@ -345,6 +346,7 @@ def test_sign_button_handle_locks_then_signs(monkeypatch: MonkeyPatch) -> None:
         patch("canvas_sdk.v1.data.Note.objects") as mock_note,
     ):
         mock_note.filter.return_value.first.return_value = fake_note
+        mock_note.filter.return_value.values_list.return_value.first.return_value = fake_note.id
         effects = handler.handle()
 
     assert [effect.type for effect in effects] == [
@@ -374,7 +376,9 @@ def test_appointment_button_handle_acts_on_the_appointment(
         patch("canvas_sdk.handlers.action_button.AppointmentModel.objects") as mock_appt,
         patch("canvas_sdk.handlers.action_button.AppointmentEffect") as mock_effect_cls,
     ):
-        mock_note.filter.return_value.values_list.return_value.first.return_value = "note-ext-id"
+        mock_note.filter.return_value.values_list.return_value.first.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         mock_appt.filter.return_value.values_list.return_value.first.return_value = "appt-id"
         getattr(mock_effect_cls.return_value, action_method).return_value = sentinel
         effects = handler.handle()

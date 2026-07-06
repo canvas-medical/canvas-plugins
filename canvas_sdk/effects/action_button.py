@@ -1,5 +1,7 @@
 from typing import Any
+from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model
@@ -13,19 +15,22 @@ class _ReloadActionButtonsEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.RELOAD_ACTION_BUTTONS
 
-    note_id: str | None = None
-    patient_id: str | None = None
+    note_id: UUID | None = Field(strict=False, default=None)
+    patient_id: UUID | None = Field(strict=False, default=None)
 
     @property
     def values(self) -> dict[str, Any]:
         """The reload effect's wire values."""
-        return {"note_id": self.note_id, "patient_id": self.patient_id}
+        return {
+            "note_id": str(self.note_id) if self.note_id else None,
+            "patient_id": str(self.patient_id) if self.patient_id else None,
+        }
 
 
 class ReloadNoteActionButtonsEffect(Model):
     """Reload a note's action buttons effect."""
 
-    id: str
+    id: UUID = Field(strict=False)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -46,7 +51,7 @@ class ReloadNoteActionButtonsEffect(Model):
 class ReloadPatientActionButtonsEffect(Model):
     """Reload a patient's action buttons effect."""
 
-    id: str
+    id: UUID = Field(strict=False)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
