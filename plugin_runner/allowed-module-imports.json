@@ -905,8 +905,10 @@
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
+    "LockNoteActionButton",
     "NoteStateActionButton",
-    "SHOW_BUTTON_REGEX"
+    "SHOW_BUTTON_REGEX",
+    "SignNoteActionButton"
   ],
   "canvas_sdk.handlers.application": [
     "Application",

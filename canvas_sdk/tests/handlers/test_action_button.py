@@ -1,4 +1,5 @@
 import json
+from typing import TypeVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,9 +18,13 @@ from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.action_button import (
     SHOW_BUTTON_REGEX,
     ActionButton,
+    LockNoteActionButton,
     NoteStateActionButton,
+    SignNoteActionButton,
 )
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
+
+_ButtonT = TypeVar("_ButtonT", bound=NoteStateActionButton)
 
 
 class ExampleActionButton(ActionButton):
@@ -209,11 +214,11 @@ def test_compute_no_button_location() -> None:
 # --- NoteStateActionButton tests ---
 
 
-class _LockButton(NoteStateActionButton):
+class _LockButton(LockNoteActionButton):
     STATE_ACTION = NoteStates.LOCKED
 
 
-class _SignButton(NoteStateActionButton):
+class _SignButton(SignNoteActionButton):
     STATE_ACTION = NoteStates.SIGNED
 
 
@@ -246,8 +251,8 @@ class _RestoreAppointmentButton(NoteStateActionButton):
 
 
 def _make_state_handler(
-    cls: type[NoteStateActionButton], monkeypatch: MonkeyPatch, note_id: int | None
-) -> NoteStateActionButton:
+    cls: type[_ButtonT], monkeypatch: MonkeyPatch, note_id: int | None
+) -> _ButtonT:
     """Instantiate a NoteStateActionButton with a context exposing the given note_id."""
     handler = cls(event=MagicMock())
     monkeypatch.setattr(type(handler), "context", property(lambda self: {"note_id": note_id}))
@@ -314,6 +319,83 @@ def test_note_state_button_not_visible_without_note(monkeypatch: MonkeyPatch) ->
     assert handler.visible() is False
 
 
+@pytest.mark.parametrize(("already_signed", "expected"), [(True, False), (False, True)])
+def test_sign_hidden_once_current_user_has_signed(
+    already_signed: bool, expected: bool, monkeypatch: MonkeyPatch
+) -> None:
+    """Sign is hidden once the current user has signed since the last lock, shown otherwise."""
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    monkeypatch.setattr(
+        SignNoteActionButton,
+        "_current_user_signed_since_last_lock",
+        lambda self: already_signed,
+    )
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.first.return_value = _fake_note(NoteStates.SIGNED)
+        assert handler.visible() is expected
+
+
+def test_sign_shown_after_amend_even_if_user_previously_signed(monkeypatch: MonkeyPatch) -> None:
+    """After an amend (unlock) Sign shows again, even for a user who signed before the amend.
+
+    The already-signed guard only applies while the note is currently SIGNED; from UNLOCKED the
+    user must lock-and-sign again, so the button must not stay hidden.
+    """
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    monkeypatch.setattr(
+        SignNoteActionButton,
+        "_current_user_signed_since_last_lock",
+        lambda self: True,  # would hide Sign if it were consulted
+    )
+    with patch("canvas_sdk.handlers.action_button.Note.objects") as mock_note:
+        mock_note.filter.return_value.first.return_value = _fake_note(NoteStates.UNLOCKED)
+        assert handler.visible() is True
+
+
+def test_already_signed_check_scopes_to_current_user_since_last_lock(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """The check looks for the acting user's sign after the note's most recent lock."""
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    handler.event.actor.id = "42"
+    with patch("canvas_sdk.handlers.action_button.NoteStateChangeEvent.objects") as mock_events:
+        events = mock_events.filter.return_value
+        events.order_by.return_value.values_list.return_value.first.return_value = 10
+        events.exists.return_value = True
+        assert handler._current_user_signed_since_last_lock() is True
+
+        events.exists.return_value = False
+        assert handler._current_user_signed_since_last_lock() is False
+
+    mock_events.filter.assert_any_call(note__dbid=5, state=NoteStates.LOCKED)
+    mock_events.filter.assert_any_call(
+        note__dbid=5,
+        state=NoteStates.SIGNED,
+        originator__dbid="42",
+        dbid__gt=10,
+    )
+
+
+def test_already_signed_check_false_without_current_user(monkeypatch: MonkeyPatch) -> None:
+    """With no acting user on the event, the check is False and never queries."""
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    handler.event.actor.id = None
+    with patch("canvas_sdk.handlers.action_button.NoteStateChangeEvent.objects") as mock_events:
+        assert handler._current_user_signed_since_last_lock() is False
+        mock_events.filter.assert_not_called()
+
+
+def test_already_signed_check_false_without_prior_lock(monkeypatch: MonkeyPatch) -> None:
+    """A note that has never been locked can't have been signed since its last lock."""
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    handler.event.actor.id = "42"
+    with patch("canvas_sdk.handlers.action_button.NoteStateChangeEvent.objects") as mock_events:
+        events = mock_events.filter.return_value
+        events.order_by.return_value.values_list.return_value.first.return_value = None
+        assert handler._current_user_signed_since_last_lock() is False
+        events.exists.assert_not_called()
+
+
 def test_note_state_button_handle_returns_transition_and_reload(
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -351,6 +433,33 @@ def test_sign_button_handle_locks_then_signs(monkeypatch: MonkeyPatch) -> None:
 
     assert [effect.type for effect in effects] == [
         EffectType.LOCK_NOTE,
+        EffectType.SIGN_NOTE,
+        EffectType.RELOAD_ACTION_BUTTONS,
+    ]
+
+
+@pytest.mark.parametrize("state", [NoteStates.LOCKED, NoteStates.SIGNED])
+def test_sign_button_skips_lock_when_note_already_locked(
+    state: str, monkeypatch: MonkeyPatch
+) -> None:
+    """An already locked/signed note is signed again without re-locking.
+
+    This lets a note be signed by multiple providers after a single lock (NEW -> LOCKED ->
+    SIGN -> SIGN -> ...); a re-lock is only emitted again after an amend (unlock).
+    """
+    handler = _make_state_handler(_SignButton, monkeypatch, note_id=5)
+    fake_note = _fake_note(state)  # is_sig_required by default
+    with (
+        patch("canvas_sdk.v1.data.PracticeLocation.objects"),
+        patch("canvas_sdk.v1.data.Staff.objects"),
+        patch("canvas_sdk.v1.data.Patient.objects"),
+        patch("canvas_sdk.v1.data.Note.objects") as mock_note,
+    ):
+        mock_note.filter.return_value.first.return_value = fake_note
+        mock_note.filter.return_value.values_list.return_value.first.return_value = fake_note.id
+        effects = handler.handle()
+
+    assert [effect.type for effect in effects] == [
         EffectType.SIGN_NOTE,
         EffectType.RELOAD_ACTION_BUTTONS,
     ]
@@ -395,8 +504,26 @@ def test_appointment_button_handle_acts_on_the_appointment(
         (_DeleteButton, NoteStates.NEW, NoteTypeCategories.ENCOUNTER, True),  # NEW allows Delete
         (_DeleteButton, NoteStates.LOCKED, NoteTypeCategories.ENCOUNTER, False),  # LOCKED does not
         (_UndeleteButton, NoteStates.DELETED, NoteTypeCategories.ENCOUNTER, True),  # -> Restore
-        (_DischargeButton, NoteStates.NEW, NoteTypeCategories.ENCOUNTER, True),  # NEW allows it
-        (_DischargeButton, NoteStates.LOCKED, NoteTypeCategories.ENCOUNTER, False),
+        # Discharge is inpatient-only (the effect rejects it otherwise), even though the shared
+        # matrix lists DISCHARGED for encounter states too.
+        (
+            _DischargeButton,
+            NoteStates.NEW,
+            NoteTypeCategories.INPATIENT,
+            True,
+        ),  # inpatient allows it
+        (
+            _DischargeButton,
+            NoteStates.NEW,
+            NoteTypeCategories.ENCOUNTER,
+            False,
+        ),  # encounter does not
+        (
+            _DischargeButton,
+            NoteStates.LOCKED,
+            NoteTypeCategories.INPATIENT,
+            False,
+        ),  # LOCKED does not
         (_CheckInButton, NoteStates.BOOKED, NoteTypeCategories.APPOINTMENT, True),  # check-in
         (_CheckInButton, NoteStates.NEW, NoteTypeCategories.ENCOUNTER, False),
         (_NoShowButton, NoteStates.BOOKED, NoteTypeCategories.APPOINTMENT, True),  # no-show

@@ -15,7 +15,7 @@ from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data import Appointment as AppointmentModel
 from canvas_sdk.v1.data import Note
-from canvas_sdk.v1.data.note import NoteStates
+from canvas_sdk.v1.data.note import NoteStateChangeEvent, NoteStates, NoteTypeCategories
 
 SHOW_BUTTON_REGEX = re.compile(r"^SHOW_(.+?)_BUTTON$")
 
@@ -105,13 +105,7 @@ class ActionButton(BaseHandler):
 class NoteStateActionButton(ActionButton):
     """A note footer button that transitions a note into ``STATE_ACTION``.
 
-    Shown only when that transition is allowed from the note's current state (per
-    ``TRANSITION_STATE_MATRIX``).
-
-    ``LOCKED`` and ``SIGNED`` are the same transition shown differently: a note type that
-    requires a signature offers Sign, one that does not offers Lock. So a ``LOCKED``-target
-    button is hidden for signature-required note types and a ``SIGNED``-target button is
-    hidden for those that don't require one.
+    Shown only when that transition is allowed from the note's current state.
     """
 
     RESPONDS_TO = [
@@ -150,11 +144,7 @@ class NoteStateActionButton(ActionButton):
 
     @cached_property
     def _note_context(self) -> tuple[NoteStates, bool, str] | None:
-        """The context note's (current state, is_sig_required, note type category), or None.
-
-        Cached per handler instance so ``visible()`` and ``compute()`` share a single note
-        query per button render.
-        """
+        """The context note's (current state, is_sig_required, category), or None (cached)."""
         note_id = self.context.get("note_id")
         if not note_id:
             return None
@@ -196,11 +186,7 @@ class NoteStateActionButton(ActionButton):
         raise ValueError(f"No transition for state {self.STATE_ACTION}")
 
     def _appointment_transition(self, note_id: str) -> list[Effect]:
-        """Build the Appointment effect for an appointment-only transition (Cancel/Restore).
-
-        Cancel and Restore act on the note's appointment, not the note, so they resolve the
-        appointment id from the note id and emit an Appointment effect.
-        """
+        """Build the Appointment effect for Cancel/Restore, which act on the note's appointment."""
         if self.STATE_ACTION not in (NoteStates.CANCELLED, NoteStates.REVERTED):
             return []
         appointment_id = (
@@ -214,23 +200,17 @@ class NoteStateActionButton(ActionButton):
         return [appointment.revert()]
 
     def visible(self) -> bool:
-        """Show only when STATE_ACTION is a permitted transition from the current state.
-
-        Lock and Sign are the same transition: Lock is hidden for signature-required note
-        types and Sign for those that don't require one (see the class docstring).
-        """
+        """Show only when STATE_ACTION is a permitted transition from the current state."""
         if not self.STATE_ACTION:
             return False
         note_context = self._note_context
         if not note_context:
             return False
-        current_state, is_sig_required, category = note_context
+        current_state, _is_sig_required, category = note_context
         if self.STATE_ACTION not in transition_matrix_for(category).get(current_state, []):
             return False
-        if self.STATE_ACTION == NoteStates.LOCKED:
-            return not is_sig_required
-        if self.STATE_ACTION == NoteStates.SIGNED:
-            return is_sig_required
+        if self.STATE_ACTION == NoteStates.DISCHARGED:
+            return category == NoteTypeCategories.INPATIENT
         return True
 
     def compute(self) -> list[Effect]:
@@ -260,8 +240,78 @@ class NoteStateActionButton(ActionButton):
         return [*transition_effects, ReloadNoteActionButtonsEffect(id=note_id).apply()]
 
 
+class LockNoteActionButton(NoteStateActionButton):
+    """Lock the note. Offered only for note types that don't require a signature."""
+
+    STATE_ACTION = NoteStates.LOCKED
+
+    def visible(self) -> bool:
+        """Visible only when locking is allowed and the note type needs no signature."""
+        context = self._note_context
+        if not context or not super().visible():
+            return False
+        _current_state, is_sig_required, _category = context
+        return not is_sig_required
+
+
+class SignNoteActionButton(NoteStateActionButton):
+    """Sign the note. Offered only for signature-required note types.
+
+    Locks the note first when it isn't already locked, so it can be signed repeatedly and
+    re-locked only after an amend, and is hidden once the current user has signed since the
+    last lock.
+    """
+
+    STATE_ACTION = NoteStates.SIGNED
+
+    def visible(self) -> bool:
+        """Visible for sig-required notes; hidden once the current user has already signed."""
+        context = self._note_context
+        if not context or not super().visible():
+            return False
+        current_state, is_sig_required, _category = context
+        if not is_sig_required:
+            return False
+        # Only guard at the signed state; from locked/amended the user still needs to sign.
+        if current_state == NoteStates.SIGNED:
+            return not self._current_user_signed_since_last_lock()
+        return True
+
+    def transition(self, note_id: str) -> list[Effect]:
+        """Sign the note, locking it first only when it isn't already locked/signed."""
+        effect = NoteEffect(instance_id=note_id)
+        context = self._note_context
+        current_state = context[0] if context else None
+        if current_state in (NoteStates.LOCKED, NoteStates.SIGNED):
+            return [effect.sign()]
+        return [effect.lock(), effect.sign()]
+
+    def _current_user_signed_since_last_lock(self) -> bool:
+        """Whether the current user has already signed the note since it was last locked."""
+        note_dbid = self.context.get("note_id")
+        actor_id = self.event.actor.id
+        if not note_dbid or not actor_id:
+            return False
+        last_lock_dbid = (
+            NoteStateChangeEvent.objects.filter(note__dbid=note_dbid, state=NoteStates.LOCKED)
+            .order_by("-created", "-dbid")
+            .values_list("dbid", flat=True)
+            .first()
+        )
+        if last_lock_dbid is None:
+            return False
+        return NoteStateChangeEvent.objects.filter(
+            note__dbid=note_dbid,
+            state=NoteStates.SIGNED,
+            originator__dbid=actor_id,
+            dbid__gt=last_lock_dbid,
+        ).exists()
+
+
 __exports__ = (
     "SHOW_BUTTON_REGEX",
     "ActionButton",
     "NoteStateActionButton",
+    "LockNoteActionButton",
+    "SignNoteActionButton",
 )
