@@ -635,10 +635,12 @@
   ],
   "canvas_sdk.effects.lab_report": [
     "LabReport",
+    "LabTest",
     "LabValue",
     "ObservationStatus"
   ],
   "canvas_sdk.effects.lab_report.attach_results": [
+    "LabTest",
     "LabValue",
     "ObservationStatus"
   ],

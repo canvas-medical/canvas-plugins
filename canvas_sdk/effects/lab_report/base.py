@@ -21,7 +21,7 @@ from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
 
 if TYPE_CHECKING:
-    from canvas_sdk.effects.lab_report.attach_results import LabValue
+    from canvas_sdk.effects.lab_report.attach_results import LabTest
 
 _MUTABLE_FIELDS = ("report_name", "date_performed")
 
@@ -124,17 +124,20 @@ class LabReport(TrackableFieldsModel):
             payload=json.dumps({"data": self._handle_payload()}),
         )
 
-    def attach_results(self, lab_values: list["LabValue"]) -> Effect:
+    def attach_results(self, lab_tests: list["LabTest"]) -> Effect:
         """Additively attach lab tests/values to this report.
 
-        Uses this instance's handle (``report_id`` or ``external_id``).
+        Each ``LabTest`` carries its order/compendium code and groups one or
+        more ``LabValue``s; LOINC is supplied via ``codings`` on the test and
+        each value. Uses this instance's handle (``report_id`` or
+        ``external_id``).
         """
         from canvas_sdk.effects.lab_report.attach_results import _LabReportAttachResults
 
         return _LabReportAttachResults(
             report_id=self.report_id,
             external_id=self.external_id or "",
-            lab_values=lab_values,
+            lab_tests=lab_tests,
         ).apply()
 
 
