@@ -10,7 +10,10 @@ from pydantic_core import ValidationError
 from canvas_sdk.effects.patient.base import (
     Patient,
     PatientAddress,
+    PatientContact,
+    PatientContactCategory,
     PatientContactPoint,
+    PatientContactRelationship,
     PatientExternalIdentifier,
     PatientMetadata,
     generate_patient_id,
@@ -79,6 +82,19 @@ def patient_contact_point() -> PatientContactPoint:
     """Create a PatientContactPoint for testing."""
     return PatientContactPoint(
         system=ContactPointSystem.PHONE, value="555-1234", use=ContactPointUse.HOME, rank=1
+    )
+
+
+@pytest.fixture
+def patient_contact() -> PatientContact:
+    """Create a PatientContact for testing."""
+    return PatientContact(
+        name="Jane Doe",
+        contact_identifier="contact-123",
+        phone_number="5551234567",
+        email="jane@example.com",
+        comments="Daytime only",
+        categories=[PatientContactRelationship.EMERGENCY_CONTACT.category()],
     )
 
 
@@ -535,3 +551,130 @@ def test_patient_race_and_ethnicity_omitted_when_not_set(
     payload_data = json.loads(effect.payload)
     assert "biological_race_codes" not in payload_data["data"]
     assert "cultural_ethnicity_codes" not in payload_data["data"]
+
+
+def test_patient_contact_category_to_dict() -> None:
+    """Test PatientContactCategory.to_dict() serializes the coding."""
+    category = PatientContactCategory(
+        code="DAU",
+        code_system="http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+        name="natural daughter",
+    )
+
+    assert category.to_dict() == {
+        "code_system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+        "code": "DAU",
+        "name": "natural daughter",
+    }
+
+
+def test_patient_contact_category_defaults_to_internal_system() -> None:
+    """Test PatientContactCategory defaults the code system to INTERNAL."""
+    category = PatientContactCategory(code="EMC")
+
+    assert category.code_system == "INTERNAL"
+    assert category.name is None
+
+
+def test_patient_contact_relationship_category_codings() -> None:
+    """Test that each PatientContactRelationship maps to the expected coding."""
+    assert PatientContactRelationship.EMERGENCY_CONTACT.category().to_dict() == {
+        "code_system": "INTERNAL",
+        "code": "EMC",
+        "name": "Emergency contact",
+    }
+    assert PatientContactRelationship.NEXT_OF_KIN.category().to_dict() == {
+        "code_system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+        "code": "N",
+        "name": "Next-of-Kin",
+    }
+
+
+def test_patient_contact_to_dict_with_all_fields(patient_contact: PatientContact) -> None:
+    """Test PatientContact.to_dict() with all fields populated."""
+    assert patient_contact.to_dict() == {
+        "contact_identifier": "contact-123",
+        "name": "Jane Doe",
+        "phone_number": "5551234567",
+        "email": "jane@example.com",
+        "comments": "Daytime only",
+        "categories": [{"code_system": "INTERNAL", "code": "EMC", "name": "Emergency contact"}],
+    }
+
+
+def test_patient_contact_to_dict_minimal_fields() -> None:
+    """Test PatientContact.to_dict() with only the required name; categories serialize to []."""
+    contact = PatientContact(name="John Roe")
+
+    assert contact.to_dict() == {
+        "contact_identifier": None,
+        "name": "John Roe",
+        "phone_number": None,
+        "email": None,
+        "comments": None,
+        "categories": [],
+    }
+
+
+def test_patient_values_includes_contacts_when_set(
+    mock_db_queries: dict[str, MagicMock],
+    valid_patient_data: dict[str, Any],
+    patient_contact: PatientContact,
+) -> None:
+    """Test that values includes contacts when they are provided."""
+    patient = Patient(**valid_patient_data, contacts=[patient_contact])
+    values = patient.values
+
+    assert "contacts" in values
+    assert values["contacts"] == [patient_contact.to_dict()]
+
+
+def test_patient_values_excludes_contacts_when_not_dirty(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that values excludes contacts that are not marked as dirty."""
+    patient = Patient(**valid_patient_data)
+    values = patient.values
+
+    assert "contacts" not in values
+
+
+def test_patient_values_handles_none_contacts(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that values serializes contacts to None when explicitly set to None."""
+    patient = Patient(**valid_patient_data, contacts=None)
+    values = patient.values
+
+    assert values.get("contacts") is None
+
+
+def test_patient_create_with_contacts(
+    mock_db_queries: dict[str, MagicMock],
+    valid_patient_data: dict[str, Any],
+    patient_contact: PatientContact,
+) -> None:
+    """Test that create() includes contacts in the payload."""
+    patient = Patient(**valid_patient_data, contacts=[patient_contact])
+
+    effect = patient.create()
+
+    payload_data = json.loads(effect.payload)
+    assert payload_data["data"]["contacts"] == [patient_contact.to_dict()]
+
+
+def test_patient_update_with_contacts(
+    mock_db_queries: dict[str, MagicMock], patient_contact: PatientContact
+) -> None:
+    """Test that update() includes contacts in the payload with the nested coding."""
+    patient = Patient(patient_id="123", contacts=[patient_contact])
+
+    effect = patient.update()
+
+    payload_data = json.loads(effect.payload)
+    [contact] = payload_data["data"]["contacts"]
+    assert contact["name"] == "Jane Doe"
+    assert contact["contact_identifier"] == "contact-123"
+    assert contact["categories"] == [
+        {"code_system": "INTERNAL", "code": "EMC", "name": "Emergency contact"}
+    ]
