@@ -1,7 +1,10 @@
 from canvas_sdk.effects.patient.base import (
     Patient,
     PatientAddress,
+    PatientContact,
+    PatientContactCategory,
     PatientContactPoint,
+    PatientContactRelationship,
     PatientExternalIdentifier,
     PatientMetadata,
     PatientPreferredPharmacy,
@@ -17,7 +20,10 @@ from canvas_sdk.effects.patient.create_patient_preferred_pharmacies import (
 __all__ = __exports__ = (
     "Patient",
     "PatientAddress",
+    "PatientContact",
+    "PatientContactCategory",
     "PatientContactPoint",
+    "PatientContactRelationship",
     "PatientExternalIdentifier",
     "PatientPreferredPharmacy",
     "PatientMetadata",
