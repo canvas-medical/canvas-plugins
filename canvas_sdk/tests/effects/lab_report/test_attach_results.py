@@ -7,7 +7,13 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.lab_report import LabReport, LabTest, LabValue, ObservationStatus
+from canvas_sdk.effects.lab_report import (
+    AbnormalFlag,
+    LabReport,
+    LabTest,
+    LabValue,
+    ObservationStatus,
+)
 from canvas_sdk.effects.observation.base import CodingData
 
 REPORT_ID_STR = "123e4567-e89b-12d3-a456-426614174000"
@@ -163,3 +169,21 @@ def test_lab_value_accepts_registered_status() -> None:
     """observation_status accepts the full set, e.g. REGISTERED."""
     lab_value = LabValue(value="14.2", observation_status=ObservationStatus.REGISTERED)
     assert lab_value.to_dict()["observation_status"] == "registered"
+
+
+def test_abnormal_flag_defaults_to_empty() -> None:
+    """abnormal_flag defaults to None and serializes to an empty string."""
+    assert LabValue(value="14.2").abnormal_flag is None
+    assert LabValue(value="14.2").to_dict()["abnormal_flag"] == ""
+
+
+def test_abnormal_flag_serializes_enum_value() -> None:
+    """A set abnormal_flag serializes to its HL7 code; a raw code string is coerced."""
+    assert LabValue(value="14.2", abnormal_flag=AbnormalFlag.HIGH).to_dict()["abnormal_flag"] == "H"
+    assert LabValue(value="14.2", abnormal_flag="LL").to_dict()["abnormal_flag"] == "LL"  # type: ignore[arg-type]
+
+
+def test_abnormal_flag_rejects_invalid_code() -> None:
+    """abnormal_flag only accepts AbnormalFlag values."""
+    with pytest.raises(ValidationError):
+        LabValue(value="14.2", abnormal_flag="banana")  # type: ignore[arg-type]  # runtime rejection

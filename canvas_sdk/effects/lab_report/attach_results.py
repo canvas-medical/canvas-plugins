@@ -38,6 +38,28 @@ class ObservationStatus(StrEnum):
     UNKNOWN = "unknown"
 
 
+class AbnormalFlag(StrEnum):
+    """Abnormal-result interpretation for a lab value (HL7v2 table 0078).
+
+    Flags a value against its reference range so Canvas can surface it (e.g.
+    High/Low). Matches the code set Canvas maps for display.
+    """
+
+    HIGH = "H"
+    LOW = "L"
+    CRITICAL_HIGH = "HH"
+    CRITICAL_LOW = "LL"
+    BELOW_ABSOLUTE_LOW = "<"
+    ABOVE_ABSOLUTE_HIGH = ">"
+    ABNORMAL = "A"
+    CRITICAL_ABNORMAL = "AA"
+    SUSCEPTIBLE = "S"
+    RESISTANT = "R"
+    INTERMEDIATE = "I"
+    NEGATIVE = "NEG"
+    POSITIVE = "POS"
+
+
 class LabValue(BaseModel):
     """A single result value on a lab test.
 
@@ -48,7 +70,7 @@ class LabValue(BaseModel):
     value: str
     units: str = ""
     reference_range: str = ""
-    abnormal_flag: str = ""
+    abnormal_flag: AbnormalFlag | None = None
     observation_status: ObservationStatus = ObservationStatus.FINAL
     comment: str = ""
     codings: list[CodingData] | None = None
@@ -59,7 +81,7 @@ class LabValue(BaseModel):
             "value": self.value,
             "units": self.units,
             "reference_range": self.reference_range,
-            "abnormal_flag": self.abnormal_flag,
+            "abnormal_flag": self.abnormal_flag.value if self.abnormal_flag else "",
             "observation_status": self.observation_status.value,
             "comment": self.comment,
             "codings": (
@@ -136,4 +158,4 @@ class _LabReportAttachResults(_BaseEffect):
         }
 
 
-__exports__ = ("LabTest", "LabValue", "ObservationStatus")
+__exports__ = ("AbnormalFlag", "LabTest", "LabValue", "ObservationStatus")
