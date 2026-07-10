@@ -630,12 +630,14 @@
     "HealthGorillaLabReportIngest"
   ],
   "canvas_sdk.effects.lab_report": [
+    "AbnormalFlag",
     "LabReport",
     "LabTest",
     "LabValue",
     "ObservationStatus"
   ],
   "canvas_sdk.effects.lab_report.attach_results": [
+    "AbnormalFlag",
     "LabTest",
     "LabValue",
     "ObservationStatus"
