@@ -120,7 +120,7 @@ class _LabReportAttachResults(_BaseEffect):
     """Attach lab tests/values to an existing report, identified by handle.
 
     Private — constructed by ``LabReport.attach_results``. Exactly one of
-    ``report_id`` (Canvas externally-exposable id) or ``external_id`` (the
+    ``report_id`` (Canvas externally-exposable id) or ``reference_id`` (the
     plugin's handle) must be supplied.
     """
 
@@ -128,20 +128,20 @@ class _LabReportAttachResults(_BaseEffect):
         effect_type = EffectType.ATTACH_LAB_REPORT_RESULTS
 
     report_id: UUID | None = Field(default=None, strict=False)
-    external_id: Annotated[str, Field(max_length=40)] = ""
+    reference_id: Annotated[str, Field(max_length=40)] = ""
     lab_tests: list[LabTest] = Field(min_length=1)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        """Require exactly one handle (report_id or external_id) on apply."""
+        """Require exactly one handle (report_id or reference_id) on apply."""
         errors = super()._get_error_details(method)
 
         if method == "apply":
-            handles = [handle for handle in (self.report_id, self.external_id) if handle]
+            handles = [handle for handle in (self.report_id, self.reference_id) if handle]
             if len(handles) != 1:
                 errors.append(
                     self._create_error_detail(
                         "value",
-                        "Exactly one of report_id or external_id is required.",
+                        "Exactly one of report_id or reference_id is required.",
                         handles,
                     )
                 )
@@ -153,7 +153,7 @@ class _LabReportAttachResults(_BaseEffect):
         """Serialize the effect's fields into the proto payload dict."""
         return {
             "report_id": str(self.report_id) if self.report_id else "",
-            "external_id": self.external_id,
+            "reference_id": self.reference_id,
             "lab_tests": [test.to_dict() for test in self.lab_tests],
         }
 

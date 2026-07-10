@@ -23,7 +23,7 @@ LOINC = "http://loinc.org"
 
 def test_attach_results_emits_effect_with_nested_tests_and_values() -> None:
     """attach_results() emits ATTACH_LAB_REPORT_RESULTS with tests grouping values + LOINC codings."""
-    effect = LabReport(external_id="myplugin:ocr-44").attach_results(
+    effect = LabReport(reference_id="myplugin:ocr-44").attach_results(
         [
             LabTest(
                 ontology_test_code="CBC",
@@ -43,7 +43,7 @@ def test_attach_results_emits_effect_with_nested_tests_and_values() -> None:
 
     assert effect.type == EffectType.ATTACH_LAB_REPORT_RESULTS
     data = json.loads(effect.payload)["data"]
-    assert data["external_id"] == "myplugin:ocr-44"
+    assert data["reference_id"] == "myplugin:ocr-44"
     assert data["report_id"] == ""
     assert data["lab_tests"] == [
         {
@@ -88,12 +88,12 @@ def test_attach_results_by_report_id() -> None:
     )
     data = json.loads(effect.payload)["data"]
     assert data["report_id"] == REPORT_ID_STR
-    assert data["external_id"] == ""
+    assert data["reference_id"] == ""
 
 
 def test_attach_results_codings_default_to_none() -> None:
     """A test/value without codings serializes codings as None (no LOINC attached)."""
-    effect = LabReport(external_id="x").attach_results(
+    effect = LabReport(reference_id="x").attach_results(
         [LabTest(ontology_test_name="CBC", values=[LabValue(value="14.2")])]
     )
     test = json.loads(effect.payload)["data"]["lab_tests"][0]
@@ -110,7 +110,7 @@ def test_attach_results_requires_a_handle() -> None:
 def test_attach_results_rejects_both_handles() -> None:
     """attach_results() fails when both handles are set (ambiguous)."""
     with pytest.raises(ValidationError):
-        LabReport(report_id=REPORT_ID, external_id="x").attach_results(
+        LabReport(report_id=REPORT_ID, reference_id="x").attach_results(
             [LabTest(values=[LabValue(value="14.2")])]
         )
 
@@ -118,7 +118,7 @@ def test_attach_results_rejects_both_handles() -> None:
 def test_attach_results_requires_at_least_one_test() -> None:
     """attach_results() fails on an empty test list (pydantic min_length)."""
     with pytest.raises(ValidationError):
-        LabReport(external_id="myplugin:ocr-44").attach_results([])
+        LabReport(reference_id="myplugin:ocr-44").attach_results([])
 
 
 def test_lab_test_requires_at_least_one_value() -> None:
