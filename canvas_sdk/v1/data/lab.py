@@ -68,6 +68,7 @@ class LabReport(AuditedModel, IdentifiableModel):
     transmission_type = models.CharField(choices=TransmissionType.choices, max_length=10)
     for_test_only = models.BooleanField()
     external_id = models.CharField(max_length=40)
+    reference_id = models.CharField(max_length=40)
     version = models.IntegerField()
     requisition_number = models.CharField(max_length=40)
     review = models.ForeignKey(
