@@ -244,6 +244,12 @@ def init(
         raise typer.BadParameter("The supplied directory already exists") from None
 
     print(f"Project created in {project_dir}")
+    print(
+        "Warning: Declaring plugin variables in CANVAS_MANIFEST.json is deprecated. "
+        "In the future, plugin variables will be declared and set in a manner similar "
+        "to environment variables with the Canvas CLI and/or an upcoming plugin "
+        "management application."
+    )
 
 
 def install(
