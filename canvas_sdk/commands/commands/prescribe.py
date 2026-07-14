@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import Any
+from uuid import UUID
 
 from pydantic import Field, conlist
 from pydantic_core import InitErrorDetails
@@ -13,6 +14,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.compound_medications.compound_medication import (
     CompoundMedication as CompoundMedicationEffect,
 )
+from canvas_sdk.v1.data import PracticeLocation
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 
@@ -210,6 +212,28 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
                     "data": processed_data,
                 }
             ),
+        )
+
+    def send(self, practice_location_override: UUID | str | None = None) -> Effect:
+        """Fire the send effect, optionally overriding the prescriber's practice location.
+
+        When ``practice_location_override`` (a PracticeLocation id) is provided, the
+        outgoing NewRx uses that location's address as the prescriber address.
+        This lets a plugin ship white-bagged medications to a chosen office per prescription.
+        """
+        self._validate_before_effect("send")
+
+        payload: dict[str, Any] = {"command": self.command_uuid}
+        if practice_location_override is not None:
+            if not PracticeLocation.objects.filter(id=practice_location_override).exists():
+                raise ValueError(
+                    f"Practice location with ID {practice_location_override} does not exist."
+                )
+            payload["practice_location_override"] = str(practice_location_override)
+
+        return Effect(
+            type=f"SEND_{self.constantized_key()}_COMMAND",
+            payload=json.dumps(payload),
         )
 
 
