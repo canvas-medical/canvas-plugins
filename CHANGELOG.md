@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.179.0 (2026-07-14)
+
+### Features
+
+- Add note state action buttons and note footer configuration
+  ([#1770](https://github.com/canvas-medical/canvas-plugins/pull/1770),
+  [`ed45b0f`](https://github.com/canvas-medical/canvas-plugins/commit/ed45b0f164ad257319b51522e9eb8fef157c2359))
+
+
 ## v0.178.0 (2026-07-14)
 
 ### Features
