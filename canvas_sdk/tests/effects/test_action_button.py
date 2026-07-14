@@ -15,9 +15,10 @@ from canvas_sdk.effects.action_button import (
 NOTE_OBJECTS = "canvas_sdk.effects.action_button.Note.objects"
 PATIENT_OBJECTS = "canvas_sdk.effects.action_button.Patient.objects"
 
-# The effects' ids are UUIDs (accepted as strings via strict=False).
+# The note id is a UUID (accepted as a string via strict=False). The patient id is an opaque
+# string — a dash-less UUID — passed through verbatim, so it is never re-serialized with dashes.
 NOTE_ID = "11111111-1111-1111-1111-111111111111"
-PATIENT_ID = "22222222-2222-2222-2222-222222222222"
+PATIENT_ID = "22222222222222222222222222222222"
 
 
 def test_reload_note_payload() -> None:
@@ -50,10 +51,11 @@ def test_reload_patient_payload() -> None:
     """A patient reload carries the patient id when it exists."""
     with patch(PATIENT_OBJECTS) as patient_objects:
         patient_objects.filter.return_value.exists.return_value = True
-        effect = ReloadPatientActionButtonsEffect(id=PATIENT_ID).apply()  # type: ignore[arg-type]
+        effect = ReloadPatientActionButtonsEffect(id=PATIENT_ID).apply()
 
     assert effect.type == EffectType.RELOAD_ACTION_BUTTONS
     data = json.loads(effect.payload)["data"]
+    # The dash-less id is preserved verbatim (not re-serialized to canonical UUID form).
     assert data == {"note_id": None, "patient_id": PATIENT_ID}
 
 
@@ -68,4 +70,4 @@ def test_reload_patient_rejects_missing_patient() -> None:
     with patch(PATIENT_OBJECTS) as patient_objects:
         patient_objects.filter.return_value.exists.return_value = False
         with pytest.raises(ValidationError):
-            ReloadPatientActionButtonsEffect(id=PATIENT_ID).apply()  # type: ignore[arg-type]
+            ReloadPatientActionButtonsEffect(id=PATIENT_ID).apply()
