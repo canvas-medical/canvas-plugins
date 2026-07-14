@@ -217,7 +217,7 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
     def send(self, practice_location_override: UUID | str | None = None) -> Effect:
         """Fire the send effect, optionally overriding the prescriber's practice location.
 
-        When ``practice_location_override`` (a PracticeLocation id) is provided, the 
+        When ``practice_location_override`` (a PracticeLocation id) is provided, the
         outgoing NewRx uses that location's address as the prescriber address.
         This lets a plugin ship white-bagged medications to a chosen office per prescription.
         """
