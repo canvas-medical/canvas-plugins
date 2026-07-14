@@ -19,6 +19,7 @@ from canvas_sdk.v1.data.common import (
     PersonSex,
 )
 from canvas_sdk.v1.data.utils import create_key
+from logger import log
 
 
 @dataclass
@@ -273,6 +274,10 @@ class Patient(TrackableFieldsModel):
         """Create a new Patient."""
         self._validate_before_effect("create")
 
+        log.info(
+            f"Creating patient: {self.first_name} {self.middle_name} {self.last_name} effect ID: {self.effect_id}"
+        )
+
         return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
@@ -280,6 +285,7 @@ class Patient(TrackableFieldsModel):
                     "data": self.values,
                 }
             ),
+            id=str(self.effect_id),
         )
 
     def update(self) -> Effect:
