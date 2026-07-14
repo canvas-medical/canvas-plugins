@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.178.0 (2026-07-14)
+
+### Features
+
+- Add practice_location_override to PrescribeCommand.send
+  ([#1787](https://github.com/canvas-medical/canvas-plugins/pull/1787),
+  [`b8fecab`](https://github.com/canvas-medical/canvas-plugins/commit/b8fecab2de6a7bf6de68f88df72033ee697fc159))
+
+
 ## v0.177.0 (2026-07-04)
 
 ### Bug Fixes
