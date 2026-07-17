@@ -1124,6 +1124,7 @@
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
+    "DocumentReviewDelegation",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -1443,6 +1444,9 @@
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus"
+  ],
+  "canvas_sdk.v1.data.document_review_delegation": [
+    "DocumentReviewDelegation"
   ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",

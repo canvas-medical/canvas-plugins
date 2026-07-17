@@ -22,6 +22,7 @@ from .claim_line_item import (
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
+from .document_review_delegation import DocumentReviewDelegationFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -138,6 +139,7 @@ __all__ = (
     "CoverageFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",
+    "DocumentReviewDelegationFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
