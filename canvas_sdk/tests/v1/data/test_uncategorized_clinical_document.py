@@ -8,7 +8,7 @@ from canvas_sdk.v1.data.uncategorized_clinical_document import UncategorizedClin
 
 @pytest.mark.django_db
 def test_delegations_returns_only_this_documents_rows() -> None:
-    """delegations returns the delegations linked to this document and excludes others."""
+    """Delegations returns the delegations linked to this document and excludes others."""
     document = UncategorizedClinicalDocument(dbid=4321)
     mine_first = DocumentReviewDelegationFactory.create(object_id=document.dbid, is_active=False)
     mine_second = DocumentReviewDelegationFactory.create(object_id=document.dbid, is_active=True)
