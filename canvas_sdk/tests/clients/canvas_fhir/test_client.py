@@ -173,3 +173,29 @@ def test_update_with_empty_body_returns_id_from_location(
     result = client.update("Appointment", "appt-123", {"resourceType": "Appointment"})
 
     assert result == {"id": "appt-123"}
+
+
+def test_create_with_non_dict_body_falls_back_to_location(
+    client: CanvasFhir, mock_post: MagicMock
+) -> None:
+    """A non-object JSON body is ignored in favor of the id in the Location header."""
+    response = MagicMock(
+        status_code=201, content=b"[]", headers={"Location": "/Appointment/appt-123"}
+    )
+    response.json.return_value = []
+    mock_post.return_value = response
+
+    result = client.create("Appointment", {"resourceType": "Appointment"})
+
+    assert result == {"id": "appt-123"}
+
+
+def test_create_with_empty_body_and_no_location_returns_empty_dict(
+    client: CanvasFhir, mock_post: MagicMock
+) -> None:
+    """An empty body with no id in the Location header leaves nothing to return."""
+    mock_post.return_value = _empty_success_response(201, "")
+
+    result = client.create("Appointment", {"resourceType": "Appointment"})
+
+    assert result == {}
