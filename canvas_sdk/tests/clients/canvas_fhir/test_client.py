@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
@@ -138,3 +139,37 @@ def test_update(client: CanvasFhir, mock_put: MagicMock) -> None:
         headers=client._get_headers(),
         json=data,
     )
+
+
+def _empty_success_response(status_code: int, location: str) -> MagicMock:
+    """Build a mock FHIR write response with an empty body and a ``Location`` header.
+
+    Mirrors a successful Canvas FHIR create/update: ``201``/``200`` with no body and the
+    new resource id in ``Location``. ``json()`` raises just as ``requests`` does on empty
+    content.
+    """
+    response = MagicMock(status_code=status_code, content=b"", headers={"Location": location})
+    response.json.side_effect = json.JSONDecodeError("Expecting value", "", 0)
+    return response
+
+
+def test_create_with_empty_body_returns_id_from_location(
+    client: CanvasFhir, mock_post: MagicMock
+) -> None:
+    """Create returns the new resource id from the Location header on an empty body."""
+    mock_post.return_value = _empty_success_response(201, "/Appointment/appt-123")
+
+    result = client.create("Appointment", {"resourceType": "Appointment"})
+
+    assert result == {"id": "appt-123"}
+
+
+def test_update_with_empty_body_returns_id_from_location(
+    client: CanvasFhir, mock_put: MagicMock
+) -> None:
+    """Update tolerates an empty success body and returns the resource id."""
+    mock_put.return_value = _empty_success_response(200, "/Appointment/appt-123")
+
+    result = client.update("Appointment", "appt-123", {"resourceType": "Appointment"})
+
+    assert result == {"id": "appt-123"}
