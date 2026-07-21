@@ -1082,6 +1082,7 @@
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChangeMedication",
     "ChargeDescriptionMaster",
     "ChartSectionReview",
     "ChartSectionReviewSection",
@@ -1322,6 +1323,9 @@
     "CareTeamMembership",
     "CareTeamMembershipStatus",
     "CareTeamRole"
+  ],
+  "canvas_sdk.v1.data.change_medication": [
+    "ChangeMedication"
   ],
   "canvas_sdk.v1.data.charge_description_master": [
     "ChargeDescriptionMaster"

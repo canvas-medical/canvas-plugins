@@ -21,6 +21,7 @@ from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
 from .care_team import CareTeamMembership, CareTeamRole
+from .change_medication import ChangeMedication
 from .charge_description_master import ChargeDescriptionMaster
 from .chart_section_review import ChartSectionReview, ChartSectionReviewSection
 from .claim import (
@@ -229,6 +230,7 @@ __all__ = __exports__ = (
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChangeMedication",
     "ChargeDescriptionMaster",
     "ChartSectionReview",
     "ChartSectionReviewSection",
