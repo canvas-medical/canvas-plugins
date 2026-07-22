@@ -190,6 +190,8 @@ enum EventType {
   CLAIM_SUPERVISING_PROVIDER_CHANGED = 401;
   // Fired when a claim's incident_to billing flag is toggled.
   CLAIM_INCIDENT_TO_CHANGED = 402;
+  // Fired when a claim's assignee (staff or team) is set, changed, or cleared.
+  CLAIM_ASSIGNEE_CHANGED = 403;
 
   // Payment events
 

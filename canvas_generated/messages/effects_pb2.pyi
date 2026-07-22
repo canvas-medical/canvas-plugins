@@ -282,6 +282,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_CLAIM_PROVIDER: _ClassVar[EffectType]
     UPDATE_CLAIM_SUPERVISING_PROVIDER: _ClassVar[EffectType]
     SET_CLAIM_INCIDENT_TO: _ClassVar[EffectType]
+    UPDATE_CLAIM_ASSIGNEE: _ClassVar[EffectType]
     UPSERT_CLAIM_METADATA: _ClassVar[EffectType]
     UPDATE_CLAIM_LINE_ITEM: _ClassVar[EffectType]
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
@@ -663,6 +664,7 @@ REMOVE_CLAIM_BANNER_ALERT: EffectType
 UPDATE_CLAIM_PROVIDER: EffectType
 UPDATE_CLAIM_SUPERVISING_PROVIDER: EffectType
 SET_CLAIM_INCIDENT_TO: EffectType
+UPDATE_CLAIM_ASSIGNEE: EffectType
 UPSERT_CLAIM_METADATA: EffectType
 UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
