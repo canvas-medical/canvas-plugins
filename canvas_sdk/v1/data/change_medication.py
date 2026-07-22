@@ -19,18 +19,16 @@ class ChangeMedication(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="change_medications"
+        "v1.Patient", on_delete=models.CASCADE, related_name="change_medications"
     )
-    note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="change_medications"
-    )
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="change_medications")
     medication = models.ForeignKey(
         "v1.Medication",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="change_medications",
         null=True,
     )
-    sig_original_input = models.CharField(max_length=1000, default="")
+    sig_original_input = models.CharField(max_length=1000, blank=True, default="")
 
 
 __exports__ = ("ChangeMedication",)
