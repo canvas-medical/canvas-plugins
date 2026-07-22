@@ -1240,6 +1240,8 @@
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
+    "RefillRequest",
+    "RefillRequestCoding",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1654,6 +1656,10 @@
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReportQuerySet"
+  ],
+  "canvas_sdk.v1.data.refill_request": [
+    "RefillRequest",
+    "RefillRequestCoding"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
