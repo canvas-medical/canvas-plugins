@@ -48,6 +48,9 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch(
             "canvas_sdk.effects.claim.claim_supervising_provider.Staff"
         ) as mock_supervising_staff,
+        patch("canvas_sdk.effects.claim.claim_assignee.Claim") as mock_claim_assignee,
+        patch("canvas_sdk.effects.claim.claim_assignee.Staff") as mock_assignee_staff,
+        patch("canvas_sdk.effects.claim.claim_assignee.Team") as mock_assignee_team,
         patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
         patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli,
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
@@ -68,6 +71,11 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         # Setup supervising provider mocks - claim and staff exist by default
         mock_claim_supervising.objects.filter.return_value.exists.return_value = True
         mock_supervising_staff.objects.filter.return_value.exists.return_value = True
+
+        # Setup assignee mocks - claim, staff, and team exist by default
+        mock_claim_assignee.objects.filter.return_value.exists.return_value = True
+        mock_assignee_staff.objects.filter.return_value.exists.return_value = True
+        mock_assignee_team.objects.filter.return_value.exists.return_value = True
 
         # Setup payment-related mocks
         mock_claim_obj = MagicMock()
@@ -108,6 +116,9 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
             "claim_provider_obj": mock_provider_claim_obj,
             "claim_supervising": mock_claim_supervising,
             "supervising_staff": mock_supervising_staff,
+            "claim_assignee": mock_claim_assignee,
+            "assignee_staff": mock_assignee_staff,
+            "assignee_team": mock_assignee_team,
             "payment_claim": mock_payment_claim,
             "payment_claim_obj": mock_claim_obj,
             "payment_cli": mock_cli,
@@ -929,3 +940,93 @@ def test_set_incident_to_requires_existing_claim(mock_db_queries: dict[str, Magi
         claim.set_incident_to(False)
 
     assert "Claim with id invalid-claim-id does not exist." in repr(e.value)
+
+
+def test_claim_effect_assign_to_staff(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that assign with an assignee_id emits the staff assignment payload."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.assign(assignee_id="staff-key")
+
+    assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
+    assert json.loads(effect.payload)["data"] == {
+        "claim_id": "claim-id",
+        "assignee_id": "staff-key",
+        "team_id": None,
+    }
+
+
+def test_claim_effect_assign_to_team(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that assign with a team_id emits the team assignment payload."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.assign(team_id="team-key")
+
+    assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
+    assert json.loads(effect.payload)["data"] == {
+        "claim_id": "claim-id",
+        "assignee_id": None,
+        "team_id": "team-key",
+    }
+
+
+def test_claim_effect_unassign(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that unassign clears both assignee and team."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.unassign()
+
+    assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
+    assert json.loads(effect.payload)["data"] == {
+        "claim_id": "claim-id",
+        "assignee_id": None,
+        "team_id": None,
+    }
+
+
+def test_claim_effect_assign_rejects_both_staff_and_team(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that assigning to both a staff member and a team raises a validation error."""
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(assignee_id="staff-key", team_id="team-key")
+
+    assert "assigned to a staff member or a team, but not both" in repr(e.value)
+
+
+def test_claim_effect_assign_requires_existing_claim(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that assign validates the claim exists."""
+    mock_db_queries["claim_assignee"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="invalid-claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(assignee_id="staff-key")
+
+    assert "Claim with id invalid-claim-id does not exist." in repr(e.value)
+
+
+def test_claim_effect_assign_requires_existing_staff(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that assign validates the Staff exists when assignee_id is given."""
+    mock_db_queries["assignee_staff"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(assignee_id="missing-staff")
+
+    assert "Staff with id missing-staff does not exist." in repr(e.value)
+
+
+def test_claim_effect_assign_requires_existing_team(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that assign validates the Team exists when team_id is given."""
+    mock_db_queries["assignee_team"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(team_id="missing-team")
+
+    assert "Team with id missing-team does not exist." in repr(e.value)
