@@ -3,7 +3,6 @@ from typing import cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
-    BaseModelManager,
     BaseQuerySet,
     ForPatientQuerySetMixin,
     IdentifiableModel,
@@ -16,16 +15,16 @@ class RefillRequestQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """RefillRequestQuerySet."""
 
 
-RefillRequestManager = BaseModelManager.from_queryset(RefillRequestQuerySet)
-
-
 class RefillRequest(TimestampedModel, IdentifiableModel):
     """RefillRequest."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_refillrequest_001"
 
-    objects = cast(RefillRequestQuerySet, RefillRequestManager())
+    # Plain Manager (not BaseModelManager): RefillRequest is not an AuditedModel and
+    # has no `deleted` column, so BaseModelManager's deleted=False filter would raise
+    # FieldError on every query. Mirrors ReferralReport (also TimestampedModel-only).
+    objects = cast(RefillRequestQuerySet, models.Manager.from_queryset(RefillRequestQuerySet)())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="refill_requests", null=True
