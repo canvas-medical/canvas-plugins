@@ -1,3 +1,10 @@
+from .admin_catalog import (
+    AdminCommandType,
+    AdminDiagnosticView,
+    AdminLabel,
+    AdminProtocolTemplate,
+    AdminQueue,
+)
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .application import Application
 from .appointment import (
@@ -83,6 +90,7 @@ from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
 from .fax import Fax, FaxDirection, FaxStatus, FaxStatusModel
+from .fee_schedule import FeeSchedule
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
 from .group import Group
@@ -135,6 +143,7 @@ from .lab import (
     LabValueCoding,
 )
 from .letter import Language, Letter, LetterActionEvent
+from .letter_template import LetterTemplate
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -165,6 +174,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
+from .organization_setting import OrganizationSetting
 from .organizational_entity import OrganizationalEntity
 from .patient import (
     ContactCategory,
@@ -190,8 +200,10 @@ from .patient_group import PatientGroup, PatientGroupMember
 from .payment_card import PaymentCard
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
+from .permission_group import PermissionGroup, RolePermissionGroup
 from .plan import Plan
 from .plugin_command import PluginCommand
+from .poc_lab_template import POCLabTemplate
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -199,6 +211,7 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
+from .posting_rule import PostingRule
 from .practicelocation import (
     PracticeLocation,
     PracticeLocationAddress,
@@ -243,6 +256,8 @@ from .refill_request import RefillRequest, RefillRequestCoding
 from .remove_allergy_event import RemoveAllergyEvent
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .resolve_condition_event import ResolveConditionEvent
+from .role import Role, RoleDomain
+from .schedule_duration import ScheduleDuration
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -269,6 +284,7 @@ from .uncategorized_clinical_document import (
 )
 from .user import CanvasUser
 from .vaccine import Vaccine, VaccineLot, VaccineManufacturer
+from .vaccine_lot import VaccineCatalog
 from .visual_exam_finding import VisualExamFinding
 from .vitals import VitalSign, VitalSignReading
 
@@ -546,5 +562,22 @@ __all__ = __exports__ = (
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
+    # Instance Configuration data models
+    "AdminCommandType",
+    "AdminDiagnosticView",
+    "AdminLabel",
+    "AdminProtocolTemplate",
+    "AdminQueue",
+    "FeeSchedule",
+    "LetterTemplate",
+    "OrganizationSetting",
+    "PermissionGroup",
+    "POCLabTemplate",
+    "PostingRule",
+    "Role",
+    "RoleDomain",
+    "RolePermissionGroup",
+    "ScheduleDuration",
+    "VaccineCatalog",
     "proxy_field",
 )
