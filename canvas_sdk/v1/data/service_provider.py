@@ -20,6 +20,9 @@ class ServiceProvider(IdentifiableModel):
     specialty = models.CharField(max_length=512)
     practice_name = models.CharField(max_length=512, null=True, blank=True)
     notes = models.TextField(default="", null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    npi = models.CharField(max_length=10, null=True, blank=True)
+    direct_address = models.CharField(max_length=512, null=True, blank=True)
 
     @property
     def full_name(self) -> str:

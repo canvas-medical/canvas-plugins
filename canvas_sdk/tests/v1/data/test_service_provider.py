@@ -1,0 +1,37 @@
+import pytest
+
+from canvas_sdk.test_utils.factories.service_provider import ServiceProviderFactory
+from canvas_sdk.v1.data import ServiceProvider
+
+
+@pytest.mark.django_db
+def test_service_provider_new_fields_model_defaults() -> None:
+    """The new fields fall back to model-level defaults when not supplied.
+
+    Built directly (NOT via the factory, which sets the three fields explicitly) so the
+    model's own default/null behavior is exercised and round-trips through the database.
+    """
+    provider = ServiceProvider(first_name="Jane", specialty="Cardiology")
+    provider.save()
+
+    persisted = ServiceProvider.objects.get(pk=provider.pk)
+
+    assert persisted.is_active is True
+    assert persisted.npi is None
+    assert persisted.direct_address is None
+
+
+@pytest.mark.django_db
+def test_service_provider_new_fields_round_trip_explicit_values() -> None:
+    """Explicit values for the new fields round-trip through the SDK model."""
+    provider = ServiceProviderFactory.create(
+        is_active=False,
+        npi="9876543210",
+        direct_address="john.smith@direct.example.org",
+    )
+
+    persisted = ServiceProvider.objects.get(pk=provider.pk)
+
+    assert persisted.is_active is False
+    assert persisted.npi == "9876543210"
+    assert persisted.direct_address == "john.smith@direct.example.org"
