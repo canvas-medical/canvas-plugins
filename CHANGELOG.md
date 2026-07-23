@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.181.0 (2026-07-23)
+
+### Features
+
+- Add change medication model ([#1793](https://github.com/canvas-medical/canvas-plugins/pull/1793),
+  [`f097812`](https://github.com/canvas-medical/canvas-plugins/commit/f0978124f7bd40c7c20c121765b460f5f9c24536))
+
+
 ## v0.180.0 (2026-07-23)
 
 ### Features
