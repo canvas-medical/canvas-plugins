@@ -4,6 +4,7 @@ from uuid import UUID
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.claim.claim_assignee import _UpdateClaimAssignee
 from canvas_sdk.effects.claim.claim_banner_alert import (
     BannerAlertIntent,
     _AddClaimBannerAlert,
@@ -206,6 +207,33 @@ class ClaimEffect(Model):
             Effect: An effect that moves the claim to the specified queue.
         """
         return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
+
+    def assign(self, *, assignee_id: str | None = None, team_id: str | None = None) -> Effect:
+        """
+        Assigns the claim to a staff member or a team.
+
+        Provide exactly one of ``assignee_id`` or ``team_id``. Passing neither
+        clears the assignment (equivalent to :meth:`unassign`).
+
+        Args:
+            assignee_id (str | None): The identifier of the Staff member to assign.
+            team_id (str | None): The identifier of the Team to assign.
+
+        Returns:
+            Effect: An effect that updates the claim's assignee.
+        """
+        return _UpdateClaimAssignee(
+            claim_id=self.claim_id, assignee_id=assignee_id, team_id=team_id
+        ).apply()
+
+    def unassign(self) -> Effect:
+        """
+        Clears the claim's assignee (staff member or team).
+
+        Returns:
+            Effect: An effect that clears the claim's assignee.
+        """
+        return _UpdateClaimAssignee(claim_id=self.claim_id).apply()
 
     def post_payment(
         self,
