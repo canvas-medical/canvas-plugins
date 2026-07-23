@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "instance_config_settings_page",
+    "description": "Example plugin that registers a native settings page under /set-up/ using SettingsPageHandler and the widget primitives.",
+    "url_permissions": [],
+    "components": {
+        "applications": [],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "protocols": [],
+        "views": [],
+        "handlers": [
+            {
+                "class": "instance_config_settings_page.handlers.fasting_program:FastingProgramSettings",
+                "description": "Renders the Fasting Program settings page under /set-up/fasting_program/."
+            }
+        ]
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": ""
+}
