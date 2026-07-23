@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.180.0 (2026-07-23)
+
+### Features
+
+- **data**: Add RefillRequest data model
+  ([#1795](https://github.com/canvas-medical/canvas-plugins/pull/1795),
+  [`8462eb6`](https://github.com/canvas-medical/canvas-plugins/commit/8462eb65756408df176a1ad6e3381b8fc5362cae))
+
+
 ## v0.179.0 (2026-07-14)
 
 ### Features
