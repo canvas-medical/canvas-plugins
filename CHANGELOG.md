@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.180.0 (2026-07-23)
+
+### Features
+
+- **data**: Add RefillRequest data model
+  ([#1795](https://github.com/canvas-medical/canvas-plugins/pull/1795),
+  [`8462eb6`](https://github.com/canvas-medical/canvas-plugins/commit/8462eb65756408df176a1ad6e3381b8fc5362cae))
+
+
+## v0.179.0 (2026-07-14)
+
+### Features
+
+- Add note state action buttons and note footer configuration
+  ([#1770](https://github.com/canvas-medical/canvas-plugins/pull/1770),
+  [`ed45b0f`](https://github.com/canvas-medical/canvas-plugins/commit/ed45b0f164ad257319b51522e9eb8fef157c2359))
+
+
+## v0.178.0 (2026-07-14)
+
+### Features
+
+- Add practice_location_override to PrescribeCommand.send
+  ([#1787](https://github.com/canvas-medical/canvas-plugins/pull/1787),
+  [`b8fecab`](https://github.com/canvas-medical/canvas-plugins/commit/b8fecab2de6a7bf6de68f88df72033ee697fc159))
+
+
 ## v0.177.0 (2026-07-04)
 
 ### Bug Fixes
