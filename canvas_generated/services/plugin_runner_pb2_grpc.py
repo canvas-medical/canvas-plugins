@@ -60,6 +60,11 @@ class PluginRunnerStub(object):
                 request_serializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesRequest.SerializeToString,
                 response_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesResponse.FromString,
                 _registered_method=True)
+        self.RunAgent = channel.unary_stream(
+                '/canvas.PluginRunner/RunAgent',
+                request_serializer=canvas__generated_dot_messages_dot_plugins__pb2.RunAgentRequest.SerializeToString,
+                response_deserializer=canvas__generated_dot_messages_dot_events__pb2.EventResponse.FromString,
+                _registered_method=True)
 
 
 class PluginRunnerServicer(object):
@@ -95,6 +100,14 @@ class PluginRunnerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RunAgent(self, request, context):
+        """Agent Runner Framework (KOALA-5544). Reuses EventResponse so emitted
+        agent effects flow back through the same shape handler-emitted effects do.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_PluginRunnerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -122,6 +135,11 @@ def add_PluginRunnerServicer_to_server(servicer, server):
                     servicer.GetRegisteredEventTypes,
                     request_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesRequest.FromString,
                     response_serializer=canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesResponse.SerializeToString,
+            ),
+            'RunAgent': grpc.unary_stream_rpc_method_handler(
+                    servicer.RunAgent,
+                    request_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.RunAgentRequest.FromString,
+                    response_serializer=canvas__generated_dot_messages_dot_events__pb2.EventResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -259,6 +277,33 @@ class PluginRunner(object):
             '/canvas.PluginRunner/GetRegisteredEventTypes',
             canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesRequest.SerializeToString,
             canvas__generated_dot_messages_dot_plugins__pb2.GetRegisteredEventTypesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RunAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/canvas.PluginRunner/RunAgent',
+            canvas__generated_dot_messages_dot_plugins__pb2.RunAgentRequest.SerializeToString,
+            canvas__generated_dot_messages_dot_events__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
