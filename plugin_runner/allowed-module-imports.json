@@ -1207,6 +1207,7 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationalEntity",
     "Patient",
     "PatientAddress",
     "PatientConsent",
@@ -1578,6 +1579,9 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint"
+  ],
+  "canvas_sdk.v1.data.organizational_entity": [
+    "OrganizationalEntity"
   ],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",

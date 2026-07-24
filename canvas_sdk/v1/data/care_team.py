@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.coding import Coding
+
+if TYPE_CHECKING:
+    from canvas_sdk.v1.data.service_provider import ServiceProvider
 
 
 class CareTeamMembershipStatus(models.TextChoices):
@@ -41,11 +46,25 @@ class CareTeamMembership(TimestampedModel, IdentifiableModel):
     role = models.ForeignKey(
         "v1.CareTeamRole", related_name="care_teams", on_delete=models.DO_NOTHING, null=True
     )
+    organizational_entity = models.ForeignKey(
+        "v1.OrganizationalEntity",
+        on_delete=models.DO_NOTHING,
+        related_name="care_team_memberships",
+        null=True,
+    )
     status = models.CharField(choices=CareTeamMembershipStatus.choices, max_length=20)
     lead = models.BooleanField()
     role_code = models.CharField(max_length=255)
     role_system = models.CharField(max_length=255)
     role_display = models.CharField(max_length=255)
+
+    @property
+    def service_provider(self) -> "ServiceProvider | None":
+        """The external ServiceProvider for this membership, via its organizational entity."""
+        entity = self.organizational_entity
+        if entity is None:
+            return None
+        return entity.service_provider
 
     def __str__(self) -> str:
         return f"id={self.id}"

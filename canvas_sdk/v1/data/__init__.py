@@ -134,6 +134,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
+from .organizational_entity import OrganizationalEntity
 from .patient import (
     Patient,
     PatientAddress,
@@ -358,6 +359,7 @@ __all__ = __exports__ = (
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationalEntity",
     "Patient",
     "PatientAddress",
     "PatientContactPoint",
