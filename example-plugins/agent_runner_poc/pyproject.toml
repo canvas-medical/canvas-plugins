@@ -1,0 +1,18 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "PoC reference agent for the Canvas Agent Runner Framework (KOALA-5544)"
+license = "MIT"
+name = "agent_runner_poc"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
+
+[tool.uv.sources]
+canvas = {editable = true, path = "../../"}
