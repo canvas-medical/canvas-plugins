@@ -22,3 +22,30 @@ message UnloadPluginRequest {
 message UnloadPluginResponse {
   bool success = 1;
 }
+
+// Agent Runner Framework (KOALA-5544)
+//
+// Sent from home-app's `run_agent` Celery task to the plugin-runner to
+// invoke an AgentPlugin subclass. The plugin-runner resolves the agent
+// class from LOADED_PLUGINS, drives load_state/run/save_state with the
+// supplied scope, and streams emitted effects back as EventResponse.
+message RunAgentRequest {
+  // "module.path:Class" — same format as components.handlers[].class.
+  string agent_id = 1;
+
+  // Namespace tuple used for state-store keying (and V1 lock keying).
+  string scope_key = 2;
+
+  // Identifier for this run; included in audit and effect provenance.
+  string run_id = 3;
+
+  // JSON-encoded dict carrying trigger-shaped data the agent needs in run().
+  string trigger_payload = 4;
+
+  // Provenance fields, threaded through to each emitted Effect so audit
+  // and downstream interpreters see the originating plugin/handler/actor.
+  string plugin_name = 5;
+  string handler_name = 6;
+  string actor = 7;
+  string source = 8;
+}

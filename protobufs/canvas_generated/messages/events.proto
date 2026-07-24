@@ -1481,4 +1481,11 @@ message Event {
 message EventResponse {
   bool success = 1;
   repeated Effect effects = 2;
+  // Optional. When set, indicates the kind of expected failure that
+  // produced ``success = false`` so the caller can decide whether to
+  // retry, surface a user-facing error, etc. Empty string means either
+  // success or a generic/unstructured failure. Currently defined:
+  //   - "AGENT_LOCKED": the per-scope_key lock was held by another run;
+  //     the caller should re-enqueue with backoff (doc §6.2).
+  string error_kind = 3;
 }
