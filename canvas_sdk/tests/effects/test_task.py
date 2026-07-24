@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from pydantic_core import ValidationError
 
-from canvas_sdk.effects.task import AddTask, TaskStatus, UpdateTask
+from canvas_sdk.effects.task import AddTask, LinkedObject, TaskStatus, UpdateTask
 from canvas_sdk.v1.data.task import TaskPriority
 
 
@@ -127,6 +127,48 @@ def test_task_effects_reject_invalid_priority(task_cls: type, invalid_value: Any
 
     errors = exc_info.value.errors()
     assert any("priority" in str(e).lower() for e in errors)
+
+
+def test_add_task_linked_objects_defaults_to_empty(valid_add_task_data: dict[str, Any]) -> None:
+    """Test that linked_objects defaults to an empty list."""
+    task = AddTask(**valid_add_task_data)
+
+    assert task.linked_objects == []
+    assert task.values["linked_objects"] == []
+
+
+def test_add_task_with_multiple_linked_objects(valid_add_task_data: dict[str, Any]) -> None:
+    """Test creating a task with multiple linked objects, accepting dicts and models."""
+    referral_id = str(uuid4())
+    note_id = str(uuid4())
+    valid_add_task_data["linked_objects"] = [
+        {"id": referral_id, "type": "REFERRAL"},
+        LinkedObject(id=note_id, type=AddTask.LinkableObjectType.NOTE),
+    ]
+
+    task = AddTask(**valid_add_task_data)
+    values = task.values
+
+    assert values["linked_objects"] == [
+        {"id": referral_id, "type": "REFERRAL"},
+        {"id": note_id, "type": "NOTE"},
+    ]
+
+
+def test_add_task_rejects_invalid_linked_object_type(valid_add_task_data: dict[str, Any]) -> None:
+    """Test that an invalid linked object type is rejected."""
+    valid_add_task_data["linked_objects"] = [{"id": str(uuid4()), "type": "BOGUS"}]
+
+    with pytest.raises(ValidationError) as exc_info:
+        AddTask(**valid_add_task_data)
+
+    assert any("linked_objects" in str(e).lower() for e in exc_info.value.errors())
+
+
+def test_linked_object_uses_add_task_linkable_object_type() -> None:
+    """Test that LinkedObject validates its type against AddTask.LinkableObjectType."""
+    linked_object = LinkedObject(id=str(uuid4()), type=AddTask.LinkableObjectType.CLAIM)
+    assert linked_object.type is AddTask.LinkableObjectType.CLAIM
 
 
 def test_update_task_clears_priority_explicitly() -> None:

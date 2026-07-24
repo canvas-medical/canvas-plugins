@@ -844,6 +844,7 @@
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
+    "LinkedObject",
     "TaskMetadata",
     "TaskPriority",
     "TaskStatus",
@@ -852,6 +853,7 @@
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
+    "LinkedObject",
     "TaskMetadata",
     "TaskPriority",
     "TaskStatus",

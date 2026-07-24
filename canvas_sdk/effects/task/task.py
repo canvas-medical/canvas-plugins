@@ -3,7 +3,7 @@ from enum import Enum, StrEnum
 from typing import Any, Self, cast
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import BaseModel, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -30,6 +30,8 @@ class AddTask(_BaseEffect):
 
         REFERRAL = "REFERRAL"
         IMAGING = "IMAGING"
+        NOTE = "NOTE"
+        CLAIM = "CLAIM"
 
     class Meta:
         effect_type = EffectType.CREATE_TASK
@@ -46,6 +48,7 @@ class AddTask(_BaseEffect):
     labels: list[str] = []
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
+    linked_objects: list["LinkedObject"] = []
     author_id: str | UUID | None = None
 
     @model_validator(mode="after")
@@ -80,7 +83,17 @@ class AddTask(_BaseEffect):
                 "id": str(self.linked_object_id) if self.linked_object_id else None,
                 "type": self.linked_object_type.value if self.linked_object_type else None,
             },
+            "linked_objects": [
+                {"id": str(obj.id), "type": obj.type.value} for obj in self.linked_objects
+            ],
         }
+
+
+class LinkedObject(BaseModel):
+    """A single object linked to a Task."""
+
+    id: str | UUID
+    type: AddTask.LinkableObjectType
 
 
 class AddTaskComment(_BaseEffect):
@@ -178,6 +191,7 @@ class TaskMetadata(BaseMetadata):
 __exports__ = (
     "AddTask",
     "AddTaskComment",
+    "LinkedObject",
     "TaskPriority",
     "TaskStatus",
     "TaskMetadata",
