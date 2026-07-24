@@ -154,6 +154,7 @@ from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plugin_command import PluginCommand
+from .plugin_data import PluginData
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -376,6 +377,7 @@ __all__ = __exports__ = (
     "PayorSpecificCharge",
     "PaymentCollection",
     "PluginCommand",
+    "PluginData",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
