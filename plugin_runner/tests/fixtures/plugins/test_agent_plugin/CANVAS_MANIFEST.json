@@ -1,0 +1,25 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_agent_plugin",
+    "description": "Fixture: minimal AgentPlugin for RunAgent RPC tests",
+    "components": {
+        "handlers": [],
+        "agents": [
+            {
+                "class": "test_agent_plugin.agents.echo_agent:EchoAgent",
+                "description": "Test agent that echoes its trigger payload as a LOG effect"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
