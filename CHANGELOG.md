@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.182.0 (2026-07-24)
+
+### Features
+
+- Add DocumentReviewDelegation SDK data model and DOCUMENT_DELEGATED event
+  ([#1791](https://github.com/canvas-medical/canvas-plugins/pull/1791),
+  [`325b832`](https://github.com/canvas-medical/canvas-plugins/commit/325b8323e8fa7e9cffe17f3f080ab4db6841ce76))
+
+
 ## v0.181.0 (2026-07-23)
 
 ### Features
