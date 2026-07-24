@@ -2,6 +2,7 @@ import datetime
 import json
 import re
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 from pydantic_core import InitErrorDetails
@@ -39,6 +40,79 @@ class PatientContactPoint:
             "use": self.use.value,
             "rank": self.rank,
             "has_consent": self.has_consent,
+        }
+
+
+@dataclass
+class PatientContactCategory:
+    """A relationship category for a patient contact (e.g. emergency contact, next-of-kin)."""
+
+    code: str
+    code_system: str = "INTERNAL"
+    name: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the contact category to a dictionary."""
+        return {
+            "code_system": self.code_system,
+            "code": self.code,
+            "name": self.name,
+        }
+
+
+class PatientContactRelationship(Enum):
+    """Common patient-contact relationship categories, each carrying its full coding."""
+
+    code: str
+    code_system: str
+    display: str
+
+    EMERGENCY_CONTACT = ("EMC", "INTERNAL", "Emergency contact")
+    POWER_OF_ATTORNEY = ("POA", "INTERNAL", "Power of attorney")
+    AUTHORIZED_FOR_RELEASE_OF_INFORMATION = (
+        "ARI",
+        "INTERNAL",
+        "Authorized for release of information",
+    )
+    NEXT_OF_KIN = ("N", "http://terminology.hl7.org/CodeSystem/v2-0131", "Next-of-Kin")
+
+    def __init__(self, code: str, code_system: str, display: str) -> None:
+        """Store the coding tuple as named attributes on the member."""
+        self.code = code
+        self.code_system = code_system
+        self.display = display
+
+    def category(self) -> "PatientContactCategory":
+        """Return the PatientContactCategory coding for this relationship."""
+        return PatientContactCategory(
+            code=self.code, code_system=self.code_system, name=self.display
+        )
+
+
+@dataclass
+class PatientContact:
+    """A class representing a patient contact, such as an emergency contact or related person."""
+
+    name: str
+    contact_identifier: str | None = None
+    phone_number: str | None = None
+    email: str | None = None
+    comments: str | None = None
+    categories: list[PatientContactCategory] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the contact to a dictionary."""
+        return {
+            "contact_identifier": self.contact_identifier,
+            "name": self.name,
+            "phone_number": self.phone_number,
+            "email": self.email,
+            "comments": self.comments,
+            "categories": (
+                [category.to_dict() for category in self.categories]
+                if self.categories is not None
+                else []
+            ),
         }
 
 
@@ -147,6 +221,7 @@ class Patient(TrackableFieldsModel):
     cultural_ethnicity_codes: list[str] | None = None
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
+    contacts: list[PatientContact] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
     preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
     addresses: list[PatientAddress] | None = None
@@ -161,6 +236,13 @@ class Patient(TrackableFieldsModel):
             values["contact_points"] = (
                 [cp.to_dict() for cp in self.contact_points]
                 if self.contact_points is not None
+                else None
+            )
+
+        if self.is_dirty("contacts"):
+            values["contacts"] = (
+                [contact.to_dict() for contact in self.contacts]
+                if self.contacts is not None
                 else None
             )
 
@@ -299,7 +381,10 @@ class Patient(TrackableFieldsModel):
 __exports__ = (
     "Patient",
     "PatientAddress",
+    "PatientContact",
+    "PatientContactCategory",
     "PatientContactPoint",
+    "PatientContactRelationship",
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",
