@@ -95,6 +95,10 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     package_name = init_plugin_name.replace("-", "_")
     assert result.exit_code == 0
 
+    # deprecation warning: declaring plugin variables in the manifest is going away
+    assert "deprecated" in result.output
+    assert "plugin variables" in result.output
+
     # plugin directory exists
     plugin = Path(f"./{init_plugin_name}/{package_name}")
     assert plugin.exists()
