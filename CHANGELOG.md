@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v0.182.2 (2026-07-27)
+
+### Bug Fixes
+
+- Trigger new release ([#1799](https://github.com/canvas-medical/canvas-plugins/pull/1799),
+  [`abfca07`](https://github.com/canvas-medical/canvas-plugins/commit/abfca07169b9cfc1c3a578aedeb4054671e8cf10))
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+
 ## v0.182.1 (2026-07-27)
 
 ### Bug Fixes
