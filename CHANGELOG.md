@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.182.1 (2026-07-27)
+
+### Bug Fixes
+
+- Rank staff clinical role by privilege level
+  ([#1783](https://github.com/canvas-medical/canvas-plugins/pull/1783),
+  [`b0d9cc7`](https://github.com/canvas-medical/canvas-plugins/commit/b0d9cc7481e89aebd93a3e57f439b22ff872e6b1))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.182.0 (2026-07-24)
 
 ### Features
