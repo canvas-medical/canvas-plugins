@@ -20,6 +20,7 @@ from cookiecutter.exceptions import OutputDirExistsException
 from cookiecutter.main import cookiecutter
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
 from plugin_runner.plugin_runner import load_plugin_handlers
@@ -279,6 +280,7 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        _lint_plugin_static(plugin_name)
         _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
@@ -787,11 +789,40 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
 
 
+def _lint_plugin_static(plugin_name: Path) -> None:
+    """Static pre-load lint: RestrictedPython constructs that fail at runtime and
+    Custom Data setup mistakes the sandbox load can't surface. Prints warnings and
+    raises ``typer.Exit(1)`` on any error-severity finding.
+    """
+    manifest_path = plugin_name / "CANVAS_MANIFEST.json"
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        manifest = {}
+
+    findings = lint_plugin(plugin_name, manifest)
+    if not findings:
+        return
+
+    warnings = [f for f in findings if f.severity == "warning"]
+    errors = [f for f in findings if f.severity == "error"]
+
+    for w in warnings:
+        print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
+
+    if errors:
+        print("\nThese issues will fail on the instance (sandbox / Custom Data):")
+        for e in errors:
+            print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
+        raise typer.Exit(code=1)
+
+
 def validate(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
     """Validate a plugin's manifest and that all its handlers load in the sandbox."""
     validate_manifest(plugin_name)
+    _lint_plugin_static(plugin_name)
     _validate_plugin_loads(plugin_name)
 
 

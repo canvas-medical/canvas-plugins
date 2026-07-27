@@ -1,6 +1,70 @@
 # CHANGELOG
 
 
+## v0.182.0 (2026-07-24)
+
+### Features
+
+- Add DocumentReviewDelegation SDK data model and DOCUMENT_DELEGATED event
+  ([#1791](https://github.com/canvas-medical/canvas-plugins/pull/1791),
+  [`325b832`](https://github.com/canvas-medical/canvas-plugins/commit/325b8323e8fa7e9cffe17f3f080ab4db6841ce76))
+
+
+## v0.181.0 (2026-07-23)
+
+### Features
+
+- Add change medication model ([#1793](https://github.com/canvas-medical/canvas-plugins/pull/1793),
+  [`f097812`](https://github.com/canvas-medical/canvas-plugins/commit/f0978124f7bd40c7c20c121765b460f5f9c24536))
+
+
+## v0.180.0 (2026-07-23)
+
+### Features
+
+- **data**: Add RefillRequest data model
+  ([#1795](https://github.com/canvas-medical/canvas-plugins/pull/1795),
+  [`8462eb6`](https://github.com/canvas-medical/canvas-plugins/commit/8462eb65756408df176a1ad6e3381b8fc5362cae))
+
+
+## v0.179.0 (2026-07-14)
+
+### Features
+
+- Add note state action buttons and note footer configuration
+  ([#1770](https://github.com/canvas-medical/canvas-plugins/pull/1770),
+  [`ed45b0f`](https://github.com/canvas-medical/canvas-plugins/commit/ed45b0f164ad257319b51522e9eb8fef157c2359))
+
+
+## v0.178.0 (2026-07-14)
+
+### Features
+
+- Add practice_location_override to PrescribeCommand.send
+  ([#1787](https://github.com/canvas-medical/canvas-plugins/pull/1787),
+  [`b8fecab`](https://github.com/canvas-medical/canvas-plugins/commit/b8fecab2de6a7bf6de68f88df72033ee697fc159))
+
+
+## v0.177.0 (2026-07-04)
+
+### Bug Fixes
+
+- Import Effect from canvas_sdk.effects in recurring_appointments handler
+  ([#1767](https://github.com/canvas-medical/canvas-plugins/pull/1767),
+  [`448c489`](https://github.com/canvas-medical/canvas-plugins/commit/448c489d095a445fef3b4934504a5a755261ce3c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+### Features
+
+- Static sandbox + Custom Data lint in `canvas validate`
+  ([#1784](https://github.com/canvas-medical/canvas-plugins/pull/1784),
+  [`07fd7e1`](https://github.com/canvas-medical/canvas-plugins/commit/07fd7e1de3f662ba19269598fd19231a0eebea79))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.176.0 (2026-06-30)
 
 ### Features

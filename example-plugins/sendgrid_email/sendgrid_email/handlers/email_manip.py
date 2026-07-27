@@ -1,8 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
-from email_sender.constants.constants import Constants
-
 from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.clients.sendgrid.constants import (
     CriterionOperation,
@@ -28,6 +26,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
 from logger import log
+from sendgrid_email.constants.constants import Constants
 
 
 class EmailManip(SimpleAPI):
