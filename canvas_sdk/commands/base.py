@@ -11,6 +11,7 @@ from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.command_custom_html import _CommandCustomHtml
 from canvas_sdk.effects.command_metadata.base import _CommandMetadata
+from canvas_sdk.effects.note import Note as NoteEffect
 
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
@@ -58,7 +59,7 @@ class _BaseCommand(TrackableFieldsModel):
     def constantized_key(cls) -> str:
         return re.sub(r"(?<!^)(?=[A-Z])", "_", cls.Meta.key).upper()
 
-    note_uuid: str | None = None
+    note_uuid: str | NoteEffect | None = None
     command_uuid: str | None = None
 
     def _get_effect_method_required_fields(self, method: str) -> tuple:
@@ -115,21 +116,52 @@ class _BaseCommand(TrackableFieldsModel):
             if name not in base_properties
         }
 
-    def originate(self, line_number: int = -1, commit: bool = False) -> Effect:
+    def _extract_nested_effects(self) -> list[Effect]:
+        """Extract any nested effects from parameters that need to be sent separately.
+
+        Returns:
+            tuple: (nested_effects, uuid_mapping) where uuid_mapping maps
+                   attribute names to the effect_uuid of their nested effects
+        """
+        nested_effects = []
+
+        # Check all attributes for nested effect objects
+        for attr_name in dir(self):
+            if attr_name.startswith("_"):
+                continue
+            attr_value = getattr(self, attr_name)
+            if isinstance(attr_value, TrackableFieldsModel) and hasattr(attr_value, "create"):
+                # This is a nested effect object, extract it
+                effect = attr_value.create()
+                nested_effects.append(effect)
+
+        return nested_effects
+
+    def originate(self, line_number: int = -1, commit: bool = False) -> Effect | list[Effect]:
         """Originate a new command in the note body."""
         self._validate_before_effect("originate")
-        return Effect(
+
+        # Extract any nested effects
+        nested_effects = self._extract_nested_effects()
+
+        main_effect = Effect(
             type=f"ORIGINATE_{self.constantized_key()}_COMMAND",
             payload=json.dumps(
                 {
                     "command": self.command_uuid,
-                    "note": self.note_uuid,
+                    "note": str(getattr(self.note_uuid, "effect_id", self.note_uuid)),
                     "data": self.values,
                     "line_number": line_number,
                     "commit": commit,
                 }
             ),
+            id=str(self.effect_id),
         )
+
+        if nested_effects:
+            return nested_effects + [main_effect]
+        else:
+            return main_effect
 
     def _origination_payload_for_batch(self, line_number: int = -1) -> dict:
         """Originate a new command in the note body for batch processing."""
