@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.183.0 (2026-07-28)
+
+### Features
+
+- Add redirect effect ([#1780](https://github.com/canvas-medical/canvas-plugins/pull/1780),
+  [`640dac5`](https://github.com/canvas-medical/canvas-plugins/commit/640dac5e5142dcd098787d2b0fa2be238aea9bef))
+
+
 ## v0.182.2 (2026-07-27)
 
 ### Bug Fixes
