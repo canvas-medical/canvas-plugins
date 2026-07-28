@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.184.0 (2026-07-28)
+
+### Features
+
+- Add lab report effect ([#1769](https://github.com/canvas-medical/canvas-plugins/pull/1769),
+  [`f5d669b`](https://github.com/canvas-medical/canvas-plugins/commit/f5d669b67c750707e8c75cf5a3a9b1264934c84f))
+
+
 ## v0.183.0 (2026-07-28)
 
 ### Features
