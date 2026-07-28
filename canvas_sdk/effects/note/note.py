@@ -9,8 +9,10 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
+from canvas_sdk.effects.patient.base import Patient as PatientEffect
 from canvas_sdk.v1.data import Note as NoteModel
-from canvas_sdk.v1.data import NoteType, Patient, Staff
+from canvas_sdk.v1.data import NoteType, Staff
+from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 TRANSITION_STATE_MATRIX = {
@@ -100,7 +102,7 @@ class Note(NoteOrAppointmentABC):
     Attributes:
         note_type_id (UUID | str): The ID of the note type.
         datetime_of_service (datetime.datetime): The date and time of the service.
-        patient_id (str): The ID of the patient.
+        patient_id (str | Patient): The ID of the patient or a Patient effect object.
     """
 
     class Meta:
@@ -108,7 +110,7 @@ class Note(NoteOrAppointmentABC):
 
     note_type_id: UUID | str | None = None
     datetime_of_service: datetime.datetime | None = None
-    patient_id: str | None = None
+    patient_id: str | PatientEffect | None = None
     title: str | None = None
     related_data: dict | None = None
     supervising_provider_id: str | None = None
@@ -399,7 +401,11 @@ class Note(NoteOrAppointmentABC):
                     )
                 )
 
-        if self.patient_id and not Patient.objects.filter(id=self.patient_id).exists():
+        if (
+            self.patient_id
+            and isinstance(self.patient_id, str)
+            and not PatientModel.objects.filter(id=self.patient_id).exists()
+        ):
             errors.append(
                 self._create_error_detail(
                     "value",
