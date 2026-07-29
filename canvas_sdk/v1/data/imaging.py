@@ -131,6 +131,12 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     result_date = models.DateField()
     original_date = models.DateField()
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
+    s3_report_url = models.CharField(max_length=512)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a URL for accessing the imaging report file, or None if unset."""
+        return self.s3_report_url or None
 
 
 class ImagingReportCoding(Coding):

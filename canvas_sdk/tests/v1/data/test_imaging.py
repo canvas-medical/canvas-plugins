@@ -72,3 +72,19 @@ def test_find_excludes_codings_with_wrong_system() -> None:
     ImagingReportCodingFactory.create(report=report, system="http://snomed.info/sct", code="44388")
 
     assert list(ImagingReport.objects.find(_ColonoscopyValueSet)) == []
+
+
+def test_document_url_with_s3_report_url() -> None:
+    """document_url returns the stored report URL when s3_report_url is set."""
+    report = ImagingReport()
+    report.s3_report_url = "https://example.com/report.pdf"
+
+    assert report.document_url == "https://example.com/report.pdf"
+
+
+def test_document_url_returns_none_when_no_url() -> None:
+    """document_url returns None when s3_report_url is empty."""
+    report = ImagingReport()
+    report.s3_report_url = ""
+
+    assert report.document_url is None
