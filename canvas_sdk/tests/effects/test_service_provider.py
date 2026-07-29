@@ -208,6 +208,65 @@ def test_deactivate_serializes_payload(mock_provider_exists: MagicMock) -> None:
     assert json.loads(effect.payload) == {"data": {"id": "00000000-0000-0000-0000-000000000002"}}
 
 
+@pytest.mark.parametrize(
+    "npi",
+    [
+        "12345678901",  # too long
+        "123456789",  # too short
+        "",  # empty
+        "123456789a",  # non-numeric
+        "123 456789",  # embedded space
+        "١٢٣٤٥٦٧٨٩٠",  # non-ASCII digits
+    ],
+)
+def test_create_rejects_malformed_npi(npi: str) -> None:
+    """create() raises for an npi that is not exactly 10 ASCII digits."""
+    with pytest.raises(ValidationError) as exc_info:
+        ServiceProvider(
+            first_name="Jane",
+            specialty="Cardiology",
+            business_address="123 Main St",
+            npi=npi,
+        ).create()
+
+    assert "npi" in str(exc_info.value)
+
+
+def test_create_accepts_valid_npi() -> None:
+    """create() accepts a 10-digit npi, including one with a leading zero."""
+    effect = ServiceProvider(
+        first_name="Jane",
+        specialty="Cardiology",
+        business_address="123 Main St",
+        npi="0123456789",
+    ).create()
+
+    assert json.loads(effect.payload)["data"]["npi"] == "0123456789"
+
+
+def test_update_rejects_malformed_npi(mock_provider_exists: MagicMock) -> None:
+    """update() raises for a malformed npi rather than sending it onward."""
+    with pytest.raises(ValidationError) as exc_info:
+        ServiceProvider(id="00000000-0000-0000-0000-000000000001", npi="nope").update()
+
+    assert "npi" in str(exc_info.value)
+
+
+def test_update_allows_clearing_npi(mock_provider_exists: MagicMock) -> None:
+    """update(npi=None) clears the field and is not treated as malformed."""
+    effect = ServiceProvider(id="00000000-0000-0000-0000-000000000001", npi=None).update()
+
+    data = json.loads(effect.payload)["data"]
+    assert data["npi"] is None
+
+
+def test_deactivate_ignores_npi(mock_provider_exists: MagicMock) -> None:
+    """deactivate() does not send npi, so a stale value on the model must not block it."""
+    effect = ServiceProvider(id="00000000-0000-0000-0000-000000000002", npi="bad").deactivate()
+
+    assert json.loads(effect.payload) == {"data": {"id": "00000000-0000-0000-0000-000000000002"}}
+
+
 def test_deactivate_requires_id() -> None:
     """deactivate() raises when id is missing."""
     with pytest.raises(ValidationError) as exc_info:

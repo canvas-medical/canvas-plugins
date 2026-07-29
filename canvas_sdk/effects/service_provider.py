@@ -35,6 +35,16 @@ CREATE_REQUIRED_FIELDS: tuple[str, ...] = ("first_name", "specialty", "business_
 # `business_address` is excluded (it is a nullable column).
 UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = ("first_name", "specialty")
 
+NPI_LENGTH = 10
+
+
+def _is_valid_npi(npi: str) -> bool:
+    """Return whether the value is exactly 10 ASCII digits.
+
+    ASCII is required because ``isdigit()`` alone also accepts non-ASCII numerals.
+    """
+    return len(npi) == NPI_LENGTH and npi.isascii() and npi.isdigit()
+
 
 class ServiceProvider(TrackableFieldsModel):
     """
@@ -146,6 +156,21 @@ class ServiceProvider(TrackableFieldsModel):
                             getattr(self, field),
                         )
                     )
+
+        # Only checked when npi is actually sent, so omitting it or clearing it stays valid.
+        if (
+            method in ("create", "update")
+            and self.is_dirty("npi")
+            and self.npi is not None
+            and not _is_valid_npi(self.npi)
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Field 'npi' must be exactly 10 digits.",
+                    self.npi,
+                )
+            )
 
         return errors
 

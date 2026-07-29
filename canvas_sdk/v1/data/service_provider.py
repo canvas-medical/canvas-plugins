@@ -23,6 +23,8 @@ class ServiceProvider(IdentifiableModel):
     is_active = models.BooleanField(default=True)
     npi = models.CharField(max_length=10, null=True, blank=True)
     direct_address = models.CharField(max_length=512, null=True, blank=True)
+    # Set for providers from the shared Science directory; null for customer-created ones.
+    science_contact_id = models.IntegerField(null=True, blank=True)
 
     @property
     def full_name(self) -> str:
