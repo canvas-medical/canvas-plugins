@@ -248,6 +248,10 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     HEALTH_GORILLA_LAB_ORDER_INGEST: _ClassVar[EffectType]
     HEALTH_GORILLA_LAB_REPORT_INGEST: _ClassVar[EffectType]
     SET_COMMAND_CUSTOM_HTML: _ClassVar[EffectType]
+    CREATE_LAB_REPORT: _ClassVar[EffectType]
+    UPDATE_LAB_REPORT: _ClassVar[EffectType]
+    ENTER_IN_ERROR_LAB_REPORT: _ClassVar[EffectType]
+    ATTACH_LAB_REPORT_RESULTS: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     SET_APPLICATION_NOTIFICATION_BADGE: _ClassVar[EffectType]
@@ -287,6 +291,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
+    REDIRECT: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
@@ -629,6 +634,10 @@ HEALTH_GORILLA_LAB_ORDER_OVERRIDE: EffectType
 HEALTH_GORILLA_LAB_ORDER_INGEST: EffectType
 HEALTH_GORILLA_LAB_REPORT_INGEST: EffectType
 SET_COMMAND_CUSTOM_HTML: EffectType
+CREATE_LAB_REPORT: EffectType
+UPDATE_LAB_REPORT: EffectType
+ENTER_IN_ERROR_LAB_REPORT: EffectType
+ATTACH_LAB_REPORT_RESULTS: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 SET_APPLICATION_NOTIFICATION_BADGE: EffectType
@@ -668,6 +677,7 @@ UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
+REDIRECT: EffectType
 SIMPLE_API_RESPONSE: EffectType
 SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
 SIMPLE_API_WEBSOCKET_DENY: EffectType
