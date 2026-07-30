@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Any
 
 from django.db import models
 
@@ -23,8 +24,9 @@ class ServiceProvider(IdentifiableModel):
     is_active = models.BooleanField(default=True)
     npi = models.CharField(max_length=10, null=True, blank=True)
     direct_address = models.CharField(max_length=512, null=True, blank=True)
-    # Set for providers from the shared Science directory; null for customer-created ones.
-    science_contact_id = models.IntegerField(null=True, blank=True)
+    # True only for providers a customer created through the SDK. Filter on it to search a
+    # customer's own directory; everything else, including Science-derived providers, is False.
+    is_customer_managed = models.BooleanField(default=False)
 
     @property
     def full_name(self) -> str:
@@ -54,6 +56,49 @@ class ServiceProvider(IdentifiableModel):
             name_components.append(self.first_name)
 
         return " ".join(name_components)
+
+    def as_search_result(self, annotations: list[str] | None = None) -> dict[str, Any]:
+        """Shape this provider as an autocomplete result for a command's search."""
+        description = " • ".join(
+            part for part in (self.specialty, self.practice_name, self.business_address) if part
+        )
+
+        return {
+            "text": self.full_name.strip(),
+            "value": self.dbid,
+            "description": description,
+            "annotations": list(annotations or []),
+            "extra": {
+                "contact": {
+                    "service_provider_id": self.dbid,
+                    # Always null: this is a local provider, not a Science contact.
+                    "science_contact_id": None,
+                    "firstName": self.first_name,
+                    "lastName": self.last_name,
+                    "businessFax": self.business_fax,
+                    "businessPhone": self.business_phone,
+                    "businessAddress": self.business_address,
+                    "specialty": self.specialty,
+                    "practiceName": self.practice_name,
+                    "notes": self.notes,
+                }
+            },
+        }
+
+    def as_search_contact(self, annotations: list[str] | None = None) -> dict[str, Any]:
+        """Shape this provider as a contact record for a contact directory search."""
+        return {
+            "id": self.dbid,
+            "serviceProviderId": self.dbid,
+            "firstName": self.first_name,
+            "lastName": self.last_name,
+            "practiceName": self.practice_name,
+            "specialty": self.specialty,
+            "businessAddress": self.business_address,
+            "businessPhone": self.business_phone,
+            "businessFax": self.business_fax,
+            "annotations": list(annotations or []),
+        }
 
 
 __exports__ = ("ServiceProvider",)

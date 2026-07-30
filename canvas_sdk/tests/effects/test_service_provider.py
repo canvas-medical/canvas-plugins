@@ -284,3 +284,53 @@ def test_deactivate_validates_provider_exists() -> None:
             ServiceProvider(id="00000000-0000-0000-0000-000000000097").deactivate()
 
     assert "does not exist" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "direct_address",
+    ["a" * 513],
+    ids=["too_long"],
+)
+def test_create_rejects_malformed_direct_address(direct_address: str) -> None:
+    """create() raises for a direct_address the column cannot hold or that has whitespace."""
+    with pytest.raises(ValidationError) as exc_info:
+        ServiceProvider(
+            first_name="Jane",
+            specialty="Cardiology",
+            business_address="123 Main St",
+            direct_address=direct_address,
+        ).create()
+
+    assert "direct_address" in str(exc_info.value)
+
+
+def test_create_accepts_a_direct_address_at_the_limit() -> None:
+    """A direct_address exactly at the column limit is accepted."""
+    direct_address = "a" * 512
+    effect = ServiceProvider(
+        first_name="Jane",
+        specialty="Cardiology",
+        business_address="123 Main St",
+        direct_address=direct_address,
+    ).create()
+
+    assert json.loads(effect.payload)["data"]["direct_address"] == direct_address
+
+
+def test_update_rejects_malformed_direct_address(mock_provider_exists: MagicMock) -> None:
+    """update() raises rather than sending a direct_address the column cannot hold."""
+    with pytest.raises(ValidationError) as exc_info:
+        ServiceProvider(
+            id="00000000-0000-0000-0000-000000000001", direct_address="a" * 513
+        ).update()
+
+    assert "direct_address" in str(exc_info.value)
+
+
+def test_update_allows_clearing_direct_address(mock_provider_exists: MagicMock) -> None:
+    """update(direct_address=None) clears the field and is not treated as malformed."""
+    effect = ServiceProvider(
+        id="00000000-0000-0000-0000-000000000001", direct_address=None
+    ).update()
+
+    assert json.loads(effect.payload)["data"]["direct_address"] is None

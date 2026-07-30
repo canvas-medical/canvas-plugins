@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
@@ -35,15 +35,23 @@ CREATE_REQUIRED_FIELDS: tuple[str, ...] = ("first_name", "specialty", "business_
 # `business_address` is excluded (it is a nullable column).
 UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = ("first_name", "specialty")
 
-NPI_LENGTH = 10
+NPI_LENGTH = cast(int, ServiceProviderModel._meta.get_field("npi").max_length)
+DIRECT_ADDRESS_MAX_LENGTH = cast(
+    int, ServiceProviderModel._meta.get_field("direct_address").max_length
+)
 
 
 def _is_valid_npi(npi: str) -> bool:
     """Return whether the value is exactly 10 ASCII digits.
 
-    ASCII is required because ``isdigit()`` alone also accepts non-ASCII numerals.
+    ASCII too, since isdigit() alone accepts non-ASCII numerals.
     """
     return len(npi) == NPI_LENGTH and npi.isascii() and npi.isdigit()
+
+
+def _is_valid_direct_address(direct_address: str) -> bool:
+    """Return whether the value fits the column."""
+    return len(direct_address) <= DIRECT_ADDRESS_MAX_LENGTH
 
 
 class ServiceProvider(TrackableFieldsModel):
@@ -169,6 +177,21 @@ class ServiceProvider(TrackableFieldsModel):
                     "value",
                     "Field 'npi' must be exactly 10 digits.",
                     self.npi,
+                )
+            )
+
+        if (
+            method in ("create", "update")
+            and self.is_dirty("direct_address")
+            and self.direct_address is not None
+            and not _is_valid_direct_address(self.direct_address)
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Field 'direct_address' must be at most {DIRECT_ADDRESS_MAX_LENGTH} "
+                    "characters.",
+                    self.direct_address,
                 )
             )
 

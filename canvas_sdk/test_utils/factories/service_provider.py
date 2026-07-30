@@ -20,3 +20,4 @@ class ServiceProviderFactory(factory.django.DjangoModelFactory[ServiceProvider])
     is_active = True
     npi = factory.Faker("numerify", text="##########")
     direct_address = factory.Sequence(lambda n: f"provider{n}@direct.example.org")
+    is_customer_managed = True
