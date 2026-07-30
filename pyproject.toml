@@ -51,6 +51,7 @@ dependencies = [
   "requests",
   "restrictedpython>=8.0,<8.3",
   "sentry-sdk>=2.33.2",
+  "snowflake-connector-python==4.6.0",
   "statsd>=4.0.1,<5",
   "stripe>=14.1.0",
   "typer",
@@ -62,7 +63,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "0.184.0"
+version = "0.185.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas"]

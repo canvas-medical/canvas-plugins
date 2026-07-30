@@ -517,6 +517,23 @@ THIRD_PARTY_MODULES = {
         "Response",
         "Session",
     },
+    "snowflake.connector": {
+        "apilevel",
+        "connect",
+        "DatabaseError",
+        "DataError",
+        "DictCursor",
+        "Error",
+        "IntegrityError",
+        "InterfaceError",
+        "InternalError",
+        "NotSupportedError",
+        "OperationalError",
+        "paramstyle",
+        "ProgrammingError",
+        "SnowflakeConnection",
+        "threadsafety",
+    },
 }
 
 

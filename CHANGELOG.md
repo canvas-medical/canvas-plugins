@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.185.0 (2026-07-30)
+
+### Features
+
+- Adds snowflake-connector-python to allowed modules
+  ([#1800](https://github.com/canvas-medical/canvas-plugins/pull/1800),
+  [`64c6ac0`](https://github.com/canvas-medical/canvas-plugins/commit/64c6ac029cca93ebf1296021b0d2939e8ef6a713))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.184.0 (2026-07-28)
 
 ### Features
