@@ -131,7 +131,7 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     result_date = models.DateField()
     original_date = models.DateField()
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
-    s3_report_url = models.CharField(max_length=512)
+    s3_report_url = models.URLField(max_length=512, null=True, blank=True)
 
     @property
     def document_url(self) -> str | None:
