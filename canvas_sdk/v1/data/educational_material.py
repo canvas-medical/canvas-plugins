@@ -9,6 +9,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySet,
 )
 
+
 # Kept in sync with HW_SUPPORTED_LANGUAGES in home-app.
 class EducationalMaterialLanguage(models.TextChoices):
     """Supported languages for educational material."""
