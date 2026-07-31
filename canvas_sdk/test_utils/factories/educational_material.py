@@ -16,8 +16,3 @@ class EducationalMaterialFactory(factory.django.DjangoModelFactory[EducationalMa
     )
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
-    article_id = "12345"
-    selected_language = "en-us"
-    title = "Managing Type 2 Diabetes"
-    languages = factory.LazyFunction(lambda: ["en-us"])
-    abstract = "An overview of managing type 2 diabetes."
