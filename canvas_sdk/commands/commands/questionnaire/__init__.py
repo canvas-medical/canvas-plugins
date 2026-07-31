@@ -7,6 +7,7 @@ from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.questionnaire.question import (
     BaseQuestion,
     CheckboxQuestion,
+    DateQuestion,
     IntegerQuestion,
     RadioQuestion,
     ResponseOption,
@@ -17,6 +18,7 @@ from canvas_sdk.v1.data import Command, Questionnaire
 QUESTION_CLASSES: dict[str, type[BaseQuestion]] = {
     ResponseOption.TYPE_TEXT: TextQuestion,
     ResponseOption.TYPE_INTEGER: IntegerQuestion,
+    ResponseOption.TYPE_DATE: DateQuestion,
     ResponseOption.TYPE_RADIO: RadioQuestion,
     ResponseOption.TYPE_CHECKBOX: CheckboxQuestion,
 }
