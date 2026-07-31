@@ -134,6 +134,41 @@ def test_plugin_runner_settings_import() -> None:
         sandbox.execute()
 
 
+RECURRING_APPOINTMENTS_HANDLER_IMPORTS = """
+    from canvas_sdk.effects import Effect
+    from canvas_sdk.effects.note import ScheduleEvent
+    from canvas_sdk.effects.note.appointment import Appointment
+    from canvas_sdk.events import EventType
+    from canvas_sdk.handlers.base import BaseHandler
+    from canvas_sdk.v1.data import Appointment as AppointmentModel
+    from canvas_sdk.v1.data import AppointmentMetadata
+    from canvas_sdk.v1.data.note import NoteTypeCategories
+
+    result = Effect
+"""
+
+
+def test_recurring_appointments_handler_imports_are_allowed() -> None:
+    """The recurrence handler's SDK imports must all be sandbox-legal.
+
+    `Effect` is exported by `canvas_sdk.effects`, not `canvas_sdk.effects.base`; importing it
+    from the submodule is rejected by the sandbox and silently stops the handler from registering.
+    """
+    sandbox = _sandbox_from_code(RECURRING_APPOINTMENTS_HANDLER_IMPORTS)
+
+    scope = sandbox.execute()
+
+    assert scope["result"].__name__ == "Effect"
+
+
+def test_effect_not_importable_from_effects_base() -> None:
+    """`Effect` is only exposed by `canvas_sdk.effects`; the `canvas_sdk.effects.base` path is rejected."""
+    sandbox = _sandbox_from_code("from canvas_sdk.effects.base import Effect")
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()
+
+
 def test_support_match() -> None:
     """Test that match is supported."""
     sandbox = _sandbox_from_code(

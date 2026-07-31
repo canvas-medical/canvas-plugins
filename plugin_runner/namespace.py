@@ -270,19 +270,43 @@ def is_valid_namespace_name(namespace: str) -> bool:
     return NAMESPACE_PATTERN.match(namespace) is not None and len(namespace) <= PG_NAMEDATALEN
 
 
-def create_namespace_schema(namespace: str) -> dict[str, str] | None:
+def create_namespace_schema(
+    namespace: str,
+    read_key: str | None = None,
+    read_write_key: str | None = None,
+) -> dict[str, str] | None:
     """Create or update a shared data namespace schema.
 
     Always runs the idempotent init SQL to ensure all schema objects
     (including the ``schema_version`` sentinel table) exist.  For new namespaces,
-    also generates and inserts authentication keys.
+    also inserts authentication keys.
+
+    Args:
+        namespace: Schema name (``org__name`` format).
+        read_key: Optional caller-supplied plaintext read access key. When
+            provided together with ``read_write_key``, both are hashed into
+            ``namespace_auth`` instead of fresh UUIDs. Control Room uses this
+            to mint keys ahead of install and persist them itself (KOALA-5407).
+        read_write_key: Optional caller-supplied plaintext read_write access
+            key. Must be provided together with ``read_key``.
 
     Returns:
         Dict with 'namespace_read_access_key' and 'namespace_read_write_access_key' if namespace was created,
         None if namespace already existed.
+
+    Raises:
+        PluginInstallationError: If only one of ``read_key`` / ``read_write_key``
+            is supplied, or either carries an empty value.
     """
     if not is_valid_namespace_name(namespace):
         raise ValueError(f"Invalid namespace name: {namespace}")
+
+    keys_supplied = read_key is not None or read_write_key is not None
+    if keys_supplied and (not read_key or not read_write_key):
+        raise PluginInstallationError(
+            "create_namespace_schema requires both 'read_key' and 'read_write_key' "
+            "with non-empty values when either is provided."
+        )
 
     log.info(f"Creating namespace schema '{namespace}'")
 
@@ -304,11 +328,16 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
         generated_keys = None
 
         if is_new:
-            # Generate UUID keys for read and read_write access
-            read_key = str(uuid.uuid4())
-            read_write_key = str(uuid.uuid4())
+            if keys_supplied:
+                read_description = "Caller-supplied read access key"
+                read_write_description = "Caller-supplied read_write access key"
+            else:
+                read_key = str(uuid.uuid4())
+                read_write_key = str(uuid.uuid4())
+                read_description = "Auto-generated read access key"
+                read_write_description = "Auto-generated read_write access key"
 
-            # Insert hashed keys into namespace_auth
+            assert read_key is not None and read_write_key is not None
             read_key_hash = hashlib.sha256(read_key.encode()).hexdigest()
             read_write_key_hash = hashlib.sha256(read_write_key.encode()).hexdigest()
 
@@ -320,10 +349,10 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
                 (
                     read_key_hash,
                     "read",
-                    "Auto-generated read access key",
+                    read_description,
                     read_write_key_hash,
                     "read_write",
-                    "Auto-generated read_write access key",
+                    read_write_description,
                 ),
             )
 
@@ -332,7 +361,8 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
                 READ_WRITE_ACCESS_KEY: read_write_key,
             }
 
-            log.info(f"Created namespace schema '{namespace}' with auto-generated access keys")
+            origin = "caller-supplied" if keys_supplied else "auto-generated"
+            log.info(f"Created namespace schema '{namespace}' with {origin} access keys")
         else:
             log.info(f"Namespace schema '{namespace}' already exists, init SQL re-applied")
 
@@ -488,8 +518,18 @@ def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict
         create_namespace_schema(namespace=schema_name)
         return True
 
-    # Namespace doesn't exist - create it
-    generated_keys = create_namespace_schema(namespace=schema_name)
+    # Namespace doesn't exist - create it. If the caller (e.g. Control Room)
+    # has pre-minted both keys and passed them through as secrets, forward them
+    # so they end up in namespace_auth instead of fresh UUIDs. Otherwise fall
+    # back to UUID generation (the canvas CLI direct-install path).
+    if secrets.get(READ_ACCESS_KEY) and secrets.get(READ_WRITE_ACCESS_KEY):
+        generated_keys = create_namespace_schema(
+            namespace=schema_name,
+            read_key=secrets[READ_ACCESS_KEY],
+            read_write_key=secrets[READ_WRITE_ACCESS_KEY],
+        )
+    else:
+        generated_keys = create_namespace_schema(namespace=schema_name)
     if generated_keys:
         store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
         log.info(

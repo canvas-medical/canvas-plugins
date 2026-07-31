@@ -1,6 +1,7 @@
 from canvas_sdk.effects.claim.claim import (
     BannerAlertIntent,
     ClaimEffect,
+    ClaimSupervisingProvider,
     ColorEnum,
     Label,
     LineItemTransaction,
@@ -19,4 +20,5 @@ __all__ = __exports__ = (
     "ClaimOrderingProvider",
     "ClaimProvider",
     "ClaimReferringProvider",
+    "ClaimSupervisingProvider",
 )

@@ -53,7 +53,7 @@ Configure this secret in your Canvas plugin settings:
 
 ## Installation
 
-1. Install the plugin via the command line: `canvas install email_sender`
+1. Install the plugin via the command line: `canvas install sendgrid_email`
 2. Configure the required secret with your SendGrid API key (`https://xxxx.canvasmedical.com/admin/plugin_io/plugin/`)
 3. Access the application from a patient's chart in the drawer menu
 

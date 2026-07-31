@@ -21,6 +21,7 @@ from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
 from .care_team import CareTeamMembership, CareTeamRole
+from .change_medication import ChangeMedication
 from .charge_description_master import ChargeDescriptionMaster
 from .chart_section_review import ChartSectionReview, ChartSectionReviewSection
 from .claim import (
@@ -33,6 +34,7 @@ from .claim import (
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
+    ClaimSupervisingProvider,
     InstallmentPlan,
 )
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
@@ -59,6 +61,7 @@ from .document_reference import (
     DocumentReferenceCoding,
     DocumentReferenceStatus,
 )
+from .document_review_delegation import DocumentReviewDelegation
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -178,7 +181,8 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .referral import Referral, ReferralReport, ReferralReview
+from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
+from .refill_request import RefillRequest, RefillRequestCoding
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -227,6 +231,7 @@ __all__ = __exports__ = (
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChangeMedication",
     "ChargeDescriptionMaster",
     "ChartSectionReview",
     "ChartSectionReviewSection",
@@ -246,6 +251,7 @@ __all__ = __exports__ = (
     "ClaimProvider",
     "ClaimQueue",
     "ClaimSubmission",
+    "ClaimSupervisingProvider",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -270,6 +276,7 @@ __all__ = __exports__ = (
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
+    "DocumentReviewDelegation",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -384,7 +391,10 @@ __all__ = __exports__ = (
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
+    "RefillRequest",
+    "RefillRequestCoding",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",

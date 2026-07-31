@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,6 +18,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointUse,
     PersonSex,
 )
+from canvas_sdk.v1.data.utils import create_key
 
 
 @dataclass
@@ -103,6 +105,19 @@ class PatientAddress:
         }
 
 
+_PATIENT_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
+
+
+def generate_patient_id() -> str:
+    """Generate a patient id (a UUID4 hex string without hyphens) for Patient(patient_id=...)."""
+    return create_key()
+
+
+def _is_valid_patient_id(value: str) -> bool:
+    """Return True if value is a well-formed patient id (32-character lowercase hex)."""
+    return bool(_PATIENT_ID_RE.match(value))
+
+
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
@@ -123,6 +138,13 @@ class Patient(TrackableFieldsModel):
     clinical_note: str | None = None
     default_location_id: str | None = None
     default_provider_id: str | None = None
+    active: bool | None = None
+    deceased: bool | None = None
+    deceased_datetime: datetime.datetime | None = None
+    deceased_cause: str | None = None
+    deceased_comment: str | None = None
+    biological_race_codes: list[str] | None = None
+    cultural_ethnicity_codes: list[str] | None = None
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
@@ -173,11 +195,12 @@ class Patient(TrackableFieldsModel):
 
         # Validate create-specific requirements
         if method == "create":
-            if self.patient_id:
+            if self.patient_id is not None and not _is_valid_patient_id(self.patient_id):
                 errors.append(
                     self._create_error_detail(
                         "value",
-                        "Patient ID should not be set when creating a new patient.",
+                        "Patient ID must be a 32-character hex string (a UUID4 without "
+                        "hyphens); use generate_patient_id() to generate one.",
                         self.patient_id,
                     )
                 )
@@ -280,4 +303,5 @@ __exports__ = (
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",
+    "generate_patient_id",
 )

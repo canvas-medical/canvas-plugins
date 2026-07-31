@@ -1,6 +1,9 @@
 import pytest
 
-from canvas_sdk.test_utils.factories.claim import ClaimCoverageFactory, ClaimFactory
+from canvas_sdk.test_utils.factories.claim import (
+    ClaimCoverageFactory,
+    ClaimFactory,
+)
 
 
 @pytest.mark.django_db

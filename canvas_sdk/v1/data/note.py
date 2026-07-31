@@ -167,6 +167,9 @@ class Note(TimestampedModel, IdentifiableModel):
     provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
+    supervising_provider = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervised_notes", null=True
+    )
     note_type = models.CharField(choices=NoteTypes.choices, null=True, max_length=50)
     note_type_version = models.ForeignKey(
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes"

@@ -6,7 +6,7 @@ import factory
 from django.utils import timezone
 from factory.fuzzy import FuzzyDate
 
-from canvas_sdk.v1.data import Referral, ReferralReport, ReferralReview
+from canvas_sdk.v1.data import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 
 
 class ReferralFactory(factory.django.DjangoModelFactory[Referral]):
@@ -80,3 +80,16 @@ class ReferralReportFactory(factory.django.DjangoModelFactory[ReferralReport]):
     )
     comment = factory.Faker("paragraph")
     priority = False
+
+
+class ReferralReportCodingFactory(factory.django.DjangoModelFactory[ReferralReportCoding]):
+    """Factory for creating a ReferralReportCoding."""
+
+    class Meta:
+        model = ReferralReportCoding
+
+    report = factory.SubFactory(ReferralReportFactory)
+    system = factory.Faker("random_element", elements=["LOINC", "SNOMED", "CPT"])
+    code = factory.Faker("bothify", text="#####-#")
+    display = factory.Faker("text", max_nb_chars=200)
+    value = factory.Faker("text", max_nb_chars=200)

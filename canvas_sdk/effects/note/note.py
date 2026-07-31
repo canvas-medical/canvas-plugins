@@ -10,16 +10,75 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
-from canvas_sdk.v1.data import NoteType, Patient
+from canvas_sdk.v1.data import NoteType, Patient, Staff
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 TRANSITION_STATE_MATRIX = {
-    NoteStates.NEW: [NoteStates.LOCKED, NoteStates.PUSHED],
+    NoteStates.NEW: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.CONVERTED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
     NoteStates.LOCKED: [NoteStates.SIGNED, NoteStates.UNLOCKED],
-    NoteStates.UNLOCKED: [NoteStates.LOCKED, NoteStates.PUSHED],
+    NoteStates.UNLOCKED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
     NoteStates.SIGNED: [NoteStates.UNLOCKED, NoteStates.SIGNED],
-    NoteStates.PUSHED: [NoteStates.LOCKED, NoteStates.PUSHED],
+    NoteStates.PUSHED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DELETED,
+    ],
+    NoteStates.DELETED: [NoteStates.UNDELETED],
+    NoteStates.UNDELETED: [
+        NoteStates.LOCKED,
+        NoteStates.SIGNED,
+        NoteStates.PUSHED,
+        NoteStates.DISCHARGED,
+        NoteStates.DELETED,
+    ],
 }
+
+APPOINTMENT_TRANSITION_MATRIX = {
+    NoteStates.SCHEDULING: [NoteStates.BOOKED, NoteStates.DELETED],
+    NoteStates.BOOKED: [
+        NoteStates.CONVERTED,
+        NoteStates.SCHEDULING,
+        NoteStates.CANCELLED,
+        NoteStates.NOSHOW,
+    ],
+    NoteStates.REVERTED: [
+        NoteStates.CONVERTED,
+        NoteStates.SCHEDULING,
+        NoteStates.CANCELLED,
+        NoteStates.NOSHOW,
+    ],
+    NoteStates.CANCELLED: [NoteStates.REVERTED],
+    NoteStates.NOSHOW: [NoteStates.LOCKED, NoteStates.CONVERTED],
+    NoteStates.LOCKED: [NoteStates.UNLOCKED],
+}
+
+
+def transition_matrix_for(category: str | None) -> dict[NoteStates, list[NoteStates]]:
+    """Return the state-transition matrix for a note type ``category``."""
+    if category == NoteTypeCategories.APPOINTMENT:
+        return APPOINTMENT_TRANSITION_MATRIX
+    return TRANSITION_STATE_MATRIX
+
 
 ACTION_STATE_MATRIX = {
     "lock": NoteStates.LOCKED,
@@ -52,6 +111,7 @@ class Note(NoteOrAppointmentABC):
     patient_id: str | None = None
     title: str | None = None
     related_data: dict | None = None
+    supervising_provider_id: str | None = None
 
     def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
@@ -345,6 +405,18 @@ class Note(NoteOrAppointmentABC):
                     "value",
                     f"Patient with ID {self.patient_id} does not exist.",
                     self.patient_id,
+                )
+            )
+
+        if (
+            self.supervising_provider_id
+            and not Staff.objects.filter(id=self.supervising_provider_id).exists()
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Supervising provider with ID {self.supervising_provider_id} does not exist.",
+                    self.supervising_provider_id,
                 )
             )
 

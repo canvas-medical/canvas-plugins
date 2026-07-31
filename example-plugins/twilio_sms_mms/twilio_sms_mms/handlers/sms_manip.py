@@ -13,8 +13,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from logger import log
-
-from ..constants.constants import Constants
+from twilio_sms_mms.constants.constants import Constants
 
 
 class SmsManip(StaffSessionAuthMixin, SimpleAPI):

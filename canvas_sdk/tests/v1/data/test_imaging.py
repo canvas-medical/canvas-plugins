@@ -4,6 +4,16 @@ from canvas_sdk.test_utils.factories import (
     ImagingReportCodingFactory,
     ImagingReportFactory,
 )
+from canvas_sdk.v1.data.imaging import ImagingReport
+from canvas_sdk.value_set.value_set import ValueSet
+
+
+class _ColonoscopyValueSet(ValueSet):
+    """Tiny value set fixture for find() tests."""
+
+    VALUE_SET_NAME = "Colonoscopy Sample"
+    OID = "tests.colonoscopy-sample"
+    CPT = {"44388", "45378"}
 
 
 @pytest.mark.django_db
@@ -36,3 +46,29 @@ def test_coding_fields_are_persisted() -> None:
     assert fetched.code == "24590-2"
     assert fetched.display == "US Retroperitoneum"
     assert fetched.value == "positive"
+
+
+@pytest.mark.django_db
+def test_find_returns_reports_with_codings_in_value_set() -> None:
+    """ImagingReport.objects.find(value_set) matches via codings__system/code."""
+    matching = ImagingReportFactory.create()
+    ImagingReportCodingFactory.create(
+        report=matching, system="http://www.ama-assn.org/go/cpt", code="44388"
+    )
+    other = ImagingReportFactory.create()
+    ImagingReportCodingFactory.create(
+        report=other, system="http://www.ama-assn.org/go/cpt", code="99999"
+    )
+
+    found = list(ImagingReport.objects.find(_ColonoscopyValueSet))
+
+    assert [r.id for r in found] == [matching.id]
+
+
+@pytest.mark.django_db
+def test_find_excludes_codings_with_wrong_system() -> None:
+    """A code matching the CPT set under a different code system is not returned."""
+    report = ImagingReportFactory.create()
+    ImagingReportCodingFactory.create(report=report, system="http://snomed.info/sct", code="44388")
+
+    assert list(ImagingReport.objects.find(_ColonoscopyValueSet)) == []

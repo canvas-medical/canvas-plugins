@@ -1,4 +1,4 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from django.db import models
 
@@ -11,6 +11,9 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+
+if TYPE_CHECKING:
+    from canvas_sdk.v1.data.document_review_delegation import DocumentReviewDelegation
 
 
 class UncategorizedClinicalDocumentReviewQuerySet(
@@ -79,6 +82,22 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
     original_date = models.DateField(null=True)
     comment = models.TextField(default="", blank=True)
     priority = models.BooleanField(default=False)
+
+    @property
+    def delegations(self) -> "models.QuerySet[DocumentReviewDelegation]":
+        """All review delegations for this document, oldest first."""
+        from canvas_sdk.v1.data.document_review_delegation import DocumentReviewDelegation
+
+        return DocumentReviewDelegation.objects.filter(
+            content_type__app_label="api",
+            content_type__model="uncategorizedclinicaldocument",
+            object_id=self.dbid,
+        ).order_by("created")
+
+    @property
+    def active_delegation(self) -> "DocumentReviewDelegation | None":
+        """The current active delegation, or None when the document is with its owner."""
+        return self.delegations.filter(is_active=True).first()
 
 
 __exports__ = ("UncategorizedClinicalDocumentReview", "UncategorizedClinicalDocument")

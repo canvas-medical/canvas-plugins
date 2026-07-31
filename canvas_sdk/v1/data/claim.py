@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Self
 from django.db import models
 
 from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, MetadataModel, TimestampedModel
-from canvas_sdk.v1.data.common import PersonSex
+from canvas_sdk.v1.data.common import PersonSex, TaxIDType
 from canvas_sdk.v1.data.coverage import (
     CoverageRelationshipCode,
     CoverageType,
@@ -262,6 +262,31 @@ class ClaimProvider(TimestampedModel, IdentifiableModel):
     hosp_to_date = models.CharField(max_length=10, default="0000-00-00")
 
 
+class ClaimSupervisingProvider(TimestampedModel, IdentifiableModel):
+    """Immutable snapshot of a claim's supervising provider (837P loop 2310D).
+
+    Captured at claim creation from the note's supervising provider and frozen
+    thereafter, so later edits to the note or the underlying Staff record do not
+    retroactively change a submitted claim.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimsupervising_001"
+
+    claim = models.OneToOneField(
+        "v1.Claim", on_delete=models.CASCADE, related_name="supervising_provider"
+    )
+    staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, related_name="+", null=True)
+
+    first_name = models.CharField(max_length=255, default="", blank=True)
+    last_name = models.CharField(max_length=255, default="", blank=True)
+    middle_name = models.CharField(max_length=255, default="", blank=True)
+    npi = models.CharField(max_length=10, default="0")
+    taxonomy = models.CharField(max_length=100, default="", blank=True)
+    tax_id = models.CharField(max_length=100, default="", blank=True)
+    tax_id_type = models.CharField(max_length=1, choices=TaxIDType.choices, default=TaxIDType.EIN)
+
+
 class ClaimPatient(TimestampedModel):
     """ClaimPatient."""
 
@@ -316,6 +341,7 @@ class Claim(TimestampedModel, IdentifiableModel):
     auto_accident_state = models.CharField(max_length=2)
     employment_related = models.BooleanField(default=False)
     other_accident = models.BooleanField(default=False)
+    incident_to = models.BooleanField(default=False)
     accident_code = models.CharField(max_length=10)
     illness_date = models.DateField(blank=True, null=True)
     remote_batch_id = models.CharField(max_length=100)
@@ -429,6 +455,7 @@ __exports__ = (
     "ClaimPatient",
     "ClaimPayerOrder",
     "ClaimProvider",
+    "ClaimSupervisingProvider",
     "ClaimQueues",
     "ClaimQueueColumns",
     "ClaimSubmission",

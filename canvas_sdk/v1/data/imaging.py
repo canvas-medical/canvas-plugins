@@ -1,12 +1,16 @@
 import json
-from typing import Self
+from typing import Self, cast
 
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
+    BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     TimestampedModel,
+    ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
@@ -29,6 +33,8 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingorder_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
@@ -73,6 +79,8 @@ class ImagingReview(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreview_001"
 
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30
     )
@@ -86,6 +94,10 @@ class ImagingReview(AuditedModel, IdentifiableModel):
     )
 
 
+class ImagingReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
+    """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
+
+
 class ImagingReport(TimestampedModel, IdentifiableModel):
     """Model to read ImagingReport data."""
 
@@ -96,6 +108,8 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreport_001"
+
+    objects = cast(ImagingReportQuerySet, models.Manager.from_queryset(ImagingReportQuerySet)())
 
     review_mode = models.CharField(choices=DocumentReviewMode.choices, max_length=2)
     junked = models.BooleanField()
@@ -176,6 +190,7 @@ __exports__ = (
     "ImagingReview",
     "ImagingReport",
     "ImagingReportCoding",
+    "ImagingReportQuerySet",
     "ImagingReportTemplate",
     "ImagingReportTemplateQuerySet",
     "ImagingReportTemplateField",
