@@ -19,10 +19,10 @@ class EducationalMaterial(AuditedModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="educational_materials"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="education_material"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="educational_materials"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="education_material"
     )
     article_id = models.TextField(blank=True, default="")
     selected_language = models.CharField(max_length=6, default="en-us")
