@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -11,6 +12,7 @@ class ResponseOption:
     TYPE_INTEGER = "INT"
     TYPE_RADIO = "SING"
     TYPE_CHECKBOX = "MULT"
+    TYPE_DATE = "DATE"
 
     def __init__(self, dbid: int, name: str, code: str, value: str) -> None:
         self.dbid: int = dbid
@@ -88,6 +90,39 @@ class IntegerQuestion(BaseQuestion):
             ) from e
 
 
+class DateQuestion(BaseQuestion):
+    """A question that expects a date response."""
+
+    type = ResponseOption.TYPE_DATE
+
+    def add_response(self, /, date: datetime.date | str) -> None:
+        """Record a date response.
+
+        Accepts a ``datetime.date``, a ``datetime.datetime``, or an ISO 8601
+        date string (YYYY-MM-DD). The value is normalized and stored as an
+        ISO 8601 date string.
+        """
+        if isinstance(date, datetime.datetime):
+            value = date.date()
+        elif isinstance(date, datetime.date):
+            value = date
+        elif isinstance(date, str):
+            try:
+                value = datetime.date.fromisoformat(date)
+            except ValueError as e:
+                raise ValueError(
+                    f"Response for a date question must be a valid ISO 8601 date "
+                    f"(YYYY-MM-DD). Question: {self.label}"
+                ) from e
+        else:
+            raise ValueError(
+                f"Response for a date question must be a date or an ISO 8601 date string. "
+                f"Question: {self.label}"
+            )
+
+        self.response = value.isoformat()
+
+
 class RadioQuestion(BaseQuestion):
     """A question that expects a single-choice response."""
 
@@ -140,6 +175,7 @@ __exports__ = (
     "BaseQuestion",
     "TextQuestion",
     "IntegerQuestion",
+    "DateQuestion",
     "RadioQuestion",
     "CheckboxQuestion",
 )
