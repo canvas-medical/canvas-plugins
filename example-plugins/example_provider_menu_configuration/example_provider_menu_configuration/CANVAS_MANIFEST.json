@@ -1,0 +1,35 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_provider_menu_configuration",
+    "description": "Removes the native scheduling entry points: hides the Schedule item from the provider (hamburger) menu with a ProviderMenuConfiguration allow-list, hides the Appointments preset filter from the global panel with a PanelConfiguration allow-list, and moves the default landing page off the schedule page so providers are not stranded.",
+    "components": {
+        "handlers": [
+            {
+                "class": "example_provider_menu_configuration.handlers.provider_menu:HideScheduleMenuItem",
+                "description": "Allow-lists every provider menu item except Schedule.",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "example_provider_menu_configuration.handlers.provider_menu:HideAppointmentsPanelFilter",
+                "description": "Allow-lists every global panel section except Appointments.",
+                "data_access": {"event": "", "read": [], "write": []}
+            },
+            {
+                "class": "example_provider_menu_configuration.handlers.provider_menu:LandOnPatientsInsteadOfSchedule",
+                "description": "Sends providers to the patients page on login instead of the schedule page.",
+                "data_access": {"event": "", "read": [], "write": []}
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": ["https://docs.canvasmedical.com/sdk/layout/"],
+    "license": "MIT",
+    "diagram": false,
+    "readme": "./README.md"
+}

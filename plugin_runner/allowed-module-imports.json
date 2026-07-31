@@ -810,6 +810,9 @@
     "ProtocolCard",
     "Recommendation"
   ],
+  "canvas_sdk.effects.provider_menu_configuration": [
+    "ProviderMenuConfiguration"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
