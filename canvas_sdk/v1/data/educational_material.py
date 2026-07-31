@@ -10,7 +10,7 @@ from canvas_sdk.v1.data.base import (
 )
 
 # Kept in sync with HW_SUPPORTED_LANGUAGES in home-app.
-HW_SUPPORTED_LANGUAGES = (
+EDUCATIONAL_MATERIAL_LANGUAGES = (
     ("en-us", "English"),
     ("es-us", "Spanish"),
     ("en-ca", "English CA"),
@@ -56,7 +56,7 @@ class EducationalMaterial(AuditedModel):
     )
     article_id = models.TextField(blank=True, default="")
     selected_language = models.CharField(
-        max_length=6, choices=HW_SUPPORTED_LANGUAGES, default="en-us"
+        max_length=6, choices=EDUCATIONAL_MATERIAL_LANGUAGES, default="en-us"
     )
     title = models.TextField(blank=True, default="")
     languages = ArrayField(models.CharField(max_length=6, default=""), blank=True, default=list)
