@@ -62,6 +62,7 @@ from .document_reference import (
     DocumentReferenceStatus,
 )
 from .document_review_delegation import DocumentReviewDelegation
+from .educational_material import EducationalMaterial
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -277,6 +278,7 @@ __all__ = __exports__ = (
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
+    "EducationalMaterial",
     "EligibilitySummary",
     "Encounter",
     "Event",
