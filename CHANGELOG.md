@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.186.0 (2026-07-31)
+
+### Features
+
+- Add calendar and calendar event lifecycle events
+  ([#1735](https://github.com/canvas-medical/canvas-plugins/pull/1735),
+  [`e62cb06`](https://github.com/canvas-medical/canvas-plugins/commit/e62cb06eb534daae0b3a4f613780873b8a9a9f13))
+
+
 ## v0.185.0 (2026-07-30)
 
 ### Features
