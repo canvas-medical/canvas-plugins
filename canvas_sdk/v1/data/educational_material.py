@@ -27,7 +27,7 @@ class EducationalMaterial(AuditedModel):
     article_id = models.TextField(blank=True, default="")
     selected_language = models.CharField(max_length=6, default="en-us")
     title = models.TextField(blank=True, default="")
-    languages = ArrayField(models.CharField(max_length=6), blank=True, default=list)
+    languages = ArrayField(models.CharField(max_length=6, default=""), blank=True, default=list)
     abstract = models.TextField(blank=True, default="")
 
 
