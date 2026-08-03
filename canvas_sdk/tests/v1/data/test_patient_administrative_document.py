@@ -2,7 +2,10 @@ from unittest.mock import patch
 
 import pytest
 
-from canvas_sdk.test_utils.factories import PatientAdministrativeDocumentFactory
+from canvas_sdk.test_utils.factories import (
+    DocumentCodingFactory,
+    PatientAdministrativeDocumentFactory,
+)
 from canvas_sdk.v1.data.patient_administrative_document import PatientAdministrativeDocument
 
 
@@ -29,11 +32,15 @@ def test_document_url_returns_none_when_no_document() -> None:
 
 @pytest.mark.django_db
 def test_fields_round_trip() -> None:
-    """PAD fields are readable through the data model."""
+    """PAD fields (including the code coding) are readable through the data model."""
+    coding = DocumentCodingFactory.create(
+        system="http://loinc.org", code="34133-9", display="Summary of episode note"
+    )
     pad = PatientAdministrativeDocumentFactory.create(
         name="Insurance card",
         review_mode="IN",
         comment="front and back",
+        code=coding,
     )
 
     fetched = PatientAdministrativeDocument.objects.get(dbid=pad.dbid)
@@ -41,5 +48,6 @@ def test_fields_round_trip() -> None:
     assert fetched.name == "Insurance card"
     assert fetched.review_mode == "IN"
     assert fetched.comment == "front and back"
+    assert fetched.code_id == coding.dbid
     assert fetched.patient_id == pad.patient_id
     assert fetched.document.name == "administrative/doc.pdf"

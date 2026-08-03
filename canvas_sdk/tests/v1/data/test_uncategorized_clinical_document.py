@@ -2,7 +2,11 @@
 
 import pytest
 
-from canvas_sdk.test_utils.factories import DocumentReviewDelegationFactory
+from canvas_sdk.test_utils.factories import (
+    DocumentCodingFactory,
+    DocumentReviewDelegationFactory,
+    UncategorizedClinicalDocumentFactory,
+)
 from canvas_sdk.v1.data.uncategorized_clinical_document import UncategorizedClinicalDocument
 
 
@@ -34,3 +38,16 @@ def test_active_delegation_returns_none_when_none_active() -> None:
     DocumentReviewDelegationFactory.create(object_id=document.dbid, is_active=False)
 
     assert document.active_delegation is None
+
+
+@pytest.mark.django_db
+def test_code_coding_round_trips() -> None:
+    """The code coding is readable through the data model."""
+    coding = DocumentCodingFactory.create(
+        system="http://loinc.org", code="34133-9", display="Summary of episode note"
+    )
+    document = UncategorizedClinicalDocumentFactory.create(code=coding)
+
+    fetched = UncategorizedClinicalDocument.objects.get(dbid=document.dbid)
+
+    assert fetched.code_id == coding.dbid

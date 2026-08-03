@@ -1,7 +1,15 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import presigned_url
+
+
+class DocumentCoding(Coding):
+    """DocumentCoding."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_documentcoding_001"
 
 
 class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
@@ -20,6 +28,9 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
     team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True, related_name="+")
     integration_task_review = models.ForeignKey(
         "v1.IntegrationTaskReview", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    code = models.ForeignKey(
+        DocumentCoding, on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
 
     name = models.CharField(max_length=255)
@@ -40,4 +51,4 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
         return None
 
 
-__exports__ = ("PatientAdministrativeDocument",)
+__exports__ = ("DocumentCoding", "PatientAdministrativeDocument")
