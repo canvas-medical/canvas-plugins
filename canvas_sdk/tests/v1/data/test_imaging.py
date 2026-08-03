@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from canvas_sdk.test_utils.factories import (
@@ -72,3 +74,24 @@ def test_find_excludes_codings_with_wrong_system() -> None:
     ImagingReportCodingFactory.create(report=report, system="http://snomed.info/sct", code="44388")
 
     assert list(ImagingReport.objects.find(_ColonoscopyValueSet)) == []
+
+
+def test_document_url_with_s3_report_url() -> None:
+    """document_url returns a presigned URL when s3_report_url is set."""
+    report = ImagingReport()
+    report.s3_report_url = "imaging_orders/report.pdf"
+
+    with patch(
+        "canvas_sdk.v1.data.imaging.presigned_url",
+        return_value="https://s3.example.com/presigned",
+    ) as mock:
+        assert report.document_url == "https://s3.example.com/presigned"
+        mock.assert_called_once_with("imaging_orders/report.pdf")
+
+
+def test_document_url_returns_none_when_no_url() -> None:
+    """document_url returns None when s3_report_url is empty."""
+    report = ImagingReport()
+    report.s3_report_url = ""
+
+    assert report.document_url is None
