@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.187.0 (2026-08-03)
+
+### Features
+
+- **data**: Expose document_url on imaging report
+  ([#1802](https://github.com/canvas-medical/canvas-plugins/pull/1802),
+  [`5e6c150`](https://github.com/canvas-medical/canvas-plugins/commit/5e6c150b921a51210acd84aa2c34c8d1fcd000af))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.186.0 (2026-07-31)
 
 ### Features
