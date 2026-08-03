@@ -3,19 +3,7 @@ import datetime
 import factory
 from factory.fuzzy import FuzzyDate
 
-from canvas_sdk.v1.data import DocumentCoding, PatientAdministrativeDocument
-
-
-class DocumentCodingFactory(factory.django.DjangoModelFactory[DocumentCoding]):
-    """Factory for DocumentCoding."""
-
-    class Meta:
-        model = DocumentCoding
-
-    system = "http://loinc.org"
-    code = "34133-9"
-    display = "Summary of episode note"
-    user_selected = False
+from canvas_sdk.v1.data import PatientAdministrativeDocument
 
 
 class PatientAdministrativeDocumentFactory(

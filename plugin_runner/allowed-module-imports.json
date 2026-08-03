@@ -1139,7 +1139,6 @@
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
-    "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -1616,7 +1615,6 @@
     "SexAtBirth"
   ],
   "canvas_sdk.v1.data.patient_administrative_document": [
-    "DocumentCoding",
     "PatientAdministrativeDocument"
   ],
   "canvas_sdk.v1.data.patient_consent": [

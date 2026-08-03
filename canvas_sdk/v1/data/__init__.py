@@ -145,7 +145,7 @@ from .patient import (
     PatientPhoto,
     PatientSetting,
 )
-from .patient_administrative_document import DocumentCoding, PatientAdministrativeDocument
+from .patient_administrative_document import PatientAdministrativeDocument
 from .patient_consent import (
     PatientConsent,
     PatientConsentCoding,
@@ -273,7 +273,6 @@ __all__ = __exports__ = (
     "DiagnosticView",
     "Discount",
     "ContentType",
-    "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
