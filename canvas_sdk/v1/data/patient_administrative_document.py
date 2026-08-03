@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import presigned_url
 
@@ -12,7 +12,7 @@ class DocumentCoding(Coding):
         db_table = "canvas_sdk_data_api_documentcoding_001"
 
 
-class PatientAdministrativeDocument(TimestampedModel):
+class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
     """Model to read PatientAdministrativeDocument data."""
 
     class Meta:
