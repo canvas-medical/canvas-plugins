@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -614,6 +615,15 @@ def test_patient_contact_to_dict_minimal_fields() -> None:
         "comments": None,
         "categories": [],
     }
+
+
+def test_patient_contact_to_dict_coerces_uuid_identifier() -> None:
+    """Test PatientContact.to_dict() serializes a UUID contact_identifier to its string form."""
+    contact = PatientContact(
+        name="Jane Doe", contact_identifier=uuid.UUID("12345678-1234-5678-1234-567812345678")
+    )
+
+    assert contact.to_dict()["contact_identifier"] == "12345678-1234-5678-1234-567812345678"
 
 
 def test_patient_values_includes_contacts_when_set(

@@ -1,6 +1,7 @@
 import datetime
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -94,7 +95,7 @@ class PatientContact:
     """A class representing a patient contact, such as an emergency contact or related person."""
 
     name: str
-    contact_identifier: str | None = None
+    contact_identifier: str | uuid.UUID | None = None
     phone_number: str | None = None
     email: str | None = None
     comments: str | None = None
@@ -103,7 +104,9 @@ class PatientContact:
     def to_dict(self) -> dict[str, Any]:
         """Convert the contact to a dictionary."""
         return {
-            "contact_identifier": self.contact_identifier,
+            "contact_identifier": (
+                str(self.contact_identifier) if self.contact_identifier is not None else None
+            ),
             "name": self.name,
             "phone_number": self.phone_number,
             "email": self.email,
