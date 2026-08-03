@@ -33,6 +33,7 @@ from plugin_runner.plugin_runner import (
     ENVIRONMENT,
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
+    PLUGIN_SYNC_LOCK,
     STARTUP_RETRY_LIMIT,
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
@@ -637,6 +638,35 @@ def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
 
         mock_install_plugins.assert_called_once()
         mock_load_plugins.assert_called_once()
+
+
+def test_synchronize_plugins_holds_lock_during_install_and_load() -> None:
+    """Install and load run while holding PLUGIN_SYNC_LOCK, which is released afterward."""
+    with (
+        patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
+        patch(
+            "plugin_runner.plugin_runner.install_plugins", new_callable=Mock
+        ) as mock_install_plugins,
+        patch("plugin_runner.plugin_runner.load_plugins", new_callable=Mock) as mock_load_plugins,
+    ):
+        mock_client = Mock()
+        mock_pubsub = Mock()
+        mock_get_client.return_value = (mock_client, mock_pubsub)
+        mock_pubsub.get_message.return_value = {
+            "type": "pmessage",
+            "data": pickle.dumps({"action": "reload"}),
+        }
+
+        held: dict[str, bool] = {}
+        mock_install_plugins.side_effect = lambda: held.__setitem__(
+            "install", PLUGIN_SYNC_LOCK.locked()
+        )
+        mock_load_plugins.side_effect = lambda: held.__setitem__("load", PLUGIN_SYNC_LOCK.locked())
+
+        synchronize_plugins(run_once=True)
+
+        assert held == {"install": True, "load": True}
+        assert PLUGIN_SYNC_LOCK.locked() is False
 
 
 def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
@@ -1269,3 +1299,36 @@ def test_main_logs_keyboard_interrupt(
 
     assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
     assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+@patch("plugin_runner.plugin_runner.threading.Thread")
+def test_main_starts_synchronizer_after_initial_load(
+    mock_thread: MagicMock,
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    mock_install: MagicMock,
+    mock_load: MagicMock,
+) -> None:
+    """main() installs, then loads, then starts the synchronizer thread — in that order."""
+    from plugin_runner.plugin_runner import main
+
+    order: list[str] = []
+    mock_install.side_effect = lambda: order.append("install")
+    mock_load.side_effect = lambda *args, **kwargs: order.append("load")
+
+    mock_sync_thread = MagicMock()
+    mock_sync_thread.start.side_effect = lambda: order.append("synchronizer_start")
+    mock_sync_thread.is_alive.return_value = False
+    mock_thread.return_value = mock_sync_thread
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    main(specified_plugin_paths=None)
+
+    assert order == ["install", "load", "synchronizer_start"]

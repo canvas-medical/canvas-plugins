@@ -459,6 +459,10 @@ class PluginRunner(PluginRunnerServicer):
 
 STOP_SYNCHRONIZER = threading.Event()
 
+# Serializes plugin install/load so a synchronizer-driven reload can't rmtree and
+# re-extract the plugin dir mid-import (transient ModuleNotFoundError at boot).
+PLUGIN_SYNC_LOCK = threading.Lock()
+
 # HOME-APP-11Y5 / KOALA-5359 — set after the synchronizer has successfully
 # psubscribed at least once. Distinguishes startup race (redis DNS not yet
 # resolvable on container cold start) from genuine mid-run failure.
@@ -506,26 +510,29 @@ def synchronize_plugins(run_once: bool = False) -> None:
         _engine_for_plugin.cache_clear()
         plugin_name = data.get("plugin", None)
         try:
-            if data["action"] == "reload":
-                if plugin_name:
-                    plugin = enabled_plugins([plugin_name]).get(plugin_name, None)
+            with PLUGIN_SYNC_LOCK:
+                if data["action"] == "reload":
+                    if plugin_name:
+                        plugin = enabled_plugins([plugin_name]).get(plugin_name, None)
 
-                    if plugin:
+                        if plugin:
+                            log.info(
+                                f'synchronize_plugins: installing/reloading plugin "{plugin_name}" for action=reload'
+                            )
+                            unload_plugin(plugin_name)
+                            install_plugin(plugin_name, attributes=plugin)
+                            plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
+                            load_plugin(plugin_dir.resolve())
+                    else:
                         log.info(
-                            f'synchronize_plugins: installing/reloading plugin "{plugin_name}" for action=reload'
+                            "synchronize_plugins: installing/reloading plugins for action=reload"
                         )
-                        unload_plugin(plugin_name)
-                        install_plugin(plugin_name, attributes=plugin)
-                        plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
-                        load_plugin(plugin_dir.resolve())
-                else:
-                    log.info("synchronize_plugins: installing/reloading plugins for action=reload")
-                    install_plugins()
-                    load_plugins()
-            elif data["action"] == "unload" and plugin_name:
-                log.info(f'synchronize_plugins: uninstalling plugin "{plugin_name}"')
-                unload_plugin(plugin_name)
-                uninstall_plugin(plugin_name)
+                        install_plugins()
+                        load_plugins()
+                elif data["action"] == "unload" and plugin_name:
+                    log.info(f'synchronize_plugins: uninstalling plugin "{plugin_name}"')
+                    unload_plugin(plugin_name)
+                    uninstall_plugin(plugin_name)
         except Exception as e:
             if isinstance(e, PluginInstallationError):
                 message = "install_plugins failed"
@@ -1146,11 +1153,17 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     # from the CLI
     synchronizer_thread = threading.Thread(target=synchronize_plugins_and_report_errors)
     if specified_plugin_paths is None:
-        install_plugins()
+        # Install and load as one unit under the lock, and start the synchronizer
+        # only after the initial load completes; starting it earlier let a reload
+        # re-extract the plugin dir mid-import (ModuleNotFoundError at boot).
+        with PLUGIN_SYNC_LOCK:
+            install_plugins()
+            load_plugins(specified_plugin_paths)
+
         STOP_SYNCHRONIZER.clear()
         synchronizer_thread.start()
-
-    load_plugins(specified_plugin_paths)
+    else:
+        load_plugins(specified_plugin_paths)
 
     server.start()
 
