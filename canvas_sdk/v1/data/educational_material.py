@@ -7,6 +7,7 @@ from canvas_sdk.v1.data.base import (
     AuditedModel,
     CommittableModelManager,
     CommittableQuerySet,
+    IdentifiableModel,
 )
 
 
@@ -42,7 +43,7 @@ class EducationalMaterialLanguage(models.TextChoices):
     ZH_US = "zh-us", "Chinese"
 
 
-class EducationalMaterial(AuditedModel):
+class EducationalMaterial(AuditedModel, IdentifiableModel):
     """Model to read EducationalMaterial command data."""
 
     class Meta:
