@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.189.0 (2026-08-04)
+
+### Features
+
+- Add supplemental oxygen field to the vitals command
+  ([#1794](https://github.com/canvas-medical/canvas-plugins/pull/1794),
+  [`8a4e7e4`](https://github.com/canvas-medical/canvas-plugins/commit/8a4e7e4b1a2c88b85d00a45cf8d0c2e09490e341))
+
+
 ## v0.188.0 (2026-08-04)
 
 ### Features
