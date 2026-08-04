@@ -37,6 +37,12 @@ class VitalsCommand(BaseCommand):
         IRREGULARLY_IRREGULAR = 1
         REGULARLY_IRREGULAR = 2
 
+    class SupplementalOxygen(Enum):
+        # LOINC LL4908-1 answer codes.
+        CONTINUOUS_HIGH_FLOW = "LA28684-1"
+        CONTINUOUS_LOW_FLOW = "LA28685-8"
+        INTERMITTENT = "LA28686-6"
+
     height: conint(ge=10, le=108) | None = None  # type: ignore[valid-type]
     weight_lbs: conint(ge=1, le=1500) | None = None  # type: ignore[valid-type]
     weight_oz: int | None = None
@@ -50,6 +56,7 @@ class VitalsCommand(BaseCommand):
     pulse_rhythm: PulseRhythm | None = None
     respiration_rate: conint(ge=6, le=60) | None = None  # type: ignore[valid-type]
     oxygen_saturation: conint(ge=60, le=100) | None = None  # type: ignore[valid-type]
+    supplemental_oxygen: SupplementalOxygen | None = None
     note: constr(max_length=150) | None = None  # type: ignore[valid-type]
 
 
