@@ -40,6 +40,7 @@ from plugin_runner.plugin_runner import (
     load_plugin,
     load_plugin_handlers,
     load_plugins,
+    reload_plugin,
     synchronize_plugins,
     synchronize_plugins_and_report_errors,
     unload_plugin,
@@ -379,6 +380,109 @@ def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> No
     )
 
 
+EXAMPLE_HANDLER_KEY = "example_plugin:example_plugin.handlers.my_handler:Handler"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_keeps_routes_registered_during_reload(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """reload_plugin keeps the previous handlers routable until the new version
+    has finished importing, so a reload never drops the plugin's routes.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    observed: dict[str, bool] = {}
+    real_load = load_or_reload_plugin
+
+    def spy(path: Path) -> bool:
+        # While the new version is importing, the old handler must still be routed.
+        observed["still_routed"] = all(
+            EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before
+        )
+        return real_load(path)
+
+    with patch("plugin_runner.plugin_runner.load_or_reload_plugin", side_effect=spy):
+        reload_plugin("example_plugin", install_test_plugin)
+
+    assert observed["still_routed"] is True
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_preserves_previous_version_on_import_error(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """If the new version raises while importing, the previous version stays live
+    and routed rather than being unloaded.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    with patch(
+        "plugin_runner.plugin_runner.load_or_reload_plugin",
+        side_effect=RuntimeError("boom"),
+    ):
+        reload_plugin("example_plugin", install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_preserves_previous_version_when_load_reports_failure(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """If the new version fails to load (returns False), the previous version
+    stays live and routed rather than being unloaded.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    with patch("plugin_runner.plugin_runner.load_or_reload_plugin", return_value=False):
+        reload_plugin("example_plugin", install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_prunes_handlers_absent_from_new_version(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Handlers present in the previous version but absent from the new one are
+    removed once the reload succeeds.
+    """
+    stale_key = "example_plugin:example_plugin.handlers.removed:Gone"
+    LOADED_PLUGINS[stale_key] = {
+        "active": True,
+        "class": Mock(),
+        "sandbox": {},
+        "handler": {},
+        "secrets": {},
+        "namespace_config": None,
+    }
+
+    reload_plugin("example_plugin", install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert stale_key not in LOADED_PLUGINS
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_remove_plugin_should_be_removed_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
@@ -640,14 +744,20 @@ def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
 
 
 def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
-    """Test that synchronize_plugins installs and loads only the given enabled plugin."""
+    """Test that synchronize_plugins installs a plugin before swapping it in.
+
+    The install (slow download + namespace wait) must run before the in-memory
+    reload so the running version keeps serving; reload_plugin then swaps it in
+    atomically. The destructive unload_plugin must not be used on this path.
+    """
     plugin_name = "my_enabled_plugin"
 
+    manager = Mock()
     with (
         patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
         patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
         patch("plugin_runner.plugin_runner.install_plugin") as mock_install_plugin,
-        patch("plugin_runner.plugin_runner.load_or_reload_plugin") as mock_load_or_reload_plugin,
+        patch("plugin_runner.plugin_runner.reload_plugin") as mock_reload_plugin,
         patch("plugin_runner.plugin_runner.unload_plugin") as mock_unload_plugin,
         patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
         patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
@@ -656,6 +766,8 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
         mock_pubsub = Mock()
         mock_get_client.return_value = (mock_client, mock_pubsub)
         mock_enabled_plugins.return_value = {plugin_name: {"version": "0.1.0"}}
+        manager.attach_mock(mock_install_plugin, "install_plugin")
+        manager.attach_mock(mock_reload_plugin, "reload_plugin")
 
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
@@ -667,9 +779,12 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
         mock_install_plugin.assert_called_once_with(plugin_name, attributes={"version": "0.1.0"})
 
         expected_path = (Path(PLUGIN_DIRECTORY) / plugin_name).resolve()
-        mock_load_or_reload_plugin.assert_called_once_with(expected_path)
-        mock_unload_plugin.assert_called_once_with(plugin_name)
+        mock_reload_plugin.assert_called_once_with(plugin_name, expected_path)
 
+        # The install must run before the in-memory swap so routes keep serving.
+        assert [call[0] for call in manager.mock_calls] == ["install_plugin", "reload_plugin"]
+
+        mock_unload_plugin.assert_not_called()
         mock_install_plugins.assert_not_called()
         mock_load_plugins.assert_not_called()
 
