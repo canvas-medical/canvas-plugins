@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.188.0 (2026-08-04)
+
+### Features
+
+- Add customer driver provider directories to SDK
+  ([#1798](https://github.com/canvas-medical/canvas-plugins/pull/1798),
+  [`c6aeb5c`](https://github.com/canvas-medical/canvas-plugins/commit/c6aeb5cb9e4d25228a60f6d1b4b3aef35a1cf858))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+
 ## v0.187.0 (2026-08-03)
 
 ### Features
