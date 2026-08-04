@@ -144,6 +144,28 @@ def test_presigned_url_removes_bucket_prefix(settings: SettingsWrapper) -> None:
     assert "/test-bucket/path/to/file.pdf?" not in url
 
 
+def test_presigned_url_normalizes_full_url(settings: SettingsWrapper) -> None:
+    """A full stored S3 URL is reduced to its key, not nested inside another URL."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
+
+    stored = (
+        "https://test-bucket.s3.amazonaws.com/test-customer/multipage.pdf"
+        "?AWSAccessKeyId=AKIA&Signature=abc&Expires=1"
+    )
+
+    url = presigned_url(stored)
+
+    assert "/test-customer/multipage.pdf?" in url
+    assert "https%3A" not in url  # no nested, url-encoded S3 URL
+    assert "test-customer/test-customer" not in url  # prefix not doubled
+    assert "AWSAccessKeyId" not in url  # the stored query string is dropped
+    assert "X-Amz-Signature=" in url
+
+
 def test_presigned_url_raises_error_without_credentials(settings: SettingsWrapper) -> None:
     """Test that presigned_url raises ValueError when AWS credentials are missing."""
     settings.AWS_ACCESS_KEY_ID = ""
