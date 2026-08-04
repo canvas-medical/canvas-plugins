@@ -23,6 +23,7 @@ from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
+from .educational_material import EducationalMaterialFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -140,6 +141,7 @@ __all__ = (
     "DiagnosticReportFactory",
     "ContentTypeFactory",
     "DocumentReviewDelegationFactory",
+    "EducationalMaterialFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
