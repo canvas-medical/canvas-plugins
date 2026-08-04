@@ -32,19 +32,11 @@ def presigned_url(s3_key: str, expires_in: int = 3600) -> str:
 
     customer_identifier = settings.CUSTOMER_IDENTIFIER
 
-    # Some fields (e.g. ImagingReport.s3_report_url) store a full absolute S3 URL
-    # rather than a bare key; reduce it to the object path so it isn't nested,
-    # url-encoded, inside the presigned URL built below.
-    if "://" in s3_key:
-        s3_key = urllib.parse.urlparse(s3_key).path
+    # Clean the key - remove bucket prefix if present
+    s3_key = s3_key.replace(f"{bucket}/", "")
 
-    # Clean the key - strip any leading slash and bucket prefix if present
-    s3_key = s3_key.lstrip("/").replace(f"{bucket}/", "")
-
-    # Prepend the customer identifier prefix unless the key already carries it
-    prefix = f"{customer_identifier}/"
-    if not s3_key.startswith(prefix):
-        s3_key = f"{prefix}{s3_key}"
+    # Prepend the customer identifier prefix
+    s3_key = f"{customer_identifier}/{s3_key}"
 
     service = "s3"
     host = f"{bucket}.s3.{region}.amazonaws.com"
