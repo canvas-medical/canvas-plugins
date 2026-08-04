@@ -20,6 +20,7 @@ def test_service_provider_new_fields_model_defaults() -> None:
     assert persisted.npi is None
     assert persisted.direct_address is None
     assert persisted.is_customer_managed is False
+    assert persisted.science_contact_id is None
 
 
 @pytest.mark.django_db
@@ -29,6 +30,7 @@ def test_service_provider_new_fields_round_trip_explicit_values() -> None:
         is_active=False,
         npi="9876543210",
         direct_address="john.smith@direct.example.org",
+        science_contact_id=4242,
     )
 
     persisted = ServiceProvider.objects.get(pk=provider.pk)
@@ -36,6 +38,7 @@ def test_service_provider_new_fields_round_trip_explicit_values() -> None:
     assert persisted.is_active is False
     assert persisted.npi == "9876543210"
     assert persisted.direct_address == "john.smith@direct.example.org"
+    assert persisted.science_contact_id == 4242
 
 
 @pytest.mark.django_db
@@ -77,11 +80,32 @@ def test_as_search_result_threads_the_provider_id() -> None:
 
 
 @pytest.mark.django_db
-def test_as_search_result_never_sends_a_science_link() -> None:
-    """The payload's Science link is always null, so a local id can never land in that column."""
-    provider = ServiceProviderFactory.create()
+def test_as_search_result_passes_through_a_real_science_link() -> None:
+    """A Science-derived provider reports its real link rather than claiming to have none."""
+    provider = ServiceProviderFactory.create(is_customer_managed=False, science_contact_id=4242)
 
-    assert provider.as_search_result()["extra"]["contact"]["science_contact_id"] is None
+    assert provider.as_search_result()["extra"]["contact"]["science_contact_id"] == 4242
+
+
+@pytest.mark.django_db
+def test_as_search_result_never_sends_the_provider_id_as_a_science_link() -> None:
+    """A provider with no Science link sends null, so its own id cannot land in that column."""
+    provider = ServiceProviderFactory.create(science_contact_id=None)
+
+    contact = provider.as_search_result()["extra"]["contact"]
+
+    assert contact["science_contact_id"] is None
+    # No "id" key either: the write path reads one as a Science contact id when nothing else says
+    # which provider this is.
+    assert "id" not in contact
+
+
+@pytest.mark.django_db
+def test_as_search_contact_does_not_send_a_science_link() -> None:
+    """The care team mutation takes exactly one identifier, so only serviceProviderId is sent."""
+    provider = ServiceProviderFactory.create(is_customer_managed=False, science_contact_id=4242)
+
+    assert "scienceContactId" not in provider.as_search_contact()
 
 
 @pytest.mark.django_db

@@ -28,6 +28,11 @@ class ServiceProvider(IdentifiableModel):
     # customer's own directory; everything else, including Science-derived providers, is False.
     is_customer_managed = models.BooleanField(default=False)
 
+    # The shared directory contact this provider came from, null when it came from none. Read-only,
+    # and not a provenance signal: legacy providers predate this tracking, so use
+    # is_customer_managed to tell a customer's own providers apart.
+    science_contact_id = models.IntegerField(null=True, blank=True)
+
     @property
     def full_name(self) -> str:
         """Service provider full name."""
@@ -69,10 +74,11 @@ class ServiceProvider(IdentifiableModel):
             "description": description,
             "annotations": list(annotations or []),
             "extra": {
+                # service_provider_id is load-bearing, so don't drop it: without it the write path
+                # treats an "id" key as a Science contact id. No "id" is sent here either.
                 "contact": {
                     "service_provider_id": self.dbid,
-                    # Always null: this is a local provider, not a Science contact.
-                    "science_contact_id": None,
+                    "science_contact_id": self.science_contact_id,
                     "firstName": self.first_name,
                     "lastName": self.last_name,
                     "businessFax": self.business_fax,
