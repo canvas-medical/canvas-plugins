@@ -822,6 +822,9 @@
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
   ],
+  "canvas_sdk.effects.service_provider": [
+    "ServiceProvider"
+  ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
   ],
