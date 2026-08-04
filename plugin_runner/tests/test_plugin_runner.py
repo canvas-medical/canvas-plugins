@@ -1269,3 +1269,36 @@ def test_main_logs_keyboard_interrupt(
 
     assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
     assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+@patch("plugin_runner.plugin_runner.threading.Thread")
+def test_main_starts_synchronizer_after_initial_load(
+    mock_thread: MagicMock,
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    mock_install: MagicMock,
+    mock_load: MagicMock,
+) -> None:
+    """main() installs, then loads, then starts the synchronizer thread — in that order."""
+    from plugin_runner.plugin_runner import main
+
+    order: list[str] = []
+    mock_install.side_effect = lambda: order.append("install")
+    mock_load.side_effect = lambda *args, **kwargs: order.append("load")
+
+    mock_sync_thread = MagicMock()
+    mock_sync_thread.start.side_effect = lambda: order.append("synchronizer_start")
+    mock_sync_thread.is_alive.return_value = False
+    mock_thread.return_value = mock_sync_thread
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    main(specified_plugin_paths=None)
+
+    assert order == ["install", "load", "synchronizer_start"]

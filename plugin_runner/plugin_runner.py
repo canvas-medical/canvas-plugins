@@ -1146,11 +1146,17 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     # from the CLI
     synchronizer_thread = threading.Thread(target=synchronize_plugins_and_report_errors)
     if specified_plugin_paths is None:
+        # Start the synchronizer only after the initial load completes. All plugin
+        # install/load runs on this single serial synchronizer thread except this
+        # one-time boot load; starting it earlier let a reload re-extract the plugin
+        # dir mid-import (transient ModuleNotFoundError: Could not load module).
         install_plugins()
+        load_plugins(specified_plugin_paths)
+
         STOP_SYNCHRONIZER.clear()
         synchronizer_thread.start()
-
-    load_plugins(specified_plugin_paths)
+    else:
+        load_plugins(specified_plugin_paths)
 
     server.start()
 
