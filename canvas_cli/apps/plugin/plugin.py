@@ -4,6 +4,7 @@ import ast
 import base64
 import builtins
 import json
+import os
 import sys
 import tarfile
 import tempfile
@@ -20,6 +21,7 @@ from cookiecutter.exceptions import OutputDirExistsException
 from cookiecutter.main import cookiecutter
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
 from plugin_runner.plugin_runner import load_plugin_handlers
@@ -279,6 +281,7 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        _lint_plugin_static(plugin_name)
         _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
@@ -556,59 +559,48 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
             # Store just the class part (module.path:ClassName)
             referenced_classes.add(class_ref)
 
-    # Find all Python files in the plugin
+    # Walk the plugin tree, pruning directories we never want to descend into.
+    # Mirrors _build_package's dotfile-skip rule (.venv, .git, .tox, .eggs, ...)
+    # so the validator sees the same set of files that ship in the package.
     unreferenced = []
-    python_files = builtins.list(plugin_path.rglob("*.py"))
-
-    # Known base class names to look for in inheritance
     base_handler_names = {"BaseHandler", "BaseProtocol"}
 
-    for py_file in python_files:
-        # Skip test files, __pycache__, and __init__ files
-        # Check if file is in a test directory or is a test file itself
-        parts = py_file.parts
-        if "__pycache__" in str(py_file) or py_file.name == "__init__.py":
-            continue
-        if "tests" in parts or "test" in parts or py_file.stem.startswith("test_"):
-            continue
+    def _skip_dir(name: str) -> bool:
+        return name.startswith(".") or name in {"__pycache__", "tests", "test"}
 
-        # Parse the file using AST to avoid executing code
-        try:
-            tree = ast.parse(py_file.read_text())
+    for dirpath, dirnames, filenames in os.walk(plugin_path):
+        dirnames[:] = [d for d in dirnames if not _skip_dir(d)]
+        for filename in filenames:
+            if not filename.endswith(".py"):
+                continue
+            if filename == "__init__.py" or filename.startswith("test_"):
+                continue
+            py_file = Path(dirpath) / filename
 
-            # Find all class definitions
+            try:
+                tree = ast.parse(py_file.read_bytes())
+            except Exception:
+                print(f"Warning: Could not parse file '{py_file}'")
+                continue
+
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # Check if this class inherits from BaseHandler or BaseProtocol
-                    inherits_from_base = False
-                    for base in node.bases:
-                        # Handle direct inheritance: class Foo(BaseHandler)
-                        if isinstance(base, ast.Name) and base.id in base_handler_names:
-                            inherits_from_base = True
-                            break
-                        # Handle module-qualified inheritance: class Foo(handlers.BaseHandler)
-                        elif isinstance(base, ast.Attribute):
-                            if base.attr in base_handler_names:
-                                inherits_from_base = True
-                                break
+                if not isinstance(node, ast.ClassDef):
+                    continue
 
-                    if inherits_from_base:
-                        # Build the class reference string
-                        # Get relative path from plugin root
-                        relative_path = py_file.relative_to(plugin_path)
-                        module_path = str(relative_path.with_suffix("")).replace("/", ".")
-                        # Include package name prefix to match manifest format
-                        package_name = plugin_path.name
-                        class_ref = f"{package_name}.{module_path}:{node.name}"
+                inherits_from_base = any(
+                    (isinstance(base, ast.Name) and base.id in base_handler_names)
+                    or (isinstance(base, ast.Attribute) and base.attr in base_handler_names)
+                    for base in node.bases
+                )
+                if not inherits_from_base:
+                    continue
 
-                        # Check if it's referenced in the manifest
-                        if not any(class_ref in ref for ref in referenced_classes):
-                            unreferenced.append(class_ref)
+                relative_path = py_file.relative_to(plugin_path)
+                module_path = str(relative_path.with_suffix("")).replace("/", ".")
+                class_ref = f"{plugin_path.name}.{module_path}:{node.name}"
 
-        except Exception:
-            # Skip files that can't be parsed
-            print(f"Warning: Could not parse file '{py_file}'")
-            pass
+                if not any(class_ref in ref for ref in referenced_classes):
+                    unreferenced.append(class_ref)
 
     return unreferenced
 
@@ -787,11 +779,40 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
 
 
+def _lint_plugin_static(plugin_name: Path) -> None:
+    """Static pre-load lint: RestrictedPython constructs that fail at runtime and
+    Custom Data setup mistakes the sandbox load can't surface. Prints warnings and
+    raises ``typer.Exit(1)`` on any error-severity finding.
+    """
+    manifest_path = plugin_name / "CANVAS_MANIFEST.json"
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        manifest = {}
+
+    findings = lint_plugin(plugin_name, manifest)
+    if not findings:
+        return
+
+    warnings = [f for f in findings if f.severity == "warning"]
+    errors = [f for f in findings if f.severity == "error"]
+
+    for w in warnings:
+        print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
+
+    if errors:
+        print("\nThese issues will fail on the instance (sandbox / Custom Data):")
+        for e in errors:
+            print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
+        raise typer.Exit(code=1)
+
+
 def validate(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
     """Validate a plugin's manifest and that all its handlers load in the sandbox."""
     validate_manifest(plugin_name)
+    _lint_plugin_static(plugin_name)
     _validate_plugin_loads(plugin_name)
 
 

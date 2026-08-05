@@ -1,4 +1,5 @@
 from .calendar import CalendarFactory, EventFactory
+from .change_medication import ChangeMedicationFactory
 from .chart_section_review import ChartSectionReviewFactory
 from .claim import (
     ClaimCommentFactory,
@@ -21,6 +22,8 @@ from .claim_line_item import (
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
+from .document_review_delegation import DocumentReviewDelegationFactory
+from .educational_material import EducationalMaterialFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -54,11 +57,13 @@ from .lab_report_template import (
     LabReportTemplateFieldOptionFactory,
 )
 from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
+from .medication import MedicationFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
+from .medication_statement import MedicationStatementFactory
 from .note import NoteFactory, NoteMetadataFactory, NoteStateChangeEventFactory, NoteTypeFactory
 from .organization import (
     OrganizationAddressFactory,
@@ -117,6 +122,7 @@ from .visual_exam_finding import VisualExamFindingFactory
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
+    "ChangeMedicationFactory",
     "ChartSectionReviewFactory",
     "ClaimBannerAlertFactory",
     "ClaimFactory",
@@ -135,6 +141,8 @@ __all__ = (
     "CoverageFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",
+    "DocumentReviewDelegationFactory",
+    "EducationalMaterialFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
@@ -167,9 +175,11 @@ __all__ = (
     "LabReportTemplateFieldFactory",
     "LabReportTemplateFieldOptionFactory",
     "LetterActionEventFactory",
+    "MedicationFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
+    "MedicationStatementFactory",
     "NoteFactory",
     "NoteMetadataFactory",
     "NoteStateChangeEventFactory",

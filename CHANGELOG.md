@@ -1,6 +1,229 @@
 # CHANGELOG
 
 
+## v0.191.1 (2026-08-05)
+
+### Bug Fixes
+
+- Skip hidden dirs in unreferenced-handler scan
+  ([#1659](https://github.com/canvas-medical/canvas-plugins/pull/1659),
+  [`c897b57`](https://github.com/canvas-medical/canvas-plugins/commit/c897b572fde2f5b0dd237bdb363a912112462cdf))
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
+## v0.191.0 (2026-08-05)
+
+### Features
+
+- Provider menu configuration effect to control which items show in the menu
+  ([#1804](https://github.com/canvas-medical/canvas-plugins/pull/1804),
+  [`22f8d7f`](https://github.com/canvas-medical/canvas-plugins/commit/22f8d7f962dc08de0cbd3468a37c027c45ce6ae8))
+
+
+## v0.190.0 (2026-08-05)
+
+### Features
+
+- **data**: Add educational material data model
+  ([#1806](https://github.com/canvas-medical/canvas-plugins/pull/1806),
+  [`b54b6d6`](https://github.com/canvas-medical/canvas-plugins/commit/b54b6d6c5746ef9752ba430d9158cd3a5d9f6faa))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.189.0 (2026-08-04)
+
+### Features
+
+- Add supplemental oxygen field to the vitals command
+  ([#1794](https://github.com/canvas-medical/canvas-plugins/pull/1794),
+  [`8a4e7e4`](https://github.com/canvas-medical/canvas-plugins/commit/8a4e7e4b1a2c88b85d00a45cf8d0c2e09490e341))
+
+
+## v0.188.0 (2026-08-04)
+
+### Features
+
+- Add customer driver provider directories to SDK
+  ([#1798](https://github.com/canvas-medical/canvas-plugins/pull/1798),
+  [`c6aeb5c`](https://github.com/canvas-medical/canvas-plugins/commit/c6aeb5cb9e4d25228a60f6d1b4b3aef35a1cf858))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+
+## v0.187.0 (2026-08-03)
+
+### Features
+
+- **data**: Expose document_url on imaging report
+  ([#1802](https://github.com/canvas-medical/canvas-plugins/pull/1802),
+  [`5e6c150`](https://github.com/canvas-medical/canvas-plugins/commit/5e6c150b921a51210acd84aa2c34c8d1fcd000af))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.186.0 (2026-07-31)
+
+### Features
+
+- Add calendar and calendar event lifecycle events
+  ([#1735](https://github.com/canvas-medical/canvas-plugins/pull/1735),
+  [`e62cb06`](https://github.com/canvas-medical/canvas-plugins/commit/e62cb06eb534daae0b3a4f613780873b8a9a9f13))
+
+
+## v0.185.0 (2026-07-30)
+
+### Features
+
+- Adds snowflake-connector-python to allowed modules
+  ([#1800](https://github.com/canvas-medical/canvas-plugins/pull/1800),
+  [`64c6ac0`](https://github.com/canvas-medical/canvas-plugins/commit/64c6ac029cca93ebf1296021b0d2939e8ef6a713))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
+## v0.184.0 (2026-07-28)
+
+### Features
+
+- Add lab report effect ([#1769](https://github.com/canvas-medical/canvas-plugins/pull/1769),
+  [`f5d669b`](https://github.com/canvas-medical/canvas-plugins/commit/f5d669b67c750707e8c75cf5a3a9b1264934c84f))
+
+
+## v0.183.0 (2026-07-28)
+
+### Features
+
+- Add redirect effect ([#1780](https://github.com/canvas-medical/canvas-plugins/pull/1780),
+  [`640dac5`](https://github.com/canvas-medical/canvas-plugins/commit/640dac5e5142dcd098787d2b0fa2be238aea9bef))
+
+
+## v0.182.2 (2026-07-27)
+
+### Bug Fixes
+
+- Trigger new release ([#1799](https://github.com/canvas-medical/canvas-plugins/pull/1799),
+  [`abfca07`](https://github.com/canvas-medical/canvas-plugins/commit/abfca07169b9cfc1c3a578aedeb4054671e8cf10))
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+
+## v0.182.1 (2026-07-27)
+
+### Bug Fixes
+
+- Rank staff clinical role by privilege level
+  ([#1783](https://github.com/canvas-medical/canvas-plugins/pull/1783),
+  [`b0d9cc7`](https://github.com/canvas-medical/canvas-plugins/commit/b0d9cc7481e89aebd93a3e57f439b22ff872e6b1))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
+## v0.182.0 (2026-07-24)
+
+### Features
+
+- Add DocumentReviewDelegation SDK data model and DOCUMENT_DELEGATED event
+  ([#1791](https://github.com/canvas-medical/canvas-plugins/pull/1791),
+  [`325b832`](https://github.com/canvas-medical/canvas-plugins/commit/325b8323e8fa7e9cffe17f3f080ab4db6841ce76))
+
+
+## v0.181.0 (2026-07-23)
+
+### Features
+
+- Add change medication model ([#1793](https://github.com/canvas-medical/canvas-plugins/pull/1793),
+  [`f097812`](https://github.com/canvas-medical/canvas-plugins/commit/f0978124f7bd40c7c20c121765b460f5f9c24536))
+
+
+## v0.180.0 (2026-07-23)
+
+### Features
+
+- **data**: Add RefillRequest data model
+  ([#1795](https://github.com/canvas-medical/canvas-plugins/pull/1795),
+  [`8462eb6`](https://github.com/canvas-medical/canvas-plugins/commit/8462eb65756408df176a1ad6e3381b8fc5362cae))
+
+
+## v0.179.0 (2026-07-14)
+
+### Features
+
+- Add note state action buttons and note footer configuration
+  ([#1770](https://github.com/canvas-medical/canvas-plugins/pull/1770),
+  [`ed45b0f`](https://github.com/canvas-medical/canvas-plugins/commit/ed45b0f164ad257319b51522e9eb8fef157c2359))
+
+
+## v0.178.0 (2026-07-14)
+
+### Features
+
+- Add practice_location_override to PrescribeCommand.send
+  ([#1787](https://github.com/canvas-medical/canvas-plugins/pull/1787),
+  [`b8fecab`](https://github.com/canvas-medical/canvas-plugins/commit/b8fecab2de6a7bf6de68f88df72033ee697fc159))
+
+
+## v0.177.0 (2026-07-04)
+
+### Bug Fixes
+
+- Import Effect from canvas_sdk.effects in recurring_appointments handler
+  ([#1767](https://github.com/canvas-medical/canvas-plugins/pull/1767),
+  [`448c489`](https://github.com/canvas-medical/canvas-plugins/commit/448c489d095a445fef3b4934504a5a755261ce3c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+### Features
+
+- Static sandbox + Custom Data lint in `canvas validate`
+  ([#1784](https://github.com/canvas-medical/canvas-plugins/pull/1784),
+  [`07fd7e1`](https://github.com/canvas-medical/canvas-plugins/commit/07fd7e1de3f662ba19269598fd19231a0eebea79))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.176.0 (2026-06-30)
+
+### Features
+
+- Support committed() on all committable command models
+  ([#1776](https://github.com/canvas-medical/canvas-plugins/pull/1776),
+  [`affe606`](https://github.com/canvas-medical/canvas-plugins/commit/affe60660c05890860de44ac98426a147982cc73))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.175.0 (2026-06-26)
+
+### Features
+
+- Add eligibility checks to the sdk
+  ([#1688](https://github.com/canvas-medical/canvas-plugins/pull/1688),
+  [`bd2e860`](https://github.com/canvas-medical/canvas-plugins/commit/bd2e860e5d26ddc0ef0c504556b016ad39aca796))
+
+
 ## v0.174.0 (2026-06-24)
 
 ### Features

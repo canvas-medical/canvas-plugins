@@ -132,10 +132,9 @@ class Prescription(IdentifiableModel, AuditedModel):
         max_length=1, choices=PrescriptionResponse, null=True, blank=True
     )
     reason_code = models.CharField(max_length=3, null=True, blank=True)
-    # TODO: uncomment when RefillRequest is added to Data Module
-    # refill_request = models.ForeignKey(
-    #     "v1.RefillRequest", on_delete=models.CASCADE, null=True, blank=True, related_name="response"
-    # )
+    refill_request = models.ForeignKey(
+        "v1.RefillRequest", on_delete=models.CASCADE, null=True, blank=True, related_name="response"
+    )
     related_refill = models.OneToOneField("self", on_delete=models.CASCADE, null=True, blank=True)
     is_epcs = models.BooleanField(null=True, default=False)
 

@@ -410,6 +410,10 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.action_button": [
+    "ReloadNoteActionButtonsEffect",
+    "ReloadPatientActionButtonsEffect"
+  ],
   "canvas_sdk.effects.application_notification_badge": [
     "ApplicationNotificationBadge"
   ],
@@ -629,6 +633,22 @@
     "HealthGorillaLabOrderIngest",
     "HealthGorillaLabReportIngest"
   ],
+  "canvas_sdk.effects.lab_report": [
+    "AbnormalFlag",
+    "LabReport",
+    "LabTest",
+    "LabValue",
+    "ObservationStatus"
+  ],
+  "canvas_sdk.effects.lab_report.attach_results": [
+    "AbnormalFlag",
+    "LabTest",
+    "LabValue",
+    "ObservationStatus"
+  ],
+  "canvas_sdk.effects.lab_report.base": [
+    "LabReport"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
@@ -665,6 +685,9 @@
   "canvas_sdk.effects.note.restrictions": [
     "NoteRestrictionsEffect",
     "NoteRestrictionsUpdatedEffect"
+  ],
+  "canvas_sdk.effects.note_footer_configuration": [
+    "NoteFooterConfiguration"
   ],
   "canvas_sdk.effects.observation": [
     "CodingData",
@@ -787,14 +810,23 @@
     "ProtocolCard",
     "Recommendation"
   ],
+  "canvas_sdk.effects.provider_menu_configuration": [
+    "ProviderMenuConfiguration"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
+  ],
+  "canvas_sdk.effects.redirect": [
+    "RedirectEffect"
   ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
+  ],
+  "canvas_sdk.effects.service_provider": [
+    "ServiceProvider"
   ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
@@ -879,12 +911,29 @@
     "Event",
     "TargetType"
   ],
+  "canvas_sdk.events.surescripts": [
+    "BenefitCoverage",
+    "EligibilityPlan",
+    "SurescriptsBenefitsResponse",
+    "SurescriptsEligibilityResponse",
+    "TherapeuticAlternative"
+  ],
+  "canvas_sdk.events.surescripts.surescripts_messages": [
+    "BenefitCoverage",
+    "EligibilityPlan",
+    "SurescriptsBenefitsResponse",
+    "SurescriptsEligibilityResponse",
+    "TherapeuticAlternative"
+  ],
   "canvas_sdk.handlers": [
     "BaseHandler"
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
-    "SHOW_BUTTON_REGEX"
+    "LockNoteActionButton",
+    "NoteStateActionButton",
+    "SHOW_BUTTON_REGEX",
+    "SignNoteActionButton"
   ],
   "canvas_sdk.handlers.application": [
     "Application",
@@ -1058,6 +1107,7 @@
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChangeMedication",
     "ChargeDescriptionMaster",
     "ChartSectionReview",
     "ChartSectionReviewSection",
@@ -1099,6 +1149,8 @@
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
+    "DocumentReviewDelegation",
+    "EducationalMaterial",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -1217,6 +1269,8 @@
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
+    "RefillRequest",
+    "RefillRequestCoding",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1297,6 +1351,9 @@
     "CareTeamMembership",
     "CareTeamMembershipStatus",
     "CareTeamRole"
+  ],
+  "canvas_sdk.v1.data.change_medication": [
+    "ChangeMedication"
   ],
   "canvas_sdk.v1.data.charge_description_master": [
     "ChargeDescriptionMaster"
@@ -1414,6 +1471,12 @@
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus"
+  ],
+  "canvas_sdk.v1.data.document_review_delegation": [
+    "DocumentReviewDelegation"
+  ],
+  "canvas_sdk.v1.data.educational_material": [
+    "EducationalMaterial"
   ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
@@ -1634,6 +1697,10 @@
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReportQuerySet"
+  ],
+  "canvas_sdk.v1.data.refill_request": [
+    "RefillRequest",
+    "RefillRequestCoding"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",

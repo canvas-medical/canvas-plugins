@@ -6,6 +6,8 @@ from django.db import models
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     TimestampedModel,
     ValueSetLookupQuerySetMixin,
@@ -24,6 +26,7 @@ from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplateQuerySet,
 )
 from canvas_sdk.v1.data.task import Task
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class ImagingOrder(AuditedModel, IdentifiableModel):
@@ -31,6 +34,8 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingorder_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
@@ -74,6 +79,8 @@ class ImagingReview(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreview_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30
@@ -125,6 +132,14 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     result_date = models.DateField()
     original_date = models.DateField()
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
+    s3_report_url = models.CharField(max_length=512, null=True, blank=True)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a short-lived presigned URL for the imaging report, or None when unset."""
+        if self.s3_report_url:
+            return presigned_url(self.s3_report_url)
+        return None
 
 
 class ImagingReportCoding(Coding):

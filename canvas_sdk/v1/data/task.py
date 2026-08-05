@@ -1,8 +1,12 @@
+from typing import cast
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     MetadataModel,
     Model,
@@ -126,6 +130,8 @@ class NoteTask(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_notetask_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="note_tasks")
     task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks", null=True)

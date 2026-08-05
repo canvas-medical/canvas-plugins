@@ -161,6 +161,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
     SHOW_PATIENT_CHART_SUMMARY_SECTIONS: _ClassVar[EffectType]
     SHOW_PATIENT_NOTE_HEADER_DROPDOWN_SECTIONS: _ClassVar[EffectType]
+    NOTE_FOOTER__CONFIGURATION: _ClassVar[EffectType]
     SHOW_PATIENT_PROFILE_SECTIONS: _ClassVar[EffectType]
     PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     SEND_SURESCRIPTS_ELIGIBILITY_REQUEST: _ClassVar[EffectType]
@@ -247,9 +248,14 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     HEALTH_GORILLA_LAB_ORDER_INGEST: _ClassVar[EffectType]
     HEALTH_GORILLA_LAB_REPORT_INGEST: _ClassVar[EffectType]
     SET_COMMAND_CUSTOM_HTML: _ClassVar[EffectType]
+    CREATE_LAB_REPORT: _ClassVar[EffectType]
+    UPDATE_LAB_REPORT: _ClassVar[EffectType]
+    ENTER_IN_ERROR_LAB_REPORT: _ClassVar[EffectType]
+    ATTACH_LAB_REPORT_RESULTS: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     SET_APPLICATION_NOTIFICATION_BADGE: _ClassVar[EffectType]
+    RELOAD_ACTION_BUTTONS: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENT_IS_RESCHEDULABLE: _ClassVar[EffectType]
@@ -285,6 +291,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
+    REDIRECT: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
     SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
@@ -354,6 +361,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_STAFF_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
+    SHOW_PROVIDER_MENU_ITEMS: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
     EVENT_VALIDATION_ERROR: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__METADATA: _ClassVar[EffectType]
@@ -386,6 +394,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_DOCUMENT_FIELDS: _ClassVar[EffectType]
     JUNK_DOCUMENT: _ClassVar[EffectType]
     REMOVE_DOCUMENT_FROM_PATIENT: _ClassVar[EffectType]
+    CREATE_SERVICE_PROVIDER: _ClassVar[EffectType]
+    UPDATE_SERVICE_PROVIDER: _ClassVar[EffectType]
+    DEACTIVATE_SERVICE_PROVIDER: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -540,6 +551,7 @@ ANNOTATE_PATIENT_CHART_DETECTED_ISSUE_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
 SHOW_PATIENT_CHART_SUMMARY_SECTIONS: EffectType
 SHOW_PATIENT_NOTE_HEADER_DROPDOWN_SECTIONS: EffectType
+NOTE_FOOTER__CONFIGURATION: EffectType
 SHOW_PATIENT_PROFILE_SECTIONS: EffectType
 PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH_RESULTS: EffectType
 SEND_SURESCRIPTS_ELIGIBILITY_REQUEST: EffectType
@@ -626,9 +638,14 @@ HEALTH_GORILLA_LAB_ORDER_OVERRIDE: EffectType
 HEALTH_GORILLA_LAB_ORDER_INGEST: EffectType
 HEALTH_GORILLA_LAB_REPORT_INGEST: EffectType
 SET_COMMAND_CUSTOM_HTML: EffectType
+CREATE_LAB_REPORT: EffectType
+UPDATE_LAB_REPORT: EffectType
+ENTER_IN_ERROR_LAB_REPORT: EffectType
+ATTACH_LAB_REPORT_RESULTS: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 SET_APPLICATION_NOTIFICATION_BADGE: EffectType
+RELOAD_ACTION_BUTTONS: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType
 PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: EffectType
 PATIENT_PORTAL__APPOINTMENT_IS_RESCHEDULABLE: EffectType
@@ -664,6 +681,7 @@ UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
+REDIRECT: EffectType
 SIMPLE_API_RESPONSE: EffectType
 SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
 SIMPLE_API_WEBSOCKET_DENY: EffectType
@@ -733,6 +751,7 @@ DELETE_STAFF_EXTERNAL_IDENTIFIER: EffectType
 DELETE_STAFF_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
+SHOW_PROVIDER_MENU_ITEMS: EffectType
 REDIRECT_CONTEXT: EffectType
 EVENT_VALIDATION_ERROR: EffectType
 REVENUE__PAYMENT_PROCESSOR__METADATA: EffectType
@@ -765,6 +784,9 @@ ASSIGN_DOCUMENT_REVIEWER: EffectType
 UPDATE_DOCUMENT_FIELDS: EffectType
 JUNK_DOCUMENT: EffectType
 REMOVE_DOCUMENT_FROM_PATIENT: EffectType
+CREATE_SERVICE_PROVIDER: EffectType
+UPDATE_SERVICE_PROVIDER: EffectType
+DEACTIVATE_SERVICE_PROVIDER: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

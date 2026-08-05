@@ -7,6 +7,8 @@ from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
     BaseQuerySet,
+    CommittableModelManager,
+    CommittableQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
@@ -22,6 +24,8 @@ class Referral(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_referral_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING)
