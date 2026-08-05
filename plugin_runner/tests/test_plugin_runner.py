@@ -483,6 +483,52 @@ def test_reload_plugin_prunes_handlers_absent_from_new_version(
     assert stale_key not in LOADED_PLUGINS
 
 
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+def test_reload_plugin_drops_stale_modules_before_reimport(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """reload_plugin drops the plugin's already-imported modules from sys.modules
+    before importing the new version, so the reload picks up the new code instead
+    of reusing the stale (old) module objects.
+    """
+    import sys
+
+    name = "test_module_imports_plugin"
+    stale_modules = {
+        mod: module
+        for mod, module in sys.modules.items()
+        if mod == name or mod.startswith(f"{name}.")
+    }
+    assert stale_modules  # loading the plugin registered its modules in sys.modules
+
+    dropped_before_import: dict[str, bool] = {}
+    real_load = load_or_reload_plugin
+
+    def spy(path: Path) -> bool:
+        # The stale module objects must already be gone when the new version imports.
+        dropped_before_import["all_gone"] = all(mod not in sys.modules for mod in stale_modules)
+        return real_load(path)
+
+    with patch("plugin_runner.plugin_runner.load_or_reload_plugin", side_effect=spy):
+        reload_plugin(name, install_test_plugin)
+
+    assert dropped_before_import["all_gone"] is True
+    # The reload succeeded and the plugin's handlers are active again.
+    assert any(
+        handler_name.startswith(f"{name}:") and plugin["active"]
+        for handler_name, plugin in LOADED_PLUGINS.items()
+    )
+    # The re-import registered fresh module objects rather than the stale ones.
+    reimported = {
+        mod: module
+        for mod, module in sys.modules.items()
+        if mod == name or mod.startswith(f"{name}.")
+    }
+    assert all(
+        reimported[mod] is not stale_modules[mod] for mod in reimported if mod in stale_modules
+    )
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_remove_plugin_should_be_removed_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
