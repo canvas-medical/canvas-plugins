@@ -138,10 +138,10 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         Returns None when the document has no related object or the content type has no
         SDK data model equivalent.
         """
-        if self.content_type_id is None or self.object_id is None:
+        content_type = self.content_type
+        if content_type is None or self.object_id is None:
             return None
 
-        content_type = self.content_type
         path = _RELATED_OBJECT_MODEL_PATHS.get((content_type.app_label, content_type.model))
         if path is None:
             return None
