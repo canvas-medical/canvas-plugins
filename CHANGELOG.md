@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.193.0 (2026-08-05)
+
+### Features
+
+- Expose external care team members and their service provider on careteammembership
+  ([#1777](https://github.com/canvas-medical/canvas-plugins/pull/1777),
+  [`497df92`](https://github.com/canvas-medical/canvas-plugins/commit/497df92a419e84f5d0814adf0b8f49fe0b35b76f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.192.0 (2026-08-05)
 
 ### Features
