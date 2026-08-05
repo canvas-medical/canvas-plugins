@@ -1,6 +1,10 @@
 from unittest.mock import patch
 
+import pytest
+
+from canvas_sdk.test_utils.factories import ContentTypeFactory, ImagingReportFactory
 from canvas_sdk.v1.data.document_reference import DocumentReference
+from canvas_sdk.v1.data.imaging import ImagingReport
 
 
 def test_document_url_with_document() -> None:
@@ -41,3 +45,39 @@ def test_document_reference_str() -> None:
     doc_ref.id = "abc123"
 
     assert str(doc_ref) == "DocumentReference(id=abc123)"
+
+
+@pytest.mark.django_db
+def test_related_object_resolves_to_sdk_model() -> None:
+    """related_object resolves content_type + object_id to the SDK model instance."""
+    report = ImagingReportFactory.create()
+    content_type = ContentTypeFactory.create(app_label="api", model="imagingreport")
+
+    doc_ref = DocumentReference()
+    doc_ref.content_type = content_type
+    doc_ref.object_id = report.dbid
+
+    resolved = doc_ref.related_object
+
+    assert isinstance(resolved, ImagingReport)
+    assert resolved.dbid == report.dbid
+
+
+@pytest.mark.django_db
+def test_related_object_none_for_unmapped_content_type() -> None:
+    """related_object returns None when the content type has no SDK equivalent."""
+    content_type = ContentTypeFactory.create(app_label="api", model="note")
+
+    doc_ref = DocumentReference()
+    doc_ref.content_type = content_type
+    doc_ref.object_id = 123
+
+    assert doc_ref.related_object is None
+
+
+def test_related_object_none_without_content_type() -> None:
+    """related_object returns None when there is no related object."""
+    doc_ref = DocumentReference()
+    doc_ref.object_id = None
+
+    assert doc_ref.related_object is None
