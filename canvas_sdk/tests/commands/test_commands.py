@@ -888,3 +888,29 @@ def test_vitals_body_temperature_float_in_originate_payload() -> None:
     effect = command.originate()
     payload = json.loads(effect.payload)
     assert payload["data"]["body_temperature"] == 98.6
+
+
+def test_vitals_supplemental_oxygen_accepts_enum_value() -> None:
+    """Test that supplemental_oxygen accepts a SupplementalOxygen enum member."""
+    command = VitalsCommand(
+        note_uuid="test_uuid",
+        supplemental_oxygen=VitalsCommand.SupplementalOxygen.CONTINUOUS_HIGH_FLOW,
+    )
+    assert command.supplemental_oxygen == VitalsCommand.SupplementalOxygen.CONTINUOUS_HIGH_FLOW
+
+
+def test_vitals_supplemental_oxygen_defaults_to_none() -> None:
+    """Test that supplemental_oxygen defaults to None."""
+    command = VitalsCommand(note_uuid="test_uuid")
+    assert command.supplemental_oxygen is None
+
+
+def test_vitals_supplemental_oxygen_in_originate_payload() -> None:
+    """Test that a selected supplemental_oxygen serializes as its enum value."""
+    command = VitalsCommand(
+        note_uuid="test_uuid",
+        supplemental_oxygen=VitalsCommand.SupplementalOxygen.INTERMITTENT,
+    )
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+    assert payload["data"]["supplemental_oxygen"] == "LA28686-6"

@@ -707,7 +707,10 @@
     "CreatePatientPreferredPharmacies",
     "Patient",
     "PatientAddress",
+    "PatientContact",
+    "PatientContactCategory",
     "PatientContactPoint",
+    "PatientContactRelationship",
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",
@@ -716,7 +719,10 @@
   "canvas_sdk.effects.patient.base": [
     "Patient",
     "PatientAddress",
+    "PatientContact",
+    "PatientContactCategory",
     "PatientContactPoint",
+    "PatientContactRelationship",
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",
@@ -810,6 +816,9 @@
     "ProtocolCard",
     "Recommendation"
   ],
+  "canvas_sdk.effects.provider_menu_configuration": [
+    "ProviderMenuConfiguration"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
@@ -821,6 +830,9 @@
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
+  ],
+  "canvas_sdk.effects.service_provider": [
+    "ServiceProvider"
   ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
@@ -1145,6 +1157,7 @@
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
+    "EducationalMaterial",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -1227,6 +1240,7 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationalEntity",
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
@@ -1469,6 +1483,9 @@
   "canvas_sdk.v1.data.document_review_delegation": [
     "DocumentReviewDelegation"
   ],
+  "canvas_sdk.v1.data.educational_material": [
+    "EducationalMaterial"
+  ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
     "EncounterMedium",
@@ -1599,6 +1616,9 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint"
+  ],
+  "canvas_sdk.v1.data.organizational_entity": [
+    "OrganizationalEntity"
   ],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",

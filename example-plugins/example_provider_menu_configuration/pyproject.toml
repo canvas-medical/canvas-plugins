@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Removes the native scheduling entry points: hides the Schedule item from the provider (hamburger) menu, hides the Appointments preset filter from the global panel, and moves the default landing page off the schedule page."
+license = "MIT"
+name = "example_provider_menu_configuration"
+readme = "example_provider_menu_configuration/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

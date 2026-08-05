@@ -23,6 +23,7 @@ from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
+from .educational_material import EducationalMaterialFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import (
@@ -69,6 +70,7 @@ from .organization import (
     OrganizationContactPointFactory,
     OrganizationFactory,
 )
+from .organizational_entity import OrganizationalEntityFactory
 from .patient import (
     PatientAddressFactory,
     PatientFacilityAddressFactory,
@@ -145,6 +147,7 @@ __all__ = (
     "ContentTypeFactory",
     "DocumentCodingFactory",
     "DocumentReviewDelegationFactory",
+    "EducationalMaterialFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
@@ -189,6 +192,7 @@ __all__ = (
     "OrganizationAddressFactory",
     "OrganizationContactPointFactory",
     "OrganizationFactory",
+    "OrganizationalEntityFactory",
     "PatientAddressFactory",
     "PatientAdministrativeDocumentFactory",
     "PatientFacilityAddressFactory",

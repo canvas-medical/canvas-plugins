@@ -1,6 +1,103 @@
 # CHANGELOG
 
 
+## v0.193.0 (2026-08-05)
+
+### Features
+
+- Expose external care team members and their service provider on careteammembership
+  ([#1777](https://github.com/canvas-medical/canvas-plugins/pull/1777),
+  [`497df92`](https://github.com/canvas-medical/canvas-plugins/commit/497df92a419e84f5d0814adf0b8f49fe0b35b76f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.192.0 (2026-08-05)
+
+### Features
+
+- **effects**: Support writing patient contacts on the Patient effect
+  ([#1785](https://github.com/canvas-medical/canvas-plugins/pull/1785),
+  [`f01c920`](https://github.com/canvas-medical/canvas-plugins/commit/f01c920e98558d57c2978eab281243d0a9569721))
+
+
+## v0.191.2 (2026-08-05)
+
+### Bug Fixes
+
+- **data**: Return a resolvable presigned url for imaging report document_url
+  ([#1810](https://github.com/canvas-medical/canvas-plugins/pull/1810),
+  [`b066e80`](https://github.com/canvas-medical/canvas-plugins/commit/b066e8030bbf9d945bf535e12760fa60327c9369))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.191.1 (2026-08-05)
+
+### Bug Fixes
+
+- Skip hidden dirs in unreferenced-handler scan
+  ([#1659](https://github.com/canvas-medical/canvas-plugins/pull/1659),
+  [`c897b57`](https://github.com/canvas-medical/canvas-plugins/commit/c897b572fde2f5b0dd237bdb363a912112462cdf))
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
+## v0.191.0 (2026-08-05)
+
+### Features
+
+- Provider menu configuration effect to control which items show in the menu
+  ([#1804](https://github.com/canvas-medical/canvas-plugins/pull/1804),
+  [`22f8d7f`](https://github.com/canvas-medical/canvas-plugins/commit/22f8d7f962dc08de0cbd3468a37c027c45ce6ae8))
+
+
+## v0.190.0 (2026-08-05)
+
+### Features
+
+- **data**: Add educational material data model
+  ([#1806](https://github.com/canvas-medical/canvas-plugins/pull/1806),
+  [`b54b6d6`](https://github.com/canvas-medical/canvas-plugins/commit/b54b6d6c5746ef9752ba430d9158cd3a5d9f6faa))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.189.0 (2026-08-04)
+
+### Features
+
+- Add supplemental oxygen field to the vitals command
+  ([#1794](https://github.com/canvas-medical/canvas-plugins/pull/1794),
+  [`8a4e7e4`](https://github.com/canvas-medical/canvas-plugins/commit/8a4e7e4b1a2c88b85d00a45cf8d0c2e09490e341))
+
+
+## v0.188.0 (2026-08-04)
+
+### Features
+
+- Add customer driver provider directories to SDK
+  ([#1798](https://github.com/canvas-medical/canvas-plugins/pull/1798),
+  [`c6aeb5c`](https://github.com/canvas-medical/canvas-plugins/commit/c6aeb5cb9e4d25228a60f6d1b4b3aef35a1cf858))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+
 ## v0.187.0 (2026-08-03)
 
 ### Features

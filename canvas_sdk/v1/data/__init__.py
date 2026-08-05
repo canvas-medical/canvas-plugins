@@ -62,6 +62,7 @@ from .document_reference import (
     DocumentReferenceStatus,
 )
 from .document_review_delegation import DocumentReviewDelegation
+from .educational_material import EducationalMaterial
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -134,6 +135,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
+from .organizational_entity import OrganizationalEntity
 from .patient import (
     Patient,
     PatientAddress,
@@ -279,6 +281,7 @@ __all__ = __exports__ = (
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
+    "EducationalMaterial",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -360,6 +363,7 @@ __all__ = __exports__ = (
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationalEntity",
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",

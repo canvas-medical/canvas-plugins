@@ -361,6 +361,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_STAFF_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
+    SHOW_PROVIDER_MENU_ITEMS: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
     EVENT_VALIDATION_ERROR: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__METADATA: _ClassVar[EffectType]
@@ -393,6 +394,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_DOCUMENT_FIELDS: _ClassVar[EffectType]
     JUNK_DOCUMENT: _ClassVar[EffectType]
     REMOVE_DOCUMENT_FROM_PATIENT: _ClassVar[EffectType]
+    CREATE_SERVICE_PROVIDER: _ClassVar[EffectType]
+    UPDATE_SERVICE_PROVIDER: _ClassVar[EffectType]
+    DEACTIVATE_SERVICE_PROVIDER: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -747,6 +751,7 @@ DELETE_STAFF_EXTERNAL_IDENTIFIER: EffectType
 DELETE_STAFF_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
+SHOW_PROVIDER_MENU_ITEMS: EffectType
 REDIRECT_CONTEXT: EffectType
 EVENT_VALIDATION_ERROR: EffectType
 REVENUE__PAYMENT_PROCESSOR__METADATA: EffectType
@@ -779,6 +784,9 @@ ASSIGN_DOCUMENT_REVIEWER: EffectType
 UPDATE_DOCUMENT_FIELDS: EffectType
 JUNK_DOCUMENT: EffectType
 REMOVE_DOCUMENT_FROM_PATIENT: EffectType
+CREATE_SERVICE_PROVIDER: EffectType
+UPDATE_SERVICE_PROVIDER: EffectType
+DEACTIVATE_SERVICE_PROVIDER: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

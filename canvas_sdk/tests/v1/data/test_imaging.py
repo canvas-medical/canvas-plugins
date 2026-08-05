@@ -1,6 +1,5 @@
-from unittest.mock import patch
-
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 
 from canvas_sdk.test_utils.factories import (
     ImagingReportCodingFactory,
@@ -76,17 +75,29 @@ def test_find_excludes_codings_with_wrong_system() -> None:
     assert list(ImagingReport.objects.find(_ColonoscopyValueSet)) == []
 
 
-def test_document_url_with_s3_report_url() -> None:
-    """document_url returns a presigned URL when s3_report_url is set."""
-    report = ImagingReport()
-    report.s3_report_url = "imaging_orders/report.pdf"
+def test_document_url_presigns_full_stored_url(settings: SettingsWrapper) -> None:
+    """A full S3 URL stored on s3_report_url yields a single, resolvable presigned URL."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
 
-    with patch(
-        "canvas_sdk.v1.data.imaging.presigned_url",
-        return_value="https://s3.example.com/presigned",
-    ) as mock:
-        assert report.document_url == "https://s3.example.com/presigned"
-        mock.assert_called_once_with("imaging_orders/report.pdf")
+    report = ImagingReport()
+    report.s3_report_url = (
+        "https://test-bucket.s3.amazonaws.com/test-customer/multipage.pdf"
+        "?AWSAccessKeyId=AKIA&Signature=abc&Expires=1"
+    )
+
+    url = report.document_url
+
+    assert url is not None
+    assert url.startswith(
+        "https://test-bucket.s3.us-west-2.amazonaws.com/test-customer/multipage.pdf?"
+    )
+    assert "https%3A" not in url  # no nested, url-encoded S3 URL
+    assert "test-customer/test-customer" not in url  # prefix not doubled
+    assert "X-Amz-Signature=" in url
 
 
 def test_document_url_returns_none_when_no_url() -> None:
