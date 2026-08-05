@@ -1151,6 +1151,7 @@
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
+    "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -1242,6 +1243,7 @@
     "OrganizationalEntity",
     "Patient",
     "PatientAddress",
+    "PatientAdministrativeDocument",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
@@ -1632,6 +1634,10 @@
     "PatientSetting",
     "PatientSettingConstants",
     "SexAtBirth"
+  ],
+  "canvas_sdk.v1.data.patient_administrative_document": [
+    "DocumentCoding",
+    "PatientAdministrativeDocument"
   ],
   "canvas_sdk.v1.data.patient_consent": [
     "PatientConsent",

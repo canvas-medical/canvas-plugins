@@ -72,6 +72,9 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
         on_delete=models.SET_NULL,
     )
     team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True)
+    code = models.ForeignKey(
+        "v1.DocumentCoding", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
 
     name = models.CharField(max_length=255)
     review_mode = models.CharField(max_length=2)
