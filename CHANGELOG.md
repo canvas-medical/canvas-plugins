@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v0.192.0 (2026-08-05)
+
+### Features
+
+- **effects**: Support writing patient contacts on the Patient effect
+  ([#1785](https://github.com/canvas-medical/canvas-plugins/pull/1785),
+  [`f01c920`](https://github.com/canvas-medical/canvas-plugins/commit/f01c920e98558d57c2978eab281243d0a9569721))
+
+
+## v0.191.2 (2026-08-05)
+
+### Bug Fixes
+
+- **data**: Return a resolvable presigned url for imaging report document_url
+  ([#1810](https://github.com/canvas-medical/canvas-plugins/pull/1810),
+  [`b066e80`](https://github.com/canvas-medical/canvas-plugins/commit/b066e8030bbf9d945bf535e12760fa60327c9369))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.191.1 (2026-08-05)
 
 ### Bug Fixes
