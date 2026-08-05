@@ -332,6 +332,7 @@
   "canvas_sdk.commands.commands.questionnaire.question": [
     "BaseQuestion",
     "CheckboxQuestion",
+    "DateQuestion",
     "IntegerQuestion",
     "RadioQuestion",
     "ResponseOption",
