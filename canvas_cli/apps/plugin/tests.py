@@ -1231,6 +1231,96 @@ class HandlerInTestDir(BaseHandler):
     assert len(unreferenced) == 0
 
 
+def test_find_unreferenced_handlers_skips_hidden_dirs(tmp_path: Path) -> None:
+    """Handlers under hidden dirs (.venv, .tox, .git, ...) must not be reported.
+
+    Mirrors the dotfile-skip rule that _build_package already applies when
+    packaging a plugin: anything under a dot-prefixed directory is treated as
+    out-of-band (virtualenvs, VCS metadata, tool caches).
+    """
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    handler_source = """
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class VendoredHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+"""
+
+    for hidden in (".venv", ".tox", ".eggs"):
+        nested = plugin_dir / hidden / "lib" / "python3.14" / "site-packages" / "pkg"
+        nested.mkdir(parents=True)
+        (nested / "handler.py").write_text(handler_source)
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == []
+
+
+def test_find_unreferenced_handlers_prunes_hidden_dirs_without_blinding_scan(
+    tmp_path: Path,
+) -> None:
+    """Hidden dirs are pruned *without* blinding the scan to real handlers.
+
+    Three handlers in one plugin: one vendored under ``.venv`` (must be
+    ignored), one referenced in the manifest (must not be reported), and one
+    genuine orphan (must be reported). Asserting the exact result distinguishes
+    "pruned the hidden dirs" from "scanned nothing at all" -- an ``== []``
+    assertion alone also passes when the scan never reaches the real files.
+    """
+    plugin_dir = tmp_path / "test_plugin"
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir(parents=True)
+    (handlers_dir / "__init__.py").touch()
+
+    manifest: dict[str, Any] = {
+        "components": {"handlers": [{"class": "test_plugin.handlers.referenced:ReferencedHandler"}]}
+    }
+
+    def handler_source(name: str) -> str:
+        return (
+            "\nfrom canvas_sdk.handlers import BaseHandler\n\n\n"
+            f'class {name}(BaseHandler):\n    RESPONDS_TO = "test"\n'
+        )
+
+    vendored = plugin_dir / ".venv" / "lib" / "python3.14" / "site-packages" / "pkg"
+    vendored.mkdir(parents=True)
+    (vendored / "handler.py").write_text(handler_source("VendoredHandler"))
+    (handlers_dir / "referenced.py").write_text(handler_source("ReferencedHandler"))
+    (handlers_dir / "orphan.py").write_text(handler_source("OrphanHandler"))
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == ["test_plugin.handlers.orphan:OrphanHandler"]
+
+
+def test_find_unreferenced_handlers_skips_unparseable_files(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A file that can't be parsed by ast.parse must be skipped with a warning."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    broken = handlers_dir / "broken.py"
+    broken.write_text("class Foo(BaseHandler:\n    pass\n")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == []
+    assert f"Warning: Could not parse file '{broken}'" in capsys.readouterr().out
+
+
 def test_find_unreferenced_handlers_skips_imported_classes(tmp_path: Path) -> None:
     """Test that _find_unreferenced_handlers skips imported classes."""
     plugin_dir = tmp_path / "test_plugin"

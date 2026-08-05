@@ -1,6 +1,44 @@
 # CHANGELOG
 
 
+## v0.191.1 (2026-08-05)
+
+### Bug Fixes
+
+- Skip hidden dirs in unreferenced-handler scan
+  ([#1659](https://github.com/canvas-medical/canvas-plugins/pull/1659),
+  [`c897b57`](https://github.com/canvas-medical/canvas-plugins/commit/c897b572fde2f5b0dd237bdb363a912112462cdf))
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
+## v0.191.0 (2026-08-05)
+
+### Features
+
+- Provider menu configuration effect to control which items show in the menu
+  ([#1804](https://github.com/canvas-medical/canvas-plugins/pull/1804),
+  [`22f8d7f`](https://github.com/canvas-medical/canvas-plugins/commit/22f8d7f962dc08de0cbd3468a37c027c45ce6ae8))
+
+
+## v0.190.0 (2026-08-05)
+
+### Features
+
+- **data**: Add educational material data model
+  ([#1806](https://github.com/canvas-medical/canvas-plugins/pull/1806),
+  [`b54b6d6`](https://github.com/canvas-medical/canvas-plugins/commit/b54b6d6c5746ef9752ba430d9158cd3a5d9f6faa))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.189.0 (2026-08-04)
 
 ### Features

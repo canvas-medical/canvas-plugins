@@ -810,6 +810,9 @@
     "ProtocolCard",
     "Recommendation"
   ],
+  "canvas_sdk.effects.provider_menu_configuration": [
+    "ProviderMenuConfiguration"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
@@ -1147,6 +1150,7 @@
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
+    "EducationalMaterial",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -1469,6 +1473,9 @@
   ],
   "canvas_sdk.v1.data.document_review_delegation": [
     "DocumentReviewDelegation"
+  ],
+  "canvas_sdk.v1.data.educational_material": [
+    "EducationalMaterial"
   ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
