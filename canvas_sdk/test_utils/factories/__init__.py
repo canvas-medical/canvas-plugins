@@ -56,7 +56,13 @@ from .lab_report_template import (
     LabReportTemplateFieldFactory,
     LabReportTemplateFieldOptionFactory,
 )
-from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
+from .letter import (
+    LanguageFactory,
+    LetterActionEventFactory,
+    LetterFactory,
+    LetterLanguageTemplateFactory,
+    LetterTemplateFactory,
+)
 from .medication import MedicationFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
@@ -174,6 +180,8 @@ __all__ = (
     "LabReportTemplateFieldFactory",
     "LabReportTemplateFieldOptionFactory",
     "LetterActionEventFactory",
+    "LetterLanguageTemplateFactory",
+    "LetterTemplateFactory",
     "MedicationFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
