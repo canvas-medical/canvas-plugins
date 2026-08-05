@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.191.1 (2026-08-05)
+
+### Bug Fixes
+
+- Skip hidden dirs in unreferenced-handler scan
+  ([#1659](https://github.com/canvas-medical/canvas-plugins/pull/1659),
+  [`c897b57`](https://github.com/canvas-medical/canvas-plugins/commit/c897b572fde2f5b0dd237bdb363a912112462cdf))
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
 ## v0.191.0 (2026-08-05)
 
 ### Features
