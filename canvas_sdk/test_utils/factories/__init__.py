@@ -70,6 +70,7 @@ from .organization import (
     OrganizationContactPointFactory,
     OrganizationFactory,
 )
+from .organizational_entity import OrganizationalEntityFactory
 from .patient import (
     PatientAddressFactory,
     PatientFacilityAddressFactory,
@@ -186,6 +187,7 @@ __all__ = (
     "OrganizationAddressFactory",
     "OrganizationContactPointFactory",
     "OrganizationFactory",
+    "OrganizationalEntityFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
