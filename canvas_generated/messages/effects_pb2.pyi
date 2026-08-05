@@ -361,6 +361,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_STAFF_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
+    SHOW_PROVIDER_MENU_ITEMS: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
     EVENT_VALIDATION_ERROR: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__METADATA: _ClassVar[EffectType]
@@ -750,6 +751,7 @@ DELETE_STAFF_EXTERNAL_IDENTIFIER: EffectType
 DELETE_STAFF_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
+SHOW_PROVIDER_MENU_ITEMS: EffectType
 REDIRECT_CONTEXT: EffectType
 EVENT_VALIDATION_ERROR: EffectType
 REVENUE__PAYMENT_PROCESSOR__METADATA: EffectType
