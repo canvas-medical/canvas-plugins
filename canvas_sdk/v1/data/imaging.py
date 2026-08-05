@@ -1,6 +1,8 @@
 import json
+import urllib.parse
 from typing import Self, cast
 
+from django.conf import settings
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
@@ -137,9 +139,12 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     @property
     def document_url(self) -> str | None:
         """Return a short-lived presigned URL for the imaging report, or None when unset."""
-        if self.s3_report_url:
-            return presigned_url(self.s3_report_url)
-        return None
+        if not self.s3_report_url:
+            return None
+        # s3_report_url stores a full absolute S3 URL, but presigned_url() expects the
+        # object key within the customer's folder (it re-adds the host and "<customer>/").
+        key = urllib.parse.urlparse(self.s3_report_url).path.lstrip("/")
+        return presigned_url(key.removeprefix(f"{settings.CUSTOMER_IDENTIFIER}/"))
 
 
 class ImagingReportCoding(Coding):
