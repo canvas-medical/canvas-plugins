@@ -1264,6 +1264,43 @@ class VendoredHandler(BaseHandler):
     assert unreferenced == []
 
 
+def test_find_unreferenced_handlers_prunes_hidden_dirs_without_blinding_scan(
+    tmp_path: Path,
+) -> None:
+    """Hidden dirs are pruned *without* blinding the scan to real handlers.
+
+    Three handlers in one plugin: one vendored under ``.venv`` (must be
+    ignored), one referenced in the manifest (must not be reported), and one
+    genuine orphan (must be reported). Asserting the exact result distinguishes
+    "pruned the hidden dirs" from "scanned nothing at all" -- an ``== []``
+    assertion alone also passes when the scan never reaches the real files.
+    """
+    plugin_dir = tmp_path / "test_plugin"
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir(parents=True)
+    (handlers_dir / "__init__.py").touch()
+
+    manifest: dict[str, Any] = {
+        "components": {"handlers": [{"class": "test_plugin.handlers.referenced:ReferencedHandler"}]}
+    }
+
+    def handler_source(name: str) -> str:
+        return (
+            "\nfrom canvas_sdk.handlers import BaseHandler\n\n\n"
+            f'class {name}(BaseHandler):\n    RESPONDS_TO = "test"\n'
+        )
+
+    vendored = plugin_dir / ".venv" / "lib" / "python3.14" / "site-packages" / "pkg"
+    vendored.mkdir(parents=True)
+    (vendored / "handler.py").write_text(handler_source("VendoredHandler"))
+    (handlers_dir / "referenced.py").write_text(handler_source("ReferencedHandler"))
+    (handlers_dir / "orphan.py").write_text(handler_source("OrphanHandler"))
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert unreferenced == ["test_plugin.handlers.orphan:OrphanHandler"]
+
+
 def test_find_unreferenced_handlers_skips_unparseable_files(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
