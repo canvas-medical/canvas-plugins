@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.190.0 (2026-08-05)
+
+### Features
+
+- **data**: Add educational material data model
+  ([#1806](https://github.com/canvas-medical/canvas-plugins/pull/1806),
+  [`b54b6d6`](https://github.com/canvas-medical/canvas-plugins/commit/b54b6d6c5746ef9752ba430d9158cd3a5d9f6faa))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.189.0 (2026-08-04)
 
 ### Features
