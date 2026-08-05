@@ -60,3 +60,59 @@ def test_non_service_provider_entity_returns_none() -> None:
     )
 
     assert entity.service_provider is None
+
+
+@pytest.mark.django_db
+def test_filter_memberships_by_service_provider() -> None:
+    """A plugin can reverse-look-up every membership linked to a specific ServiceProvider."""
+    content_type = ContentTypeFactory.create(app_label="data_integration", model="serviceprovider")
+    provider = ServiceProviderFactory.create()
+    other_provider = ServiceProviderFactory.create()
+
+    common = {
+        "status": CareTeamMembershipStatus.ACTIVE,
+        "lead": False,
+        "role_code": "",
+        "role_system": "",
+        "role_display": "",
+    }
+    match_a = CareTeamMembership.objects.create(
+        patient=PatientFactory.create(),
+        staff=None,
+        organizational_entity=OrganizationalEntityFactory.create(
+            content_type=content_type,
+            object_id=provider.dbid,
+            type=OrganizationalEntity.OrganizationalEntityType.SERVICE_PROVIDER,
+        ),
+        **common,
+    )
+    match_b = CareTeamMembership.objects.create(
+        patient=PatientFactory.create(),
+        staff=None,
+        organizational_entity=OrganizationalEntityFactory.create(
+            content_type=content_type,
+            object_id=provider.dbid,
+            type=OrganizationalEntity.OrganizationalEntityType.SERVICE_PROVIDER,
+        ),
+        **common,
+    )
+    # A membership to a different provider -- must be excluded by object_id.
+    CareTeamMembership.objects.create(
+        patient=PatientFactory.create(),
+        staff=None,
+        organizational_entity=OrganizationalEntityFactory.create(
+            content_type=content_type,
+            object_id=other_provider.dbid,
+            type=OrganizationalEntity.OrganizationalEntityType.SERVICE_PROVIDER,
+        ),
+        **common,
+    )
+    # An internal (staff-backed) membership with no entity -- must be excluded.
+    CareTeamMembership.objects.create(patient=PatientFactory.create(), **common)
+
+    matches = CareTeamMembership.objects.filter(
+        organizational_entity__content_type__model="serviceprovider",
+        organizational_entity__object_id=provider.dbid,
+    )
+
+    assert set(matches.values_list("dbid", flat=True)) == {match_a.dbid, match_b.dbid}
