@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.191.0 (2026-08-05)
+
+### Features
+
+- Provider menu configuration effect to control which items show in the menu
+  ([#1804](https://github.com/canvas-medical/canvas-plugins/pull/1804),
+  [`22f8d7f`](https://github.com/canvas-medical/canvas-plugins/commit/22f8d7f962dc08de0cbd3468a37c027c45ce6ae8))
+
+
 ## v0.190.0 (2026-08-05)
 
 ### Features
