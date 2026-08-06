@@ -14,7 +14,6 @@ from canvas_sdk.effects.patient.base import (
     PatientContact,
     PatientContactCategory,
     PatientContactPoint,
-    PatientContactRelationship,
     PatientExternalIdentifier,
     PatientMetadata,
     generate_patient_id,
@@ -35,16 +34,20 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.patient.base.PatientModel.objects") as mock_patient,
         patch("canvas_sdk.effects.patient.base.PracticeLocation.objects") as mock_location,
         patch("canvas_sdk.effects.patient.base.Staff.objects") as mock_staff,
+        patch("canvas_sdk.effects.patient.base.ContactCategory.objects") as mock_category,
     ):
         # Setup default behaviors - objects exist
         mock_patient.filter.return_value.exists.return_value = True
         mock_location.filter.return_value.exists.return_value = True
         mock_staff.filter.return_value.exists.return_value = True
+        # Codings resolve in one batched query; the instance has the one the fixtures use.
+        mock_category.filter.return_value.values_list.return_value = [("EMC", "INTERNAL")]
 
         yield {
             "patient": mock_patient,
             "location": mock_location,
             "staff": mock_staff,
+            "category": mock_category,
         }
 
 
@@ -86,16 +89,23 @@ def patient_contact_point() -> PatientContactPoint:
     )
 
 
+# contact_identifier must be a UUID: the write path rejects opaque strings like "contact-123".
+CONTACT_UUID = "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+RELATED_PATIENT_UUID = "b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3"
+
+
 @pytest.fixture
 def patient_contact() -> PatientContact:
     """Create a PatientContact for testing."""
     return PatientContact(
         name="Jane Doe",
-        contact_identifier="contact-123",
+        contact_identifier=CONTACT_UUID,
         phone_number="5551234567",
         email="jane@example.com",
         comments="Daytime only",
-        categories=[PatientContactRelationship.EMERGENCY_CONTACT.category()],
+        categories=[
+            PatientContactCategory(code="EMC", code_system="INTERNAL", name="Emergency contact")
+        ],
     )
 
 
@@ -569,32 +579,33 @@ def test_patient_contact_category_to_dict() -> None:
     }
 
 
-def test_patient_contact_category_defaults_to_internal_system() -> None:
-    """Test PatientContactCategory defaults the code system to INTERNAL."""
-    category = PatientContactCategory(code="EMC")
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        pytest.param({"code": "EMC"}, id="only-code"),
+        pytest.param({"code": "EMC", "code_system": "INTERNAL"}, id="missing-name"),
+        pytest.param({"code": "EMC", "name": "Emergency contact"}, id="missing-code_system"),
+        pytest.param({"code_system": "INTERNAL", "name": "Emergency contact"}, id="missing-code"),
+    ],
+)
+def test_patient_contact_category_requires_all_three_fields(kwargs: dict[str, str]) -> None:
+    """PatientContactCategory requires code, code_system and name, with no defaulting."""
+    with pytest.raises(TypeError):
+        PatientContactCategory(**kwargs)
 
-    assert category.code_system == "INTERNAL"
-    assert category.name is None
 
+def test_patient_contact_relationship_enum_is_not_exported() -> None:
+    """The hardcoded relationship enum is gone; codings are looked up via ContactCategory."""
+    import canvas_sdk.effects.patient as patient_effects
 
-def test_patient_contact_relationship_category_codings() -> None:
-    """Test that each PatientContactRelationship maps to the expected coding."""
-    assert PatientContactRelationship.EMERGENCY_CONTACT.category().to_dict() == {
-        "code_system": "INTERNAL",
-        "code": "EMC",
-        "name": "Emergency contact",
-    }
-    assert PatientContactRelationship.NEXT_OF_KIN.category().to_dict() == {
-        "code_system": "http://terminology.hl7.org/CodeSystem/v2-0131",
-        "code": "N",
-        "name": "Next-of-Kin",
-    }
+    assert not hasattr(patient_effects, "PatientContactRelationship")
+    assert "PatientContactRelationship" not in patient_effects.__exports__
 
 
 def test_patient_contact_to_dict_with_all_fields(patient_contact: PatientContact) -> None:
     """Test PatientContact.to_dict() with all fields populated."""
     assert patient_contact.to_dict() == {
-        "contact_identifier": "contact-123",
+        "contact_identifier": CONTACT_UUID,
         "name": "Jane Doe",
         "phone_number": "5551234567",
         "email": "jane@example.com",
@@ -603,17 +614,28 @@ def test_patient_contact_to_dict_with_all_fields(patient_contact: PatientContact
     }
 
 
-def test_patient_contact_to_dict_minimal_fields() -> None:
-    """Test PatientContact.to_dict() with only the required name; categories serialize to []."""
+def test_patient_contact_to_dict_omits_unset_fields() -> None:
+    """Unset fields are omitted so a partial update cannot blank stored values."""
     contact = PatientContact(name="John Roe")
 
-    assert contact.to_dict() == {
-        "contact_identifier": None,
+    assert contact.to_dict() == {"name": "John Roe"}
+
+
+def test_patient_contact_to_dict_keeps_empty_string_to_clear_a_field() -> None:
+    """An explicit empty string is preserved, which is how a builder clears a stored value."""
+    assert PatientContact(name="John Roe", phone_number="").to_dict() == {
         "name": "John Roe",
-        "phone_number": None,
-        "email": None,
-        "comments": None,
-        "categories": [],
+        "phone_number": "",
+    }
+
+
+def test_patient_contact_to_dict_with_related_patient() -> None:
+    """A contact may reference an existing Canvas patient instead of an inline person."""
+    contact = PatientContact(related_patient=RELATED_PATIENT_UUID, comments="Spouse")
+
+    assert contact.to_dict() == {
+        "related_patient": RELATED_PATIENT_UUID,
+        "comments": "Spouse",
     }
 
 
@@ -684,7 +706,109 @@ def test_patient_update_with_contacts(
     payload_data = json.loads(effect.payload)
     [contact] = payload_data["data"]["contacts"]
     assert contact["name"] == "Jane Doe"
-    assert contact["contact_identifier"] == "contact-123"
+    assert contact["contact_identifier"] == CONTACT_UUID
     assert contact["categories"] == [
         {"code_system": "INTERNAL", "code": "EMC", "name": "Emergency contact"}
     ]
+
+
+@pytest.mark.parametrize(
+    "contact,expected_message",
+    [
+        pytest.param(
+            PatientContact(comments="nothing identifies this person"),
+            "name.*related_patient",
+            id="neither-name-nor-related-patient",
+        ),
+        pytest.param(
+            PatientContact(name="Jane Doe", contact_identifier="contact-123"),
+            "contact_identifier",
+            id="non-uuid-contact-identifier",
+        ),
+        pytest.param(
+            PatientContact(name="Jane Doe", related_patient="not-a-uuid"),
+            "related_patient",
+            id="non-uuid-related-patient",
+        ),
+        pytest.param(
+            PatientContact(name="Jane Doe", phone_number="555123"), "phone_number", id="short-phone"
+        ),
+        pytest.param(
+            PatientContact(name="Jane Doe", phone_number="555-123-4567"),
+            "phone_number",
+            id="punctuated-phone",
+        ),
+        pytest.param(
+            PatientContact(name="Jane Doe", email="not-an-email"), "email", id="invalid-email"
+        ),
+        pytest.param(
+            PatientContact(
+                name="Jane Doe",
+                categories=[PatientContactCategory(code="EMC", code_system="INTERNAL", name="")],
+            ),
+            "name",
+            id="category-with-blank-name",
+        ),
+    ],
+)
+def test_patient_create_rejects_invalid_contacts(
+    mock_db_queries: dict[str, MagicMock],
+    valid_patient_data: dict[str, Any],
+    contact: PatientContact,
+    expected_message: str,
+) -> None:
+    """Malformed contacts are rejected before the effect is emitted."""
+    patient = Patient(**valid_patient_data, contacts=[contact])
+
+    with pytest.raises(ValidationError, match=expected_message):
+        patient.create()
+
+
+def test_patient_update_requires_contact_identifier(mock_db_queries: dict[str, MagicMock]) -> None:
+    """contact_identifier is required on update so the existing contact is targeted."""
+    patient = Patient(patient_id="123", contacts=[PatientContact(name="Jane Doe")])
+
+    with pytest.raises(ValidationError, match="contact_identifier"):
+        patient.update()
+
+
+def test_patient_create_rejects_unknown_contact_category(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """A coding absent from the instance errors instead of being created on the fly."""
+    mock_db_queries["category"].filter.return_value.values_list.return_value = []
+    patient = Patient(
+        **valid_patient_data,
+        contacts=[
+            PatientContact(
+                name="Jane Doe",
+                categories=[
+                    PatientContactCategory(
+                        code="ZZZ", code_system="INTERNAL", name="Totally made up"
+                    )
+                ],
+            )
+        ],
+    )
+
+    with pytest.raises(ValidationError, match="ZZZ"):
+        patient.create()
+
+
+def test_patient_create_allows_related_patient_that_does_not_exist_yet(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """A contact may reference a patient that an earlier effect in the same run creates.
+
+    Existence is deliberately not checked at this point, because effects are applied only
+    after the plugin returns. Checking here would break cross-patient linking in one run.
+    """
+    mock_db_queries["patient"].filter.return_value.exists.return_value = False
+    patient = Patient(
+        **valid_patient_data, contacts=[PatientContact(related_patient=RELATED_PATIENT_UUID)]
+    )
+
+    effect = patient.create()
+
+    [contact] = json.loads(effect.payload)["data"]["contacts"]
+    assert contact["related_patient"] == RELATED_PATIENT_UUID
