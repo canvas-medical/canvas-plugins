@@ -3,7 +3,6 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 from pydantic_core import InitErrorDetails
@@ -11,8 +10,8 @@ from pydantic_core import InitErrorDetails
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.metadata import Metadata as PatientMetadata
+from canvas_sdk.v1.data import ContactCategory, PracticeLocation, Staff
 from canvas_sdk.v1.data import Patient as PatientModel
-from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import (
     AddressType,
     AddressUse,
@@ -46,11 +45,15 @@ class PatientContactPoint:
 
 @dataclass
 class PatientContactCategory:
-    """A relationship category for a patient contact (e.g. emergency contact, next-of-kin)."""
+    """A relationship category for a patient contact (e.g. emergency contact, next-of-kin).
+
+    All three fields are required and none is defaulted: the coding must already exist in the
+    instance. Look one up with the `ContactCategory` data model rather than inventing a coding.
+    """
 
     code: str
-    code_system: str = "INTERNAL"
-    name: str | None = None
+    code_system: str
+    name: str
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the contact category to a dictionary."""
@@ -61,62 +64,51 @@ class PatientContactCategory:
         }
 
 
-class PatientContactRelationship(Enum):
-    """Common patient-contact relationship categories, each carrying its full coding."""
-
-    code: str
-    code_system: str
-    display: str
-
-    EMERGENCY_CONTACT = ("EMC", "INTERNAL", "Emergency contact")
-    POWER_OF_ATTORNEY = ("POA", "INTERNAL", "Power of attorney")
-    AUTHORIZED_FOR_RELEASE_OF_INFORMATION = (
-        "ARI",
-        "INTERNAL",
-        "Authorized for release of information",
-    )
-    NEXT_OF_KIN = ("N", "http://terminology.hl7.org/CodeSystem/v2-0131", "Next-of-Kin")
-
-    def __init__(self, code: str, code_system: str, display: str) -> None:
-        """Store the coding tuple as named attributes on the member."""
-        self.code = code
-        self.code_system = code_system
-        self.display = display
-
-    def category(self) -> "PatientContactCategory":
-        """Return the PatientContactCategory coding for this relationship."""
-        return PatientContactCategory(
-            code=self.code, code_system=self.code_system, name=self.display
-        )
-
-
 @dataclass
 class PatientContact:
     """A class representing a patient contact, such as an emergency contact or related person."""
 
-    name: str
+    name: str | None = None
     contact_identifier: str | uuid.UUID | None = None
     phone_number: str | None = None
     email: str | None = None
     comments: str | None = None
     categories: list[PatientContactCategory] | None = None
+    # Set instead of `name` to point the contact at an existing Canvas patient.
+    related_patient: str | uuid.UUID | None = None
+    # Set with `contact_identifier` to remove an existing contact rather than create or update one.
+    inactive: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the contact to a dictionary."""
-        return {
-            "contact_identifier": (
-                str(self.contact_identifier) if self.contact_identifier is not None else None
-            ),
-            "name": self.name,
-            "phone_number": self.phone_number,
-            "email": self.email,
-            "comments": self.comments,
-            "categories": (
-                [category.to_dict() for category in self.categories]
-                if self.categories is not None
-                else []
-            ),
+        """Convert the contact to a dictionary, omitting any field that was not set.
+
+        Unset fields are omitted rather than sent as null: the write path derives the columns
+        to update from the keys it receives and reads null as an empty value, so sending every
+        key would make an update of one field blank all the others. Pass "" to clear a value.
+        """
+        values: dict[str, Any] = {
+            key: value
+            for key, value in (
+                ("name", self.name),
+                ("phone_number", self.phone_number),
+                ("email", self.email),
+                ("comments", self.comments),
+                ("inactive", self.inactive),
+            )
+            if value is not None
         }
+
+        for key, identifier in (
+            ("contact_identifier", self.contact_identifier),
+            ("related_patient", self.related_patient),
+        ):
+            if identifier is not None:
+                values[key] = str(identifier)
+
+        if self.categories is not None:
+            values["categories"] = [category.to_dict() for category in self.categories]
+
+        return values
 
 
 @dataclass
@@ -183,6 +175,9 @@ class PatientAddress:
 
 
 _PATIENT_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
+# The contact phone number column holds exactly 10 digits, matching the UI's own validation.
+_CONTACT_PHONE_RE = re.compile(r"\A[0-9]{10}\Z")
+_EMAIL_RE = re.compile(r"\A[^@\s]+@[^@\s]+\.[^@\s]+\Z")
 
 
 def generate_patient_id() -> str:
@@ -193,6 +188,17 @@ def generate_patient_id() -> str:
 def _is_valid_patient_id(value: str) -> bool:
     """Return True if value is a well-formed patient id (32-character lowercase hex)."""
     return bool(_PATIENT_ID_RE.match(value))
+
+
+def _is_valid_uuid(value: str | uuid.UUID) -> bool:
+    """Return True if value is a well-formed UUID, hyphenated or not."""
+    if isinstance(value, uuid.UUID):
+        return True
+    try:
+        uuid.UUID(value)
+    except (ValueError, AttributeError, TypeError):
+        return False
+    return True
 
 
 class Patient(TrackableFieldsModel):
@@ -275,8 +281,92 @@ class Patient(TrackableFieldsModel):
 
         return values
 
+    def _get_contact_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Validate each contact's shape, and its categories against the instance's codings.
+
+        Existence of `related_patient` and of the contact behind `contact_identifier` is
+        deliberately not checked here: effects are applied after the plugin returns, so a
+        patient or contact created by an earlier effect in the same run does not exist yet at
+        this point. Format is checked here, existence when the effect is applied. Category
+        codings are instance reference data that no effect creates, so those are checked here.
+        """
+        errors: list[InitErrorDetails] = []
+        codings: set[tuple[str, str]] = set()
+
+        def error(message: str, value: Any) -> None:
+            errors.append(self._create_error_detail("value", message, value))
+
+        for contact in self.contacts or []:
+            if contact.inactive:
+                # A removal only needs the identifier of the contact to remove; requiring a
+                # name or related_patient too would force a meaningless value onto a delete.
+                if contact.contact_identifier is None:
+                    error(
+                        "'contact_identifier' is required to remove a contact via inactive=True.",
+                        None,
+                    )
+            elif contact.name is None and contact.related_patient is None:
+                error(
+                    "A patient contact requires either 'name' (an inline person) or "
+                    "'related_patient' (the key of an existing Canvas patient).",
+                    None,
+                )
+            if method == "update" and not contact.inactive and contact.contact_identifier is None:
+                error(
+                    "'contact_identifier' is required when updating a patient contact, so the "
+                    "existing contact is updated rather than duplicated.",
+                    None,
+                )
+            for field, value in (
+                ("contact_identifier", contact.contact_identifier),
+                ("related_patient", contact.related_patient),
+            ):
+                if value is not None and not _is_valid_uuid(value):
+                    error(f"Contact '{field}' must be a UUID, got {value}.", value)
+            # An empty string is how a builder clears a stored value, so only validate content.
+            if contact.phone_number and not _CONTACT_PHONE_RE.match(contact.phone_number):
+                error(
+                    f"Contact 'phone_number' must be 10 digits, got {contact.phone_number}.",
+                    contact.phone_number,
+                )
+            if contact.email and not _EMAIL_RE.match(contact.email):
+                error(
+                    f"Contact 'email' must be a valid email address, got {contact.email}.",
+                    contact.email,
+                )
+            for category in contact.categories or []:
+                if missing := [
+                    field
+                    for field in ("code", "code_system", "name")
+                    if not getattr(category, field)
+                ]:
+                    error(
+                        f"A contact category requires 'code', 'code_system' and 'name'; missing "
+                        f"or blank: {', '.join(missing)}.",
+                        None,
+                    )
+                else:
+                    codings.add((category.code, category.code_system))
+
+        if codings:
+            # Resolved in one query rather than one per category.
+            existing = set(
+                ContactCategory.objects.filter(code__in={code for code, _ in codings}).values_list(
+                    "code", "system"
+                )
+            )
+            for code, code_system in sorted(codings - existing):
+                error(
+                    f"Contact category '{code}' (system '{code_system}') does not exist in this "
+                    f"instance. Look up an existing coding with ContactCategory.objects.",
+                    code,
+                )
+
+        return errors
+
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+        errors.extend(self._get_contact_error_details(method))
 
         # Validate create-specific requirements
         if method == "create":
@@ -387,7 +477,6 @@ __exports__ = (
     "PatientContact",
     "PatientContactCategory",
     "PatientContactPoint",
-    "PatientContactRelationship",
     "PatientExternalIdentifier",
     "PatientMetadata",
     "PatientPreferredPharmacy",

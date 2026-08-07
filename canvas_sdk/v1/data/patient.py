@@ -7,7 +7,12 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    IdentifiableModel,
+    MetadataModel,
+    Model,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -317,6 +322,69 @@ class PatientFacilityAddress(PatientAddress):
     )
 
 
+class ContactCategory(Model):
+    """A contact-category coding available in this Canvas instance.
+
+    Use this to look up a valid coding before attaching it to a patient contact. Writing a
+    coding that does not exist here is rejected rather than created on the fly.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_contactcategory_001"
+
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=10)
+    # Aliases home-app's `code_system` column.
+    system = models.CharField(max_length=255)
+    protected = models.BooleanField(default=False)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.code})"
+
+
+class PatientContactPerson(TimestampedModel, IdentifiableModel):
+    """A patient's contact: an emergency contact, next-of-kin, or other related person.
+
+    A contact either holds the person's details directly, or references another Canvas
+    patient through `related_patient`. When `related_patient` is set, that patient's own
+    details supersede the values stored here.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientcontactperson_001"
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="contacts", null=True
+    )
+    name = models.CharField(max_length=255, blank=True, default="")
+    phone_number = models.CharField(max_length=10, blank=True, default="")
+    email = models.CharField(max_length=255, blank=True, default="")
+    comments = models.TextField(blank=True, default="")
+    related_patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="related_contacts", null=True
+    )
+
+    def __str__(self) -> str:
+        return f"PatientContactPerson(id={self.id}, name={self.name})"
+
+
+class PatientContactCategory(TimestampedModel):
+    """The link between a patient's contact and one of its category codings."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientcontactcategory_001"
+
+    contact_person = models.ForeignKey(
+        PatientContactPerson, on_delete=models.DO_NOTHING, related_name="categories"
+    )
+    category = models.ForeignKey(
+        ContactCategory, on_delete=models.DO_NOTHING, related_name="patient_contact_categories"
+    )
+
+    def __str__(self) -> str:
+        return f"PatientContactCategory(dbid={self.dbid})"
+
+
 class PatientPhoto(TimestampedModel):
     """PatientPhoto."""
 
@@ -361,6 +429,9 @@ __exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
     "Patient",
+    "ContactCategory",
+    "PatientContactPerson",
+    "PatientContactCategory",
     "PatientContactPoint",
     "PatientAddress",
     "PatientFacilityAddress",
