@@ -76,6 +76,8 @@ class PatientContact:
     categories: list[PatientContactCategory] | None = None
     # Set instead of `name` to point the contact at an existing Canvas patient.
     related_patient: str | uuid.UUID | None = None
+    # Set with `contact_identifier` to remove an existing contact rather than create or update one.
+    inactive: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the contact to a dictionary, omitting any field that was not set.
@@ -91,6 +93,7 @@ class PatientContact:
                 ("phone_number", self.phone_number),
                 ("email", self.email),
                 ("comments", self.comments),
+                ("inactive", self.inactive),
             )
             if value is not None
         }
@@ -294,13 +297,21 @@ class Patient(TrackableFieldsModel):
             errors.append(self._create_error_detail("value", message, value))
 
         for contact in self.contacts or []:
-            if contact.name is None and contact.related_patient is None:
+            if contact.inactive:
+                # A removal only needs the identifier of the contact to remove; requiring a
+                # name or related_patient too would force a meaningless value onto a delete.
+                if contact.contact_identifier is None:
+                    error(
+                        "'contact_identifier' is required to remove a contact via inactive=True.",
+                        None,
+                    )
+            elif contact.name is None and contact.related_patient is None:
                 error(
                     "A patient contact requires either 'name' (an inline person) or "
                     "'related_patient' (the key of an existing Canvas patient).",
                     None,
                 )
-            if method == "update" and contact.contact_identifier is None:
+            if method == "update" and not contact.inactive and contact.contact_identifier is None:
                 error(
                     "'contact_identifier' is required when updating a patient contact, so the "
                     "existing contact is updated rather than duplicated.",

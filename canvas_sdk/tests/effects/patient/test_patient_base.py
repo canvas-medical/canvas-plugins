@@ -639,6 +639,20 @@ def test_patient_contact_to_dict_with_related_patient() -> None:
     }
 
 
+def test_patient_contact_to_dict_with_inactive() -> None:
+    """A contact flagged inactive is removed rather than created or updated."""
+    contact = PatientContact(contact_identifier=CONTACT_UUID, inactive=True)
+
+    assert contact.to_dict() == {"contact_identifier": CONTACT_UUID, "inactive": True}
+
+
+def test_patient_contact_to_dict_omits_inactive_when_unset() -> None:
+    """Inactive is omitted, not sent as false, when the builder never set it."""
+    contact = PatientContact(name="Jane Doe")
+
+    assert "inactive" not in contact.to_dict()
+
+
 def test_patient_contact_to_dict_coerces_uuid_identifier() -> None:
     """Test PatientContact.to_dict() serializes a UUID contact_identifier to its string form."""
     contact = PatientContact(
@@ -770,6 +784,35 @@ def test_patient_update_requires_contact_identifier(mock_db_queries: dict[str, M
 
     with pytest.raises(ValidationError, match="contact_identifier"):
         patient.update()
+
+
+def test_patient_update_removes_contact_without_name_or_related_patient(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """A removal (inactive=True) is exempt from the name-or-related_patient requirement.
+
+    Requiring a builder to pass a meaningless name or related_patient just to delete a
+    contact they already have the identifier for would defeat the point of the flag.
+    """
+    patient = Patient(
+        patient_id="123",
+        contacts=[PatientContact(contact_identifier=CONTACT_UUID, inactive=True)],
+    )
+
+    effect = patient.update()
+
+    [contact] = json.loads(effect.payload)["data"]["contacts"]
+    assert contact == {"contact_identifier": CONTACT_UUID, "inactive": True}
+
+
+def test_patient_removal_still_requires_contact_identifier(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """inactive=True with no contact_identifier has nothing to remove."""
+    patient = Patient(**valid_patient_data, contacts=[PatientContact(inactive=True)])
+
+    with pytest.raises(ValidationError, match="contact_identifier"):
+        patient.create()
 
 
 def test_patient_create_rejects_unknown_contact_category(
