@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils.module_loading import import_string
 
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
@@ -8,23 +7,28 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.educational_material import EducationalMaterial
+from canvas_sdk.v1.data.imaging import ImagingReport
+from canvas_sdk.v1.data.invoice import Invoice
+from canvas_sdk.v1.data.lab import LabReport
+from canvas_sdk.v1.data.letter import Letter
+from canvas_sdk.v1.data.note import NoteStateChangeEvent
+from canvas_sdk.v1.data.patient_administrative_document import PatientAdministrativeDocument
+from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.v1.data.uncategorized_clinical_document import UncategorizedClinicalDocument
 from canvas_sdk.v1.data.utils import presigned_url
 
-# related-object content type (app_label, model) -> dotted SDK model path, imported lazily on read
-_RELATED_OBJECT_MODEL_PATHS = {
-    ("api", "labreport"): "canvas_sdk.v1.data.lab.LabReport",
-    ("api", "imagingreport"): "canvas_sdk.v1.data.imaging.ImagingReport",
-    ("api", "letter"): "canvas_sdk.v1.data.letter.Letter",
-    ("api", "notestatechangeevent"): "canvas_sdk.v1.data.note.NoteStateChangeEvent",
-    ("api", "uncategorizedclinicaldocument"): (
-        "canvas_sdk.v1.data.uncategorized_clinical_document.UncategorizedClinicalDocument"
-    ),
-    ("api", "referralreport"): "canvas_sdk.v1.data.referral.ReferralReport",
-    ("api", "educationalmaterial"): "canvas_sdk.v1.data.educational_material.EducationalMaterial",
-    ("api", "patientadministrativedocument"): (
-        "canvas_sdk.v1.data.patient_administrative_document.PatientAdministrativeDocument"
-    ),
-    ("quality_and_revenue", "invoicefull"): "canvas_sdk.v1.data.invoice.Invoice",
+# related-object content type (app_label, model) -> SDK data model
+_RELATED_OBJECT_MODELS: dict[tuple[str, str], type[models.Model]] = {
+    ("api", "labreport"): LabReport,
+    ("api", "imagingreport"): ImagingReport,
+    ("api", "letter"): Letter,
+    ("api", "notestatechangeevent"): NoteStateChangeEvent,
+    ("api", "uncategorizedclinicaldocument"): UncategorizedClinicalDocument,
+    ("api", "referralreport"): ReferralReport,
+    ("api", "educationalmaterial"): EducationalMaterial,
+    ("api", "patientadministrativedocument"): PatientAdministrativeDocument,
+    ("quality_and_revenue", "invoicefull"): Invoice,
 }
 
 
@@ -142,10 +146,10 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         if content_type is None or self.object_id is None:
             return None
 
-        path = _RELATED_OBJECT_MODEL_PATHS.get((content_type.app_label, content_type.model))
-        if path is None:
+        model = _RELATED_OBJECT_MODELS.get((content_type.app_label, content_type.model))
+        if model is None:
             return None
-        return import_string(path).objects.filter(dbid=self.object_id).first()
+        return model.objects.filter(dbid=self.object_id).first()
 
 
 __exports__ = (
