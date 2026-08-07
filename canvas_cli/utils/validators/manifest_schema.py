@@ -165,9 +165,20 @@ manifest_schema = {
                     "menu_order": {"type": "integer"},
                     "show_in_panel": {"type": "boolean"},
                     "panel_priority": {"type": "integer"},
+                    "dock_edge": {
+                        "type": "string",
+                        "enum": ["left", "right", "top", "bottom"],
+                    },
+                    # Width on left/right, height on top/bottom - px or %
+                    "dock_size": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?(px|%)$",
+                    },
+                    "open_on_load": {"type": "boolean"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
+                "dependentRequired": {"dock_size": ["dock_edge"]},
             },
         },
         "questionnaires": {

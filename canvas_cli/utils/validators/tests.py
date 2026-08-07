@@ -140,3 +140,57 @@ def test_manifest_variable_rejects_extra_fields(handler_manifest_example: dict) 
     ]
     with pytest.raises(jsonschema.ValidationError):
         validate_manifest_file(handler_manifest_example)
+
+
+def _make_docked_manifest(**dock_fields: object) -> dict:
+    """Return a valid manifest whose single application declares a docked pane."""
+    manifest = _make_application_manifest("global")
+    manifest["components"]["applications"][0].update(dock_fields)
+    return manifest
+
+
+@pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"], ids=lambda e: e)
+def test_manifest_validates_every_dock_edge(edge: str) -> None:
+    """All four window edges are accepted as a docking position."""
+    validate_manifest_file(_make_docked_manifest(dock_edge=edge, dock_size="320px"))
+
+
+def test_manifest_rejects_an_unknown_dock_edge() -> None:
+    """An edge that isn't one of the four fails validation rather than being ignored."""
+    with pytest.raises(ValidationError, match="is not one of"):
+        validate_manifest_file(_make_docked_manifest(dock_edge="diagonal"))
+
+
+@pytest.mark.parametrize("size", ["320px", "25%", "1000px", "5%"], ids=lambda s: s)
+def test_manifest_accepts_css_pixel_and_percentage_sizes(size: str) -> None:
+    """dock_size is a CSS length; px and % are the two forms the dock resolves."""
+    validate_manifest_file(_make_docked_manifest(dock_edge="left", dock_size=size))
+
+
+@pytest.mark.parametrize("size", ["320", "320em", "wide", "-10px", ""], ids=lambda s: s or "empty")
+def test_manifest_rejects_a_dock_size_the_frontend_cannot_resolve(size: str) -> None:
+    """A unitless or unsupported size is caught here, not silently dropped to zero.
+
+    The dock resolves an unparseable size to 0, which renders as an invisible pane —
+    exactly the kind of failure that costs a plugin author an afternoon. Failing at
+    build time is much cheaper.
+    """
+    with pytest.raises(ValidationError):
+        validate_manifest_file(_make_docked_manifest(dock_edge="left", dock_size=size))
+
+
+def test_manifest_accepts_the_dock_bootstrap_flag() -> None:
+    """open_on_load is settable from the manifest.
+
+    It predates docked panes but was unreachable: absent from both this schema and
+    home-app's ApplicationSerializer, so only a direct ORM write could set it. A docked
+    pane needs it to mount at shell load.
+    """
+    validate_manifest_file(
+        _make_docked_manifest(dock_edge="left", dock_size="320px", open_on_load=True)
+    )
+
+
+def test_manifest_still_accepts_an_application_with_no_dock_fields() -> None:
+    """Every plugin written before docked panes existed keeps validating unchanged."""
+    validate_manifest_file(_make_application_manifest("patient_specific"))
