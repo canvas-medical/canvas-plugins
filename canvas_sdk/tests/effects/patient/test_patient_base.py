@@ -812,3 +812,19 @@ def test_patient_create_allows_related_patient_that_does_not_exist_yet(
 
     [contact] = json.loads(effect.payload)["data"]["contacts"]
     assert contact["related_patient"] == RELATED_PATIENT_UUID
+
+
+def test_patient_create_accepts_a_uuid_object_contact_identifier(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """contact_identifier may be passed as a uuid.UUID object, not only its string form."""
+    identifier = uuid.UUID(CONTACT_UUID)
+    patient = Patient(
+        **valid_patient_data,
+        contacts=[PatientContact(name="Jane Doe", contact_identifier=identifier)],
+    )
+
+    effect = patient.create()
+
+    [contact] = json.loads(effect.payload)["data"]["contacts"]
+    assert contact["contact_identifier"] == str(identifier)

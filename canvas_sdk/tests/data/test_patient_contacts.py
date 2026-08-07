@@ -48,3 +48,17 @@ def test_patient_contacts_round_trip_through_the_orm() -> None:
     assert related_contact.related_patient == spouse
     assert [c.category.code for c in inline_contact.categories.all()] == ["EMC"]
     assert ContactCategory.objects.get(code="EMC").system == "INTERNAL"
+
+
+@pytest.mark.django_db
+def test_contact_models_render_readable_str() -> None:
+    """Each contact read model has a human-readable __str__ for logs and the admin."""
+    category = ContactCategory.objects.create(
+        code="EMC", system="INTERNAL", name="Emergency contact"
+    )
+    contact = PatientContactPerson.objects.create(name="Jane Doe")
+    link = PatientContactCategory.objects.create(contact_person=contact, category=category)
+
+    assert str(category) == "Emergency contact (EMC)"
+    assert str(contact) == f"PatientContactPerson(id={contact.id}, name=Jane Doe)"
+    assert str(link) == f"PatientContactCategory(dbid={link.dbid})"
