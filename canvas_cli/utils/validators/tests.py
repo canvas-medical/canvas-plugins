@@ -152,7 +152,9 @@ def _make_docked_manifest(**dock_fields: object) -> dict:
 @pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"], ids=lambda e: e)
 def test_manifest_validates_every_dock_edge(edge: str) -> None:
     """All four window edges are accepted as a docking position."""
-    validate_manifest_file(_make_docked_manifest(dock_edge=edge, dock_size="320px"))
+    validate_manifest_file(
+        _make_docked_manifest(dock_edge=edge, dock_size="320px", open_on_load=True)
+    )
 
 
 def test_manifest_rejects_an_unknown_dock_edge() -> None:
@@ -164,7 +166,9 @@ def test_manifest_rejects_an_unknown_dock_edge() -> None:
 @pytest.mark.parametrize("size", ["320px", "25%", "1000px", "5%"], ids=lambda s: s)
 def test_manifest_accepts_css_pixel_and_percentage_sizes(size: str) -> None:
     """dock_size is a CSS length; px and % are the two forms the dock resolves."""
-    validate_manifest_file(_make_docked_manifest(dock_edge="left", dock_size=size))
+    validate_manifest_file(
+        _make_docked_manifest(dock_edge="left", dock_size=size, open_on_load=True)
+    )
 
 
 @pytest.mark.parametrize("size", ["320", "320em", "wide", "-10px", ""], ids=lambda s: s or "empty")
@@ -176,7 +180,9 @@ def test_manifest_rejects_a_dock_size_the_frontend_cannot_resolve(size: str) -> 
     build time is much cheaper.
     """
     with pytest.raises(ValidationError):
-        validate_manifest_file(_make_docked_manifest(dock_edge="left", dock_size=size))
+        validate_manifest_file(
+            _make_docked_manifest(dock_edge="left", dock_size=size, open_on_load=True)
+        )
 
 
 def test_manifest_accepts_the_dock_bootstrap_flag() -> None:
@@ -188,6 +194,28 @@ def test_manifest_accepts_the_dock_bootstrap_flag() -> None:
     """
     validate_manifest_file(
         _make_docked_manifest(dock_edge="left", dock_size="320px", open_on_load=True)
+    )
+
+
+def test_manifest_requires_a_docked_application_to_declare_open_on_load() -> None:
+    """A dock edge alone does not open a pane, so leaving open_on_load out is an error.
+
+    ``dock_edge`` says *where* the pane goes; ``open_on_load`` is what mounts it. An
+    author who declares only the edge gets an application that never appears anywhere,
+    with nothing to click and no error — the most expensive kind of silence. Requiring
+    the flag here turns that into a build-time failure naming the missing property.
+    """
+    with pytest.raises(ValidationError, match="open_on_load"):
+        validate_manifest_file(_make_docked_manifest(dock_edge="left", dock_size="320px"))
+
+
+def test_manifest_accepts_a_docked_application_that_opts_out_of_opening() -> None:
+    """Declaring ``open_on_load: false`` is a deliberate choice, not a mistake.
+
+    The requirement above is that the author *decides*, not that every dock opens.
+    """
+    validate_manifest_file(
+        _make_docked_manifest(dock_edge="left", dock_size="320px", open_on_load=False)
     )
 
 
