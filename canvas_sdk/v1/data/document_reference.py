@@ -149,7 +149,7 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         model = _RELATED_OBJECT_MODELS.get((content_type.app_label, content_type.model))
         if model is None:
             return None
-        return model.objects.filter(dbid=self.object_id).first()
+        return model._default_manager.filter(dbid=self.object_id).first()
 
 
 __exports__ = (
