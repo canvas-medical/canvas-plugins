@@ -178,7 +178,14 @@ manifest_schema = {
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
-                "dependentRequired": {"dock_size": ["dock_edge"]},
+                # `dock_size` is meaningless without an edge to size, and `dock_edge`
+                # only says *where* a pane goes — `open_on_load` is what mounts it. A
+                # dock declared without the flag never appears and offers nothing to
+                # click, so the author is made to state the intent either way.
+                "dependentRequired": {
+                    "dock_size": ["dock_edge"],
+                    "dock_edge": ["open_on_load"],
+                },
             },
         },
         "questionnaires": {
