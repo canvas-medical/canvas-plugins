@@ -165,9 +165,27 @@ manifest_schema = {
                     "menu_order": {"type": "integer"},
                     "show_in_panel": {"type": "boolean"},
                     "panel_priority": {"type": "integer"},
+                    "dock_edge": {
+                        "type": "string",
+                        "enum": ["left", "right", "top", "bottom"],
+                    },
+                    # Width on left/right, height on top/bottom - px or %
+                    "dock_size": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?(px|%)$",
+                    },
+                    "open_on_load": {"type": "boolean"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
+                # `dock_size` is meaningless without an edge to size, and `dock_edge`
+                # only says *where* a pane goes — `open_on_load` is what mounts it. A
+                # dock declared without the flag never appears and offers nothing to
+                # click, so the author is made to state the intent either way.
+                "dependentRequired": {
+                    "dock_size": ["dock_edge"],
+                    "dock_edge": ["open_on_load"],
+                },
             },
         },
         "questionnaires": {
