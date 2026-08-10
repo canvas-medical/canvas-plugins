@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.194.0 (2026-08-10)
+
+### Features
+
+- Add allowed note types to patient timeline effect
+  ([#1803](https://github.com/canvas-medical/canvas-plugins/pull/1803),
+  [`ae1edfa`](https://github.com/canvas-medical/canvas-plugins/commit/ae1edfa8d96beed9a514b95a12fb31ffe3fda76f))
+
+
 ## v0.193.0 (2026-08-05)
 
 ### Features
