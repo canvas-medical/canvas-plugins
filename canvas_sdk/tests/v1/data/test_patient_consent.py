@@ -8,6 +8,7 @@ from canvas_sdk.test_utils.factories.patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from canvas_sdk.v1.data.document_reference import DocumentReference, DocumentReferenceCoding
+from canvas_sdk.v1.data.patient_administrative_document import PatientAdministrativeDocument
 from canvas_sdk.v1.data.patient_consent import (
     PatientConsent,
     PatientConsentCoding,
@@ -123,4 +124,8 @@ def test_document_references_reaches_the_signed_documents_document_reference() -
 
     references = consent.document_references
     assert list(references.values_list("dbid", flat=True)) == [doc_ref.dbid]
-    assert references.first().related_object.dbid == doc.dbid
+    reference = references.first()
+    assert reference is not None
+    related = reference.related_object
+    assert isinstance(related, PatientAdministrativeDocument)
+    assert related.dbid == doc.dbid
