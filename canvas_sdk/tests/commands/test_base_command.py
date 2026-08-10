@@ -2,6 +2,7 @@ import datetime
 import json
 import uuid
 from enum import Enum
+from unittest.mock import MagicMock
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -41,7 +42,7 @@ def dummy_command_instance() -> DummyCommand:
     cmd.uuid_field = uuid.UUID("12345678-1234-5678-1234-567812345678")
     # Set note_uuid and command_uuid for effect methods.
     cmd.note_uuid = "note-123"
-    cmd.command_uuid = "cmd-456"
+    cmd.command_uuid = "b6f4d1c8-31a1-4a0e-9c4b-5a3f4c9d0e21"
     return cmd
 
 
@@ -149,7 +150,7 @@ def test_batch_originate_raises_error_when_required_fields_not_set() -> None:
 
 
 def test_commit_successfully_returns_commit_effect(
-    dummy_command_instance: DummyCommand,
+    dummy_command_instance: DummyCommand, stored_command: MagicMock
 ) -> None:
     """Test that commit() successfully returns the commit effect."""
     effect = dummy_command_instance.commit()
@@ -170,7 +171,7 @@ def test_commit_raises_error_when_required_fields_not_set() -> None:
 
 
 def test_edit_successfully_returns_edit_effect(
-    dummy_command_instance: DummyCommand,
+    dummy_command_instance: DummyCommand, stored_command: MagicMock
 ) -> None:
     """Test that edit() successfully returns the edit effect."""
     dummy_command_instance.int_field = 1
@@ -194,7 +195,7 @@ def test_edit_raises_error_when_required_fields_not_set() -> None:
 
 
 def test_delete_successfully_returns_delete_effect(
-    dummy_command_instance: DummyCommand,
+    dummy_command_instance: DummyCommand, stored_command: MagicMock
 ) -> None:
     """Test that delete() successfully returns the delete effect."""
     effect = dummy_command_instance.delete()
@@ -215,7 +216,7 @@ def test_delete_raises_error_when_required_fields_not_set() -> None:
 
 
 def test_enter_in_error_successfully_returns_enter_in_error_effect(
-    dummy_command_instance: DummyCommand,
+    dummy_command_instance: DummyCommand, stored_command: MagicMock
 ) -> None:
     """Test that enter_in_error() successfully returns the enter_in_error effect."""
     effect = dummy_command_instance.enter_in_error()

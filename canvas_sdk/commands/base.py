@@ -3,17 +3,27 @@ import re
 from enum import EnumType
 from types import NoneType, UnionType
 from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
+from uuid import UUID
 
 from django.core.exceptions import ImproperlyConfigured
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.command_custom_html import _CommandCustomHtml
 from canvas_sdk.effects.command_metadata.base import _CommandMetadata
+from canvas_sdk.v1.data import Command
 
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
+
+_REQUIRED_STATE_BY_METHOD = {
+    "edit": "staged",
+    "delete": "staged",
+    "commit": "staged",
+    "enter_in_error": "committed",
+}
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -114,6 +124,40 @@ class _BaseCommand(TrackableFieldsModel):
             for name, definition in schema["properties"].items()
             if name not in base_properties
         }
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Generic errors for commands."""
+        errors = super()._get_error_details(method)
+
+        required_state = _REQUIRED_STATE_BY_METHOD.get(method)
+        if required_state is None or not (command_uuid := self.command_uuid):
+            return errors
+
+        try:
+            UUID(command_uuid)
+        except (AttributeError, TypeError, ValueError):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Command with {command_uuid} does not exist.",
+                    command_uuid,
+                )
+            )
+            return errors
+
+        if not Command.objects.filter(id=command_uuid, state=required_state).exists():
+            refusal = (
+                "cannot be entered in error" if method == "enter_in_error" else "cannot be changed"
+            )
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Command with {command_uuid} {refusal}.",
+                    command_uuid,
+                )
+            )
+
+        return errors
 
     def originate(self, line_number: int = -1, commit: bool = False) -> Effect:
         """Originate a new command in the note body."""
