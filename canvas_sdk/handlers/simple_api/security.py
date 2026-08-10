@@ -251,6 +251,35 @@ class PatientSessionAuthMixin(AuthSchemeMixin):
         return True
 
 
+class MixedAuthMixin(APIKeyAuthMixin, StaffSessionAuthMixin):
+    """
+    Mixed authentication scheme mixin.
+
+    Provides an implementation of the authenticate method that accepts *either* an API key or a
+    logged in staff session, so that a single handler can serve both server-to-server callers and
+    browsers.
+
+    The presence of the API key header selects which scheme applies: a browser never sends one,
+    because Canvas removes client-supplied session headers and sets its own from the session
+    cookie. Each branch then delegates to the corresponding single-scheme mixin, so the key
+    comparison and the staff check are not duplicated here. This keeps the API key out of the
+    browser entirely, while still letting a peer authenticate without a session.
+
+    The credentials annotation is the base Credentials class because the scheme is only known once
+    the headers have been examined; the concrete credentials for the selected scheme are built here.
+    Like APIKeyAuthMixin, the key is read from the API_KEY_SECRET_NAME secret.
+    """
+
+    request: Request
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate the request."""
+        if APIKeyCredentials.HEADER_NAME in self.request.headers:
+            return APIKeyAuthMixin.authenticate(self, APIKeyCredentials(self.request))
+
+        return StaffSessionAuthMixin.authenticate(self, SessionCredentials(self.request))
+
+
 __exports__ = (
     "Credentials",
     "BasicCredentials",
@@ -262,4 +291,5 @@ __exports__ = (
     "SessionCredentials",
     "StaffSessionAuthMixin",
     "PatientSessionAuthMixin",
+    "MixedAuthMixin",
 )

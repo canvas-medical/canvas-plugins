@@ -380,7 +380,7 @@ def test_prescribe_compound_medication_values_property_is_ommitted_if_fdb_code_i
 
 
 def test_prescribe_compound_medication_edit_command(
-    mock_db_queries: dict[str, MagicMock],
+    mock_db_queries: dict[str, MagicMock], stored_command: MagicMock
 ) -> None:
     """Test editing a compound medication prescription."""
     prescribe_cmd = PrescribeCommand(
@@ -636,7 +636,9 @@ def test_originate_prescribe_ignores_commit_flag(
     ids=["regular_medication", "compound_medication"],
 )
 def test_edit_prescribe_output_mutually_exclusive_fields(
-    mock_db_queries: dict[str, MagicMock], prescription: dict[str, Any]
+    mock_db_queries: dict[str, MagicMock],
+    prescription: dict[str, Any],
+    stored_command: MagicMock,
 ) -> None:
     """Test that edit output does not include mutually exclusive fields."""
     prescribe_cmd = PrescribeCommand(**{"command_uuid": str(uuid4()), **prescription})

@@ -244,6 +244,9 @@
     "UpdateGoalCommand",
     "VitalsCommand"
   ],
+  "canvas_sdk.commands.api": [
+    "CommandAPI"
+  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
@@ -979,6 +982,7 @@
     "Credentials",
     "FileFormPart",
     "FormPart",
+    "MixedAuthMixin",
     "PatientSessionAuthMixin",
     "SessionCredentials",
     "SimpleAPI",
@@ -1023,6 +1027,7 @@
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "MixedAuthMixin",
     "PatientSessionAuthMixin",
     "SessionCredentials",
     "StaffSessionAuthMixin"

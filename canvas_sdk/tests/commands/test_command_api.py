@@ -1,0 +1,659 @@
+"""Tests for `CommandAPI`, the HTTP endpoint base for writing a single command."""
+
+import inspect
+import json
+from base64 import b64encode
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from http import HTTPStatus
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+from canvas_sdk.commands import HistoryOfPresentIllnessCommand, PrescribeCommand
+from canvas_sdk.commands.api import CommandAPI
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.simple_api import JSONResponse, Response
+from canvas_sdk.events import Event, EventRequest, EventType
+from canvas_sdk.handlers.simple_api import Credentials, api
+from canvas_sdk.handlers.simple_api.exceptions import InvalidCredentialsError
+from canvas_sdk.v1.data.command import Command
+
+NOTE_UUID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+COMMAND_UUID = "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed"
+API_KEY = "an-api-key"
+
+
+class _HistoryOfPresentIllnessWithMetadata(HistoryOfPresentIllnessCommand):
+    """A command extended with a metadata field, the way a plugin would."""
+
+    metadata: dict[str, str] | None = None
+
+
+class _HistoryOfPresentIllnessAPI(CommandAPI):
+    """An endpoint exercising every method the base offers."""
+
+    PREFIX = "/v1"
+    model = _HistoryOfPresentIllnessWithMetadata
+    path = "/hpi"
+
+    @api.post(path)
+    def insert(self) -> list[Response | Effect]:
+        return self.originate()
+
+    @api.patch(f"{path}/<command_uuid>")
+    def update(self) -> list[Response | Effect]:
+        return self.edit()
+
+    @api.delete(f"{path}/<command_uuid>")
+    def delete(self) -> list[Response | Effect]:
+        return self.action("delete")
+
+    @api.post(f"{path}/<command_uuid>/commit")
+    def commit(self) -> list[Response | Effect]:
+        return self.action("commit")
+
+    @api.post(f"{path}/<command_uuid>/enter-in-error")
+    def enter_in_error(self) -> list[Response | Effect]:
+        return self.action("enter_in_error")
+
+    @api.post(f"{path}/<command_uuid>/review")
+    def review(self) -> list[Response | Effect]:
+        # This command is not reviewable, so the base reports that rather than raising.
+        return self.action("review")
+
+
+class _NarrativeRequiredCommand(HistoryOfPresentIllnessCommand):
+    """A command with a rule its field types do not express, checked as the effect is built."""
+
+    class Meta:
+        key = "hpi"
+        originate_required_fields = ("narrative",)
+
+
+class _NarrativeRequiredAPI(CommandAPI):
+    """An endpoint over a command whose rule the request cannot satisfy."""
+
+    PREFIX = "/v1"
+    model = _NarrativeRequiredCommand
+    path = "/narrative-required"
+
+    @api.post(path)
+    def insert(self) -> list[Response | Effect]:
+        return self.originate()
+
+
+def _event(
+    method: str,
+    path: str,
+    body: Any = None,
+    raw: bytes | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> Event:
+    """A SIMPLE_API_REQUEST event for ``method path``, carrying ``raw`` or ``body`` as JSON."""
+    if raw is None:
+        raw = b"" if body is None else json.dumps(body).encode()
+
+    return Event(
+        EventRequest(
+            type=EventType.SIMPLE_API_REQUEST,
+            context=json.dumps(
+                {
+                    "method": method,
+                    "path": path,
+                    "query_string": "",
+                    "body": b64encode(raw).decode(),
+                    "headers": dict(headers or {}),
+                }
+            ),
+        )
+    )
+
+
+def _handler(
+    method: str,
+    path: str,
+    body: Any = None,
+    raw: bytes | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> _HistoryOfPresentIllnessAPI:
+    """An endpoint handling ``method path``; path params come from the real route match."""
+    # mypy cannot see that BaseHandler.__init__ assigns `secrets`, so the class reads as abstract.
+    return _HistoryOfPresentIllnessAPI(  # type: ignore[abstract]
+        _event(method, path, body, raw, headers)
+    )
+
+
+def _split(result: list[Response | Effect]) -> tuple[list[Effect], list[Response]]:
+    """Separate a handler's return value into its effects and its responses."""
+    return (
+        [item for item in result if isinstance(item, Effect)],
+        [item for item in result if isinstance(item, Response)],
+    )
+
+
+def _payload(effect: Effect) -> dict[str, Any]:
+    """An effect's decoded payload."""
+    return json.loads(effect.payload)
+
+
+def _content(response: Response) -> dict[str, Any]:
+    """A response's decoded JSON body."""
+    return json.loads(response.content or b"{}")
+
+
+@contextmanager
+def _stored(state: str | None) -> Iterator[MagicMock]:
+    """Patch the command table so one command exists, in ``state``.
+
+    Both readers are answered from it: the endpoint asks whether a command of its type has the id,
+    and the command asks whether it is in the state its action requires. ``None`` means no such
+    command.
+    """
+
+    def filter(**kwargs: Any) -> MagicMock:
+        queryset = MagicMock()
+        if "state" in kwargs:
+            # The command asking whether it is in the state its action requires.
+            queryset.exists.return_value = kwargs["state"] == state
+        else:
+            # The endpoint asking whether a command of its type has this id at all.
+            queryset.exists.return_value = state is not None
+        return queryset
+
+    manager = MagicMock()
+    manager.filter.side_effect = filter
+    with patch.object(Command, "objects", manager):
+        yield manager
+
+
+# ---------------------------------------------------------------- insert
+
+
+def test_insert_originates_the_command_and_reports_it_created() -> None:
+    """A valid body yields an originate effect plus a 201 naming the new command."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "narrative": "cough x3 days"})
+
+    effects, responses = _split(handler.insert())
+
+    assert [EffectType.Name(effect.type) for effect in effects] == ["ORIGINATE_HPI_COMMAND"]
+    payload = _payload(effects[0])
+    assert payload["note"] == NOTE_UUID
+    assert payload["data"] == {"narrative": "cough x3 days"}
+    assert payload["commit"] is False
+
+    assert responses[0].status_code == HTTPStatus.CREATED
+    body = _content(responses[0])
+    assert body["command_uuid"] == payload["command"]
+    assert body["committed"] is False
+
+
+def test_insert_commits_when_the_body_asks_for_it() -> None:
+    """``commit`` rides the originate effect and is reported back."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "commit": True})
+
+    effects, responses = _split(handler.insert())
+
+    assert _payload(effects[0])["commit"] is True
+    assert _content(responses[0])["committed"] is True
+
+
+def test_insert_keeps_the_envelope_out_of_the_command_data() -> None:
+    """``note_uuid`` / ``command_uuid`` address the command; they are not part of its data."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "narrative": "sore throat"})
+
+    effects, _ = _split(handler.insert())
+
+    assert _payload(effects[0])["data"] == {"narrative": "sore throat"}
+
+
+def test_insert_emits_metadata_as_separate_effects() -> None:
+    """A model that declares ``metadata`` gets one upsert effect per pair, after the originate."""
+    handler = _handler(
+        "POST",
+        "/v1/hpi",
+        {
+            "note_id": NOTE_UUID,
+            "narrative": "headache",
+            "metadata": {"source": "test", "channel": "api"},
+        },
+    )
+
+    effects, _ = _split(handler.insert())
+
+    assert [EffectType.Name(effect.type) for effect in effects] == [
+        "ORIGINATE_HPI_COMMAND",
+        "UPSERT_COMMAND_METADATA",
+        "UPSERT_COMMAND_METADATA",
+    ]
+    assert _payload(effects[0])["data"] == {"narrative": "headache"}
+    assert _payload(effects[1])["data"] == {
+        "schema_key": "hpi",
+        "command_id": _payload(effects[0])["command"],
+        "key": "source",
+        "value": "test",
+    }
+
+
+def test_insert_names_the_note_only_as_note_id() -> None:
+    """``note_id`` is the endpoint's contract, and the error names it — not the SDK's spelling."""
+    handler = _handler("POST", "/v1/hpi", {"note_uuid": NOTE_UUID, "narrative": "wrong key"})
+
+    effects, responses = _split(handler.originate())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "note_id", "message": "Field required"}
+    ]
+
+
+def test_insert_ignores_a_caller_supplied_command_id_field() -> None:
+    """The command is addressed by ``command_id``, not by the model's own field."""
+    handler = _handler(
+        "POST",
+        "/v1/hpi",
+        {"note_id": NOTE_UUID, "command_id": COMMAND_UUID, "command_uuid": "ignored"},
+    )
+
+    effects, responses = _split(handler.originate())
+
+    assert _payload(effects[0])["command"] == COMMAND_UUID
+    assert _content(responses[0])["command_uuid"] == COMMAND_UUID
+
+
+def test_insert_ignores_keys_that_are_not_command_fields() -> None:
+    """Callers may send display-only keys; they never reach the command."""
+    handler = _handler(
+        "POST",
+        "/v1/hpi",
+        {"note_id": NOTE_UUID, "narrative": "rash", "narrative_label": "Rash (display only)"},
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert _payload(effects[0])["data"] == {"narrative": "rash"}
+    assert responses[0].status_code == HTTPStatus.CREATED
+
+
+@pytest.mark.parametrize(
+    argnames="body",
+    argvalues=[b"{not json", b'["a", "list"]', b'"a string"'],
+    ids=["malformed", "json-array", "json-scalar"],
+)
+def test_insert_rejects_a_body_that_is_not_a_json_object(body: bytes) -> None:
+    """Anything but a JSON object is a 400, and emits nothing. Pins the shared rejection shape."""
+    effects, responses = _split(_handler("POST", "/v1/hpi", raw=body).insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0]) == {
+        "error": "Request body must be a JSON object",
+        "validation_errors": [],
+    }
+
+
+def test_insert_reports_field_errors_from_the_command_model() -> None:
+    """A value the model rejects is a 400 listing the offending field, and emits nothing."""
+    handler = _handler(
+        "POST", "/v1/hpi", {"note_id": NOTE_UUID, "metadata": {"source": ["not", "a", "string"]}}
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    body = _content(responses[0])
+    assert body["error"] == "Validation failed"
+    assert body["validation_errors"][0]["field"] == "metadata.source"
+
+
+def test_insert_reports_errors_raised_when_the_effect_is_built() -> None:
+    """A rule checked as the effect is built surfaces as a 400, not an unhandled error."""
+    handler = _NarrativeRequiredAPI(  # type: ignore[abstract]
+        _event("POST", "/v1/narrative-required", {"note_id": NOTE_UUID})
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    body = _content(responses[0])
+    assert body["error"] == "Validation failed"
+    assert "'narrative' is required" in body["validation_errors"][0]["message"]
+
+
+# ---------------------------------------------------------------- update
+
+
+def test_update_edits_the_command() -> None:
+    """A valid body yields an edit effect for the addressed command plus a 200."""
+    handler = _handler(
+        "PATCH", f"/v1/hpi/{COMMAND_UUID}", {"note_id": NOTE_UUID, "narrative": "revised"}
+    )
+
+    with _stored("staged"):
+        effects, responses = _split(handler.update())
+
+    assert EffectType.Name(effects[0].type) == "EDIT_HPI_COMMAND"
+    payload = _payload(effects[0])
+    assert payload["command"] == COMMAND_UUID
+    assert payload["data"] == {"narrative": "revised"}
+    assert _content(responses[0]) == {"command_uuid": COMMAND_UUID, "mode": "edit"}
+
+
+def test_update_needs_no_note_because_it_addresses_an_existing_command() -> None:
+    """Only origination takes ``note_id``; an edit is addressed by its path and omits it."""
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+
+    with _stored("staged"):
+        effects, responses = _split(handler.update())
+
+    assert EffectType.Name(effects[0].type) == "EDIT_HPI_COMMAND"
+    assert _payload(effects[0])["data"] == {"narrative": "revised"}
+    assert responses[0].status_code == HTTPStatus.OK
+
+
+def test_update_does_not_honor_a_commit_flag() -> None:
+    """``commit`` is not part of the edit body, so it is ignored rather than acted on."""
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised", "commit": True})
+
+    with _stored("staged"):
+        effects, responses = _split(handler.update())
+
+    assert [EffectType.Name(effect.type) for effect in effects] == ["EDIT_HPI_COMMAND"]
+    assert "commit" not in _payload(effects[0])
+    assert _payload(effects[0])["data"] == {"narrative": "revised"}
+    assert responses[0].status_code == HTTPStatus.OK
+
+
+def test_update_is_not_found_when_no_such_command_exists() -> None:
+    """An unknown id is a 404 and emits nothing."""
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+
+    with _stored(None):
+        effects, responses = _split(handler.update())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------- delete
+
+
+def test_delete_removes_a_staged_command() -> None:
+    """A staged command yields a delete effect plus a 200."""
+    handler = _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}")
+
+    with _stored("staged"):
+        effects, responses = _split(handler.delete())
+
+    assert EffectType.Name(effects[0].type) == "DELETE_HPI_COMMAND"
+    assert _payload(effects[0]) == {"command": COMMAND_UUID}
+    assert _content(responses[0]) == {"command_uuid": COMMAND_UUID, "mode": "delete"}
+
+
+def test_delete_is_refused_once_the_command_is_committed() -> None:
+    """A committed command cannot be deleted; the command itself says so, as a 400."""
+    handler = _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}")
+
+    with _stored("committed"):
+        effects, responses = _split(handler.delete())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
+    ]
+
+
+def test_delete_is_not_found_when_no_such_command_exists() -> None:
+    """An unknown id is a 404 and emits nothing."""
+    handler = _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}")
+
+    with _stored(None):
+        effects, responses = _split(handler.delete())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------- actions
+
+
+def test_an_action_is_applied_to_the_command() -> None:
+    """``commit`` yields the matching id-only effect plus a 200."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/commit")
+
+    with _stored("staged"):
+        effects, responses = _split(handler.commit())
+
+    assert EffectType.Name(effects[0].type) == "COMMIT_HPI_COMMAND"
+    assert _payload(effects[0]) == {"command": COMMAND_UUID}
+    assert _content(responses[0]) == {"command_uuid": COMMAND_UUID, "mode": "commit"}
+
+
+def test_enter_in_error_voids_the_command() -> None:
+    """Enter-in-error yields the matching id-only effect plus a 200."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/enter-in-error")
+
+    with _stored("committed"):
+        effects, responses = _split(handler.enter_in_error())
+
+    assert EffectType.Name(effects[0].type) == "ENTER_IN_ERROR_HPI_COMMAND"
+    assert _content(responses[0])["mode"] == "enter_in_error"
+
+
+def test_an_action_the_command_does_not_support_is_rejected() -> None:
+    """Only some commands are reviewable; asking the others is a 400, not an unhandled error."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/review")
+
+    with _stored("staged"):
+        effects, responses = _split(handler.review())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert "does not support the 'review' action" in _content(responses[0])["error"]
+
+
+def test_an_action_is_not_found_when_no_such_command_exists() -> None:
+    """An unknown id is a 404 and emits nothing."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/commit")
+
+    with _stored(None):
+        effects, responses = _split(handler.commit())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------- state rules, as 400 responses
+#
+# A command refuses an action its state disallows while the effect is built. Each of these would be
+# an unhandled error rather than a response if that path were not covered.
+
+
+def test_committing_an_already_committed_command_is_rejected() -> None:
+    """Only a staged command can be committed."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/commit")
+
+    with _stored("committed"):
+        effects, responses = _split(handler.commit())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    body = _content(responses[0])
+    assert body["error"] == "Validation failed"
+    assert body["validation_errors"] == [
+        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
+    ]
+
+
+def test_entering_a_staged_command_in_error_is_rejected() -> None:
+    """Only a committed command can be entered in error; a staged one is deleted instead."""
+    handler = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/enter-in-error")
+
+    with _stored("staged"):
+        effects, responses = _split(handler.enter_in_error())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be entered in error."}
+    ]
+
+
+def test_editing_a_committed_command_is_rejected() -> None:
+    """Only a staged command can be edited."""
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+
+    with _stored("committed"):
+        effects, responses = _split(handler.update())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
+    ]
+
+
+def test_an_action_the_state_allows_still_succeeds() -> None:
+    """The state checks reject only what they should — the permitted actions still go through."""
+    with _stored("staged"):
+        effects, _ = _split(_handler("POST", f"/v1/hpi/{COMMAND_UUID}/commit").commit())
+        assert EffectType.Name(effects[0].type) == "COMMIT_HPI_COMMAND"
+
+        effects, _ = _split(_handler("DELETE", f"/v1/hpi/{COMMAND_UUID}").delete())
+        assert EffectType.Name(effects[0].type) == "DELETE_HPI_COMMAND"
+
+    with _stored("committed"):
+        result = _handler("POST", f"/v1/hpi/{COMMAND_UUID}/enter-in-error").enter_in_error()
+        effects, _ = _split(result)
+        assert EffectType.Name(effects[0].type) == "ENTER_IN_ERROR_HPI_COMMAND"
+
+
+# ---------------------------------------------------------------- command-type scoping
+
+
+def test_lookup_is_scoped_to_the_endpoints_command_type() -> None:
+    """The lookup filters on the command type, so an id of another type is simply not found."""
+    handler = _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}")
+
+    with _stored("staged") as manager:
+        handler.delete()
+
+    # The command runs a state check of its own, so look for the endpoint's lookup among the calls.
+    assert {"id": COMMAND_UUID, "schema_key": "hpi"} in [
+        call.kwargs for call in manager.filter.call_args_list
+    ]
+
+
+def test_a_malformed_id_is_not_found_rather_than_a_query_error() -> None:
+    """An id that cannot be a command's is a 404, not an unhandled error.
+
+    Filtering a ``UUIDField`` with an unparseable value raises Django's ``ValidationError``, which
+    the lookup has to absorb. Run against the real manager, since that is the behavior relied on.
+    """
+    with pytest.raises(DjangoValidationError):
+        Command.objects.filter(id="not-a-uuid")
+
+    for result in (
+        _handler("DELETE", "/v1/hpi/not-a-uuid").delete(),
+        _handler("POST", "/v1/hpi/not-a-uuid/commit").commit(),
+        _handler("PATCH", "/v1/hpi/not-a-uuid", {"narrative": "x"}).update(),
+    ):
+        effects, responses = _split(result)
+
+        assert effects == []
+        assert responses[0].status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------- routing and auth
+
+
+def test_a_peer_authenticates_with_an_api_key() -> None:
+    """A server-to-server caller presenting the shared key is let through."""
+    handler = _handler("POST", "/v1/hpi", headers={"Authorization": API_KEY})
+    handler.secrets = {"simpleapi-api-key": API_KEY}
+
+    assert handler.authenticate(Credentials(handler.request)) is True
+
+
+def test_a_peer_presenting_the_wrong_api_key_is_rejected() -> None:
+    """A wrong key is turned away rather than falling through to the session scheme."""
+    handler = _handler("POST", "/v1/hpi", headers={"Authorization": "not-the-key"})
+    handler.secrets = {"simpleapi-api-key": API_KEY}
+
+    with pytest.raises(InvalidCredentialsError):
+        handler.authenticate(Credentials(handler.request))
+
+
+def test_a_browser_authenticates_with_a_staff_session() -> None:
+    """A caller with no key but a staff session — a browser — is let through."""
+    handler = _handler(
+        "POST",
+        "/v1/hpi",
+        headers={"canvas-logged-in-user-type": "Staff", "canvas-logged-in-user-id": "staff-1"},
+    )
+
+    assert handler.authenticate(Credentials(handler.request)) is True
+
+
+def test_a_logged_in_patient_is_rejected() -> None:
+    """Writing commands is staff-only, so a patient session is turned away."""
+    handler = _handler(
+        "POST",
+        "/v1/hpi",
+        headers={"canvas-logged-in-user-type": "Patient", "canvas-logged-in-user-id": "patient-1"},
+    )
+
+    with pytest.raises(InvalidCredentialsError):
+        handler.authenticate(Credentials(handler.request))
+
+
+def test_a_caller_with_neither_a_key_nor_a_session_is_rejected() -> None:
+    """Absent both schemes, the request is turned away."""
+    handler = _handler("POST", "/v1/hpi")
+
+    with pytest.raises(InvalidCredentialsError):
+        handler.authenticate(Credentials(handler.request))
+
+
+def test_the_endpoint_declares_the_credentials_the_scheme_needs() -> None:
+    """The scheme is chosen from the headers, so the annotation is the base Credentials."""
+    annotation = inspect.get_annotations(_HistoryOfPresentIllnessAPI.authenticate, eval_str=True)
+
+    assert annotation["credentials"] is Credentials
+
+
+def test_routes_resolve_through_the_prefix_and_path_params() -> None:
+    """The declared routes are registered under the prefix, with the id as a path param."""
+    assert _handler("POST", "/v1/hpi").request.path_params == {}
+    assert _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}").request.path_params == {
+        "command_uuid": COMMAND_UUID
+    }
+
+
+def test_a_reviewable_command_supports_review() -> None:
+    """The action check reflects the command class, so reviewable commands do expose review."""
+
+    class _PrescribeAPI(CommandAPI):
+        PREFIX = "/v1"
+        model = PrescribeCommand
+        path = "/prescribe"
+
+        @api.post(f"{path}/<command_uuid>/review")
+        def review(self) -> list[Response | Effect]:
+            return self.action("review")
+
+    handler = _PrescribeAPI(  # type: ignore[abstract]
+        _event("POST", f"/v1/prescribe/{COMMAND_UUID}/review")
+    )
+
+    with _stored("staged"):
+        effects, responses = _split(handler.review())
+
+    assert EffectType.Name(effects[0].type) == "REVIEW_PRESCRIBE_COMMAND"
+    assert isinstance(responses[0], JSONResponse)
