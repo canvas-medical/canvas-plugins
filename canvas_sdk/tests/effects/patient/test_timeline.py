@@ -32,7 +32,9 @@ def test_apply_returns_correct_effect(mock_filter: MagicMock) -> None:
             "excluded_note_types": [
                 "12345678-1234-5678-1234-567812345678",
                 "87654321-4321-8765-4321-876543218765",
-            ]
+            ],
+            # Not supplied, so no constraint on the New Note button.
+            "allowed_new_note_types": None,
         }
     }
 
@@ -79,3 +81,81 @@ def test_get_error_details_empty_list_no_errors(mock_filter: MagicMock) -> None:
 
     assert errors == []
     mock_filter.assert_not_called()
+
+
+def test_excluded_note_types_is_optional() -> None:
+    """Test that a plugin restricting only the New Note button need not pass exclusions."""
+    payload = json.loads(PatientTimelineEffect().apply().payload)
+
+    assert payload == {
+        "data": {"excluded_note_types": [], "allowed_new_note_types": None},
+    }
+
+
+@patch("canvas_sdk.effects.patient.timeline.NoteType.objects.filter")
+def test_allowed_new_note_types_is_serialized(mock_filter: MagicMock) -> None:
+    """Test that the New Note allow-list round-trips into the payload."""
+    note_type_id = str(uuid4())
+    mock_filter.return_value.values_list.return_value = [note_type_id]
+
+    payload = json.loads(
+        PatientTimelineEffect(allowed_new_note_types=[note_type_id]).apply().payload
+    )
+
+    assert payload["data"]["allowed_new_note_types"] == [note_type_id]
+    assert payload["data"]["excluded_note_types"] == []
+
+
+def test_empty_allow_list_is_distinct_from_none() -> None:
+    """Test that [] and None serialize differently.
+
+    home-app reads None as "no constraint" and [] as "offer no note types", which hides the
+    New Note button, so the two must not collapse onto each other.
+    """
+    unset = json.loads(PatientTimelineEffect().apply().payload)
+    empty = json.loads(PatientTimelineEffect(allowed_new_note_types=[]).apply().payload)
+
+    assert unset["data"]["allowed_new_note_types"] is None
+    assert empty["data"]["allowed_new_note_types"] == []
+
+
+@patch("canvas_sdk.effects.patient.timeline.NoteType.objects.filter")
+def test_both_fields_can_be_set_together(mock_filter: MagicMock) -> None:
+    """Test that a plugin can hide history and restrict creation in one effect."""
+    excluded = str(uuid4())
+    allowed = str(uuid4())
+    mock_filter.return_value.values_list.return_value = [excluded, allowed]
+
+    payload = json.loads(
+        PatientTimelineEffect(excluded_note_types=[excluded], allowed_new_note_types=[allowed])
+        .apply()
+        .payload
+    )
+
+    assert payload["data"]["excluded_note_types"] == [excluded]
+    assert payload["data"]["allowed_new_note_types"] == [allowed]
+
+
+@patch("canvas_sdk.effects.patient.timeline.NoteType.objects.filter")
+def test_unknown_note_type_in_the_allow_list_raises(mock_filter: MagicMock) -> None:
+    """Test that the allow-list is validated too, not just the exclusion list."""
+    nonexistent = str(uuid4())
+    mock_filter.return_value.values_list.return_value = []
+
+    with pytest.raises(PydanticValidationError) as exc_info:
+        PatientTimelineEffect(allowed_new_note_types=[nonexistent]).apply()
+
+    assert any(f"Note type '{nonexistent}' not found" in str(e) for e in exc_info.value.errors())
+
+
+@patch("canvas_sdk.effects.patient.timeline.NoteType.objects.filter")
+def test_both_lists_are_validated_in_a_single_query(mock_filter: MagicMock) -> None:
+    """Test that validating both fields costs one query over the union of the two."""
+    excluded = str(uuid4())
+    allowed = str(uuid4())
+    mock_filter.return_value.values_list.return_value = [excluded, allowed]
+
+    PatientTimelineEffect(excluded_note_types=[excluded], allowed_new_note_types=[allowed]).apply()
+
+    mock_filter.assert_called_once()
+    assert set(mock_filter.call_args.kwargs["unique_identifier__in"]) == {excluded, allowed}
