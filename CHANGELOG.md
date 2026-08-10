@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.195.0 (2026-08-10)
+
+### Features
+
+- **data**: Add patient administrative document data model
+  ([#1807](https://github.com/canvas-medical/canvas-plugins/pull/1807),
+  [`2b64baf`](https://github.com/canvas-medical/canvas-plugins/commit/2b64baf6253561e1c4358e2fad5e54f0e9eb538c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.194.0 (2026-08-10)
 
 ### Features
