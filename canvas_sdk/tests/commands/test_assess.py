@@ -173,3 +173,20 @@ def test_methods_that_do_not_send_values_skip_the_ownership_check(
     assess = AssessCommand(command_uuid=str(command.id), condition_id=str(foreign_condition.id))
 
     assert getattr(assess, method)() is not None
+
+
+# --- condition ownership with no note or command anchor -------------------
+
+
+def test_originate_without_an_anchor_skips_the_ownership_check(condition: Condition) -> None:
+    """Without a note or command to resolve the patient from, ownership can't be checked.
+
+    The command still fails on the required note_uuid, but the cross-patient condition
+    error is never raised.
+    """
+    assess = AssessCommand(condition_id=str(condition.id))
+
+    with pytest.raises(ValidationError, match="note_uuid") as exc_info:
+        assess.originate()
+
+    assert "does not belong to this command's patient" not in str(exc_info.value)
