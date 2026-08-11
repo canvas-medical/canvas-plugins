@@ -1,7 +1,7 @@
 from abc import ABC
 from http import HTTPStatus
 from json import JSONDecodeError, loads
-from typing import Any, ClassVar, TypeVar
+from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -71,21 +71,16 @@ def _error_detail(type: str, message: str, field: str, value: Any) -> InitErrorD
 
 
 class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
-    """Base for an HTTP endpoint that writes one command type.
+    """Base for an HTTP endpoint that writes one command type."""
 
-    Subclasses set :attr:`model` and :attr:`path`, then declare their own routes: route collection
-    scans each class's own ``__dict__``, so an inherited decorated method is never registered, and a
-    route handler may not reuse a name defined here.
-    """
-
-    model: ClassVar[type[_BaseCommand]]
-    path: ClassVar[str]
-
-    def originate(self) -> list[Response | Effect]:
+    def originate(self, model: type[_BaseCommand]) -> list[Response | Effect]:
         """Originate a new command from the request body.
 
         The body carries the command's fields under ``values``, the note as ``note_id``, and
         optionally ``command_id`` and ``commit``.
+
+        Args:
+            model: The command to write.
 
         Returns:
             The originate effect, one metadata effect per pair, and a ``201`` carrying
@@ -96,7 +91,9 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
                 return [self._bad_request("Request body must be a JSON object")]
 
             command_uuid = request.command_id or str(uuid4())
-            command = self._command(request.values, command_uuid, note_id=str(request.note_id))
+            command = self._command(
+                model, request.values, command_uuid, note_id=str(request.note_id)
+            )
             effects = [
                 command.originate(commit=request.commit),
                 *self._metadata_effects(command, request.metadata),
@@ -112,64 +109,66 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
             ),
         ]
 
-    def edit(self) -> list[Response | Effect]:
-        """Edit the staged command named by the ``command_uuid`` path parameter.
+    def edit(self, model: type[_BaseCommand], command_id: str) -> list[Response | Effect]:
+        """Edit a staged command.
 
         The body carries the command's field values as a whole, and is re-validated in full. A
         committed command cannot be edited: enter it in error and originate its replacement.
+
+        Args:
+            model: The command to write.
+            command_id: The command to edit.
 
         Returns:
             The edit effect, one metadata effect per pair, and a ``200``; or a lone ``400`` when the
             body or command is invalid, or ``404`` when no command of this type has that id.
         """
-        command_uuid = self._command_uuid()
-
         try:
             if (request := self._request(_CommandBody)) is None:
                 return [self._bad_request("Request body must be a JSON object")]
-            if not self._exists(command_uuid):
-                return [self._not_found()]
+            if not self._exists(model, command_id):
+                return [self._not_found(model)]
 
-            command = self._command(request.values, command_uuid)
+            command = self._command(model, request.values, command_id)
             effects = [command.edit(), *self._metadata_effects(command, request.metadata)]
         except ValidationError as error:
             return [self._bad_request(error)]
 
-        return [*effects, self._ok(command_uuid, "edit")]
+        return [*effects, self._ok(command_id, "edit")]
 
-    def action(self, action: str) -> list[Response | Effect]:
-        """Apply an id-only action to the command named by the ``command_uuid`` path parameter.
+    def action(
+        self, model: type[_BaseCommand], command_id: str, action: str
+    ) -> list[Response | Effect]:
+        """Apply an id-only action to a command.
 
         ``delete``, ``commit``, ``enter_in_error``, and ``review`` / ``send`` on the commands whose
         classes support them. Whether the command's state allows the action is its own rule, applied
         as it builds the effect.
 
         Args:
-            action: The effect-building method to call. Each route names its own, so this never
-                comes from the request.
+            model: The command to act on.
+            command_id: The command to apply it to.
+            action: The effect-building method to call.
 
         Returns:
             The action's effect and a ``200``; or a lone ``404`` when no command of this type has
             that id, or ``400`` when the action is unsupported or the command's rules refuse it.
         """
-        command_uuid = self._command_uuid()
-        if not self._exists(command_uuid):
-            return [self._not_found()]
+        if not self._exists(model, command_id):
+            return [self._not_found(model)]
 
         try:
-            command = self.model(command_uuid=command_uuid)
+            command = model(command_uuid=command_id)
             build_effect = getattr(command, action, None)
             if not callable(build_effect):
                 return [
-                    self._bad_request(
-                        f"{self.model.__name__} does not support the '{action}' action"
-                    )
+                    self._bad_request(f"{model.__name__} does not support the '{action}' action")
                 ]
             effect = build_effect()
         except ValidationError as error:
             return [self._bad_request(error)]
 
-        return [effect, self._ok(command_uuid, action)]
+        return [effect, self._ok(command_id, action)]
 
     def _request(self, body_model: type[_Body]) -> _Body | None:
         """Read the request body as the shape this route accepts.
@@ -193,13 +192,14 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
 
         return body_model.model_validate(body)
 
-    def _check_errors(self, values: dict[str, Any]) -> None:
+    def _check_errors(self, model: type[_BaseCommand], values: dict[str, Any]) -> None:
         """Check the command's field values, reporting anything wrong with them at once.
 
         A value must name a field the command has: silently dropping an unknown one would write a
         blank command over a typo.
 
         Args:
+            model: The command the values describe.
             values: The command's field values, as sent under ``values``.
 
         Raises:
@@ -208,12 +208,12 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         """
         details = [
             _error_detail("unexpected_field", "Unexpected field", field, values[field])
-            for field in sorted(set(values) - set(self.model.model_fields))
+            for field in sorted(set(values) - set(model.model_fields))
         ]
 
         if not details:
             try:
-                self.model.model_validate(values)
+                model.model_validate(values)
             except ValidationError as error:
                 details = [
                     _error_detail(
@@ -226,18 +226,19 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
                 ]
 
         if details:
-            raise ValidationError.from_exception_data(self.model.__name__, details)
-
-    def _command_uuid(self) -> str:
-        """Return the ``command_uuid`` path parameter, or an empty string when the route has none."""
-        return (self.request.path_params.get("command_uuid") or "").strip()
+            raise ValidationError.from_exception_data(model.__name__, details)
 
     def _command(
-        self, values: dict[str, Any], command_uuid: str, note_id: str | None = None
+        self,
+        model: type[_BaseCommand],
+        values: dict[str, Any],
+        command_uuid: str,
+        note_id: str | None = None,
     ) -> _BaseCommand:
         """Build a validated command from a parsed body's field values.
 
         Args:
+            model: The command to build.
             values: The command's field values.
             command_uuid: The id to assign to the command.
             note_id: The note to write into. Only origination needs it, since an edit addresses a
@@ -249,8 +250,8 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         Raises:
             ValidationError: If the values do not satisfy the command model.
         """
-        self._check_errors(values)
-        command = self.model.model_validate(
+        self._check_errors(model, values)
+        command = model.model_validate(
             {**values, "note_uuid": note_id, "command_uuid": command_uuid}
         )
 
@@ -272,30 +273,31 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         """
         return [command.upsert_metadata(key, value) for key, value in metadata.items()]
 
-    def _exists(self, command_uuid: str) -> bool:
+    def _exists(self, model: type[_BaseCommand], command_id: str) -> bool:
         """Report whether a command of this endpoint's type has this id.
 
         State is not read here — whether it allows an action is the command's own rule.
 
         Args:
-            command_uuid: The id to look up.
+            model: The command whose type the id must belong to.
+            command_id: The id to look up.
 
         Returns:
             True when such a command exists, otherwise False.
         """
         try:
-            return Command.objects.filter(id=command_uuid, schema_key=self.model.Meta.key).exists()
+            return Command.objects.filter(id=command_id, schema_key=model.Meta.key).exists()
         except DjangoValidationError:
             return False
 
-    def _ok(self, command_uuid: str, mode: str) -> Response:
+    def _ok(self, command_id: str, mode: str) -> Response:
         """Return a ``200`` naming the command that was acted on and the action taken."""
-        return JSONResponse({"command_uuid": command_uuid, "mode": mode})
+        return JSONResponse({"command_uuid": command_id, "mode": mode})
 
-    def _not_found(self) -> Response:
-        """Return a ``404`` for an id matching no command of this endpoint's type."""
+    def _not_found(self, model: type[_BaseCommand]) -> Response:
+        """Return a ``404`` for an id matching no command of ``model``'s type."""
         return JSONResponse(
-            {"error": f"No {self.model.Meta.key} command with that id"},
+            {"error": f"No {model.Meta.key} command with that id"},
             status_code=HTTPStatus.NOT_FOUND,
         )
 
