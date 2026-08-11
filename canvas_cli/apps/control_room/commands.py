@@ -77,6 +77,32 @@ def _error_detail(resp: requests.Response) -> str:
         return resp.text
 
 
+def _consent_url(host: str, request_id: int, action: str) -> str:
+    """Build a ``/plugin-io/consent/<id>/<action>/`` URL."""
+    return urljoin(host, f"plugin-io/consent/{request_id}/{action}/")
+
+
+def _post(host: str, token: str, url: str, body: dict[str, object] | None = None) -> dict:
+    """POST to a Control Room proxy endpoint and return the parsed JSON body.
+
+    Raises ``typer.BadParameter`` on transport failure or a non-200 (the proxy
+    surfaces CR *business* failures as HTTP 200 with ``ok: false``, which the
+    caller inspects).
+    """
+    try:
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            json=body,
+            timeout=_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        raise typer.BadParameter(f"Could not reach {host}: {exc}") from exc
+    if resp.status_code != requests.codes.ok:
+        raise typer.BadParameter(f"Control Room error ({resp.status_code}): {_error_detail(resp)}")
+    return resp.json()
+
+
 # -- git plumbing (all transparent to the author) ----------------------------
 
 
@@ -256,3 +282,93 @@ def pull(
         raise typer.Exit(1)
 
     print(merged.stdout.strip() or "Already up to date with Control Room.")
+
+
+def deploy(
+    plugin_name: Path = typer.Argument(..., help="Path to the plugin to deploy"),
+    ref: str = typer.Option("main", "--ref", help="Published git ref to deploy"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    assume_yes: bool = typer.Option(
+        False, "--yes", "-y", help="Approve all consent prompts non-interactively"
+    ),
+) -> None:
+    """Deploy an already-published plugin ref to this instance via Control Room.
+
+    Names a ref previously sent up with `canvas publish`; Control Room builds
+    the artifact and installs it. If the deploy is gated on operator consent
+    (e.g. cross-plugin custom-data access), the requests are shown and approved
+    or denied inline.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+    if not plugin_name.is_dir():
+        raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
+
+    name = _manifest_name(plugin_name)
+    token = get_or_request_api_token(host)
+    _, org_slug = _control_room_info(host, token)
+
+    print(f"Deploying {org_slug}/{name}@{ref}…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "deploy"),
+        {"plugins": [{"orgSlug": org_slug, "name": name, "gitRef": ref}]},
+    )
+
+    if not result.get("ok"):
+        print(f"Deploy failed: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    if result.get("status") == "pending_consent":
+        _handle_consent(host, token, result, assume_yes=assume_yes)
+        return
+
+    print(f"Deploy dispatched for {org_slug}/{name}@{ref}.")
+
+
+def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: bool) -> None:
+    """Walk the operator through the consent requests a gated deploy produced."""
+    requests_list = deploy_result.get("consent_requests") or []
+    count = deploy_result.get("consent_request_count", len(requests_list))
+    print(f"\nThis deploy needs operator consent ({count} request(s)):\n")
+
+    if not requests_list:
+        # The proxy inlines requests on the deploy response; if they're missing
+        # something is off — don't silently proceed.
+        print("Consent is required but no request details were returned; check Control Room.")
+        raise typer.Exit(1)
+
+    denied = False
+    dispatched = False
+    for req in requests_list:
+        request_id = req["id"]
+        heading = req.get("title") or req.get("subject") or f"Consent request {request_id}"
+        print(f"  • {heading}")
+        if implication := req.get("implication"):
+            print(f"    {implication}")
+
+        approve = assume_yes or typer.confirm(f"    Approve request {request_id}?", default=False)
+        if approve:
+            outcome = _post(host, token, _consent_url(host, request_id, "approve"))
+            if not outcome.get("ok"):
+                print(f"    Approval failed: {outcome.get('error') or 'unknown error'}")
+                raise typer.Exit(1)
+            dispatched = dispatched or bool(outcome.get("dispatched"))
+            print("    Approved.")
+        else:
+            reason = "" if assume_yes else typer.prompt("    Reason for denial", default="")
+            _post(host, token, _consent_url(host, request_id, "deny"), {"reason": reason})
+            denied = True
+            print("    Denied.")
+
+    print()
+    if denied:
+        print("Deploy was not dispatched — one or more consent requests were denied.")
+        raise typer.Exit(1)
+    if dispatched:
+        print("All consent granted — deploy dispatched.")
+    else:
+        print("Consent recorded; the deploy will dispatch once all approvals are in.")
