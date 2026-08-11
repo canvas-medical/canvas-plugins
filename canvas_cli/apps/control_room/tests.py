@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
 import requests
 import typer
 from typer.testing import CliRunner
@@ -38,7 +39,14 @@ def _plugin_dir(tmp_path: Path, name: str = "my_plugin") -> Path:
 
 
 def _git_side_effect(
-    *, push_rc: int = 0, push_stderr: str = "", remote_exists: bool = False
+    *,
+    push_rc: int = 0,
+    push_stderr: str = "",
+    remote_exists: bool = False,
+    fetch_rc: int = 0,
+    fetch_stderr: str = "",
+    merge_rc: int = 0,
+    merge_stderr: str = "",
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Fake `subprocess.run` for the git calls publish/pull make."""
 
@@ -51,9 +59,10 @@ def _git_side_effect(
         if sub[:2] == ["push", "cr"]:
             return subprocess.CompletedProcess(cmd, push_rc, "", push_stderr)
         if sub[0] == "fetch":
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+            return subprocess.CompletedProcess(cmd, fetch_rc, "", fetch_stderr)
         if sub[0] == "merge":
-            return subprocess.CompletedProcess(cmd, 0, "Already up to date.\n", "")
+            stdout = "" if merge_rc else "Already up to date.\n"
+            return subprocess.CompletedProcess(cmd, merge_rc, stdout, merge_stderr)
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
     return run
@@ -338,3 +347,300 @@ def test_deploy_failure_exits_nonzero(
 
     assert result.exit_code == 1
     assert "not found" in result.output.lower()
+
+
+# -- Control Room discovery / proxy transport errors -------------------------
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get", side_effect=requests.RequestException("network down"))
+@patch("subprocess.run")
+def test_publish_control_room_unreachable_exits(
+    mock_run: Mock, _get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """An unreachable instance during CR discovery fails with a clear message."""
+    mock_run.side_effect = _git_side_effect()
+
+    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "could not reach" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+def test_deploy_control_room_unconfigured_exits(
+    mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A non-200 from control-room/info surfaces the JSON error detail."""
+    mock_get.return_value = _resp({"error": "CR not enabled"}, code=503)
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "not available" in result.output.lower()
+    assert "CR not enabled" in result.output
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post", side_effect=requests.RequestException("boom"))
+def test_deploy_post_transport_error_exits(
+    _post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A transport error POSTing the deploy fails loudly rather than hanging."""
+    mock_get.return_value = _resp(INFO)
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "could not reach" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_post_non_200_exits(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A non-200 from the deploy proxy surfaces the raw body when it isn't JSON."""
+    mock_get.return_value = _resp(INFO)
+    bad = Mock(status_code=502, text="502 Bad Gateway")
+    bad.json.side_effect = ValueError("no json")
+    mock_post.return_value = bad
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "502" in result.output
+    assert "Bad Gateway" in result.output
+
+
+# -- _manifest_name edge cases -----------------------------------------------
+
+
+def test_manifest_name_missing_file(tmp_path: Path) -> None:
+    """A plugin dir without a manifest is rejected."""
+    (tmp_path / "plug").mkdir()
+    with pytest.raises(typer.BadParameter) as exc:
+        commands._manifest_name(tmp_path / "plug")
+    assert "CANVAS_MANIFEST.json" in str(exc.value)
+
+
+def test_manifest_name_invalid_json(tmp_path: Path) -> None:
+    """A manifest that isn't valid JSON is reported, not swallowed."""
+    directory = tmp_path / "plug"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text("{not json")
+    with pytest.raises(typer.BadParameter) as exc:
+        commands._manifest_name(directory)
+    assert "Could not read" in str(exc.value)
+
+
+def test_manifest_name_missing_name(tmp_path: Path) -> None:
+    """A manifest with no `name` key is rejected."""
+    directory = tmp_path / "plug"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text("{}")
+    with pytest.raises(typer.BadParameter) as exc:
+        commands._manifest_name(directory)
+    assert "name" in str(exc.value)
+
+
+# -- host / directory guards -------------------------------------------------
+
+
+def test_publish_requires_host(tmp_path: Path) -> None:
+    """Publish refuses to run without a resolved host."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.publish(tmp_path, host=None)
+    assert "specify a host" in str(exc.value)
+
+
+def test_publish_requires_directory(tmp_path: Path) -> None:
+    """Publish refuses a plugin path that isn't a directory."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.publish(tmp_path / "missing", host=HOST)
+    assert "valid directory" in str(exc.value)
+
+
+def test_pull_requires_host(tmp_path: Path) -> None:
+    """Pull refuses to run without a resolved host."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.pull(tmp_path, host=None)
+    assert "specify a host" in str(exc.value)
+
+
+def test_pull_requires_directory(tmp_path: Path) -> None:
+    """Pull refuses a plugin path that isn't a directory."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.pull(tmp_path / "missing", host=HOST)
+    assert "valid directory" in str(exc.value)
+
+
+def test_deploy_requires_host(tmp_path: Path) -> None:
+    """Deploy refuses to run without a resolved host."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.deploy(tmp_path, host=None)
+    assert "specify a host" in str(exc.value)
+
+
+def test_deploy_requires_directory(tmp_path: Path) -> None:
+    """Deploy refuses a plugin path that isn't a directory."""
+    with pytest.raises(typer.BadParameter) as exc:
+        commands.deploy(tmp_path / "missing", host=HOST)
+    assert "valid directory" in str(exc.value)
+
+
+# -- publish / pull git failures ---------------------------------------------
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_publish_push_failure_reports_stderr(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A push failure unrelated to fast-forward surfaces git's stderr."""
+    mock_get.return_value = _resp(INFO)
+    mock_run.side_effect = _git_side_effect(
+        push_rc=1, push_stderr="fatal: Authentication failed for 'cr'"
+    )
+
+    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 1
+    assert "Authentication failed" in result.output
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_pull_fetch_failure_exits(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A failed `git fetch` from Control Room exits non-zero with git's stderr."""
+    mock_get.return_value = _resp(INFO)
+    mock_run.side_effect = _git_side_effect(
+        remote_exists=True, fetch_rc=1, fetch_stderr="fatal: could not read from remote"
+    )
+
+    result = runner.invoke(_app(), ["pull", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 1
+    assert "could not read from remote" in result.output
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_pull_merge_conflict_asks_for_resolution(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A merge conflict tells the author to resolve, commit, and publish again."""
+    mock_get.return_value = _resp(INFO)
+    mock_run.side_effect = _git_side_effect(
+        remote_exists=True, merge_rc=1, merge_stderr="CONFLICT (content): Merge conflict in a.py"
+    )
+
+    result = runner.invoke(_app(), ["pull", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 1
+    assert "manual resolution" in result.output.lower()
+
+
+# -- _handle_consent edge cases ----------------------------------------------
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_pending_consent_without_details_exits(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A pending_consent status with no inlined requests is an error, not a silent pass."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "pending_consent", "consent_request_count": 2}
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 1
+    assert "no request details" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_consent_approval_failure_exits(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A failed approval POST aborts the deploy non-zero."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "pending_consent",
+            "consent_request_count": 1,
+            "consent_requests": [{"id": 7, "title": "hello-reader wants read"}],
+        },
+        approve={"ok": False, "error": "operator lacks permission"},
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+
+    assert result.exit_code == 1
+    assert "approval failed" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_consent_recorded_pending_other_approvals(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """An approval that doesn't itself dispatch reports consent recorded, exit 0."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "pending_consent",
+            "consent_request_count": 1,
+            "consent_requests": [{"id": 7, "title": "hello-reader wants read"}],
+        },
+        approve={"ok": True, "dispatched": False},
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "consent recorded" in result.output.lower()
+
+
+# -- CONTROL_ROOM_BETA registration gate -------------------------------------
+
+
+def test_main_registers_control_room_commands_with_beta_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """publish/pull/deploy/git-credential are registered when CONTROL_ROOM_BETA=true."""
+    import importlib
+
+    import canvas_cli.main
+
+    monkeypatch.setenv("CONTROL_ROOM_BETA", "true")
+    try:
+        importlib.reload(canvas_cli.main)
+        names = [
+            (c.callback.__name__ if c.callback else None)
+            for c in canvas_cli.main.app.registered_commands
+        ]
+        assert "publish" in names
+        assert "pull" in names
+        assert "deploy" in names
+        assert "git_credential" in names
+    finally:
+        # Restore the module without the beta flag so other tests aren't polluted.
+        monkeypatch.delenv("CONTROL_ROOM_BETA", raising=False)
+        importlib.reload(canvas_cli.main)
