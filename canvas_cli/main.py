@@ -7,7 +7,7 @@ import typer
 
 from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.auth import login, logout
-from canvas_cli.apps.control_room import git_credential, publish, pull
+from canvas_cli.apps.control_room import deploy, git_credential, publish, pull
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -49,6 +49,7 @@ if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
     )(git_credential)
     app.command(short_help="Publish a plugin to Control Room.")(publish)
     app.command(short_help="Pull Control Room changes into a plugin.")(pull)
+    app.command(short_help="Deploy a published plugin to this instance via Control Room.")(deploy)
 
 # Config app
 config_app = typer.Typer(

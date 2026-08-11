@@ -25,6 +25,7 @@ def _app() -> typer.Typer:
     app.command(name="git-credential")(commands.git_credential)
     app.command()(commands.publish)
     app.command()(commands.pull)
+    app.command()(commands.deploy)
     return app
 
 
@@ -183,3 +184,125 @@ def test_pull_fetches_and_merges(
     calls = [c.args[0] for c in mock_run.call_args_list]
     assert any(c[3:5] == ["fetch", "cr"] for c in calls)
     assert any(c[3:5] == ["merge", "--no-edit"] and c[5] == "cr/main" for c in calls)
+
+
+# -- deploy + consent --------------------------------------------------------
+
+
+def _resp(body: dict, code: int = 200) -> Mock:
+    """A fake requests.Response with a JSON body."""
+    resp = Mock(status_code=code)
+    resp.json.return_value = body
+    return resp
+
+
+def _post_router(
+    *, deploy: dict, approve: dict | None = None, deny: dict | None = None
+) -> Callable[..., Mock]:
+    """Route requests.post by URL to the deploy / approve / deny fakes."""
+
+    def post(url: str, **kwargs: object) -> Mock:
+        if url.endswith("/control-room/deploy/"):
+            return _resp(deploy)
+        if url.endswith("/approve/"):
+            return _resp(approve or {"ok": True, "dispatched": True})
+        if url.endswith("/deny/"):
+            return _resp(deny or {"ok": True, "cancelled_record_count": 1})
+        return _resp({"error": "unexpected"}, 404)
+
+    return post
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path) -> None:
+    """A deploy with no consent gate reports dispatched and carries org/name/ref."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "dispatched",
+            "matrix": {"id": "m1"},
+            "consent_request_count": 0,
+        }
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 0, result.output
+    assert "dispatched" in result.output.lower()
+    body = next(
+        c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
+    )
+    assert body == {"plugins": [{"orgSlug": "acme", "name": "my_plugin", "gitRef": "main"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_pending_consent_auto_approves(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """--yes approves each inlined consent request; the last approval dispatches."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "pending_consent",
+            "consent_request_count": 1,
+            "consent_requests": [{"id": 7, "title": "hello-reader wants read", "implication": "x"}],
+        },
+        approve={"ok": True, "dispatched": True},
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "dispatched" in result.output.lower()
+    approve_urls = [c.args[0] for c in mock_post.call_args_list if c.args[0].endswith("/approve/")]
+    assert approve_urls and approve_urls[0].endswith("/plugin-io/consent/7/approve/")
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_consent_denied_interactively(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """Declining a consent prompt denies the request and fails the deploy."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "pending_consent",
+            "consent_request_count": 1,
+            "consent_requests": [{"id": 7, "title": "hello-reader wants read"}],
+        },
+    )
+
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST], input="n\nnot this fork\n"
+    )
+
+    assert result.exit_code == 1
+    deny_urls = [c.args[0] for c in mock_post.call_args_list if c.args[0].endswith("/deny/")]
+    assert deny_urls and deny_urls[0].endswith("/plugin-io/consent/7/deny/")
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_failure_exits_nonzero(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A business failure (ok=false) exits non-zero with the CR error surfaced."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={"ok": False, "error": "Plugins not found: ['acme/my_plugin']"}
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code == 1
+    assert "not found" in result.output.lower()
