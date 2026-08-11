@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.195.2 (2026-08-11)
+
+### Bug Fixes
+
+- Enforce max length for today_assessment field in the diagnose command
+  ([#1815](https://github.com/canvas-medical/canvas-plugins/pull/1815),
+  [`c949668`](https://github.com/canvas-medical/canvas-plugins/commit/c949668a28704fb0e44d4503401eed31ba8e94f1))
+
+
 ## v0.195.1 (2026-08-11)
 
 ### Bug Fixes
