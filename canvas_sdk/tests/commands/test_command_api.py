@@ -42,28 +42,28 @@ class _HistoryOfPresentIllnessAPI(CommandAPI):
 
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
-        return self.originate()
+        return self.originate(self.model)
 
     @api.patch(f"{path}/<command_uuid>")
     def update(self) -> list[Response | Effect]:
-        return self.edit()
+        return self.edit(self.model, self.request.path_params["command_uuid"])
 
     @api.delete(f"{path}/<command_uuid>")
     def delete(self) -> list[Response | Effect]:
-        return self.action("delete")
+        return self.action(self.model, self.request.path_params["command_uuid"], "delete")
 
     @api.post(f"{path}/<command_uuid>/commit")
     def commit(self) -> list[Response | Effect]:
-        return self.action("commit")
+        return self.action(self.model, self.request.path_params["command_uuid"], "commit")
 
     @api.post(f"{path}/<command_uuid>/enter-in-error")
     def enter_in_error(self) -> list[Response | Effect]:
-        return self.action("enter_in_error")
+        return self.action(self.model, self.request.path_params["command_uuid"], "enter_in_error")
 
     @api.post(f"{path}/<command_uuid>/review")
     def review(self) -> list[Response | Effect]:
         # This command is not reviewable, so the base reports that rather than raising.
-        return self.action("review")
+        return self.action(self.model, self.request.path_params["command_uuid"], "review")
 
 
 class _NarrativeRequiredCommand(HistoryOfPresentIllnessCommand):
@@ -83,7 +83,7 @@ class _NarrativeRequiredAPI(CommandAPI):
 
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
-        return self.originate()
+        return self.originate(self.model)
 
 
 class _AssessRelaxedForJSON(AssessCommand):
@@ -101,7 +101,7 @@ class _AssessAPI(CommandAPI):
 
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
-        return self.originate()
+        return self.originate(self.model)
 
 
 def _event(
@@ -266,7 +266,7 @@ def test_insert_names_the_note_only_as_note_id() -> None:
         "POST", "/v1/hpi", {"note_uuid": NOTE_UUID, "values": {"narrative": "wrong key"}}
     )
 
-    effects, responses = _split(handler.originate())
+    effects, responses = _split(handler.insert())
 
     assert effects == []
     assert responses[0].status_code == HTTPStatus.BAD_REQUEST
@@ -283,7 +283,7 @@ def test_insert_ignores_a_caller_supplied_command_id_field() -> None:
         {"note_id": NOTE_UUID, "command_id": COMMAND_UUID, "command_uuid": "ignored"},
     )
 
-    effects, responses = _split(handler.originate())
+    effects, responses = _split(handler.insert())
 
     assert _payload(effects[0])["command"] == COMMAND_UUID
     assert _content(responses[0])["command_uuid"] == COMMAND_UUID
@@ -708,7 +708,7 @@ def test_a_reviewable_command_supports_review() -> None:
 
         @api.post(f"{path}/<command_uuid>/review")
         def review(self) -> list[Response | Effect]:
-            return self.action("review")
+            return self.action(self.model, self.request.path_params["command_uuid"], "review")
 
     handler = _PrescribeAPI(  # type: ignore[abstract]
         _event("POST", f"/v1/prescribe/{COMMAND_UUID}/review")
