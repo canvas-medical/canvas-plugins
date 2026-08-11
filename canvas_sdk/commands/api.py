@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from pydantic import BaseModel, Field, ValidationError
+from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects import Effect
@@ -48,6 +49,27 @@ def _field_errors(error: ValidationError) -> list[dict[str, str]]:
     ]
 
 
+def _error_detail(type: str, message: str, field: str, value: Any) -> InitErrorDetails:
+    """Describe one thing wrong with a value the caller sent under ``values``.
+
+    Args:
+        type: The error's machine-readable kind.
+        message: The error, in words.
+        field: The field it concerns.
+        value: What the caller sent for it.
+
+    Returns:
+        The error, reported against ``values.<field>``.
+    """
+    return InitErrorDetails(
+        # The message is passed as context, not as the template, so one containing braces is not
+        # read as a placeholder.
+        type=PydanticCustomError(type, "{message}", {"message": message}),
+        loc=("values", field),
+        input=value,
+    )
+
+
 class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
     """Base for an HTTP endpoint that writes one command type.
 
@@ -62,8 +84,8 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
     def originate(self) -> list[Response | Effect]:
         """Originate a new command from the request body.
 
-        The body carries the command's fields, ``note_id``, and optionally ``command_id`` and
-        ``commit``. Keys that are not fields of :attr:`model` are ignored.
+        The body carries the command's fields under ``values``, the note as ``note_id``, and
+        optionally ``command_id`` and ``commit``.
 
         Returns:
             The originate effect, one metadata effect per pair, and a ``201`` carrying
@@ -150,11 +172,7 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         return [effect, self._ok(command_uuid, action)]
 
     def _request(self, body_model: type[_Body]) -> _Body | None:
-        """Split the request body into the envelope ``body_model`` declares and the command's values.
-
-        What remains once the envelope keys are removed is filtered to :attr:`model`'s fields, so a
-        display-only key, or one the route does not honor, is ignored rather than reaching the
-        command.
+        """Read the request body as the shape this route accepts.
 
         Args:
             body_model: The body shape this route accepts.
@@ -173,20 +191,42 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         if not isinstance(body, dict):
             return None
 
-        remaining: dict[str, Any] = dict(body)
-        envelope = {
-            key: remaining.pop(key)
-            for key in body_model.model_fields
-            if key != "values" and key in remaining
-        }
-        fields = set(self.model.model_fields)
+        return body_model.model_validate(body)
 
-        return body_model.model_validate(
-            {
-                **envelope,
-                "values": {key: value for key, value in remaining.items() if key in fields},
-            }
-        )
+    def _check_errors(self, values: dict[str, Any]) -> None:
+        """Check the command's field values, reporting anything wrong with them at once.
+
+        A value must name a field the command has: silently dropping an unknown one would write a
+        blank command over a typo.
+
+        Args:
+            values: The command's field values, as sent under ``values``.
+
+        Raises:
+            ValidationError: If a value names a field the command does not have, or holds the wrong
+                kind of value for one. Each is reported against ``values.<field>``.
+        """
+        details = [
+            _error_detail("unexpected_field", "Unexpected field", field, values[field])
+            for field in sorted(set(values) - set(self.model.model_fields))
+        ]
+
+        if not details:
+            try:
+                self.model.model_validate(values)
+            except ValidationError as error:
+                details = [
+                    _error_detail(
+                        item["type"],
+                        item["msg"],
+                        ".".join(map(str, item["loc"])),
+                        item.get("input"),
+                    )
+                    for item in error.errors()
+                ]
+
+        if details:
+            raise ValidationError.from_exception_data(self.model.__name__, details)
 
     def _command_uuid(self) -> str:
         """Return the ``command_uuid`` path parameter, or an empty string when the route has none."""
@@ -209,9 +249,11 @@ class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
         Raises:
             ValidationError: If the values do not satisfy the command model.
         """
+        self._check_errors(values)
         command = self.model.model_validate(
             {**values, "note_uuid": note_id, "command_uuid": command_uuid}
         )
+
         for field in ("note_uuid", "command_uuid"):
             command._dirty_keys.discard(field)
 
