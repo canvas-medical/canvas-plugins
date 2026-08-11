@@ -138,6 +138,38 @@ def test_publish_configures_remote_and_pushes(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
+def test_publish_hardens_git_auth_config(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """Publish resets inherited credential.helper + http.extraHeader for the CR
+    host (so osxkeychain or a stale cr-login token can't shadow the helper) and
+    registers our helper by absolute path (git invokes it via a bare shell).
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_run.side_effect = _git_side_effect(push_rc=0)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
+    assert result.exit_code == 0, result.output
+
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    prefix = ["git", "-C", str(plugin_dir), "config"]
+    # credential helper list reset, then our helper added by absolute path
+    assert prefix + ["credential.https://cr.example.helper", ""] in calls
+    add = next(
+        c for c in calls if c[3:6] == ["config", "--add", "credential.https://cr.example.helper"]
+    )
+    assert (
+        add[6].startswith("!") and "git-credential" in add[6] and add[6].endswith(f"--host {HOST}")
+    )
+    # a stale cr-login Authorization extraHeader for the host is reset
+    assert prefix + ["http.https://cr.example.extraHeader", ""] in calls
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
 def test_publish_non_fast_forward_suggests_pull(
     mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
