@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.195.1 (2026-08-11)
+
+### Bug Fixes
+
+- Assess command validations ([#1817](https://github.com/canvas-medical/canvas-plugins/pull/1817),
+  [`2a641c2`](https://github.com/canvas-medical/canvas-plugins/commit/2a641c26a40668860041c4c8d901851f2471be99))
+
+
 ## v0.195.0 (2026-08-10)
 
 ### Features
