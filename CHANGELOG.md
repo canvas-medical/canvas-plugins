@@ -1,6 +1,57 @@
 # CHANGELOG
 
 
+## v0.196.0 (2026-08-11)
+
+### Features
+
+- **data**: Expose DocumentReference related_object
+  ([#1812](https://github.com/canvas-medical/canvas-plugins/pull/1812),
+  [`0ee6004`](https://github.com/canvas-medical/canvas-plugins/commit/0ee600449b0781c3b84d024461fc4de473c16358))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.195.2 (2026-08-11)
+
+### Bug Fixes
+
+- Enforce max length for today_assessment field in the diagnose command
+  ([#1815](https://github.com/canvas-medical/canvas-plugins/pull/1815),
+  [`c949668`](https://github.com/canvas-medical/canvas-plugins/commit/c949668a28704fb0e44d4503401eed31ba8e94f1))
+
+
+## v0.195.1 (2026-08-11)
+
+### Bug Fixes
+
+- Assess command validations ([#1817](https://github.com/canvas-medical/canvas-plugins/pull/1817),
+  [`2a641c2`](https://github.com/canvas-medical/canvas-plugins/commit/2a641c26a40668860041c4c8d901851f2471be99))
+
+
+## v0.195.0 (2026-08-10)
+
+### Features
+
+- **data**: Add patient administrative document data model
+  ([#1807](https://github.com/canvas-medical/canvas-plugins/pull/1807),
+  [`2b64baf`](https://github.com/canvas-medical/canvas-plugins/commit/2b64baf6253561e1c4358e2fad5e54f0e9eb538c))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.194.0 (2026-08-10)
 
 ### Features

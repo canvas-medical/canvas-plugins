@@ -1,9 +1,14 @@
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import Field
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.v1.data import Command, Condition, Note
+
+CONDITION_VALIDATED_METHODS = frozenset({"originate", "edit"})
 
 
 class AssessCommand(_BaseCommand):
@@ -22,23 +27,40 @@ class AssessCommand(_BaseCommand):
     )
     background: str | None = None
     status: Status | None = None
-    narrative: str | None = None
+    narrative: str | None = Field(default=None, max_length=2048)
 
+    def _is_target_patient(self, patient_id: str) -> bool:
+        """Return whether the given patient is the one whose chart this command writes to."""
+        if self.note_uuid:
+            return Note.objects.filter(id=self.note_uuid, patient__id=patient_id).exists()
 
-# how do we make sure that condition_id is a valid condition for the patient?
+        if self.command_uuid:
+            return Command.objects.filter(id=self.command_uuid, patient__id=patient_id).exists()
 
-# idea1:
-# create a class attribute 'pre_validate_condition': bool
-#      True: before doing any actions against the home-app instance, will first check
-#            if its an active condition for that patient, and it not then logs a message
-#            and doesn't do the action. can even create a cache so that we dont always
-#            have to keep asking home-app for every patient
-#      False: still tries to do it but will run up against whatever home-app barriers
-#             we have against actions like that (if those dont already exist, then
-#             definitely create them!)
+        return True
 
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
 
-# idea2:
-# validator that checks that condition.patient is the same as note.patient
+        if not self.condition_id or method not in CONDITION_VALIDATED_METHODS:
+            return errors
+
+        condition_patient_id = (
+            Condition.objects.filter(id=self.condition_id)
+            .values_list("patient__id", flat=True)
+            .first()
+        )
+
+        if condition_patient_id is None or not self._is_target_patient(condition_patient_id):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Condition {self.condition_id} does not belong to this command's patient",
+                    self.condition_id,
+                )
+            )
+
+        return errors
+
 
 __exports__ = ("AssessCommand",)

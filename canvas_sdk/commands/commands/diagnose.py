@@ -16,7 +16,7 @@ class DiagnoseCommand(_BaseCommand):
     )
     background: str | None = None
     approximate_date_of_onset: date | None = None
-    today_assessment: str | None = None
+    today_assessment: str | None = Field(default=None, max_length=2048)
 
 
 __exports__ = ("DiagnoseCommand",)
