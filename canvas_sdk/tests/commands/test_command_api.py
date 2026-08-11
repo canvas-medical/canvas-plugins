@@ -11,8 +11,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.exceptions import ValidationError as DjangoValidationError
+from pydantic import ConfigDict, ValidationError
 
-from canvas_sdk.commands import HistoryOfPresentIllnessCommand, PrescribeCommand
+from canvas_sdk.commands import AssessCommand, HistoryOfPresentIllnessCommand, PrescribeCommand
 from canvas_sdk.commands.api import CommandAPI
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -79,6 +80,24 @@ class _NarrativeRequiredAPI(CommandAPI):
     PREFIX = "/v1"
     model = _NarrativeRequiredCommand
     path = "/narrative-required"
+
+    @api.post(path)
+    def insert(self) -> list[Response | Effect]:
+        return self.originate()
+
+
+class _AssessRelaxedForJSON(AssessCommand):
+    """A command relaxed for JSON, the way an endpoint declares its model."""
+
+    model_config = ConfigDict(strict=False)
+
+
+class _AssessAPI(CommandAPI):
+    """An endpoint over a command with a date and an enum, which JSON carries as strings."""
+
+    PREFIX = "/v1"
+    model = _AssessRelaxedForJSON
+    path = "/assess"
 
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
@@ -174,7 +193,9 @@ def _stored(state: str | None) -> Iterator[MagicMock]:
 
 def test_insert_originates_the_command_and_reports_it_created() -> None:
     """A valid body yields an originate effect plus a 201 naming the new command."""
-    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "narrative": "cough x3 days"})
+    handler = _handler(
+        "POST", "/v1/hpi", {"note_id": NOTE_UUID, "values": {"narrative": "cough x3 days"}}
+    )
 
     effects, responses = _split(handler.insert())
 
@@ -202,7 +223,9 @@ def test_insert_commits_when_the_body_asks_for_it() -> None:
 
 def test_insert_keeps_the_envelope_out_of_the_command_data() -> None:
     """``note_uuid`` / ``command_uuid`` address the command; they are not part of its data."""
-    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "narrative": "sore throat"})
+    handler = _handler(
+        "POST", "/v1/hpi", {"note_id": NOTE_UUID, "values": {"narrative": "sore throat"}}
+    )
 
     effects, _ = _split(handler.insert())
 
@@ -216,7 +239,7 @@ def test_insert_emits_metadata_as_separate_effects() -> None:
         "/v1/hpi",
         {
             "note_id": NOTE_UUID,
-            "narrative": "headache",
+            "values": {"narrative": "headache"},
             "metadata": {"source": "test", "channel": "api"},
         },
     )
@@ -239,7 +262,9 @@ def test_insert_emits_metadata_as_separate_effects() -> None:
 
 def test_insert_names_the_note_only_as_note_id() -> None:
     """``note_id`` is the endpoint's contract, and the error names it — not the SDK's spelling."""
-    handler = _handler("POST", "/v1/hpi", {"note_uuid": NOTE_UUID, "narrative": "wrong key"})
+    handler = _handler(
+        "POST", "/v1/hpi", {"note_uuid": NOTE_UUID, "values": {"narrative": "wrong key"}}
+    )
 
     effects, responses = _split(handler.originate())
 
@@ -265,17 +290,50 @@ def test_insert_ignores_a_caller_supplied_command_id_field() -> None:
 
 
 def test_insert_ignores_keys_that_are_not_command_fields() -> None:
-    """Callers may send display-only keys; they never reach the command."""
+    """A key outside the body model is ignored, so a caller can keep display-only data there."""
     handler = _handler(
         "POST",
         "/v1/hpi",
-        {"note_id": NOTE_UUID, "narrative": "rash", "narrative_label": "Rash (display only)"},
+        {
+            "note_id": NOTE_UUID,
+            "values": {"narrative": "rash"},
+            "narrative_label": "Rash (display only)",
+        },
     )
 
     effects, responses = _split(handler.insert())
 
     assert _payload(effects[0])["data"] == {"narrative": "rash"}
     assert responses[0].status_code == HTTPStatus.CREATED
+
+
+def test_insert_rejects_a_value_the_command_has_no_field_for() -> None:
+    """A misspelled or unknown field is a 400, not a blank command reported as created."""
+    handler = _handler(
+        "POST", "/v1/hpi", {"note_id": NOTE_UUID, "values": {"narrativ": "typo", "nope": 1}}
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "values.narrativ", "message": "Unexpected field"},
+        {"field": "values.nope", "message": "Unexpected field"},
+    ]
+
+
+def test_insert_reports_a_bad_value_against_the_key_the_caller_sent() -> None:
+    """A field error names the path the caller used, so it points back into ``values``."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "values": {"narrative": 123}})
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert _content(responses[0])["validation_errors"] == [
+        {"field": "values.narrative", "message": "Input should be a valid string"}
+    ]
 
 
 @pytest.mark.parametrize(
@@ -331,7 +389,9 @@ def test_insert_reports_errors_raised_when_the_effect_is_built() -> None:
 def test_update_edits_the_command() -> None:
     """A valid body yields an edit effect for the addressed command plus a 200."""
     handler = _handler(
-        "PATCH", f"/v1/hpi/{COMMAND_UUID}", {"note_id": NOTE_UUID, "narrative": "revised"}
+        "PATCH",
+        f"/v1/hpi/{COMMAND_UUID}",
+        {"note_id": NOTE_UUID, "values": {"narrative": "revised"}},
     )
 
     with _stored("staged"):
@@ -346,7 +406,7 @@ def test_update_edits_the_command() -> None:
 
 def test_update_needs_no_note_because_it_addresses_an_existing_command() -> None:
     """Only origination takes ``note_id``; an edit is addressed by its path and omits it."""
-    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"values": {"narrative": "revised"}})
 
     with _stored("staged"):
         effects, responses = _split(handler.update())
@@ -358,7 +418,9 @@ def test_update_needs_no_note_because_it_addresses_an_existing_command() -> None
 
 def test_update_does_not_honor_a_commit_flag() -> None:
     """``commit`` is not part of the edit body, so it is ignored rather than acted on."""
-    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised", "commit": True})
+    handler = _handler(
+        "PATCH", f"/v1/hpi/{COMMAND_UUID}", {"values": {"narrative": "revised"}, "commit": True}
+    )
 
     with _stored("staged"):
         effects, responses = _split(handler.update())
@@ -371,7 +433,7 @@ def test_update_does_not_honor_a_commit_flag() -> None:
 
 def test_update_is_not_found_when_no_such_command_exists() -> None:
     """An unknown id is a 404 and emits nothing."""
-    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"values": {"narrative": "revised"}})
 
     with _stored(None):
         effects, responses = _split(handler.update())
@@ -507,7 +569,7 @@ def test_entering_a_staged_command_in_error_is_rejected() -> None:
 
 def test_editing_a_committed_command_is_rejected() -> None:
     """Only a staged command can be edited."""
-    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"narrative": "revised"})
+    handler = _handler("PATCH", f"/v1/hpi/{COMMAND_UUID}", {"values": {"narrative": "revised"}})
 
     with _stored("committed"):
         effects, responses = _split(handler.update())
@@ -562,7 +624,7 @@ def test_a_malformed_id_is_not_found_rather_than_a_query_error() -> None:
     for result in (
         _handler("DELETE", "/v1/hpi/not-a-uuid").delete(),
         _handler("POST", "/v1/hpi/not-a-uuid/commit").commit(),
-        _handler("PATCH", "/v1/hpi/not-a-uuid", {"narrative": "x"}).update(),
+        _handler("PATCH", "/v1/hpi/not-a-uuid", {"values": {"narrative": "x"}}).update(),
     ):
         effects, responses = _split(result)
 
@@ -657,3 +719,27 @@ def test_a_reviewable_command_supports_review() -> None:
 
     assert EffectType.Name(effects[0].type) == "REVIEW_PRESCRIBE_COMMAND"
     assert isinstance(responses[0], JSONResponse)
+
+
+def test_a_model_relaxed_for_json_coerces_the_strings_a_body_carries() -> None:
+    """The SDK's commands are strict, so an endpoint declares a lax model to accept JSON."""
+    handler = _AssessAPI(  # type: ignore[abstract]
+        _event(
+            "POST",
+            "/v1/assess",
+            {"note_id": NOTE_UUID, "values": {"status": "improved", "narrative": "better"}},
+        )
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert _payload(effects[0])["data"] == {"status": "improved", "narrative": "better"}
+    assert responses[0].status_code == HTTPStatus.CREATED
+
+
+def test_a_strict_model_cannot_take_those_strings() -> None:
+    """Why the lax model is needed: the command as the SDK declares it rejects the same body."""
+    assert AssessCommand.model_config.get("strict") is not False
+
+    with pytest.raises(ValidationError):
+        AssessCommand.model_validate({"status": "improved"})
