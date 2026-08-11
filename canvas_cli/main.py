@@ -7,6 +7,7 @@ import typer
 
 from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.auth import login, logout
+from canvas_cli.apps.control_room import git_credential, publish, pull
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -41,6 +42,13 @@ app.command(short_help="Run the specified plugin for local development.")(run_pl
 if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
     app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
     app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
+    app.command(
+        name="git-credential",
+        hidden=True,
+        short_help="Git credential helper for Control Room pushes (invoked by git).",
+    )(git_credential)
+    app.command(short_help="Publish a plugin to Control Room.")(publish)
+    app.command(short_help="Pull Control Room changes into a plugin.")(pull)
 
 # Config app
 config_app = typer.Typer(
