@@ -16,6 +16,7 @@ from canvas_sdk.commands import (
     AssessCommand,
     ChartSectionReviewCommand,
     CustomCommand,
+    DiagnoseCommand,
     FamilyHistoryCommand,
     GoalCommand,
     InstructCommand,
@@ -914,3 +915,42 @@ def test_vitals_supplemental_oxygen_in_originate_payload() -> None:
     effect = command.originate()
     payload = json.loads(effect.payload)
     assert payload["data"]["supplemental_oxygen"] == "LA28686-6"
+
+
+def test_diagnose_today_assessment_accepts_max_length() -> None:
+    """Test that today_assessment accepts a value at the 2048 character limit."""
+    command = DiagnoseCommand(note_uuid="test_uuid", today_assessment="a" * 2048)
+    assert command.today_assessment == "a" * 2048
+
+
+def test_diagnose_today_assessment_rejects_above_max_length() -> None:
+    """Test that today_assessment rejects a value over the 2048 character limit."""
+    with pytest.raises(ValidationError):
+        DiagnoseCommand(note_uuid="test_uuid", today_assessment="a" * 2049)
+
+
+def test_diagnose_today_assessment_rejects_above_max_length_on_assignment() -> None:
+    """Test that today_assessment is validated when assigned after construction."""
+    command = DiagnoseCommand(note_uuid="test_uuid")
+    with pytest.raises(ValidationError):
+        command.today_assessment = "a" * 2049
+
+
+def test_diagnose_today_assessment_allows_none() -> None:
+    """Test that today_assessment can be None."""
+    command = DiagnoseCommand(note_uuid="test_uuid", today_assessment=None)
+    assert command.today_assessment is None
+
+
+def test_diagnose_today_assessment_defaults_to_none() -> None:
+    """Test that today_assessment defaults to None."""
+    command = DiagnoseCommand(note_uuid="test_uuid")
+    assert command.today_assessment is None
+
+
+def test_diagnose_today_assessment_at_max_length_in_originate_payload() -> None:
+    """Test that a today_assessment at the limit survives into the originate payload."""
+    command = DiagnoseCommand(note_uuid="test_uuid", today_assessment="a" * 2048)
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+    assert payload["data"]["today_assessment"] == "a" * 2048
