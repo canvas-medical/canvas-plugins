@@ -7,7 +7,29 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.educational_material import EducationalMaterial
+from canvas_sdk.v1.data.imaging import ImagingReport
+from canvas_sdk.v1.data.invoice import Invoice
+from canvas_sdk.v1.data.lab import LabReport
+from canvas_sdk.v1.data.letter import Letter
+from canvas_sdk.v1.data.note import NoteStateChangeEvent
+from canvas_sdk.v1.data.patient_administrative_document import PatientAdministrativeDocument
+from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.v1.data.uncategorized_clinical_document import UncategorizedClinicalDocument
 from canvas_sdk.v1.data.utils import presigned_url
+
+# related-object content type (app_label, model) -> SDK data model
+_RELATED_OBJECT_MODELS: dict[tuple[str, str], type[models.Model]] = {
+    ("api", "labreport"): LabReport,
+    ("api", "imagingreport"): ImagingReport,
+    ("api", "letter"): Letter,
+    ("api", "notestatechangeevent"): NoteStateChangeEvent,
+    ("api", "uncategorizedclinicaldocument"): UncategorizedClinicalDocument,
+    ("api", "referralreport"): ReferralReport,
+    ("api", "educationalmaterial"): EducationalMaterial,
+    ("api", "patientadministrativedocument"): PatientAdministrativeDocument,
+    ("quality_and_revenue", "invoicefull"): Invoice,
+}
 
 
 class DocumentReferenceStatus(models.TextChoices):
@@ -90,6 +112,11 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         on_delete=models.DO_NOTHING,
     )
 
+    content_type = models.ForeignKey(
+        "v1.ContentType", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    object_id = models.IntegerField(null=True)
+
     related_object_document_title = models.CharField(max_length=255, null=True, blank=True)
     related_object_document_comment = models.CharField(max_length=255, null=True, blank=True)
 
@@ -107,6 +134,22 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         if self.document:
             return presigned_url(self.document)
         return self.document_absolute_url
+
+    @property
+    def related_object(self) -> "models.Model | None":
+        """Resolve content_type + object_id to the SDK data model instance it points at.
+
+        Returns None when the document has no related object or the content type has no
+        SDK data model equivalent.
+        """
+        content_type = self.content_type
+        if content_type is None or self.object_id is None:
+            return None
+
+        model = _RELATED_OBJECT_MODELS.get((content_type.app_label, content_type.model))
+        if model is None:
+            return None
+        return model._default_manager.filter(dbid=self.object_id).first()
 
 
 __exports__ = (
