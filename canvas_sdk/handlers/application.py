@@ -80,6 +80,7 @@ class ApplicationScope(StrEnum):
 
     NOTE = "note"
     SCHEDULING = "scheduling"
+    DOCKED = "docked"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -89,6 +90,8 @@ class EmbeddedApplication(Application, ABC):
     SCOPE: ApplicationScope
     IDENTIFIER: str | None = None
     PRIORITY: int = 0
+    DOCK_EDGE: str | None = None
+    DOCK_SIZE: str | None = None
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
@@ -101,6 +104,8 @@ class EmbeddedApplication(Application, ABC):
                             identifier=self.identifier,
                             open_by_default=self.open_by_default(),
                             priority=self.PRIORITY,
+                            dock_edge=self.DOCK_EDGE,
+                            dock_size=self.DOCK_SIZE,
                         ).apply()
                     ]
                 return []
