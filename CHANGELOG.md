@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.196.0 (2026-08-11)
+
+### Features
+
+- **data**: Expose DocumentReference related_object
+  ([#1812](https://github.com/canvas-medical/canvas-plugins/pull/1812),
+  [`0ee6004`](https://github.com/canvas-medical/canvas-plugins/commit/0ee600449b0781c3b84d024461fc4de473c16358))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.195.2 (2026-08-11)
 
 ### Bug Fixes
