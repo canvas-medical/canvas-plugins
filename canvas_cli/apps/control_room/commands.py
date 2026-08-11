@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -149,12 +150,32 @@ def _ensure_cr_remote(plugin_dir: Path, host: str) -> tuple[str, str]:
 
     # Scope the credential helper to the CR git host and bake in this instance
     # so `canvas git-credential` knows where to mint the push JWT. Host-level
-    # scoping is enough: only git ever invokes a credential helper.
+    # scoping is enough: only git ever invokes a credential helper. Use the
+    # absolute path to *this* canvas executable — git invokes the helper via a
+    # bare shell, so a plain "canvas" only works if it's on PATH (it isn't when
+    # run from a venv or `uv run`).
+    canvas_bin = shutil.which(sys.argv[0]) or sys.argv[0]
     origin = _url_origin(remote_url)
+    # Reset the helper list for this host first (empty value) so an inherited,
+    # broader-scope helper — notably macOS's system-wide osxkeychain — can't
+    # shadow ours with a stale cached credential, then register ours as the sole
+    # helper for the CR git host.
+    _git(plugin_dir, "config", f"credential.{origin}.helper", "")
     _git(
-        plugin_dir, "config", f"credential.{origin}.helper", f"!canvas git-credential --host {host}"
+        plugin_dir,
+        "config",
+        "--add",
+        f"credential.{origin}.helper",
+        f"!{canvas_bin} git-credential --host {host}",
     )
     _git(plugin_dir, "config", f"credential.{origin}.username", "git")
+
+    # Drop any inherited Authorization extraHeader for the CR host. A prior
+    # `canvas login` / cr-login writes a URL-scoped `http.<host>.extraHeader`
+    # with an OAuth2 token; git would attach it to our push and shadow the
+    # credential helper, sending a stale token that 401s. An empty value resets
+    # the (multi-valued) list for this repo, leaving the helper as the sole auth.
+    _git(plugin_dir, "config", f"http.{origin}.extraHeader", "")
 
     return org_slug, name
 
