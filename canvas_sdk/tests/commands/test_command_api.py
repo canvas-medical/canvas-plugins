@@ -1,6 +1,5 @@
 """Tests for `CommandAPI`, the HTTP endpoint base for writing a single command."""
 
-import inspect
 import json
 from base64 import b64encode
 from collections.abc import Iterator, Mapping
@@ -11,15 +10,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.exceptions import ValidationError as DjangoValidationError
-from pydantic import ConfigDict, ValidationError
 
 from canvas_sdk.commands import AssessCommand, HistoryOfPresentIllnessCommand, PrescribeCommand
 from canvas_sdk.commands.api import CommandAPI
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import Event, EventRequest, EventType
-from canvas_sdk.handlers.simple_api import Credentials, SessionCredentials, api
-from canvas_sdk.handlers.simple_api.exceptions import InvalidCredentialsError
+from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.v1.data.command import Command
 
 NOTE_UUID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
@@ -85,18 +82,24 @@ class _NarrativeRequiredAPI(CommandAPI):
         return self.originate(self.model)
 
 
-class _AssessRelaxedForJSON(AssessCommand):
-    """A command relaxed for JSON, the way an endpoint declares its model."""
-
-    model_config = ConfigDict(strict=False)
-
-
 class _AssessAPI(CommandAPI):
     """An endpoint over a command with a date and an enum, which JSON carries as strings."""
 
     PREFIX = "/v1"
-    model = _AssessRelaxedForJSON
+    model = AssessCommand
     path = "/assess"
+
+    @api.post(path)
+    def insert(self) -> list[Response | Effect]:
+        return self.originate(self.model)
+
+
+class _PrescribeAPI(CommandAPI):
+    """An endpoint over the command with the numbers a body can misstate."""
+
+    PREFIX = "/v1"
+    model = PrescribeCommand
+    path = "/prescribe-command"
 
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
@@ -138,10 +141,7 @@ def _handler(
     headers: Mapping[str, str] | None = None,
 ) -> _HistoryOfPresentIllnessAPI:
     """An endpoint handling ``method path``; path params come from the real route match."""
-    # mypy cannot see that BaseHandler.__init__ assigns `secrets`, so the class reads as abstract.
-    return _HistoryOfPresentIllnessAPI(  # type: ignore[abstract]
-        _event(method, path, body, raw, headers)
-    )
+    return _HistoryOfPresentIllnessAPI(_event(method, path, body, raw, headers))
 
 
 def _split(result: list[Response | Effect]) -> tuple[list[Effect], list[Response]]:
@@ -369,7 +369,7 @@ def test_insert_reports_field_errors_from_the_command_model() -> None:
 
 def test_insert_reports_errors_raised_when_the_effect_is_built() -> None:
     """A rule checked as the effect is built surfaces as a 400, not an unhandled error."""
-    handler = _NarrativeRequiredAPI(  # type: ignore[abstract]
+    handler = _NarrativeRequiredAPI(
         _event("POST", "/v1/narrative-required", {"note_id": NOTE_UUID})
     )
 
@@ -631,53 +631,21 @@ def test_a_malformed_id_is_not_found_rather_than_a_query_error() -> None:
         assert responses[0].status_code == HTTPStatus.NOT_FOUND
 
 
-# ---------------------------------------------------------------- routing and auth
+# --------------------------------------------------------------- what the base leaves out
 
 
-def test_a_browser_authenticates_with_a_staff_session() -> None:
-    """A caller with no key but a staff session — a browser — is let through."""
-    handler = _handler(
-        "POST",
-        "/v1/hpi",
-        headers={"canvas-logged-in-user-type": "Staff", "canvas-logged-in-user-id": "staff-1"},
-    )
+def test_the_base_leaves_authentication_to_the_endpoint() -> None:
+    """`CommandAPI` authenticates nothing: who may write is the plugin's decision, not its own.
 
-    assert handler.authenticate(SessionCredentials(handler.request)) is True
-
-
-def test_a_logged_in_patient_is_rejected() -> None:
-    """Writing commands is staff-only, so a patient session is turned away."""
-    handler = _handler(
-        "POST",
-        "/v1/hpi",
-        headers={"canvas-logged-in-user-type": "Patient", "canvas-logged-in-user-id": "patient-1"},
-    )
-
-    with pytest.raises(InvalidCredentialsError):
-        handler.authenticate(SessionCredentials(handler.request))
+    Asserted rather than described because the failure is silent in the wrong direction — a base
+    that grew an `authenticate` would quietly take the choice away from every endpoint that mixes
+    it in, and the endpoint would still appear to work. Which schemes exist, and what each one
+    accepts, is `tests/handlers/simple_api`'s subject rather than this file's.
+    """
+    assert "authenticate" not in vars(CommandAPI)
 
 
-def test_a_caller_with_neither_a_key_nor_a_session_is_rejected() -> None:
-    """Absent both schemes, the request is turned away."""
-    handler = _handler("POST", "/v1/hpi")
-
-    with pytest.raises(InvalidCredentialsError):
-        handler.authenticate(SessionCredentials(handler.request))
-
-
-def test_the_endpoint_declares_the_credentials_the_scheme_needs() -> None:
-    """The scheme is chosen from the headers, so the annotation is the base Credentials."""
-    annotation = inspect.get_annotations(_HistoryOfPresentIllnessAPI.authenticate, eval_str=True)
-
-    assert annotation["credentials"] is Credentials
-
-
-def test_routes_resolve_through_the_prefix_and_path_params() -> None:
-    """The declared routes are registered under the prefix, with the id as a path param."""
-    assert _handler("POST", "/v1/hpi").request.path_params == {}
-    assert _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}").request.path_params == {
-        "command_uuid": COMMAND_UUID
-    }
+# ------------------------------------------------------- what the command class decides for it
 
 
 def test_a_reviewable_command_supports_review() -> None:
@@ -692,9 +660,7 @@ def test_a_reviewable_command_supports_review() -> None:
         def review(self) -> list[Response | Effect]:
             return self.action(self.model, self.request.path_params["command_uuid"], "review")
 
-    handler = _PrescribeAPI(  # type: ignore[abstract]
-        _event("POST", f"/v1/prescribe/{COMMAND_UUID}/review")
-    )
+    handler = _PrescribeAPI(_event("POST", f"/v1/prescribe/{COMMAND_UUID}/review"))
 
     with _stored("staged"):
         effects, responses = _split(handler.review())
@@ -703,9 +669,9 @@ def test_a_reviewable_command_supports_review() -> None:
     assert isinstance(responses[0], JSONResponse)
 
 
-def test_a_model_relaxed_for_json_coerces_the_strings_a_body_carries() -> None:
-    """The SDK's commands are strict, so an endpoint declares a lax model to accept JSON."""
-    handler = _AssessAPI(  # type: ignore[abstract]
+def test_a_command_coerces_the_strings_a_body_carries() -> None:
+    """A command reads a JSON body directly: an enum arrives as its value, a date as text."""
+    handler = _AssessAPI(
         _event(
             "POST",
             "/v1/assess",
@@ -719,9 +685,32 @@ def test_a_model_relaxed_for_json_coerces_the_strings_a_body_carries() -> None:
     assert responses[0].status_code == HTTPStatus.CREATED
 
 
-def test_a_strict_model_cannot_take_those_strings() -> None:
-    """Why the lax model is needed: the command as the SDK declares it rejects the same body."""
-    assert AssessCommand.model_config.get("strict") is not False
+def test_a_command_parses_leniently_so_an_endpoint_needs_no_subclass() -> None:
+    """The reason this endpoint can name the command itself.
 
-    with pytest.raises(ValidationError):
-        AssessCommand.model_validate({"status": "improved"})
+    Commands are populated from wire formats, so they are the one part of the SDK that parses
+    leniently (``_BaseCommand.model_config``). An endpoint once needed a lax subclass per command
+    to accept a JSON body; asserted here because deleting that line would bring them all back.
+    """
+    assert AssessCommand.model_config.get("strict") is False
+    assert (
+        AssessCommand.model_validate({"status": "improved"}).status is AssessCommand.Status.IMPROVED
+    )
+
+
+def test_a_boolean_sent_for_a_number_is_read_as_one() -> None:
+    """The sharp edge of that leniency, pinned rather than assumed.
+
+    Commands parse leniently, and pydantic's lax `int` accepts a boolean: `true` becomes 1. On a
+    refill count that is a clinically meaningful coercion of a caller's mistake, so it is asserted
+    here — if the SDK ever decides to refuse it (a per-field `strict`, or a validator that rejects
+    `bool` for a number), this test is where that decision becomes visible.
+    """
+    handler = _PrescribeAPI(
+        _event("POST", "/v1/prescribe-command", {"note_id": NOTE_UUID, "values": {"refills": True}})
+    )
+
+    effects, responses = _split(handler.insert())
+
+    assert _payload(effects[0])["data"] == {"refills": 1}
+    assert responses[0].status_code == HTTPStatus.CREATED
