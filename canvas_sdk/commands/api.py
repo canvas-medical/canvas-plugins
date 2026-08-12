@@ -11,7 +11,7 @@ from pydantic_core import InitErrorDetails, PydanticCustomError
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
-from canvas_sdk.handlers.simple_api import MixedAuthMixin, SimpleAPI
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin
 from canvas_sdk.v1.data.command import Command
 
 
@@ -70,7 +70,7 @@ def _error_detail(type: str, message: str, field: str, value: Any) -> InitErrorD
     )
 
 
-class CommandAPI(MixedAuthMixin, SimpleAPI, ABC):
+class CommandAPI(StaffSessionAuthMixin, SimpleAPI, ABC):  # type: ignore[misc]
     """Base for an HTTP endpoint that writes one command type."""
 
     def originate(self, model: type[_BaseCommand]) -> list[Response | Effect]:

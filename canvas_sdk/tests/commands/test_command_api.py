@@ -18,13 +18,12 @@ from canvas_sdk.commands.api import CommandAPI
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import Event, EventRequest, EventType
-from canvas_sdk.handlers.simple_api import Credentials, api
+from canvas_sdk.handlers.simple_api import Credentials, SessionCredentials, api
 from canvas_sdk.handlers.simple_api.exceptions import InvalidCredentialsError
 from canvas_sdk.v1.data.command import Command
 
 NOTE_UUID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
 COMMAND_UUID = "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed"
-API_KEY = "an-api-key"
 
 
 class _HistoryOfPresentIllnessWithMetadata(HistoryOfPresentIllnessCommand):
@@ -635,23 +634,6 @@ def test_a_malformed_id_is_not_found_rather_than_a_query_error() -> None:
 # ---------------------------------------------------------------- routing and auth
 
 
-def test_a_peer_authenticates_with_an_api_key() -> None:
-    """A server-to-server caller presenting the shared key is let through."""
-    handler = _handler("POST", "/v1/hpi", headers={"Authorization": API_KEY})
-    handler.secrets = {"simpleapi-api-key": API_KEY}
-
-    assert handler.authenticate(Credentials(handler.request)) is True
-
-
-def test_a_peer_presenting_the_wrong_api_key_is_rejected() -> None:
-    """A wrong key is turned away rather than falling through to the session scheme."""
-    handler = _handler("POST", "/v1/hpi", headers={"Authorization": "not-the-key"})
-    handler.secrets = {"simpleapi-api-key": API_KEY}
-
-    with pytest.raises(InvalidCredentialsError):
-        handler.authenticate(Credentials(handler.request))
-
-
 def test_a_browser_authenticates_with_a_staff_session() -> None:
     """A caller with no key but a staff session — a browser — is let through."""
     handler = _handler(
@@ -660,7 +642,7 @@ def test_a_browser_authenticates_with_a_staff_session() -> None:
         headers={"canvas-logged-in-user-type": "Staff", "canvas-logged-in-user-id": "staff-1"},
     )
 
-    assert handler.authenticate(Credentials(handler.request)) is True
+    assert handler.authenticate(SessionCredentials(handler.request)) is True
 
 
 def test_a_logged_in_patient_is_rejected() -> None:
@@ -672,7 +654,7 @@ def test_a_logged_in_patient_is_rejected() -> None:
     )
 
     with pytest.raises(InvalidCredentialsError):
-        handler.authenticate(Credentials(handler.request))
+        handler.authenticate(SessionCredentials(handler.request))
 
 
 def test_a_caller_with_neither_a_key_nor_a_session_is_rejected() -> None:
@@ -680,7 +662,7 @@ def test_a_caller_with_neither_a_key_nor_a_session_is_rejected() -> None:
     handler = _handler("POST", "/v1/hpi")
 
     with pytest.raises(InvalidCredentialsError):
-        handler.authenticate(Credentials(handler.request))
+        handler.authenticate(SessionCredentials(handler.request))
 
 
 def test_the_endpoint_declares_the_credentials_the_scheme_needs() -> None:
