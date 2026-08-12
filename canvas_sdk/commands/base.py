@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 from uuid import UUID
 
 from django.core.exceptions import ImproperlyConfigured
+from pydantic import ConfigDict
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
@@ -27,6 +28,8 @@ _REQUIRED_STATE_BY_METHOD = {
 
 
 class _BaseCommand(TrackableFieldsModel):
+    model_config = ConfigDict(strict=False)
+
     class Meta:
         key = ""
         originate_required_fields = ("note_uuid",)
