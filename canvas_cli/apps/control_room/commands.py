@@ -117,7 +117,25 @@ def _git(plugin_dir: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _require_git_installed() -> None:
+    """Fail with an actionable message when git isn't on PATH.
+
+    The headless flow keeps git invisible to plugin authors, so a missing git
+    would otherwise surface as a raw ``FileNotFoundError`` from ``subprocess``
+    (``check=False`` doesn't suppress it — it's raised at spawn time) with no
+    hint that the fix is to install git. ``publish``/``pull`` shell out to git;
+    ``deploy`` is HTTP-only and never reaches here.
+    """
+    if shutil.which("git") is None:
+        raise typer.BadParameter(
+            "git was not found on your PATH. `canvas publish` and `canvas pull` "
+            "use git to sync your plugin with Control Room. Install it from "
+            "https://git-scm.com/downloads and try again."
+        )
+
+
 def _require_git_repo(plugin_dir: Path) -> None:
+    _require_git_installed()
     result = _git(plugin_dir, "rev-parse", "--is-inside-work-tree")
     if result.returncode != 0 or result.stdout.strip() != "true":
         raise typer.BadParameter(
