@@ -204,6 +204,22 @@ def test_publish_requires_git_repo(mock_run: Mock, tmp_path: Path) -> None:
     assert "not a git repository" in result.output
 
 
+@patch("subprocess.run", side_effect=FileNotFoundError(2, "No such file or directory", "git"))
+@patch("canvas_cli.apps.control_room.commands.shutil.which", return_value=None)
+def test_publish_without_git_installed_gives_actionable_error(
+    _which: Mock, mock_run: Mock, tmp_path: Path
+) -> None:
+    """Publish on a git-less system fails with an install hint, not a raw
+    FileNotFoundError traceback, and never tries to spawn git.
+    """
+    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+    assert result.exit_code != 0
+    assert "git-scm.com/downloads" in result.output
+    # The preflight fires before any git subprocess — no FileNotFoundError leaks.
+    assert not isinstance(result.exception, FileNotFoundError)
+    mock_run.assert_not_called()
+
+
 # -- pull --------------------------------------------------------------------
 
 
