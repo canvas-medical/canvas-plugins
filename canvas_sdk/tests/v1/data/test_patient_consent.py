@@ -129,3 +129,17 @@ def test_document_references_reaches_the_signed_documents_document_reference() -
     related = reference.related_object
     assert isinstance(related, PatientAdministrativeDocument)
     assert related.dbid == doc.dbid
+
+
+@pytest.mark.django_db
+def test_active_document_falls_back_to_latest_by_dbid_when_none_dated() -> None:
+    """active_document falls back to the latest non-junked document by dbid when none is dated."""
+    consent = _make_consent()
+    first = PatientAdministrativeDocumentFactory.create(original_date=None)
+    second = PatientAdministrativeDocumentFactory.create(original_date=None)
+    junked = PatientAdministrativeDocumentFactory.create(original_date=None, junked=True)
+    consent.documents.add(first, second, junked)
+
+    active = consent.active_document
+    assert active is not None
+    assert active.dbid == second.dbid
