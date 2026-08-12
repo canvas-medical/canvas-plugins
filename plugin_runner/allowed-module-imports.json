@@ -247,44 +247,6 @@
   "canvas_sdk.commands.api": [
     "CommandAPI"
   ],
-  "canvas_sdk.commands.api_parsers": [
-    "AllergyAPIParser",
-    "AssessAPIParser",
-    "DiagnoseAPIParser",
-    "HistoryOfPresentIllnessAPIParser",
-    "PerformAPIParser",
-    "PlanAPIParser",
-    "PrescribeAPIParser",
-    "ReasonForVisitAPIParser",
-    "TaskAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.allergy": [
-    "AllergyAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.assess": [
-    "AssessAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.diagnose": [
-    "DiagnoseAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.history_present_illness": [
-    "HistoryOfPresentIllnessAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.perform": [
-    "PerformAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.plan": [
-    "PlanAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.prescribe": [
-    "PrescribeAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.reason_for_visit": [
-    "ReasonForVisitAPIParser"
-  ],
-  "canvas_sdk.commands.api_parsers.task": [
-    "TaskAPIParser"
-  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
