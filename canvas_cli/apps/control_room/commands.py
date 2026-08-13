@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -107,13 +108,34 @@ def _post(host: str, token: str, url: str, body: dict[str, object] | None = None
 # -- git plumbing (all transparent to the author) ----------------------------
 
 
-def _git(plugin_dir: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run a git command scoped to the plugin repo."""
+def _git(
+    plugin_dir: Path, *args: str, isolate_config: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command scoped to the plugin repo.
+
+    ``isolate_config`` points ``GIT_CONFIG_GLOBAL``/``GIT_CONFIG_SYSTEM`` at
+    ``/dev/null`` so git reads only the repo-local ``.git/config``. Use it for
+    the network operations (``push``/``fetch``): it structurally prevents
+    anything above the repo — a stale ``cr-login`` ``http.<host>.extraHeader``
+    (in any slash form) or the macOS ``osxkeychain`` credential helper — from
+    shadowing the credential helper we register and 401ing the push. Requires
+    git >= 2.32; older git ignores the vars and falls back to global config.
+
+    Do **not** isolate operations that need the user's identity or transport
+    config: ``merge`` reads ``user.name``/``user.email`` from global config, and
+    a push behind a corporate proxy / custom CA would lose ``http.proxy`` /
+    ``http.sslCAInfo``. Only the auth-during-network path needs isolation.
+    """
+    env = {**os.environ}
+    if isolate_config:
+        env["GIT_CONFIG_GLOBAL"] = os.devnull
+        env["GIT_CONFIG_SYSTEM"] = os.devnull
     return subprocess.run(
         ["git", "-C", str(plugin_dir), *args],
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
 
 
@@ -166,39 +188,25 @@ def _ensure_cr_remote(plugin_dir: Path, host: str) -> tuple[str, str]:
     else:
         _git(plugin_dir, "remote", "add", "cr", remote_url)
 
-    # Scope the credential helper to the CR git host and bake in this instance
-    # so `canvas git-credential` knows where to mint the push JWT. Host-level
-    # scoping is enough: only git ever invokes a credential helper. Use the
+    # Register our credential helper as the sole helper for the CR git host, so
+    # `canvas git-credential` mints the push JWT. `--replace-all` keeps it a
+    # single entry across repeat publishes. We no longer reset inherited helpers
+    # or stale `http.<host>.extraHeader`s here: the network operations run with
+    # global/system git config ignored (see `_git(..., isolate_config=True)`),
+    # which prevents that shadowing structurally rather than key by key. Use the
     # absolute path to *this* canvas executable — git invokes the helper via a
     # bare shell, so a plain "canvas" only works if it's on PATH (it isn't when
     # run from a venv or `uv run`).
     canvas_bin = shutil.which(sys.argv[0]) or sys.argv[0]
     origin = _url_origin(remote_url)
-    # Reset the helper list for this host first (empty value) so an inherited,
-    # broader-scope helper — notably macOS's system-wide osxkeychain — can't
-    # shadow ours with a stale cached credential, then register ours as the sole
-    # helper for the CR git host.
-    _git(plugin_dir, "config", f"credential.{origin}.helper", "")
     _git(
         plugin_dir,
         "config",
-        "--add",
+        "--replace-all",
         f"credential.{origin}.helper",
         f"!{canvas_bin} git-credential --host {host}",
     )
     _git(plugin_dir, "config", f"credential.{origin}.username", "git")
-
-    # Drop any inherited Authorization extraHeader for the CR host. A prior
-    # `canvas login` / cr-login writes a URL-scoped `http.<host>.extraHeader`
-    # with an OAuth2 token; git would attach it to our push and shadow the
-    # credential helper, sending a stale token that 401s. An empty value resets
-    # the (multi-valued) list for this repo, leaving the helper as the sole auth.
-    # Reset both the bare origin and the trailing-slash form: `http.<url>`
-    # matching is by URL prefix, and cr-login writes the key WITH a trailing
-    # slash (`http.<host>/.extraHeader`) in *global* config, so clearing only the
-    # bare origin leaves that global entry live for this repo.
-    for key in (f"http.{origin}.extraHeader", f"http.{origin}/.extraHeader"):
-        _git(plugin_dir, "config", key, "")
 
     return org_slug, name
 
@@ -281,7 +289,7 @@ def publish(
     print(f"Publishing {org_slug}/{name} to Control Room…")
     # Push the current HEAD onto Control Room's canonical `main` ref. CR enforces
     # fast-forward-only, so a stale local HEAD is rejected (see below).
-    result = _git(plugin_name, "push", "cr", "HEAD:main")
+    result = _git(plugin_name, "push", "cr", "HEAD:main", isolate_config=True)
     if result.returncode != 0:
         stderr = result.stderr or ""
         if any(marker in stderr for marker in ("non-fast-forward", "fetch first", "[rejected]")):
@@ -312,7 +320,7 @@ def pull(
     org_slug, name = _ensure_cr_remote(plugin_name, host)
 
     print(f"Fetching {org_slug}/{name} from Control Room…")
-    fetched = _git(plugin_name, "fetch", "cr")
+    fetched = _git(plugin_name, "fetch", "cr", isolate_config=True)
     if fetched.returncode != 0:
         print(fetched.stderr or "git fetch failed")
         raise typer.Exit(1)
