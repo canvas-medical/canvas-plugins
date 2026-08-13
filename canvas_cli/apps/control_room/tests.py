@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -147,12 +148,13 @@ def test_publish_configures_remote_and_pushes(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
-def test_publish_hardens_git_auth_config(
+def test_publish_registers_helper_and_isolates_push_config(
     mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
-    """Publish resets inherited credential.helper + http.extraHeader for the CR
-    host (so osxkeychain or a stale cr-login token can't shadow the helper) and
-    registers our helper by absolute path (git invokes it via a bare shell).
+    """Publish registers our credential helper by absolute path (git invokes it
+    via a bare shell) as the sole helper for the CR host, and runs the push with
+    global/system git config ignored so nothing above the repo — a stale
+    cr-login extraHeader or osxkeychain — can shadow it.
     """
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
@@ -163,19 +165,27 @@ def test_publish_hardens_git_auth_config(
     assert result.exit_code == 0, result.output
 
     calls = [c.args[0] for c in mock_run.call_args_list]
-    prefix = ["git", "-C", str(plugin_dir), "config"]
-    # credential helper list reset, then our helper added by absolute path
-    assert prefix + ["credential.https://cr.example.helper", ""] in calls
-    add = next(
-        c for c in calls if c[3:6] == ["config", "--add", "credential.https://cr.example.helper"]
+    # our helper is registered by absolute path, replacing any prior local entry
+    helper = next(
+        c
+        for c in calls
+        if c[3:6] == ["config", "--replace-all", "credential.https://cr.example.helper"]
     )
     assert (
-        add[6].startswith("!") and "git-credential" in add[6] and add[6].endswith(f"--host {HOST}")
+        helper[6].startswith("!")
+        and "git-credential" in helper[6]
+        and helper[6].endswith(f"--host {HOST}")
     )
-    # a stale cr-login Authorization extraHeader for the host is reset — both the
-    # bare origin and the trailing-slash form cr-login actually writes.
-    assert prefix + ["http.https://cr.example.extraHeader", ""] in calls
-    assert prefix + ["http.https://cr.example/.extraHeader", ""] in calls
+    # the push runs with global + system git config redirected to /dev/null
+    push_call = next(c for c in mock_run.call_args_list if c.args[0][3:6] == ["push", "cr", "HEAD:main"])
+    push_env = push_call.kwargs["env"]
+    assert push_env["GIT_CONFIG_GLOBAL"] == os.devnull
+    assert push_env["GIT_CONFIG_SYSTEM"] == os.devnull
+    # config-setting calls are NOT isolated (writes go to local config normally)
+    helper_call = next(
+        c for c in mock_run.call_args_list if c.args[0][3:5] == ["config", "--replace-all"]
+    )
+    assert "GIT_CONFIG_GLOBAL" not in helper_call.kwargs.get("env", {})
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
