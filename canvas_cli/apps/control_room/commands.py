@@ -499,6 +499,47 @@ def deploy(
     print(f"Deploy dispatched for {org_slug}/{name}@{ref}.")
 
 
+def set_variables(
+    plugin_name: str = typer.Argument(..., help="Plugin name to configure"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    variables: list[str] = typer.Argument(..., help="Variables to set, e.g. Key=value"),
+) -> None:
+    """Set a plugin's variables through Control Room.
+
+    The headless replacement for the direct-to-instance ``config set``: Control
+    Room stores the values and pushes them to this instance, so it keeps working
+    once ``canvas install``'s write path is locked out for CR-managed plugins.
+    Values are write-only and treated as sensitive, matching the direct path.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    parsed: list[dict[str, object]] = []
+    for item in variables:
+        key, sep, value = item.partition("=")
+        if not sep or not key:
+            raise typer.BadParameter(f"Invalid variable format: '{item}'. Use key=value.")
+        parsed.append({"key": key, "value": value, "sensitive": True})
+
+    token = get_or_request_api_token(host)
+    _, org_slug = _control_room_info(host, token)
+
+    print(f"Setting {len(parsed)} variable(s) on {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "set-variables"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name, "variables": parsed}]},
+    )
+    if not result.get("ok"):
+        print(f"Failed to set variables: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name}.")
+
+
 def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: bool) -> None:
     """Walk the operator through the consent requests a gated deploy produced."""
     requests_list = deploy_result.get("consent_requests") or []
