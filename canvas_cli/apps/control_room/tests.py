@@ -49,12 +49,14 @@ def _git_side_effect(
     merge_rc: int = 0,
     merge_stderr: str = "",
     dirty: bool = False,
+    staged_files: list[str] | None = None,
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Fake `subprocess.run` for the git calls publish/pull make.
 
     ``dirty`` models an uncommitted working tree: `diff --cached --quiet` reports
-    a staged diff and `status --porcelain` lists a change. Everything else
-    (`add`, `commit`, `config user.*`) falls through to the rc=0 default.
+    a staged diff and `status --porcelain` lists a change. ``staged_files`` is the
+    NUL-joined list `diff --cached --name-only` returns (for the oversize check).
+    Everything else (`add`, `commit`, `config user.*`) falls through to rc=0.
     """
 
     def run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -72,6 +74,9 @@ def _git_side_effect(
             return subprocess.CompletedProcess(cmd, merge_rc, stdout, merge_stderr)
         if sub[:3] == ["diff", "--cached", "--quiet"]:
             return subprocess.CompletedProcess(cmd, 1 if dirty else 0, "", "")
+        if sub[:2] == ["diff", "--cached"] and "--name-only" in sub:
+            payload = "\0".join(staged_files) + "\0" if staged_files else ""
+            return subprocess.CompletedProcess(cmd, 0, payload, "")
         if sub[:2] == ["status", "--porcelain"]:
             return subprocess.CompletedProcess(cmd, 0, "M hello/x.py\n" if dirty else "", "")
         return subprocess.CompletedProcess(cmd, 0, "", "")
@@ -270,6 +275,31 @@ def test_publish_auto_commits_working_tree(
     assert commit.kwargs["env"]["GIT_AUTHOR_NAME"] == "Canvas CLI"
     assert "GIT_CONFIG_GLOBAL" not in commit.kwargs["env"]
     assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_publish_rejects_oversized_file(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A too-large staged file fails fast with the offending path — before any
+    commit or push — so the author fixes it locally, not via a CR 413.
+    """
+    monkeypatch.setattr(commands, "_MAX_PUBLISH_FILE_BYTES", 10)
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_run.side_effect = _git_side_effect(dirty=True, staged_files=["big.bin"])
+    plugin_dir = _plugin_dir(tmp_path)
+    (plugin_dir / "big.bin").write_bytes(b"x" * 4096)  # > the patched 10-byte limit
+
+    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
+    assert result.exit_code != 0
+    assert "big.bin" in result.output
+    assert "too large to publish" in result.output
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3] == "commit" for c in calls)  # never committed
+    assert not any(c[3:5] == ["push", "cr"] for c in calls)  # never pushed
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
