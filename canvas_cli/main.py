@@ -7,7 +7,14 @@ import typer
 
 from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.auth import login, logout
-from canvas_cli.apps.control_room import deploy, git_credential, publish, pull, set_variables
+from canvas_cli.apps.control_room import (
+    deploy,
+    git_credential,
+    publish,
+    pull,
+    set_variables,
+    uninstall,
+)
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -19,10 +26,17 @@ APP_NAME = "canvas_cli"
 # The main app
 app = typer.Typer(no_args_is_help=True, rich_markup_mode=None, add_completion=False)
 
+_CONTROL_ROOM_BETA = os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true"
+
 # Commands
 app.command(short_help="Create a new plugin")(plugin.init)
 app.command(short_help="Install a plugin into a Canvas instance")(plugin.install)
-app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.uninstall)
+# In the beta, `uninstall` routes through Control Room (home-app refuses a direct
+# CLI uninstall of a control_room_managed plugin — KOALA-5877); otherwise direct.
+if _CONTROL_ROOM_BETA:
+    app.command(short_help="Uninstall a plugin via Control Room.")(uninstall)
+else:
+    app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.uninstall)
 app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
@@ -38,8 +52,6 @@ app.command(
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
-
-_CONTROL_ROOM_BETA = os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true"
 
 if _CONTROL_ROOM_BETA:
     app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)

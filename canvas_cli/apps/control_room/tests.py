@@ -29,6 +29,7 @@ def _app() -> typer.Typer:
     app.command()(commands.pull)
     app.command()(commands.deploy)
     app.command(name="set-variables")(commands.set_variables)
+    app.command(name="uninstall")(commands.uninstall)
     return app
 
 
@@ -470,6 +471,37 @@ def test_set_variables_rejects_bad_format(
     assert result.exit_code != 0
     assert "key=value" in result.output.lower()
     mock_post.assert_not_called()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_uninstall_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
+    """`uninstall` (beta) discovers the org and POSTs to the uninstall proxy."""
+    mock_get.return_value = _resp(INFO)  # /control-room/info/ discovery
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(_app(), ["uninstall", "my_plugin", "--host", HOST])
+
+    assert result.exit_code == 0, result.output
+    call = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/uninstall/")
+    )
+    assert call.kwargs["json"] == {"plugins": [{"orgSlug": "acme", "name": "my_plugin"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_uninstall_surfaces_cr_error(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
+    """A CR business failure (ok=false) exits non-zero with the message."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.return_value = _resp({"ok": False, "error": "Permission denied"})
+
+    result = runner.invoke(_app(), ["uninstall", "my_plugin", "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "Permission denied" in result.output
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")

@@ -540,6 +540,38 @@ def set_variables(
     print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name}.")
 
 
+def uninstall(
+    plugin_name: str = typer.Argument(..., help="Plugin name to uninstall"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+) -> None:
+    """Uninstall a plugin from this instance through Control Room.
+
+    The headless teardown: home-app refuses a direct CLI uninstall of a
+    ``control_room_managed`` plugin (KOALA-5877), so removal must go through
+    Control Room. Dispatches an uninstall on the calling instance.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    token = get_or_request_api_token(host)
+    _, org_slug = _control_room_info(host, token)
+
+    print(f"Uninstalling {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "uninstall"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name}]},
+    )
+    if not result.get("ok"):
+        print(f"Uninstall failed: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    print(f"Uninstall dispatched for {org_slug}/{plugin_name}.")
+
+
 def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: bool) -> None:
     """Walk the operator through the consent requests a gated deploy produced."""
     requests_list = deploy_result.get("consent_requests") or []
