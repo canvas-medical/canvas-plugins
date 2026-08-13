@@ -171,6 +171,48 @@ def _require_git_repo(plugin_dir: Path) -> None:
         )
 
 
+# Per-file size ceiling for a publish. Mirrors Control Room's default
+# GIT_MAX_PUSH_BYTES (25 MB) so the CLI never rejects a file CR would accept —
+# a single file this large can't fit under CR's per-push cap anyway. This is an
+# early, friendly client-side check; CR enforces the real limit server-side.
+_MAX_PUBLISH_FILE_BYTES = 25 * 1024 * 1024
+
+
+def _reject_oversized_staged_files(plugin_dir: Path) -> None:
+    """Refuse to snapshot a file too large to publish, before committing/pushing.
+
+    Ergonomics for the honest author who accidentally staged a build artifact,
+    dataset, model weights, or a committed virtualenv: fail fast locally with the
+    offending paths instead of eating a round-trip to Control Room's 413. Not a
+    security boundary — a determined client bypasses the CLI — which is why CR
+    also caps the push server-side.
+    """
+    root = _git(plugin_dir, "rev-parse", "--show-toplevel").stdout.strip() or str(plugin_dir)
+    names = _git(
+        plugin_dir, "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR"
+    ).stdout
+    offending: list[tuple[str, int]] = []
+    for rel in names.split("\0"):
+        if not rel:
+            continue
+        try:
+            size = (Path(root) / rel).stat().st_size
+        except OSError:
+            continue  # deletions / unreadable — not a size concern
+        if size > _MAX_PUBLISH_FILE_BYTES:
+            offending.append((rel, size))
+
+    if offending:
+        limit_mb = _MAX_PUBLISH_FILE_BYTES // (1024 * 1024)
+        listing = "\n".join(f"  {path} ({size / 1024 / 1024:.1f} MB)" for path, size in offending)
+        raise typer.BadParameter(
+            f"These files are too large to publish ({limit_mb} MB max per file):\n"
+            f"{listing}\n"
+            "Remove them (build artifacts, datasets, binaries) or add them to "
+            ".gitignore, then publish again. Control Room enforces this server-side too."
+        )
+
+
 def _capture_working_tree(plugin_dir: Path, *, message: str | None) -> bool:
     """Stage and commit the working tree so ``publish`` ships what's on disk.
 
@@ -193,6 +235,8 @@ def _capture_working_tree(plugin_dir: Path, *, message: str | None) -> bool:
     # tree is a diff).
     if _git(plugin_dir, "diff", "--cached", "--quiet").returncode == 0:
         return False
+
+    _reject_oversized_staged_files(plugin_dir)
 
     identity: dict[str, str] = {}
     if not _git(plugin_dir, "config", "user.name").stdout.strip():
