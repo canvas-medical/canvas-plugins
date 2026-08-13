@@ -4,6 +4,7 @@ from canvas_cli.apps.control_room.commands import (
     publish,
     pull,
     set_variables,
+    uninstall,
 )
 
 __all__ = (
@@ -12,4 +13,5 @@ __all__ = (
     "publish",
     "pull",
     "set_variables",
+    "uninstall",
 )
