@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.196.1 (2026-08-13)
+
+### Bug Fixes
+
+- Don't reject assess condition when the target note isn't persisted yet
+  ([#1821](https://github.com/canvas-medical/canvas-plugins/pull/1821),
+  [`423a7b9`](https://github.com/canvas-medical/canvas-plugins/commit/423a7b9c3b2510ec7d5c7182aa5e458358d38acf))
+
+Signed-off-by: Rui Batista <103107926+ruipbatista@users.noreply.github.com>
+
+
 ## v0.196.0 (2026-08-11)
 
 ### Features
