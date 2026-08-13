@@ -193,7 +193,12 @@ def _ensure_cr_remote(plugin_dir: Path, host: str) -> tuple[str, str]:
     # with an OAuth2 token; git would attach it to our push and shadow the
     # credential helper, sending a stale token that 401s. An empty value resets
     # the (multi-valued) list for this repo, leaving the helper as the sole auth.
-    _git(plugin_dir, "config", f"http.{origin}.extraHeader", "")
+    # Reset both the bare origin and the trailing-slash form: `http.<url>`
+    # matching is by URL prefix, and cr-login writes the key WITH a trailing
+    # slash (`http.<host>/.extraHeader`) in *global* config, so clearing only the
+    # bare origin leaves that global entry live for this repo.
+    for key in (f"http.{origin}.extraHeader", f"http.{origin}/.extraHeader"):
+        _git(plugin_dir, "config", key, "")
 
     return org_slug, name
 
