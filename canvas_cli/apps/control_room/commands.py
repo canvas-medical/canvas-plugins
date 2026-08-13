@@ -530,7 +530,12 @@ def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: b
             print("    Approved.")
         else:
             reason = "" if assume_yes else typer.prompt("    Reason for denial", default="")
-            _post(host, token, _consent_url(host, request_id, "deny"), {"reason": reason})
+            outcome = _post(host, token, _consent_url(host, request_id, "deny"), {"reason": reason})
+            if not outcome.get("ok"):
+                # Surface a server-side rejection (e.g. permission) instead of
+                # reporting a denial that didn't take — the request stays live.
+                print(f"    Denial failed: {outcome.get('error') or 'unknown error'}")
+                raise typer.Exit(1)
             denied = True
             print("    Denied.")
 

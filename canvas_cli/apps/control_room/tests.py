@@ -477,6 +477,36 @@ def test_deploy_consent_denied_interactively(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
+def test_deploy_consent_deny_rejected_by_server_surfaces_error(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A denial the server rejects (ok=false) must be surfaced, not reported as
+    'Denied' — otherwise the operator thinks the request was cancelled when it's
+    still live.
+    """
+    mock_get.return_value = _resp(INFO)
+    mock_post.side_effect = _post_router(
+        deploy={
+            "ok": True,
+            "status": "pending_consent",
+            "consent_request_count": 1,
+            "consent_requests": [{"id": 7, "title": "hello-reader wants read"}],
+        },
+        deny={"ok": False, "error": "Permission denied"},
+    )
+
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST], input="n\nnope\n"
+    )
+
+    assert result.exit_code == 1
+    assert "Denial failed" in result.output
+    assert "Permission denied" in result.output
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
 def test_deploy_failure_exits_nonzero(
     mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
