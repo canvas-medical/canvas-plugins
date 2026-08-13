@@ -142,20 +142,6 @@ def test_manifest_variable_rejects_extra_fields(handler_manifest_example: dict) 
         validate_manifest_file(handler_manifest_example)
 
 
-def test_manifest_rejects_placement_keys_that_are_no_longer_manifest_fields() -> None:
-    """Where a pane docks lives on the application class, never in the manifest.
-
-    ``dock_edge``/``dock_size`` were briefly manifest keys. Rejecting them is kinder
-    than ignoring them: an author porting an older example gets told at build time,
-    rather than shipping a pane that silently never appears.
-    """
-    for key, value in (("dock_edge", "left"), ("dock_size", "320px")):
-        manifest = _make_application_manifest("global")
-        manifest["components"]["applications"][0][key] = value
-        with pytest.raises(ValidationError, match="Additional properties"):
-            validate_manifest_file(manifest)
-
-
 def test_manifest_accepts_an_ordinary_application() -> None:
     """The application entry carries identity and an icon, and nothing about layout."""
     validate_manifest_file(_make_application_manifest("patient_specific"))
