@@ -7,7 +7,7 @@ import typer
 
 from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.auth import login, logout
-from canvas_cli.apps.control_room import deploy, git_credential, publish, pull
+from canvas_cli.apps.control_room import deploy, git_credential, publish, pull, set_variables
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -39,7 +39,9 @@ app.command(
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
 
-if os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true":
+_CONTROL_ROOM_BETA = os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true"
+
+if _CONTROL_ROOM_BETA:
     app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
     app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
     app.command(
@@ -61,9 +63,18 @@ app.add_typer(config_app, name="config")
 config_app.command(name="list", short_help="List plugin variables on a Canvas instance.")(
     plugin.list_secrets
 )
-config_app.command(name="set", short_help="Set plugin variables on a Canvas instance.")(
-    plugin.set_secrets
-)
+# In the Control Room beta, `config set` routes through CR (the headless path
+# that survives the KOALA-5877 install-write lockout) instead of writing the
+# instance directly; the CR path errors clearly if the instance isn't
+# CR-managed, mirroring publish/deploy. Outside the beta it stays direct.
+if _CONTROL_ROOM_BETA:
+    config_app.command(name="set", short_help="Set plugin variables via Control Room.")(
+        set_variables
+    )
+else:
+    config_app.command(name="set", short_help="Set plugin variables on a Canvas instance.")(
+        plugin.set_secrets
+    )
 
 # Namespace app
 namespace_app = typer.Typer(

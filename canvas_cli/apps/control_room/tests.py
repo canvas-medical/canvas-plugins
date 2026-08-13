@@ -28,6 +28,7 @@ def _app() -> typer.Typer:
     app.command()(commands.publish)
     app.command()(commands.pull)
     app.command()(commands.deploy)
+    app.command(name="set-variables")(commands.set_variables)
     return app
 
 
@@ -420,6 +421,55 @@ def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_pa
         c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
     )
     assert body == {"plugins": [{"orgSlug": "acme", "name": "my_plugin", "gitRef": "main"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_set_variables_routes_through_cr(
+    mock_post: Mock, mock_get: Mock, _token: Mock
+) -> None:
+    """`config set` (beta) discovers the org and POSTs the variables to the
+    set-variables proxy, marking them sensitive (write-only, like the direct
+    path).
+    """
+    mock_get.return_value = _resp(INFO)  # /control-room/info/ discovery
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(
+        _app(),
+        ["set-variables", "my_plugin", "--host", HOST, "API_KEY=secret", "URL=https://x"],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/set-variables/")
+    )
+    assert call.kwargs["json"] == {
+        "plugins": [
+            {
+                "orgSlug": "acme",
+                "name": "my_plugin",
+                "variables": [
+                    {"key": "API_KEY", "value": "secret", "sensitive": True},
+                    {"key": "URL", "value": "https://x", "sensitive": True},
+                ],
+            }
+        ]
+    }
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_set_variables_rejects_bad_format(
+    mock_post: Mock, mock_get: Mock, _token: Mock
+) -> None:
+    """A malformed variable fails locally (before any network call)."""
+    result = runner.invoke(_app(), ["set-variables", "my_plugin", "--host", HOST, "noequals"])
+    assert result.exit_code != 0
+    assert "key=value" in result.output.lower()
+    mock_post.assert_not_called()
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
