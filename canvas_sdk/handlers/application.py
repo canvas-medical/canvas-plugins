@@ -1,6 +1,7 @@
 import importlib.metadata
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from typing import Any
 
 import deprecation
 
@@ -90,30 +91,32 @@ class EmbeddedApplication(Application, ABC):
     SCOPE: ApplicationScope
     IDENTIFIER: str | None = None
     PRIORITY: int = 0
-    DOCK_EDGE: str | None = None
-    DOCK_SIZE: str | None = None
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
         match self.event.type:
             case EventType.APPLICATION__ON_GET:
                 if self._matches_scope() and self.visible():
-                    return [
-                        ShowApplicationEffect(
-                            name=self.NAME,
-                            identifier=self.identifier,
-                            open_by_default=self.open_by_default(),
-                            priority=self.PRIORITY,
-                            dock_edge=self.DOCK_EDGE,
-                            dock_size=self.DOCK_SIZE,
-                        ).apply()
-                    ]
+                    return [ShowApplicationEffect(**self._show_application_values()).apply()]
                 return []
             case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
                 # Explicitly ignore the event here in case it's emitted directly.
                 return []
             case _:
                 return super().compute()
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """What this application tells Canvas about itself on APPLICATION__ON_GET.
+
+        Subclasses whose surface needs more than the common fields extend this rather
+        than reimplementing ``compute``.
+        """
+        return {
+            "name": self.NAME,
+            "identifier": self.identifier,
+            "open_by_default": self.open_by_default(),
+            "priority": self.PRIORITY,
+        }
 
     def _matches_scope(self) -> bool:
         """Check if the event scope matches the application scope."""
@@ -131,6 +134,23 @@ class EmbeddedApplication(Application, ABC):
     def identifier(self) -> str:
         """The application identifier."""
         return self.IDENTIFIER if self.IDENTIFIER else super().identifier
+
+
+class DockedApplication(EmbeddedApplication):
+    """An Application that mounts in a persistent pane on an edge of the window."""
+
+    SCOPE = ApplicationScope.DOCKED
+
+    DOCK_EDGE: str | None = None
+    DOCK_SIZE: str | None = None
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the placement Canvas needs to size the pane's track."""
+        return {
+            **super()._show_application_values(),
+            "dock_edge": self.DOCK_EDGE,
+            "dock_size": self.DOCK_SIZE,
+        }
 
 
 class NoteApplication(EmbeddedApplication):
@@ -192,6 +212,7 @@ class SchedulingApplication(EmbeddedApplication):
 __exports__ = (
     "Application",
     "ApplicationScope",
+    "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",
     "SchedulingApplication",
