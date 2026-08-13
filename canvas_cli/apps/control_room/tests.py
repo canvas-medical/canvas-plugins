@@ -172,8 +172,10 @@ def test_publish_hardens_git_auth_config(
     assert (
         add[6].startswith("!") and "git-credential" in add[6] and add[6].endswith(f"--host {HOST}")
     )
-    # a stale cr-login Authorization extraHeader for the host is reset
+    # a stale cr-login Authorization extraHeader for the host is reset — both the
+    # bare origin and the trailing-slash form cr-login actually writes.
     assert prefix + ["http.https://cr.example.extraHeader", ""] in calls
+    assert prefix + ["http.https://cr.example/.extraHeader", ""] in calls
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
