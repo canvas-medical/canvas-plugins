@@ -140,6 +140,17 @@ def test_originate_without_condition_id_is_unvalidated(note: Note) -> None:
     assert effect is not None
 
 
+def test_originate_allows_condition_when_note_is_not_yet_persisted(condition: Condition) -> None:
+    """A not-yet-persisted note doesn't cause its condition to be rejected."""
+    assess = AssessCommand(
+        note_uuid="3f7c1a9e-2b6d-4c8a-9e1f-0a2b3c4d5e6f", condition_id=str(condition.id)
+    )
+
+    effect = assess.originate()
+
+    assert effect is not None
+
+
 # --- condition ownership on edit ------------------------------------------
 
 
@@ -160,6 +171,17 @@ def test_edit_rejects_condition_belonging_to_another_patient(
 
     with pytest.raises(ValidationError, match="does not belong to this command's patient"):
         assess.edit()
+
+
+def test_edit_allows_condition_when_command_is_not_yet_persisted(condition: Condition) -> None:
+    """A not-yet-persisted command doesn't cause its condition to be rejected."""
+    assess = AssessCommand(
+        command_uuid="3f7c1a9e-2b6d-4c8a-9e1f-0a2b3c4d5e6f", condition_id=str(condition.id)
+    )
+
+    effect = assess.edit()
+
+    assert effect is not None
 
 
 # --- methods that don't write condition_id --------------------------------

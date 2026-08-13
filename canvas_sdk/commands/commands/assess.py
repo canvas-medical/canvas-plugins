@@ -32,12 +32,20 @@ class AssessCommand(_BaseCommand):
     def _is_target_patient(self, patient_id: str) -> bool:
         """Return whether the given patient is the one whose chart this command writes to."""
         if self.note_uuid:
-            return Note.objects.filter(id=self.note_uuid, patient__id=patient_id).exists()
+            anchor_patient_id = (
+                Note.objects.filter(id=self.note_uuid).values_list("patient__id", flat=True).first()
+            )
+        elif self.command_uuid:
+            anchor_patient_id = (
+                Command.objects.filter(id=self.command_uuid)
+                .values_list("patient__id", flat=True)
+                .first()
+            )
+        else:
+            return True
 
-        if self.command_uuid:
-            return Command.objects.filter(id=self.command_uuid, patient__id=patient_id).exists()
-
-        return True
+        # Anchor may not be persisted yet (same-batch effect); home-app re-checks at apply time.
+        return anchor_patient_id is None or anchor_patient_id == patient_id
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
