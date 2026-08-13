@@ -109,7 +109,10 @@ def _post(host: str, token: str, url: str, body: dict[str, object] | None = None
 
 
 def _git(
-    plugin_dir: Path, *args: str, isolate_config: bool = False
+    plugin_dir: Path,
+    *args: str,
+    isolate_config: bool = False,
+    extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a git command scoped to the plugin repo.
 
@@ -130,6 +133,8 @@ def _git(
     if isolate_config:
         env["GIT_CONFIG_GLOBAL"] = os.devnull
         env["GIT_CONFIG_SYSTEM"] = os.devnull
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         ["git", "-C", str(plugin_dir), *args],
         capture_output=True,
@@ -164,6 +169,47 @@ def _require_git_repo(plugin_dir: Path) -> None:
             f"'{plugin_dir}' is not a git repository. `canvas publish` pushes your "
             "plugin's git history to Control Room, so the plugin must live in a git repo."
         )
+
+
+def _capture_working_tree(plugin_dir: Path, *, message: str | None) -> bool:
+    """Stage and commit the working tree so ``publish`` ships what's on disk.
+
+    Git stays invisible to plugin authors (KOALA-5923): they edit files and
+    ``canvas publish`` — no ``git add`` / ``git commit`` in their vocabulary — so
+    we snapshot the tree for them. ``git add -A`` picks up modifications, new
+    files, and deletions. Returns ``True`` if a commit was made, ``False`` if the
+    tree was already clean (nothing staged after the add).
+
+    Identity: the author's configured ``user.name``/``user.email`` are used when
+    set (so history is attributable); we fall back to a Canvas identity only for
+    the field(s) they haven't configured, so an author who never set up git can
+    still publish instead of hitting "committer identity unknown". The commit is
+    deliberately NOT config-isolated, unlike the push, so that configured
+    identity is visible.
+    """
+    _git(plugin_dir, "add", "-A")
+    # `diff --cached --quiet` exits 0 when nothing is staged, 1 when there is a
+    # diff to commit (covers a fresh repo with no HEAD too — staged vs the empty
+    # tree is a diff).
+    if _git(plugin_dir, "diff", "--cached", "--quiet").returncode == 0:
+        return False
+
+    identity: dict[str, str] = {}
+    if not _git(plugin_dir, "config", "user.name").stdout.strip():
+        identity["GIT_AUTHOR_NAME"] = identity["GIT_COMMITTER_NAME"] = "Canvas CLI"
+    if not _git(plugin_dir, "config", "user.email").stdout.strip():
+        identity["GIT_AUTHOR_EMAIL"] = identity["GIT_COMMITTER_EMAIL"] = (
+            "canvas-cli@canvasmedical.com"
+        )
+
+    commit_message = message or (
+        f"Publish via canvas CLI ({time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})"
+    )
+    committed = _git(plugin_dir, "commit", "-m", commit_message, extra_env=identity or None)
+    if committed.returncode != 0:
+        print(committed.stderr or committed.stdout or "git commit failed", file=sys.stderr)
+        raise typer.Exit(1)
+    return True
 
 
 def _url_origin(url: str) -> str:
@@ -276,13 +322,36 @@ def publish(
     host: str | None = typer.Option(
         callback=get_default_host, default=None, help="Canvas instance to connect to"
     ),
+    message: str | None = typer.Option(
+        None, "--message", "-m", help="Commit message for the snapshot (default: auto)"
+    ),
+    no_commit: bool = typer.Option(
+        False,
+        "--no-commit",
+        help="Publish the last commit as-is; don't snapshot the working tree.",
+    ),
 ) -> None:
-    """Publish a plugin's current git HEAD to Control Room."""
+    """Publish a plugin's current code to Control Room.
+
+    By default this snapshots your working tree — staging and committing any
+    changes for you — and pushes it, so what's on disk is what gets published;
+    you never have to touch git. Pass ``--no-commit`` if you manage your own
+    commits and want to publish exactly the current ``HEAD``.
+    """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
     if not plugin_name.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
     _require_git_repo(plugin_name)
+
+    if no_commit:
+        if _git(plugin_name, "status", "--porcelain").stdout.strip():
+            print(
+                "Note: --no-commit set and the working tree has uncommitted changes; "
+                "publishing the last commit only — your uncommitted edits won't ship."
+            )
+    else:
+        _capture_working_tree(plugin_name, message=message)
 
     org_slug, name = _ensure_cr_remote(plugin_name, host)
 
@@ -301,7 +370,12 @@ def publish(
         print(stderr or "git push failed")
         raise typer.Exit(1)
 
-    print(f"Published {org_slug}/{name}. Deploy it with `canvas deploy`.")
+    # `git push` prints "Everything up-to-date" (and pushes nothing) when HEAD is
+    # already on CR — surface that honestly rather than a misleading "Published".
+    if "up-to-date" in (result.stdout + result.stderr).lower():
+        print(f"Nothing new to publish — Control Room already has {org_slug}/{name}@main.")
+    else:
+        print(f"Published {org_slug}/{name}. Deploy it with `canvas deploy`.")
 
 
 def pull(

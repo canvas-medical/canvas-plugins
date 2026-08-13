@@ -48,8 +48,14 @@ def _git_side_effect(
     fetch_stderr: str = "",
     merge_rc: int = 0,
     merge_stderr: str = "",
+    dirty: bool = False,
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
-    """Fake `subprocess.run` for the git calls publish/pull make."""
+    """Fake `subprocess.run` for the git calls publish/pull make.
+
+    ``dirty`` models an uncommitted working tree: `diff --cached --quiet` reports
+    a staged diff and `status --porcelain` lists a change. Everything else
+    (`add`, `commit`, `config user.*`) falls through to the rc=0 default.
+    """
 
     def run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         sub = cmd[3:]  # cmd == ["git", "-C", <dir>, <subcommand>, ...]
@@ -64,6 +70,10 @@ def _git_side_effect(
         if sub[0] == "merge":
             stdout = "" if merge_rc else "Already up to date.\n"
             return subprocess.CompletedProcess(cmd, merge_rc, stdout, merge_stderr)
+        if sub[:3] == ["diff", "--cached", "--quiet"]:
+            return subprocess.CompletedProcess(cmd, 1 if dirty else 0, "", "")
+        if sub[:2] == ["status", "--porcelain"]:
+            return subprocess.CompletedProcess(cmd, 0, "M hello/x.py\n" if dirty else "", "")
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
     return run
@@ -230,6 +240,81 @@ def test_publish_without_git_installed_gives_actionable_error(
     # The preflight fires before any git subprocess — no FileNotFoundError leaks.
     assert not isinstance(result.exception, FileNotFoundError)
     mock_run.assert_not_called()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_publish_auto_commits_working_tree(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A dirty tree is staged + committed for the author (git stays invisible),
+    then pushed. The commit falls back to a Canvas identity when none is set.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_run.side_effect = _git_side_effect(push_rc=0, dirty=True)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(
+        _app(), ["publish", str(plugin_dir), "--host", HOST, "-m", "my snapshot"]
+    )
+    assert result.exit_code == 0, result.output
+
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert ["git", "-C", str(plugin_dir), "add", "-A"] in calls
+    commit = next(c for c in mock_run.call_args_list if c.args[0][3] == "commit")
+    assert "my snapshot" in commit.args[0]  # our message is used
+    # no configured identity in this repo → Canvas fallback, and the commit is
+    # NOT config-isolated (so a configured identity would be honored)
+    assert commit.kwargs["env"]["GIT_AUTHOR_NAME"] == "Canvas CLI"
+    assert "GIT_CONFIG_GLOBAL" not in commit.kwargs["env"]
+    assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_publish_no_commit_skips_snapshot_and_warns(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """--no-commit publishes HEAD as-is: no commit is made, and the author is
+    warned that uncommitted changes won't ship.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_run.side_effect = _git_side_effect(push_rc=0, dirty=True)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST, "--no-commit"])
+    assert result.exit_code == 0, result.output
+    assert "won't ship" in result.output
+
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3] == "commit" for c in calls)  # nothing committed
+    assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_publish_clean_tree_reports_nothing_new(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A clean tree already on CR reports 'nothing new', not a misleading
+    'Published'.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    # clean tree (no commit) + git's up-to-date push message
+    mock_run.side_effect = _git_side_effect(push_stderr="Everything up-to-date", dirty=False)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
+    assert result.exit_code == 0, result.output
+    assert "Nothing new to publish" in result.output
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3] == "commit" for c in calls)
 
 
 # -- pull --------------------------------------------------------------------
