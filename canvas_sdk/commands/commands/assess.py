@@ -44,7 +44,7 @@ class AssessCommand(_BaseCommand):
         else:
             return True
 
-        # Anchor may not be persisted yet (same-batch effect); home-app re-checks at apply time.
+        # Anchor may not be persisted yet (same-batch effect);
         return anchor_patient_id is None or anchor_patient_id == patient_id
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
