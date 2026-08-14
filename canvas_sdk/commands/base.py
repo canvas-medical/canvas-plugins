@@ -19,13 +19,6 @@ from canvas_sdk.v1.data import Command, Note
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
 
-_REQUIRED_STATE_BY_METHOD = {
-    "edit": "staged",
-    "delete": "staged",
-    "commit": "staged",
-    "enter_in_error": "committed",
-}
-
 
 def _blank_to_none(value: Any) -> Any:
     """Read a blank id as an absent one.
