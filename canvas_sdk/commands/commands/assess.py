@@ -6,7 +6,7 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.v1.data import Command, Condition, Note
+from canvas_sdk.v1.data import Condition
 
 CONDITION_VALIDATED_METHODS = frozenset({"originate", "edit"})
 
@@ -28,24 +28,6 @@ class AssessCommand(_BaseCommand):
     background: str | None = None
     status: Status | None = None
     narrative: str | None = Field(default=None, max_length=2048)
-
-    def _is_target_patient(self, patient_id: str) -> bool:
-        """Return whether the given patient is the one whose chart this command writes to."""
-        if self.note_uuid:
-            anchor_patient_id = (
-                Note.objects.filter(id=self.note_uuid).values_list("patient__id", flat=True).first()
-            )
-        elif self.command_uuid:
-            anchor_patient_id = (
-                Command.objects.filter(id=self.command_uuid)
-                .values_list("patient__id", flat=True)
-                .first()
-            )
-        else:
-            return True
-
-        # Anchor may not be persisted yet (same-batch effect);
-        return anchor_patient_id is None or anchor_patient_id == patient_id
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
