@@ -149,6 +149,23 @@ def test_a_medication_id_that_cannot_be_an_id_is_a_validation_error(note: Note) 
         ChangeMedicationCommand(note_uuid=str(note.id), medication_id="99999")  # type: ignore[arg-type]
 
 
+def test_a_medication_id_given_as_a_string_is_still_accepted(note: Note, patient: Patient) -> None:
+    """The field was declared `str` before this change, so its callers pass one.
+
+    Retyping it to UUID only stays compatible because commands parse leniently. Under strict
+    parsing pydantic refuses the string form outright — `Input should be an instance of UUID` —
+    which would break every plugin that passes the id the way it used to be declared.
+    """
+    medication = _medication(patient)
+
+    command = ChangeMedicationCommand(
+        note_uuid=str(note.id),
+        medication_id=str(medication.id),  # type: ignore[arg-type]
+    )
+
+    assert command.originate()
+
+
 def test_no_medication_id_means_nothing_to_check(note: Note) -> None:
     """The field is optional until commit, so an empty command originates fine."""
     assert ChangeMedicationCommand(note_uuid=str(note.id)).originate()
