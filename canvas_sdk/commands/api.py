@@ -14,6 +14,21 @@ from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI
 from canvas_sdk.v1.data.command import Command
 
+_REQUIRED_STATE_BY_ACTION = {
+    "edit": "staged",
+    "delete": "staged",
+    "commit": "staged",
+    "enter_in_error": "committed",
+}
+
+#: For the refusal message, so it reads as a sentence about the command.
+_PAST_TENSE = {
+    "edit": "edited",
+    "delete": "deleted",
+    "commit": "committed",
+    "enter_in_error": "entered in error",
+}
+
 
 class _CommandBody(BaseModel):
     """A request body that describes a command, for the routes that address one by path."""
@@ -26,7 +41,7 @@ class _OriginateBody(_CommandBody):
     """A request body that creates a command, which has no path to address it by."""
 
     note_id: UUID = Field(strict=False)
-    command_id: str | None = None
+    command_id: UUID | None = Field(default=None, strict=False)
     commit: bool = False
 
 
@@ -87,13 +102,19 @@ class CommandAPI(SimpleAPI, ABC):
 
         Returns:
             The originate effect, one metadata effect per pair, and a ``201`` carrying
-            ``command_uuid`` and ``committed``; or a lone ``400``.
+            ``command_uuid`` and ``committed``; a ``409`` when the chosen id is taken; or a lone
+            ``400``.
         """
         try:
             if (request := self._request(_OriginateBody)) is None:
                 return [self._bad_request("Request body must be a JSON object")]
 
-            command_uuid = request.command_id or str(uuid4())
+            if request.command_id is not None:
+                if self._taken(str(request.command_id)):
+                    return [self._id_taken(str(request.command_id))]
+                command_uuid = str(request.command_id)
+            else:
+                command_uuid = str(uuid4())
             command = self._command(
                 model, request.values, command_uuid, note_id=str(request.note_id)
             )
@@ -129,8 +150,11 @@ class CommandAPI(SimpleAPI, ABC):
         try:
             if (request := self._request(_CommandBody)) is None:
                 return [self._bad_request("Request body must be a JSON object")]
-            if not self._exists(model, command_id):
+            state = self._state(model, command_id)
+            if state is None:
                 return [self._not_found(model)]
+            if state != _REQUIRED_STATE_BY_ACTION["edit"]:
+                return [self._wrong_state("edit", state, _REQUIRED_STATE_BY_ACTION["edit"])]
 
             command = self._command(model, request.values, command_id)
             effects = [command.edit(), *self._metadata_effects(command, request.metadata)]
@@ -157,8 +181,12 @@ class CommandAPI(SimpleAPI, ABC):
             The action's effect and a ``200``; or a lone ``404`` when no command of this type has
             that id, or ``400`` when the action is unsupported or the command's rules refuse it.
         """
-        if not self._exists(model, command_id):
+        state = self._state(model, command_id)
+        if state is None:
             return [self._not_found(model)]
+        required = _REQUIRED_STATE_BY_ACTION.get(action)
+        if required is not None and state != required:
+            return [self._wrong_state(action, state, required)]
 
         try:
             command = model(command_uuid=command_id)
@@ -276,22 +304,68 @@ class CommandAPI(SimpleAPI, ABC):
         """
         return [command.upsert_metadata(key, value) for key, value in metadata.items()]
 
-    def _exists(self, model: type[_BaseCommand], command_id: str) -> bool:
-        """Report whether a command of this endpoint's type has this id.
+    def _state(self, model: type[_BaseCommand], command_id: str) -> str | None:
+        """The state of the command this endpoint's type has under this id.
 
-        State is not read here — whether it allows an action is the command's own rule.
+        One query answers both questions the routes ask — whether such a command exists at all, and
+        whether it is in a state the requested action is allowed from.
 
         Args:
             model: The command whose type the id must belong to.
             command_id: The id to look up.
 
         Returns:
-            True when such a command exists, otherwise False.
+            The command's state, or None when no command of this type has that id. A malformed id
+            is None rather than an error: ``Command.id`` is a ``UUIDField``, and filtering one on a
+            value that will not parse raises before any query is sent.
         """
         try:
-            return Command.objects.filter(id=command_id, schema_key=model.Meta.key).exists()
+            return (
+                Command.objects.filter(id=command_id, schema_key=model.Meta.key)
+                .values_list("state", flat=True)
+                .first()
+            )
         except DjangoValidationError:
-            return False
+            return None
+
+    def _taken(self, command_id: str) -> bool:
+        """Whether any command already has this id.
+
+        Args:
+            command_id: The id the caller chose.
+
+        Returns:
+            True when a command already has it.
+        """
+        return Command.objects.filter(id=command_id).exists()
+
+    def _id_taken(self, command_id: str) -> Response:
+        """Return a ``409`` for a chosen id that already belongs to a command.
+
+        A conflict rather than a validation error: nothing about the request is malformed, and the
+        caller's move is to use a different id — or to recognise that the write it is retrying
+        already landed.
+        """
+        return JSONResponse(
+            {
+                "error": "a command already has that id",
+                "command_uuid": command_id,
+                "validation_errors": [],
+            },
+            status_code=HTTPStatus.CONFLICT,
+        )
+
+    def _wrong_state(self, action: str, state: str, required: str) -> Response:
+        """Return a ``400`` for an action the command's current state does not allow."""
+        return JSONResponse(
+            {
+                "error": f"a {state} command cannot be {_PAST_TENSE.get(action, action)}",
+                "state": state,
+                "required_state": required,
+                "validation_errors": [],
+            },
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
 
     def _ok(self, command_id: str, mode: str) -> Response:
         """Return a ``200`` naming the command that was acted on and the action taken."""

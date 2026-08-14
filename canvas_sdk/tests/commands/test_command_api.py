@@ -164,21 +164,16 @@ def _content(response: Response) -> dict[str, Any]:
 
 @contextmanager
 def _stored(state: str | None) -> Iterator[MagicMock]:
-    """Patch the command table so one command exists, in ``state``.
+    """Patch the command table so one command exists, in ``state``. ``None`` means none does.
 
-    Both readers are answered from it: the endpoint asks whether a command of its type has the id,
-    and the command asks whether it is in the state its action requires. ``None`` means no such
-    command.
+    Two readers, told apart by what they call rather than by what they filter on: an addressed
+    command's state, and whether a chosen id is taken at all.
     """
 
     def filter(**kwargs: Any) -> MagicMock:
         queryset = MagicMock()
-        if "state" in kwargs:
-            # The command asking whether it is in the state its action requires.
-            queryset.exists.return_value = kwargs["state"] == state
-        else:
-            # The endpoint asking whether a command of its type has this id at all.
-            queryset.exists.return_value = state is not None
+        queryset.values_list.return_value.first.return_value = state
+        queryset.exists.return_value = state is not None
         return queryset
 
     manager = MagicMock()
@@ -282,10 +277,70 @@ def test_insert_ignores_a_caller_supplied_command_id_field() -> None:
         {"note_id": NOTE_UUID, "command_id": COMMAND_UUID, "command_uuid": "ignored"},
     )
 
-    effects, responses = _split(handler.insert())
+    # No command holds the chosen id, so it is free to use.
+    with _stored(None):
+        effects, responses = _split(handler.insert())
 
     assert _payload(effects[0])["command"] == COMMAND_UUID
     assert _content(responses[0])["command_uuid"] == COMMAND_UUID
+
+
+def test_insert_refuses_a_chosen_id_that_is_already_a_commands() -> None:
+    """``Command.uuid`` is unique, so reusing an id would fail when the effect is applied.
+
+    Refused here instead, as a conflict the caller can act on: use another id, or recognise that
+    the write being retried already landed.
+    """
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "command_id": COMMAND_UUID})
+
+    with _stored("staged"):
+        effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.CONFLICT
+    assert _content(responses[0]) == {
+        "error": "a command already has that id",
+        "command_uuid": COMMAND_UUID,
+        "validation_errors": [],
+    }
+
+
+def test_the_id_check_is_not_scoped_to_the_endpoints_command_type() -> None:
+    """An id belonging to a command of another type is still unusable.
+
+    Unlike the lookup the addressed-command routes make, this one filters on the id alone, because
+    the uniqueness it is protecting spans the whole table.
+    """
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "command_id": COMMAND_UUID})
+
+    with _stored("staged") as manager:
+        handler.insert()
+
+    manager.filter.assert_called_once_with(id=COMMAND_UUID)
+
+
+def test_insert_refuses_a_chosen_id_that_is_not_a_uuid() -> None:
+    """The chosen id becomes the command's identifier, so it has to be able to be one."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "command_id": "not-a-uuid"})
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.BAD_REQUEST
+    assert [error["field"] for error in _content(responses[0])["validation_errors"]] == [
+        "command_id"
+    ]
+
+
+def test_insert_without_a_chosen_id_reads_nothing() -> None:
+    """The ordinary path does not pay for the check: with no id chosen, there is nothing to check."""
+    handler = _handler("POST", "/v1/hpi", {"note_id": NOTE_UUID, "values": {"narrative": "x"}})
+
+    with _stored(None) as manager:
+        effects, _responses = _split(handler.insert())
+
+    assert effects
+    manager.filter.assert_not_called()
 
 
 def test_insert_ignores_keys_that_are_not_command_fields() -> None:
@@ -457,7 +512,7 @@ def test_delete_removes_a_staged_command() -> None:
 
 
 def test_delete_is_refused_once_the_command_is_committed() -> None:
-    """A committed command cannot be deleted; the command itself says so, as a 400."""
+    """A committed command cannot be deleted; it is entered in error instead."""
     handler = _handler("DELETE", f"/v1/hpi/{COMMAND_UUID}")
 
     with _stored("committed"):
@@ -465,9 +520,12 @@ def test_delete_is_refused_once_the_command_is_committed() -> None:
 
     assert effects == []
     assert responses[0].status_code == HTTPStatus.BAD_REQUEST
-    assert _content(responses[0])["validation_errors"] == [
-        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
-    ]
+    assert _content(responses[0]) == {
+        "error": "a committed command cannot be deleted",
+        "state": "committed",
+        "required_state": "staged",
+        "validation_errors": [],
+    }
 
 
 def test_delete_is_not_found_when_no_such_command_exists() -> None:
@@ -532,8 +590,10 @@ def test_an_action_is_not_found_when_no_such_command_exists() -> None:
 
 # ---------------------------------------------------------------- state rules, as 400 responses
 #
-# A command refuses an action its state disallows while the effect is built. Each of these would be
-# an unhandled error rather than a response if that path were not covered.
+# The endpoint refuses an action the command's current state does not allow, and says which state it
+# found and which one the action needs. The *command* does not check this while building its effect:
+# a plugin chaining effects builds a commit before the originate ahead of it has been applied, so
+# there is legitimately no row to read yet. An id arriving over HTTP is the opposite case.
 
 
 def test_committing_an_already_committed_command_is_rejected() -> None:
@@ -545,11 +605,12 @@ def test_committing_an_already_committed_command_is_rejected() -> None:
 
     assert effects == []
     assert responses[0].status_code == HTTPStatus.BAD_REQUEST
-    body = _content(responses[0])
-    assert body["error"] == "Validation failed"
-    assert body["validation_errors"] == [
-        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
-    ]
+    assert _content(responses[0]) == {
+        "error": "a committed command cannot be committed",
+        "state": "committed",
+        "required_state": "staged",
+        "validation_errors": [],
+    }
 
 
 def test_entering_a_staged_command_in_error_is_rejected() -> None:
@@ -561,9 +622,12 @@ def test_entering_a_staged_command_in_error_is_rejected() -> None:
 
     assert effects == []
     assert responses[0].status_code == HTTPStatus.BAD_REQUEST
-    assert _content(responses[0])["validation_errors"] == [
-        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be entered in error."}
-    ]
+    assert _content(responses[0]) == {
+        "error": "a staged command cannot be entered in error",
+        "state": "staged",
+        "required_state": "committed",
+        "validation_errors": [],
+    }
 
 
 def test_editing_a_committed_command_is_rejected() -> None:
@@ -575,9 +639,12 @@ def test_editing_a_committed_command_is_rejected() -> None:
 
     assert effects == []
     assert responses[0].status_code == HTTPStatus.BAD_REQUEST
-    assert _content(responses[0])["validation_errors"] == [
-        {"field": "", "message": f"Command with {COMMAND_UUID} cannot be changed."}
-    ]
+    assert _content(responses[0]) == {
+        "error": "a committed command cannot be edited",
+        "state": "committed",
+        "required_state": "staged",
+        "validation_errors": [],
+    }
 
 
 def test_an_action_the_state_allows_still_succeeds() -> None:
@@ -605,10 +672,7 @@ def test_lookup_is_scoped_to_the_endpoints_command_type() -> None:
     with _stored("staged") as manager:
         handler.delete()
 
-    # The command runs a state check of its own, so look for the endpoint's lookup among the calls.
-    assert {"id": COMMAND_UUID, "schema_key": "hpi"} in [
-        call.kwargs for call in manager.filter.call_args_list
-    ]
+    manager.filter.assert_called_once_with(id=COMMAND_UUID, schema_key="hpi")
 
 
 def test_a_malformed_id_is_not_found_rather_than_a_query_error() -> None:
