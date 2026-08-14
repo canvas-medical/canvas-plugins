@@ -639,6 +639,27 @@ def test_patient_contact_to_dict_with_related_patient() -> None:
     }
 
 
+@pytest.mark.parametrize(
+    "related_patient",
+    [
+        pytest.param(RELATED_PATIENT_UUID, id="hex-string"),
+        pytest.param(str(uuid.UUID(RELATED_PATIENT_UUID)), id="hyphenated-string"),
+        pytest.param(uuid.UUID(RELATED_PATIENT_UUID), id="uuid-object"),
+    ],
+)
+def test_patient_contact_to_dict_normalizes_related_patient_to_a_patient_key(
+    related_patient: str | uuid.UUID,
+) -> None:
+    """Every form of the same UUID serializes to the hex key the write path looks up.
+
+    A patient's key column holds 32-character hex and the lookup does not normalize, so a
+    hyphenated value would be reported as a patient that does not exist.
+    """
+    contact = PatientContact(related_patient=related_patient)
+
+    assert contact.to_dict()["related_patient"] == RELATED_PATIENT_UUID
+
+
 def test_patient_contact_to_dict_with_inactive() -> None:
     """A contact flagged inactive is removed rather than created or updated."""
     contact = PatientContact(contact_identifier=CONTACT_UUID, inactive=True)
@@ -778,12 +799,35 @@ def test_patient_create_rejects_invalid_contacts(
         patient.create()
 
 
-def test_patient_update_requires_contact_identifier(mock_db_queries: dict[str, MagicMock]) -> None:
-    """contact_identifier is required on update so the existing contact is targeted."""
+def test_patient_update_without_contact_identifier_adds_a_contact(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Omitting contact_identifier on update adds a contact to an existing patient.
+
+    A plugin populating contacts after intake has an existing patient and no contact to point
+    at, so requiring an identifier here would leave it no way to add one at all.
+    """
     patient = Patient(patient_id="123", contacts=[PatientContact(name="Jane Doe")])
 
-    with pytest.raises(ValidationError, match="contact_identifier"):
-        patient.update()
+    effect = patient.update()
+
+    [contact] = json.loads(effect.payload)["data"]["contacts"]
+    assert contact == {"name": "Jane Doe"}
+
+
+def test_patient_update_with_contact_identifier_targets_that_contact(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Supplying contact_identifier on update modifies that contact rather than adding one."""
+    patient = Patient(
+        patient_id="123",
+        contacts=[PatientContact(contact_identifier=CONTACT_UUID, name="Jane Q. Doe")],
+    )
+
+    effect = patient.update()
+
+    [contact] = json.loads(effect.payload)["data"]["contacts"]
+    assert contact == {"contact_identifier": CONTACT_UUID, "name": "Jane Q. Doe"}
 
 
 def test_patient_update_removes_contact_without_name_or_related_patient(

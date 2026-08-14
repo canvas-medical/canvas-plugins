@@ -66,9 +66,17 @@ class PatientContactCategory:
 
 @dataclass
 class PatientContact:
-    """A class representing a patient contact, such as an emergency contact or related person."""
+    """A class representing a patient contact, such as an emergency contact or related person.
+
+    Whether a contact is added or modified is decided by `contact_identifier`, not by which
+    method the `Patient` effect was applied with: omit it to add a contact, supply it to target
+    the contact it names. So `Patient(...).update()` can add a contact to a patient that already
+    exists, which is the common case for a plugin populating contacts after intake.
+    """
 
     name: str | None = None
+    # Omit to add a contact. Supply it to update or remove the contact it names; on a create it
+    # is the id the new contact is given.
     contact_identifier: str | uuid.UUID | None = None
     phone_number: str | None = None
     email: str | None = None
@@ -98,12 +106,12 @@ class PatientContact:
             if value is not None
         }
 
-        for key, identifier in (
-            ("contact_identifier", self.contact_identifier),
-            ("related_patient", self.related_patient),
-        ):
-            if identifier is not None:
-                values[key] = str(identifier)
+        if self.contact_identifier is not None:
+            # A contact's id is a real UUID column, so either form of the same UUID resolves.
+            values["contact_identifier"] = str(self.contact_identifier)
+
+        if self.related_patient is not None:
+            values["related_patient"] = _as_patient_key(self.related_patient)
 
         if self.categories is not None:
             values["categories"] = [category.to_dict() for category in self.categories]
@@ -201,6 +209,20 @@ def _is_valid_uuid(value: str | uuid.UUID) -> bool:
     return True
 
 
+def _as_patient_key(value: str | uuid.UUID) -> str:
+    """Normalize a patient reference to the 32-character hex form stored as a patient's key.
+
+    A uuid.UUID object and the hyphenated string name the same patient as the bare hex, but the
+    column holds hex and the lookup does not normalize, so an un-normalized value would come
+    back as a patient that does not exist. A value that is not a UUID at all is passed through
+    for the validator to reject with a message about the real problem.
+    """
+    try:
+        return uuid.UUID(str(value)).hex
+    except (ValueError, AttributeError, TypeError):
+        return str(value)
+
+
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
@@ -281,8 +303,13 @@ class Patient(TrackableFieldsModel):
 
         return values
 
-    def _get_contact_error_details(self, method: Any) -> list[InitErrorDetails]:
+    def _get_contact_error_details(self) -> list[InitErrorDetails]:
         """Validate each contact's shape, and its categories against the instance's codings.
+
+        `contact_identifier` is what distinguishes an update of an existing contact from a new
+        one, on `create` and `update` alike: supplying it targets that contact, omitting it adds
+        a contact. So it is never required except to remove one, where there is nothing else to
+        say which contact is meant.
 
         Existence of `related_patient` and of the contact behind `contact_identifier` is
         deliberately not checked here: effects are applied after the plugin returns, so a
@@ -309,12 +336,6 @@ class Patient(TrackableFieldsModel):
                 error(
                     "A patient contact requires either 'name' (an inline person) or "
                     "'related_patient' (the key of an existing Canvas patient).",
-                    None,
-                )
-            if method == "update" and not contact.inactive and contact.contact_identifier is None:
-                error(
-                    "'contact_identifier' is required when updating a patient contact, so the "
-                    "existing contact is updated rather than duplicated.",
                     None,
                 )
             for field, value in (
@@ -366,7 +387,7 @@ class Patient(TrackableFieldsModel):
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
-        errors.extend(self._get_contact_error_details(method))
+        errors.extend(self._get_contact_error_details())
 
         # Validate create-specific requirements
         if method == "create":
