@@ -5,6 +5,7 @@ from types import NoneType, UnionType
 from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
+from pydantic import ConfigDict
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
@@ -29,6 +30,8 @@ class _BaseCommand(TrackableFieldsModel):
         enter_in_error_required_fields = ("command_uuid",)
         delegate_required_fields = ("command_uuid",)
         sign_required_fields = ("command_uuid",)
+
+    model_config = ConfigDict(strict=False)
 
     _dirty_excluded_keys = [
         "note_uuid",
