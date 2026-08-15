@@ -60,7 +60,12 @@ class Handler(BaseHandler):
 
 
 class _Target:
-    """Plain plugin-defined class, used as the target of the writes above."""
+    """Plain plugin-defined class, used as the target of the writes above.
+
+    ``flag`` is declared here rather than created on the fly so the assignment
+    and ``del`` in ``compute`` type-check.
+    """
 
     def __init__(self) -> None:
         self.total = 0
+        self.flag = False
