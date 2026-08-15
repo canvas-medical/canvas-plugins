@@ -49,10 +49,12 @@ def _codes(findings: list, severity: str | None = None) -> set[str]:
     "code, expected",
     [
         ("d = {}\nd['a'] += 1\n", "augmented-subscript"),
+        ("obj.attr += 1\n", "augmented-attribute"),
         ("setattr(obj, 'x', 1)\n", "setattr-blocked"),
         ("delattr(obj, 'x')\n", "delattr-blocked"),
         ("b = bytearray(b'x')\n", "bytearray-blocked"),
-        ("C = type('C', (object,), {})\n", "type-3arg-blocked"),
+        ("C = type('C', (object,), {})\n", "type-blocked"),
+        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_construct_violation_flagged(code: str, expected: str) -> None:
@@ -84,12 +86,16 @@ def test_frozen_and_slots_dataclass_not_flagged() -> None:
     assert lint_plugin(root, {}) == []
 
 
-def test_one_arg_type_not_flagged() -> None:
-    """Only 3-arg dynamic class creation is flagged; ordinary ``type(x)`` is not
-    the class-creation anti-pattern the rule targets.
+def test_one_arg_type_flagged() -> None:
+    """One-argument ``type(x)`` is flagged too.
+
+    ``type`` is not in the sandbox builtins at all, so a one-argument call fails
+    with ``NameError`` just like the three-argument form (see the tripwire
+    below). This previously asserted the opposite, which let a plugin using
+    ``type(x)`` pass ``canvas validate`` and then fail on the instance.
     """
     root = _plugin({"handlers/h.py": "k = type(5)\n"})
-    assert "type-3arg-blocked" not in _codes(lint_plugin(root, {}))
+    assert "type-blocked" in _codes(lint_plugin(root, {}), "error")
 
 
 # ── lint-logic: Custom Data rules ─────────────────────────────────────────────
@@ -307,10 +313,12 @@ def _sandbox_raises(source: str) -> Exception | None:
     "code, rule",
     [
         ("d = {'a': 1}\nd['a'] += 1\n", "augmented-subscript"),
+        ("class T:\n    x = 1\nt = T()\nt.x += 1\n", "augmented-attribute"),
         ("class T:\n    pass\nsetattr(T(), 'x', 1)\n", "setattr-blocked"),
         ("class T:\n    x = 1\ndelattr(T(), 'x')\n", "delattr-blocked"),
         ("b = bytearray(b'x')\n", "bytearray-blocked"),
-        ("C = type('C', (object,), {})\n", "type-3arg-blocked"),
+        ("C = type('C', (object,), {})\n", "type-blocked"),
+        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_tripwire_sandbox_still_rejects(code: str, rule: str) -> None:

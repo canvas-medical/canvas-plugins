@@ -119,6 +119,18 @@ def _construct_findings(plugin_dir: Path) -> list[LintFinding]:
                         "sandbox. Rewrite as explicit reassignment: `d[k] = d[k] + v`.",
                     )
                 )
+            elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Attribute):
+                findings.append(
+                    LintFinding(
+                        "error",
+                        f"{rel}:{node.lineno}",
+                        "augmented-attribute",
+                        "Augmented assignment to an attribute (e.g. `obj.attr += v`) is "
+                        "rejected by the RestrictedPython sandbox, including on classes "
+                        "the plugin defines itself. Rewrite as explicit reassignment: "
+                        "`obj.attr = obj.attr + v`.",
+                    )
+                )
             elif isinstance(node, ast.Call):
                 name = _call_name(node)
                 if name == "setattr" and isinstance(node.func, ast.Name):
@@ -150,15 +162,21 @@ def _construct_findings(plugin_dir: Path) -> list[LintFinding]:
                             "for binary data.",
                         )
                     )
-                elif name == "type" and isinstance(node.func, ast.Name) and len(node.args) >= 3:
+                elif name == "type" and isinstance(node.func, ast.Name):
+                    # `type` is absent from the sandbox builtins entirely, so every
+                    # call fails with NameError -- not just the 3-argument dynamic
+                    # class creation form. See test_type_is_inaccessible in
+                    # plugin_runner/tests/test_sandbox.py.
                     findings.append(
                         LintFinding(
                             "error",
                             f"{rel}:{node.lineno}",
-                            "type-3arg-blocked",
-                            "`type(name, bases, dict)` dynamic class creation is not "
-                            "available in the sandbox. Declare the class normally with "
-                            "`class … :`.",
+                            "type-blocked",
+                            "`type()` is not available in the sandbox and raises "
+                            "`NameError` on any call. Use `isinstance(x, SomeClass)` to "
+                            "test a type or `x.__class__.__name__` to read its name, and "
+                            "declare classes normally with `class … :` rather than "
+                            "`type(name, bases, dict)`.",
                         )
                     )
     return findings
