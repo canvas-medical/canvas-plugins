@@ -60,10 +60,15 @@ def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
     if not root.is_dir():
         return
     for py_file in sorted(root.rglob("*.py")):
-        if set(py_file.parts) & SKIP_DIRS:
+        # Match on the path *inside* the plugin. Matching absolute parts meant a
+        # plugin that merely lived under a directory named tests/, build/, dist/
+        # or similar had every file skipped, so the lint silently passed having
+        # examined nothing.
+        rel_parts = py_file.relative_to(root).parts
+        if set(rel_parts) & SKIP_DIRS:
             continue
         # Skip anything under a dot-directory (e.g. .cache/uv/...).
-        if any(part.startswith(".") and part not in (".", "..") for part in py_file.parts[:-1]):
+        if any(part.startswith(".") and part not in (".", "..") for part in rel_parts[:-1]):
             continue
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))

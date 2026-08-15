@@ -86,6 +86,44 @@ def test_frozen_and_slots_dataclass_not_flagged() -> None:
     assert lint_plugin(root, {}) == []
 
 
+FIXTURE_PLUGIN = (
+    Path(__file__).resolve().parents[3]
+    / "plugin_runner"
+    / "tests"
+    / "fixtures"
+    / "plugins"
+    / "test_sandbox_lint_violations"
+)
+
+CONSTRUCT_RULES = {
+    "augmented-attribute",
+    "augmented-subscript",
+    "bytearray-blocked",
+    "delattr-blocked",
+    "setattr-blocked",
+    "type-blocked",
+}
+
+
+def test_fixture_plugin_reports_every_construct_rule() -> None:
+    """The on-disk fixture plugin trips every construct rule, and only in
+    ``violations.py``.
+
+    This is the end-to-end counterpart to the inline cases above: a real plugin
+    directory a human can point ``canvas validate`` at. Keeping the assertion
+    exhaustive means adding a construct rule without adding it to the fixture
+    fails here, so the fixture cannot fall behind ``plugin_lint.py``.
+    """
+    manifest = json.loads((FIXTURE_PLUGIN / "CANVAS_MANIFEST.json").read_text())
+    findings = lint_plugin(FIXTURE_PLUGIN, manifest)
+    errors = [f for f in findings if f.severity == "error"]
+
+    assert {f.code for f in errors} == CONSTRUCT_RULES
+
+    # The clean handler is the control: it must contribute nothing.
+    assert not [f for f in findings if "clean.py" in f.location]
+
+
 def test_one_arg_type_flagged() -> None:
     """One-argument ``type(x)`` is flagged too.
 
@@ -189,6 +227,24 @@ def test_files_under_skipped_dirs_are_ignored() -> None:
     """Source under a SKIP_DIRS directory (e.g. `tests/`) is never linted."""
     root = _plugin({"tests/h.py": "setattr(obj, 'x', 1)\n"})
     assert lint_plugin(root, {}) == []
+
+
+def test_skip_dirs_only_apply_inside_the_plugin() -> None:
+    """A plugin that merely *lives* under a SKIP_DIRS-named directory is linted.
+
+    SKIP_DIRS was matched against the absolute path, so a plugin checked out
+    under any directory called ``tests``, ``build``, ``dist`` and so on had every
+    file skipped and passed the lint having examined nothing.
+    """
+    enclosing = Path(mkdtemp()) / "tests"
+    enclosing.mkdir(parents=True)
+    root = enclosing / "plugin_pkg"
+    root.mkdir()
+    (root / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "plugin_pkg"}))
+    (root / "handlers").mkdir()
+    (root / "handlers" / "h.py").write_text("setattr(obj, 'x', 1)\n")
+
+    assert "setattr-blocked" in _codes(lint_plugin(root, {}), "error")
 
 
 def test_files_under_dot_dirs_are_ignored() -> None:
