@@ -697,6 +697,9 @@
     "NoteRestrictionsEffect",
     "NoteRestrictionsUpdatedEffect"
   ],
+  "canvas_sdk.effects.note_body_automation": [
+    "ShowNoteBodyAutomationEffect"
+  ],
   "canvas_sdk.effects.note_footer_configuration": [
     "NoteFooterConfiguration"
   ],
@@ -965,6 +968,11 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.note_body_automation": [
+    "AUTOMATION_SELECTED_EVENT",
+    "NoteBodyAutomation",
+    "SHOW_AUTOMATIONS_EVENT"
   ],
   "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
     "PatientChartSummaryCustomSectionHandler"
