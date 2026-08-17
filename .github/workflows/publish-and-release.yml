@@ -8,12 +8,18 @@ on:
         required: false
         default: 'false'
         type: boolean
+      publish-tag:
+        description: 'Re-publish an already-tagged version (e.g. 0.198.1) to PyPI and GitHub Releases, skipping version. Leave blank for a normal release.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   id-token: write
 
 jobs:
   build-and-test:
+    if: ${{ !inputs.publish-tag }}
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit
 
@@ -22,16 +28,18 @@ jobs:
     concurrency: release
     needs:
       - build-and-test
+    if: ${{ always() && (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped') }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish-tag }}
           token: ${{ secrets.PROJECT_AND_REPO_PAT }}
       - uses: ./.github/actions/install-python-and-uv
       - uses: ./.github/actions/install-canvas
 
       - name: Verify patch-only bump on release branches
-        if: startsWith(github.ref_name, 'release/')
+        if: ${{ !inputs.publish-tag && startsWith(github.ref_name, 'release/') }}
         run: |
           LAST_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           NEXT_VERSION=$(uv run semantic-release --strict version --print)
@@ -47,6 +55,7 @@ jobs:
 
       - name: Python Semantic Release
         id: release
+        if: ${{ !inputs.publish-tag }}
         env:
           GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
           GIT_COMMITTER_NAME: ${{ vars.RELEASE_COMMITTER_NAME }}
@@ -56,6 +65,10 @@ jobs:
           git config --global user.email "$GIT_COMMITTER_EMAIL"
           uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") version
 
+      - name: Build distributions for the tag being re-published
+        if: ${{ inputs.publish-tag && !inputs.dry-run }}
+        run: uv build
+
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: ${{ !inputs.dry-run }}
@@ -64,4 +77,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
         run: |
-          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
+          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ inputs.publish-tag || steps.release.outputs.tag }}
