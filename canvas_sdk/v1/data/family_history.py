@@ -40,9 +40,9 @@ class FamilyHistory(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
     )
-    relation_snomed_code = models.BigIntegerField(null=True)
-    relation_snomed_term = models.CharField(max_length=255)
-    narrative = models.CharField(max_length=512)
+    relation_snomed_code = models.BigIntegerField(db_index=True, null=True)
+    relation_snomed_term = models.CharField(max_length=255, blank=True, default="")
+    narrative = models.CharField(max_length=512, blank=True, default="")
 
 
 class FamilyHistoryCoding(Coding):
