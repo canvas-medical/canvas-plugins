@@ -84,13 +84,15 @@ class UpdateGoal(AuditedModel, IdentifiableModel):
         choices=GoalLifecycleStatus.choices,
         default=GoalLifecycleStatus.ACTIVE,
         blank=True,
+        null=True,
     )
-    achievement_status = models.CharField(max_length=20, choices=GoalAchievementStatus.choices)
-    priority = models.CharField(
+    achievement_status = models.CharField(
         max_length=20,
-        choices=GoalPriority.choices,
-        default=GoalPriority.MEDIUM,
+        choices=GoalAchievementStatus.choices,
+        default=GoalAchievementStatus.IN_PROGRESS,
+        blank=True,
     )
+    priority = models.CharField(max_length=20, choices=GoalPriority.choices)
     due_date = models.DateField()
     progress = models.TextField()
 
