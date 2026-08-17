@@ -72,9 +72,25 @@ jobs:
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: ${{ !inputs.dry-run }}
+        with:
+          skip-existing: true
 
       - name: Publish package distributions to GitHub Releases
+        if: ${{ !inputs.publish-tag }}
         env:
           GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
         run: |
-          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ inputs.publish-tag || steps.release.outputs.tag }}
+          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
+
+      - name: Publish distributions to the GitHub Release (re-publish)
+        if: ${{ inputs.publish-tag && !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
+          TAG: ${{ inputs.publish-tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          else
+            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG" --verify-tag --generate-notes
+          fi
