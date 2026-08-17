@@ -35,7 +35,7 @@ class FamilyHistory(AuditedModel, IdentifiableModel):
     objects = cast(FamilyHistoryQuerySet, FamilyHistoryManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="family_histories"
     )
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
