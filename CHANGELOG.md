@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.1 (2026-08-17)
+
+### Bug Fixes
+
+- Flag all type() calls and augmented assignment to attributes
+  ([#1824](https://github.com/canvas-medical/canvas-plugins/pull/1824),
+  [`f724692`](https://github.com/canvas-medical/canvas-plugins/commit/f7246921d20528a47e8702cd6fc30d313274bbee))
+
+
 ## v0.198.0 (2026-08-17)
 
 ### Features

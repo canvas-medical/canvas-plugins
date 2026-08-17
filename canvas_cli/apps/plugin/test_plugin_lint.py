@@ -49,10 +49,12 @@ def _codes(findings: list, severity: str | None = None) -> set[str]:
     "code, expected",
     [
         ("d = {}\nd['a'] += 1\n", "augmented-subscript"),
+        ("obj.attr += 1\n", "augmented-attribute"),
         ("setattr(obj, 'x', 1)\n", "setattr-blocked"),
         ("delattr(obj, 'x')\n", "delattr-blocked"),
         ("b = bytearray(b'x')\n", "bytearray-blocked"),
-        ("C = type('C', (object,), {})\n", "type-3arg-blocked"),
+        ("C = type('C', (object,), {})\n", "type-blocked"),
+        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_construct_violation_flagged(code: str, expected: str) -> None:
@@ -84,12 +86,54 @@ def test_frozen_and_slots_dataclass_not_flagged() -> None:
     assert lint_plugin(root, {}) == []
 
 
-def test_one_arg_type_not_flagged() -> None:
-    """Only 3-arg dynamic class creation is flagged; ordinary ``type(x)`` is not
-    the class-creation anti-pattern the rule targets.
+FIXTURE_PLUGIN = (
+    Path(__file__).resolve().parents[3]
+    / "plugin_runner"
+    / "tests"
+    / "fixtures"
+    / "plugins"
+    / "test_sandbox_lint_violations"
+)
+
+CONSTRUCT_RULES = {
+    "augmented-attribute",
+    "augmented-subscript",
+    "bytearray-blocked",
+    "delattr-blocked",
+    "setattr-blocked",
+    "type-blocked",
+}
+
+
+def test_fixture_plugin_reports_every_construct_rule() -> None:
+    """The on-disk fixture plugin trips every construct rule, and only in
+    ``violations.py``.
+
+    This is the end-to-end counterpart to the inline cases above: a real plugin
+    directory a human can point ``canvas validate`` at. Keeping the assertion
+    exhaustive means adding a construct rule without adding it to the fixture
+    fails here, so the fixture cannot fall behind ``plugin_lint.py``.
+    """
+    manifest = json.loads((FIXTURE_PLUGIN / "CANVAS_MANIFEST.json").read_text())
+    findings = lint_plugin(FIXTURE_PLUGIN, manifest)
+    errors = [f for f in findings if f.severity == "error"]
+
+    assert {f.code for f in errors} == CONSTRUCT_RULES
+
+    # The clean handler is the control: it must contribute nothing.
+    assert not [f for f in findings if "clean.py" in f.location]
+
+
+def test_one_arg_type_flagged() -> None:
+    """One-argument ``type(x)`` is flagged too.
+
+    ``type`` is not in the sandbox builtins at all, so a one-argument call fails
+    with ``NameError`` just like the three-argument form (see the tripwire
+    below). This previously asserted the opposite, which let a plugin using
+    ``type(x)`` pass ``canvas validate`` and then fail on the instance.
     """
     root = _plugin({"handlers/h.py": "k = type(5)\n"})
-    assert "type-3arg-blocked" not in _codes(lint_plugin(root, {}))
+    assert "type-blocked" in _codes(lint_plugin(root, {}), "error")
 
 
 # ── lint-logic: Custom Data rules ─────────────────────────────────────────────
@@ -183,6 +227,24 @@ def test_files_under_skipped_dirs_are_ignored() -> None:
     """Source under a SKIP_DIRS directory (e.g. `tests/`) is never linted."""
     root = _plugin({"tests/h.py": "setattr(obj, 'x', 1)\n"})
     assert lint_plugin(root, {}) == []
+
+
+def test_skip_dirs_only_apply_inside_the_plugin() -> None:
+    """A plugin that merely *lives* under a SKIP_DIRS-named directory is linted.
+
+    SKIP_DIRS was matched against the absolute path, so a plugin checked out
+    under any directory called ``tests``, ``build``, ``dist`` and so on had every
+    file skipped and passed the lint having examined nothing.
+    """
+    enclosing = Path(mkdtemp()) / "tests"
+    enclosing.mkdir(parents=True)
+    root = enclosing / "plugin_pkg"
+    root.mkdir()
+    (root / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "plugin_pkg"}))
+    (root / "handlers").mkdir()
+    (root / "handlers" / "h.py").write_text("setattr(obj, 'x', 1)\n")
+
+    assert "setattr-blocked" in _codes(lint_plugin(root, {}), "error")
 
 
 def test_files_under_dot_dirs_are_ignored() -> None:
@@ -307,10 +369,12 @@ def _sandbox_raises(source: str) -> Exception | None:
     "code, rule",
     [
         ("d = {'a': 1}\nd['a'] += 1\n", "augmented-subscript"),
+        ("class T:\n    x = 1\nt = T()\nt.x += 1\n", "augmented-attribute"),
         ("class T:\n    pass\nsetattr(T(), 'x', 1)\n", "setattr-blocked"),
         ("class T:\n    x = 1\ndelattr(T(), 'x')\n", "delattr-blocked"),
         ("b = bytearray(b'x')\n", "bytearray-blocked"),
-        ("C = type('C', (object,), {})\n", "type-3arg-blocked"),
+        ("C = type('C', (object,), {})\n", "type-blocked"),
+        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_tripwire_sandbox_still_rejects(code: str, rule: str) -> None:
