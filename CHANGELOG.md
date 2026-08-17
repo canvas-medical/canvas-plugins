@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.197.0 (2026-08-14)
+
+### Features
+
+- Support related-patient contacts and expose contact read models
+  ([#1813](https://github.com/canvas-medical/canvas-plugins/pull/1813),
+  [`e414cec`](https://github.com/canvas-medical/canvas-plugins/commit/e414cec0fba1b7c1f2ee24097a362754de7255c8))
+
+Signed-off-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
+
 ## v0.196.1 (2026-08-13)
 
 ### Bug Fixes

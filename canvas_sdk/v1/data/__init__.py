@@ -137,8 +137,11 @@ from .observation import (
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
 from .organizational_entity import OrganizationalEntity
 from .patient import (
+    ContactCategory,
     Patient,
     PatientAddress,
+    PatientContactCategory,
+    PatientContactPerson,
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientFacilityAddress,
@@ -364,9 +367,12 @@ __all__ = __exports__ = (
     "OrganizationAddress",
     "OrganizationContactPoint",
     "OrganizationalEntity",
+    "ContactCategory",
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
+    "PatientContactCategory",
+    "PatientContactPerson",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
