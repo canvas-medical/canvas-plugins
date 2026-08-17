@@ -79,7 +79,12 @@ class UpdateGoal(AuditedModel, IdentifiableModel):
     goal = models.ForeignKey(
         "v1.Goal", on_delete=models.DO_NOTHING, related_name="updates", null=True
     )
-    lifecycle_status = models.CharField(max_length=20, choices=GoalLifecycleStatus.choices)
+    lifecycle_status = models.CharField(
+        max_length=20,
+        choices=GoalLifecycleStatus.choices,
+        default=GoalLifecycleStatus.ACTIVE,
+        blank=True,
+    )
     achievement_status = models.CharField(max_length=20, choices=GoalAchievementStatus.choices)
     priority = models.CharField(max_length=20, choices=GoalPriority.choices)
     due_date = models.DateField()
