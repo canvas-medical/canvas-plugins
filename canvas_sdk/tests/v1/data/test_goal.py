@@ -49,4 +49,7 @@ def test_update_goal_factory_round_trips_and_links_to_goal() -> None:
     assert fetched.goal == update.goal
     assert fetched.note_id == update.note_id
     assert fetched.patient_id == update.patient_id
-    assert list(update.goal.updates.all()) == [fetched]
+
+    goal = update.goal
+    assert goal is not None
+    assert list(goal.updates.all()) == [fetched]
