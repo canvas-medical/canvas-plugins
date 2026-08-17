@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.198.0 (2026-08-17)
+
+### Features
+
+- **data**: Expose signed consent documents on patient consent
+  ([#1818](https://github.com/canvas-medical/canvas-plugins/pull/1818),
+  [`6952ba5`](https://github.com/canvas-medical/canvas-plugins/commit/6952ba5e9918d26b4b42f52416a8298c1c5cb96f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.197.0 (2026-08-14)
 
 ### Features
