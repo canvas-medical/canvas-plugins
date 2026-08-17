@@ -3,11 +3,11 @@ from typing import cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    TimestampedModel,
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -26,7 +26,7 @@ class FamilyHistoryQuerySet(
 FamilyHistoryManager = BaseModelManager.from_queryset(FamilyHistoryQuerySet)
 
 
-class FamilyHistory(TimestampedModel, IdentifiableModel):
+class FamilyHistory(AuditedModel, IdentifiableModel):
     """FamilyHistory — a patient's family medical history for one relative."""
 
     class Meta:
@@ -34,13 +34,6 @@ class FamilyHistory(TimestampedModel, IdentifiableModel):
 
     objects = cast(FamilyHistoryQuerySet, FamilyHistoryManager())
 
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
     )
