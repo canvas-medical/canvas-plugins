@@ -42,8 +42,5 @@ class UpdateGoalFactory(factory.django.DjangoModelFactory[UpdateGoal]):
         patient=factory.SelfAttribute("..patient"),
         note=factory.SelfAttribute("..note"),
     )
-    lifecycle_status = GoalLifecycleStatus.ACTIVE
-    achievement_status = GoalAchievementStatus.IN_PROGRESS
     priority = GoalPriority.MEDIUM
     due_date = factory.LazyFunction(datetime.date.today)
-    progress = factory.Faker("paragraph")
