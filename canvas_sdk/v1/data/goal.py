@@ -64,4 +64,32 @@ class Goal(AuditedModel, IdentifiableModel):
     start_date = models.DateField()
 
 
-__exports__ = ("Goal", "GoalLifecycleStatus", "GoalAchievementStatus", "GoalPriority")
+class UpdateGoal(AuditedModel, IdentifiableModel):
+    """A recorded update or close action against a Goal."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_updategoal_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="update_goals"
+    )
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="update_goals")
+    goal = models.ForeignKey(
+        "v1.Goal", on_delete=models.DO_NOTHING, related_name="updates", null=True
+    )
+    lifecycle_status = models.CharField(max_length=20, choices=GoalLifecycleStatus.choices)
+    achievement_status = models.CharField(max_length=20, choices=GoalAchievementStatus.choices)
+    priority = models.CharField(max_length=20, choices=GoalPriority.choices)
+    due_date = models.DateField()
+    progress = models.TextField()
+
+
+__exports__ = (
+    "Goal",
+    "UpdateGoal",
+    "GoalLifecycleStatus",
+    "GoalAchievementStatus",
+    "GoalPriority",
+)
