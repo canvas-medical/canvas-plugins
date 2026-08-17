@@ -13,10 +13,10 @@ def test_family_history_exposes_relation_fields() -> None:
     assert term_field.max_length == 255
 
 
-def test_family_history_coding_links_back_via_codings() -> None:
-    """FamilyHistoryCoding links to FamilyHistory with a `codings` reverse accessor."""
+def test_family_history_coding_links_back_via_coding() -> None:
+    """FamilyHistoryCoding links to FamilyHistory with a `coding` reverse accessor."""
     accessor = FamilyHistoryCoding._meta.get_field(
         "family_history"
     ).remote_field.get_accessor_name()
-    assert accessor == "codings"
-    assert hasattr(FamilyHistory, "codings")
+    assert accessor == "coding"
+    assert hasattr(FamilyHistory, "coding")

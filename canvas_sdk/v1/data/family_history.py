@@ -52,7 +52,7 @@ class FamilyHistoryCoding(Coding):
         db_table = "canvas_sdk_data_api_familyhistorycoding_001"
 
     family_history = models.ForeignKey(
-        FamilyHistory, on_delete=models.DO_NOTHING, related_name="codings", null=True
+        FamilyHistory, on_delete=models.DO_NOTHING, related_name="coding"
     )
 
 
