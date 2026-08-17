@@ -1,5 +1,6 @@
 from datetime import date
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
@@ -16,7 +17,7 @@ class ImmunizationStatementCommand(BaseCommand):
     cvx_code: str | Coding | None = None
     unstructured: Coding | None = None
     approximate_date: date | None = None
-    comments: str | None = None
+    comments: str | None = Field(default=None, max_length=255)
 
     def _has_value(self, value: str | Coding | None) -> bool:
         """Check if a value is set."""
