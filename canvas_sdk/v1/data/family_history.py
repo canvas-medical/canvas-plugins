@@ -35,10 +35,10 @@ class FamilyHistory(AuditedModel, IdentifiableModel):
     objects = cast(FamilyHistoryQuerySet, FamilyHistoryManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="family_histories"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="family_histories", null=True
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="family_histories"
     )
     relation_snomed_code = models.BigIntegerField(db_index=True, null=True)
     relation_snomed_term = models.CharField(max_length=255, blank=True, default="")
