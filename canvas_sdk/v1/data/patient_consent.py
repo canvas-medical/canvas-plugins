@@ -1,8 +1,14 @@
+from typing import TYPE_CHECKING
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import presigned_url
+
+if TYPE_CHECKING:
+    from canvas_sdk.v1.data.document_reference import DocumentReference
+    from canvas_sdk.v1.data.patient_administrative_document import PatientAdministrativeDocument
 
 
 class PatientConsentRejectionCoding(Coding):
@@ -81,6 +87,32 @@ class PatientConsent(IdentifiableModel):
         related_name="patient_consents",
     )
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
+    documents = models.ManyToManyField(
+        "v1.PatientAdministrativeDocument",
+        related_name="patient_consents",
+        db_table="canvas_sdk_data_api_patientconsent_documents_001",
+        blank=True,
+    )
+
+    @property
+    def active_document(self) -> "PatientAdministrativeDocument | None":
+        """The current signed consent document: the latest non-junked document by original date."""
+        documents = self.documents.filter(junked=False)
+        dated = documents.filter(original_date__isnull=False)
+        if dated.exists():
+            return dated.order_by("original_date", "modified").last()
+        return documents.order_by("dbid").last()
+
+    @property
+    def document_references(self) -> "models.QuerySet[DocumentReference]":
+        """The DocumentReferences for this consent's signed documents."""
+        from canvas_sdk.v1.data.document_reference import DocumentReference
+
+        return DocumentReference.objects.filter(
+            content_type__app_label="api",
+            content_type__model="patientadministrativedocument",
+            object_id__in=self.documents.values_list("dbid", flat=True),
+        )
 
 
 __exports__ = (
