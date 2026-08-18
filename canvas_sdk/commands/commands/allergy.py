@@ -1,6 +1,7 @@
 from datetime import date
 from enum import Enum, IntEnum
 
+from pydantic import Field
 from typing_extensions import TypedDict
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
@@ -34,7 +35,7 @@ class AllergyCommand(BaseCommand):
 
     allergy: Allergen | None = None
     severity: Severity | None = None
-    narrative: str | None = None
+    narrative: str | None = Field(default=None, max_length=512)
     approximate_date: date | None = None
 
 
