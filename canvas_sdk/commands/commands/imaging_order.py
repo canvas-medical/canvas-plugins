@@ -23,11 +23,11 @@ class ImagingOrderCommand(_DelegateCommandMixin, _SignCommandMixin, BaseCommand)
         default=None, json_schema_extra={"commands_api_name": "indications"}
     )
     priority: Priority | None = None
-    additional_details: str | None = None
+    additional_details: str | None = Field(default=None, max_length=1024)
     service_provider: ServiceProvider | None = Field(
         default=None, json_schema_extra={"commands_api_name": "ordering_provider"}
     )
-    comment: str | None = None
+    comment: str | None = Field(default=None, max_length=1024)
     ordering_provider_key: str | None = None
     linked_items_urns: list[str] | None = None
 
