@@ -1309,6 +1309,7 @@
     "TransactorPhone",
     "UncategorizedClinicalDocument",
     "UncategorizedClinicalDocumentReview",
+    "UpdateGoal",
     "VisualExamFinding",
     "proxy_field"
   ],
@@ -1503,7 +1504,8 @@
     "Goal",
     "GoalAchievementStatus",
     "GoalLifecycleStatus",
-    "GoalPriority"
+    "GoalPriority",
+    "UpdateGoal"
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",

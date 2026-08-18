@@ -66,7 +66,7 @@ from .educational_material import EducationalMaterial
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
-from .goal import Goal
+from .goal import Goal, UpdateGoal
 from .imaging import (
     ImagingOrder,
     ImagingReport,
@@ -437,6 +437,7 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    "UpdateGoal",
     "VisualExamFinding",
     "proxy_field",
 )
