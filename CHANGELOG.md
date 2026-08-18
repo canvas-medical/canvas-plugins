@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.6 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the allergy narrative to the length the record accepts
+  ([#1826](https://github.com/canvas-medical/canvas-plugins/pull/1826),
+  [`30c6bde`](https://github.com/canvas-medical/canvas-plugins/commit/30c6bdeaf2bc6904270a8e02192868c7145b913e))
+
+
 ## v0.198.5 (2026-08-18)
 
 ### Bug Fixes

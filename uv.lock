@@ -111,7 +111,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.198.5"
+version = "0.198.6"
 source = { editable = "." }
 dependencies = [
     { name = "cookiecutter" },
