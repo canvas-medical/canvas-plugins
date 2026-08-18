@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.7 (2026-08-18)
+
+### Bug Fixes
+
+- Add patient validation to change medication command
+  ([#1823](https://github.com/canvas-medical/canvas-plugins/pull/1823),
+  [`24aa3c5`](https://github.com/canvas-medical/canvas-plugins/commit/24aa3c549cd2add2395ea5f5a528f4ea0ca39aad))
+
+
 ## v0.198.6 (2026-08-18)
 
 ### Bug Fixes
