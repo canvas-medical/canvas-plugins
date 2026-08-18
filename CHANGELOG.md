@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.4 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the family history note to the length the record accepts
+  ([#1829](https://github.com/canvas-medical/canvas-plugins/pull/1829),
+  [`a993d7b`](https://github.com/canvas-medical/canvas-plugins/commit/a993d7b70d849da3e87cac6a58b03cf1e6a90181))
+
+
 ## v0.198.3 (2026-08-18)
 
 ### Bug Fixes
