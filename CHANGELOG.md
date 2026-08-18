@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v0.198.2 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the medication statement sig to the length the record accepts
+  ([#1830](https://github.com/canvas-medical/canvas-plugins/pull/1830),
+  [`f8fae01`](https://github.com/canvas-medical/canvas-plugins/commit/f8fae018036c2f0a3129305378a567b6c6ad94cc))
+
+### Continuous Integration
+
+- Add publish-only path to re-publish an existing tag
+  ([#1837](https://github.com/canvas-medical/canvas-plugins/pull/1837),
+  [`594bb66`](https://github.com/canvas-medical/canvas-plugins/commit/594bb662afdc03371cf8b8ce13b5a0837b57f191))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Create the github release when re-publishing a tag
+  ([#1839](https://github.com/canvas-medical/canvas-plugins/pull/1839),
+  [`22c6cf2`](https://github.com/canvas-medical/canvas-plugins/commit/22c6cf2a32ee57094ce922e02ba424f9756c660e))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Fix github release upload on the publish-only path
+  ([#1838](https://github.com/canvas-medical/canvas-plugins/pull/1838),
+  [`dfca974`](https://github.com/canvas-medical/canvas-plugins/commit/dfca974f0256da769cf28969b84130cd3bd21b2b))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
 ## v0.198.1 (2026-08-17)
 
 ### Bug Fixes
