@@ -26,6 +26,7 @@ from .document_review_delegation import DocumentReviewDelegationFactory
 from .educational_material import EducationalMaterialFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
+from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
     ImagingOrderFactory,
     ImagingReportCodingFactory,
@@ -152,6 +153,7 @@ __all__ = (
     "ExternalEventFactory",
     "ExternalVisitFactory",
     "FacilityFactory",
+    "HistoryOfPresentIllnessFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
     "ImagingReportFactory",

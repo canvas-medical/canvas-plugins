@@ -1,5 +1,7 @@
+import pytest
 from django.db import models
 
+from canvas_sdk.test_utils.factories import HistoryOfPresentIllnessFactory
 from canvas_sdk.v1.data.history_present_illness import (
     HistoryOfPresentIllness,
     string_from_narrative_json,
@@ -39,3 +41,15 @@ def test_string_from_narrative_json_edge_cases() -> None:
         )
         == "Hi"
     )
+
+
+@pytest.mark.django_db
+def test_factory_round_trips_and_shares_patient() -> None:
+    """The factory persists an HPI, wires the note to the same patient, and exposes the narrative."""
+    hpi = HistoryOfPresentIllnessFactory.create(legacy_narrative="Patient reports headache.")
+
+    fetched = HistoryOfPresentIllness.objects.get(dbid=hpi.dbid)
+
+    assert fetched.note_id == hpi.note_id
+    assert fetched.patient_id == fetched.note.patient_id
+    assert fetched.narrative == "Patient reports headache."
