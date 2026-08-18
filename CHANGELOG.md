@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.5 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the imaging order text fields to the length the record accepts
+  ([#1828](https://github.com/canvas-medical/canvas-plugins/pull/1828),
+  [`f04dabe`](https://github.com/canvas-medical/canvas-plugins/commit/f04dabe0f59477c95617c4efc8cb59728fb0d4fb))
+
+
 ## v0.198.4 (2026-08-18)
 
 ### Bug Fixes
