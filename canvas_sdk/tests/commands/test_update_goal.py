@@ -161,3 +161,23 @@ def test_a_command_with_neither_anchor_is_not_refused() -> None:
     lookup would raise rather than return — this passing is the evidence that none happens.
     """
     assert UpdateGoalCommand(goal_id=uuid.uuid4())._anchor_patient_id() is None
+
+
+def test_a_goal_is_not_checked_until_the_notes_patient_can_be_resolved(
+    note: Note, other_patient: Patient
+) -> None:
+    """Ownership is checked through validation only once the patient is known.
+
+    A plugin may originate a note and update a goal in the same batch, so the note a
+    command names need not be persisted when the effect is built. Until it is,
+    `_get_error_details` has no patient to compare against, so it skips the check rather
+    than guessing, and even a foreign goal is allowed through here.
+    """
+    foreign = _goal(other_patient, note)
+
+    command = UpdateGoalCommand(
+        note_uuid="3f7c1a9e-2b6d-4c8a-9e1f-0a2b3c4d5e6f",  # a well-formed id no note has
+        goal_id=foreign.id,
+    )
+
+    assert command.originate()
