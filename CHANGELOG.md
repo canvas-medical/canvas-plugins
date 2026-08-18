@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.198.3 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the immunization statement comments to the length the record accepts
+  ([#1831](https://github.com/canvas-medical/canvas-plugins/pull/1831),
+  [`2ac5586`](https://github.com/canvas-medical/canvas-plugins/commit/2ac558623e88cfc10ff845fe5957c8646956fe59))
+
+
 ## v0.198.2 (2026-08-18)
 
 ### Bug Fixes
