@@ -1,6 +1,74 @@
 # CHANGELOG
 
 
+## v0.198.6 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the allergy narrative to the length the record accepts
+  ([#1826](https://github.com/canvas-medical/canvas-plugins/pull/1826),
+  [`30c6bde`](https://github.com/canvas-medical/canvas-plugins/commit/30c6bdeaf2bc6904270a8e02192868c7145b913e))
+
+
+## v0.198.5 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the imaging order text fields to the length the record accepts
+  ([#1828](https://github.com/canvas-medical/canvas-plugins/pull/1828),
+  [`f04dabe`](https://github.com/canvas-medical/canvas-plugins/commit/f04dabe0f59477c95617c4efc8cb59728fb0d4fb))
+
+
+## v0.198.4 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the family history note to the length the record accepts
+  ([#1829](https://github.com/canvas-medical/canvas-plugins/pull/1829),
+  [`a993d7b`](https://github.com/canvas-medical/canvas-plugins/commit/a993d7b70d849da3e87cac6a58b03cf1e6a90181))
+
+
+## v0.198.3 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the immunization statement comments to the length the record accepts
+  ([#1831](https://github.com/canvas-medical/canvas-plugins/pull/1831),
+  [`2ac5586`](https://github.com/canvas-medical/canvas-plugins/commit/2ac558623e88cfc10ff845fe5957c8646956fe59))
+
+
+## v0.198.2 (2026-08-18)
+
+### Bug Fixes
+
+- Hold the medication statement sig to the length the record accepts
+  ([#1830](https://github.com/canvas-medical/canvas-plugins/pull/1830),
+  [`f8fae01`](https://github.com/canvas-medical/canvas-plugins/commit/f8fae018036c2f0a3129305378a567b6c6ad94cc))
+
+### Continuous Integration
+
+- Add publish-only path to re-publish an existing tag
+  ([#1837](https://github.com/canvas-medical/canvas-plugins/pull/1837),
+  [`594bb66`](https://github.com/canvas-medical/canvas-plugins/commit/594bb662afdc03371cf8b8ce13b5a0837b57f191))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Create the github release when re-publishing a tag
+  ([#1839](https://github.com/canvas-medical/canvas-plugins/pull/1839),
+  [`22c6cf2`](https://github.com/canvas-medical/canvas-plugins/commit/22c6cf2a32ee57094ce922e02ba424f9756c660e))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+- Fix github release upload on the publish-only path
+  ([#1838](https://github.com/canvas-medical/canvas-plugins/pull/1838),
+  [`dfca974`](https://github.com/canvas-medical/canvas-plugins/commit/dfca974f0256da769cf28969b84130cd3bd21b2b))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
 ## v0.198.1 (2026-08-17)
 
 ### Bug Fixes

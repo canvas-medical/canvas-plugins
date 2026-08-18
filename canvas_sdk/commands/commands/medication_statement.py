@@ -14,7 +14,7 @@ class MedicationStatementCommand(_BaseCommand):
     fdb_code: str | Coding | None = Field(
         default=None, json_schema_extra={"commands_api_name": "medication"}
     )
-    sig: str | None = None
+    sig: str | None = Field(default=None, max_length=1000)
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
