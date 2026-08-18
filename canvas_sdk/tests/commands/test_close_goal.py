@@ -126,3 +126,30 @@ def test_an_uncommitted_goal_is_still_accepted(note: Note, patient: Patient) -> 
     Goal.objects.filter(dbid=goal.dbid).update(committer_id=None)
 
     assert CloseGoalCommand(note_uuid=str(note.id), goal_id=goal.dbid).originate()
+
+
+def test_the_notes_patient_is_the_target(note: Note) -> None:
+    """When the anchor resolves, the patient it names is the target."""
+    command = CloseGoalCommand(note_uuid=str(note.id))
+    anchor_patient_id = command._anchor_patient_id()
+
+    assert anchor_patient_id is not None
+    assert command._is_target_patient(anchor_patient_id) is True
+
+
+def test_a_patient_other_than_the_notes_is_not_the_target(
+    note: Note, other_patient: Patient
+) -> None:
+    """A resolved anchor is the target for its own patient and no one else."""
+    command = CloseGoalCommand(note_uuid=str(note.id))
+
+    assert command._is_target_patient(str(other_patient.id)) is False
+
+
+def test_every_patient_is_the_target_when_no_anchor_resolves() -> None:
+    """With nothing to resolve the patient from, no record is refused.
+
+    Asserted with no database available, so a lookup would raise rather than return — this passing
+    is the evidence that none happens.
+    """
+    assert CloseGoalCommand(goal_id=1)._is_target_patient("any-patient") is True
