@@ -12,9 +12,7 @@ def test_hpi_narrative_storage_fields() -> None:
     assert isinstance(legacy_field, models.TextField)
     assert legacy_field.db_column == "narrative"
 
-    assert isinstance(
-        HistoryOfPresentIllness._meta.get_field("narrative_json"), models.JSONField
-    )
+    assert isinstance(HistoryOfPresentIllness._meta.get_field("narrative_json"), models.JSONField)
 
 
 def test_narrative_property_prefers_legacy_then_json() -> None:
