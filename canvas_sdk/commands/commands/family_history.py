@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
@@ -12,7 +13,7 @@ class FamilyHistoryCommand(BaseCommand):
 
     family_history: str | Coding | None = None
     relative: str | None = None
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=512)
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
