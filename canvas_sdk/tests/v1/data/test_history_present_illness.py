@@ -53,3 +53,41 @@ def test_factory_round_trips_and_shares_patient() -> None:
     assert fetched.note_id == hpi.note_id
     assert fetched.patient_id == fetched.note.patient_id
     assert fetched.narrative == "Patient reports headache."
+
+
+def test_string_from_narrative_json_returns_input_when_not_valid_json() -> None:
+    """A plain (non-JSON) string is returned unchanged when ``json.loads`` raises ValueError."""
+    assert string_from_narrative_json("Patient has a headache.") == "Patient has a headache."
+
+
+def test_string_from_narrative_json_unwraps_json_encoded_scalar_string() -> None:
+    """A JSON-encoded scalar string decodes to that string rather than a Slate document."""
+    assert string_from_narrative_json('"just a string"') == "just a string"
+
+
+def test_string_from_narrative_json_renders_inline_nodes() -> None:
+    """A top-level inline node renders its ``data.concept`` (ported home-app behavior)."""
+    narrative_json = {"document": {"nodes": [{"object": "inline", "data": {"concept": "Aspirin"}}]}}
+    assert string_from_narrative_json(narrative_json) == "Aspirin '"
+
+
+def test_string_from_narrative_json_renders_blocks_with_paragraph_breaks() -> None:
+    """Block nodes render nested text/inline children, newline-joined except after the last block."""
+    narrative_json = {
+        "document": {
+            "nodes": [
+                {
+                    "object": "block",
+                    "nodes": [
+                        {"object": "text", "leaves": [{"text": "First line"}]},
+                        {"object": "inline", "data": {"concept": "concept1"}},
+                    ],
+                },
+                {
+                    "object": "block",
+                    "nodes": [{"object": "text", "leaves": [{"text": "Second line"}]}],
+                },
+            ]
+        }
+    }
+    assert string_from_narrative_json(narrative_json) == "First lineconcept1 '\nSecond line"
