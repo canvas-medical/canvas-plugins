@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.199.0 (2026-08-18)
+
+### Features
+
+- **data**: Expose UpdateGoal in the data module
+  ([#1836](https://github.com/canvas-medical/canvas-plugins/pull/1836),
+  [`ce3cb52`](https://github.com/canvas-medical/canvas-plugins/commit/ce3cb526b09ef9ff5e0b2ef8a00a8a66427d77a7))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+
+## v0.198.7 (2026-08-18)
+
+### Bug Fixes
+
+- Add patient validation to change medication command
+  ([#1823](https://github.com/canvas-medical/canvas-plugins/pull/1823),
+  [`24aa3c5`](https://github.com/canvas-medical/canvas-plugins/commit/24aa3c549cd2add2395ea5f5a528f4ea0ca39aad))
+
+
 ## v0.198.6 (2026-08-18)
 
 ### Bug Fixes
