@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.200.2 (2026-08-19)
+
+### Bug Fixes
+
+- Bound the prescription text and counts when an effect is built
+  ([#1822](https://github.com/canvas-medical/canvas-plugins/pull/1822),
+  [`eee1011`](https://github.com/canvas-medical/canvas-plugins/commit/eee1011394524e096f03b7c869f4a24c5ce2daa5))
+
+
 ## v0.200.1 (2026-08-19)
 
 ### Bug Fixes
