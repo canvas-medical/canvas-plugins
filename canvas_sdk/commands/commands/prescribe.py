@@ -17,6 +17,11 @@ from canvas_sdk.effects.compound_medications.compound_medication import (
 from canvas_sdk.v1.data import PracticeLocation
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
+_SIG_MAX_LENGTH = 1000
+_NOTE_TO_PHARMACIST_MAX_LENGTH = 210
+_REFILLS_MIN = 0
+_REFILLS_MAX = 99
+
 
 @dataclass
 class CompoundMedicationData:
@@ -81,7 +86,7 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
         return self.fdb_code is not None and self.fdb_code.strip() != ""
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
-        """Add compound medication validation to the base validation."""
+        """Add compound medication and prescription count validation to the base validation."""
         errors = super()._get_error_details(method)
 
         # Validate that exactly one medication type is provided
@@ -129,6 +134,44 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
                 controlled_substance_ndc=self.compound_medication_data.controlled_substance_ndc,
             )
             errors.extend(compound_med_errors)
+
+        if len(self.sig) > _SIG_MAX_LENGTH:
+            errors.append(
+                self._create_error_detail(
+                    "value", f"Sig cannot be longer than {_SIG_MAX_LENGTH} characters", self.sig
+                )
+            )
+
+        if (
+            self.note_to_pharmacist is not None
+            and len(self.note_to_pharmacist) > _NOTE_TO_PHARMACIST_MAX_LENGTH
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Note to pharmacist cannot be longer than "
+                    f"{_NOTE_TO_PHARMACIST_MAX_LENGTH} characters",
+                    self.note_to_pharmacist,
+                )
+            )
+
+        if self.refills is not None and not _REFILLS_MIN <= self.refills <= _REFILLS_MAX:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Refills must be between {_REFILLS_MIN} and {_REFILLS_MAX}",
+                    self.refills,
+                )
+            )
+
+        if self.quantity_to_dispense is not None and self.quantity_to_dispense <= 0:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Quantity to dispense must be greater than 0",
+                    self.quantity_to_dispense,
+                )
+            )
 
         return errors
 
