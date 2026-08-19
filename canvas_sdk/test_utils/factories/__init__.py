@@ -27,6 +27,7 @@ from .educational_material import EducationalMaterialFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
+from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
 from .goal import GoalFactory, UpdateGoalFactory
 from .imaging import (
     ImagingOrderFactory,
@@ -155,6 +156,8 @@ __all__ = (
     "ExternalVisitFactory",
     "FacilityFactory",
     "HistoryOfPresentIllnessFactory",
+    "FamilyHistoryFactory",
+    "FamilyHistoryCodingFactory",
     "GoalFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",

@@ -1163,6 +1163,8 @@
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FamilyHistory",
+    "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
     "Goal",
@@ -1500,6 +1502,10 @@
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"
+  ],
+  "canvas_sdk.v1.data.family_history": [
+    "FamilyHistory",
+    "FamilyHistoryCoding"
   ],
   "canvas_sdk.v1.data.goal": [
     "Goal",

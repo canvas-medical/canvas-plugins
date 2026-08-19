@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.200.0 (2026-08-19)
+
+### Features
+
+- **data**: Expose FamilyHistory in the data module
+  ([#1840](https://github.com/canvas-medical/canvas-plugins/pull/1840),
+  [`860e2ab`](https://github.com/canvas-medical/canvas-plugins/commit/860e2abb95f0e5cfc1fcfe480c809435ccf665b2))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.199.1 (2026-08-19)
+
+### Bug Fixes
+
+- Bound the update diagnosis text fields when an effect is built
+  ([#1827](https://github.com/canvas-medical/canvas-plugins/pull/1827),
+  [`3f6f950`](https://github.com/canvas-medical/canvas-plugins/commit/3f6f950929dec8442f07f9e3d38621960cbbbd29))
+
+
 ## v0.199.0 (2026-08-18)
 
 ### Features
