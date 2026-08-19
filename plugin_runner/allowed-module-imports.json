@@ -942,6 +942,7 @@
   "canvas_sdk.handlers.application": [
     "Application",
     "ApplicationScope",
+    "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",

@@ -136,19 +136,48 @@ class EmbeddedApplication(Application, ABC):
         return self.IDENTIFIER if self.IDENTIFIER else super().identifier
 
 
+class DockEdge(StrEnum):
+    """Which edge of the window a docked pane occupies."""
+
+    LEFT = "left"
+    RIGHT = "right"
+    TOP = "top"
+    BOTTOM = "bottom"
+
+
 class DockedApplication(EmbeddedApplication):
-    """An Application that mounts in a persistent pane on an edge of the window."""
+    """An Application that mounts in a persistent pane on an edge of the window.
+
+    A dock is always shown. It has no launcher entry to be opened from and no control to
+    dismiss it, so its presence is settled by installing the plugin — which is why
+    ``open_by_default`` is not overridable here the way it is for other embedded scopes.
+
+    ``DOCK_EDGE`` and ``DOCK_SIZE`` are required: without them Canvas has nowhere to put
+    the pane and no track to size, so a subclass omitting either is a programming error
+    rather than a pane that quietly never appears.
+    """
 
     SCOPE = ApplicationScope.DOCKED
 
-    DOCK_EDGE: str | None = None
-    DOCK_SIZE: str | None = None
+    DOCK_EDGE: DockEdge
+    DOCK_SIZE: str
+
+    def open_by_default(self) -> bool:
+        """Always true: a dock is chrome, not a window the user opens."""
+        return True
 
     def _show_application_values(self) -> dict[str, Any]:
         """Add the placement Canvas needs to size the pane's track."""
+        for attribute in ("DOCK_EDGE", "DOCK_SIZE"):
+            if not getattr(self, attribute, None):
+                raise NotImplementedError(
+                    f"{type(self).__name__} must set {attribute}: a docked application "
+                    "has nowhere to mount without an edge and a size."
+                )
+
         return {
             **super()._show_application_values(),
-            "dock_edge": self.DOCK_EDGE,
+            "dock_edge": DockEdge(self.DOCK_EDGE).value,
             "dock_size": self.DOCK_SIZE,
         }
 
@@ -212,6 +241,7 @@ class SchedulingApplication(EmbeddedApplication):
 __exports__ = (
     "Application",
     "ApplicationScope",
+    "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",
