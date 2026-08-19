@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.199.1 (2026-08-19)
+
+### Bug Fixes
+
+- Bound the update diagnosis text fields when an effect is built
+  ([#1827](https://github.com/canvas-medical/canvas-plugins/pull/1827),
+  [`3f6f950`](https://github.com/canvas-medical/canvas-plugins/commit/3f6f950929dec8442f07f9e3d38621960cbbbd29))
+
+
 ## v0.199.0 (2026-08-18)
 
 ### Features
