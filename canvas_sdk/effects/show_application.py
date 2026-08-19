@@ -18,7 +18,6 @@ class ShowApplicationEffect(_BaseEffect):
     priority: int = Field(default=0)
     dock_edge: str | None = Field(default=None)
     dock_size: str | None = Field(default=None)
-    shows_patient_data: bool = Field(default=False)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -30,7 +29,6 @@ class ShowApplicationEffect(_BaseEffect):
             "priority": self.priority,
             "dock_edge": self.dock_edge,
             "dock_size": self.dock_size,
-            "shows_patient_data": self.shows_patient_data,
         }
 
     @property
