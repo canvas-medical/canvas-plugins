@@ -67,7 +67,6 @@ from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
-from .goal import Goal
 from .goal import Goal, UpdateGoal
 from .imaging import (
     ImagingOrder,
