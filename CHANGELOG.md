@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.200.0 (2026-08-19)
+
+### Features
+
+- **data**: Expose FamilyHistory in the data module
+  ([#1840](https://github.com/canvas-medical/canvas-plugins/pull/1840),
+  [`860e2ab`](https://github.com/canvas-medical/canvas-plugins/commit/860e2abb95f0e5cfc1fcfe480c809435ccf665b2))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.199.1 (2026-08-19)
 
 ### Bug Fixes
