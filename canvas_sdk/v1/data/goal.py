@@ -45,23 +45,62 @@ class GoalPriority(models.TextChoices):
     LOW = "low-priority", "Low Priority"
 
 
-class Goal(AuditedModel, IdentifiableModel):
+class AbstractGoal(AuditedModel, IdentifiableModel):
+    """AbstractGoal."""
+
+    class Meta:
+        abstract = True
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="%(class)ss"
+    )
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="%(class)ss")
+    lifecycle_status = models.CharField(
+        max_length=20,
+        choices=GoalLifecycleStatus.choices,
+        default=GoalLifecycleStatus.ACTIVE,
+        blank=True,
+    )
+    achievement_status = models.CharField(
+        max_length=20,
+        choices=GoalAchievementStatus.choices,
+        default=GoalAchievementStatus.IN_PROGRESS,
+        blank=True,
+    )
+    priority = models.CharField(
+        max_length=20, choices=GoalPriority.choices, default=GoalPriority.MEDIUM
+    )
+    due_date = models.DateField(null=True)
+    progress = models.TextField(default="", blank=True)
+
+
+class Goal(AbstractGoal):
     """Goal."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_goal_001"
 
-    objects = cast(CommittableQuerySet, CommittableModelManager())
-
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="goals")
-    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="goals")
-    lifecycle_status = models.CharField(max_length=20, choices=GoalLifecycleStatus.choices)
-    achievement_status = models.CharField(max_length=20, choices=GoalAchievementStatus.choices)
-    priority = models.CharField(max_length=20, choices=GoalPriority.choices)
-    due_date = models.DateField()
-    progress = models.TextField()
-    goal_statement = models.TextField()
+    goal_statement = models.TextField(blank=True, default="")
     start_date = models.DateField()
 
 
-__exports__ = ("Goal", "GoalLifecycleStatus", "GoalAchievementStatus", "GoalPriority")
+class UpdateGoal(AbstractGoal):
+    """UpdateGoal."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_updategoal_001"
+
+    goal = models.ForeignKey(
+        "v1.Goal", on_delete=models.DO_NOTHING, related_name="updates", null=True
+    )
+
+
+__exports__ = (
+    "Goal",
+    "UpdateGoal",
+    "GoalLifecycleStatus",
+    "GoalAchievementStatus",
+    "GoalPriority",
+)

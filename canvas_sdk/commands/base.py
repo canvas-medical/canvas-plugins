@@ -5,12 +5,14 @@ from types import NoneType, UnionType
 from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
+from pydantic import ConfigDict
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.command_custom_html import _CommandCustomHtml
 from canvas_sdk.effects.command_metadata.base import _CommandMetadata
+from canvas_sdk.v1.data import Command, Note
 
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
@@ -28,6 +30,8 @@ class _BaseCommand(TrackableFieldsModel):
         enter_in_error_required_fields = ("command_uuid",)
         delegate_required_fields = ("command_uuid",)
         sign_required_fields = ("command_uuid",)
+
+    model_config = ConfigDict(strict=False)
 
     _dirty_excluded_keys = [
         "note_uuid",
@@ -114,6 +118,37 @@ class _BaseCommand(TrackableFieldsModel):
             for name, definition in schema["properties"].items()
             if name not in base_properties
         }
+
+    def _anchor_patient_id(self) -> str | None:
+        """The patient whose chart this command writes to, when that can be known.
+
+        Returns:
+            The patient's id, or None when there is nothing to resolve it from *or* the anchor is
+            not persisted yet. The second case is not an error: a plugin may return several effects
+            from one handler, and the note or command a later effect names may not exist at the
+            moment that effect is built.
+        """
+        if note_uuid := self.note_uuid:
+            return Note.objects.filter(id=note_uuid).values_list("patient__id", flat=True).first()
+
+        if command_uuid := self.command_uuid:
+            return (
+                Command.objects.filter(id=command_uuid)
+                .values_list("patient__id", flat=True)
+                .first()
+            )
+
+        return None
+
+    def _is_target_patient(self, patient_id: str) -> bool:
+        """Whether the given patient is the one whose chart this command writes to.
+
+        True when the anchor cannot be resolved: a command that does not yet know its patient must
+        not refuse a record on the suspicion that it belongs to someone else
+        """
+        anchor_patient_id = self._anchor_patient_id()
+
+        return anchor_patient_id is None or anchor_patient_id == patient_id
 
     def originate(self, line_number: int = -1, commit: bool = False) -> Effect:
         """Originate a new command in the note body."""
