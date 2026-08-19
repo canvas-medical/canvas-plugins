@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.200.1 (2026-08-19)
+
+### Bug Fixes
+
+- Check the goal being closed belongs to the command's patient
+  ([#1834](https://github.com/canvas-medical/canvas-plugins/pull/1834),
+  [`f458efe`](https://github.com/canvas-medical/canvas-plugins/commit/f458efed87fe24548872beb5b0412ee64c5d5785))
+
+
 ## v0.200.0 (2026-08-19)
 
 ### Features
