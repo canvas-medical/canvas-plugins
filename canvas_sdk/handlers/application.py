@@ -144,18 +144,12 @@ class DockedApplication(EmbeddedApplication):
     DOCK_EDGE: str | None = None
     DOCK_SIZE: str | None = None
 
-    # Whether what this pane renders depends on the current patient. Canvas obscures such
-    # a pane from the moment the user navigates until it replies CONTEXT_ACK, so that it
-    # is never left presenting the previous patient's data as if it were current.
-    SHOWS_PATIENT_DATA: bool = False
-
     def _show_application_values(self) -> dict[str, Any]:
         """Add the placement Canvas needs to size the pane's track."""
         return {
             **super()._show_application_values(),
             "dock_edge": self.DOCK_EDGE,
             "dock_size": self.DOCK_SIZE,
-            "shows_patient_data": self.SHOWS_PATIENT_DATA,
         }
 
 

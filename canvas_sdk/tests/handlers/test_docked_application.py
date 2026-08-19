@@ -28,13 +28,6 @@ class ExampleDockedApplication(DockedApplication):
         ]
 
 
-class PatientDataPane(ExampleDockedApplication):
-    """A dock whose content describes the current patient."""
-
-    IDENTIFIER = "test_plugin__patient_dock"
-    SHOWS_PATIENT_DATA = True
-
-
 class BareDock(DockedApplication):
     """A dock that declares nothing beyond the minimum."""
 
@@ -78,36 +71,12 @@ def test_on_get_reports_its_placement() -> None:
     assert payload["open_by_default"] is True
 
 
-def test_on_get_reports_that_it_shows_patient_data() -> None:
-    """Whether to obscure the pane on navigation comes from the plugin.
-
-    Canvas cannot read this off the application's installed row: a dock declared under
-    the manifest's ``handlers`` has no row, and such a pane would then never be obscured
-    while it still showed the previous patient's data.
-
-    Nor is it the application's audience. This pane declares no ``scope`` of its own
-    beyond ``DOCKED`` — a globally-available pane can still render one patient's data.
-    """
-    assert _payload(PatientDataPane(_on_get()))["shows_patient_data"] is True
-
-
-def test_showing_patient_data_defaults_to_false() -> None:
-    """A pane is assumed to hold nothing patient-specific unless it says otherwise.
-
-    Obscuring every pane instead would be worse than it sounds: replying CONTEXT_ACK is
-    opt-in behaviour, so any pane that does not implement it — including every pane
-    written before this existed — would go dark permanently after the first navigation.
-    """
-    assert _payload(ExampleDockedApplication(_on_get()))["shows_patient_data"] is False
-
-
 def test_a_dock_declaring_nothing_still_answers() -> None:
     """The placement keys are optional, so a bare dock must not raise."""
     payload = _payload(BareDock(_on_get()))
 
     assert payload["dock_edge"] is None
     assert payload["dock_size"] is None
-    assert payload["shows_patient_data"] is False
 
 
 def test_wrong_scope_returns_no_effects() -> None:
