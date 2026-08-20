@@ -51,7 +51,7 @@ class Procedure(AuditedModel, IdentifiableModel):
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="procedures", null=True, default=None
     )
     status = models.IntegerField(choices=ProcedureStatus.choices, null=True)
-    notes = models.TextField(null=True, blank=True)
+    notes = models.TextField(null=True)
     editors = ArrayField(models.IntegerField(), null=True, blank=True, default=None)
 
 
