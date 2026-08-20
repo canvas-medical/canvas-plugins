@@ -1,5 +1,4 @@
 import pytest
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.test_utils.factories import ProcedureCodingFactory
@@ -7,17 +6,13 @@ from canvas_sdk.v1.data.procedure import Procedure, ProcedureCoding, ProcedureSt
 
 
 def test_procedure_exposes_home_app_fields() -> None:
-    """Procedure exposes the status, notes, editors, and provider fields from home-app."""
+    """Procedure exposes the status, notes, and provider fields from home-app."""
     status_field = Procedure._meta.get_field("status")
     assert isinstance(status_field, models.IntegerField)
     assert status_field.null is True
 
     notes_field = Procedure._meta.get_field("notes")
     assert isinstance(notes_field, models.TextField)
-
-    # ArrayField is rewritten to JSONField under SQLite by the model metaclass.
-    editors_field = Procedure._meta.get_field("editors")
-    assert isinstance(editors_field, (ArrayField, models.JSONField))
 
     provider_field = Procedure._meta.get_field("provider")
     assert provider_field.null is True

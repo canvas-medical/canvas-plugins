@@ -1,6 +1,5 @@
 from typing import cast
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
@@ -52,7 +51,6 @@ class Procedure(AuditedModel, IdentifiableModel):
     )
     status = models.IntegerField(choices=ProcedureStatus.choices, null=True)
     notes = models.TextField(null=True)
-    editors = ArrayField(models.IntegerField(), null=True, blank=True, default=None)
 
 
 class ProcedureCoding(Coding):
