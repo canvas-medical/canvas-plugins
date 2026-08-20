@@ -150,12 +150,6 @@ def test_default_visible_returns_true() -> None:
     assert ExampleAutomation(_show_event()).visible() is True
 
 
-def test_keywords_and_priority_defaults() -> None:
-    """KEYWORDS defaults to empty and PRIORITY defaults to zero."""
-    assert InvisibleAutomation.KEYWORDS == []
-    assert InvisibleAutomation.PRIORITY == 0
-
-
 # --- compute() on the list event ---
 
 

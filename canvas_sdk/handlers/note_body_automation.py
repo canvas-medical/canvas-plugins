@@ -1,5 +1,4 @@
 import json
-import re
 from abc import abstractmethod
 from functools import cached_property
 from typing import Any
@@ -16,7 +15,7 @@ from canvas_sdk.v1.data import Note
 SHOW_AUTOMATIONS_EVENT = EventType.Name(EventType.SHOW_NOTE_BODY_AUTOMATIONS)
 AUTOMATION_SELECTED_EVENT = EventType.Name(EventType.NOTE_BODY_AUTOMATION_SELECTED)
 
-ORIGINATE_COMMAND_REGEX = re.compile(r"^ORIGINATE_(.+)_COMMAND$")
+ORIGINATE_EFFECT_PREFIX = "ORIGINATE_"
 
 # The line_number that ``originate`` sends when the author gives no line. Canvas
 # reads it as "after the last command in the body".
@@ -104,14 +103,15 @@ class NoteBodyAutomation(BaseHandler):
 
         An automation answers a keystroke, so its commands belong where the user
         was typing. ``originate`` defaults the line to ``DEFAULT_LINE_NUMBER``,
-        which appends, and this fills the real line in. An author who chose a
-        line keeps it, and any other effect is left alone.
+        which appends, and this fills the real line in. Canvas gives a command
+        with a line the line itself, replacing what the user typed, so an author
+        who chose a line keeps that placement. Any other effect is left alone.
         """
         if self.line_number == DEFAULT_LINE_NUMBER:
             return effects
 
         for effect in effects:
-            if not ORIGINATE_COMMAND_REGEX.fullmatch(EffectType.Name(effect.type)):
+            if not EffectType.Name(effect.type).startswith(ORIGINATE_EFFECT_PREFIX):
                 continue
 
             try:
@@ -133,6 +133,7 @@ class NoteBodyAutomation(BaseHandler):
 
 __exports__ = (
     "AUTOMATION_SELECTED_EVENT",
+    "DEFAULT_LINE_NUMBER",
     "SHOW_AUTOMATIONS_EVENT",
     "NoteBodyAutomation",
 )

@@ -32,10 +32,5 @@ class ShowNoteBodyAutomationEffect(_BaseEffect):
             "priority": self.priority,
         }
 
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
-
 
 __exports__ = ("ShowNoteBodyAutomationEffect",)
