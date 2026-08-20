@@ -48,7 +48,7 @@ class Procedure(AuditedModel, IdentifiableModel):
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="procedures")
     provider = models.ForeignKey(
-        "v1.Staff", on_delete=models.DO_NOTHING, related_name="procedures", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="procedures", null=True, default=None
     )
     status = models.IntegerField(choices=ProcedureStatus.choices, null=True)
     notes = models.TextField(null=True, blank=True)
