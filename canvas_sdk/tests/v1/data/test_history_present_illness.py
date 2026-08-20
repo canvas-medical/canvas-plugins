@@ -2,10 +2,7 @@ import pytest
 from django.db import models
 
 from canvas_sdk.test_utils.factories import HistoryOfPresentIllnessFactory
-from canvas_sdk.v1.data.history_present_illness import (
-    HistoryOfPresentIllness,
-    string_from_narrative_json,
-)
+from canvas_sdk.v1.data.history_present_illness import HistoryOfPresentIllness
 
 
 def test_hpi_narrative_storage_fields() -> None:
@@ -34,9 +31,9 @@ def test_narrative_property_prefers_legacy_then_json() -> None:
 
 def test_string_from_narrative_json_edge_cases() -> None:
     """The porter returns '' for empty input and parses a JSON-string document."""
-    assert string_from_narrative_json(None) == ""
+    assert HistoryOfPresentIllness.string_from_narrative_json(None) == ""
     assert (
-        string_from_narrative_json(
+        HistoryOfPresentIllness.string_from_narrative_json(
             '{"document": {"nodes": [{"object": "text", "leaves": [{"text": "Hi"}]}]}}'
         )
         == "Hi"
@@ -57,18 +54,21 @@ def test_factory_round_trips_and_shares_patient() -> None:
 
 def test_string_from_narrative_json_returns_input_when_not_valid_json() -> None:
     """A plain (non-JSON) string is returned unchanged when ``json.loads`` raises ValueError."""
-    assert string_from_narrative_json("Patient has a headache.") == "Patient has a headache."
+    assert (
+        HistoryOfPresentIllness.string_from_narrative_json("Patient has a headache.")
+        == "Patient has a headache."
+    )
 
 
 def test_string_from_narrative_json_unwraps_json_encoded_scalar_string() -> None:
     """A JSON-encoded scalar string decodes to that string rather than a Slate document."""
-    assert string_from_narrative_json('"just a string"') == "just a string"
+    assert HistoryOfPresentIllness.string_from_narrative_json('"just a string"') == "just a string"
 
 
 def test_string_from_narrative_json_renders_inline_nodes() -> None:
     """A top-level inline node renders its ``data.concept`` (ported home-app behavior)."""
     narrative_json = {"document": {"nodes": [{"object": "inline", "data": {"concept": "Aspirin"}}]}}
-    assert string_from_narrative_json(narrative_json) == "Aspirin '"
+    assert HistoryOfPresentIllness.string_from_narrative_json(narrative_json) == "Aspirin '"
 
 
 def test_string_from_narrative_json_renders_blocks_with_paragraph_breaks() -> None:
@@ -90,4 +90,7 @@ def test_string_from_narrative_json_renders_blocks_with_paragraph_breaks() -> No
             ]
         }
     }
-    assert string_from_narrative_json(narrative_json) == "First lineconcept1 '\nSecond line"
+    assert (
+        HistoryOfPresentIllness.string_from_narrative_json(narrative_json)
+        == "First lineconcept1 '\nSecond line"
+    )
