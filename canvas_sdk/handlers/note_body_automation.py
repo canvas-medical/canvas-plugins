@@ -1,9 +1,12 @@
+import json
+import re
 from abc import abstractmethod
 from functools import cached_property
 from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note_body_automation import ShowNoteBodyAutomationEffect
 from canvas_sdk.events import EventType
@@ -12,6 +15,12 @@ from canvas_sdk.v1.data import Note
 
 SHOW_AUTOMATIONS_EVENT = EventType.Name(EventType.SHOW_NOTE_BODY_AUTOMATIONS)
 AUTOMATION_SELECTED_EVENT = EventType.Name(EventType.NOTE_BODY_AUTOMATION_SELECTED)
+
+ORIGINATE_COMMAND_REGEX = re.compile(r"^ORIGINATE_(.+)_COMMAND$")
+
+# The line_number that ``originate`` sends when the author gives no line. Canvas
+# reads it as "after the last command in the body".
+DEFAULT_LINE_NUMBER = -1
 
 
 class NoteBodyAutomation(BaseHandler):
@@ -22,8 +31,10 @@ class NoteBodyAutomation(BaseHandler):
     it in the browser as the user types. Canvas calls ``handle`` when the user
     selects the entry.
 
-    Canvas puts the effects from ``handle`` on the line the user typed on, so a
-    command from ``originate`` needs no ``line_number``.
+    A command from ``handle`` lands on the line the user typed on, and takes that
+    line over the way a native command does. ``originate`` therefore needs no
+    ``line_number``. An automation that wants the command somewhere else passes
+    one, and it is kept.
     """
 
     RESPONDS_TO = [
@@ -55,6 +66,11 @@ class NoteBodyAutomation(BaseHandler):
             return None
         return Note.objects.filter(dbid=note_id).select_related("note_type_version").first()
 
+    @property
+    def line_number(self) -> int:
+        """The note body line the user typed on, or -1 outside a selection."""
+        return self.event.context.get("line_number", DEFAULT_LINE_NUMBER)
+
     def visible(self) -> bool:
         """Return True to show this automation for the note in the event context."""
         return True
@@ -79,9 +95,40 @@ class NoteBodyAutomation(BaseHandler):
             ]
 
         if self.event.context.get("key") == self.AUTOMATION_KEY:
-            return self.handle()
+            return self._place_on_the_user_line(self.handle())
 
         return []
+
+    def _place_on_the_user_line(self, effects: list[Effect]) -> list[Effect]:
+        """Put the command originations in ``effects`` on the line the user typed on.
+
+        An automation answers a keystroke, so its commands belong where the user
+        was typing. ``originate`` defaults the line to ``DEFAULT_LINE_NUMBER``,
+        which appends, and this fills the real line in. An author who chose a
+        line keeps it, and any other effect is left alone.
+        """
+        if self.line_number == DEFAULT_LINE_NUMBER:
+            return effects
+
+        for effect in effects:
+            if not ORIGINATE_COMMAND_REGEX.fullmatch(EffectType.Name(effect.type)):
+                continue
+
+            try:
+                payload = json.loads(effect.payload)
+            except ValueError:
+                continue
+
+            if not isinstance(payload, dict):
+                continue
+
+            if payload.get("line_number", DEFAULT_LINE_NUMBER) != DEFAULT_LINE_NUMBER:
+                continue
+
+            payload["line_number"] = self.line_number
+            effect.payload = json.dumps(payload)
+
+        return effects
 
 
 __exports__ = (
