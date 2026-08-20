@@ -50,7 +50,7 @@ class EligibilityResponse(TimestampedModel, IdentifiableModel):
         null=True,
     )
     coverage = models.ForeignKey(
-        "v1.Coverage", on_delete=models.DO_NOTHING, related_name="eligibility_responses", null=True
+        "v1.Coverage", on_delete=models.DO_NOTHING, related_name="eligibility_responses"
     )
     client_id = models.CharField(max_length=100, blank=True, default="")
     correlation_id = models.CharField(max_length=100, blank=True, default="")
