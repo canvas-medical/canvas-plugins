@@ -20,9 +20,9 @@ def test_procedure_exposes_home_app_fields() -> None:
 
 def test_procedure_status_choices_match_home_app() -> None:
     """ProcedureStatus mirrors the home-app in-progress/aborted/completed integer codes."""
-    assert ProcedureStatus.IN_PROGRESS == 1
-    assert ProcedureStatus.ABORTED == 2
-    assert ProcedureStatus.COMPLETED == 3
+    assert ProcedureStatus.IN_PROGRESS.value == 1
+    assert ProcedureStatus.ABORTED.value == 2
+    assert ProcedureStatus.COMPLETED.value == 3
 
 
 def test_procedure_coding_links_back_via_codings() -> None:
@@ -35,6 +35,6 @@ def test_procedure_coding_links_back_via_codings() -> None:
 @pytest.mark.django_db
 def test_procedure_factory_builds_with_coding() -> None:
     """The SDK ProcedureFactory creates a Procedure reachable via its coding's `codings` accessor."""
-    coding = ProcedureCodingFactory()
+    coding = ProcedureCodingFactory.create()
     assert coding.procedure.status == ProcedureStatus.COMPLETED
     assert list(coding.procedure.codings.all()) == [coding]
