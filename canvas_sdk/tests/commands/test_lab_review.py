@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from pydantic_core import ValidationError
 
@@ -104,6 +106,14 @@ def test_an_edit_naming_the_patients_own_report_is_allowed(
     edit = LabReviewCommand(command_uuid=str(command.id), report_ids=[str(report.id)])
 
     assert edit.edit()
+
+
+def test_an_unresolved_anchor_skips_the_ownership_check(foreign_report: LabReport) -> None:
+    """No persisted anchor means no patient to check, so ownership is skipped and the report still originates."""
+    command = LabReviewCommand(note_uuid=str(uuid4()), report_ids=[str(foreign_report.id)])
+
+    assert command._anchor_patient_id() is None
+    assert command.originate()
 
 
 def test_a_report_that_does_not_need_review_is_still_refused(note: Note, patient: Patient) -> None:
