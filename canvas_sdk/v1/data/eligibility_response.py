@@ -33,7 +33,7 @@ class EligibilityRequest(TimestampedModel, IdentifiableModel):
     trading_partner_id = models.CharField(max_length=255)
     member = models.JSONField()
     provider = models.JSONField(null=True, blank=True)
-    payload = models.TextField(default="", blank=True)
+    payload = models.TextField(default="")
     control_number = models.CharField(max_length=20, default="", blank=True)
 
 
