@@ -108,10 +108,10 @@ class EligibilityResponse(TimestampedModel, IdentifiableModel):
             return False
 
     def _get_relevant_person(self) -> dict:
-        coverage = self.coverage
-        if coverage is None:
-            raise _NoMatchedPersonError
         try:
+            coverage = self.coverage
+            if coverage is None:
+                raise _NoMatchedPersonError
             patient = coverage.patient
             subscriber = coverage.subscriber
             parsed_subscriber = self._get_subscriber()

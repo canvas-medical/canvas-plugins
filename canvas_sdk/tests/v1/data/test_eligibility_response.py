@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
+from canvas_sdk.v1.data.coverage import Coverage
 from canvas_sdk.v1.data.eligibility_response import (
     EligibilityResponse,
     EligibilityResponseStatus,
@@ -263,3 +264,37 @@ def test_eligibility_info_empty_when_matched_person_lacks_benefit_key(
     response.parsed_x12_response = {"receivers": [{"subscribers": [_parsed_person()]}]}
 
     assert response.eligibility_or_benefit_information == []
+
+
+class _FakeEligibilityResponses:
+    """Stand-in for the ``eligibility_responses`` reverse manager."""
+
+    def __init__(self, latest: Any) -> None:
+        self._latest = latest
+        self.order_by_args: tuple = ()
+
+    def order_by(self, *fields: str) -> "_FakeEligibilityResponses":
+        self.order_by_args = fields
+        return self
+
+    def first(self) -> Any:
+        return self._latest
+
+
+def test_coverage_eligibility_status_unknown_when_no_responses(mocker: "MockerFixture") -> None:
+    """A coverage with no eligibility responses reports UNKNOWN (not verified)."""
+    responses = _FakeEligibilityResponses(None)
+    mocker.patch.object(Coverage, "eligibility_responses", responses)
+
+    assert Coverage().eligibility_status == EligibilityResponseStatus.UNKNOWN
+    assert responses.order_by_args == ("-created",)
+
+
+def test_coverage_eligibility_status_uses_latest_response(mocker: "MockerFixture") -> None:
+    """A coverage defers to the status of its most recent eligibility response."""
+    latest = SimpleNamespace(status=EligibilityResponseStatus.INACTIVE)
+    responses = _FakeEligibilityResponses(latest)
+    mocker.patch.object(Coverage, "eligibility_responses", responses)
+
+    assert Coverage().eligibility_status == EligibilityResponseStatus.INACTIVE
+    assert responses.order_by_args == ("-created",)
