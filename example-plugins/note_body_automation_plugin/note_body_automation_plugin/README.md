@@ -33,5 +33,18 @@ return any effect.
 
 ## Line position
 
-Canvas puts the effects from ``handle`` on the line that the user typed on. Do
-not give ``originate`` a ``line_number``.
+A command from ``handle`` lands on the line that the user typed on, and takes
+that line over. The typed text becomes the command, the way a native command
+does. Call ``originate`` with no ``line_number`` to get this.
+
+The line is on the handler as ``self.line_number``. Give it to ``originate`` to
+put the command somewhere else, and Canvas keeps the line you ask for:
+
+```python
+def handle(self) -> list[Effect]:
+    return [
+        PlanCommand(note_uuid=..., narrative="...").originate(
+            line_number=self.line_number + 1
+        )
+    ]
+```
