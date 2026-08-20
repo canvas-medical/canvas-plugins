@@ -3,6 +3,7 @@ from typing import Any
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
@@ -110,8 +111,11 @@ class EligibilityResponse(TimestampedModel, IdentifiableModel):
     def _get_relevant_person(self) -> dict:
         try:
             coverage = self.coverage
-            if coverage is None:
-                raise _NoMatchedPersonError
+        except ObjectDoesNotExist:
+            raise _NoMatchedPersonError from None
+        if coverage is None:
+            raise _NoMatchedPersonError
+        try:
             patient = coverage.patient
             subscriber = coverage.subscriber
             parsed_subscriber = self._get_subscriber()
