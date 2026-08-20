@@ -971,6 +971,7 @@
   ],
   "canvas_sdk.handlers.note_body_automation": [
     "AUTOMATION_SELECTED_EVENT",
+    "DEFAULT_LINE_NUMBER",
     "NoteBodyAutomation",
     "SHOW_AUTOMATIONS_EVENT"
   ],
