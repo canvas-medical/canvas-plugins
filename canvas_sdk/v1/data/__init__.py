@@ -66,10 +66,9 @@ from .educational_material import EducationalMaterial
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
-from .goal import Goal
-from .history_present_illness import HistoryOfPresentIllness
 from .family_history import FamilyHistory, FamilyHistoryCoding
 from .goal import Goal, UpdateGoal
+from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
     ImagingOrder,
     ImagingReport,
