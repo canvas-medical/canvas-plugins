@@ -2,7 +2,7 @@ import pytest
 from django.db import models
 
 from canvas_sdk.test_utils.factories import PlanFactory
-from canvas_sdk.v1.data.plan import Plan, string_from_narrative_json
+from canvas_sdk.v1.data.plan import Plan
 
 
 def test_plan_narrative_fields() -> None:
@@ -35,7 +35,7 @@ def test_narrative_property_falls_back_to_json() -> None:
 
 def test_string_from_narrative_json_handles_blocks_and_none() -> None:
     """The porter renders block/text nodes and treats empty input as an empty string."""
-    assert string_from_narrative_json(None) == ""
+    assert Plan.string_from_narrative_json(None) == ""
     doc = {
         "document": {
             "nodes": [
@@ -43,7 +43,7 @@ def test_string_from_narrative_json_handles_blocks_and_none() -> None:
             ]
         }
     }
-    assert string_from_narrative_json(doc) == "line"
+    assert Plan.string_from_narrative_json(doc) == "line"
 
 
 @pytest.mark.django_db

@@ -1171,6 +1171,7 @@
     "FieldType",
     "FieldValueTooLarge",
     "Goal",
+    "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReportCoding",
@@ -1524,6 +1525,9 @@
     "GoalLifecycleStatus",
     "GoalPriority",
     "UpdateGoal"
+  ],
+  "canvas_sdk.v1.data.history_present_illness": [
+    "HistoryOfPresentIllness"
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",

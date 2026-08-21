@@ -73,6 +73,7 @@ from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
 from .goal import Goal, UpdateGoal
+from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
     ImagingOrder,
     ImagingReport,
@@ -307,6 +308,7 @@ __all__ = __exports__ = (
     "FieldValueTooLarge",
     "FieldType",
     "Goal",
+    "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReportCoding",
