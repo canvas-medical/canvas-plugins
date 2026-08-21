@@ -1,6 +1,54 @@
 # CHANGELOG
 
 
+## v0.202.0 (2026-08-21)
+
+### Features
+
+- **data**: Add procedure to the data module
+  ([#1846](https://github.com/canvas-medical/canvas-plugins/pull/1846),
+  [`7f7f77d`](https://github.com/canvas-medical/canvas-plugins/commit/7f7f77d1760d503b0282e94adcebaffd38bfc1ac))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.201.0 (2026-08-21)
+
+### Features
+
+- **data**: Expose eligibility response and request in the data module
+  ([#1844](https://github.com/canvas-medical/canvas-plugins/pull/1844),
+  [`f33e159`](https://github.com/canvas-medical/canvas-plugins/commit/f33e15937e7d257c601776e57e57ed894a0f367f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.200.2 (2026-08-19)
+
+### Bug Fixes
+
+- Bound the prescription text and counts when an effect is built
+  ([#1822](https://github.com/canvas-medical/canvas-plugins/pull/1822),
+  [`eee1011`](https://github.com/canvas-medical/canvas-plugins/commit/eee1011394524e096f03b7c869f4a24c5ce2daa5))
+
+
+## v0.200.1 (2026-08-19)
+
+### Bug Fixes
+
+- Check the goal being closed belongs to the command's patient
+  ([#1834](https://github.com/canvas-medical/canvas-plugins/pull/1834),
+  [`f458efe`](https://github.com/canvas-medical/canvas-plugins/commit/f458efed87fe24548872beb5b0412ee64c5d5785))
+
+
 ## v0.200.0 (2026-08-19)
 
 ### Features

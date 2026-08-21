@@ -1157,6 +1157,9 @@
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
     "EducationalMaterial",
+    "EligibilityRequest",
+    "EligibilityResponse",
+    "EligibilityResponseStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -1271,6 +1274,9 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus",
+    "Procedure",
+    "ProcedureCoding",
+    "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
@@ -1491,6 +1497,11 @@
   "canvas_sdk.v1.data.educational_material": [
     "EducationalMaterial"
   ],
+  "canvas_sdk.v1.data.eligibility_response": [
+    "EligibilityRequest",
+    "EligibilityResponse",
+    "EligibilityResponseStatus"
+  ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
     "EncounterMedium",
@@ -1692,6 +1703,11 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.procedure": [
+    "Procedure",
+    "ProcedureCoding",
+    "ProcedureStatus"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",

@@ -24,6 +24,7 @@ from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .educational_material import EducationalMaterialFactory
+from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
@@ -93,6 +94,7 @@ from .practicelocation import (
     PracticeLocationSettingFactory,
 )
 from .prescription import PrescriptionFactory
+from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .referral import (
@@ -151,6 +153,8 @@ __all__ = (
     "DocumentCodingFactory",
     "DocumentReviewDelegationFactory",
     "EducationalMaterialFactory",
+    "EligibilityRequestFactory",
+    "EligibilityResponseFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
@@ -213,6 +217,8 @@ __all__ = (
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
     "PrescriptionFactory",
+    "ProcedureFactory",
+    "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
     "ReferralFactory",

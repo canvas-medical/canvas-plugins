@@ -63,6 +63,11 @@ from .document_reference import (
 )
 from .document_review_delegation import DocumentReviewDelegation
 from .educational_material import EducationalMaterial
+from .eligibility_response import (
+    EligibilityRequest,
+    EligibilityResponse,
+    EligibilityResponseStatus,
+)
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -176,6 +181,7 @@ from .practicelocation import (
     PracticeLocationSetting,
 )
 from .prescription import Prescription, PrescriptionResponse, PrescriptionStatus
+from .procedure import Procedure, ProcedureCoding, ProcedureStatus
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -287,6 +293,9 @@ __all__ = __exports__ = (
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
     "EducationalMaterial",
+    "EligibilityRequest",
+    "EligibilityResponse",
+    "EligibilityResponseStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -401,6 +410,9 @@ __all__ = __exports__ = (
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus",
+    "Procedure",
+    "ProcedureCoding",
+    "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
