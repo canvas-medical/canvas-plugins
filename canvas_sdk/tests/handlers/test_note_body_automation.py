@@ -321,3 +321,61 @@ def test_another_effect_is_left_alone() -> None:
     effects = ModalAutomation(_selected_event("modal_automation", line_number=7)).compute()
 
     assert effects[0].payload == payload_before
+
+
+# --- the abstract handle() contract ---
+
+
+def test_base_handle_is_abstract_and_raises() -> None:
+    """A subclass that defers to the base handle() gets NotImplementedError."""
+
+    class DefersToBase(NoteBodyAutomation):
+        AUTOMATION_KEY = "defers_to_base"
+        AUTOMATION_TITLE = "Defers To Base"
+
+        def handle(self) -> list[Effect]:
+            return super().handle()
+
+    with pytest.raises(NotImplementedError):
+        DefersToBase(_show_event()).handle()
+
+
+# --- payloads that are not a placeable origination ---
+
+
+def test_a_malformed_origination_payload_is_left_alone() -> None:
+    """An origination whose payload is not valid JSON is passed through untouched."""
+    broken = PlanCommand(note_uuid=NOTE_UUID, narrative="Follow up.").originate()
+    broken.payload = "{not valid json"
+
+    class BrokenPayloadAutomation(NoteBodyAutomation):
+        AUTOMATION_KEY = "broken_payload_automation"
+        AUTOMATION_TITLE = "Broken Payload Automation"
+
+        def handle(self) -> list[Effect]:
+            return [broken]
+
+    effects = BrokenPayloadAutomation(
+        _selected_event("broken_payload_automation", line_number=7)
+    ).compute()
+
+    assert effects[0].payload == "{not valid json"
+
+
+def test_a_non_dict_origination_payload_is_left_alone() -> None:
+    """An origination whose payload is valid JSON but not an object is left alone."""
+    listish = PlanCommand(note_uuid=NOTE_UUID, narrative="Follow up.").originate()
+    listish.payload = json.dumps([1, 2, 3])
+
+    class ListPayloadAutomation(NoteBodyAutomation):
+        AUTOMATION_KEY = "list_payload_automation"
+        AUTOMATION_TITLE = "List Payload Automation"
+
+        def handle(self) -> list[Effect]:
+            return [listish]
+
+    effects = ListPayloadAutomation(
+        _selected_event("list_payload_automation", line_number=7)
+    ).compute()
+
+    assert json.loads(effects[0].payload) == [1, 2, 3]
