@@ -13,6 +13,7 @@ from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
 )
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
+from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
 from canvas_sdk.commands.commands.instruct import InstructCommand
 from canvas_sdk.commands.commands.lab_order import LabOrderCommand
 from canvas_sdk.commands.commands.medical_history import MedicalHistoryCommand
@@ -59,6 +60,8 @@ __all__ = __exports__ = (
     "CustomCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
+    "ImmunizationStatementCommand",
+    "ImmunizeCommand",
     "InstructCommand",
     "LabOrderCommand",
     "LabReviewCommand",
