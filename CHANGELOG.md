@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.203.0 (2026-08-21)
+
+### Features
+
+- **data**: Expose HistoryOfPresentIllness in the data module
+  ([#1841](https://github.com/canvas-medical/canvas-plugins/pull/1841),
+  [`1aaa96b`](https://github.com/canvas-medical/canvas-plugins/commit/1aaa96b4707a9d834627b964fba057eec11d1fda))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+
 ## v0.202.0 (2026-08-21)
 
 ### Features
