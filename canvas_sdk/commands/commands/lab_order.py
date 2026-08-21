@@ -9,6 +9,8 @@ from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.base import _SendableCommandMixin
 from canvas_sdk.v1.data.lab import LabPartner, LabPartnerTest
 
+_COMMENT_MAX_LENGTH = 128
+
 
 class LabOrderCommand(_SendableCommandMixin, BaseCommand):
     """A class for managing a Lab Order command within a specific note."""
@@ -98,6 +100,15 @@ class LabOrderCommand(_SendableCommandMixin, BaseCommand):
                             self.tests_order_codes,
                         )
                     )
+
+        if self.comment and len(self.comment) > _COMMENT_MAX_LENGTH:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"comment cannot be longer than {_COMMENT_MAX_LENGTH} characters",
+                    self.comment,
+                )
+            )
 
         return errors
 
