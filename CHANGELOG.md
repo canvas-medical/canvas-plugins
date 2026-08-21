@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.201.0 (2026-08-21)
+
+### Features
+
+- **data**: Expose eligibility response and request in the data module
+  ([#1844](https://github.com/canvas-medical/canvas-plugins/pull/1844),
+  [`f33e159`](https://github.com/canvas-medical/canvas-plugins/commit/f33e15937e7d257c601776e57e57ed894a0f367f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.200.2 (2026-08-19)
 
 ### Bug Fixes
