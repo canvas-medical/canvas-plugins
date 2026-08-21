@@ -153,3 +153,19 @@ def test_a_lot_alone_is_not_checked_against_a_vaccine() -> None:
     command = ImmunizeCommand(note_uuid=NOTE_UUID, lot_id=lot.id)
 
     assert command.originate().type == EffectType.ORIGINATE_IMMUNIZE_COMMAND
+
+
+@pytest.mark.django_db
+def test_an_inactive_vaccine_is_rejected() -> None:
+    """A vaccine that is no longer active cannot be administered."""
+    vaccine = VaccineFactory.create(active=False)
+
+    with pytest.raises(ValidationError, match="No active vaccine found"):
+        ImmunizeCommand(note_uuid=NOTE_UUID, vaccine_id=vaccine.id).originate()
+
+
+@pytest.mark.django_db
+def test_an_unknown_lot_id_is_rejected() -> None:
+    """A lot id that matches no inventory record is rejected."""
+    with pytest.raises(ValidationError, match="Vaccine lot with id .* not found"):
+        ImmunizeCommand(note_uuid=NOTE_UUID, lot_id=uuid4()).originate()
