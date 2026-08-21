@@ -222,6 +222,7 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReview,
 )
 from .user import CanvasUser
+from .vaccine import Vaccine, VaccineLot, VaccineManufacturer
 from .visual_exam_finding import VisualExamFinding
 
 __all__ = __exports__ = (
@@ -455,6 +456,9 @@ __all__ = __exports__ = (
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
     "UpdateGoal",
+    "Vaccine",
+    "VaccineLot",
+    "VaccineManufacturer",
     "VisualExamFinding",
     "proxy_field",
 )
