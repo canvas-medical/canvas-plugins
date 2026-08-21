@@ -28,7 +28,7 @@ def test_vital_sign_links_back_via_signs() -> None:
 @pytest.mark.django_db
 def test_vital_sign_factory_builds_with_reading() -> None:
     """The SDK VitalSignFactory creates a VitalSign reachable via its reading's `signs`."""
-    sign = VitalSignFactory(value="120/80", units="mmHg")
+    sign = VitalSignFactory.create(value="120/80", units="mmHg")
     assert sign.value == "120/80"
     assert sign.reading.patient_id is not None
     assert list(sign.reading.signs.all()) == [sign]
