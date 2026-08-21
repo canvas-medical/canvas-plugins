@@ -1320,6 +1320,8 @@
     "UncategorizedClinicalDocumentReview",
     "UpdateGoal",
     "VisualExamFinding",
+    "VitalSign",
+    "VitalSignReading",
     "proxy_field"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
@@ -1804,6 +1806,10 @@
   ],
   "canvas_sdk.v1.data.visual_exam_finding": [
     "VisualExamFinding"
+  ],
+  "canvas_sdk.v1.data.vitals": [
+    "VitalSign",
+    "VitalSignReading"
   ],
   "canvas_sdk.v1.plugin_database_context": [
     "get_access_level",

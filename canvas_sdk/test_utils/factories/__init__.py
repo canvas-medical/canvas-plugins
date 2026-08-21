@@ -127,6 +127,7 @@ from .uncategorized_clinical_document import (
 )
 from .user import CanvasUserFactory
 from .visual_exam_finding import VisualExamFindingFactory
+from .vitals import VitalSignFactory, VitalSignReadingFactory
 
 __all__ = (
     "CalendarFactory",
@@ -243,4 +244,6 @@ __all__ = (
     "UncategorizedClinicalDocumentReviewFactory",
     "UpdateGoalFactory",
     "VisualExamFindingFactory",
+    "VitalSignReadingFactory",
+    "VitalSignFactory",
 )
