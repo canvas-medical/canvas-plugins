@@ -123,6 +123,7 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReviewFactory,
 )
 from .user import CanvasUserFactory
+from .vaccine import VaccineFactory, VaccineLotFactory
 from .visual_exam_finding import VisualExamFindingFactory
 
 __all__ = (
@@ -234,5 +235,7 @@ __all__ = (
     "UncategorizedClinicalDocumentFactory",
     "UncategorizedClinicalDocumentReviewFactory",
     "UpdateGoalFactory",
+    "VaccineFactory",
+    "VaccineLotFactory",
     "VisualExamFindingFactory",
 )
