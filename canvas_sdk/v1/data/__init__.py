@@ -63,6 +63,11 @@ from .document_reference import (
 )
 from .document_review_delegation import DocumentReviewDelegation
 from .educational_material import EducationalMaterial
+from .eligibility_response import (
+    EligibilityRequest,
+    EligibilityResponse,
+    EligibilityResponseStatus,
+)
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -286,6 +291,9 @@ __all__ = __exports__ = (
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
     "EducationalMaterial",
+    "EligibilityRequest",
+    "EligibilityResponse",
+    "EligibilityResponseStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",

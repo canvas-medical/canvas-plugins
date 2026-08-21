@@ -12,6 +12,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointSystem,
     ContactPointUse,
 )
+from canvas_sdk.v1.data.eligibility_response import EligibilityResponseStatus
 
 
 class CoverageRank(models.IntegerChoices):
@@ -227,6 +228,16 @@ class Coverage(TimestampedModel, IdentifiableModel):
     )
     comments = models.TextField(default="", blank=True)
     subscriber_identifier = models.CharField(max_length=100, blank=True, default="")
+
+    @property
+    def eligibility_status(self) -> EligibilityResponseStatus:
+        """The current eligibility status of this coverage.
+
+        Returns the most recent eligibility response's status, or ``UNKNOWN`` when the coverage
+        has never been checked (``eligibility_responses`` is empty).
+        """
+        last_response = self.eligibility_responses.order_by("-created").first()
+        return last_response.status if last_response else EligibilityResponseStatus.UNKNOWN
 
     def __str__(self) -> str:
         return f"id={self.id}"
