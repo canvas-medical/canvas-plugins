@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.202.0 (2026-08-21)
+
+### Features
+
+- **data**: Add procedure to the data module
+  ([#1846](https://github.com/canvas-medical/canvas-plugins/pull/1846),
+  [`7f7f77d`](https://github.com/canvas-medical/canvas-plugins/commit/7f7f77d1760d503b0282e94adcebaffd38bfc1ac))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.201.0 (2026-08-21)
 
 ### Features
