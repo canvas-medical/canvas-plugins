@@ -1273,6 +1273,9 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus",
+    "Procedure",
+    "ProcedureCoding",
+    "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
@@ -1696,6 +1699,11 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.procedure": [
+    "Procedure",
+    "ProcedureCoding",
+    "ProcedureStatus"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",

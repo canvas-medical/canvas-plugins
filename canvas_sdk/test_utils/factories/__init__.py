@@ -93,6 +93,7 @@ from .practicelocation import (
     PracticeLocationSettingFactory,
 )
 from .prescription import PrescriptionFactory
+from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .referral import (
@@ -214,6 +215,8 @@ __all__ = (
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
     "PrescriptionFactory",
+    "ProcedureFactory",
+    "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
     "ReferralFactory",
