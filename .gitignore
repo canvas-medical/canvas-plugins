@@ -17,6 +17,10 @@ dist/
 # SQLite databases
 *.sqlite3
 
+# coverage.py data files (SQLite DBs written by `pytest --cov`; never commit)
+.coverage
+.coverage.*
+
 profile-imports-*.txt
 
 # mypy cache
