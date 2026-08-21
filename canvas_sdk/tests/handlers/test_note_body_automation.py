@@ -327,17 +327,14 @@ def test_another_effect_is_left_alone() -> None:
 
 
 def test_base_handle_is_abstract_and_raises() -> None:
-    """A subclass that defers to the base handle() gets NotImplementedError."""
+    """The base handle() refuses to run, so a subclass has to write its own.
 
-    class DefersToBase(NoteBodyAutomation):
-        AUTOMATION_KEY = "defers_to_base"
-        AUTOMATION_TITLE = "Defers To Base"
-
-        def handle(self) -> list[Effect]:
-            return super().handle()
-
+    Called on the class rather than through super(), because mypy rightly warns
+    that reaching an abstract method with a trivial body through super() is not
+    safe in general.
+    """
     with pytest.raises(NotImplementedError):
-        DefersToBase(_show_event()).handle()
+        NoteBodyAutomation.handle(ExampleAutomation(_show_event()))
 
 
 # --- payloads that are not a placeable origination ---
