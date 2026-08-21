@@ -5,6 +5,7 @@ manifest_schema = {
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
         "description": {"type": "string"},
+        "data_isolated": {"type": "boolean", "default": True},
         "variables": {
             "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",
             "type": "array",
