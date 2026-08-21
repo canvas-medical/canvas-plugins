@@ -24,6 +24,7 @@ from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .educational_material import EducationalMaterialFactory
+from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
@@ -151,6 +152,8 @@ __all__ = (
     "DocumentCodingFactory",
     "DocumentReviewDelegationFactory",
     "EducationalMaterialFactory",
+    "EligibilityRequestFactory",
+    "EligibilityResponseFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
