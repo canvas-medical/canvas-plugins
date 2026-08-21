@@ -49,7 +49,7 @@ def test_string_from_narrative_json_handles_blocks_and_none() -> None:
 @pytest.mark.django_db
 def test_plan_factory_builds() -> None:
     """The SDK PlanFactory creates a Plan whose narrative resolves from legacy_narrative."""
-    plan = PlanFactory()
+    plan = PlanFactory.create()
     assert plan.narrative == plan.legacy_narrative
     assert plan.patient_id is not None
     assert plan.note_id is not None
