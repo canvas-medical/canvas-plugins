@@ -1266,6 +1266,7 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -1681,6 +1682,9 @@
   ],
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
+  ],
+  "canvas_sdk.v1.data.plan": [
+    "Plan"
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
