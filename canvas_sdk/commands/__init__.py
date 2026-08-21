@@ -14,6 +14,7 @@ from canvas_sdk.commands.commands.history_present_illness import (
 )
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
+from canvas_sdk.commands.commands.immunize import ImmunizeCommand
 from canvas_sdk.commands.commands.instruct import InstructCommand
 from canvas_sdk.commands.commands.lab_order import LabOrderCommand
 from canvas_sdk.commands.commands.medical_history import MedicalHistoryCommand
