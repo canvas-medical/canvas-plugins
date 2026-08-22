@@ -873,9 +873,6 @@
     "SendSurescriptsEligibilityRequestEffect",
     "SendSurescriptsMedicationHistoryRequestEffect"
   ],
-  "canvas_sdk.effects.surface_entry": [
-    "_SurfaceEntryEffect"
-  ],
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
@@ -1041,9 +1038,6 @@
   "canvas_sdk.handlers.simple_api.websocket": [
     "WebSocket",
     "WebSocketAPI"
-  ],
-  "canvas_sdk.handlers.surface_entry": [
-    "PluginSurfaceEntry"
   ],
   "canvas_sdk.protocols": [
     "BaseProtocol",

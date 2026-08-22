@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from functools import cached_property
 from typing import Any
 
@@ -6,14 +7,14 @@ from django.core.exceptions import ImproperlyConfigured
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note_body_automation import ShowNoteBodyAutomationEffect
 from canvas_sdk.events import EventType
-from canvas_sdk.handlers.surface_entry import PluginSurfaceEntry
+from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data import Note
 
 # The line Canvas reads as "after the last command in the body".
 APPEND_AFTER_LAST_COMMAND = -1
 
 
-class NoteBodyAutomation(PluginSurfaceEntry):
+class NoteBodyAutomation(BaseHandler):
     """Base class for note body automations.
 
     An automation is one entry in the list that shows when the user types "/" in
@@ -42,6 +43,7 @@ class NoteBodyAutomation(PluginSurfaceEntry):
     AUTOMATION_KEY: str
     AUTOMATION_TITLE: str
     KEYWORDS: list[str] = []
+    PRIORITY: int = 0
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Refuse a subclass that has no key or no title."""
@@ -67,27 +69,33 @@ class NoteBodyAutomation(PluginSurfaceEntry):
         """The note body line the user typed on, or -1 outside a selection."""
         return self.event.context.get("line_number", APPEND_AFTER_LAST_COMMAND)
 
-    @property
-    def entry_key(self) -> str:
-        """The key Canvas sends back when the user selects this automation."""
-        return self.AUTOMATION_KEY
-
-    def is_list_event(self) -> bool:
-        """Whether Canvas is collecting the automations for a note."""
-        return self.event.name == EventType.Name(EventType.SHOW_NOTE_BODY_AUTOMATIONS)
-
-    def shows_this_entry(self) -> bool:
-        """The note body is one surface, so its list event always asks for this."""
+    def visible(self) -> bool:
+        """Return True to show this automation for the note in the event context."""
         return True
 
-    def entry_effect(self) -> Effect:
-        """The effect that puts this automation in the note body command list."""
-        return ShowNoteBodyAutomationEffect(
-            key=self.AUTOMATION_KEY,
-            title=self.AUTOMATION_TITLE,
-            keywords=self.KEYWORDS,
-            priority=self.PRIORITY,
-        ).apply()
+    @abstractmethod
+    def handle(self) -> list[Effect]:
+        """Return the effects to apply when the user selects this automation."""
+        raise NotImplementedError("Implement to handle the automation selection")
+
+    def compute(self) -> list[Effect]:
+        """List this automation, or handle its selection."""
+        if self.event.name == EventType.Name(EventType.SHOW_NOTE_BODY_AUTOMATIONS):
+            if not self.visible():
+                return []
+            return [
+                ShowNoteBodyAutomationEffect(
+                    key=self.AUTOMATION_KEY,
+                    title=self.AUTOMATION_TITLE,
+                    keywords=self.KEYWORDS,
+                    priority=self.PRIORITY,
+                ).apply()
+            ]
+
+        if self.event.context.get("key") == self.AUTOMATION_KEY:
+            return self.handle()
+
+        return []
 
 
 __exports__ = ("APPEND_AFTER_LAST_COMMAND", "NoteBodyAutomation")
