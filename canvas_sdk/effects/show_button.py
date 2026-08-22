@@ -3,10 +3,10 @@ from typing import Any
 from pydantic import Field
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_sdk.effects.surface_entry import _SurfaceEntryEffect
 
 
-class ShowButtonEffect(_BaseEffect):
+class ShowButtonEffect(_SurfaceEntryEffect):
     """
     An Effect that will decide an action button's properties.
     """
@@ -14,27 +14,13 @@ class ShowButtonEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.SHOW_ACTION_BUTTON
 
-    key: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    priority: int = Field(default=0)
     color: str | None = Field(min_length=7, max_length=7, default=None)
     background: str | None = Field(min_length=7, max_length=7, default=None)
 
     @property
     def values(self) -> dict[str, Any]:
         """The ShowButtonEffect's values."""
-        return {
-            "key": self.key,
-            "title": self.title,
-            "priority": self.priority,
-            "color": self.color,
-            "background": self.background,
-        }
-
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
+        return {**super().values, "color": self.color, "background": self.background}
 
 
 __exports__ = ("ShowButtonEffect",)

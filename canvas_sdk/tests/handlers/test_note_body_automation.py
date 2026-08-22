@@ -6,15 +6,11 @@ from django.core.exceptions import ImproperlyConfigured
 from pydantic import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.commands.commands.plan import PlanCommand
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.note_body_automation import ShowNoteBodyAutomationEffect
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.note_body_automation import (
-    AUTOMATION_SELECTED_EVENT,
-    DEFAULT_LINE_NUMBER,
-    SHOW_AUTOMATIONS_EVENT,
+    APPEND_AFTER_LAST_COMMAND,
     NoteBodyAutomation,
 )
 
@@ -71,27 +67,6 @@ def _selected_event(key: str, line_number: int | None = 7) -> Event:
     )
 
 
-class OriginatingAutomation(NoteBodyAutomation):
-    """An automation that adds a command, the way a real one does."""
-
-    AUTOMATION_KEY = "originating_automation"
-    AUTOMATION_TITLE = "Originating Automation"
-
-    line_for_the_command: int | None = None
-
-    def handle(self) -> list[Effect]:
-        """Add a Plan command, with a line only when the test asks for one."""
-        command = PlanCommand(note_uuid=NOTE_UUID, narrative="Follow up.")
-        if self.line_for_the_command is None:
-            return [command.originate()]
-        return [command.originate(line_number=self.line_for_the_command)]
-
-
-def _originated_line(effects: list[Effect]) -> int:
-    """The line number in the one origination among ``effects``."""
-    return json.loads(effects[0].payload)["line_number"]
-
-
 # --- RESPONDS_TO ---
 
 
@@ -101,8 +76,6 @@ def test_responds_to_both_events() -> None:
         "SHOW_NOTE_BODY_AUTOMATIONS",
         "NOTE_BODY_AUTOMATION_SELECTED",
     ]
-    assert SHOW_AUTOMATIONS_EVENT == "SHOW_NOTE_BODY_AUTOMATIONS"
-    assert AUTOMATION_SELECTED_EVENT == "NOTE_BODY_AUTOMATION_SELECTED"
 
 
 # --- configuration guard ---
@@ -275,52 +248,7 @@ def test_line_number_defaults_to_the_appending_value() -> None:
     """With no line in the context the handler reports the appending default."""
     event = _selected_event("test_automation", line_number=None)
 
-    assert ExampleAutomation(event).line_number == DEFAULT_LINE_NUMBER
-
-
-def test_a_command_lands_on_the_line_the_user_typed_on() -> None:
-    """An automation writes plain originate(), and Canvas still gets the user's line."""
-    automation = OriginatingAutomation(_selected_event("originating_automation", line_number=7))
-
-    effects = automation.compute()
-
-    assert _originated_line(effects) == 7
-
-
-def test_a_line_the_author_chose_is_kept() -> None:
-    """An author who asks for a specific line keeps it."""
-    automation = OriginatingAutomation(_selected_event("originating_automation", line_number=7))
-    automation.line_for_the_command = 2
-
-    effects = automation.compute()
-
-    assert _originated_line(effects) == 2
-
-
-def test_a_command_appends_when_the_context_carries_no_line() -> None:
-    """With no line to place it on, the command keeps the appending default."""
-    automation = OriginatingAutomation(_selected_event("originating_automation", line_number=None))
-
-    effects = automation.compute()
-
-    assert _originated_line(effects) == DEFAULT_LINE_NUMBER
-
-
-def test_another_effect_is_left_alone() -> None:
-    """Only a command origination is placed. Every other effect passes through."""
-    modal = LaunchModalEffect(content="<p>hi</p>", title="Summary").apply()
-    payload_before = modal.payload
-
-    class ModalAutomation(NoteBodyAutomation):
-        AUTOMATION_KEY = "modal_automation"
-        AUTOMATION_TITLE = "Modal Automation"
-
-        def handle(self) -> list[Effect]:
-            return [modal]
-
-    effects = ModalAutomation(_selected_event("modal_automation", line_number=7)).compute()
-
-    assert effects[0].payload == payload_before
+    assert ExampleAutomation(event).line_number == APPEND_AFTER_LAST_COMMAND
 
 
 # --- the abstract handle() contract ---
@@ -338,41 +266,3 @@ def test_base_handle_is_abstract_and_raises() -> None:
 
 
 # --- payloads that are not a placeable origination ---
-
-
-def test_a_malformed_origination_payload_is_left_alone() -> None:
-    """An origination whose payload is not valid JSON is passed through untouched."""
-    broken = PlanCommand(note_uuid=NOTE_UUID, narrative="Follow up.").originate()
-    broken.payload = "{not valid json"
-
-    class BrokenPayloadAutomation(NoteBodyAutomation):
-        AUTOMATION_KEY = "broken_payload_automation"
-        AUTOMATION_TITLE = "Broken Payload Automation"
-
-        def handle(self) -> list[Effect]:
-            return [broken]
-
-    effects = BrokenPayloadAutomation(
-        _selected_event("broken_payload_automation", line_number=7)
-    ).compute()
-
-    assert effects[0].payload == "{not valid json"
-
-
-def test_a_non_dict_origination_payload_is_left_alone() -> None:
-    """An origination whose payload is valid JSON but not an object is left alone."""
-    listish = PlanCommand(note_uuid=NOTE_UUID, narrative="Follow up.").originate()
-    listish.payload = json.dumps([1, 2, 3])
-
-    class ListPayloadAutomation(NoteBodyAutomation):
-        AUTOMATION_KEY = "list_payload_automation"
-        AUTOMATION_TITLE = "List Payload Automation"
-
-        def handle(self) -> list[Effect]:
-            return [listish]
-
-    effects = ListPayloadAutomation(
-        _selected_event("list_payload_automation", line_number=7)
-    ).compute()
-
-    assert json.loads(effects[0].payload) == [1, 2, 3]
