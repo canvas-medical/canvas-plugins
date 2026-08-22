@@ -1,0 +1,12 @@
+[project]
+authors = [{name = "Virtuosis Artificial Intelligence SA"}]
+dependencies = ["canvas[test-utils]"]
+description = "Consent-gated voice biomarker analysis with the Virtuosis API"
+license = "MIT"
+name = "virtuosis_voice_biomarker"
+readme = "virtuosis_voice_biomarker/README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
