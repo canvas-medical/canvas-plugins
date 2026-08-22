@@ -873,6 +873,9 @@
     "SendSurescriptsEligibilityRequestEffect",
     "SendSurescriptsMedicationHistoryRequestEffect"
   ],
+  "canvas_sdk.effects.surface_entry": [
+    "_SurfaceEntryEffect"
+  ],
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
@@ -957,10 +960,8 @@
     "CronTask"
   ],
   "canvas_sdk.handlers.note_body_automation": [
-    "AUTOMATION_SELECTED_EVENT",
-    "DEFAULT_LINE_NUMBER",
-    "NoteBodyAutomation",
-    "SHOW_AUTOMATIONS_EVENT"
+    "APPEND_AFTER_LAST_COMMAND",
+    "NoteBodyAutomation"
   ],
   "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
     "PatientChartSummaryCustomSectionHandler"
@@ -1040,6 +1041,9 @@
   "canvas_sdk.handlers.simple_api.websocket": [
     "WebSocket",
     "WebSocketAPI"
+  ],
+  "canvas_sdk.handlers.surface_entry": [
+    "PluginSurfaceEntry"
   ],
   "canvas_sdk.protocols": [
     "BaseProtocol",
