@@ -12,7 +12,7 @@ from canvas_sdk.effects.note import Note as NoteEffect
 from canvas_sdk.effects.note.note import transition_matrix_for
 from canvas_sdk.effects.show_button import ShowButtonEffect
 from canvas_sdk.events import EventType
-from canvas_sdk.handlers.surface_entry import PluginSurfaceEntry
+from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data import Appointment as AppointmentModel
 from canvas_sdk.v1.data import Note
 from canvas_sdk.v1.data.note import NoteStateChangeEvent, NoteStates, NoteTypeCategories
@@ -20,7 +20,7 @@ from canvas_sdk.v1.data.note import NoteStateChangeEvent, NoteStates, NoteTypeCa
 SHOW_BUTTON_REGEX = re.compile(r"^SHOW_(.+?)_BUTTON$")
 
 
-class ActionButton(PluginSurfaceEntry):
+class ActionButton(BaseHandler):
     """Base class for action buttons."""
 
     RESPONDS_TO = [
@@ -64,6 +64,7 @@ class ActionButton(PluginSurfaceEntry):
     BUTTON_TITLE: str = ""
     BUTTON_KEY: str = ""
     BUTTON_LOCATION: ButtonLocation
+    PRIORITY: int = 0
     BUTTON_TEXT_COLOR: str | None = None
     BUTTON_BACKGROUND_COLOR: str | None = None
 
@@ -76,35 +77,29 @@ class ActionButton(PluginSurfaceEntry):
         """Method to determine button visibility."""
         return True
 
-    @property
-    def entry_key(self) -> str:
-        """The key Canvas sends back when the user clicks this button."""
-        return self.BUTTON_KEY
+    def compute(self) -> list[Effect]:
+        """Method to compute the effects."""
+        if not self.BUTTON_LOCATION:
+            return []
 
-    def is_list_event(self) -> bool:
-        """Whether Canvas is collecting the buttons for some location."""
-        return SHOW_BUTTON_REGEX.fullmatch(self.event.name) is not None
+        show_button_event_match = SHOW_BUTTON_REGEX.fullmatch(self.event.name)
 
-    def shows_this_entry(self) -> bool:
-        """Whether the location being collected is this button's own."""
-        match = SHOW_BUTTON_REGEX.fullmatch(self.event.name)
-        if not match:
-            return False
-        return self.ButtonLocation[match.group(1)] == self.BUTTON_LOCATION
+        if show_button_event_match:
+            location = show_button_event_match.group(1)
+            if self.ButtonLocation[location] == self.BUTTON_LOCATION and self.visible():
+                return [
+                    ShowButtonEffect(
+                        key=self.BUTTON_KEY,
+                        title=self.BUTTON_TITLE,
+                        priority=self.PRIORITY,
+                        color=self.BUTTON_TEXT_COLOR,
+                        background=self.BUTTON_BACKGROUND_COLOR,
+                    ).apply()
+                ]
+        elif self.context["key"] == self.BUTTON_KEY:
+            return self.handle()
 
-    def entry_effect(self) -> Effect:
-        """The effect that puts this button in its location."""
-        return ShowButtonEffect(
-            key=self.BUTTON_KEY,
-            title=self.BUTTON_TITLE,
-            priority=self.PRIORITY,
-            color=self.BUTTON_TEXT_COLOR,
-            background=self.BUTTON_BACKGROUND_COLOR,
-        ).apply()
-
-    def is_configured(self) -> bool:
-        """A button with no location has nowhere to go, so it answers nothing."""
-        return bool(self.BUTTON_LOCATION)
+        return []
 
 
 class NoteStateActionButton(ActionButton):
