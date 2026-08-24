@@ -116,7 +116,7 @@ class VitalSign(TimestampedModel, IdentifiableModel):
 
     reading = models.ForeignKey(VitalSignReading, on_delete=models.DO_NOTHING, related_name="signs")
     date_recorded = models.DateTimeField(default=timezone.now, db_index=True)
-    loinc_num = models.CharField(max_length=10)
+    loinc_num = models.CharField(max_length=10, db_index=True)
     sign = models.CharField(choices=VitalSignConstants.SIGN_CHOICES, max_length=33, db_index=True)
     sign_description = models.CharField(max_length=100, blank=True, default="")
     value = models.CharField(max_length=150)
