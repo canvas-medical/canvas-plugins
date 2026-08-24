@@ -223,6 +223,7 @@ from .uncategorized_clinical_document import (
 )
 from .user import CanvasUser
 from .visual_exam_finding import VisualExamFinding
+from .vitals import VitalSign, VitalSignReading
 
 __all__ = __exports__ = (
     "Application",
@@ -456,5 +457,7 @@ __all__ = __exports__ = (
     "UncategorizedClinicalDocument",
     "UpdateGoal",
     "VisualExamFinding",
+    "VitalSign",
+    "VitalSignReading",
     "proxy_field",
 )
