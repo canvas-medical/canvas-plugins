@@ -1282,6 +1282,7 @@
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -1734,6 +1735,7 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
+    "ReasonForVisit",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
