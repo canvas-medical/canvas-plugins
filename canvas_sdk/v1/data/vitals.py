@@ -41,7 +41,7 @@ class VitalSignReading(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="vital_sign_readings"
     )
-    date_recorded = models.DateTimeField(default=timezone.now)
+    date_recorded = models.DateTimeField()
 
 
 class VitalSign(TimestampedModel, IdentifiableModel):
@@ -51,7 +51,7 @@ class VitalSign(TimestampedModel, IdentifiableModel):
         db_table = "canvas_sdk_data_api_vitalsign_001"
 
     reading = models.ForeignKey(VitalSignReading, on_delete=models.DO_NOTHING, related_name="signs")
-    date_recorded = models.DateTimeField()
+    date_recorded = models.DateTimeField(default=timezone.now, db_index=True)
     loinc_num = models.CharField(max_length=10)
     sign = models.CharField(max_length=33)
     sign_description = models.CharField(max_length=100, blank=True, default="")
