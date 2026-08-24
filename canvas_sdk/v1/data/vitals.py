@@ -115,7 +115,7 @@ class VitalSign(TimestampedModel, IdentifiableModel):
         db_table = "canvas_sdk_data_api_vitalsign_001"
 
     reading = models.ForeignKey(VitalSignReading, on_delete=models.DO_NOTHING, related_name="signs")
-    date_recorded = models.DateTimeField(db_index=True)
+    date_recorded = models.DateTimeField(default=timezone.now, db_index=True)
     loinc_num = models.CharField(max_length=10)
     sign = models.CharField(choices=VitalSignConstants.SIGN_CHOICES, max_length=33, db_index=True)
     sign_description = models.CharField(max_length=100, blank=True, default="")
