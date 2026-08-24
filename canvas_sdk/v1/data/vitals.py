@@ -1,6 +1,7 @@
 from typing import cast
 
 from django.db import models
+from django.utils import timezone
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
@@ -40,7 +41,7 @@ class VitalSignReading(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="vital_sign_readings"
     )
-    date_recorded = models.DateTimeField()
+    date_recorded = models.DateTimeField(default=timezone.now)
 
 
 class VitalSign(TimestampedModel, IdentifiableModel):
