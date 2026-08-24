@@ -1,12 +1,20 @@
 import hashlib
 import json
 import uuid
+from typing import Any, Self, cast
 
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import FieldError
 from django.db import models
+from django.db.models.manager import BaseManager
 from django.utils import timezone
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    BaseQuerySet,
+    IdentifiableModel,
+    MetadataModel,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.claim import Claim
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import empty_note_body
@@ -155,11 +163,137 @@ class NoteType(TimestampedModel, IdentifiableModel, Coding):
     is_sig_required = models.BooleanField(default=True)
 
 
+# The fields holding the body content. Version 1 notes store the body in
+# `_body`; version 2 notes store it across `_body_content` and `_body_order`.
+NOTE_BODY_FIELDS = ("_body", "_body_content", "_body_order")
+
+# Everything the `body` property reads. It consults `_version` first to decide
+# which shape to build, so a query loading `body` has to load that too.
+NOTE_BODY_READ_FIELDS = (*NOTE_BODY_FIELDS, "_version")
+
+
+# The column holding the body for a note's version, exposed to filters as
+# `body`.
+NOTE_BODY_COLUMN = models.Case(
+    models.When(_version=2, then=models.F("_body_content")),
+    default=models.F("_body"),
+)
+
+
+def _expand_body(fields: tuple[Any, ...], replacement: tuple[str, ...]) -> tuple[Any, ...]:
+    """Replace `body` with the given fields, leaving the rest as-is."""
+    expanded: list[Any] = []
+    for field in fields:
+        if field == "body":
+            expanded.extend(replacement)
+        else:
+            expanded.append(field)
+    return tuple(expanded)
+
+
+def _is_body_lookup(name: Any) -> bool:
+    """Whether a lookup name targets `body`."""
+    return name == "body" or (isinstance(name, str) and name.startswith("body__"))
+
+
+def _references_body(condition: models.Q) -> bool:
+    """Whether a Q object looks up `body` at any depth."""
+    for child in condition.children:
+        if isinstance(child, models.Q):
+            if _references_body(child):
+                return True
+        elif isinstance(child, tuple) and _is_body_lookup(child[0]):
+            return True
+    return False
+
+
+def _reject_body_selection(fields: tuple[Any, ...], method: str) -> None:
+    """Refuse to select `body`, which no single column holds.
+
+    Django's own message for an unselectable alias suggests promoting it with
+    `annotate`, which here would hand back the stored column instead of the
+    body: for a version 2 note that is a mapping keyed by line, not the ordered
+    list of lines that `body` returns.
+    """
+    if "body" in fields:
+        raise FieldError(
+            f"'body' cannot be selected with {method}(), because it is built from "
+            "several columns rather than stored in one. Use only('body') to load "
+            "notes whose 'body' is populated."
+        )
+
+
+class NoteQuerySet(BaseQuerySet):
+    """A queryset for notes."""
+
+    def _alias_body_if_referenced(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Self:
+        """Make `body` resolvable, but only for calls that look it up.
+
+        The alias is added per call rather than to every note queryset so that
+        queries not mentioning `body` are left exactly as they were written.
+        """
+        references_body = any(_is_body_lookup(key) for key in kwargs) or any(
+            isinstance(arg, models.Q) and _references_body(arg) for arg in args
+        )
+        return self.alias(body=NOTE_BODY_COLUMN) if references_body else self
+
+    def filter(self, *args: Any, **kwargs: Any) -> Self:
+        """Filter the queryset, resolving `body` to the note's body column.
+
+        `body` is a property rather than a field, so it is supplied as a query
+        alias here. That covers `filter`, `exclude` and `get`, including lookups
+        nested inside `Q` objects, but not `order_by`, `values`, or traversal
+        from another model's queryset.
+        """
+        return super(NoteQuerySet, self._alias_body_if_referenced(args, kwargs)).filter(
+            *args, **kwargs
+        )
+
+    def exclude(self, *args: Any, **kwargs: Any) -> Self:
+        """Exclude matching rows, resolving `body` to the note's body column."""
+        return super(NoteQuerySet, self._alias_body_if_referenced(args, kwargs)).exclude(
+            *args, **kwargs
+        )
+
+    def defer(self, *fields: Any) -> Self:
+        """Defer loading of the named fields.
+
+        `body` is a property derived from three columns, so naming it defers all
+        of them.
+        """
+        return super().defer(*_expand_body(fields, NOTE_BODY_FIELDS))
+
+    def only(self, *fields: Any) -> Self:
+        """Load only the named fields, deferring the rest.
+
+        `body` expands to every field the property reads, so that building a
+        body from the result costs no further queries.
+        """
+        return super().only(*_expand_body(fields, NOTE_BODY_READ_FIELDS))
+
+    def values(self, *fields: Any, **expressions: Any) -> models.QuerySet[Any, dict[str, Any]]:
+        """Return dictionaries of field values, refusing to select `body`."""
+        _reject_body_selection(fields, "values")
+        return super().values(*fields, **expressions)
+
+    def values_list(
+        self, *fields: Any, flat: bool = False, named: bool = False
+    ) -> models.QuerySet[Any, Any]:
+        """Return tuples of field values, refusing to select `body`."""
+        _reject_body_selection(fields, "values_list")
+        return super().values_list(*fields, flat=flat, named=named)
+
+
+NoteManager = BaseManager.from_queryset(NoteQuerySet)
+
+
 class Note(TimestampedModel, IdentifiableModel):
     """Note."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_note_001"
+
+    objects = cast(NoteQuerySet, NoteManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="notes", null=True
