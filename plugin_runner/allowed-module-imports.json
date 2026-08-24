@@ -1289,6 +1289,7 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1753,6 +1754,9 @@
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.resolve_condition_event": [
+    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"

@@ -197,6 +197,7 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .refill_request import RefillRequest, RefillRequestCoding
+from .resolve_condition_event import ResolveConditionEvent
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -426,6 +427,7 @@ __all__ = __exports__ = (
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",

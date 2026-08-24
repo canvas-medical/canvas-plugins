@@ -103,6 +103,7 @@ from .referral import (
     ReferralReportFactory,
     ReferralReviewFactory,
 )
+from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
@@ -226,6 +227,7 @@ __all__ = (
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",
