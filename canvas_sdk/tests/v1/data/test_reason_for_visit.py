@@ -30,7 +30,7 @@ def test_narrative_property_prefers_legacy_then_json() -> None:
 @pytest.mark.django_db
 def test_rfv_factory_builds() -> None:
     """The SDK ReasonForVisitFactory persists a ReasonForVisit whose narrative resolves."""
-    rfv = ReasonForVisitFactory(legacy_narrative="Annual checkup")
+    rfv = ReasonForVisitFactory.create(legacy_narrative="Annual checkup")
     assert rfv.narrative == "Annual checkup"
     assert rfv.patient_id is not None
     assert rfv.note_id is not None
@@ -39,14 +39,14 @@ def test_rfv_factory_builds() -> None:
 @pytest.mark.django_db
 def test_rfv_coding_persists_and_links_to_reason_for_visit() -> None:
     """A ReasonForVisitCoding round-trips its fields and is reachable via the ``codings`` relation."""
-    rfv = ReasonForVisitFactory()
-    ReasonForVisitCodingFactory(
+    rfv = ReasonForVisitFactory.create()
+    ReasonForVisitCodingFactory.create(
         reason_for_visit=rfv,
         system="http://snomed.info/sct",
         code="699134002",
         display="Caregiver Annual Health Check",
     )
-    ReasonForVisitCodingFactory(reason_for_visit=ReasonForVisitFactory())
+    ReasonForVisitCodingFactory.create(reason_for_visit=ReasonForVisitFactory.create())
 
     fetched = rfv.codings.get()
 
