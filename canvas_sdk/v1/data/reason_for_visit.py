@@ -29,6 +29,17 @@ class ReasonForVisit(TypeAheadNarrativeMixin, AuditedModel, IdentifiableModel):
     )
 
 
+class ReasonForVisitCoding(Coding):
+    """ReasonForVisitCoding."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_reasonforvisitcoding_001"
+
+    reason_for_visit = models.ForeignKey(
+        ReasonForVisit, on_delete=models.DO_NOTHING, related_name="codings"
+    )
+
+
 class ReasonForVisitSettingCoding(IdentifiableModel, Coding):
     """ReasonForVisitSettingCoding."""
 
@@ -40,4 +51,4 @@ class ReasonForVisitSettingCoding(IdentifiableModel, Coding):
     duration = ArrayField(models.DurationField())
 
 
-__exports__ = ("ReasonForVisit", "ReasonForVisitSettingCoding")
+__exports__ = ("ReasonForVisit", "ReasonForVisitCoding", "ReasonForVisitSettingCoding")

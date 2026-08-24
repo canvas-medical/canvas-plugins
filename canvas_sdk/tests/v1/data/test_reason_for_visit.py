@@ -1,8 +1,8 @@
 import pytest
 from django.db import models
 
-from canvas_sdk.test_utils.factories import ReasonForVisitFactory
-from canvas_sdk.v1.data.reason_for_visit import ReasonForVisit
+from canvas_sdk.test_utils.factories import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from canvas_sdk.v1.data.reason_for_visit import ReasonForVisit, ReasonForVisitCoding
 
 
 def test_rfv_narrative_storage_fields() -> None:
@@ -34,3 +34,23 @@ def test_rfv_factory_builds() -> None:
     assert rfv.narrative == "Annual checkup"
     assert rfv.patient_id is not None
     assert rfv.note_id is not None
+
+
+@pytest.mark.django_db
+def test_rfv_coding_persists_and_links_to_reason_for_visit() -> None:
+    """A ReasonForVisitCoding round-trips its fields and is reachable via the ``codings`` relation."""
+    rfv = ReasonForVisitFactory()
+    ReasonForVisitCodingFactory(
+        reason_for_visit=rfv,
+        system="http://snomed.info/sct",
+        code="699134002",
+        display="Caregiver Annual Health Check",
+    )
+    ReasonForVisitCodingFactory(reason_for_visit=ReasonForVisitFactory())
+
+    fetched = rfv.codings.get()
+
+    assert isinstance(fetched, ReasonForVisitCoding)
+    assert fetched.system == "http://snomed.info/sct"
+    assert fetched.code == "699134002"
+    assert fetched.display == "Caregiver Annual Health Check"
