@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.203.1 (2026-08-24)
+
+### Bug Fixes
+
+- Bound the lab order comment when an effect is built
+  ([#1843](https://github.com/canvas-medical/canvas-plugins/pull/1843),
+  [`b1dc284`](https://github.com/canvas-medical/canvas-plugins/commit/b1dc284dde4798b2fc8d60f503b8ae6531465c13))
+
+
 ## v0.203.0 (2026-08-21)
 
 ### Features
