@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.204.0 (2026-08-24)
+
+### Features
+
+- **data**: Add vital signs to the data module
+  ([#1849](https://github.com/canvas-medical/canvas-plugins/pull/1849),
+  [`8e3d5c4`](https://github.com/canvas-medical/canvas-plugins/commit/8e3d5c4f2677641e7666599f3e738d560460f616))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.203.1 (2026-08-24)
 
 ### Bug Fixes
