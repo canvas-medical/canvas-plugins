@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.205.0 (2026-08-25)
+
+### Features
+
+- Immunize command ([#1847](https://github.com/canvas-medical/canvas-plugins/pull/1847),
+  [`51b7f3e`](https://github.com/canvas-medical/canvas-plugins/commit/51b7f3e95154c25c16afd73584a04ed51c47f67f))
+
+
 ## v0.204.0 (2026-08-24)
 
 ### Features
