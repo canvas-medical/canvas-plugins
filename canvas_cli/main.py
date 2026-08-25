@@ -8,10 +8,9 @@ import typer
 from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.auth import login, logout
 from canvas_cli.apps.control_room import (
+    cr_init,
     deploy,
     git_credential,
-    publish,
-    pull,
     set_variables,
     uninstall,
 )
@@ -61,8 +60,10 @@ if _CONTROL_ROOM_BETA:
         hidden=True,
         short_help="Git credential helper for Control Room pushes (invoked by git).",
     )(git_credential)
-    app.command(short_help="Publish a plugin to Control Room.")(publish)
-    app.command(short_help="Pull Control Room changes into a plugin.")(pull)
+    app.command(
+        name="cr-init",
+        short_help="Connect a plugin's git repo to Control Room (sets up the 'cr' remote).",
+    )(cr_init)
     app.command(short_help="Deploy a published plugin to this instance via Control Room.")(deploy)
 
 # Config app

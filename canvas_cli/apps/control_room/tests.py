@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -25,8 +24,7 @@ def _app() -> typer.Typer:
     """A local app so tests don't depend on the CONTROL_ROOM_BETA gate in main."""
     app = typer.Typer(rich_markup_mode=None)
     app.command(name="git-credential")(commands.git_credential)
-    app.command()(commands.publish)
-    app.command()(commands.pull)
+    app.command(name="cr-init")(commands.cr_init)
     app.command()(commands.deploy)
     app.command(name="set-variables")(commands.set_variables)
     app.command(name="uninstall")(commands.uninstall)
@@ -53,12 +51,12 @@ def _git_side_effect(
     dirty: bool = False,
     staged_files: list[str] | None = None,
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
-    """Fake `subprocess.run` for the git calls publish/pull make.
+    """Fake `subprocess.run` for the git calls cr-init (and the deploy/consent
+    flow) make.
 
-    ``dirty`` models an uncommitted working tree: `diff --cached --quiet` reports
-    a staged diff and `status --porcelain` lists a change. ``staged_files`` is the
-    NUL-joined list `diff --cached --name-only` returns (for the oversize check).
-    Everything else (`add`, `commit`, `config user.*`) falls through to rc=0.
+    ``remote_exists`` toggles whether `remote get-url cr` finds an existing
+    remote (→ set-url vs add). The fetch/merge/dirty/staged knobs remain for
+    completeness. Everything else falls through to rc=0.
     """
 
     def run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -128,25 +126,28 @@ def test_git_credential_get_failure_exits_nonzero(_post: Mock, _token: Mock) -> 
     assert result.exit_code == 1
 
 
-# -- publish -----------------------------------------------------------------
+# -- cr-init -----------------------------------------------------------------
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
-def test_publish_configures_remote_and_pushes(
+def test_cr_init_configures_remote_and_helper(
     mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
-    """Publish discovers CR, points `cr` at the repo, and pushes HEAD to main."""
+    """cr-init discovers CR, points `cr` at the repo, and registers the push
+    credential helper — but never commits or pushes (the user does plain git).
+    """
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(push_rc=0)
+    mock_run.side_effect = _git_side_effect()
     plugin_dir = _plugin_dir(tmp_path)
 
-    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
+    result = runner.invoke(_app(), ["cr-init", str(plugin_dir), "--host", HOST])
 
     assert result.exit_code == 0, result.output
-    assert "Published acme/my_plugin" in result.output
+    assert "Connected acme/my_plugin to Control Room" in result.output
+    assert "git push cr HEAD:main" in result.output  # guidance for plain-git publish
     calls = [c.args[0] for c in mock_run.call_args_list]
     # cr remote pointed at the discovered {git_url}/{org}/{name}.git
     assert [
@@ -158,31 +159,7 @@ def test_publish_configures_remote_and_pushes(
         "cr",
         "https://cr.example/git/acme/my_plugin.git",
     ] in calls
-    # pushed current HEAD to CR's canonical main ref
-    assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_registers_helper_and_isolates_push_config(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """Publish registers our credential helper by absolute path (git invokes it
-    via a bare shell) as the sole helper for the CR host, and runs the push with
-    global/system git config ignored so nothing above the repo — a stale
-    cr-login extraHeader or osxkeychain — can shadow it.
-    """
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(push_rc=0)
-    plugin_dir = _plugin_dir(tmp_path)
-
-    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
-    assert result.exit_code == 0, result.output
-
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    # our helper is registered by absolute path, replacing any prior local entry
+    # the credential helper is registered by absolute path for the CR host
     helper = next(
         c
         for c in calls
@@ -193,183 +170,51 @@ def test_publish_registers_helper_and_isolates_push_config(
         and "git-credential" in helper[6]
         and helper[6].endswith(f"--host {HOST}")
     )
-    # the push runs with global + system git config redirected to /dev/null
-    push_call = next(c for c in mock_run.call_args_list if c.args[0][3:6] == ["push", "cr", "HEAD:main"])
-    push_env = push_call.kwargs["env"]
-    assert push_env["GIT_CONFIG_GLOBAL"] == os.devnull
-    assert push_env["GIT_CONFIG_SYSTEM"] == os.devnull
-    # config-setting calls are NOT isolated (writes go to local config normally)
-    helper_call = next(
-        c for c in mock_run.call_args_list if c.args[0][3:5] == ["config", "--replace-all"]
-    )
-    assert "GIT_CONFIG_GLOBAL" not in helper_call.kwargs.get("env", {})
+    # cr-init is setup-only: it never commits or pushes — that's the user's job now
+    assert not any(c[3] == "commit" for c in calls)
+    assert not any(c[3:5] == ["push", "cr"] for c in calls)
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
-def test_publish_non_fast_forward_suggests_pull(
+def test_cr_init_idempotent_updates_existing_remote(
     mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
-    """A rejected (non-fast-forward) push tells the author to `canvas pull`."""
+    """Re-running updates the existing `cr` URL (set-url) rather than re-adding."""
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(
-        push_rc=1, push_stderr="! [rejected] HEAD -> main (non-fast-forward)"
-    )
+    mock_run.side_effect = _git_side_effect(remote_exists=True)
+    plugin_dir = _plugin_dir(tmp_path)
 
-    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(_app(), ["cr-init", str(plugin_dir), "--host", HOST])
 
-    assert result.exit_code == 1
-    assert "canvas pull" in result.output
+    assert result.exit_code == 0, result.output
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert any(c[3:6] == ["remote", "set-url", "cr"] for c in calls)
+    assert not any(c[3:6] == ["remote", "add", "cr"] for c in calls)
 
 
 @patch("subprocess.run")
-def test_publish_requires_git_repo(mock_run: Mock, tmp_path: Path) -> None:
-    """Publish refuses a non-git directory before making any network call."""
+def test_cr_init_requires_git_repo(mock_run: Mock, tmp_path: Path) -> None:
+    """cr-init refuses a non-git directory before any network call."""
     mock_run.return_value = subprocess.CompletedProcess([], 128, "", "not a git repository")
-    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(_app(), ["cr-init", str(_plugin_dir(tmp_path)), "--host", HOST])
     assert result.exit_code != 0
     assert "not a git repository" in result.output
 
 
 @patch("subprocess.run", side_effect=FileNotFoundError(2, "No such file or directory", "git"))
 @patch("canvas_cli.apps.control_room.commands.shutil.which", return_value=None)
-def test_publish_without_git_installed_gives_actionable_error(
+def test_cr_init_without_git_installed_gives_actionable_error(
     _which: Mock, mock_run: Mock, tmp_path: Path
 ) -> None:
-    """Publish on a git-less system fails with an install hint, not a raw
-    FileNotFoundError traceback, and never tries to spawn git.
-    """
-    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+    """cr-init on a git-less system fails with an install hint, never spawning git."""
+    result = runner.invoke(_app(), ["cr-init", str(_plugin_dir(tmp_path)), "--host", HOST])
     assert result.exit_code != 0
     assert "git-scm.com/downloads" in result.output
-    # The preflight fires before any git subprocess — no FileNotFoundError leaks.
     assert not isinstance(result.exception, FileNotFoundError)
     mock_run.assert_not_called()
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_auto_commits_working_tree(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """A dirty tree is staged + committed for the author (git stays invisible),
-    then pushed. The commit falls back to a Canvas identity when none is set.
-    """
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(push_rc=0, dirty=True)
-    plugin_dir = _plugin_dir(tmp_path)
-
-    result = runner.invoke(
-        _app(), ["publish", str(plugin_dir), "--host", HOST, "-m", "my snapshot"]
-    )
-    assert result.exit_code == 0, result.output
-
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    assert ["git", "-C", str(plugin_dir), "add", "-A"] in calls
-    commit = next(c for c in mock_run.call_args_list if c.args[0][3] == "commit")
-    assert "my snapshot" in commit.args[0]  # our message is used
-    # no configured identity in this repo → Canvas fallback, and the commit is
-    # NOT config-isolated (so a configured identity would be honored)
-    assert commit.kwargs["env"]["GIT_AUTHOR_NAME"] == "Canvas CLI"
-    assert "GIT_CONFIG_GLOBAL" not in commit.kwargs["env"]
-    assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_rejects_oversized_file(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A too-large staged file fails fast with the offending path — before any
-    commit or push — so the author fixes it locally, not via a CR 413.
-    """
-    monkeypatch.setattr(commands, "_MAX_PUBLISH_FILE_BYTES", 10)
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(dirty=True, staged_files=["big.bin"])
-    plugin_dir = _plugin_dir(tmp_path)
-    (plugin_dir / "big.bin").write_bytes(b"x" * 4096)  # > the patched 10-byte limit
-
-    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
-    assert result.exit_code != 0
-    assert "big.bin" in result.output
-    assert "too large to publish" in result.output
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    assert not any(c[3] == "commit" for c in calls)  # never committed
-    assert not any(c[3:5] == ["push", "cr"] for c in calls)  # never pushed
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_no_commit_skips_snapshot_and_warns(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """--no-commit publishes HEAD as-is: no commit is made, and the author is
-    warned that uncommitted changes won't ship.
-    """
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(push_rc=0, dirty=True)
-    plugin_dir = _plugin_dir(tmp_path)
-
-    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST, "--no-commit"])
-    assert result.exit_code == 0, result.output
-    assert "won't ship" in result.output
-
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    assert not any(c[3] == "commit" for c in calls)  # nothing committed
-    assert any(c[3:6] == ["push", "cr", "HEAD:main"] for c in calls)
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_clean_tree_reports_nothing_new(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """A clean tree already on CR reports 'nothing new', not a misleading
-    'Published'.
-    """
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    # clean tree (no commit) + git's up-to-date push message
-    mock_run.side_effect = _git_side_effect(push_stderr="Everything up-to-date", dirty=False)
-    plugin_dir = _plugin_dir(tmp_path)
-
-    result = runner.invoke(_app(), ["publish", str(plugin_dir), "--host", HOST])
-    assert result.exit_code == 0, result.output
-    assert "Nothing new to publish" in result.output
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    assert not any(c[3] == "commit" for c in calls)
-
-
-# -- pull --------------------------------------------------------------------
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_pull_fetches_and_merges(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """Pull fetches `cr` and merges `cr/main` into the working copy."""
-    mock_get.return_value = Mock(status_code=200)
-    mock_get.return_value.json.return_value = INFO
-    mock_run.side_effect = _git_side_effect(remote_exists=True)
-
-    result = runner.invoke(_app(), ["pull", str(_plugin_dir(tmp_path)), "--host", HOST])
-
-    assert result.exit_code == 0, result.output
-    assert "up to date" in result.output.lower()
-    calls = [c.args[0] for c in mock_run.call_args_list]
-    assert any(c[3:5] == ["fetch", "cr"] for c in calls)
-    assert any(c[3:5] == ["merge", "--no-edit"] and c[5] == "cr/main" for c in calls)
 
 
 # -- deploy + consent --------------------------------------------------------
@@ -427,9 +272,7 @@ def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_pa
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
-def test_set_variables_routes_through_cr(
-    mock_post: Mock, mock_get: Mock, _token: Mock
-) -> None:
+def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
     """`config set` (beta) discovers the org and POSTs the variables to the
     set-variables proxy, marking them sensitive (write-only, like the direct
     path).
@@ -463,9 +306,7 @@ def test_set_variables_routes_through_cr(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
-def test_set_variables_rejects_bad_format(
-    mock_post: Mock, mock_get: Mock, _token: Mock
-) -> None:
+def test_set_variables_rejects_bad_format(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
     """A malformed variable fails locally (before any network call)."""
     result = runner.invoke(_app(), ["set-variables", "my_plugin", "--host", HOST, "noequals"])
     assert result.exit_code != 0
@@ -610,13 +451,13 @@ def test_deploy_failure_exits_nonzero(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get", side_effect=requests.RequestException("network down"))
 @patch("subprocess.run")
-def test_publish_control_room_unreachable_exits(
+def test_cr_init_control_room_unreachable_exits(
     mock_run: Mock, _get: Mock, _token: Mock, tmp_path: Path
 ) -> None:
     """An unreachable instance during CR discovery fails with a clear message."""
     mock_run.side_effect = _git_side_effect()
 
-    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(_app(), ["cr-init", str(_plugin_dir(tmp_path)), "--host", HOST])
 
     assert result.exit_code != 0
     assert "could not reach" in result.output.lower()
@@ -705,31 +546,17 @@ def test_manifest_name_missing_name(tmp_path: Path) -> None:
 # -- host / directory guards -------------------------------------------------
 
 
-def test_publish_requires_host(tmp_path: Path) -> None:
-    """Publish refuses to run without a resolved host."""
+def test_cr_init_requires_host(tmp_path: Path) -> None:
+    """cr-init refuses to run without a resolved host."""
     with pytest.raises(typer.BadParameter) as exc:
-        commands.publish(tmp_path, host=None)
+        commands.cr_init(tmp_path, host=None)
     assert "specify a host" in str(exc.value)
 
 
-def test_publish_requires_directory(tmp_path: Path) -> None:
-    """Publish refuses a plugin path that isn't a directory."""
+def test_cr_init_requires_directory(tmp_path: Path) -> None:
+    """cr-init refuses a plugin path that isn't a directory."""
     with pytest.raises(typer.BadParameter) as exc:
-        commands.publish(tmp_path / "missing", host=HOST)
-    assert "valid directory" in str(exc.value)
-
-
-def test_pull_requires_host(tmp_path: Path) -> None:
-    """Pull refuses to run without a resolved host."""
-    with pytest.raises(typer.BadParameter) as exc:
-        commands.pull(tmp_path, host=None)
-    assert "specify a host" in str(exc.value)
-
-
-def test_pull_requires_directory(tmp_path: Path) -> None:
-    """Pull refuses a plugin path that isn't a directory."""
-    with pytest.raises(typer.BadParameter) as exc:
-        commands.pull(tmp_path / "missing", host=HOST)
+        commands.cr_init(tmp_path / "missing", host=HOST)
     assert "valid directory" in str(exc.value)
 
 
@@ -745,63 +572,6 @@ def test_deploy_requires_directory(tmp_path: Path) -> None:
     with pytest.raises(typer.BadParameter) as exc:
         commands.deploy(tmp_path / "missing", host=HOST)
     assert "valid directory" in str(exc.value)
-
-
-# -- publish / pull git failures ---------------------------------------------
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_publish_push_failure_reports_stderr(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """A push failure unrelated to fast-forward surfaces git's stderr."""
-    mock_get.return_value = _resp(INFO)
-    mock_run.side_effect = _git_side_effect(
-        push_rc=1, push_stderr="fatal: Authentication failed for 'cr'"
-    )
-
-    result = runner.invoke(_app(), ["publish", str(_plugin_dir(tmp_path)), "--host", HOST])
-
-    assert result.exit_code == 1
-    assert "Authentication failed" in result.output
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_pull_fetch_failure_exits(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """A failed `git fetch` from Control Room exits non-zero with git's stderr."""
-    mock_get.return_value = _resp(INFO)
-    mock_run.side_effect = _git_side_effect(
-        remote_exists=True, fetch_rc=1, fetch_stderr="fatal: could not read from remote"
-    )
-
-    result = runner.invoke(_app(), ["pull", str(_plugin_dir(tmp_path)), "--host", HOST])
-
-    assert result.exit_code == 1
-    assert "could not read from remote" in result.output
-
-
-@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
-@patch("requests.get")
-@patch("subprocess.run")
-def test_pull_merge_conflict_asks_for_resolution(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
-) -> None:
-    """A merge conflict tells the author to resolve, commit, and publish again."""
-    mock_get.return_value = _resp(INFO)
-    mock_run.side_effect = _git_side_effect(
-        remote_exists=True, merge_rc=1, merge_stderr="CONFLICT (content): Merge conflict in a.py"
-    )
-
-    result = runner.invoke(_app(), ["pull", str(_plugin_dir(tmp_path)), "--host", HOST])
-
-    assert result.exit_code == 1
-    assert "manual resolution" in result.output.lower()
 
 
 # -- _handle_consent edge cases ----------------------------------------------
@@ -879,7 +649,9 @@ def test_deploy_consent_recorded_pending_other_approvals(
 def test_main_registers_control_room_commands_with_beta_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """publish/pull/deploy/git-credential are registered when CONTROL_ROOM_BETA=true."""
+    """cr-init/deploy/git-credential are registered when CONTROL_ROOM_BETA=true;
+    the retired publish/pull wrappers are not.
+    """
     import importlib
 
     import canvas_cli.main
@@ -891,10 +663,11 @@ def test_main_registers_control_room_commands_with_beta_flag(
             (c.callback.__name__ if c.callback else None)
             for c in canvas_cli.main.app.registered_commands
         ]
-        assert "publish" in names
-        assert "pull" in names
+        assert "cr_init" in names
         assert "deploy" in names
         assert "git_credential" in names
+        assert "publish" not in names
+        assert "pull" not in names
     finally:
         # Restore the module without the beta flag so other tests aren't polluted.
         monkeypatch.delenv("CONTROL_ROOM_BETA", raising=False)

@@ -1,18 +1,21 @@
-"""Headless publish/pull via Control Room (KOALA-5923).
+"""Control Room deploy commands for the `canvas` CLI (KOALA-5923).
 
-The `canvas` CLI never talks to Control Room directly — it goes through the
-developer's own Canvas instance (home-app), which proxies to Control Room and
-signs short-lived JWTs on the developer's behalf. Git is an implementation
-detail: `canvas publish` discovers the Control Room git server + org from the
-instance, configures a `cr` remote and a credential helper transparently, and
-pushes. The plugin author never types a git URL, an org, or a git command.
+Control Room is the authoritative git home for a plugin. The `canvas` CLI never
+talks to Control Room directly — it goes through the developer's own Canvas
+instance (home-app), which proxies to Control Room and signs short-lived JWTs on
+the developer's behalf. ``canvas cr-init`` discovers the CR git server + org
+from the instance and wires up a ``cr`` remote + credential helper; from there
+the (git-savvy) developer publishes with **plain git** (``git push cr
+HEAD:main``) — the CLI no longer wraps add/commit/push.
 
 Commands (registered behind CONTROL_ROOM_BETA in canvas_cli.main):
 
   * ``canvas git-credential`` — hidden git credential helper; git invokes it to
     mint a push credential via the instance's ``mint-git-jwt`` endpoint.
-  * ``canvas publish`` — push the plugin's current HEAD to Control Room.
-  * ``canvas pull`` — integrate Control Room changes (e.g. a Canvas Support fix).
+  * ``canvas cr-init`` — connect a plugin repo to Control Room (sets up the
+    ``cr`` remote + credential helper). One-time, idempotent.
+  * ``canvas deploy`` / ``canvas config set`` / ``canvas uninstall`` — dispatch
+    deploy / variable / uninstall operations through the instance's CR proxies.
 """
 
 from __future__ import annotations
@@ -155,8 +158,8 @@ def _require_git_installed() -> None:
     """
     if shutil.which("git") is None:
         raise typer.BadParameter(
-            "git was not found on your PATH. `canvas publish` and `canvas pull` "
-            "use git to sync your plugin with Control Room. Install it from "
+            "git was not found on your PATH. `canvas cr-init` and publishing to "
+            "Control Room use git. Install it from "
             "https://git-scm.com/downloads and try again."
         )
 
@@ -166,94 +169,9 @@ def _require_git_repo(plugin_dir: Path) -> None:
     result = _git(plugin_dir, "rev-parse", "--is-inside-work-tree")
     if result.returncode != 0 or result.stdout.strip() != "true":
         raise typer.BadParameter(
-            f"'{plugin_dir}' is not a git repository. `canvas publish` pushes your "
-            "plugin's git history to Control Room, so the plugin must live in a git repo."
+            f"'{plugin_dir}' is not a git repository. Control Room is your plugin's "
+            "git remote, so the plugin must live in a git repo (run `git init` first)."
         )
-
-
-# Per-file size ceiling for a publish. Mirrors Control Room's default
-# GIT_MAX_PUSH_BYTES (25 MB) so the CLI never rejects a file CR would accept —
-# a single file this large can't fit under CR's per-push cap anyway. This is an
-# early, friendly client-side check; CR enforces the real limit server-side.
-_MAX_PUBLISH_FILE_BYTES = 25 * 1024 * 1024
-
-
-def _reject_oversized_staged_files(plugin_dir: Path) -> None:
-    """Refuse to snapshot a file too large to publish, before committing/pushing.
-
-    Ergonomics for the honest author who accidentally staged a build artifact,
-    dataset, model weights, or a committed virtualenv: fail fast locally with the
-    offending paths instead of eating a round-trip to Control Room's 413. Not a
-    security boundary — a determined client bypasses the CLI — which is why CR
-    also caps the push server-side.
-    """
-    root = _git(plugin_dir, "rev-parse", "--show-toplevel").stdout.strip() or str(plugin_dir)
-    names = _git(
-        plugin_dir, "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR"
-    ).stdout
-    offending: list[tuple[str, int]] = []
-    for rel in names.split("\0"):
-        if not rel:
-            continue
-        try:
-            size = (Path(root) / rel).stat().st_size
-        except OSError:
-            continue  # deletions / unreadable — not a size concern
-        if size > _MAX_PUBLISH_FILE_BYTES:
-            offending.append((rel, size))
-
-    if offending:
-        limit_mb = _MAX_PUBLISH_FILE_BYTES // (1024 * 1024)
-        listing = "\n".join(f"  {path} ({size / 1024 / 1024:.1f} MB)" for path, size in offending)
-        raise typer.BadParameter(
-            f"These files are too large to publish ({limit_mb} MB max per file):\n"
-            f"{listing}\n"
-            "Remove them (build artifacts, datasets, binaries) or add them to "
-            ".gitignore, then publish again. Control Room enforces this server-side too."
-        )
-
-
-def _capture_working_tree(plugin_dir: Path, *, message: str | None) -> bool:
-    """Stage and commit the working tree so ``publish`` ships what's on disk.
-
-    Git stays invisible to plugin authors (KOALA-5923): they edit files and
-    ``canvas publish`` — no ``git add`` / ``git commit`` in their vocabulary — so
-    we snapshot the tree for them. ``git add -A`` picks up modifications, new
-    files, and deletions. Returns ``True`` if a commit was made, ``False`` if the
-    tree was already clean (nothing staged after the add).
-
-    Identity: the author's configured ``user.name``/``user.email`` are used when
-    set (so history is attributable); we fall back to a Canvas identity only for
-    the field(s) they haven't configured, so an author who never set up git can
-    still publish instead of hitting "committer identity unknown". The commit is
-    deliberately NOT config-isolated, unlike the push, so that configured
-    identity is visible.
-    """
-    _git(plugin_dir, "add", "-A")
-    # `diff --cached --quiet` exits 0 when nothing is staged, 1 when there is a
-    # diff to commit (covers a fresh repo with no HEAD too — staged vs the empty
-    # tree is a diff).
-    if _git(plugin_dir, "diff", "--cached", "--quiet").returncode == 0:
-        return False
-
-    _reject_oversized_staged_files(plugin_dir)
-
-    identity: dict[str, str] = {}
-    if not _git(plugin_dir, "config", "user.name").stdout.strip():
-        identity["GIT_AUTHOR_NAME"] = identity["GIT_COMMITTER_NAME"] = "Canvas CLI"
-    if not _git(plugin_dir, "config", "user.email").stdout.strip():
-        identity["GIT_AUTHOR_EMAIL"] = identity["GIT_COMMITTER_EMAIL"] = (
-            "canvas-cli@canvasmedical.com"
-        )
-
-    commit_message = message or (
-        f"Publish via canvas CLI ({time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})"
-    )
-    committed = _git(plugin_dir, "commit", "-m", commit_message, extra_env=identity or None)
-    if committed.returncode != 0:
-        print(committed.stderr or committed.stdout or "git commit failed", file=sys.stderr)
-        raise typer.Exit(1)
-    return True
 
 
 def _url_origin(url: str) -> str:
@@ -265,7 +183,7 @@ def _url_origin(url: str) -> str:
 def _ensure_cr_remote(plugin_dir: Path, host: str) -> tuple[str, str]:
     """Discover CR + configure the ``cr`` remote and credential helper.
 
-    Idempotent — safe to call on every publish/pull. Returns ``(org_slug,
+    Idempotent — safe to call on every ``cr-init``. Returns ``(org_slug,
     plugin_name)``. The plugin author never sees any of this.
     """
     token = get_or_request_api_token(host)
@@ -326,7 +244,7 @@ def git_credential(
 ) -> None:
     """Git credential helper — mints a short-lived Control Room push JWT.
 
-    Not called directly; git invokes it (configured by `canvas publish`) as
+    Not called directly; git invokes it (configured by `canvas cr-init`) as
     ``canvas git-credential --host <instance> <get|store|erase>``, feeding the
     request on stdin. Only ``get`` does anything: it returns ``username=git``
     and a fresh JWT as the password. Tokens are ephemeral, so store/erase are
@@ -361,97 +279,37 @@ def git_credential(
         print(f"password_expiry_utc={int(time.time()) + int(expires_in)}")
 
 
-def publish(
-    plugin_name: Path = typer.Argument(..., help="Path to the plugin to publish"),
+def cr_init(
+    plugin_name: Path = typer.Argument(..., help="Path to the plugin to connect to Control Room"),
     host: str | None = typer.Option(
         callback=get_default_host, default=None, help="Canvas instance to connect to"
     ),
-    message: str | None = typer.Option(
-        None, "--message", "-m", help="Commit message for the snapshot (default: auto)"
-    ),
-    no_commit: bool = typer.Option(
-        False,
-        "--no-commit",
-        help="Publish the last commit as-is; don't snapshot the working tree.",
-    ),
 ) -> None:
-    """Publish a plugin's current code to Control Room.
+    """Connect a plugin's git repo to Control Room (its authoritative remote).
 
-    By default this snapshots your working tree — staging and committing any
-    changes for you — and pushes it, so what's on disk is what gets published;
-    you never have to touch git. Pass ``--no-commit`` if you manage your own
-    commits and want to publish exactly the current ``HEAD``.
+    One-time, idempotent setup: adds a ``cr`` remote pointing at Control Room's
+    git backend and registers the credential helper that mints push tokens. After
+    this you publish with **plain git** — Control Room is a normal remote:
+
+        git add -A && git commit -m "…"
+        git push cr HEAD:main
+
+    then deploy with ``canvas deploy``. (Control Room is the source of truth for
+    plugin history; there is no separate ``publish`` step.)
     """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
     if not plugin_name.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
-    _require_git_repo(plugin_name)
-
-    if no_commit:
-        if _git(plugin_name, "status", "--porcelain").stdout.strip():
-            print(
-                "Note: --no-commit set and the working tree has uncommitted changes; "
-                "publishing the last commit only — your uncommitted edits won't ship."
-            )
-    else:
-        _capture_working_tree(plugin_name, message=message)
+    _require_git_repo(plugin_name)  # also asserts git is installed
 
     org_slug, name = _ensure_cr_remote(plugin_name, host)
 
-    print(f"Publishing {org_slug}/{name} to Control Room…")
-    # Push the current HEAD onto Control Room's canonical `main` ref. CR enforces
-    # fast-forward-only, so a stale local HEAD is rejected (see below).
-    result = _git(plugin_name, "push", "cr", "HEAD:main", isolate_config=True)
-    if result.returncode != 0:
-        stderr = result.stderr or ""
-        if any(marker in stderr for marker in ("non-fast-forward", "fetch first", "[rejected]")):
-            print(
-                "Control Room has newer commits than your local copy — most likely a "
-                "Canvas Support fix.\nRun `canvas pull` to integrate them, then publish again."
-            )
-            raise typer.Exit(1)
-        print(stderr or "git push failed")
-        raise typer.Exit(1)
-
-    # `git push` prints "Everything up-to-date" (and pushes nothing) when HEAD is
-    # already on CR — surface that honestly rather than a misleading "Published".
-    if "up-to-date" in (result.stdout + result.stderr).lower():
-        print(f"Nothing new to publish — Control Room already has {org_slug}/{name}@main.")
-    else:
-        print(f"Published {org_slug}/{name}. Deploy it with `canvas deploy`.")
-
-
-def pull(
-    plugin_name: Path = typer.Argument(..., help="Path to the plugin to update"),
-    host: str | None = typer.Option(
-        callback=get_default_host, default=None, help="Canvas instance to connect to"
-    ),
-) -> None:
-    """Integrate Control Room changes (e.g. a Canvas Support fix) into a plugin."""
-    if not host:
-        raise typer.BadParameter("Please specify a host or add one to the configuration file")
-    if not plugin_name.is_dir():
-        raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
-    _require_git_repo(plugin_name)
-
-    org_slug, name = _ensure_cr_remote(plugin_name, host)
-
-    print(f"Fetching {org_slug}/{name} from Control Room…")
-    fetched = _git(plugin_name, "fetch", "cr", isolate_config=True)
-    if fetched.returncode != 0:
-        print(fetched.stderr or "git fetch failed")
-        raise typer.Exit(1)
-
-    merged = _git(plugin_name, "merge", "--no-edit", "cr/main")
-    if merged.returncode != 0:
-        print(
-            "Control Room changes need manual resolution — resolve the conflicts, "
-            "commit, then `canvas publish` again:\n" + (merged.stderr or merged.stdout)
-        )
-        raise typer.Exit(1)
-
-    print(merged.stdout.strip() or "Already up to date with Control Room.")
+    print(f"Connected {org_slug}/{name} to Control Room (remote 'cr').")
+    print("Publish with plain git, then deploy:")
+    print("  git add -A && git commit -m 'your message'")
+    print("  git push cr HEAD:main")
+    print(f"  canvas deploy {plugin_name} --host {host}")
 
 
 def deploy(
@@ -466,8 +324,9 @@ def deploy(
 ) -> None:
     """Deploy an already-published plugin ref to this instance via Control Room.
 
-    Names a ref previously sent up with `canvas publish`; Control Room builds
-    the artifact and installs it. If the deploy is gated on operator consent
+    Names a ref previously pushed to the `cr` remote (`git push cr HEAD:main`);
+    Control Room builds the artifact and installs it. If the deploy is gated on
+    operator consent
     (e.g. cross-plugin custom-data access), the requests are shown and approved
     or denied inline.
     """
