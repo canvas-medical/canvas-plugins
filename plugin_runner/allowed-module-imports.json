@@ -1289,6 +1289,7 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemoveAllergyEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1747,6 +1748,9 @@
   "canvas_sdk.v1.data.refill_request": [
     "RefillRequest",
     "RefillRequestCoding"
+  ],
+  "canvas_sdk.v1.data.remove_allergy_event": [
+    "RemoveAllergyEvent"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
