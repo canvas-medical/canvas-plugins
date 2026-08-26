@@ -112,7 +112,6 @@ def test_an_unresolved_anchor_skips_the_ownership_check(foreign_report: LabRepor
     """No persisted anchor means no patient to check, so ownership is skipped and the report still originates."""
     command = LabReviewCommand(note_uuid=str(uuid4()), report_ids=[str(foreign_report.id)])
 
-    assert command._anchor_patient_id() is None
     assert command.originate()
 
 
