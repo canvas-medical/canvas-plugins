@@ -233,9 +233,16 @@ class Coverage(TimestampedModel, IdentifiableModel):
     def eligibility_status(self) -> EligibilityResponseStatus:
         """The current eligibility status of this coverage.
 
-        Returns the most recent eligibility response's status, or ``UNKNOWN`` when the coverage
-        has never been checked (``eligibility_responses`` is empty).
+        A coverage whose payer cannot resolve a real-time eligibility request (e.g. self-pay) is
+        ``NOT_APPLICABLE`` regardless of the responses it holds — such a coverage may carry a failed
+        response recorded before the check was skipped, and reporting that as a failure
+        misrepresents a coverage that was never eligible for a check.
+
+        Otherwise returns the most recent eligibility response's status, or ``UNKNOWN`` when the
+        coverage has never been checked (``eligibility_responses`` is empty).
         """
+        if self.issuer and not self.issuer.supports_eligibility_check:
+            return EligibilityResponseStatus.NOT_APPLICABLE
         last_response = self.eligibility_responses.order_by("-created").first()
         return last_response.status if last_response else EligibilityResponseStatus.UNKNOWN
 
@@ -281,6 +288,15 @@ class Transactor(Model):
     coverage_types = ArrayField(
         models.CharField(choices=TransactorCoverageType.choices, max_length=64)
     )
+
+    @property
+    def supports_eligibility_check(self) -> bool:
+        """Whether a real-time eligibility request can resolve for this payer.
+
+        The self-pay payer (``payer_id == "PATIENT"``) represents patient liability rather than an
+        insurer, so a 270 can never succeed.
+        """
+        return self.payer_id != "PATIENT"
 
 
 class TransactorAddress(TimestampedModel, IdentifiableModel):
