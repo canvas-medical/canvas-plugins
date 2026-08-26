@@ -214,6 +214,8 @@
     "HistoryOfPresentIllnessCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
+    "ImmunizationStatementCommand",
+    "ImmunizeCommand",
     "InstructCommand",
     "LabOrderCommand",
     "LabReviewCommand",
@@ -293,6 +295,9 @@
   ],
   "canvas_sdk.commands.commands.immunization_statement": [
     "ImmunizationStatementCommand"
+  ],
+  "canvas_sdk.commands.commands.immunize": [
+    "ImmunizeCommand"
   ],
   "canvas_sdk.commands.commands.instruct": [
     "InstructCommand"
@@ -1320,6 +1325,9 @@
     "UncategorizedClinicalDocument",
     "UncategorizedClinicalDocumentReview",
     "UpdateGoal",
+    "Vaccine",
+    "VaccineLot",
+    "VaccineManufacturer",
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
@@ -1807,6 +1815,11 @@
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"
+  ],
+  "canvas_sdk.v1.data.vaccine": [
+    "Vaccine",
+    "VaccineLot",
+    "VaccineManufacturer"
   ],
   "canvas_sdk.v1.data.visual_exam_finding": [
     "VisualExamFinding"

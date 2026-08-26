@@ -223,6 +223,7 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReview,
 )
 from .user import CanvasUser
+from .vaccine import Vaccine, VaccineLot, VaccineManufacturer
 from .visual_exam_finding import VisualExamFinding
 from .vitals import VitalSign, VitalSignReading
 
@@ -458,6 +459,9 @@ __all__ = __exports__ = (
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
     "UpdateGoal",
+    "Vaccine",
+    "VaccineLot",
+    "VaccineManufacturer",
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
