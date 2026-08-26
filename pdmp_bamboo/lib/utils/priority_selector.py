@@ -20,6 +20,8 @@ class PrioritySelector:
     ):
         """
         Select item using priority logic.
+
+        Priority order:
         1. State match + Primary
         2. State match only
         3. Primary (any state)
@@ -66,4 +68,3 @@ class PrioritySelector:
         # Priority 4: First available
         log.info(f"PrioritySelector: Selected {item_description} (Priority 4: first available)")
         return items[0]
-

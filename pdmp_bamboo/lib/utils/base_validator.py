@@ -70,4 +70,3 @@ class BaseValidator(ABC):
         """
         if condition:
             self._add_error(errors, message, "INFO")
-

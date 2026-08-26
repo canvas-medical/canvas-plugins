@@ -2,14 +2,12 @@
 <div data-component="modal-info-box"
      data-box-type="info"
      class="card pdmp-card pdmp-card-padded">
-    <h4 data-component="info-box-title" class="pdmp-title-no-margin pdmp-color-primary pdmp-title-lg pdmp-title-flex">
-        <span class="pdmp-icon-sm">{{ icon }}</span> {{ title }}
-    </h4>
-    <ul data-component="info-box-list" class="pdmp-color-primary pdmp-list-padded pdmp-text-small">
-        {% for item in items %}
-        <li>{{ item }}</li>
-        {% endfor %}
-    </ul>
+  <h4 data-component="info-box-title" class="pdmp-title-no-margin pdmp-color-primary pdmp-title-lg pdmp-title-flex">
+    <span class="pdmp-icon-sm">{{ icon }}</span> {{ title }}
+  </h4>
+  <ul data-component="info-box-list" class="pdmp-color-primary pdmp-list-padded pdmp-text-small">
+    {% for item in items %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
 </div>
-
-

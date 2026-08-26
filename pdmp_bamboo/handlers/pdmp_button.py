@@ -130,9 +130,9 @@ class PDMPRequestButton(ActionButton):
             from canvas_sdk.effects.launch_modal import LaunchModalEffect
             from canvas_sdk.templates import render_to_string
 
-            error_html = render_to_string("templates/error/handler_error.html", {
-                "error_message": str(e)
-            })
+            error_html = render_to_string(
+                "templates/error/handler_error.html", {"error_message": str(e)}
+            )
             error_effect = LaunchModalEffect(
                 content=error_html,
                 target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE_LARGE,

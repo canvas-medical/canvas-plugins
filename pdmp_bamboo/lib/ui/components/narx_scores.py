@@ -66,4 +66,6 @@ class NarxScoresComponent(BaseComponent):
                 }
             )
 
-        return self._render_template("templates/components/narx_scores.html", {"scores": template_scores})
+        return self._render_template(
+            "templates/components/narx_scores.html", {"scores": template_scores}
+        )

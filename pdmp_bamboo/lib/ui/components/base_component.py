@@ -4,14 +4,13 @@ Base Component.
 Base class for all UI components with safe template rendering.
 """
 
-from abc import ABC
 from typing import Any
 
 from canvas_sdk.templates import render_to_string
 from logger import log
 
 
-class BaseComponent(ABC):
+class BaseComponent:
     """Base component with safe template rendering."""
 
     def _render_template(
@@ -34,4 +33,3 @@ class BaseComponent(ABC):
         except Exception as e:
             log.error(f"{component_name}: Error rendering template {template_path}: {e}")
             return None
-

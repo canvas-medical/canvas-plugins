@@ -29,6 +29,7 @@ class ReportButtonComponent(BaseComponent):
             patient_id: Canvas patient ID
             practitioner_id: Canvas practitioner ID
             organization_id: Canvas organization ID
+            staff_id: Canvas staff ID (defaults to practitioner ID)
 
         Returns:
             HTML string for report button, or None if no report URL

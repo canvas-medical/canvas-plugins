@@ -1,31 +1,30 @@
 <!-- PDMP Assessment Status Component -->
 {% if assessment_created %}
-<div class="alert pdmp-alert pdmp-alert-success pdmp-alert-lg pdmp-margin-top"
-     data-component="assessment-status-component"
-     data-component-type="success-status"
-     data-variant="success">
+  <div class="alert pdmp-alert pdmp-alert-success pdmp-alert-lg pdmp-margin-top"
+       data-component="assessment-status-component"
+       data-component-type="success-status"
+       data-variant="success">
     <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
-        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
     <div>
-        <h4 class="pdmp-color-success pdmp-title-no-margin pdmp-title-bottom-margin">Documentation Created</h4>
-        <p class="pdmp-text-small pdmp-color-success pdmp-title-no-margin">Structured assessment added to note documenting PDMP check was performed</p>
+      <h4 class="pdmp-color-success pdmp-title-no-margin pdmp-title-bottom-margin">Documentation Created</h4>
+      <p class="pdmp-text-small pdmp-color-success pdmp-title-no-margin">Structured assessment added to note documenting PDMP check was performed</p>
     </div>
-</div>
+  </div>
 {% elif assessment_error %}
-<div class="alert pdmp-alert pdmp-alert-yellow pdmp-alert-lg pdmp-margin-top"
-     data-component="assessment-status-component"
-     data-component-type="error-status"
-     data-variant="yellow">
+  <div class="alert pdmp-alert pdmp-alert-yellow pdmp-alert-lg pdmp-margin-top"
+       data-component="assessment-status-component"
+       data-component-type="error-status"
+       data-variant="yellow">
     <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
     <div>
-        <h4 class="pdmp-color-warn pdmp-title-no-margin pdmp-title-bottom-margin">Documentation Warning</h4>
-        <p class="pdmp-text-small pdmp-color-warn pdmp-title-no-margin">Could not create structured assessment: {{ assessment_error }}</p>
+      <h4 class="pdmp-color-warn pdmp-title-no-margin pdmp-title-bottom-margin">Documentation Warning</h4>
+      <p class="pdmp-text-small pdmp-color-warn pdmp-title-no-margin">Could not create structured assessment: {{ assessment_error }}</p>
     </div>
-</div>
+  </div>
 {% endif %}
-

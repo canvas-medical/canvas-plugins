@@ -23,14 +23,14 @@ class PatientValidator(BaseValidator):
         self._validate_required(patient.first_name, "Patient first name", errors)
         self._validate_required(patient.last_name, "Patient last name", errors)
         self._validate_required(patient.birth_date, "Patient birth date", errors)
-        
+
         if patient.sex == SexCode.UNKNOWN:
             self._add_error(errors, "Patient sex/gender is REQUIRED", "ERROR")
 
         # Optional but recommended fields
         if patient.address.is_empty():
             self._add_error(errors, "Patient address is missing", "WARNING")
-        
+
         self._validate_optional(patient.phone, "Patient phone number", errors)
         self._validate_optional(patient.ssn, "Patient SSN", errors)
 
@@ -121,7 +121,9 @@ class PracticeLocationValidator(BaseValidator):
 
         # Required fields for PDMP
         self._validate_required(practice_location.name, "Practice location name", errors)
-        self._validate_required(practice_location.npi, "Practice location NPI for PDMP requests", errors)
+        self._validate_required(
+            practice_location.npi, "Practice location NPI for PDMP requests", errors
+        )
 
         if not errors:
             log.info(
@@ -147,16 +149,14 @@ class PracticeLocationValidator(BaseValidator):
 
         # Optional but recommended fields
         self._validate_info(
-            not practice_location.phone,
-            "Practice location phone number is missing",
-            errors
+            not practice_location.phone, "Practice location phone number is missing", errors
         )
 
         # Check for DEA number (optional but useful for PDMP)
         self._validate_info(
             not practice_location.dea,
             "Practice location DEA number is missing - may be required for some PDMP requests",
-            errors
+            errors,
         )
 
         log.info(f"PracticeLocationValidator: Validation completed with {len(errors)} errors")
@@ -171,12 +171,57 @@ class AddressValidator(BaseValidator):
 
     # Valid US state codes
     VALID_STATES = [
-        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-        "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-        "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-        "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-        "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-        "DC"  # District of Columbia
+        "AL",
+        "AK",
+        "AZ",
+        "AR",
+        "CA",
+        "CO",
+        "CT",
+        "DE",
+        "FL",
+        "GA",
+        "HI",
+        "ID",
+        "IL",
+        "IN",
+        "IA",
+        "KS",
+        "KY",
+        "LA",
+        "ME",
+        "MD",
+        "MA",
+        "MI",
+        "MN",
+        "MS",
+        "MO",
+        "MT",
+        "NE",
+        "NV",
+        "NH",
+        "NJ",
+        "NM",
+        "NY",
+        "NC",
+        "ND",
+        "OH",
+        "OK",
+        "OR",
+        "PA",
+        "RI",
+        "SC",
+        "SD",
+        "TN",
+        "TX",
+        "UT",
+        "VT",
+        "VA",
+        "WA",
+        "WV",
+        "WI",
+        "WY",
+        "DC",  # District of Columbia
     ]
 
     def validate(self, address: AddressDTO) -> list[str]:

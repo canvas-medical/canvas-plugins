@@ -1,12 +1,12 @@
 /**
  * PDMP Report Loader
- * 
+ *
  * Handles PDMP report button interactions, iframe loading, and skeleton loader display.
  */
 
 (function() {
     'use strict';
-    
+
     /**
      * PDMPReportLoader Class
      * Manages report loading state and UI updates
@@ -19,7 +19,7 @@
             this.iframeLoaded = false;
             this.init();
         }
-        
+
         /**
          * Initialize the button and attach event listeners
          */
@@ -31,17 +31,17 @@
                     setTimeout(tryInit, 100);
                     return;
                 }
-                
+
                 this.attachEventListeners();
             };
-            
+
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', tryInit);
             } else {
                 setTimeout(tryInit, 50);
             }
         }
-        
+
         /**
          * Attach click event listener to button
          */
@@ -49,21 +49,21 @@
             if (!this.button) {
                 return;
             }
-            
+
             this.button.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const reportUrl = this.button.getAttribute('data-report-url');
                 const patientId = this.button.getAttribute('data-patient-id');
                 const practitionerId = this.button.getAttribute('data-practitioner-id');
                 const organizationId = this.button.getAttribute('data-organization-id');
                 const staffId = this.button.getAttribute('data-staff-id');
-                
+
                 this.openReport(reportUrl, patientId, practitionerId, organizationId, staffId);
             };
         }
-        
+
         /**
          * Open PDMP report by loading iframe
          */
@@ -72,24 +72,24 @@
                 console.error('PDMP: Button not found');
                 return;
             }
-            
+
             if (this.isLoading || this.iframeLoaded) {
                 return;
             }
-            
+
             this.isLoading = true;
             this.updateButtonState('loading');
             this.injectSkeletonKeyframes();
             this.showSkeletonLoader();
             this.loadIframe(reportUrl, patientId, practitionerId, organizationId, staffId);
         }
-        
+
         /**
          * Update button visual state
          */
         updateButtonState(state) {
             if (!this.button) return;
-            
+
             switch (state) {
                 case 'loading':
                     this.button.disabled = true;
@@ -108,7 +108,7 @@
                     break;
             }
         }
-        
+
         /**
          * Inject CSS keyframes for skeleton animations
          */
@@ -116,7 +116,7 @@
             if (document.querySelector('#skeleton-keyframes')) {
                 return;
             }
-            
+
             const style = document.createElement('style');
             style.id = 'skeleton-keyframes';
             style.textContent = `
@@ -131,7 +131,7 @@
             `;
             document.head.appendChild(style);
         }
-        
+
         /**
          * Get modal container element
          */
@@ -140,7 +140,7 @@
                    document.querySelector('[data-modal-content]') ||
                    document.querySelector('.modal-content');
         }
-        
+
         /**
          * Get patient header element
          */
@@ -149,7 +149,7 @@
             if (!container) return null;
             return container.querySelector('[data-component="patient-header-component"]');
         }
-        
+
         /**
          * Show skeleton loader in modal
          */
@@ -159,10 +159,10 @@
                 console.error('PDMP: Modal container not found');
                 return;
             }
-            
+
             const patientHeader = this._getPatientHeader();
             const patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
-            
+
             const skeletonHTML = `
                 <style>
                     @keyframes pdmp-skeleton-shimmer {
@@ -194,10 +194,10 @@
                     </div>
                 </div>
             `;
-            
+
             modalContainer.innerHTML = patientHeaderHTML + skeletonHTML;
         }
-        
+
         /**
          * Load report iframe
          */
@@ -208,21 +208,21 @@
                            '&practitioner_id=' + practitionerId +
                            '&organization_id=' + organizationId +
                            (staffId ? '&staff_id=' + staffId : '');
-            
+
             const modalContainer = this._getModalContainer();
             if (!modalContainer) {
                 console.error('PDMP: Modal container not found');
                 this.isLoading = false;
                 return;
             }
-            
+
             const patientHeader = this._getPatientHeader();
             const patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
-            
+
             const iframeContainer = document.createElement('div');
             iframeContainer.id = 'pdmp-iframe-container';
             iframeContainer.className = 'pdmp-iframe-container-inline';
-            
+
             const iframeElement = document.createElement('iframe');
             iframeElement.id = 'pdmp-report-iframe';
             iframeElement.src = iframeUrl;
@@ -230,26 +230,26 @@
             iframeElement.frameBorder = '0';
             iframeElement.allowFullscreen = true;
             iframeElement.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
-            
+
             iframeContainer.appendChild(iframeElement);
-            
+
             iframeElement.onload = () => {
                 if (this.iframeLoaded) {
                     return;
                 }
-                
+
                 this.iframeLoaded = true;
-                
+
                 const skeletonContainer = document.getElementById('pdmp-skeleton-container');
                 if (skeletonContainer) {
                     skeletonContainer.style.display = 'none';
                 }
-                
+
                 iframeContainer.style.display = 'block';
                 this.updateButtonState('loaded');
                 this.isLoading = false;
             };
-            
+
             iframeElement.onerror = () => {
                 console.error('PDMP: Iframe failed to load');
                 this.isLoading = false;
@@ -257,26 +257,26 @@
                 this.showError('Failed to load the PDMP report iframe');
                 this.updateButtonState('error');
             };
-            
+
             modalContainer.appendChild(iframeContainer);
         }
-        
+
         /**
          * Show error message in modal
          */
         showError(errorMessage) {
             this.isLoading = false;
             this.iframeLoaded = false;
-            
+
             const modalContainer = this._getModalContainer();
             if (!modalContainer) {
                 console.error('PDMP: Modal container not found');
                 return;
             }
-            
+
             const patientHeader = this._getPatientHeader();
             const patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
-            
+
             const errorHTML = `
                 <div class="pdmp-padding-content-lg pdmp-modal-content-bg">
                     <div class="pdmp-error-box">
@@ -297,12 +297,11 @@
                     </div>
                 </div>
             `;
-            
+
             modalContainer.innerHTML = patientHeaderHTML + errorHTML;
         }
     }
-    
+
     // Initialize loader when script loads
     window.PDMPReportLoader = new PDMPReportLoader('reportHeaderBtn');
 })();
-

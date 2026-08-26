@@ -1,23 +1,21 @@
 <!-- Help / Next Steps Section -->
 <section class="section alerts pdmp-section">
-    <div class="alert-group pdmp-alert-group" role="group" aria-label="Next steps">
-        <div class="alert-title pdmp-title pdmp-title-flex">
-            <span class="pdmp-icon-sm">!</span> What to do next
-        </div>
-        <div class="alert pdmp-alert pdmp-alert-note" data-variant="note">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
-                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <div>
-                <ul class="pdmp-list-reset pdmp-text-small">
-                    {% for item in items %}
-                    <li class="pdmp-list-spaced">{{ item }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
+  <div class="alert-group pdmp-alert-group" role="group" aria-label="Next steps">
+    <div class="alert-title pdmp-title pdmp-title-flex">
+      <span class="pdmp-icon-sm">!</span> What to do next
     </div>
+    <div class="alert pdmp-alert pdmp-alert-note" data-variant="note">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
+        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <ul class="pdmp-list-reset pdmp-text-small">
+          {% for item in items %}
+            <li class="pdmp-list-spaced">{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
 </section>
-
-

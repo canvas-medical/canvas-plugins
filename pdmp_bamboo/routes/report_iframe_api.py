@@ -69,12 +69,16 @@ class ReportIframeAPI(BaseReportAPI):
                 error_html = self._create_error_html(result)
 
                 # Log error response
-                self._log_response_details(request_id, HTTPStatus.INTERNAL_SERVER_ERROR, len(error_html))
+                self._log_response_details(
+                    request_id, HTTPStatus.INTERNAL_SERVER_ERROR, len(error_html)
+                )
 
                 return [HTMLResponse(error_html, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
 
         except Exception as e:
-            log.error(f"[{request_id}] ReportIframeEndpoint: Unexpected error: {str(e)}", exc_info=True)
+            log.error(
+                f"[{request_id}] ReportIframeEndpoint: Unexpected error: {str(e)}", exc_info=True
+            )
             error_html = self._create_error_html(
                 {
                     "error_type": "unexpected_error",
@@ -83,7 +87,9 @@ class ReportIframeAPI(BaseReportAPI):
             )
 
             # Log error response
-            self._log_response_details(request_id, HTTPStatus.INTERNAL_SERVER_ERROR, len(error_html))
+            self._log_response_details(
+                request_id, HTTPStatus.INTERNAL_SERVER_ERROR, len(error_html)
+            )
 
             return [HTMLResponse(error_html, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
 

@@ -48,7 +48,7 @@ class PDMPClient:
             http = Http()
             api_url = f"{api_base_url}/v5_1/patient"
             log.info(f"PDMPClient: Sending request to {api_url}")
-            
+
             # Canvas SDK Http.post expects data as string, headers dict
             # Note: Canvas SDK Http does not support timeout or cert parameters
             response = http.post(
@@ -123,7 +123,6 @@ class PDMPClient:
             log.info("PDMPClient: Making POST request to PMP Gateway for report")
             log.info(f"  - URL: {report_url}")
             log.info(f"  - Body length: {len(report_request_xml)} characters")
-            
 
             http = Http()
             response = http.post(
@@ -204,9 +203,7 @@ class PDMPClient:
                 "environment": env_label,
             }
 
-    def _process_response(
-        self, response: Any, xml_content: str, env_label: str
-    ) -> dict[str, Any]:
+    def _process_response(self, response: Any, xml_content: str, env_label: str) -> dict[str, Any]:
         """Process the HTTP response from the PDMP API."""
         log.info(f"PDMPClient: Received response - Status: {response.status_code}")
         log.info(f"PDMPClient: Response URL: {response.url}")
@@ -267,7 +264,6 @@ class PDMPClient:
         headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 
         return headers
-
 
     def validate_api_url(self, base_url: str) -> str:
         """

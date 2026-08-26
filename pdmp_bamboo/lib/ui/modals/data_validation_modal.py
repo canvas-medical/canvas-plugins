@@ -44,17 +44,22 @@ class DataValidationModal(BaseModal):
         from canvas_sdk.templates import render_to_string
 
         # Build available data summary
-        available_summary = self._build_available_data_summary(available_data) if available_data else ""
+        available_summary = (
+            self._build_available_data_summary(available_data) if available_data else ""
+        )
 
         # Build next steps section
         next_steps = self._build_next_steps()
 
         # Render template with all components
-        return render_to_string("templates/modals/data_validation_modal_content.html", {
-            "missing_data": missing_data,
-            "available_data_summary": available_summary,
-            "next_steps_section": next_steps
-        })
+        return render_to_string(
+            "templates/modals/data_validation_modal_content.html",
+            {
+                "missing_data": missing_data,
+                "available_data_summary": available_summary,
+                "next_steps_section": next_steps,
+            },
+        )
 
     def _build_available_data_summary(self, available_data: dict[str, Any]) -> str:
         """Build available data summary section via template."""
@@ -64,12 +69,18 @@ class DataValidationModal(BaseModal):
 
         patient_data = available_data.get("patient", {})
         if patient_data:
-            patient_name = f"{patient_data.get('first_name', '')} {patient_data.get('last_name', '')}".strip() or "Name not available"
+            patient_name = (
+                f"{patient_data.get('first_name', '')} {patient_data.get('last_name', '')}".strip()
+                or "Name not available"
+            )
             summary_items.append({"label": "Patient", "value": patient_name})
 
         practitioner_data = available_data.get("practitioner", {})
         if practitioner_data:
-            practitioner_name = f"{practitioner_data.get('first_name', '')} {practitioner_data.get('last_name', '')}".strip() or "Name not available"
+            practitioner_name = (
+                f"{practitioner_data.get('first_name', '')} {practitioner_data.get('last_name', '')}".strip()
+                or "Name not available"
+            )
             summary_items.append({"label": "Practitioner", "value": practitioner_name})
 
         organization_data = available_data.get("organization", {})
@@ -78,15 +89,19 @@ class DataValidationModal(BaseModal):
             summary_items.append({"label": "Organization", "value": org_name})
 
         if summary_items:
-            return render_to_string("templates/components/available_data_summary.html", {
-                "items": summary_items,
-            })
+            return render_to_string(
+                "templates/components/available_data_summary.html",
+                {
+                    "items": summary_items,
+                },
+            )
 
         return ""
 
     def _build_next_steps(self) -> str:
         """Build next steps section via template."""
         from canvas_sdk.templates import render_to_string
+
         next_steps = [
             "Complete missing patient information in Canvas EMR",
             "Ensure practitioner has required NPI or DEA numbers",
@@ -94,6 +109,9 @@ class DataValidationModal(BaseModal):
             "Try the PDMP request again after verifying data",
             "Contact your system administrator if errors persist",
         ]
-        return render_to_string("templates/components/help_section.html", {
-            "items": next_steps,
-        })
+        return render_to_string(
+            "templates/components/help_section.html",
+            {
+                "items": next_steps,
+            },
+        )

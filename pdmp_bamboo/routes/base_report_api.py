@@ -134,4 +134,3 @@ class BaseReportAPI(SimpleAPIRoute, ABC):
             "templates/error/handler_error.html", {"error_message": f"{title} - {message}"}
         )
         return HTMLResponse(html, status_code=status_code)
-

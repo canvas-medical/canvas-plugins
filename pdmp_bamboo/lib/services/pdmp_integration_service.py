@@ -6,8 +6,6 @@ This replaces the old handle_pdmp_request function with clean, modular architect
 Uses dependency injection and RequestContext for better decoupling.
 """
 
-from datetime import datetime
-
 from canvas_sdk.effects import Effect
 from logger import log
 from pdmp_bamboo.lib.api.pdmp_client import PDMPClient
@@ -88,7 +86,6 @@ class PDMPIntegrationService:
         log.info(f"PDMPIntegrationService: Starting PDMP request: {request_context}")
 
         try:
-
             # Step 1: Extract data
             log.info("PDMPIntegrationService: Step 1 - Extracting data")
             extracted_data, extraction_errors = (

@@ -19,10 +19,7 @@ def format_full_name(first: str, last: str, middle: str = "") -> str:
     Returns:
         Formatted full name string
     """
-    if middle:
-        parts = [first, middle, last]
-    else:
-        parts = [first, last]
+    parts = [first, middle, last] if middle else [first, last]
 
     return " ".join(filter(None, parts)).strip()
 
@@ -42,4 +39,3 @@ def safe_get(data: dict | None, key: str, default: Any = None) -> Any:
     if data is None:
         return default
     return data.get(key, default)
-
