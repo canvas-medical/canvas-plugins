@@ -42,7 +42,7 @@ class RemoveAllergyEvent(AuditedModel, IdentifiableModel):
     allergy = models.ForeignKey(
         "v1.AllergyIntolerance",
         on_delete=models.DO_NOTHING,
-        related_name="removeallergyevent_set",
+        related_name="remove_allergy_events",
         null=True,
     )
     rationale = models.CharField(max_length=1024, default="", blank=True)
