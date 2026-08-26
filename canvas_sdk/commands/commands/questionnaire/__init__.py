@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.questionnaire.question import (
@@ -22,16 +22,32 @@ QUESTION_CLASSES: dict[str, type[BaseQuestion]] = {
 }
 
 
+class Selection(BaseModel):
+    """One option ticked on a checkbox question."""
+
+    # A key this model does not know is a caller's mistake, not something to drop quietly.
+    model_config = ConfigDict(extra="forbid")
+
+    # The option's id, as the question's options report it in dbid.
+    option_id: int
+    # What this selection is qualified with. A checkbox question is the only kind that takes a
+    # comment, and each of its selections carries its own.
+    comment: str = ""
+    # False unticks the option instead. An option a payload says nothing about keeps the state
+    # it already had.
+    selected: bool = True
+
+
 class Answer(BaseModel):
     """One question's response."""
 
-    #: The question's id, as :attr:`QuestionnaireCommand.questions` reports it.
+    model_config = ConfigDict(extra="forbid")
+
+    # The question's id, as the command's questions report it.
     question_id: int
-    #: The answer, in the form the question takes: text, a number, an option's id, or a list of
-    #: option ids for a checkbox.
-    response: str | int | list[int]
-    #: Carried onto a checkbox selection; ignored by every other question type.
-    comment: str = ""
+    # The answer, in the form the question takes: text, a number, an option's id, or the
+    # list of selections a checkbox question takes.
+    response: str | int | list[Selection]
 
 
 class QuestionnaireCommand(_BaseCommand):
@@ -45,8 +61,8 @@ class QuestionnaireCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "questionnaire"}
     )
     result: str | None = None
-    #: The answers this command records, one per question. Read into :attr:`values` as responses
-    #: on the matching :attr:`questions`.
+    # The answers this command records, one per question. Read into `values` as responses on
+    # the matching questions.
     answers: list[Answer] = Field(default_factory=list)
 
     @cached_property
@@ -124,8 +140,8 @@ class QuestionnaireCommand(_BaseCommand):
     def _apply_answers(self) -> None:
         """Set each answer as a response on its question, dispatching on the question's type.
 
-        Clears the questions :attr:`answers` names before setting them, so reading twice gives
-        the same result and a response set directly on any other question is left alone.
+        Clears the questions `answers` names before setting them, so reading twice gives the
+        same result and a response set directly on any other question is left alone.
         """
         questions = {str(question.id): question for question in self.questions}
 
@@ -146,14 +162,16 @@ class QuestionnaireCommand(_BaseCommand):
             elif question.type == ResponseOption.TYPE_RADIO:
                 question.add_response(option=self._option(question, str(answer.response)))
             else:
-                option_ids = (
-                    [str(option_id) for option_id in answer.response]
-                    if isinstance(answer.response, list)
-                    else [str(answer.response)]
-                )
-                for option_id in option_ids:
+                if not isinstance(answer.response, list):
+                    raise ValueError(
+                        f"Question '{question.label}' is answered with a list of selections"
+                    )
+
+                for selection in answer.response:
                     question.add_response(
-                        option=self._option(question, option_id), comment=answer.comment
+                        option=self._option(question, str(selection.option_id)),
+                        selected=selection.selected,
+                        comment=selection.comment,
                     )
 
     @property
@@ -174,4 +192,4 @@ class QuestionnaireCommand(_BaseCommand):
         return values
 
 
-__exports__ = ("QUESTION_CLASSES", "Answer", "QuestionnaireCommand")
+__exports__ = ("QUESTION_CLASSES", "Answer", "QuestionnaireCommand", "Selection")
