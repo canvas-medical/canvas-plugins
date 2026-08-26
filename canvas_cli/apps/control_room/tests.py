@@ -63,9 +63,9 @@ def _git_side_effect(
         sub = cmd[3:]  # cmd == ["git", "-C", <dir>, <subcommand>, ...]
         if sub[:2] == ["rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, "true\n", "")
-        if sub[:3] == ["remote", "get-url", "cr"]:
+        if sub[:3] == ["remote", "get-url", "origin"]:
             return subprocess.CompletedProcess(cmd, 0 if remote_exists else 1, "", "")
-        if sub[:2] == ["push", "cr"]:
+        if sub[:2] == ["push", "origin"]:
             return subprocess.CompletedProcess(cmd, push_rc, "", push_stderr)
         if sub[0] == "fetch":
             return subprocess.CompletedProcess(cmd, fetch_rc, "", fetch_stderr)
@@ -147,16 +147,16 @@ def test_cr_init_configures_remote_and_helper(
 
     assert result.exit_code == 0, result.output
     assert "Connected acme/my_plugin to Control Room" in result.output
-    assert "git push cr HEAD:main" in result.output  # guidance for plain-git publish
+    assert "git push origin HEAD:main" in result.output  # guidance for plain-git publish
     calls = [c.args[0] for c in mock_run.call_args_list]
-    # cr remote pointed at the discovered {git_url}/{org}/{name}.git
+    # origin pointed at the discovered {git_url}/{org}/{name}.git
     assert [
         "git",
         "-C",
         str(plugin_dir),
         "remote",
         "add",
-        "cr",
+        "origin",
         "https://cr.example/git/acme/my_plugin.git",
     ] in calls
     # the credential helper is registered by absolute path for the CR host
@@ -172,7 +172,7 @@ def test_cr_init_configures_remote_and_helper(
     )
     # cr-init is setup-only: it never commits or pushes — that's the user's job now
     assert not any(c[3] == "commit" for c in calls)
-    assert not any(c[3:5] == ["push", "cr"] for c in calls)
+    assert not any(c[3:5] == ["push", "origin"] for c in calls)
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
@@ -191,8 +191,8 @@ def test_cr_init_idempotent_updates_existing_remote(
 
     assert result.exit_code == 0, result.output
     calls = [c.args[0] for c in mock_run.call_args_list]
-    assert any(c[3:6] == ["remote", "set-url", "cr"] for c in calls)
-    assert not any(c[3:6] == ["remote", "add", "cr"] for c in calls)
+    assert any(c[3:6] == ["remote", "set-url", "origin"] for c in calls)
+    assert not any(c[3:6] == ["remote", "add", "origin"] for c in calls)
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
@@ -225,7 +225,7 @@ def test_cr_init_repo_name_decouples_git_repo_from_manifest(
         str(plugin_dir),
         "remote",
         "add",
-        "cr",
+        "origin",
         "https://cr.example/git/acme/acme-abc123-my-plugin.git",
     ] in calls
     assert not any(c[3:5] == ["remote", "add"] and "my_plugin.git" in c[-1] for c in calls)

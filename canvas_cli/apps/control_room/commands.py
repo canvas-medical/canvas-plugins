@@ -4,16 +4,16 @@ Control Room is the authoritative git home for a plugin. The `canvas` CLI never
 talks to Control Room directly — it goes through the developer's own Canvas
 instance (home-app), which proxies to Control Room and signs short-lived JWTs on
 the developer's behalf. ``canvas cr-init`` discovers the CR git server + org
-from the instance and wires up a ``cr`` remote + credential helper; from there
-the (git-savvy) developer publishes with **plain git** (``git push cr
-HEAD:main``) — the CLI no longer wraps add/commit/push.
+from the instance and points the repo's ``origin`` at Control Room (+ a
+credential helper); from there the (git-savvy) developer publishes with **plain
+git** (``git push origin HEAD:main``) — the CLI no longer wraps add/commit/push.
 
 Commands (registered behind CONTROL_ROOM_BETA in canvas_cli.main):
 
   * ``canvas git-credential`` — hidden git credential helper; git invokes it to
     mint a push credential via the instance's ``mint-git-jwt`` endpoint.
-  * ``canvas cr-init`` — connect a plugin repo to Control Room (sets up the
-    ``cr`` remote + credential helper). One-time, idempotent.
+  * ``canvas cr-init`` — connect a plugin repo to Control Room (points ``origin``
+    at CR + registers the credential helper). One-time, idempotent.
   * ``canvas deploy`` / ``canvas config set`` / ``canvas uninstall`` — dispatch
     deploy / variable / uninstall operations through the instance's CR proxies.
 """
@@ -183,7 +183,7 @@ def _url_origin(url: str) -> str:
 def _ensure_cr_remote(
     plugin_dir: Path, host: str, *, repo_name: str | None = None
 ) -> tuple[str, str]:
-    """Discover CR + configure the ``cr`` remote and credential helper.
+    """Discover CR + configure the ``origin`` remote and credential helper.
 
     Idempotent — safe to call on every ``cr-init``. Returns ``(org_slug,
     repo_name)``.
@@ -201,15 +201,19 @@ def _ensure_cr_remote(
     git_url, org_slug = _control_room_info(host, token)
     name = repo_name or _manifest_name(plugin_dir)
 
+    # Control Room is the plugin's authoritative git home, so it IS the repo's
+    # `origin`. Naming it `origin` (rather than a side remote) means plain git —
+    # and Studio's build agent, which uses `origin` — pushes/fetches CR with no
+    # special-casing.
     remote_url = f"{git_url.rstrip('/')}/{org_slug}/{name}.git"
-    if _git(plugin_dir, "remote", "get-url", "cr").returncode == 0:
-        _git(plugin_dir, "remote", "set-url", "cr", remote_url)
+    if _git(plugin_dir, "remote", "get-url", "origin").returncode == 0:
+        _git(plugin_dir, "remote", "set-url", "origin", remote_url)
     else:
-        _git(plugin_dir, "remote", "add", "cr", remote_url)
+        _git(plugin_dir, "remote", "add", "origin", remote_url)
 
     # Register our credential helper as the sole helper for the CR git host, so
     # `canvas git-credential` mints the push JWT. `--replace-all` keeps it a
-    # single entry across repeat publishes. We no longer reset inherited helpers
+    # single entry across repeat inits. We no longer reset inherited helpers
     # or stale `http.<host>.extraHeader`s here: the network operations run with
     # global/system git config ignored (see `_git(..., isolate_config=True)`),
     # which prevents that shadowing structurally rather than key by key. Use the
@@ -217,15 +221,15 @@ def _ensure_cr_remote(
     # bare shell, so a plain "canvas" only works if it's on PATH (it isn't when
     # run from a venv or `uv run`).
     canvas_bin = shutil.which(sys.argv[0]) or sys.argv[0]
-    origin = _url_origin(remote_url)
+    cred_host = _url_origin(remote_url)
     _git(
         plugin_dir,
         "config",
         "--replace-all",
-        f"credential.{origin}.helper",
+        f"credential.{cred_host}.helper",
         f"!{canvas_bin} git-credential --host {host}",
     )
-    _git(plugin_dir, "config", f"credential.{origin}.username", "git")
+    _git(plugin_dir, "config", f"credential.{cred_host}.username", "git")
 
     return org_slug, name
 
@@ -306,14 +310,14 @@ def cr_init(
         ),
     ),
 ) -> None:
-    """Connect a plugin's git repo to Control Room (its authoritative remote).
+    """Connect a plugin's git repo to Control Room (its ``origin`` remote).
 
-    One-time, idempotent setup: adds a ``cr`` remote pointing at Control Room's
-    git backend and registers the credential helper that mints push tokens. After
-    this you publish with **plain git** — Control Room is a normal remote:
+    One-time, idempotent setup: points ``origin`` at Control Room's git backend
+    and registers the credential helper that mints push tokens. After this you
+    publish with **plain git** — Control Room is your ``origin``:
 
         git add -A && git commit -m "…"
-        git push cr HEAD:main
+        git push origin HEAD:main
 
     then deploy with ``canvas deploy``. (Control Room is the source of truth for
     plugin history; there is no separate ``publish`` step.)
@@ -330,10 +334,10 @@ def cr_init(
 
     org_slug, name = _ensure_cr_remote(plugin_name, host, repo_name=repo_name)
 
-    print(f"Connected {org_slug}/{name} to Control Room (remote 'cr').")
+    print(f"Connected {org_slug}/{name} to Control Room (remote 'origin').")
     print("Publish with plain git, then deploy:")
     print("  git add -A && git commit -m 'your message'")
-    print("  git push cr HEAD:main")
+    print("  git push origin HEAD:main")
     print(f"  canvas deploy {plugin_name} --host {host}")
 
 
@@ -349,7 +353,7 @@ def deploy(
 ) -> None:
     """Deploy an already-published plugin ref to this instance via Control Room.
 
-    Names a ref previously pushed to the `cr` remote (`git push cr HEAD:main`);
+    Names a ref previously pushed to `origin` (`git push origin HEAD:main`);
     Control Room builds the artifact and installs it. If the deploy is gated on
     operator consent
     (e.g. cross-plugin custom-data access), the requests are shown and approved
