@@ -180,15 +180,26 @@ def _url_origin(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-def _ensure_cr_remote(plugin_dir: Path, host: str) -> tuple[str, str]:
+def _ensure_cr_remote(
+    plugin_dir: Path, host: str, *, repo_name: str | None = None
+) -> tuple[str, str]:
     """Discover CR + configure the ``cr`` remote and credential helper.
 
     Idempotent — safe to call on every ``cr-init``. Returns ``(org_slug,
-    plugin_name)``. The plugin author never sees any of this.
+    repo_name)``.
+
+    ``repo_name`` is the **git repository** identity, which Control Room tracks
+    separately from the **plugin package name** (the manifest ``name`` — the
+    home-app identity that deploy/config key off, which must be a snake_case
+    Python package matching the source subfolder). When omitted, it defaults to
+    the manifest name (convenient for a git-savvy CLI user who's fine keeping
+    the two equal). Studio passes its own stable id, because it must name the
+    repo before the agent has authored the manifest — so the two names differ,
+    which Control Room supports (see canvas-plugins#1820).
     """
     token = get_or_request_api_token(host)
     git_url, org_slug = _control_room_info(host, token)
-    name = _manifest_name(plugin_dir)
+    name = repo_name or _manifest_name(plugin_dir)
 
     remote_url = f"{git_url.rstrip('/')}/{org_slug}/{name}.git"
     if _git(plugin_dir, "remote", "get-url", "cr").returncode == 0:
@@ -284,6 +295,16 @@ def cr_init(
     host: str | None = typer.Option(
         callback=get_default_host, default=None, help="Canvas instance to connect to"
     ),
+    repo_name: str | None = typer.Option(
+        None,
+        "--repo-name",
+        help=(
+            "Git repository name in Control Room. Defaults to the plugin's "
+            "manifest name. Control Room tracks the git repo name separately "
+            "from the plugin package name, so a caller (e.g. Studio) that must "
+            "name the repo before a manifest exists can set this explicitly."
+        ),
+    ),
 ) -> None:
     """Connect a plugin's git repo to Control Room (its authoritative remote).
 
@@ -296,6 +317,10 @@ def cr_init(
 
     then deploy with ``canvas deploy``. (Control Room is the source of truth for
     plugin history; there is no separate ``publish`` step.)
+
+    With ``--repo-name`` the manifest need not exist yet (the repo name is the
+    git identity, distinct from the manifest/package name); without it, the
+    manifest is read to default the repo name.
     """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
@@ -303,7 +328,7 @@ def cr_init(
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
     _require_git_repo(plugin_name)  # also asserts git is installed
 
-    org_slug, name = _ensure_cr_remote(plugin_name, host)
+    org_slug, name = _ensure_cr_remote(plugin_name, host, repo_name=repo_name)
 
     print(f"Connected {org_slug}/{name} to Control Room (remote 'cr').")
     print("Publish with plain git, then deploy:")

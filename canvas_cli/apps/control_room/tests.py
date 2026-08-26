@@ -195,6 +195,42 @@ def test_cr_init_idempotent_updates_existing_remote(
     assert not any(c[3:6] == ["remote", "add", "cr"] for c in calls)
 
 
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_cr_init_repo_name_decouples_git_repo_from_manifest(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """--repo-name sets the git-repo identity independent of the manifest/package
+    name (they're separate concepts in Control Room; canvas-plugins#1820). The
+    manifest here is `my_plugin`, but the repo is named by the explicit id.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_run.side_effect = _git_side_effect()
+    plugin_dir = _plugin_dir(tmp_path)  # manifest name == "my_plugin"
+
+    result = runner.invoke(
+        _app(),
+        ["cr-init", str(plugin_dir), "--host", HOST, "--repo-name", "acme-abc123-my-plugin"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Connected acme/acme-abc123-my-plugin" in result.output
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    # remote points at the explicit repo id, NOT the manifest name
+    assert [
+        "git",
+        "-C",
+        str(plugin_dir),
+        "remote",
+        "add",
+        "cr",
+        "https://cr.example/git/acme/acme-abc123-my-plugin.git",
+    ] in calls
+    assert not any(c[3:5] == ["remote", "add"] and "my_plugin.git" in c[-1] for c in calls)
+
+
 @patch("subprocess.run")
 def test_cr_init_requires_git_repo(mock_run: Mock, tmp_path: Path) -> None:
     """cr-init refuses a non-git directory before any network call."""
