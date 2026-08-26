@@ -331,6 +331,7 @@
     "PrescribeCommand"
   ],
   "canvas_sdk.commands.commands.questionnaire": [
+    "Answer",
     "QUESTION_CLASSES",
     "QuestionnaireCommand"
   ],

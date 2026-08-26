@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Any
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.questionnaire.question import (
@@ -22,6 +22,18 @@ QUESTION_CLASSES: dict[str, type[BaseQuestion]] = {
 }
 
 
+class Answer(BaseModel):
+    """One question's response."""
+
+    #: The question's id, as :attr:`QuestionnaireCommand.questions` reports it.
+    question_id: int
+    #: The answer, in the form the question takes: text, a number, an option's id, or a list of
+    #: option ids for a checkbox.
+    response: str | int | list[int]
+    #: Carried onto a checkbox selection; ignored by every other question type.
+    comment: str = ""
+
+
 class QuestionnaireCommand(_BaseCommand):
     """A class for managing a Questionnaire command within a specific note."""
 
@@ -33,6 +45,9 @@ class QuestionnaireCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "questionnaire"}
     )
     result: str | None = None
+    #: The answers this command records, one per question. Read into :attr:`values` as responses
+    #: on the matching :attr:`questions`.
+    answers: list[Answer] = Field(default_factory=list)
 
     @cached_property
     def _questionnaire(self) -> Questionnaire | None:
@@ -91,17 +106,72 @@ class QuestionnaireCommand(_BaseCommand):
                 raise ValueError(f"Unsupported question type: {q_type}")
         return question_objs
 
+    def _option(self, question: BaseQuestion, option_id: str) -> ResponseOption:
+        """The option this question offers under this id.
+
+        Ids are compared as text so a lone one that arrived as a string still matches.
+        """
+        for option in question.options:
+            if str(option.dbid) == option_id:
+                return option
+
+        allowed = ", ".join(f"{option.dbid} ({option.name})" for option in question.options)
+        raise ValueError(
+            f"{option_id!r} is not an option for question '{question.label}'. "
+            f"Allowed options: {allowed or 'none'}"
+        )
+
+    def _apply_answers(self) -> None:
+        """Set each answer as a response on its question, dispatching on the question's type.
+
+        Clears the questions :attr:`answers` names before setting them, so reading twice gives
+        the same result and a response set directly on any other question is left alone.
+        """
+        questions = {str(question.id): question for question in self.questions}
+
+        for answer in self.answers:
+            question = questions.get(str(answer.question_id))
+            if question is None:
+                raise ValueError(
+                    f"{answer.question_id} is not a question in questionnaire "
+                    f"{self.questionnaire_id}"
+                )
+
+            question.response = None
+
+            if question.type == ResponseOption.TYPE_TEXT:
+                question.add_response(text=str(answer.response))
+            elif question.type == ResponseOption.TYPE_INTEGER:
+                question.add_response(integer=answer.response)
+            elif question.type == ResponseOption.TYPE_RADIO:
+                question.add_response(option=self._option(question, str(answer.response)))
+            else:
+                option_ids = (
+                    [str(option_id) for option_id in answer.response]
+                    if isinstance(answer.response, list)
+                    else [str(answer.response)]
+                )
+                for option_id in option_ids:
+                    question.add_response(
+                        option=self._option(question, option_id), comment=answer.comment
+                    )
+
     @property
     def values(self) -> dict:
         """Return the values for the command.
 
         For questionnaire-related commands, this includes the responses to the questions.
         """
+        if self.answers:
+            self._apply_answers()
+
         values = super().values
+        # answers do not carry over the effect.
+        values.pop("answers", None)
 
         values["questions"] = {q.name: q.response for q in self.questions if q.response is not None}
 
         return values
 
 
-__exports__ = ("QUESTION_CLASSES", "QuestionnaireCommand")
+__exports__ = ("QUESTION_CLASSES", "Answer", "QuestionnaireCommand")
