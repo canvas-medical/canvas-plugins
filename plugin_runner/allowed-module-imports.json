@@ -3104,8 +3104,5 @@
   ],
   "logger": [
     "log"
-  ],
-  "jsonschema": [
-    "ValidationError"
   ]
 }
