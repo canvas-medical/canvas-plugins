@@ -4,8 +4,6 @@ Data Transfer Objects for PDMP data.
 DTOs are immutable classes that ensure data integrity.
 """
 
-import re
-
 
 class SexCode:
     """Standard sex/gender codes for PDMP data."""
@@ -32,11 +30,11 @@ class AddressDTO:
         # Normalize state to uppercase
         if state:
             state = state.upper().strip()
-        
+
         # Normalize ZIP code
         if zip_code:
             zip_code = zip_code.strip()
-            
+
         self.street = street
         self.street2 = street2
         self.city = city

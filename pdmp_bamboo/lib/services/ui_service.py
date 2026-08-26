@@ -234,13 +234,16 @@ class UIService:
         # Order: Patient Header -> [Report Button -> Scores -> Messages -> iframe container] -> Assessment
         from canvas_sdk.templates import render_to_string
 
-        html_content = render_to_string("templates/modals/success_modal_wrapper.html", {
-            "patient_header_html": patient_header_html,
-            "report_button_html": report_button_html,
-            "scores_html": scores_html,
-            "messages_html": messages_html,
-            "assessment_html": assessment_html
-        })
+        html_content = render_to_string(
+            "templates/modals/success_modal_wrapper.html",
+            {
+                "patient_header_html": patient_header_html,
+                "report_button_html": report_button_html,
+                "scores_html": scores_html,
+                "messages_html": messages_html,
+                "assessment_html": assessment_html,
+            },
+        )
 
         modal_title = "✅ PDMP Request Successful"
 

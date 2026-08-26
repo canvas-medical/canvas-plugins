@@ -13,7 +13,7 @@ from logger import log
 class RiskThresholds:
     """
     PDMP risk score thresholds for NarxCare risk assessment.
-    
+
     These thresholds define risk levels based on NarxCare score values.
     Scores range from 0-999+, with higher scores indicating higher risk.
     """
@@ -177,12 +177,12 @@ class ResponseParserService:
     def _get_risk_level(self, score_value: int) -> str:
         """
         Determine risk level based on NarxCare score value.
-        
+
         Uses RiskThresholds constants for consistent threshold values.
-        
+
         Args:
             score_value: NarxCare score value (0-999+)
-            
+
         Returns:
             Risk level description string
         """
@@ -196,12 +196,12 @@ class ResponseParserService:
     def _get_risk_color(self, score_value: int) -> str:
         """
         Get color code for risk level visualization.
-        
+
         Uses RiskThresholds constants for consistent colors.
-        
+
         Args:
             score_value: NarxCare score value (0-999+)
-            
+
         Returns:
             Hex color code for UI display
         """
@@ -215,10 +215,10 @@ class ResponseParserService:
     def _get_severity_color(self, severity: str) -> str:
         """
         Get color code for message severity.
-        
+
         Args:
             severity: Severity level string (High, Medium, Low)
-            
+
         Returns:
             Hex color code for UI display
         """

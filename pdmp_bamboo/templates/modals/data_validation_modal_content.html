@@ -3,51 +3,50 @@
      data-component="data-validation-modal"
      data-modal-type="validation"
      class="shell pdmp-modal-shell">
-    <main class="app pdmp-modal-app"
-          data-component="modal-main-content">
-        <h1 class="sr-only pdmp-sr-only"
-            data-component="modal-title-hidden">PDMP Data Validation</h1>
+  <main class="app pdmp-modal-app"
+        data-component="modal-main-content">
+    <h1 class="sr-only pdmp-sr-only"
+        data-component="modal-title-hidden">PDMP Data Validation</h1>
 
-        <p class="pdmp-text-muted pdmp-margin-bottom">The following data is missing or incomplete for the PDMP request:</p>
+    <p class="pdmp-text-muted pdmp-margin-bottom">The following data is missing or incomplete for the PDMP request:</p>
 
         <!-- Missing Data Section -->
-        <section class="section alerts pdmp-section"
-                 data-component="missing-data-section">
-            <div class="alert-group pdmp-alert-group"
-                 data-component="missing-data-group"
-                 role="group"
-                 aria-label="Missing data">
-                <div class="alert-title pdmp-title pdmp-title-flex"
-                     data-component="missing-data-title">
-                    <span class="pdmp-icon-sm">!</span> Missing Required Data
-                </div>
-                <div class="alert pdmp-alert pdmp-alert-red"
-                     data-component="missing-data-alert"
-                     data-variant="red">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <div>
-                        <ul data-component="missing-data-list" class="pdmp-list-reset pdmp-text-small">
-                            {% for item in missing_data %}
-                            <li class="pdmp-list-spaced">{{ item }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <section class="section alerts pdmp-section"
+             data-component="missing-data-section">
+      <div class="alert-group pdmp-alert-group"
+           data-component="missing-data-group"
+           role="group"
+           aria-label="Missing data">
+        <div class="alert-title pdmp-title pdmp-title-flex"
+             data-component="missing-data-title">
+          <span class="pdmp-icon-sm">!</span> Missing Required Data
+        </div>
+        <div class="alert pdmp-alert pdmp-alert-red"
+             data-component="missing-data-alert"
+             data-variant="red">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <ul data-component="missing-data-list" class="pdmp-list-reset pdmp-text-small">
+              {% for item in missing_data %}
+                <li class="pdmp-list-spaced">{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
 
         <!-- Available Data Summary -->
-        {{ available_data_summary|safe }}
+    {{ available_data_summary|safe }}
 
         <!-- Next Steps -->
-        {{ next_steps_section|safe }}
+    {{ next_steps_section|safe }}
 
         <!-- Add bottom spacing to prevent Canvas Chat bot from covering content -->
-        <div class="pdmp-spacer-bottom"></div>
-    </main>
+    <div class="pdmp-spacer-bottom"></div>
+  </main>
 </div>
 <!-- PDMP Data Validation Modal End -->
-

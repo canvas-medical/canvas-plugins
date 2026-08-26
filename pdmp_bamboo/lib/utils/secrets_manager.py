@@ -12,8 +12,8 @@ Notes:
 from __future__ import annotations
 
 import json
-# Note: Using built-in types instead of typing imports for Canvas plugin compatibility
 
+# Note: Using built-in types instead of typing imports for Canvas plugin compatibility
 from logger import log
 
 
@@ -77,11 +77,13 @@ class SecretsManager:
                     f"SecretsManager: credential at index {idx} missing required fields (staff_id/username/password)"
                 )
                 continue
-            normalized.append({
-                "staff_id": staff_id,
-                "pdmp_username": username,
-                "pdmp_password": password,
-            })
+            normalized.append(
+                {
+                    "staff_id": staff_id,
+                    "pdmp_username": username,
+                    "pdmp_password": password,
+                }
+            )
 
         self._staff_creds_cache = normalized
         log.info(f"SecretsManager: Loaded {len(self._staff_creds_cache)} staff credential records")
@@ -115,5 +117,3 @@ class SecretsManager:
         raise ValueError(
             "No PDMP credentials found for the current staff user. Please add an entry to PDMP_STAFF_CREDENTIALS."
         )
-
-

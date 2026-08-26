@@ -56,13 +56,15 @@ class ReportService:
 
             if not extracted_data:
                 return create_error_result(
-                    "data_extraction_failed", "Failed to extract Canvas data", extraction_errors=extraction_errors
+                    "data_extraction_failed",
+                    "Failed to extract Canvas data",
+                    extraction_errors=extraction_errors,
                 )
 
             # Step 2: Convert DTOs to dictionaries for XML builder
             log.info("ReportService: Step 2 - Converting DTOs to dictionaries")
             converted_data = {
-                key: value.to_dict() if hasattr(value, 'to_dict') else value
+                key: value.to_dict() if hasattr(value, "to_dict") else value
                 for key, value in extracted_data.items()
             }
 
@@ -124,7 +126,9 @@ class ReportService:
                     "api_result": api_result,
                 }
             else:
-                log.error(f"ReportService: API request failed - {api_result.get('error', 'Unknown error')}")
+                log.error(
+                    f"ReportService: API request failed - {api_result.get('error', 'Unknown error')}"
+                )
                 return create_error_result(
                     "api_request_failed",
                     f"PDMP API request failed: {api_result.get('error', 'Unknown error')}",
@@ -134,7 +138,9 @@ class ReportService:
 
         except Exception as e:
             log.error(f"ReportService: Unexpected error: {str(e)}")
-            return create_error_result("unexpected_error", f"Unexpected error: {str(e)}", extraction_errors=[])
+            return create_error_result(
+                "unexpected_error", f"Unexpected error: {str(e)}", extraction_errors=[]
+            )
 
     def _extract_report_url(self, response_text: str) -> str | None:
         """
@@ -201,4 +207,3 @@ class ReportService:
         except Exception as e:
             log.error(f"ReportService: Error fetching report HTML: {str(e)}")
             return None
-

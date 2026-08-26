@@ -98,23 +98,27 @@ class SuccessModal(BaseModal):
         scores_html = self.scores_component.create_component(parsed_data) or ""
         alerts_html = self.alerts_component.create_component(parsed_data) or ""
         messages_html = self.messages_component.create_component(parsed_data) or ""
-        raw_response_html = self.raw_response_component.create_component(
-            api_result.get("raw_response", "")
-        ) or ""
+        raw_response_html = (
+            self.raw_response_component.create_component(api_result.get("raw_response", "")) or ""
+        )
 
-        return render_to_string("templates/modals/success_modal_wrapper.html", {
-            "patient_header_html": patient_header_html or "",
-            "report_button_html": self.report_component.create_component(
-                parsed_data,
-                patient_id=patient_id,
-                practitioner_id=practitioner_id,
-                organization_id=organization_id,
-            ) or "",
-            "scores_html": scores_html,
-            "messages_html": (alerts_html or messages_html),
-            "raw_response_html": raw_response_html,
-            "assessment_html": self.assessment_component.create_component(result) or "",
-        })
+        return render_to_string(
+            "templates/modals/success_modal_wrapper.html",
+            {
+                "patient_header_html": patient_header_html or "",
+                "report_button_html": self.report_component.create_component(
+                    parsed_data,
+                    patient_id=patient_id,
+                    practitioner_id=practitioner_id,
+                    organization_id=organization_id,
+                )
+                or "",
+                "scores_html": scores_html,
+                "messages_html": (alerts_html or messages_html),
+                "raw_response_html": raw_response_html,
+                "assessment_html": self.assessment_component.create_component(result) or "",
+            },
+        )
 
     def _build_status_info(
         self, result: dict[str, Any], api_result: dict[str, Any], use_test_env: bool

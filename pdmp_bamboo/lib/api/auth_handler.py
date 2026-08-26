@@ -9,7 +9,6 @@ import time
 import uuid
 
 from logger import log
- 
 
 
 class AuthHandler:
@@ -18,9 +17,7 @@ class AuthHandler:
     def __init__(self):
         self.user_agent = "Canvas-PDMP-Plugin/1.0"
 
-    def create_auth_headers(
-        self, username: str, password: str
-    ) -> dict[str, str]:
+    def create_auth_headers(self, username: str, password: str) -> dict[str, str]:
         """
         Create BambooHealth PMP Gateway authentication headers.
 

@@ -1,6 +1,6 @@
 /**
  * PDMP Bamboo Plugin Styles
- * 
+ *
  * Comprehensive CSS class system replacing inline styles.
  * Uses CSS variables from base_styles.html for consistency.
  */
@@ -836,27 +836,26 @@
     .pdmp-hero-title {
         font-size: 2rem;
     }
-    
+
     .pdmp-hero-subtitle {
         font-size: 1.125rem;
     }
-    
+
     .pdmp-instructions-card {
         padding: 24px;
     }
-    
+
     .pdmp-step {
         padding: 20px;
     }
-    
+
     .pdmp-step-number {
         width: 36px;
         height: 36px;
         font-size: 1rem;
     }
-    
+
     .pdmp-support-card {
         padding: 24px;
     }
 }
-

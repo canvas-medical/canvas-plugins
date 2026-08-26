@@ -29,13 +29,13 @@ class DTOToXMLConverter:
     def _convert_dto(self, dto, dto_name: str) -> dict[str, Any]:
         """
         Generic DTO conversion with consistent logging.
-        
+
         Now that DTOs are dataclasses, conversion is simple via to_dict().
-        
+
         Args:
             dto: DTO instance to convert
             dto_name: Name of DTO for logging
-            
+
         Returns:
             Dictionary representation of DTO
         """

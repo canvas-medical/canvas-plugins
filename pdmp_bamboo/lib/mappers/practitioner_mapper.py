@@ -57,7 +57,9 @@ class PractitionerMapper:
                 full_name = getattr(practice_location, "full_name", None)
                 short_name = getattr(practice_location, "short_name", None)
                 practice_location_name = full_name or short_name or ""
-                log.info(f"Extracted practice location: {practice_location_name} (ID: {practice_location_id})")
+                log.info(
+                    f"Extracted practice location: {practice_location_name} (ID: {practice_location_id})"
+                )
                 return practice_location_id, practice_location_name
             else:
                 log.warning(f"Staff {staff.id} has no primary practice location")
@@ -160,7 +162,9 @@ class PractitionerMapper:
             )
 
             if selected_license:
-                license_number = getattr(selected_license, "license_or_certification_identifier", "")
+                license_number = getattr(
+                    selected_license, "license_or_certification_identifier", ""
+                )
                 license_type_value = getattr(selected_license, "license_type", "Medical")
                 license_state = getattr(selected_license, "state", "")
                 log.info(
@@ -253,5 +257,7 @@ class PractitionerMapper:
             practice_location_name=practice_location_name,
         )
 
-        log.info(f"Mapped practitioner: NPI={dto.npi_number}, DEA={dto.dea_number}, License={dto.license_state}")
+        log.info(
+            f"Mapped practitioner: NPI={dto.npi_number}, DEA={dto.dea_number}, License={dto.license_state}"
+        )
         return dto

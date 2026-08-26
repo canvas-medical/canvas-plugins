@@ -1,7 +1,6 @@
 from canvas_sdk.v1.data import PracticeLocation
 from logger import log
 from pdmp_bamboo.lib.models.dtos import AddressDTO, PracticeLocationDTO
-from pdmp_bamboo.lib.utils.common import safe_get_attr
 
 
 class PracticeLocationMapper:

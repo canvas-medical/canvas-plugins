@@ -67,9 +67,7 @@ class DataExtractionService:
         try:
             # Load practice location and organization in one query; prefetch licenses
             staff = (
-                Staff.objects.select_related(
-                    "primary_practice_location__organization"
-                )
+                Staff.objects.select_related("primary_practice_location__organization")
                 .prefetch_related("licenses")
                 .get(id=practitioner_id)
             )
@@ -134,10 +132,8 @@ class DataExtractionService:
             log.info(
                 f"DataExtractionService: Getting practice location with ID: {practice_location_id}"
             )
-            practice_location = (
-                PracticeLocation.objects.prefetch_related("addresses").get(
-                    id=practice_location_id
-                )
+            practice_location = PracticeLocation.objects.prefetch_related("addresses").get(
+                id=practice_location_id
             )
             log.info(f"DataExtractionService: Practice location found: {practice_location}")
 

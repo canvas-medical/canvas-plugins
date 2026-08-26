@@ -46,35 +46,49 @@ class ErrorModal(BaseModal):
         from canvas_sdk.templates import render_to_string
 
         error_details = self._build_error_details(error_type, errors)
-        api_details = self._build_api_details(api_result) if api_result.get("raw_response") else None
+        api_details = (
+            self._build_api_details(api_result) if api_result.get("raw_response") else None
+        )
         help_section = self._build_help_section()
 
-        return render_to_string("templates/modals/error_modal_content.html", {
-            "error_details": error_details,
-            "api_details": api_details,
-            "help_section": help_section,
-        })
+        return render_to_string(
+            "templates/modals/error_modal_content.html",
+            {
+                "error_details": error_details,
+                "api_details": api_details,
+                "help_section": help_section,
+            },
+        )
 
     def _build_error_details(self, error_type: str, errors: list[str]) -> str:
         """Build error details section via template."""
         from canvas_sdk.templates import render_to_string
-        return render_to_string("templates/components/error_details.html", {
-            "error_title": self._get_error_title(error_type),
-            "errors": errors,
-        })
+
+        return render_to_string(
+            "templates/components/error_details.html",
+            {
+                "error_title": self._get_error_title(error_type),
+                "errors": errors,
+            },
+        )
 
     def _build_api_details(self, api_result: dict[str, Any]) -> str:
         """Build API response details section via template."""
         from canvas_sdk.templates import render_to_string
-        return render_to_string("templates/components/api_details.html", {
-            "status_code": api_result.get("status_code", "N/A"),
-            "response_url": api_result.get("response_url", "N/A"),
-            "response_reason": api_result.get("response_reason"),
-        })
+
+        return render_to_string(
+            "templates/components/api_details.html",
+            {
+                "status_code": api_result.get("status_code", "N/A"),
+                "response_url": api_result.get("response_url", "N/A"),
+                "response_reason": api_result.get("response_reason"),
+            },
+        )
 
     def _build_help_section(self) -> str:
         """Build help section with next steps via template."""
         from canvas_sdk.templates import render_to_string
+
         help_items = [
             "Check that all required patient data is present in Canvas",
             "Verify practitioner has valid NPI or DEA numbers",
@@ -82,9 +96,12 @@ class ErrorModal(BaseModal):
             "Try the request again after verifying data",
             "Contact your system administrator if errors persist",
         ]
-        return render_to_string("templates/components/help_section.html", {
-            "items": help_items,
-        })
+        return render_to_string(
+            "templates/components/help_section.html",
+            {
+                "items": help_items,
+            },
+        )
 
     def _get_error_title(self, error_type: str) -> str:
         """Get a user-friendly error title based on error type."""
