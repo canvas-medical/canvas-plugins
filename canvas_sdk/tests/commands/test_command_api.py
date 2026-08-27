@@ -1,4 +1,4 @@
-"""Tests for `CommandAPI`, the HTTP endpoint base for writing a single command."""
+"""Tests for `CommandAPI`, the HTTP endpoint base for writing commands."""
 
 import json
 from base64 import b64encode
@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 from canvas_sdk.commands import AssessCommand, HistoryOfPresentIllnessCommand, PrescribeCommand
 from canvas_sdk.commands.api import CommandAPI
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import Event, EventRequest, EventType
@@ -104,6 +105,46 @@ class _PrescribeAPI(CommandAPI):
     @api.post(path)
     def insert(self) -> list[Response | Effect]:
         return self.originate(self.model)
+
+
+class _CommandsAPI(CommandAPI):
+    """An endpoint serving several commands, naming each one from the path.
+
+    The command is a method argument rather than a property of the class, so one endpoint can
+    serve as many as it likes: adding another is an entry in ``COMMANDS``.
+    """
+
+    PREFIX = "/v1"
+    COMMANDS: dict[str, type[_BaseCommand]] = {
+        "hpi": HistoryOfPresentIllnessCommand,
+        "assess": AssessCommand,
+    }
+    path = "/commands/<command_schema>"
+
+    @api.post(path)
+    def insert(self) -> list[Response | Effect]:
+        model = self._named_command()
+
+        return self.originate(model) if model else [self._unknown_schema()]
+
+    @api.delete(f"{path}/<command_uuid>")
+    def delete(self) -> list[Response | Effect]:
+        model = self._named_command()
+        if not model:
+            return [self._unknown_schema()]
+
+        return self.action(model, self.request.path_params["command_uuid"], "delete")
+
+    def _named_command(self) -> type[_BaseCommand] | None:
+        """The command the ``command_schema`` path parameter names, or None if it names none."""
+        return self.COMMANDS.get(self.request.path_params["command_schema"])
+
+    def _unknown_schema(self) -> Response:
+        """A 404 for a schema this endpoint does not serve, naming the ones it does."""
+        return JSONResponse(
+            {"error": "no such command", "commands": sorted(self.COMMANDS)},
+            status_code=HTTPStatus.NOT_FOUND,
+        )
 
 
 def _event(
@@ -778,3 +819,79 @@ def test_a_boolean_sent_for_a_number_is_read_as_one() -> None:
 
     assert _payload(effects[0])["data"] == {"refills": 1}
     assert responses[0].status_code == HTTPStatus.CREATED
+
+
+# ------------------------------------------- one endpoint, one command or several
+
+
+def test_an_endpoint_can_serve_several_commands() -> None:
+    """The same endpoint writes whichever command the request names.
+
+    Each single-command endpoint above names its command once; this one names a different command
+    per request. Both work because the command is passed to `originate` rather than fixed on the
+    class.
+    """
+    hpi = _CommandsAPI(
+        _event("POST", "/v1/commands/hpi", {"note_id": NOTE_UUID, "values": {"narrative": "cough"}})
+    )
+    assess = _CommandsAPI(
+        _event(
+            "POST",
+            "/v1/commands/assess",
+            {"note_id": NOTE_UUID, "values": {"status": "improved"}},
+        )
+    )
+
+    hpi_effects, hpi_responses = _split(hpi.insert())
+    assess_effects, assess_responses = _split(assess.insert())
+
+    assert EffectType.Name(hpi_effects[0].type) == "ORIGINATE_HPI_COMMAND"
+    assert _payload(hpi_effects[0])["data"] == {"narrative": "cough"}
+    assert hpi_responses[0].status_code == HTTPStatus.CREATED
+
+    assert EffectType.Name(assess_effects[0].type) == "ORIGINATE_ASSESS_COMMAND"
+    assert _payload(assess_effects[0])["data"] == {"status": "improved"}
+    assert assess_responses[0].status_code == HTTPStatus.CREATED
+
+
+def test_a_body_is_validated_against_the_command_the_request_names() -> None:
+    """Which command is named decides what the body may say.
+
+    `status` is a field of assess and not of hpi, so the same body is accepted through one route
+    and refused through the other. This is what would break if an endpoint resolved its command
+    anywhere but per request.
+    """
+    body = {"note_id": NOTE_UUID, "values": {"status": "improved"}}
+
+    accepted = _split(_CommandsAPI(_event("POST", "/v1/commands/assess", body)).insert())[1][0]
+    refused = _split(_CommandsAPI(_event("POST", "/v1/commands/hpi", body)).insert())[1][0]
+
+    assert accepted.status_code == HTTPStatus.CREATED
+
+    assert refused.status_code == HTTPStatus.BAD_REQUEST
+    assert _content(refused)["validation_errors"] == [
+        {"field": "values.status", "message": "Unexpected field"}
+    ]
+
+
+def test_a_shared_endpoint_acts_on_the_command_the_path_names() -> None:
+    """An id-only action is routed the same way, and scoped to that command's type."""
+    with _stored("staged") as manager:
+        effects, responses = _split(
+            _CommandsAPI(_event("DELETE", f"/v1/commands/hpi/{COMMAND_UUID}")).delete()
+        )
+
+    assert EffectType.Name(effects[0].type) == "DELETE_HPI_COMMAND"
+    assert responses[0].status_code == HTTPStatus.OK
+    assert manager.filter.call_args.kwargs == {"id": COMMAND_UUID, "schema_key": "hpi"}
+
+
+def test_a_schema_the_endpoint_does_not_serve_is_the_endpoints_own_answer() -> None:
+    """The base is asked nothing about a command it was never handed."""
+    handler = _CommandsAPI(_event("POST", "/v1/commands/plan", {"note_id": NOTE_UUID}))
+
+    effects, responses = _split(handler.insert())
+
+    assert effects == []
+    assert responses[0].status_code == HTTPStatus.NOT_FOUND
+    assert _content(responses[0])["commands"] == ["assess", "hpi"]
