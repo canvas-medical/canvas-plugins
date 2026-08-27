@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.205.3 (2026-08-27)
+
+### Bug Fixes
+
+- Check the allergy being removed belongs to the command's patient
+  ([#1833](https://github.com/canvas-medical/canvas-plugins/pull/1833),
+  [`d31fcc6`](https://github.com/canvas-medical/canvas-plugins/commit/d31fcc629999f49fc17cf5a78511bfa27844aa20))
+
+
 ## v0.205.2 (2026-08-27)
 
 ### Bug Fixes
