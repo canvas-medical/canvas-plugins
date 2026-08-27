@@ -1177,6 +1177,7 @@
     "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
+    "FollowUp",
     "Goal",
     "HistoryOfPresentIllness",
     "ImagingOrder",
@@ -1529,6 +1530,9 @@
   "canvas_sdk.v1.data.family_history": [
     "FamilyHistory",
     "FamilyHistoryCoding"
+  ],
+  "canvas_sdk.v1.data.follow_up": [
+    "FollowUp"
   ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
