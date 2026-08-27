@@ -1,6 +1,42 @@
 # CHANGELOG
 
 
+## v0.206.0 (2026-08-27)
+
+### Features
+
+- Add alternative way to add answers to questionnaires
+  ([#1856](https://github.com/canvas-medical/canvas-plugins/pull/1856),
+  [`0d3751b`](https://github.com/canvas-medical/canvas-plugins/commit/0d3751b67793ddc45b5e7fe0c752b95829e3c22b))
+
+
+## v0.205.3 (2026-08-27)
+
+### Bug Fixes
+
+- Check the allergy being removed belongs to the command's patient
+  ([#1833](https://github.com/canvas-medical/canvas-plugins/pull/1833),
+  [`d31fcc6`](https://github.com/canvas-medical/canvas-plugins/commit/d31fcc629999f49fc17cf5a78511bfa27844aa20))
+
+
+## v0.205.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the goal being updated belongs to the command's patient
+  ([#1835](https://github.com/canvas-medical/canvas-plugins/pull/1835),
+  [`326f50c`](https://github.com/canvas-medical/canvas-plugins/commit/326f50c83ece157fe1c228477f71c09254998371))
+
+
+## v0.205.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check reviewed reports belong to the command's patient
+  ([#1842](https://github.com/canvas-medical/canvas-plugins/pull/1842),
+  [`dc0bf65`](https://github.com/canvas-medical/canvas-plugins/commit/dc0bf65fe61a16280b7e061c0857e8723ab1ef99))
+
+
 ## v0.205.0 (2026-08-25)
 
 ### Features
