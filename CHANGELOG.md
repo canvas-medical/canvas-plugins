@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.206.0 (2026-08-27)
+
+### Features
+
+- Add alternative way to add answers to questionnaires
+  ([#1856](https://github.com/canvas-medical/canvas-plugins/pull/1856),
+  [`0d3751b`](https://github.com/canvas-medical/canvas-plugins/commit/0d3751b67793ddc45b5e7fe0c752b95829e3c22b))
+
+
 ## v0.205.3 (2026-08-27)
 
 ### Bug Fixes
