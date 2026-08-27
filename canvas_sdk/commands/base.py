@@ -2,10 +2,11 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Any, Union, get_args, get_origin
+from uuid import UUID
 
 from django.core.exceptions import ImproperlyConfigured
-from pydantic import ConfigDict
+from pydantic import BeforeValidator, ConfigDict
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
@@ -16,6 +17,22 @@ from canvas_sdk.v1.data import Command, Note
 
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
+
+
+def _blank_to_none(value: Any) -> Any:
+    """Read a blank id as an absent one.
+
+    These fields took a string before they took a UUID, so a caller with nothing to send may send an
+    empty string rather than None. That is not an id, and it is not an error either.
+    """
+    if isinstance(value, str) and not value.strip():
+        return None
+
+    return value
+
+
+#: An id that may be absent, given either as None or as an empty string.
+_OptionalId = Annotated[UUID | None, BeforeValidator(_blank_to_none)]
 
 
 class _BaseCommand(TrackableFieldsModel):
