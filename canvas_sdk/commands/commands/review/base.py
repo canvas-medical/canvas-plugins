@@ -49,19 +49,27 @@ class _BaseReview(_BaseCommand):
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+        model: Any = self.Meta.model
 
         if self.report_ids:
+            patient_id = self._anchor_patient_id()
+
             for report_id in self.report_ids:
-                can_be_reviewed = self.Meta.model.objects.filter(  # type: ignore[attr-defined]
+                reports = model.objects.filter(
                     Q(id=report_id),
                     Q(review_mode=ReviewMode.REVIEW_REQUIRED),
                     (Q(review__committer__isnull=True) | Q(review__entered_in_error__isnull=False)),
-                ).exists()
-                if not can_be_reviewed:
+                )
+
+                if patient_id is not None:
+                    reports = reports.filter(patient__id=patient_id)
+
+                if not reports.exists():
                     errors.append(
                         self._create_error_detail(
                             "value",
-                            f"{self.Meta.model.__class__.__name__} with ID {report_id} cannot be reviewed.",
+                            f"{model.__name__} with ID {report_id} cannot be reviewed"
+                            " or does not belong to this command's patient.",
                             self.report_ids,
                         )
                     )
