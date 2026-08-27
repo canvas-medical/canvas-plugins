@@ -302,7 +302,7 @@ def test_coverage_eligibility_status_uses_latest_response(mocker: "MockerFixture
 
 def test_status_enum_includes_not_applicable() -> None:
     """The SDK enum carries NOT_APPLICABLE so self-pay coverages have a value to report (KOALA-6940)."""
-    assert EligibilityResponseStatus.NOT_APPLICABLE == "NotApplicable"
+    assert EligibilityResponseStatus.NOT_APPLICABLE.value == "NotApplicable"
 
 
 def test_transactor_supports_eligibility_check() -> None:
