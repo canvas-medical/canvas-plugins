@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.205.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check reviewed reports belong to the command's patient
+  ([#1842](https://github.com/canvas-medical/canvas-plugins/pull/1842),
+  [`dc0bf65`](https://github.com/canvas-medical/canvas-plugins/commit/dc0bf65fe61a16280b7e061c0857e8723ab1ef99))
+
+
 ## v0.205.0 (2026-08-25)
 
 ### Features
