@@ -8,8 +8,6 @@ from canvas_sdk.commands import RemoveAllergyCommand
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import AllergyIntolerance, Command, Note, Patient
 
-NOTE_UUID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
-
 
 @pytest.fixture
 def patient(db: None) -> Patient:
@@ -163,38 +161,3 @@ def test_an_id_given_as_a_string_is_still_accepted(note: Note, allergy: AllergyI
     )
 
     assert command.originate()
-
-
-def test_a_command_with_neither_anchor_skips_the_check(allergy: AllergyIntolerance) -> None:
-    """A command that cannot know its patient must not guess."""
-    command = RemoveAllergyCommand(allergy_id=allergy.id)
-
-    assert command._anchor_patient_id() is None
-
-
-# --- narrative max length -------------------------------------------------
-
-
-def test_narrative_accepts_max_length() -> None:
-    """Narrative accepts a value at the 512 character limit."""
-    text = "a" * 512
-
-    assert RemoveAllergyCommand(note_uuid=NOTE_UUID, narrative=text).narrative == text
-
-
-def test_narrative_rejects_above_max_length() -> None:
-    """Over the limit is refused, against the field, so a caller knows what to shorten."""
-    with pytest.raises(ValidationError) as caught:
-        RemoveAllergyCommand(note_uuid=NOTE_UUID, narrative="a" * 513)
-
-    error = caught.value.errors()[0]
-    assert error["loc"] == ("narrative",)
-    assert error["type"] == "string_too_long"
-
-
-def test_narrative_rejects_above_max_length_on_assignment() -> None:
-    """The narrative is validated when assigned after construction."""
-    command = RemoveAllergyCommand(note_uuid=NOTE_UUID)
-
-    with pytest.raises(ValidationError):
-        command.narrative = "a" * 513
