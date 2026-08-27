@@ -15,7 +15,7 @@ def test_follow_up_exposes_scheduling_fields() -> None:
 @pytest.mark.django_db
 def test_follow_up_factory_builds_and_links_to_patient() -> None:
     """The SDK FollowUpFactory creates a FollowUp reachable via patient.follow_ups."""
-    follow_up = FollowUpFactory(reason_for_visit="6 month recheck")
+    follow_up = FollowUpFactory.create(reason_for_visit="6 month recheck")
 
     assert follow_up.reason_for_visit == "6 month recheck"
     assert follow_up.patient_id is not None
