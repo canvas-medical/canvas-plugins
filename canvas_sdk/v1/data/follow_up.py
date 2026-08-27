@@ -8,6 +8,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySet,
     IdentifiableModel,
 )
+from canvas_sdk.v1.data.encounter import EncounterMedium
 
 
 class FollowUp(AuditedModel, IdentifiableModel):
@@ -33,7 +34,13 @@ class FollowUp(AuditedModel, IdentifiableModel):
     reason_for_visit_coding = models.TextField(default="", blank=True)
     note_to_patient = models.TextField(default="", blank=True)
     internal_comment = models.TextField(default="", blank=True)
-    requested_appointment_type = models.CharField(max_length=20, null=True, blank=True)
+    requested_appointment_type = models.CharField(
+        max_length=20,
+        choices=EncounterMedium.choices,
+        default=EncounterMedium.OFFICE,
+        null=True,
+        db_index=True,
+    )
     requested_note_type = models.ForeignKey(
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="follow_ups"
     )
