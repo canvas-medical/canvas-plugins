@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.206.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the condition being resolved belongs to the command's patient
+  ([#1825](https://github.com/canvas-medical/canvas-plugins/pull/1825),
+  [`cea15cb`](https://github.com/canvas-medical/canvas-plugins/commit/cea15cbfb8c39143057f17778d55db9587f5c3c5))
+
+
 ## v0.206.1 (2026-08-27)
 
 ### Bug Fixes
