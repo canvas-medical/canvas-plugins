@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.207.0 (2026-08-27)
+
+### Features
+
+- Command api base ([#1819](https://github.com/canvas-medical/canvas-plugins/pull/1819),
+  [`7c002b7`](https://github.com/canvas-medical/canvas-plugins/commit/7c002b70c927f3c73c1deb70b9127ec4b79889d7))
+
+
 ## v0.206.2 (2026-08-27)
 
 ### Bug Fixes
