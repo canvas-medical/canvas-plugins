@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.206.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check the medication being stopped belongs to the command's patient
+  ([#1832](https://github.com/canvas-medical/canvas-plugins/pull/1832),
+  [`f6d67da`](https://github.com/canvas-medical/canvas-plugins/commit/f6d67da0c2736873e77fc25bcf0e3b3a394591be))
+
+
 ## v0.206.0 (2026-08-27)
 
 ### Features
