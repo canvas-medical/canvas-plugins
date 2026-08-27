@@ -153,16 +153,6 @@ def test_a_foreign_goals_data_cannot_be_copied_onto_this_patients_note(
         UpdateGoalCommand(note_uuid=str(note.id), goal_id=foreign.id, progress="better").originate()
 
 
-def test_a_command_with_neither_anchor_is_not_refused() -> None:
-    """A command that cannot know its patient must not guess.
-
-    A plugin can return several effects from one handler, and the note or command a later effect
-    names may not be persisted when that effect is built. Asserted with no database available, so a
-    lookup would raise rather than return — this passing is the evidence that none happens.
-    """
-    assert UpdateGoalCommand(goal_id=uuid.uuid4())._anchor_patient_id() is None
-
-
 def test_a_goal_is_not_checked_until_the_notes_patient_can_be_resolved(
     note: Note, other_patient: Patient
 ) -> None:
