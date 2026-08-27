@@ -111,7 +111,7 @@ class CommandAPI(SimpleAPI, ABC):
 
             if request.command_id is not None:
                 if self._taken(str(request.command_id)):
-                    return [self._id_taken(str(request.command_id))]
+                    return [self._id_taken_error_response(str(request.command_id))]
                 command_uuid = str(request.command_id)
             else:
                 command_uuid = str(uuid4())
@@ -339,7 +339,7 @@ class CommandAPI(SimpleAPI, ABC):
         """
         return Command.objects.filter(id=command_id).exists()
 
-    def _id_taken(self, command_id: str) -> Response:
+    def _id_taken_error_response(self, command_id: str) -> Response:
         """Return a ``409`` for a chosen id that already belongs to a command.
 
         A conflict rather than a validation error: nothing about the request is malformed, and the

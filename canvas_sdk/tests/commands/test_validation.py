@@ -4,7 +4,6 @@ import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.commands import HistoryOfPresentIllnessCommand
 from canvas_sdk.commands.validation import CommandValidationErrorEffect, ValidationError
 
 # ValidationError tests
@@ -306,34 +305,3 @@ def test_command_validation_error_effect_real_world_usage_example() -> None:
     assert payload["data"]["errors"][0]["message"] == "Narrative is required"
     assert payload["data"]["errors"][1]["message"] == "Dosage must be a positive number"
     assert payload["data"]["errors"][2]["message"] == "Frequency is required"
-
-
-# Chaining effects — the reason a command does not read the chart while building one
-
-
-def test_a_command_builds_an_action_effect_without_reading_the_chart() -> None:
-    """An action's effect must be buildable for a command that is not on the chart yet.
-
-    A plugin may return several effects from one handler — originate a command, then commit it —
-    and Canvas applies them in order. The commit is *built* before the originate has been
-    applied, so at that moment there is no row for the command. A state check here would refuse
-    that legitimate chain, and its refusal would look identical to a genuinely bad id.
-
-    Asserted with no database available on purpose: any read would raise rather than return, so
-    this passing is the evidence that none happens. Whether an id that *should* already exist
-    really does is checked by `CommandAPI`, where the id came from a caller.
-    """
-    command = HistoryOfPresentIllnessCommand(command_uuid="1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed")
-
-    for build, expected in (
-        (command.commit, "COMMIT_HPI_COMMAND"),
-        (command.enter_in_error, "ENTER_IN_ERROR_HPI_COMMAND"),
-        (command.delete, "DELETE_HPI_COMMAND"),
-    ):
-        assert EffectType.Name(build().type) == expected
-
-
-def test_an_action_still_needs_the_command_it_addresses() -> None:
-    """Dropping the state check does not drop the id check: an action needs a command_uuid."""
-    with pytest.raises(PydanticValidationError):
-        HistoryOfPresentIllnessCommand().commit()

@@ -1,7 +1,6 @@
 """Unit tests for the Reference SDK command."""
 
 import json
-from unittest.mock import MagicMock
 from uuid import UUID
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -38,52 +37,52 @@ def test_originate_renames_field_via_commands_api_name() -> None:
     assert schema["properties"]["diagnostic_view_id"].get("commands_api_name") == "diagnostic_view"
 
 
-def test_edit_emits_edit_effect(stored_command: MagicMock) -> None:
+def test_edit_emits_edit_effect() -> None:
     """edit() builds an EDIT_REFERENCE_COMMAND effect with the data payload."""
     cmd = ReferenceCommand(diagnostic_view_id=UUID("11111111-2222-3333-4444-555555555555"))
-    cmd.command_uuid = "2c1d9f7a-4b3e-4c8d-9a1b-6e2f0d7c3a45"
+    cmd.command_uuid = "cmd-2"
 
     effect = cmd.edit()
 
     assert effect.type == EffectType.EDIT_REFERENCE_COMMAND
     payload = json.loads(effect.payload)
     assert payload == {
-        "command": "2c1d9f7a-4b3e-4c8d-9a1b-6e2f0d7c3a45",
+        "command": "cmd-2",
         "data": {"diagnostic_view_id": "11111111-2222-3333-4444-555555555555"},
     }
 
 
-def test_delete_emits_delete_effect(stored_command: MagicMock) -> None:
+def test_delete_emits_delete_effect() -> None:
     """delete() builds a DELETE_REFERENCE_COMMAND effect."""
     cmd = ReferenceCommand()
-    cmd.command_uuid = "3d2eaf8b-5c4f-4d9e-8b2c-7f3a1e8d4b56"
+    cmd.command_uuid = "cmd-3"
 
     effect = cmd.delete()
 
     assert effect.type == EffectType.DELETE_REFERENCE_COMMAND
-    assert json.loads(effect.payload) == {"command": "3d2eaf8b-5c4f-4d9e-8b2c-7f3a1e8d4b56"}
+    assert json.loads(effect.payload) == {"command": "cmd-3"}
 
 
-def test_commit_emits_commit_effect(stored_command: MagicMock) -> None:
+def test_commit_emits_commit_effect() -> None:
     """commit() builds a COMMIT_REFERENCE_COMMAND effect."""
     cmd = ReferenceCommand()
-    cmd.command_uuid = "4e3fb09c-6d50-4eaf-9c3d-8a4b2f9e5c67"
+    cmd.command_uuid = "cmd-4"
 
     effect = cmd.commit()
 
     assert effect.type == EffectType.COMMIT_REFERENCE_COMMAND
-    assert json.loads(effect.payload) == {"command": "4e3fb09c-6d50-4eaf-9c3d-8a4b2f9e5c67"}
+    assert json.loads(effect.payload) == {"command": "cmd-4"}
 
 
-def test_enter_in_error_emits_enter_in_error_effect(stored_command: MagicMock) -> None:
+def test_enter_in_error_emits_enter_in_error_effect() -> None:
     """enter_in_error() builds an ENTER_IN_ERROR_REFERENCE_COMMAND effect."""
     cmd = ReferenceCommand()
-    cmd.command_uuid = "5f40c1ad-7e61-4fb0-ad4e-9b5c30af6d78"
+    cmd.command_uuid = "cmd-5"
 
     effect = cmd.enter_in_error()
 
     assert effect.type == EffectType.ENTER_IN_ERROR_REFERENCE_COMMAND
-    assert json.loads(effect.payload) == {"command": "5f40c1ad-7e61-4fb0-ad4e-9b5c30af6d78"}
+    assert json.loads(effect.payload) == {"command": "cmd-5"}
 
 
 def test_diagnostic_view_id_is_optional() -> None:
