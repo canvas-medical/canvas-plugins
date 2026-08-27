@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.205.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the goal being updated belongs to the command's patient
+  ([#1835](https://github.com/canvas-medical/canvas-plugins/pull/1835),
+  [`326f50c`](https://github.com/canvas-medical/canvas-plugins/commit/326f50c83ece157fe1c228477f71c09254998371))
+
+
 ## v0.205.1 (2026-08-27)
 
 ### Bug Fixes
