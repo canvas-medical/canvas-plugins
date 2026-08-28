@@ -55,7 +55,7 @@ from canvas_sdk.v1.data import Condition
 from canvas_sdk.v1.data.task import TaskPriority
 
 # some commands can't be originated without any content
-EMPTY_COMMAND_NOT_ALLOWED = ["chartSectionReview"]
+EMPTY_COMMAND_NOT_ALLOWED = ["chartSectionReview", "reference"]
 
 
 def allergy() -> dict[str, Any]:

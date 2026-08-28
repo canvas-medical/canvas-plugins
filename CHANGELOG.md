@@ -1,6 +1,123 @@
 # CHANGELOG
 
 
+## v0.207.0 (2026-08-27)
+
+### Features
+
+- Command api base ([#1819](https://github.com/canvas-medical/canvas-plugins/pull/1819),
+  [`7c002b7`](https://github.com/canvas-medical/canvas-plugins/commit/7c002b70c927f3c73c1deb70b9127ec4b79889d7))
+
+
+## v0.206.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the condition being resolved belongs to the command's patient
+  ([#1825](https://github.com/canvas-medical/canvas-plugins/pull/1825),
+  [`cea15cb`](https://github.com/canvas-medical/canvas-plugins/commit/cea15cbfb8c39143057f17778d55db9587f5c3c5))
+
+
+## v0.206.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check the medication being stopped belongs to the command's patient
+  ([#1832](https://github.com/canvas-medical/canvas-plugins/pull/1832),
+  [`f6d67da`](https://github.com/canvas-medical/canvas-plugins/commit/f6d67da0c2736873e77fc25bcf0e3b3a394591be))
+
+
+## v0.206.0 (2026-08-27)
+
+### Features
+
+- Add alternative way to add answers to questionnaires
+  ([#1856](https://github.com/canvas-medical/canvas-plugins/pull/1856),
+  [`0d3751b`](https://github.com/canvas-medical/canvas-plugins/commit/0d3751b67793ddc45b5e7fe0c752b95829e3c22b))
+
+
+## v0.205.3 (2026-08-27)
+
+### Bug Fixes
+
+- Check the allergy being removed belongs to the command's patient
+  ([#1833](https://github.com/canvas-medical/canvas-plugins/pull/1833),
+  [`d31fcc6`](https://github.com/canvas-medical/canvas-plugins/commit/d31fcc629999f49fc17cf5a78511bfa27844aa20))
+
+
+## v0.205.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the goal being updated belongs to the command's patient
+  ([#1835](https://github.com/canvas-medical/canvas-plugins/pull/1835),
+  [`326f50c`](https://github.com/canvas-medical/canvas-plugins/commit/326f50c83ece157fe1c228477f71c09254998371))
+
+
+## v0.205.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check reviewed reports belong to the command's patient
+  ([#1842](https://github.com/canvas-medical/canvas-plugins/pull/1842),
+  [`dc0bf65`](https://github.com/canvas-medical/canvas-plugins/commit/dc0bf65fe61a16280b7e061c0857e8723ab1ef99))
+
+
+## v0.205.0 (2026-08-25)
+
+### Features
+
+- Immunize command ([#1847](https://github.com/canvas-medical/canvas-plugins/pull/1847),
+  [`51b7f3e`](https://github.com/canvas-medical/canvas-plugins/commit/51b7f3e95154c25c16afd73584a04ed51c47f67f))
+
+
+## v0.204.0 (2026-08-24)
+
+### Features
+
+- **data**: Add vital signs to the data module
+  ([#1849](https://github.com/canvas-medical/canvas-plugins/pull/1849),
+  [`8e3d5c4`](https://github.com/canvas-medical/canvas-plugins/commit/8e3d5c4f2677641e7666599f3e738d560460f616))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.203.1 (2026-08-24)
+
+### Bug Fixes
+
+- Bound the lab order comment when an effect is built
+  ([#1843](https://github.com/canvas-medical/canvas-plugins/pull/1843),
+  [`b1dc284`](https://github.com/canvas-medical/canvas-plugins/commit/b1dc284dde4798b2fc8d60f503b8ae6531465c13))
+
+
+## v0.203.0 (2026-08-21)
+
+### Features
+
+- **data**: Expose HistoryOfPresentIllness in the data module
+  ([#1841](https://github.com/canvas-medical/canvas-plugins/pull/1841),
+  [`1aaa96b`](https://github.com/canvas-medical/canvas-plugins/commit/1aaa96b4707a9d834627b964fba057eec11d1fda))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+
 ## v0.202.0 (2026-08-21)
 
 ### Features
