@@ -105,6 +105,7 @@ from .referral import (
     ReferralReportFactory,
     ReferralReviewFactory,
 )
+from .remove_allergy_event import RemoveAllergyEventFactory
 from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
@@ -233,6 +234,7 @@ __all__ = (
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "RemoveAllergyEventFactory",
     "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",
