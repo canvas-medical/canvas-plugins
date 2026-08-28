@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.208.0 (2026-08-28)
+
+### Features
+
+- **data**: Add plan to the data module
+  ([#1848](https://github.com/canvas-medical/canvas-plugins/pull/1848),
+  [`79d22a1`](https://github.com/canvas-medical/canvas-plugins/commit/79d22a1e6f26481c01e0cecca7a2033343af1304))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.207.0 (2026-08-27)
 
 ### Features
