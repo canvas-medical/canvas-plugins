@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.210.0 (2026-08-28)
+
+### Features
+
+- **data**: Add resolve condition event to the data module
+  ([#1852](https://github.com/canvas-medical/canvas-plugins/pull/1852),
+  [`042ca44`](https://github.com/canvas-medical/canvas-plugins/commit/042ca44353ccc0f4fee3ad66d4a1ece094027bd5))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.209.0 (2026-08-28)
 
 ### Features
