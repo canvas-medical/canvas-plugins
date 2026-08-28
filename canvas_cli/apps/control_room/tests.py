@@ -126,6 +126,27 @@ def test_git_credential_get_failure_exits_nonzero(_post: Mock, _token: Mock) -> 
     assert result.exit_code == 1
 
 
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.post")
+def test_git_credential_forbidden_surfaces_remediation(mock_post: Mock, _token: Mock) -> None:
+    """A 403 from the role gate prints the actionable remediation (which git shows)
+    instead of a raw '403 Client Error', and emits no credential.
+    """
+    mock_post.return_value = Mock(status_code=403)
+    mock_post.return_value.json.return_value = {
+        "code": "plugin_role_required",
+        "remediation": "Ask a Canvas administrator to grant you either role.",
+    }
+    result = runner.invoke(
+        _app(),
+        ["git-credential", "--host", HOST, "get"],
+        input="protocol=https\nhost=cr.example\n\n",
+    )
+    assert result.exit_code == 1
+    assert "Ask a Canvas administrator to grant you either role." in result.output
+    assert "username=git" not in result.output  # no credential emitted
+
+
 # -- cr-init -----------------------------------------------------------------
 
 
@@ -253,6 +274,29 @@ def test_cr_init_without_git_installed_gives_actionable_error(
     mock_run.assert_not_called()
 
 
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_cr_init_fails_fast_without_plugin_role(
+    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """cr-init reads can_manage_plugins from info and bails with the remediation
+    before configuring any git remote — so the user learns at setup, not from an
+    opaque failure mid `git push`.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = {**INFO, "can_manage_plugins": False}
+    mock_run.side_effect = _git_side_effect()
+
+    result = runner.invoke(_app(), ["cr-init", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "Administrative Developer or Clinical Developer" in result.output
+    # Never configured git — no remote was added.
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3:5] == ["remote", "add"] for c in calls)
+
+
 # -- deploy + consent --------------------------------------------------------
 
 
@@ -306,6 +350,26 @@ def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_pa
         c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
     )
     assert body == {"plugins": [{"orgSlug": "acme", "name": "my_plugin", "gitRef": "main"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_forbidden_renders_remediation(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A 403 on deploy renders the actionable remediation, not 'not available'."""
+    mock_get.return_value = _resp(INFO)
+    mock_post.return_value = _resp(
+        {"code": "plugin_role_required", "remediation": "Ask an admin to grant you either role."},
+        403,
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "Ask an admin to grant you either role." in result.output
+    assert "not available" not in result.output.lower()
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")

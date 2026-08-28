@@ -49,11 +49,32 @@ def _cr_url(host: str, *paths: str) -> str:
     return urljoin(host, join)
 
 
-def _control_room_info(host: str, token: str) -> tuple[str, str]:
-    """Discover the CR git server URL + this instance's org slug.
+# Shown when the caller lacks a plugin-developer role. Mirrors home-app's 403
+# `remediation`; used as the fallback when a response body doesn't carry one.
+_MISSING_ROLE_MESSAGE = (
+    "You don't have permission to manage plugins on this instance. Ask a Canvas "
+    "administrator to grant you either the Administrative Developer or Clinical "
+    "Developer role."
+)
 
-    Returns ``(git_url, org_slug)``. Raises ``typer.BadParameter`` on any
-    failure (unreachable, unconfigured instance, unassigned org).
+
+def _forbidden_message(resp: requests.Response) -> str:
+    """The actionable message for a 403 — prefer the body's ``remediation``."""
+    try:
+        body = resp.json()
+    except ValueError:
+        return _MISSING_ROLE_MESSAGE
+    return body.get("remediation") or body.get("error") or _MISSING_ROLE_MESSAGE
+
+
+def _control_room_info(host: str, token: str) -> tuple[str, str, bool]:
+    """Discover the CR git server URL, this instance's org slug, and whether the
+    caller may manage plugins.
+
+    Returns ``(git_url, org_slug, can_manage_plugins)``. Raises
+    ``typer.BadParameter`` on any failure (unreachable, unconfigured instance,
+    unassigned org). ``info`` itself is not role-gated, so ``can_manage_plugins``
+    lets callers surface the permission gap without provoking a 403.
     """
     try:
         resp = requests.get(
@@ -64,6 +85,8 @@ def _control_room_info(host: str, token: str) -> tuple[str, str]:
     except requests.RequestException as exc:
         raise typer.BadParameter(f"Could not reach {host}: {exc}") from exc
 
+    if resp.status_code == requests.codes.forbidden:
+        raise typer.BadParameter(_forbidden_message(resp))
     if resp.status_code != requests.codes.ok:
         detail = _error_detail(resp)
         raise typer.BadParameter(
@@ -71,7 +94,7 @@ def _control_room_info(host: str, token: str) -> tuple[str, str]:
         )
 
     data = resp.json()
-    return data["git_url"], data["org_slug"]
+    return data["git_url"], data["org_slug"], bool(data.get("can_manage_plugins", True))
 
 
 def _error_detail(resp: requests.Response) -> str:
@@ -103,6 +126,8 @@ def _post(host: str, token: str, url: str, body: dict[str, object] | None = None
         )
     except requests.RequestException as exc:
         raise typer.BadParameter(f"Could not reach {host}: {exc}") from exc
+    if resp.status_code == requests.codes.forbidden:
+        raise typer.BadParameter(_forbidden_message(resp))
     if resp.status_code != requests.codes.ok:
         raise typer.BadParameter(f"Control Room error ({resp.status_code}): {_error_detail(resp)}")
     return resp.json()
@@ -198,7 +223,12 @@ def _ensure_cr_remote(
     which Control Room supports (see canvas-plugins#1820).
     """
     token = get_or_request_api_token(host)
-    git_url, org_slug = _control_room_info(host, token)
+    git_url, org_slug, can_manage_plugins = _control_room_info(host, token)
+    # Fail fast, before configuring any git remote/credential helper: without a
+    # plugin-developer role the eventual `git push` would fail opaquely (the
+    # credential helper can't mint a token). Surface it here at setup instead.
+    if not can_manage_plugins:
+        raise typer.BadParameter(_MISSING_ROLE_MESSAGE)
     name = repo_name or _manifest_name(plugin_dir)
 
     # Control Room is the plugin's authoritative git home, so it IS the repo's
@@ -287,6 +317,11 @@ def git_credential(
             headers={"Authorization": f"Bearer {token}"},
             timeout=_TIMEOUT_SECONDS,
         )
+        if resp.status_code == requests.codes.forbidden:
+            # A role gate, not a transport error — surface the actionable message
+            # git will show, instead of a raw "403 Client Error" that buries it.
+            print(f"canvas: {_forbidden_message(resp)}", file=sys.stderr)
+            raise typer.Exit(1)
         resp.raise_for_status()
         body = resp.json()
     except (requests.RequestException, ValueError) as exc:
@@ -373,7 +408,7 @@ def deploy(
 
     name = _manifest_name(plugin_name)
     token = get_or_request_api_token(host)
-    _, org_slug = _control_room_info(host, token)
+    _, org_slug, _ = _control_room_info(host, token)
 
     print(f"Deploying {org_slug}/{name}@{ref}…")
     result = _post(
@@ -421,7 +456,7 @@ def set_variables(
         parsed.append({"key": key, "value": value, "sensitive": True})
 
     token = get_or_request_api_token(host)
-    _, org_slug = _control_room_info(host, token)
+    _, org_slug, _ = _control_room_info(host, token)
 
     print(f"Setting {len(parsed)} variable(s) on {org_slug}/{plugin_name} via Control Room…")
     result = _post(
@@ -453,7 +488,7 @@ def uninstall(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     token = get_or_request_api_token(host)
-    _, org_slug = _control_room_info(host, token)
+    _, org_slug, _ = _control_room_info(host, token)
 
     print(f"Uninstalling {org_slug}/{plugin_name} via Control Room…")
     result = _post(
