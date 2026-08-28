@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.209.0 (2026-08-28)
+
+### Features
+
+- **data**: Add reason for visit anchor to the data module
+  ([#1851](https://github.com/canvas-medical/canvas-plugins/pull/1851),
+  [`c9bae42`](https://github.com/canvas-medical/canvas-plugins/commit/c9bae420af7eef270585b929c01f50cfa3b8be42))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.208.0 (2026-08-28)
 
 ### Features
