@@ -166,6 +166,7 @@ from .patient_consent import (
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
+from .plan import Plan
 from .plugin_command import PluginCommand
 from .posting import (
     BasePosting,
@@ -194,10 +195,11 @@ from .questionnaire import (
     ResponseOption,
     ResponseOptionSet,
 )
-from .reason_for_visit import ReasonForVisitSettingCoding
+from .reason_for_visit import ReasonForVisit, ReasonForVisitCoding, ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .refill_request import RefillRequest, RefillRequestCoding
 from .remove_allergy_event import RemoveAllergyEvent
+from .resolve_condition_event import ResolveConditionEvent
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -405,6 +407,7 @@ __all__ = __exports__ = (
     "PatientGroupMember",
     "PayorSpecificCharge",
     "PaymentCollection",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -421,6 +424,8 @@ __all__ = __exports__ = (
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -429,6 +434,7 @@ __all__ = __exports__ = (
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",

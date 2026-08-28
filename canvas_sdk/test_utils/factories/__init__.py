@@ -86,6 +86,7 @@ from .patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -97,6 +98,7 @@ from .prescription import PrescriptionFactory
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
+from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
@@ -104,6 +106,7 @@ from .referral import (
     ReferralReviewFactory,
 )
 from .remove_allergy_event import RemoveAllergyEventFactory
+from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
@@ -214,6 +217,7 @@ __all__ = (
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
     "PatientPhotoFactory",
+    "PlanFactory",
     "PluginCommandFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
@@ -224,11 +228,14 @@ __all__ = (
     "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
+    "ReasonForVisitCodingFactory",
+    "ReasonForVisitFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
     "RemoveAllergyEventFactory",
+    "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",

@@ -244,6 +244,9 @@
     "UpdateGoalCommand",
     "VitalsCommand"
   ],
+  "canvas_sdk.commands.api": [
+    "CommandAPI"
+  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
@@ -331,8 +334,10 @@
     "PrescribeCommand"
   ],
   "canvas_sdk.commands.commands.questionnaire": [
+    "Answer",
     "QUESTION_CLASSES",
-    "QuestionnaireCommand"
+    "QuestionnaireCommand",
+    "Selection"
   ],
   "canvas_sdk.commands.commands.questionnaire.question": [
     "BaseQuestion",
@@ -1271,6 +1276,7 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -1287,6 +1293,8 @@
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -1295,6 +1303,7 @@
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1693,6 +1702,9 @@
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
   ],
+  "canvas_sdk.v1.data.plan": [
+    "Plan"
+  ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
   ],
@@ -1745,6 +1757,8 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
@@ -1765,6 +1779,9 @@
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.resolve_condition_event": [
+    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
