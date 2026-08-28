@@ -235,7 +235,14 @@ def _ensure_cr_remote(
 
 
 def _manifest_name(plugin_dir: Path) -> str:
-    """The plugin's manifest ``name`` — the Control Room repo name."""
+    """The plugin's manifest ``name`` — its home-app *package* name.
+
+    Control Room tracks this separately from the git **repository** name (see
+    ``_ensure_cr_remote``). The CLI deploy/config commands use it as the repo
+    name too, which holds only under the CLI's contract that a git-savvy user
+    keeps the two equal; a consumer that lets them diverge (e.g. Studio) must
+    pass the repo name explicitly. See canvas-plugins#1820.
+    """
     manifest = plugin_dir / "CANVAS_MANIFEST.json"
     if not manifest.exists():
         raise typer.BadParameter(f"'{plugin_dir}' has no CANVAS_MANIFEST.json")
@@ -384,7 +391,9 @@ def deploy(
         _handle_consent(host, token, result, assume_yes=assume_yes)
         return
 
-    print(f"Deploy dispatched for {org_slug}/{name}@{ref}.")
+    matrix_id = (result.get("matrix") or {}).get("id")
+    suffix = f" (deploy {matrix_id})" if matrix_id else ""
+    print(f"Deploy dispatched for {org_slug}/{name}@{ref}.{suffix}")
 
 
 def set_variables(

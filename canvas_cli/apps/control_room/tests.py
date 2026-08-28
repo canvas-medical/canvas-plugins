@@ -299,6 +299,9 @@ def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_pa
 
     assert result.exit_code == 0, result.output
     assert "dispatched" in result.output.lower()
+    # The deploy (matrix) id is surfaced so a user can track it (e.g. a future
+    # status command).
+    assert "m1" in result.output
     body = next(
         c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
     )
