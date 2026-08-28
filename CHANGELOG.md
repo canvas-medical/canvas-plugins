@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.211.0 (2026-08-28)
+
+### Features
+
+- **data**: Add remove allergy event to the data module
+  ([#1853](https://github.com/canvas-medical/canvas-plugins/pull/1853),
+  [`13b0c04`](https://github.com/canvas-medical/canvas-plugins/commit/13b0c04ddbe5edb0b052f1ab97892bf7c5172beb))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.210.0 (2026-08-28)
 
 ### Features
