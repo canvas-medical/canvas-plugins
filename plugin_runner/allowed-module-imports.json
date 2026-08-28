@@ -2120,8 +2120,7 @@
     "VaccineManufacturer"
   ],
   "canvas_sdk.v1.data.vaccine_lot": [
-    "VaccineCatalog",
-    "VaccineLot"
+    "VaccineCatalog"
   ],
   "canvas_sdk.v1.data.visual_exam_finding": [
     "VisualExamFinding"
