@@ -86,6 +86,7 @@ from .patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -127,7 +128,9 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReviewFactory,
 )
 from .user import CanvasUserFactory
+from .vaccine import VaccineFactory, VaccineLotFactory
 from .visual_exam_finding import VisualExamFindingFactory
+from .vitals import VitalSignFactory, VitalSignReadingFactory
 
 __all__ = (
     "CalendarFactory",
@@ -212,6 +215,7 @@ __all__ = (
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
     "PatientPhotoFactory",
+    "PlanFactory",
     "PluginCommandFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
@@ -245,5 +249,9 @@ __all__ = (
     "UncategorizedClinicalDocumentFactory",
     "UncategorizedClinicalDocumentReviewFactory",
     "UpdateGoalFactory",
+    "VaccineFactory",
+    "VaccineLotFactory",
     "VisualExamFindingFactory",
+    "VitalSignReadingFactory",
+    "VitalSignFactory",
 )

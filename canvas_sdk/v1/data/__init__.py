@@ -166,6 +166,7 @@ from .patient_consent import (
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
+from .plan import Plan
 from .plugin_command import PluginCommand
 from .posting import (
     BasePosting,
@@ -222,7 +223,9 @@ from .uncategorized_clinical_document import (
     UncategorizedClinicalDocumentReview,
 )
 from .user import CanvasUser
+from .vaccine import Vaccine, VaccineLot, VaccineManufacturer
 from .visual_exam_finding import VisualExamFinding
+from .vitals import VitalSign, VitalSignReading
 
 __all__ = __exports__ = (
     "Application",
@@ -402,6 +405,7 @@ __all__ = __exports__ = (
     "PatientGroupMember",
     "PayorSpecificCharge",
     "PaymentCollection",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -457,6 +461,11 @@ __all__ = __exports__ = (
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
     "UpdateGoal",
+    "Vaccine",
+    "VaccineLot",
+    "VaccineManufacturer",
     "VisualExamFinding",
+    "VitalSign",
+    "VitalSignReading",
     "proxy_field",
 )
