@@ -324,12 +324,32 @@ def _post_router(
     return post
 
 
+def _get_router(*, matrix: dict | None = None) -> Callable[..., Mock]:
+    """Route requests.get: ``/info/`` → INFO, ``/deploy-status/<id>/`` → matrix.
+
+    The default matrix is a settled ``succeeded`` (one cell), so the poll returns
+    on the first read with no sleep. Pass ``matrix`` to settle failed/skipped.
+    """
+    settled = matrix or {"id": "m1", "status": "succeeded", "rollupCounts": {"succeeded": 1}}
+
+    def get(url: str, **kwargs: object) -> Mock:
+        if "/deploy-status/" in url:
+            return _resp({"matrix": settled})
+        return _resp(INFO)
+
+    return get
+
+
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
-def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path) -> None:
-    """A deploy with no consent gate reports dispatched and carries org/name/ref."""
-    mock_get.return_value = _resp(INFO)
+def test_deploy_polls_to_terminal_success(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A deploy dispatches, then polls the matrix to a terminal verdict and reports
+    the real outcome (succeeded) rather than trusting the dispatch response.
+    """
+    mock_get.side_effect = _get_router()  # /info/ + /deploy-status/ → succeeded
     mock_post.side_effect = _post_router(
         deploy={
             "ok": True,
@@ -342,14 +362,37 @@ def test_deploy_dispatched(mock_post: Mock, mock_get: Mock, _token: Mock, tmp_pa
     result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
 
     assert result.exit_code == 0, result.output
-    assert "dispatched" in result.output.lower()
-    # The deploy (matrix) id is surfaced so a user can track it (e.g. a future
-    # status command).
+    assert "succeeded" in result.output.lower()
+    # The deploy (matrix) id is surfaced so a user can track it.
     assert "m1" in result.output
+    # Polled the deploy-status endpoint for that matrix.
+    assert any("/deploy-status/m1/" in c.args[0] for c in mock_get.call_args_list)
     body = next(
         c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
     )
     assert body == {"plugins": [{"orgSlug": "acme", "name": "my_plugin", "gitRef": "main"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_deploy_reports_failure_when_matrix_settles_failed(
+    mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A deploy that dispatches ``ok`` but whose matrix settles FAILED in the async
+    CR flow exits nonzero — not masked as a dispatched success.
+    """
+    mock_get.side_effect = _get_router(
+        matrix={"id": "m1", "status": "failed", "rollupCounts": {"failed": 1}}
+    )
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
+    )
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "did not succeed" in result.output.lower()
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
@@ -380,7 +423,7 @@ def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token
     set-variables proxy, marking them sensitive (write-only, like the direct
     path).
     """
-    mock_get.return_value = _resp(INFO)  # /control-room/info/ discovery
+    mock_get.side_effect = _get_router()  # /info/ discovery + /deploy-status/ → succeeded
     mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
 
     result = runner.invoke(
@@ -420,9 +463,30 @@ def test_set_variables_rejects_bad_format(mock_post: Mock, mock_get: Mock, _toke
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
+def test_set_variables_warns_when_plugin_not_installed(
+    mock_post: Mock, mock_get: Mock, _token: Mock
+) -> None:
+    """An all-SKIPPED CONFIGURE settles ``succeeded`` in CR but applied nothing
+    (plugin not installed). The rollup — not the status — is authoritative, so the
+    CLI tells the user the values were stored but not applied, and still exits 0.
+    """
+    mock_get.side_effect = _get_router(
+        matrix={"id": "m1", "status": "succeeded", "rollupCounts": {"skipped": 1}}
+    )
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(_app(), ["set-variables", "my_plugin", "--host", HOST, "API_KEY=secret"])
+
+    assert result.exit_code == 0, result.output
+    assert "not installed" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
 def test_uninstall_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
     """`uninstall` (beta) discovers the org and POSTs to the uninstall proxy."""
-    mock_get.return_value = _resp(INFO)  # /control-room/info/ discovery
+    mock_get.side_effect = _get_router()  # /info/ discovery + /deploy-status/ → succeeded
     mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
 
     result = runner.invoke(_app(), ["uninstall", "my_plugin", "--host", HOST])

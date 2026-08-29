@@ -133,6 +133,73 @@ def _post(host: str, token: str, url: str, body: dict[str, object] | None = None
     return resp.json()
 
 
+# -- deploy-status polling (KOALA-5923) --------------------------------------
+
+# DeployMatrix.status values that mean the async CR work has settled. A dispatch
+# returns while the matrix is `in_progress` (or `pending_consent`) — the worker
+# settles the install afterward — so these are what "done" looks like.
+_MATRIX_TERMINAL = frozenset({"succeeded", "failed", "partial", "cancelled"})
+_MATRIX_POLL_INTERVAL_SECONDS = 2.0
+_MATRIX_POLL_TIMEOUT_SECONDS = 300.0
+
+
+def _poll_matrix(host: str, token: str, matrix_id: str, *, label: str) -> dict | None:
+    """Poll a matrix's status to a terminal verdict; return the final matrix dict.
+
+    Returns ``None`` if the poll window closes while the matrix is still in
+    progress — dispatched but not confirmed. A dispatch returns the moment the
+    matrix is enqueued, not when the install lands, so this turns "dispatched"
+    into the real outcome (succeeded / failed / partial / cancelled). Transient
+    read failures are tolerated until the deadline so a blip doesn't turn a real
+    success into a reported failure; a 403 (role revoked mid-flight) still raises.
+    """
+    url = _cr_url(host, "deploy-status", matrix_id)
+    deadline = time.monotonic() + _MATRIX_POLL_TIMEOUT_SECONDS
+    last_status: str | None = None
+    while time.monotonic() < deadline:
+        try:
+            resp = requests.get(
+                url, headers={"Authorization": f"Bearer {token}"}, timeout=_TIMEOUT_SECONDS
+            )
+        except requests.RequestException:
+            time.sleep(_MATRIX_POLL_INTERVAL_SECONDS)
+            continue
+        if resp.status_code == requests.codes.forbidden:
+            raise typer.BadParameter(_forbidden_message(resp))
+        if resp.status_code == requests.codes.ok:
+            matrix = (resp.json() or {}).get("matrix") or {}
+            status = str(matrix.get("status") or "")
+            if status and status != last_status:
+                print(f"  {label}: {status}…")
+                last_status = status
+            if status in _MATRIX_TERMINAL:
+                return matrix
+        # A 404 (not yet visible after dispatch) or a non-terminal status: wait.
+        time.sleep(_MATRIX_POLL_INTERVAL_SECONDS)
+    return None
+
+
+def _report_terminal_outcome(matrix: dict | None, *, what: str) -> None:
+    """Print the terminal outcome of a deploy/uninstall and exit nonzero on failure.
+
+    ``None`` means the poll window closed while still in progress (inconclusive) —
+    treated as a failure so a stuck operation isn't reported as done.
+    """
+    if matrix is None:
+        print(
+            f"{what} was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    if status == "succeeded":
+        print(f"{what} succeeded.")
+        return
+    rollup = matrix.get("rollupCounts") or {}
+    print(f"{what} did not succeed (status={status}, {rollup}).")
+    raise typer.Exit(1)
+
+
 # -- git plumbing (all transparent to the author) ----------------------------
 
 
@@ -427,8 +494,14 @@ def deploy(
         return
 
     matrix_id = (result.get("matrix") or {}).get("id")
-    suffix = f" (deploy {matrix_id})" if matrix_id else ""
-    print(f"Deploy dispatched for {org_slug}/{name}@{ref}.{suffix}")
+    if not matrix_id:
+        # No handle to poll (an older home-app/CR that doesn't return one): report
+        # dispatch acceptance rather than silently claiming the install landed.
+        print(f"Deploy dispatched for {org_slug}/{name}@{ref} (no matrix id to poll).")
+        return
+    print(f"Deploy dispatched (deploy {matrix_id}); waiting for Control Room to settle…")
+    matrix = _poll_matrix(host, token, matrix_id, label="deploy")
+    _report_terminal_outcome(matrix, what=f"Deploy of {org_slug}/{name}@{ref}")
 
 
 def set_variables(
@@ -469,6 +542,34 @@ def set_variables(
         print(f"Failed to set variables: {result.get('error') or 'unknown error'}")
         raise typer.Exit(1)
 
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name} (dispatched).")
+        return
+    matrix = _poll_matrix(host, token, matrix_id, label="config")
+    if matrix is None:
+        print(
+            f"Config was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    rollup = matrix.get("rollupCounts") or {}
+    succeeded = int(rollup.get("succeeded", 0) or 0)
+    failed = int(rollup.get("failed", 0) or 0)
+    if failed or status in {"failed", "cancelled"}:
+        print(f"Failed to set variables (status={status}, {rollup}).")
+        raise typer.Exit(1)
+    if succeeded == 0:
+        # An all-SKIPPED CONFIGURE settles `succeeded` in CR, but applied nothing:
+        # the plugin isn't installed on this instance (KOALA-5877 not_installed).
+        # Values are stored and apply on the next deploy.
+        print(
+            f"Variables stored, but '{plugin_name}' is not installed on this instance "
+            "yet, so nothing was applied. Deploy the plugin to apply them."
+        )
+        return
+
     print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name}.")
 
 
@@ -501,7 +602,13 @@ def uninstall(
         print(f"Uninstall failed: {result.get('error') or 'unknown error'}")
         raise typer.Exit(1)
 
-    print(f"Uninstall dispatched for {org_slug}/{plugin_name}.")
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Uninstall dispatched for {org_slug}/{plugin_name} (no matrix id to poll).")
+        return
+    print(f"Uninstall dispatched (matrix {matrix_id}); waiting for Control Room to settle…")
+    matrix = _poll_matrix(host, token, matrix_id, label="uninstall")
+    _report_terminal_outcome(matrix, what=f"Uninstall of {org_slug}/{plugin_name}")
 
 
 def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: bool) -> None:
