@@ -244,6 +244,9 @@
     "UpdateGoalCommand",
     "VitalsCommand"
   ],
+  "canvas_sdk.commands.api": [
+    "CommandAPI"
+  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
@@ -1177,6 +1180,7 @@
     "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
+    "FollowUp",
     "Goal",
     "HistoryOfPresentIllness",
     "ImagingOrder",
@@ -1273,6 +1277,7 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -1289,6 +1294,8 @@
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -1296,6 +1303,8 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemoveAllergyEvent",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1530,6 +1539,9 @@
     "FamilyHistory",
     "FamilyHistoryCoding"
   ],
+  "canvas_sdk.v1.data.follow_up": [
+    "FollowUp"
+  ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
     "GoalAchievementStatus",
@@ -1694,6 +1706,9 @@
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
   ],
+  "canvas_sdk.v1.data.plan": [
+    "Plan"
+  ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
   ],
@@ -1746,6 +1761,8 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
@@ -1758,11 +1775,17 @@
     "RefillRequest",
     "RefillRequestCoding"
   ],
+  "canvas_sdk.v1.data.remove_allergy_event": [
+    "RemoveAllergyEvent"
+  ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.resolve_condition_event": [
+    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"

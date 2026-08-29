@@ -1,6 +1,112 @@
 # CHANGELOG
 
 
+## v0.212.0 (2026-08-29)
+
+### Features
+
+- **data**: Add follow up to the data module
+  ([#1857](https://github.com/canvas-medical/canvas-plugins/pull/1857),
+  [`245e524`](https://github.com/canvas-medical/canvas-plugins/commit/245e524e46657bb6a93464e625d10f952a2fc889))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.211.0 (2026-08-28)
+
+### Features
+
+- **data**: Add remove allergy event to the data module
+  ([#1853](https://github.com/canvas-medical/canvas-plugins/pull/1853),
+  [`13b0c04`](https://github.com/canvas-medical/canvas-plugins/commit/13b0c04ddbe5edb0b052f1ab97892bf7c5172beb))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.210.0 (2026-08-28)
+
+### Features
+
+- **data**: Add resolve condition event to the data module
+  ([#1852](https://github.com/canvas-medical/canvas-plugins/pull/1852),
+  [`042ca44`](https://github.com/canvas-medical/canvas-plugins/commit/042ca44353ccc0f4fee3ad66d4a1ece094027bd5))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.209.0 (2026-08-28)
+
+### Features
+
+- **data**: Add reason for visit anchor to the data module
+  ([#1851](https://github.com/canvas-medical/canvas-plugins/pull/1851),
+  [`c9bae42`](https://github.com/canvas-medical/canvas-plugins/commit/c9bae420af7eef270585b929c01f50cfa3b8be42))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.208.0 (2026-08-28)
+
+### Features
+
+- **data**: Add plan to the data module
+  ([#1848](https://github.com/canvas-medical/canvas-plugins/pull/1848),
+  [`79d22a1`](https://github.com/canvas-medical/canvas-plugins/commit/79d22a1e6f26481c01e0cecca7a2033343af1304))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.207.0 (2026-08-27)
+
+### Features
+
+- Command api base ([#1819](https://github.com/canvas-medical/canvas-plugins/pull/1819),
+  [`7c002b7`](https://github.com/canvas-medical/canvas-plugins/commit/7c002b70c927f3c73c1deb70b9127ec4b79889d7))
+
+
+## v0.206.2 (2026-08-27)
+
+### Bug Fixes
+
+- Check the condition being resolved belongs to the command's patient
+  ([#1825](https://github.com/canvas-medical/canvas-plugins/pull/1825),
+  [`cea15cb`](https://github.com/canvas-medical/canvas-plugins/commit/cea15cbfb8c39143057f17778d55db9587f5c3c5))
+
+
+## v0.206.1 (2026-08-27)
+
+### Bug Fixes
+
+- Check the medication being stopped belongs to the command's patient
+  ([#1832](https://github.com/canvas-medical/canvas-plugins/pull/1832),
+  [`f6d67da`](https://github.com/canvas-medical/canvas-plugins/commit/f6d67da0c2736873e77fc25bcf0e3b3a394591be))
+
+
 ## v0.206.0 (2026-08-27)
 
 ### Features
