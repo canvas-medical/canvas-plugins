@@ -530,12 +530,6 @@
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
-  "canvas_sdk.effects.categorize_document": [
-    "CategorizeDocument",
-    "ConfidenceScores",
-    "DocumentType",
-    "DocumentTypeConfidenceScores"
-  ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
     "ColorEnum",
@@ -576,19 +570,22 @@
     "LinkDocumentToPatient",
     "PrefillDocumentFieldData",
     "PrefillDocumentFields",
-    "PrefillTemplate",
+    "Priority",
     "RemoveDocumentFromPatient",
-    "ReportType",
     "ReviewMode",
-    "TemplateFields",
-    "TemplateType"
+    "TemplateFields"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
+    "Priority",
     "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.categorize_document": [
     "CategorizeDocument"
+  ],
+  "canvas_sdk.effects.data_integration.constants": [
+    "VALID_REPORT_TYPES",
+    "VALID_TEMPLATE_TYPES"
   ],
   "canvas_sdk.effects.data_integration.junk_document": [
     "JunkDocument"
@@ -598,17 +595,14 @@
   ],
   "canvas_sdk.effects.data_integration.prefill_document_fields": [
     "PrefillDocumentFieldData",
-    "PrefillDocumentFields",
-    "PrefillTemplate"
+    "PrefillDocumentFields"
   ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
     "RemoveDocumentFromPatient"
   ],
   "canvas_sdk.effects.data_integration.types": [
     "AnnotationItem",
-    "DocumentType",
-    "ReportType",
-    "TemplateType"
+    "DocumentType"
   ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
