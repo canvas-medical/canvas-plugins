@@ -97,6 +97,7 @@ from .practicelocation import (
 )
 from .prescription import PrescriptionFactory
 from .prescription_change import (
+    PrescriptionChangeRequestCodingFactory,
     PrescriptionChangeRequestFactory,
     PrescriptionChangeResponseFactory,
 )
@@ -230,6 +231,7 @@ __all__ = (
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
     "PrescriptionChangeRequestFactory",
+    "PrescriptionChangeRequestCodingFactory",
     "PrescriptionChangeResponseFactory",
     "PrescriptionFactory",
     "ProcedureFactory",

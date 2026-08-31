@@ -1286,6 +1286,8 @@
     "PracticeLocationSetting",
     "Prescription",
     "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
     "PrescriptionChangeRequestType",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
@@ -1739,6 +1741,8 @@
   ],
   "canvas_sdk.v1.data.prescription_change": [
     "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
     "PrescriptionChangeRequestType",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
