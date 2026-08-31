@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.213.0 (2026-08-31)
+
+### Features
+
+- Add date question type to questionnaire command
+  ([#1805](https://github.com/canvas-medical/canvas-plugins/pull/1805),
+  [`3e091e0`](https://github.com/canvas-medical/canvas-plugins/commit/3e091e07d51a9487a7b57afd7fa1f0a373a2f3e0))
+
+
 ## v0.212.1 (2026-08-31)
 
 ### Bug Fixes
