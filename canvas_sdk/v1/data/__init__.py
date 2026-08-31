@@ -185,6 +185,7 @@ from .practicelocation import (
 from .prescription import Prescription, PrescriptionResponse, PrescriptionStatus
 from .prescription_change import (
     PrescriptionChangeRequest,
+    PrescriptionChangeRequestCoding,
     PrescriptionChangeResponse,
     PrescriptionChangeResponseStatus,
     PrescriptionChangeResponseType,
@@ -423,6 +424,7 @@ __all__ = __exports__ = (
     "PracticeLocationSetting",
     "Prescription",
     "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType",

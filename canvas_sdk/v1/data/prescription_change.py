@@ -9,6 +9,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class PrescriptionChangeResponseType(models.TextChoices):
@@ -63,6 +64,19 @@ class PrescriptionChangeRequest(TimestampedModel):
     content = models.JSONField(default=dict)
 
 
+class PrescriptionChangeRequestCoding(Coding):
+    """A medical coding (e.g. FDB, RxNorm) recorded against a PrescriptionChangeRequest."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_prescriptionchangerequestcoding_001"
+
+    change_request = models.ForeignKey(
+        PrescriptionChangeRequest,
+        on_delete=models.DO_NOTHING,
+        related_name="codings",
+    )
+
+
 class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
     """A response to a Surescripts prescription change request — the anchor for the ApproveChange and DenyChange commands."""
 
@@ -114,6 +128,7 @@ class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
 
 __exports__ = (
     "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType",

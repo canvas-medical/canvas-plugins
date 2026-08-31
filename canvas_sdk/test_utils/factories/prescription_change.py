@@ -1,6 +1,10 @@
 import factory
 
-from canvas_sdk.v1.data import PrescriptionChangeRequest, PrescriptionChangeResponse
+from canvas_sdk.v1.data import (
+    PrescriptionChangeRequest,
+    PrescriptionChangeRequestCoding,
+    PrescriptionChangeResponse,
+)
 
 
 class PrescriptionChangeRequestFactory(
@@ -17,6 +21,21 @@ class PrescriptionChangeRequestFactory(
         patient=factory.SelfAttribute("..patient"),
     )
     type_code = "G"
+
+
+class PrescriptionChangeRequestCodingFactory(
+    factory.django.DjangoModelFactory[PrescriptionChangeRequestCoding]
+):
+    """Factory for creating a PrescriptionChangeRequestCoding."""
+
+    class Meta:
+        model = PrescriptionChangeRequestCoding
+
+    change_request = factory.SubFactory(PrescriptionChangeRequestFactory)
+    system = "http://www.fdbhealth.com/"
+    code = factory.Faker("numerify", text="######")
+    display = factory.Faker("sentence", nb_words=4)
+    user_selected = False
 
 
 class PrescriptionChangeResponseFactory(
