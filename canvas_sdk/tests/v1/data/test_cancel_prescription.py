@@ -7,9 +7,9 @@ from canvas_sdk.v1.data.cancel_prescription import CancelPrescription, CancelPre
 
 def test_cancel_prescription_status_choices() -> None:
     """CancelPrescriptionStatus mirrors the home-app open/pending/ultimately-accepted values."""
-    assert CancelPrescriptionStatus.OPEN == "open"
-    assert CancelPrescriptionStatus.PENDING == "pending"
-    assert CancelPrescriptionStatus.ULTIMATELY_ACCEPTED == "ultimately-accepted"
+    assert CancelPrescriptionStatus.OPEN.value == "open"
+    assert CancelPrescriptionStatus.PENDING.value == "pending"
+    assert CancelPrescriptionStatus.ULTIMATELY_ACCEPTED.value == "ultimately-accepted"
 
 
 def test_cancel_prescription_fields() -> None:
