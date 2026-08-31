@@ -40,8 +40,6 @@ class PhotoSide(StrEnum):
     BACK = "BACK"
 
 
-
-
 class Coverage(TrackableFieldsModel):
     """Effect for creating, updating, expiring, removing, or stripping a photo
     from a patient's insurance coverage.
@@ -181,9 +179,7 @@ class Coverage(TrackableFieldsModel):
     def _validate_upload_keys(self) -> list[InitErrorDetails]:
         errors: list[InitErrorDetails] = []
         for field_name in ("card_image_front_upload_key", "card_image_back_upload_key"):
-            err = check_upload_key(
-                getattr(self, field_name), field_label="Card image upload key"
-            )
+            err = check_upload_key(getattr(self, field_name), field_label="Card image upload key")
             if err:
                 errors.append(self._create_error_detail("value", err, getattr(self, field_name)))
         return errors
