@@ -19,6 +19,8 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects._upload_key import check_upload_key
 from canvas_sdk.v1.data.patient import (
     Patient,
+)
+from canvas_sdk.v1.data.patient import (
     PatientIdentificationCard as PatientIdentificationCardModel,
 )
 
@@ -112,9 +114,7 @@ class PatientIdentificationCard(TrackableFieldsModel):
                 )
 
         if method in ("create", "update"):
-            err = check_upload_key(
-                self.image_upload_key, field_label="ID card image upload key"
-            )
+            err = check_upload_key(self.image_upload_key, field_label="ID card image upload key")
             if err:
                 errors.append(self._create_error_detail("value", err, self.image_upload_key))
 
@@ -130,7 +130,8 @@ class PatientIdentificationCard(TrackableFieldsModel):
 
     def update(self) -> Effect:
         """Update an existing PatientIdentificationCard. Only fields you set
-        are changed; image_upload_key is processed only when provided."""
+        are changed; image_upload_key is processed only when provided.
+        """
         self._validate_before_effect("update")
         return Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
