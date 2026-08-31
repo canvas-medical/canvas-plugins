@@ -25,7 +25,8 @@ class ResolveConditionCommand(BaseCommand):
             return errors
 
         condition_patient_id = (
-            Condition.objects.filter(id=self.condition_id)
+            Condition.objects.active()
+            .filter(id=self.condition_id)
             .values_list("patient__id", flat=True)
             .first()
         )

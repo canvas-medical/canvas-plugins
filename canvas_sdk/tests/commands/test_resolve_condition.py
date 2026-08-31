@@ -27,14 +27,25 @@ def note(patient: Patient) -> Note:
     return NoteFactory.create(patient=patient)
 
 
-def _condition(patient: Patient, clinical_status: str = "active") -> Condition:
-    """Create a minimal condition for the given patient."""
+def _condition(
+    patient: Patient,
+    clinical_status: str = "active",
+    committer_id: int | None = 1,
+) -> Condition:
+    """A condition on a patient's chart, as `Condition.objects.active()` defines one.
+
+    That is `committed()` — a committer, no entered-in-error — plus `clinical_status="active"`.
+    The interpreter resolves against the same queryset, so a fixture that skipped any of it would
+    prove the command accepts conditions the interpreter will then fail to find.
+    """
     return Condition.objects.create(
         patient=patient,
         deleted=False,
         onset_date=datetime.date(2024, 1, 1),
         resolution_date=datetime.date(2024, 1, 1),
         clinical_status=clinical_status,
+        committer_id=committer_id,
+        entered_in_error_id=None,
         notes="",
         surgical=False,
     )
@@ -99,16 +110,24 @@ def test_originate_rejects_an_unknown_condition(note: Note) -> None:
         command.originate()
 
 
-def test_a_resolved_condition_is_still_accepted(note: Note, patient: Patient) -> None:
-    """Only ownership is checked, not the condition's clinical status.
+def test_a_resolved_condition_is_refused(note: Note, patient: Patient) -> None:
+    """A condition that is already resolved is not one this command can resolve.
 
-    Narrowing to active conditions would refuse ones that can be stored, so the check stays at
-    what the record itself requires: it exists, and it is this patient's.
+    Applying the effect resolves the id with `Condition.objects.active().get(...)`, so a resolved
+    condition raises `DoesNotExist` there. Refusing it here reports the id to the plugin instead.
     """
     resolved = _condition(patient, clinical_status="resolved")
-    command = ResolveConditionCommand(note_uuid=str(note.id), condition_id=resolved.id)
 
-    assert command.originate()
+    with pytest.raises(ValidationError):
+        ResolveConditionCommand(note_uuid=str(note.id), condition_id=resolved.id).originate()
+
+
+def test_an_uncommitted_condition_is_refused(note: Note, patient: Patient) -> None:
+    """`active()` is `committed()` plus the status, and the interpreter reads both."""
+    uncommitted = _condition(patient, committer_id=None)
+
+    with pytest.raises(ValidationError):
+        ResolveConditionCommand(note_uuid=str(note.id), condition_id=uncommitted.id).originate()
 
 
 # --- condition ownership on edit ------------------------------------------
