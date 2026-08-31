@@ -1119,6 +1119,8 @@
     "BulkPatientPosting",
     "BusinessLine",
     "Calendar",
+    "CancelPrescription",
+    "CancelPrescriptionStatus",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -1387,6 +1389,10 @@
   "canvas_sdk.v1.data.calendar": [
     "Calendar",
     "Event"
+  ],
+  "canvas_sdk.v1.data.cancel_prescription": [
+    "CancelPrescription",
+    "CancelPrescriptionStatus"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
