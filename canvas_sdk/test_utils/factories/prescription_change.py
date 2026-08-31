@@ -32,5 +32,9 @@ class PrescriptionChangeResponseFactory(
         "canvas_sdk.test_utils.factories.NoteFactory",
         patient=factory.SelfAttribute("..patient"),
     )
+    request = factory.SubFactory(
+        PrescriptionChangeRequestFactory,
+        patient=factory.SelfAttribute("..patient"),
+    )
     response_type = "A"
     status = "open"

@@ -109,7 +109,6 @@ class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
         PrescriptionChangeRequest,
         on_delete=models.DO_NOTHING,
         related_name="response",
-        null=True,
     )
 
 
