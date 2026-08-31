@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.207.1 (2026-08-31)
+
+### Bug Fixes
+
+- Add optional id to allergy and update goal command ids
+  ([#1858](https://github.com/canvas-medical/canvas-plugins/pull/1858),
+  [`e7e70ff`](https://github.com/canvas-medical/canvas-plugins/commit/e7e70fff4b9b9383e5696abcfc9e8f01ad93d1cc))
+
+
 ## v0.207.0 (2026-08-27)
 
 ### Features
