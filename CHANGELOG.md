@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.213.0 (2026-08-31)
+
+### Features
+
+- Add date question type to questionnaire command
+  ([#1805](https://github.com/canvas-medical/canvas-plugins/pull/1805),
+  [`3e091e0`](https://github.com/canvas-medical/canvas-plugins/commit/3e091e07d51a9487a7b57afd7fa1f0a373a2f3e0))
+
+
+## v0.212.1 (2026-08-31)
+
+### Bug Fixes
+
+- Add optional id to allergy and update goal command ids
+  ([#1858](https://github.com/canvas-medical/canvas-plugins/pull/1858),
+  [`80b8a94`](https://github.com/canvas-medical/canvas-plugins/commit/80b8a94a0cead34a508e9f8d6ed500171f4dac96))
+
+
 ## v0.212.0 (2026-08-29)
 
 ### Features
