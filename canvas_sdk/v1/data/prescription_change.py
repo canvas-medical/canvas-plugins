@@ -57,7 +57,7 @@ class PrescriptionChangeRequest(TimestampedModel):
         related_name="change_requests",
         null=True,
     )
-    message_id = models.CharField(max_length=35, blank=True, default="")
+    message_id = models.CharField(max_length=35)
     type_code = models.CharField(max_length=2, blank=True, default="")
     sub_type_code = models.CharField(max_length=1, blank=True, default="")
     content = models.JSONField(default=dict)
