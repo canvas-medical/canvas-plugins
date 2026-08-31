@@ -353,3 +353,15 @@ def test_all_fields_together(
     assert values["document_type"] == valid_document_type
     assert values["annotations"] == valid_annotations
     assert values["source_protocol"] == "llm_v1"
+
+
+def test_template_type_key_absent_is_allowed() -> None:
+    """Test that omitting the optional template_type key entirely is accepted."""
+    document_type: dict[str, Any] = {
+        "key": "admin_doc",
+        "name": "Administrative Document",
+        "report_type": "ADMINISTRATIVE",
+    }
+    effect = CategorizeDocument(document_id="123", document_type=document_type)
+    applied = effect.apply()
+    assert applied.type == EffectType.CATEGORIZE_DOCUMENT

@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import PrefillDocumentFields
+from canvas_sdk.effects.data_integration.prefill_document_fields import PrefillTemplate
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
@@ -379,3 +380,115 @@ def test_apply_raises_error_when_field_annotation_missing_text() -> None:
         effect.apply()
 
     assert "text" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_field_annotation_missing_color() -> None:
+    """Test apply raises error when a field annotation is missing color."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {
+                    "f1": {
+                        "value": "v1",
+                        "annotations": cast(Any, [{"text": "AI 95%"}]),
+                    }
+                },
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "color" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_field_annotation_not_a_dict() -> None:
+    """Test apply raises error when a field annotation is not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [
+                {
+                    "template_id": 620,
+                    "template_name": "Test",
+                    "fields": {"f1": {"value": "v1", "annotations": ["not-a-dict"]}},
+                }
+            ],
+        ),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "must be a dict" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_field_value_not_a_dict() -> None:
+    """Test apply raises error when a field's data is not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [{"template_id": 620, "template_name": "Test", "fields": {"f1": "not-a-dict"}}],
+        ),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "must be a dict" in str(exc_info.value)
+
+
+def test_apply_succeeds_when_template_fields_not_a_dict() -> None:
+    """Test apply ignores template fields that are not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [{"template_id": 620, "template_name": "Test", "fields": "not-a-dict"}],
+        ),
+    )
+    applied = effect.apply()
+
+    assert applied.type == EffectType.UPDATE_DOCUMENT_FIELDS
+
+
+def test_values_serializes_missing_templates_as_empty_list() -> None:
+    """Test values property serializes missing templates as an empty list."""
+    effect = PrefillDocumentFields(document_id="12345")
+
+    assert effect.values["templates"] == []
+
+
+def test_values_includes_stripped_source_protocol() -> None:
+    """Test values property includes source_protocol with whitespace stripped."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+        source_protocol="  llm_v1  ",
+    )
+
+    assert effect.values["source_protocol"] == "llm_v1"
+
+
+def test_prefill_template_accepts_valid_template_name() -> None:
+    """Test PrefillTemplate accepts a non-empty template_name."""
+    template = PrefillTemplate(template_id=1, template_name="Thyroid Profile", fields={})
+
+    assert template.template_name == "Thyroid Profile"
+
+
+def test_prefill_template_rejects_blank_template_name() -> None:
+    """Test PrefillTemplate rejects a whitespace-only template_name."""
+    with pytest.raises(ValidationError) as exc_info:
+        PrefillTemplate(template_id=1, template_name="   ", fields={})
+
+    assert "template_name must be a non-empty string" in str(exc_info.value)
