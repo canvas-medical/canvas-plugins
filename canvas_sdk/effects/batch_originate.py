@@ -12,11 +12,17 @@ class BatchOriginateCommandEffect(_BaseEffect):
         effect_type = EffectType.BATCH_ORIGINATE_COMMANDS
 
     commands: list = Field(min_length=1)
+    line_number: int = Field(default=-1)
+    replace_line: bool = Field(default=False)
 
     @property
     def values(self) -> dict[str, Any]:
         """The BatchOriginateCommandEffect's values."""
-        return {"commands": [command._origination_payload_for_batch() for command in self.commands]}
+        return {
+            "commands": [command._origination_payload_for_batch() for command in self.commands],
+            "line_number": self.line_number,
+            "replace_line": self.replace_line,
+        }
 
 
 __exports__ = ("BatchOriginateCommandEffect",)
