@@ -3,9 +3,11 @@ from django.db import models
 
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
+    PrescriptionChangeRequestFactory,
     PrescriptionChangeResponseFactory,
 )
 from canvas_sdk.v1.data.prescription_change import (
+    PrescriptionChangeRequest,
     PrescriptionChangeResponse,
     PrescriptionChangeResponseStatus,
     PrescriptionChangeResponseType,
@@ -26,6 +28,22 @@ def test_fields() -> None:
     assert isinstance(
         PrescriptionChangeResponse._meta.get_field("note_to_pharmacist"), models.CharField
     )
+
+
+def test_change_request_fields() -> None:
+    """PrescriptionChangeRequest exposes the message_id and content fields."""
+    assert isinstance(PrescriptionChangeRequest._meta.get_field("message_id"), models.CharField)
+    assert isinstance(PrescriptionChangeRequest._meta.get_field("content"), models.JSONField)
+
+
+@pytest.mark.django_db
+def test_response_links_to_change_request() -> None:
+    """A response resolves its originating change request via the request FK."""
+    request = PrescriptionChangeRequestFactory.create(message_id="RX-1")
+    response = PrescriptionChangeResponseFactory.create(request=request)
+
+    assert response.request == request
+    assert list(request.response.all()) == [response]
 
 
 @pytest.mark.django_db

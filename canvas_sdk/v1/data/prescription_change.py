@@ -7,6 +7,7 @@ from canvas_sdk.v1.data.base import (
     CommittableModelManager,
     CommittableQuerySet,
     IdentifiableModel,
+    TimestampedModel,
 )
 
 
@@ -24,6 +25,42 @@ class PrescriptionChangeResponseStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     ULTIMATELY_ACCEPTED = "ultimately-accepted", "Ultimately Accepted"
     ERROR = "error", "Error"
+
+
+class PrescriptionChangeRequest(TimestampedModel):
+    """A Surescripts prescription change request received from a pharmacy."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_prescriptionchangerequest_001"
+
+    patient = models.ForeignKey(
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        related_name="prescription_change_requests",
+        null=True,
+    )
+    note = models.ForeignKey(
+        "v1.Note",
+        on_delete=models.DO_NOTHING,
+        related_name="prescription_change_requests",
+        null=True,
+    )
+    staff = models.ForeignKey(
+        "v1.Staff",
+        on_delete=models.DO_NOTHING,
+        related_name="prescription_change_requests",
+        null=True,
+    )
+    original_prescription = models.ForeignKey(
+        "v1.Prescription",
+        on_delete=models.DO_NOTHING,
+        related_name="change_requests",
+        null=True,
+    )
+    message_id = models.CharField(max_length=35, blank=True, default="")
+    type_code = models.CharField(max_length=2, blank=True, default="")
+    sub_type_code = models.CharField(max_length=1, blank=True, default="")
+    content = models.JSONField(default=dict)
 
 
 class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
@@ -68,9 +105,16 @@ class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
         default=PrescriptionChangeResponseStatus.OPEN,
     )
     prior_authorization_number = models.CharField(max_length=50, blank=True, default="")
+    request = models.ForeignKey(
+        PrescriptionChangeRequest,
+        on_delete=models.DO_NOTHING,
+        related_name="response",
+        null=True,
+    )
 
 
 __exports__ = (
+    "PrescriptionChangeRequest",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType",
