@@ -23,7 +23,5 @@ def check_upload_key(key: str | None, *, field_label: str = "Upload key") -> str
     if key is None:
         return None
     if _PLUGIN_UPLOAD_SEGMENT not in ("/" + key):
-        return (
-            f"{field_label} must contain '{_PLUGIN_UPLOAD_SEGMENT}'. Got: {key!r}"
-        )
+        return f"{field_label} must contain '{_PLUGIN_UPLOAD_SEGMENT}'. Got: {key!r}"
     return None

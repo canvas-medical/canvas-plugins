@@ -13,7 +13,8 @@ from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
 class VisualExamFindingCommand(BaseCommand):
     """Manage a Visual Exam Finding command (image + title + narrative)
-    within a specific note."""
+    within a specific note.
+    """
 
     class Meta:
         key = "visual_exam_finding"
