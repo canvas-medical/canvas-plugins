@@ -43,7 +43,4 @@ def test_delete_commit_enter_in_error_emit_right_effects() -> None:
     command = VisualExamFindingCommand(command_uuid="cmd-9")
     assert command.delete().type == EffectType.DELETE_VISUAL_EXAM_FINDING_COMMAND
     assert command.commit().type == EffectType.COMMIT_VISUAL_EXAM_FINDING_COMMAND
-    assert (
-        command.enter_in_error().type
-        == EffectType.ENTER_IN_ERROR_VISUAL_EXAM_FINDING_COMMAND
-    )
+    assert command.enter_in_error().type == EffectType.ENTER_IN_ERROR_VISUAL_EXAM_FINDING_COMMAND

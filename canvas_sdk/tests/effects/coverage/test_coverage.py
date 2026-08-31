@@ -94,8 +94,7 @@ def test_create_accepts_upload_key_with_customer_prefix(
     Coverage(
         **valid_create_kwargs,
         card_image_front_upload_key=(
-            "local/plugin-uploads/patient_coverage_companion/"
-            "20260520T013207Z-abc-front.png"
+            "local/plugin-uploads/patient_coverage_companion/20260520T013207Z-abc-front.png"
         ),
     ).create()  # should not raise
 
