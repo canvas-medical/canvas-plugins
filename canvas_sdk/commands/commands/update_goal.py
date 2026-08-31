@@ -1,12 +1,11 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any
-from uuid import UUID
 
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand, _OptionalId
 from canvas_sdk.v1.data import Goal
 
 
@@ -32,7 +31,7 @@ class UpdateGoalCommand(_BaseCommand):
         MEDIUM = "medium-priority"
         LOW = "low-priority"
 
-    goal_id: UUID | None = Field(
+    goal_id: _OptionalId = Field(
         default=None, json_schema_extra={"commands_api_name": "goal_statement"}
     )
     due_date: datetime | None = None

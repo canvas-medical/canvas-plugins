@@ -8,6 +8,12 @@ from django.core.exceptions import ImproperlyConfigured
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.commands import (
+    RemoveAllergyCommand,
+    ResolveConditionCommand,
+    StopMedicationCommand,
+    UpdateGoalCommand,
+)
 from canvas_sdk.commands.base import _BaseCommand, _OptionalId
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import Note, Patient
@@ -406,3 +412,25 @@ def test_an_optional_id_reads_a_blank_value_assigned_later_as_absent() -> None:
     command.record_id = ""  # type: ignore[assignment]
 
     assert command.record_id is None
+
+
+@pytest.mark.parametrize(
+    ("command_class", "field"),
+    [
+        (RemoveAllergyCommand, "allergy_id"),
+        (ResolveConditionCommand, "condition_id"),
+        (StopMedicationCommand, "medication_id"),
+        (UpdateGoalCommand, "goal_id"),
+    ],
+)
+def test_a_command_that_names_a_record_reads_a_blank_id_as_absent(
+    command_class: type[_BaseCommand], field: str
+) -> None:
+    """Every id field a caller may leave blank has to be `_OptionalId`, not a bare `UUID | None`.
+
+    The reading itself is asserted above; what this adds is that these four fields carry the
+    annotation. Under `UUID | None` a blank is a `uuid_parsing` error instead.
+    """
+    command = command_class.model_validate({field: ""})
+
+    assert getattr(command, field) is None
