@@ -17,10 +17,10 @@ from canvas_sdk.v1.data.prescription_change import (
 
 def test_response_type_and_status_choices() -> None:
     """The enums mirror the home-app approve/deny + status values."""
-    assert PrescriptionChangeResponseType.APPROVED == "A"
-    assert PrescriptionChangeResponseType.DENIED == "D"
-    assert PrescriptionChangeResponseStatus.ULTIMATELY_ACCEPTED == "ultimately-accepted"
-    assert PrescriptionChangeResponseStatus.ERROR == "error"
+    assert PrescriptionChangeResponseType.APPROVED.value == "A"
+    assert PrescriptionChangeResponseType.DENIED.value == "D"
+    assert PrescriptionChangeResponseStatus.ULTIMATELY_ACCEPTED.value == "ultimately-accepted"
+    assert PrescriptionChangeResponseStatus.ERROR.value == "error"
 
 
 def test_fields() -> None:
@@ -39,9 +39,9 @@ def test_change_request_fields() -> None:
 
 def test_change_request_type_choices() -> None:
     """PrescriptionChangeRequestType mirrors the home-app type codes and drives type_code choices."""
-    assert PrescriptionChangeRequestType.GENERIC == "G"
-    assert PrescriptionChangeRequestType.SUBSTITUTION == "S"
-    assert PrescriptionChangeRequestType.OUTOFSTOCK == "OS"
+    assert PrescriptionChangeRequestType.GENERIC.value == "G"
+    assert PrescriptionChangeRequestType.SUBSTITUTION.value == "S"
+    assert PrescriptionChangeRequestType.OUTOFSTOCK.value == "OS"
     assert PrescriptionChangeRequest._meta.get_field("type_code").choices
 
 
@@ -66,4 +66,7 @@ def test_committed_filters_and_links_to_patient() -> None:
     )
 
     assert set(PrescriptionChangeResponse.objects.committed()) == {committed}
-    assert list(committed.patient.prescription_change_responses.all()) == [committed]
+
+    patient = committed.patient
+    assert patient is not None
+    assert list(patient.prescription_change_responses.all()) == [committed]
