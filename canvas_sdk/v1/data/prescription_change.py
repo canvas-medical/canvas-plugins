@@ -27,10 +27,16 @@ class PrescriptionChangeResponseStatus(models.TextChoices):
     ERROR = "error", "Error"
 
 
-class PrescriptionChangeRequestSubType(models.TextChoices):
-    """Sub-type of a Surescripts prescription change request."""
+class PrescriptionChangeRequestType(models.TextChoices):
+    """Type of a Surescripts prescription change request."""
 
-    LICENSE = "A", "Confirm Presciber State License"
+    GENERIC = "G", "Generic Substitution"
+    PRIOR = "P", "Prior Authorization Required"
+    # home-app also maps "S" to "Script Clarification"; TextChoices requires unique values.
+    SUBSTITUTION = "S", "Therapeutic Interchange/Substitution"
+    DRUG = "D", "Drug Use Evaluation"
+    OUTOFSTOCK = "OS", "Pharmacy is out of stock"
+    AUTHORIZATION = "U", "Prescriber Authorization"
 
 
 class PrescriptionChangeRequest(TimestampedModel):
@@ -64,10 +70,10 @@ class PrescriptionChangeRequest(TimestampedModel):
         null=True,
     )
     message_id = models.CharField(max_length=35)
-    type_code = models.CharField(max_length=2, blank=True, default="")
-    sub_type_code = models.CharField(
-        choices=PrescriptionChangeRequestSubType.choices, max_length=1, blank=True, default=""
+    type_code = models.CharField(
+        choices=PrescriptionChangeRequestType.choices, max_length=2, blank=True, default=""
     )
+    sub_type_code = models.CharField(max_length=1, blank=True, default="")
     content = models.JSONField(default=dict)
 
 
@@ -122,7 +128,7 @@ class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
 
 __exports__ = (
     "PrescriptionChangeRequest",
-    "PrescriptionChangeRequestSubType",
+    "PrescriptionChangeRequestType",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType",

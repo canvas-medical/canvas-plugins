@@ -8,7 +8,7 @@ from canvas_sdk.test_utils.factories import (
 )
 from canvas_sdk.v1.data.prescription_change import (
     PrescriptionChangeRequest,
-    PrescriptionChangeRequestSubType,
+    PrescriptionChangeRequestType,
     PrescriptionChangeResponse,
     PrescriptionChangeResponseStatus,
     PrescriptionChangeResponseType,
@@ -37,11 +37,12 @@ def test_change_request_fields() -> None:
     assert isinstance(PrescriptionChangeRequest._meta.get_field("content"), models.JSONField)
 
 
-def test_change_request_sub_type_choices() -> None:
-    """sub_type_code mirrors the home-app license sub-type choice."""
-    assert PrescriptionChangeRequestSubType.LICENSE == "A"
-    field = PrescriptionChangeRequest._meta.get_field("sub_type_code")
-    assert field.choices == [("A", "Confirm Presciber State License")]
+def test_change_request_type_choices() -> None:
+    """PrescriptionChangeRequestType mirrors the home-app type codes and drives type_code choices."""
+    assert PrescriptionChangeRequestType.GENERIC == "G"
+    assert PrescriptionChangeRequestType.SUBSTITUTION == "S"
+    assert PrescriptionChangeRequestType.OUTOFSTOCK == "OS"
+    assert PrescriptionChangeRequest._meta.get_field("type_code").choices
 
 
 @pytest.mark.django_db
