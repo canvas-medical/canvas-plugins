@@ -9,7 +9,6 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
-from canvas_sdk.v1.data.coding import Coding
 
 
 class PrescriptionChangeResponseType(models.TextChoices):
@@ -26,6 +25,12 @@ class PrescriptionChangeResponseStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     ULTIMATELY_ACCEPTED = "ultimately-accepted", "Ultimately Accepted"
     ERROR = "error", "Error"
+
+
+class PrescriptionChangeRequestSubType(models.TextChoices):
+    """Sub-type of a Surescripts prescription change request."""
+
+    LICENSE = "A", "Confirm Presciber State License"
 
 
 class PrescriptionChangeRequest(TimestampedModel):
@@ -60,21 +65,10 @@ class PrescriptionChangeRequest(TimestampedModel):
     )
     message_id = models.CharField(max_length=35)
     type_code = models.CharField(max_length=2, blank=True, default="")
-    sub_type_code = models.CharField(max_length=1, blank=True, default="")
-    content = models.JSONField(default=dict)
-
-
-class PrescriptionChangeRequestCoding(Coding):
-    """A medical coding (e.g. FDB, RxNorm) recorded against a PrescriptionChangeRequest."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_prescriptionchangerequestcoding_001"
-
-    change_request = models.ForeignKey(
-        PrescriptionChangeRequest,
-        on_delete=models.DO_NOTHING,
-        related_name="codings",
+    sub_type_code = models.CharField(
+        choices=PrescriptionChangeRequestSubType.choices, max_length=1, blank=True, default=""
     )
+    content = models.JSONField(default=dict)
 
 
 class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
@@ -128,7 +122,7 @@ class PrescriptionChangeResponse(AuditedModel, IdentifiableModel):
 
 __exports__ = (
     "PrescriptionChangeRequest",
-    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType",

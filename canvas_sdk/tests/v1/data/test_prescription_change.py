@@ -3,13 +3,12 @@ from django.db import models
 
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
-    PrescriptionChangeRequestCodingFactory,
     PrescriptionChangeRequestFactory,
     PrescriptionChangeResponseFactory,
 )
 from canvas_sdk.v1.data.prescription_change import (
     PrescriptionChangeRequest,
-    PrescriptionChangeRequestCoding,
+    PrescriptionChangeRequestSubType,
     PrescriptionChangeResponse,
     PrescriptionChangeResponseStatus,
     PrescriptionChangeResponseType,
@@ -38,6 +37,13 @@ def test_change_request_fields() -> None:
     assert isinstance(PrescriptionChangeRequest._meta.get_field("content"), models.JSONField)
 
 
+def test_change_request_sub_type_choices() -> None:
+    """sub_type_code mirrors the home-app license sub-type choice."""
+    assert PrescriptionChangeRequestSubType.LICENSE == "A"
+    field = PrescriptionChangeRequest._meta.get_field("sub_type_code")
+    assert field.choices == [("A", "Confirm Presciber State License")]
+
+
 @pytest.mark.django_db
 def test_response_links_to_change_request() -> None:
     """A response resolves its originating change request via the request FK."""
@@ -46,22 +52,6 @@ def test_response_links_to_change_request() -> None:
 
     assert response.request == request
     assert list(request.response.all()) == [response]
-
-
-@pytest.mark.django_db
-def test_coding_links_to_change_request() -> None:
-    """A coding resolves its change request via the FK and is reachable via request.codings."""
-    request = PrescriptionChangeRequestFactory.create(message_id="RX-1")
-    coding = PrescriptionChangeRequestCodingFactory.create(change_request=request)
-
-    assert coding.change_request == request
-    assert list(request.codings.all()) == [coding]
-
-
-def test_coding_inherits_coding_fields() -> None:
-    """PrescriptionChangeRequestCoding exposes the inherited code/display/system fields."""
-    for field in ("code", "display", "system"):
-        assert isinstance(PrescriptionChangeRequestCoding._meta.get_field(field), models.CharField)
 
 
 @pytest.mark.django_db
