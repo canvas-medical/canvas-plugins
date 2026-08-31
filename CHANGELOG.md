@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.213.1 (2026-08-31)
+
+### Bug Fixes
+
+- **data**: Resolve find() FieldError on singular coding accessor
+  ([#1854](https://github.com/canvas-medical/canvas-plugins/pull/1854),
+  [`e2e637e`](https://github.com/canvas-medical/canvas-plugins/commit/e2e637e98c8ed8d655f3bfee1c1571792b43a129))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.213.0 (2026-08-31)
 
 ### Features
