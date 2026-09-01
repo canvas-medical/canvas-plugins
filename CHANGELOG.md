@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v0.216.0 (2026-09-01)
+
+### Features
+
+- **data**: Add prescription change response to the data module
+  ([#1860](https://github.com/canvas-medical/canvas-plugins/pull/1860),
+  [`dcd7605`](https://github.com/canvas-medical/canvas-plugins/commit/dcd76052789600aa28b2cdff8d64f6fc09f43218))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.215.0 (2026-09-01)
 
 ### Features
