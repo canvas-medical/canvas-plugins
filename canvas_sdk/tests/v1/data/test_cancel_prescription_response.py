@@ -18,5 +18,7 @@ def test_links_to_patient_and_request() -> None:
     """A response is reachable via patient.cancel_prescription_responses and request.response."""
     response = CancelPrescriptionResponseFactory.create(response="approved", reason_code="AA")
 
+    assert response.patient is not None
+    assert response.request is not None
     assert list(response.patient.cancel_prescription_responses.all()) == [response]
     assert response.request.response == response
