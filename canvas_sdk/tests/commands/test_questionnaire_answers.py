@@ -18,6 +18,7 @@ from canvas_sdk.commands.commands.questionnaire import (
 )
 from canvas_sdk.commands.commands.questionnaire.question import (
     CheckboxQuestion,
+    DateQuestion,
     IntegerQuestion,
     RadioQuestion,
     ResponseOption,
@@ -55,6 +56,7 @@ def questions() -> list[object]:
             id="12", name="question-12", label="Days", coding={}, options=list(COUNT_OPTIONS)
         ),
         IntegerQuestion(id="13", name="question-13", label="Packs", coding={}, options=[]),
+        DateQuestion(id="14", name="question-14", label="Quit date", coding={}, options=[]),
     ]
 
 
@@ -245,3 +247,40 @@ def test_the_effect_does_not_carry_the_answers_field(command: QuestionnaireComma
 def test_a_command_with_no_answers_is_unchanged(command: QuestionnaireCommand) -> None:
     """A command with no answers carries no questions."""
     assert command.values["questions"] == {}
+
+
+# --- date questions ---
+
+
+def test_an_answer_sets_a_date(command: QuestionnaireCommand) -> None:
+    """An ISO 8601 string answers a date question."""
+    command.answers = [Answer(question_id=14, response="2026-08-27")]
+
+    assert command.values["questions"]["question-14"] == "2026-08-27"
+
+
+def test_a_date_answer_rejects_a_value_that_is_not_a_date(
+    command: QuestionnaireCommand,
+) -> None:
+    """A date question refuses a string that is not a calendar date.
+
+    The date arm must reach DateQuestion.add_response, which is what validates.
+    Before the arm existed, a date question fell through to the checkbox arm and
+    failed with "is answered with a list of selections" instead.
+    """
+    command.answers = [Answer(question_id=14, response="2026-02-30")]
+
+    with pytest.raises(ValueError, match="valid ISO 8601 date"):
+        _ = command.values
+
+
+def test_a_date_answer_does_not_report_a_checkbox_error(
+    command: QuestionnaireCommand,
+) -> None:
+    """A date question never asks for a list of selections."""
+    command.answers = [Answer(question_id=14, response="not-a-date")]
+
+    with pytest.raises(ValueError) as error:
+        _ = command.values
+
+    assert "list of selections" not in str(error.value)

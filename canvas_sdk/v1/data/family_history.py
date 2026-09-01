@@ -1,3 +1,4 @@
+from collections.abc import Container
 from typing import cast
 
 from django.db import models
@@ -20,7 +21,10 @@ class FamilyHistoryQuerySet(
 ):
     """FamilyHistoryQuerySet."""
 
-    pass
+    @staticmethod
+    def q_object(system: str, codes: Container[str]) -> models.Q:
+        """FamilyHistoryCoding uses the singular ``coding`` reverse accessor (mirrors home-app)."""
+        return models.Q(coding__system=system, coding__code__in=codes)
 
 
 FamilyHistoryManager = BaseModelManager.from_queryset(FamilyHistoryQuerySet)

@@ -5,9 +5,16 @@ from enum import Enum
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
+from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands import (
+    RemoveAllergyCommand,
+    ResolveConditionCommand,
+    StopMedicationCommand,
+    UpdateGoalCommand,
+)
+from canvas_sdk.commands.base import _BaseCommand, _OptionalId
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import Note, Patient
 
@@ -17,6 +24,15 @@ class DummyEnum(Enum):
 
     LOW = "low"
     HIGH = "high"
+
+
+class OptionalIdCommand(_BaseCommand):
+    """A command with an optional-id field, for exercising how those fields read a value."""
+
+    class Meta:
+        key = "plan"
+
+    record_id: _OptionalId = None
 
 
 class DummyCommand(_BaseCommand):
@@ -349,3 +365,72 @@ def test_is_target_patient_true_when_the_anchor_cannot_be_resolved() -> None:
     passing is the evidence that none happens.
     """
     assert DummyCommand()._is_target_patient("any-patient-id") is True
+
+
+# --- _OptionalId: how a command reads an id that may be absent -------------
+# Commands that name one of a patient's records share this field type, so it is exercised once here
+# rather than in each of them.
+
+
+def test_an_optional_id_accepts_a_uuid() -> None:
+    """The ordinary case."""
+    given = uuid.UUID("1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed")
+
+    assert OptionalIdCommand(record_id=given).record_id == given
+
+
+def test_an_optional_id_accepts_a_uuid_given_as_a_string() -> None:
+    """Callers pass ids as strings, and lenient parsing is what keeps that working."""
+    command = OptionalIdCommand(record_id="1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed")  # type: ignore[arg-type]
+
+    assert command.record_id == uuid.UUID("1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed")
+
+
+def test_an_optional_id_refuses_a_value_that_cannot_be_an_id() -> None:
+    """The field refuses it, so it never reaches a lookup on an id column.
+
+    Filtering an id column with an unparseable value raises an error the plugin cannot catch, so a
+    caller would see a server error instead of a refusal.
+    """
+    with pytest.raises(ValidationError):
+        OptionalIdCommand(record_id="99999")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("given", ["", "   "])
+def test_an_optional_id_reads_a_blank_value_as_absent(given: str) -> None:
+    """These fields took a string before they took a UUID, so a caller may send "" for "nothing".
+
+    That has to keep meaning absent rather than becoming a validation error.
+    """
+    assert OptionalIdCommand(record_id=given).record_id is None  # type: ignore[arg-type]
+
+
+def test_an_optional_id_reads_a_blank_value_assigned_later_as_absent() -> None:
+    """`validate_assignment` is on, so the same reading holds when the field is set."""
+    command = OptionalIdCommand()
+
+    command.record_id = ""  # type: ignore[assignment]
+
+    assert command.record_id is None
+
+
+@pytest.mark.parametrize(
+    ("command_class", "field"),
+    [
+        (RemoveAllergyCommand, "allergy_id"),
+        (ResolveConditionCommand, "condition_id"),
+        (StopMedicationCommand, "medication_id"),
+        (UpdateGoalCommand, "goal_id"),
+    ],
+)
+def test_a_command_that_names_a_record_reads_a_blank_id_as_absent(
+    command_class: type[_BaseCommand], field: str
+) -> None:
+    """Every id field a caller may leave blank has to be `_OptionalId`, not a bare `UUID | None`.
+
+    The reading itself is asserted above; what this adds is that these four fields carry the
+    annotation. Under `UUID | None` a blank is a `uuid_parsing` error instead.
+    """
+    command = command_class.model_validate({field: ""})
+
+    assert getattr(command, field) is None

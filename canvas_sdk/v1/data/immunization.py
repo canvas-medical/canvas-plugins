@@ -1,3 +1,4 @@
+from collections.abc import Container
 from typing import Self, cast
 
 from django.db import models
@@ -99,6 +100,11 @@ class ImmunizationStatementQuerySet(
     def active(self) -> Self:
         """Filter immunizations statements."""
         return self.committed()
+
+    @staticmethod
+    def q_object(system: str, codes: Container[str]) -> models.Q:
+        """ImmunizationStatementCoding uses the singular ``coding`` reverse accessor."""
+        return models.Q(coding__system=system, coding__code__in=codes)
 
 
 ImmunizationStatementManager = BaseModelManager.from_queryset(ImmunizationStatementQuerySet)

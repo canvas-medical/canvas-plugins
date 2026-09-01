@@ -244,6 +244,9 @@
     "UpdateGoalCommand",
     "VitalsCommand"
   ],
+  "canvas_sdk.commands.api": [
+    "CommandAPI"
+  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
@@ -339,6 +342,7 @@
   "canvas_sdk.commands.commands.questionnaire.question": [
     "BaseQuestion",
     "CheckboxQuestion",
+    "DateQuestion",
     "IntegerQuestion",
     "RadioQuestion",
     "ResponseOption",
@@ -949,6 +953,8 @@
   "canvas_sdk.handlers.application": [
     "Application",
     "ApplicationScope",
+    "DockEdge",
+    "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",
     "SchedulingApplication"
@@ -1115,6 +1121,9 @@
     "BulkPatientPosting",
     "BusinessLine",
     "Calendar",
+    "CancelPrescription",
+    "CancelPrescriptionResponse",
+    "CancelPrescriptionStatus",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -1177,6 +1186,7 @@
     "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
+    "FollowUp",
     "Goal",
     "HistoryOfPresentIllness",
     "ImagingOrder",
@@ -1273,12 +1283,20 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "Prescription",
+    "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
+    "PrescriptionChangeRequestType",
+    "PrescriptionChangeResponse",
+    "PrescriptionChangeResponseStatus",
+    "PrescriptionChangeResponseType",
     "PrescriptionResponse",
     "PrescriptionStatus",
     "Procedure",
@@ -1289,6 +1307,8 @@
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -1296,6 +1316,8 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemoveAllergyEvent",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1377,6 +1399,13 @@
   "canvas_sdk.v1.data.calendar": [
     "Calendar",
     "Event"
+  ],
+  "canvas_sdk.v1.data.cancel_prescription": [
+    "CancelPrescription",
+    "CancelPrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.cancel_prescription_response": [
+    "CancelPrescriptionResponse"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
@@ -1529,6 +1558,9 @@
   "canvas_sdk.v1.data.family_history": [
     "FamilyHistory",
     "FamilyHistoryCoding"
+  ],
+  "canvas_sdk.v1.data.follow_up": [
+    "FollowUp"
   ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
@@ -1694,6 +1726,9 @@
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
   ],
+  "canvas_sdk.v1.data.plan": [
+    "Plan"
+  ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
   ],
@@ -1715,6 +1750,15 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.prescription_change": [
+    "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
+    "PrescriptionChangeRequestType",
+    "PrescriptionChangeResponse",
+    "PrescriptionChangeResponseStatus",
+    "PrescriptionChangeResponseType"
   ],
   "canvas_sdk.v1.data.procedure": [
     "Procedure",
@@ -1746,6 +1790,8 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
@@ -1758,11 +1804,17 @@
     "RefillRequest",
     "RefillRequestCoding"
   ],
+  "canvas_sdk.v1.data.remove_allergy_event": [
+    "RemoveAllergyEvent"
+  ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.resolve_condition_event": [
+    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"

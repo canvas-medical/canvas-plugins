@@ -1,4 +1,6 @@
 from .calendar import CalendarFactory, EventFactory
+from .cancel_prescription import CancelPrescriptionFactory
+from .cancel_prescription_response import CancelPrescriptionResponseFactory
 from .change_medication import ChangeMedicationFactory
 from .chart_section_review import ChartSectionReviewFactory
 from .claim import (
@@ -28,6 +30,7 @@ from .eligibility_response import EligibilityRequestFactory, EligibilityResponse
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
+from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
@@ -86,6 +89,7 @@ from .patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -94,15 +98,23 @@ from .practicelocation import (
     PracticeLocationSettingFactory,
 )
 from .prescription import PrescriptionFactory
+from .prescription_change import (
+    PrescriptionChangeRequestCodingFactory,
+    PrescriptionChangeRequestFactory,
+    PrescriptionChangeResponseFactory,
+)
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
+from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
     ReferralReportFactory,
     ReferralReviewFactory,
 )
+from .remove_allergy_event import RemoveAllergyEventFactory
+from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
@@ -132,6 +144,8 @@ from .vitals import VitalSignFactory, VitalSignReadingFactory
 
 __all__ = (
     "CalendarFactory",
+    "CancelPrescriptionFactory",
+    "CancelPrescriptionResponseFactory",
     "CanvasUserFactory",
     "ChangeMedicationFactory",
     "ChartSectionReviewFactory",
@@ -164,6 +178,7 @@ __all__ = (
     "HistoryOfPresentIllnessFactory",
     "FamilyHistoryFactory",
     "FamilyHistoryCodingFactory",
+    "FollowUpFactory",
     "GoalFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
@@ -213,20 +228,28 @@ __all__ = (
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
     "PatientPhotoFactory",
+    "PlanFactory",
     "PluginCommandFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
+    "PrescriptionChangeRequestFactory",
+    "PrescriptionChangeRequestCodingFactory",
+    "PrescriptionChangeResponseFactory",
     "PrescriptionFactory",
     "ProcedureFactory",
     "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
+    "ReasonForVisitCodingFactory",
+    "ReasonForVisitFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "RemoveAllergyEventFactory",
+    "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",
