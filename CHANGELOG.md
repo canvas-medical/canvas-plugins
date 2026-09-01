@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v0.216.1 (2026-09-01)
+
+### Bug Fixes
+
+- **data**: Make prescription change request identifiable
+  ([#1863](https://github.com/canvas-medical/canvas-plugins/pull/1863),
+  [`a702719`](https://github.com/canvas-medical/canvas-plugins/commit/a7027197ac564b0084fdaea217c85f8c0f387391))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
 ## v0.216.0 (2026-09-01)
 
 ### Features
