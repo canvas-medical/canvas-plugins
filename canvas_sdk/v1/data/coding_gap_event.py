@@ -22,7 +22,7 @@ class CreateCodingGapEvent(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="created_detected_issues"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="created_coding_gaps"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="created_detected_issues"
     )
     detected_issue = models.ForeignKey(
         "v1.DetectedIssue",
