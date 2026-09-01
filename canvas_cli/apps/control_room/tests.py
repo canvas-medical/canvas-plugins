@@ -27,6 +27,7 @@ def _app() -> typer.Typer:
     app.command(name="cr-init")(commands.cr_init)
     app.command()(commands.deploy)
     app.command(name="set-variables")(commands.set_variables)
+    app.command(name="unset-variables")(commands.unset_variables)
     app.command(name="uninstall")(commands.uninstall)
     return app
 
@@ -479,6 +480,63 @@ def test_set_variables_warns_when_plugin_not_installed(
 
     assert result.exit_code == 0, result.output
     assert "not installed" in result.output.lower()
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_unset_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
+    """`config unset` discovers the org and POSTs the keys to clear-variables, then
+    polls the CONFIGURE matrix to a terminal verdict.
+    """
+    mock_get.side_effect = _get_router()  # /info/ + /deploy-status/ → succeeded
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(
+        _app(), ["unset-variables", "my_plugin", "--host", HOST, "API_KEY", "URL"]
+    )
+
+    assert result.exit_code == 0, result.output
+    call = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/clear-variables/")
+    )
+    assert call.kwargs["json"] == {
+        "plugins": [{"orgSlug": "acme", "name": "my_plugin", "keys": ["API_KEY", "URL"]}]
+    }
+    assert any("/deploy-status/m1/" in c.args[0] for c in mock_get.call_args_list)
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_unset_variables_not_installed_is_ok(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
+    """An all-SKIPPED CONFIGURE (plugin not installed) has nothing to unset on the
+    instance — no failed records, so the unset still exits 0.
+    """
+    mock_get.side_effect = _get_router(
+        matrix={"id": "m1", "status": "succeeded", "rollupCounts": {"skipped": 1}}
+    )
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(_app(), ["unset-variables", "my_plugin", "--host", HOST, "API_KEY"])
+
+    assert result.exit_code == 0, result.output
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_unset_variables_reports_failure(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
+    """A CONFIGURE that settles FAILED exits nonzero."""
+    mock_get.side_effect = _get_router(
+        matrix={"id": "m1", "status": "failed", "rollupCounts": {"failed": 1}}
+    )
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(_app(), ["unset-variables", "my_plugin", "--host", HOST, "API_KEY"])
+
+    assert result.exit_code != 0
+    assert "failed" in result.output.lower()
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")

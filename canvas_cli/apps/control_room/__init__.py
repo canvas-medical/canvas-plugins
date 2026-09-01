@@ -4,6 +4,7 @@ from canvas_cli.apps.control_room.commands import (
     git_credential,
     set_variables,
     uninstall,
+    unset_variables,
 )
 
 __all__ = (
@@ -12,4 +13,5 @@ __all__ = (
     "git_credential",
     "set_variables",
     "uninstall",
+    "unset_variables",
 )

@@ -573,6 +573,59 @@ def set_variables(
     print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name}.")
 
 
+def unset_variables(
+    plugin_name: str = typer.Argument(..., help="Plugin name to configure"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    keys: list[str] = typer.Argument(..., help="Variable key names to unset, e.g. API_KEY"),
+) -> None:
+    """Unset a plugin's variables through Control Room.
+
+    The UNSET counterpart of ``config set``: Control Room clears each key's value
+    on this instance and pushes a CONFIGURE so the instance drops them (omission =
+    deletion). Immediate — no redeploy needed. Clearing a key that was never set is
+    a no-op.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    token = get_or_request_api_token(host)
+    _, org_slug, _ = _control_room_info(host, token)
+
+    print(f"Unsetting {len(keys)} variable(s) on {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "clear-variables"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name, "keys": list(keys)}]},
+    )
+    if not result.get("ok"):
+        print(f"Failed to unset variables: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Unset {len(keys)} variable(s) on {org_slug}/{plugin_name} (dispatched).")
+        return
+    matrix = _poll_matrix(host, token, matrix_id, label="unset")
+    if matrix is None:
+        print(
+            f"Unset was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    rollup = matrix.get("rollupCounts") or {}
+    # A CONFIGURE that cleared keys succeeds if nothing FAILED; an all-SKIPPED
+    # settle (plugin not installed) is fine — there was nothing to unset there.
+    if int(rollup.get("failed", 0) or 0) or status in {"failed", "cancelled"}:
+        print(f"Failed to unset variables (status={status}, {rollup}).")
+        raise typer.Exit(1)
+
+    print(f"Unset {len(keys)} variable(s) on {org_slug}/{plugin_name}.")
+
+
 def uninstall(
     plugin_name: str = typer.Argument(..., help="Plugin name to uninstall"),
     host: str | None = typer.Option(

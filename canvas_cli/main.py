@@ -13,6 +13,7 @@ from canvas_cli.apps.control_room import (
     git_credential,
     set_variables,
     uninstall,
+    unset_variables,
 )
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
@@ -83,6 +84,11 @@ config_app.command(name="list", short_help="List plugin variables on a Canvas in
 if _CONTROL_ROOM_BETA:
     config_app.command(name="set", short_help="Set plugin variables via Control Room.")(
         set_variables
+    )
+    # Unset is CR-only — the headless clear + reconcile path (KOALA-5923). There's
+    # no direct-instance equivalent, so it's registered only in the beta.
+    config_app.command(name="unset", short_help="Unset plugin variables via Control Room.")(
+        unset_variables
     )
 else:
     config_app.command(name="set", short_help="Set plugin variables on a Canvas instance.")(
