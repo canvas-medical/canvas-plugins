@@ -21,6 +21,7 @@ from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
 from .cancel_prescription import CancelPrescription, CancelPrescriptionStatus
+from .cancel_prescription_response import CancelPrescriptionResponse
 from .care_team import CareTeamMembership, CareTeamRole
 from .change_medication import ChangeMedication
 from .charge_description_master import ChargeDescriptionMaster
@@ -250,6 +251,7 @@ __all__ = __exports__ = (
     "BulkPatientPosting",
     "Calendar",
     "CancelPrescription",
+    "CancelPrescriptionResponse",
     "CancelPrescriptionStatus",
     "CanvasUser",
     "CareTeamMembership",
