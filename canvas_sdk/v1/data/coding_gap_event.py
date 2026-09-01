@@ -90,7 +90,7 @@ class DeferCodingGapEvent(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="deferred_coding_gaps"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="deferred_detected_issues"
     )
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="deferred_coding_gaps"
