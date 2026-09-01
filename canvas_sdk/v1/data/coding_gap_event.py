@@ -77,7 +77,6 @@ class AssessCodingGapEvent(AuditedModel, IdentifiableModel):
     conditions = models.ManyToManyField(
         "v1.Condition",
         related_name="assessed_coding_gaps",
-        blank=True,
         db_table="canvas_sdk_data_api_assesscodinggapevent_conditions_001",
     )
 
