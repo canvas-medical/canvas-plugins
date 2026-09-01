@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.217.0 (2026-09-01)
+
+### Features
+
+- Add docked panes ([#1814](https://github.com/canvas-medical/canvas-plugins/pull/1814),
+  [`69c4ec4`](https://github.com/canvas-medical/canvas-plugins/commit/69c4ec44a9e000db6fd792b9194228d2e5a55894))
+
+
 ## v0.216.1 (2026-09-01)
 
 ### Bug Fixes
