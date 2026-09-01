@@ -40,6 +40,11 @@ def test_change_request_fields() -> None:
     assert isinstance(PrescriptionChangeRequest._meta.get_field("content"), models.JSONField)
 
 
+def test_change_request_is_identifiable() -> None:
+    """PrescriptionChangeRequest carries a UUID id that maps to the view's externally_exposable_id."""
+    assert isinstance(PrescriptionChangeRequest._meta.get_field("id"), models.UUIDField)
+
+
 def test_change_request_type_choices() -> None:
     """PrescriptionChangeRequestType mirrors the home-app type codes and drives type_code choices."""
     assert PrescriptionChangeRequestType.GENERIC.value == "G"
