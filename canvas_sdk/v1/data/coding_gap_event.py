@@ -22,7 +22,7 @@ class CreateCodingGapEvent(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="created_detected_issues"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="created_detected_issues"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="created_coding_gaps"
     )
     detected_issue = models.ForeignKey(
         "v1.DetectedIssue",
@@ -41,10 +41,10 @@ class ValidateCodingGapEvent(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="validated_coding_gaps"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="assessed_detected_issues"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="assessed_detected_issues"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="validated_coding_gaps"
     )
     detected_issue = models.ForeignKey(
         "v1.DetectedIssue",
@@ -77,6 +77,7 @@ class AssessCodingGapEvent(AuditedModel, IdentifiableModel):
     conditions = models.ManyToManyField(
         "v1.Condition",
         related_name="assessed_coding_gaps",
+        blank=True,
         db_table="canvas_sdk_data_api_assesscodinggapevent_conditions_001",
     )
 
@@ -90,10 +91,10 @@ class DeferCodingGapEvent(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="deferred_detected_issues"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="deferred_coding_gaps"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="deferred_detected_issues"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="deferred_coding_gaps"
     )
     detected_issue = models.ForeignKey(
         "v1.DetectedIssue",
