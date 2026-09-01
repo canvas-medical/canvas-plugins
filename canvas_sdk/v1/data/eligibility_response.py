@@ -16,6 +16,7 @@ class EligibilityResponseStatus(models.TextChoices):
     INACTIVE = "Inactive", "Inactive"
     FAILED = "Failed", "Failed"
     UNKNOWN = "Unknown", "Unknown"
+    NOT_APPLICABLE = "NotApplicable", "Not Applicable"
 
 
 class _NoMatchedPersonError(Exception):
