@@ -1,4 +1,6 @@
 from .calendar import CalendarFactory, EventFactory
+from .cancel_prescription import CancelPrescriptionFactory
+from .cancel_prescription_response import CancelPrescriptionResponseFactory
 from .change_medication import ChangeMedicationFactory
 from .chart_section_review import ChartSectionReviewFactory
 from .claim import (
@@ -142,6 +144,8 @@ from .vitals import VitalSignFactory, VitalSignReadingFactory
 
 __all__ = (
     "CalendarFactory",
+    "CancelPrescriptionFactory",
+    "CancelPrescriptionResponseFactory",
     "CanvasUserFactory",
     "ChangeMedicationFactory",
     "ChartSectionReviewFactory",
