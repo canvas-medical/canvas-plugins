@@ -44,7 +44,7 @@ class ValidateCodingGapEvent(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="validated_coding_gaps"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="validated_coding_gaps"
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="assessed_detected_issues"
     )
     detected_issue = models.ForeignKey(
         "v1.DetectedIssue",
