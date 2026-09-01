@@ -20,6 +20,12 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .coding_gap_event import (
+    AssessCodingGapEventFactory,
+    CreateCodingGapEventFactory,
+    DeferCodingGapEventFactory,
+    ValidateCodingGapEventFactory,
+)
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
@@ -156,6 +162,10 @@ __all__ = (
     "ClaimSupervisingProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "AssessCodingGapEventFactory",
+    "CreateCodingGapEventFactory",
+    "DeferCodingGapEventFactory",
+    "ValidateCodingGapEventFactory",
     "CoverageFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",

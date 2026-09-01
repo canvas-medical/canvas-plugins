@@ -1107,6 +1107,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
     "BannerAlert",
@@ -1152,10 +1153,12 @@
     "ContentType",
     "Coverage",
     "CoveragePosting",
+    "CreateCodingGapEvent",
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
     "CustomModel",
+    "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -1341,6 +1344,7 @@
     "Vaccine",
     "VaccineLot",
     "VaccineManufacturer",
+    "ValidateCodingGapEvent",
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
@@ -1442,6 +1446,12 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.coding_gap_event": [
+    "AssessCodingGapEvent",
+    "CreateCodingGapEvent",
+    "DeferCodingGapEvent",
+    "ValidateCodingGapEvent"
   ],
   "canvas_sdk.v1.data.command": [
     "Command",
