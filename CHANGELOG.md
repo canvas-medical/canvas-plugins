@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.217.1 (2026-09-01)
+
+### Bug Fixes
+
+- **data**: Report NOT_APPLICABLE eligibility status for self-pay coverages
+  ([#1855](https://github.com/canvas-medical/canvas-plugins/pull/1855),
+  [`d7908f9`](https://github.com/canvas-medical/canvas-plugins/commit/d7908f9632d718beaf75d57fc47ff01ab9547036))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.217.0 (2026-09-01)
 
 ### Features
