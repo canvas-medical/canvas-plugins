@@ -46,7 +46,7 @@ class PrescriptionChangeRequestType(models.TextChoices):
     AUTHORIZATION = "U", "Prescriber Authorization"
 
 
-class PrescriptionChangeRequest(TimestampedModel):
+class PrescriptionChangeRequest(TimestampedModel, IdentifiableModel):
     """A Surescripts prescription change request received from a pharmacy."""
 
     class Meta:
