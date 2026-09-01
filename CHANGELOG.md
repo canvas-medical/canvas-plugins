@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v0.215.0 (2026-09-01)
+
+### Features
+
+- **data**: Add cancel prescription response to the data module
+  ([#1862](https://github.com/canvas-medical/canvas-plugins/pull/1862),
+  [`8a61e36`](https://github.com/canvas-medical/canvas-plugins/commit/8a61e36a21a4543358d3f473279690f242029ede))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.214.0 (2026-09-01)
+
+### Features
+
+- **data**: Add cancel prescription to the data module
+  ([#1859](https://github.com/canvas-medical/canvas-plugins/pull/1859),
+  [`6d75bbb`](https://github.com/canvas-medical/canvas-plugins/commit/6d75bbbf3b84e645a41072fb218f06723dce8f3f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.213.1 (2026-08-31)
 
 ### Bug Fixes
