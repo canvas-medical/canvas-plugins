@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.219.0 (2026-09-02)
+
+### Features
+
+- Add support for note v2 ([#1865](https://github.com/canvas-medical/canvas-plugins/pull/1865),
+  [`1723ae2`](https://github.com/canvas-medical/canvas-plugins/commit/1723ae227a88741bc80ab1b5f914b30d20af140c))
+
+
 ## v0.218.0 (2026-09-02)
 
 ### Features
