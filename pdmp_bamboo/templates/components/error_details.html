@@ -1,0 +1,35 @@
+<!-- Error Details Section -->
+<section class="section alerts pdmp-section"
+         data-component="error-details-section">
+  <div class="alert-group pdmp-alert-group"
+       data-component="error-details-group"
+       role="group"
+       aria-label="Error details">
+    <div class="alert-title pdmp-title pdmp-title-flex"
+         data-component="error-details-title">
+      <span class="pdmp-icon-sm">X</span> {{ error_title }}
+    </div>
+    <div class="alert pdmp-alert pdmp-alert-red"
+         data-component="error-details-alert"
+         data-variant="red">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
+        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <ul data-component="error-details-list" class="pdmp-list-reset pdmp-text-small">
+          {% for error in errors %}
+            {% if 'Gateway' in error or 'PMP' in error or 'PDMP' in error %}
+              <li class="pdmp-list-spaced-lg" style='padding: 8px; background: rgba(255, 255, 255, 0.5); border-radius: 6px;'>
+                <strong class="pdmp-color-danger">PDMP Gateway Message:</strong><br>
+                <span class="pdmp-color-text">{{ error }}</span>
+              </li>
+            {% else %}
+              <li class="pdmp-list-spaced">{{ error }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

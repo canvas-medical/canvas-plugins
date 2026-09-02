@@ -1,0 +1,13 @@
+<!-- Error Box -->
+<div data-component="modal-error-box"
+     data-box-type="error"
+     class="card pdmp-card pdmp-alert-red pdmp-card-padded">
+  <h4 data-component="error-box-title" class="pdmp-title-no-margin pdmp-color-danger pdmp-title-lg pdmp-title-flex">
+    <span class="pdmp-icon-sm">{{ icon }}</span> {{ title }}
+  </h4>
+  <ul data-component="error-box-list" class="pdmp-color-danger pdmp-list-padded pdmp-text-small">
+    {% for err in errors %}
+      <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+</div>
