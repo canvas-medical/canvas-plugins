@@ -22,6 +22,3 @@ profile-imports-*.txt
 # mypy cache
 .mypy_cache
 .claude/settings.local.json
-
-# coverage
-.coverage
