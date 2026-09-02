@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.218.0 (2026-09-02)
+
+### Features
+
+- Add plugin automations ([#1845](https://github.com/canvas-medical/canvas-plugins/pull/1845),
+  [`2b293df`](https://github.com/canvas-medical/canvas-plugins/commit/2b293dfa92094fb7f9438c5ccfdea04686d7bb3b))
+
+
 ## v0.217.1 (2026-09-01)
 
 ### Bug Fixes
