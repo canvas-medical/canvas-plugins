@@ -191,6 +191,7 @@ class InterviewQuestionResponse(TimestampedModel):
         ResponseOption, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True
     )
     response_option_value = models.TextField()
+    response_option_date = models.DateField(null=True, blank=True)
     questionnaire_state = models.TextField()
     interview_state = models.TextField()
     comment = models.CharField(max_length=1024)
