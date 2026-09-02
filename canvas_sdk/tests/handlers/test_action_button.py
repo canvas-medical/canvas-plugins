@@ -86,6 +86,7 @@ def test_show_button_regex_extracts_location() -> None:
     cases = {
         "SHOW_NOTE_FOOTER_BUTTON": "NOTE_FOOTER",
         "SHOW_NOTE_BODY_BUTTON": "NOTE_BODY",
+        "SHOW_NOTE_BODY_AUTOMATION_BUTTON": "NOTE_BODY_AUTOMATION",
         "SHOW_CHART_PATIENT_HEADER_BUTTON": "CHART_PATIENT_HEADER",
         "SHOW_CHART_SUMMARY_GOALS_SECTION_BUTTON": "CHART_SUMMARY_GOALS_SECTION",
     }
@@ -111,6 +112,7 @@ def test_responds_to_contains_expected_event_types() -> None:
     assert "SHOW_NOTE_HEADER_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_NOTE_FOOTER_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_NOTE_BODY_BUTTON" in ActionButton.RESPONDS_TO
+    assert "SHOW_NOTE_BODY_AUTOMATION_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_CHART_PATIENT_HEADER_BUTTON" in ActionButton.RESPONDS_TO
 
 
@@ -122,6 +124,7 @@ def test_button_location_enum_values() -> None:
     assert ActionButton.ButtonLocation.NOTE_HEADER.value == "note_header"
     assert ActionButton.ButtonLocation.NOTE_FOOTER.value == "note_footer"
     assert ActionButton.ButtonLocation.NOTE_BODY.value == "note_body"
+    assert ActionButton.ButtonLocation.NOTE_BODY_AUTOMATION.value == "note_body_automation"
     assert ActionButton.ButtonLocation.CHART_PATIENT_HEADER.value == "chart_patient_header"
 
 
@@ -670,3 +673,47 @@ def test_note_state_button_base_class_is_inert(monkeypatch: MonkeyPatch) -> None
     assert handler.visible() is False
     with pytest.raises(ValueError):
         handler.transition("note-ext-id")
+
+
+# --- the note body command list is its own location ---
+
+
+class NoteBodyAutomationButton(ActionButton):
+    """An entry in the note body command list, which the user opens with "/"."""
+
+    BUTTON_TITLE = "Refill"
+    BUTTON_KEY = "refill"
+    BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_BODY_AUTOMATION
+    PRIORITY = 0
+
+    def handle(self) -> list[Effect]:
+        """Handle the selection."""
+        return []
+
+
+def test_an_automation_shows_in_the_command_list() -> None:
+    """The command list event puts a NOTE_BODY_AUTOMATION button in the list."""
+    event = Event(EventRequest(type=EventType.SHOW_NOTE_BODY_AUTOMATION_BUTTON))
+
+    effects = NoteBodyAutomationButton(event).compute()
+
+    assert len(effects) == 1
+    assert json.loads(effects[0].payload)["data"]["key"] == "refill"
+
+
+def test_an_automation_stays_out_of_the_note_body() -> None:
+    """A NOTE_BODY_AUTOMATION button never answers the plain note body event."""
+    event = Event(EventRequest(type=EventType.SHOW_NOTE_BODY_BUTTON))
+
+    assert NoteBodyAutomationButton(event).compute() == []
+
+
+def test_a_note_body_button_stays_out_of_the_command_list() -> None:
+    """A NOTE_BODY button never answers the command list event.
+
+    The two locations read alike. Sharing one would put every button already at
+    NOTE_BODY into the "/" list without the plugin author asking for it.
+    """
+    event = Event(EventRequest(type=EventType.SHOW_NOTE_BODY_AUTOMATION_BUTTON))
+
+    assert NoColorActionButton(event).compute() == []
