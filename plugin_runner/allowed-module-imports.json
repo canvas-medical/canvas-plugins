@@ -1285,6 +1285,7 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PluginData",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
