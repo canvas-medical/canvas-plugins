@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
@@ -56,8 +57,53 @@ class LetterActionEvent(TimestampedModel, IdentifiableModel):
     )
 
 
+class LetterTemplateType(models.TextChoices):
+    """The category a letter template belongs to."""
+
+    INTERVENTION = "intervention", "Intervention"
+    LETTER = "letter", "Letter"
+    MESSAGE = "message", "Message"
+
+
+class LetterTemplate(TimestampedModel):
+    """A reusable letter template, with its categories, locations, and per-language content."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_lettertemplate_001"
+
+    name = models.CharField(max_length=255)
+    active = models.BooleanField()
+    restrict_editing = models.BooleanField()
+    template_type = ArrayField(
+        base_field=models.CharField(max_length=64, choices=LetterTemplateType.choices),
+        default=list,
+        blank=True,
+    )
+    locations = ArrayField(base_field=models.CharField(max_length=10), default=list, blank=True)
+
+
+class LetterLanguageTemplate(TimestampedModel):
+    """The header, body, and footer of a letter template in a single language."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_letterlanguagetemplate_001"
+
+    template = models.ForeignKey(
+        "v1.LetterTemplate", on_delete=models.DO_NOTHING, related_name="template_languages"
+    )
+    header = models.TextField(blank=True, default="")
+    content = models.TextField()
+    footer = models.TextField(blank=True, default="")
+    language = models.ForeignKey(
+        "v1.Language", on_delete=models.DO_NOTHING, related_name="letter_language_templates"
+    )
+
+
 __exports__ = (
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
 )
