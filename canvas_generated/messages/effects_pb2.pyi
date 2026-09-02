@@ -128,6 +128,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENTER_IN_ERROR_REFILL_COMMAND: _ClassVar[EffectType]
     SEND_REFILL_COMMAND: _ClassVar[EffectType]
     REVIEW_REFILL_COMMAND: _ClassVar[EffectType]
+    UPDATE_REFILL_REQUEST: _ClassVar[EffectType]
     ORIGINATE_VITALS_COMMAND: _ClassVar[EffectType]
     EDIT_VITALS_COMMAND: _ClassVar[EffectType]
     DELETE_VITALS_COMMAND: _ClassVar[EffectType]
@@ -523,6 +524,7 @@ COMMIT_REFILL_COMMAND: EffectType
 ENTER_IN_ERROR_REFILL_COMMAND: EffectType
 SEND_REFILL_COMMAND: EffectType
 REVIEW_REFILL_COMMAND: EffectType
+UPDATE_REFILL_REQUEST: EffectType
 ORIGINATE_VITALS_COMMAND: EffectType
 EDIT_VITALS_COMMAND: EffectType
 DELETE_VITALS_COMMAND: EffectType
