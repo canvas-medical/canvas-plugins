@@ -828,6 +828,9 @@
   "canvas_sdk.effects.provider_menu_configuration": [
     "ProviderMenuConfiguration"
   ],
+  "canvas_sdk.effects.questionnaire": [
+    "CreateQuestionnaire"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
@@ -1059,13 +1062,19 @@
     "Timeframe"
   ],
   "canvas_sdk.questionnaires": [
-    "questionnaire_from_yaml"
+    "questionnaire_from_yaml",
+    "to_yaml"
   ],
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
+    "EnabledCondition",
     "ExtendedDraft7Validator",
+    "Question",
     "QuestionnaireConfig",
-    "from_yaml"
+    "Response",
+    "from_yaml",
+    "to_yaml",
+    "validate_yaml"
   ],
   "canvas_sdk.templates": [
     "render_to_string"
@@ -1305,6 +1314,7 @@
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisit",
@@ -1784,6 +1794,7 @@
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ResponseOption",

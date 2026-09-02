@@ -534,6 +534,12 @@ THIRD_PARTY_MODULES = {
         "SnowflakeConnection",
         "threadsafety",
     },
+    "yaml": {
+        "dump",
+        "load",
+        "safe_load",
+        "SafeLoader",
+    },
 }
 
 
