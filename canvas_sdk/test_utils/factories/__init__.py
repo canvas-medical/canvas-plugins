@@ -32,6 +32,7 @@ from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
+from .group import GroupFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
     ImagingOrderFactory,
@@ -180,6 +181,7 @@ __all__ = (
     "FamilyHistoryCodingFactory",
     "FollowUpFactory",
     "GoalFactory",
+    "GroupFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
     "ImagingReportFactory",
