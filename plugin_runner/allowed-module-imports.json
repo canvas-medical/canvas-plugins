@@ -1310,6 +1310,7 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
+    "Reference",
     "Referral",
     "ReferralReport",
     "ReferralReportCoding",
@@ -1793,6 +1794,9 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
+  ],
+  "canvas_sdk.v1.data.reference": [
+    "Reference"
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
