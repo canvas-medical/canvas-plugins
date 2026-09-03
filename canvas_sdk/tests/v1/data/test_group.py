@@ -1,7 +1,12 @@
 import pytest
 from django.db import models
 
-from canvas_sdk.test_utils.factories import ContentTypeFactory, GroupFactory, PatientGroupFactory
+from canvas_sdk.test_utils.factories import (
+    ContentTypeFactory,
+    GroupFactory,
+    PatientGroupFactory,
+    TeamFactory,
+)
 from canvas_sdk.v1.data.group import Group
 
 
@@ -22,3 +27,16 @@ def test_patient_group_accessor_resolves_content_object() -> None:
 
     assert group.patient_group == patient_group
     assert group.team is None
+
+
+@pytest.mark.django_db
+def test_team_accessor_resolves_content_object() -> None:
+    """group.team resolves the Team content object; patient_group stays None."""
+    team = TeamFactory.create()
+    group = GroupFactory.create(
+        content_type=ContentTypeFactory.create(app_label="api", model="team"),
+        object_id=team.dbid,
+    )
+
+    assert group.team == team
+    assert group.patient_group is None
