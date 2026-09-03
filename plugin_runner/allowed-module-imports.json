@@ -1158,6 +1158,7 @@
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
+    "CustomCommand",
     "CustomModel",
     "DetectedIssue",
     "DetectedIssueEvidence",
@@ -1505,6 +1506,9 @@
     "CustomAttributeQuerySet",
     "VALUE_FIELDS",
     "VALUE_FIELD_MAP"
+  ],
+  "canvas_sdk.v1.data.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
