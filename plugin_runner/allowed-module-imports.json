@@ -817,6 +817,11 @@
     "PaymentProcessorMetadata",
     "RemovePaymentMethodResponse"
   ],
+  "canvas_sdk.effects.phone_dial_configuration": [
+    "PhoneDialClickHandling",
+    "PhoneDialConfiguration",
+    "PhoneDialSection"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
