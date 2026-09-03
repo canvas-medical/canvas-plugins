@@ -22,6 +22,7 @@ from .claim_line_item import (
     ClaimLineItemModifierFactory,
 )
 from .coverage import CoverageFactory
+from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
@@ -164,6 +165,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
+    "CustomCommandFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",
     "DocumentCodingFactory",
