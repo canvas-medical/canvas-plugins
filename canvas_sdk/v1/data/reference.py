@@ -27,6 +27,7 @@ class Reference(AuditedModel, IdentifiableModel):
         on_delete=models.DO_NOTHING,
         related_name="references",
         null=True,
+        blank=True,
     )
     name = models.CharField(max_length=100, blank=True, default="")
     content = models.JSONField(blank=True, default=dict)
