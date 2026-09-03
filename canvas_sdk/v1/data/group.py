@@ -11,9 +11,7 @@ class Group(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_group_001"
 
-    content_type = models.ForeignKey(
-        "v1.ContentType", on_delete=models.DO_NOTHING, related_name="+", null=True
-    )
+    content_type = models.ForeignKey("v1.ContentType", on_delete=models.DO_NOTHING)
     object_id = models.BigIntegerField(null=True)
 
     @property
