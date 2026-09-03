@@ -516,7 +516,12 @@ def set_variables(
     The headless replacement for the direct-to-instance ``config set``: Control
     Room stores the values and pushes them to this instance, so it keeps working
     once ``canvas install``'s write path is locked out for CR-managed plugins.
-    Values are write-only and treated as sensitive, matching the direct path.
+
+    Whether a variable is sensitive (write-only) is determined by the plugin's
+    ``CANVAS_MANIFEST.json`` ``variables[].sensitive`` declaration — the same rule
+    as the direct ``config set`` path. This command does not choose sensitivity;
+    declare it in the manifest. Setting a key the manifest doesn't declare is
+    rejected by Control Room.
     """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
@@ -526,7 +531,7 @@ def set_variables(
         key, sep, value = item.partition("=")
         if not sep or not key:
             raise typer.BadParameter(f"Invalid variable format: '{item}'. Use key=value.")
-        parsed.append({"key": key, "value": value, "sensitive": True})
+        parsed.append({"key": key, "value": value})
 
     token = get_or_request_api_token(host)
     _, org_slug, _ = _control_room_info(host, token)

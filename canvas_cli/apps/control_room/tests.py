@@ -421,8 +421,8 @@ def test_deploy_forbidden_renders_remediation(
 @patch("requests.post")
 def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
     """`config set` (beta) discovers the org and POSTs the variables to the
-    set-variables proxy, marking them sensitive (write-only, like the direct
-    path).
+    set-variables proxy. It sends only ``{key, value}`` — sensitivity is resolved
+    by Control Room from the plugin's manifest, not chosen by this command.
     """
     mock_get.side_effect = _get_router()  # /info/ discovery + /deploy-status/ → succeeded
     mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
@@ -442,8 +442,8 @@ def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token
                 "orgSlug": "acme",
                 "name": "my_plugin",
                 "variables": [
-                    {"key": "API_KEY", "value": "secret", "sensitive": True},
-                    {"key": "URL", "value": "https://x", "sensitive": True},
+                    {"key": "API_KEY", "value": "secret"},
+                    {"key": "URL", "value": "https://x"},
                 ],
             }
         ]
