@@ -154,7 +154,9 @@ AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 MEDIA_S3_BUCKET_NAME = os.getenv("MEDIA_S3_BUCKET_NAME", "canvas-client-media")
 
 # ONTOLOGIES_SIGNING_KEY = os.getenv("ONTOLOGIES_SIGNING_KEY", "")
-PLUGIN_RUNNER_SIGNING_KEY = os.getenv("PLUGIN_RUNNER_SIGNING_KEY", "")
+PLUGIN_RUNNER_SIGNING_KEY = os.getenv(
+    "PLUGIN_RUNNER_SIGNING_KEY", "insecure-signing-key-for-tests-only-abcd" if IS_TESTING else ""
+)
 # SCIENCE_SIGNING_KEY = os.getenv("SCIENCE_SIGNING_KEY", "")
 
 PLUGIN_DIRECTORY = os.getenv(
