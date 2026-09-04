@@ -148,6 +148,9 @@ filterwarnings = [
 ]
 markers = ['integtest: mark a test as being an integration test with external dependencies']
 norecursedirs = [
+  # A git worktree under .claude/worktrees holds a full second checkout, whose
+  # conftest.py collides with this one and fails collection outright.
+  ".claude",
   ".git",
   ".mypy_cache",
   ".pytest_cache",
