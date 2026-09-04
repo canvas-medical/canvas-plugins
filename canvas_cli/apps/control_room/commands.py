@@ -3,10 +3,14 @@
 Control Room is the authoritative git home for a plugin. The `canvas` CLI never
 talks to Control Room directly — it goes through the developer's own Canvas
 instance (home-app), which proxies to Control Room and signs short-lived JWTs on
-the developer's behalf. ``canvas cr-init`` discovers the CR git server + org
-from the instance and points the repo's ``origin`` at Control Room (+ a
-credential helper); from there the (git-savvy) developer publishes with **plain
-git** (``git push origin HEAD:main``) — the CLI no longer wraps add/commit/push.
+the developer's behalf.
+
+``canvas deploy`` is the one-shot happy path: it registers the repo, points the
+repo's ``origin`` at Control Room (+ a credential helper), commits and pushes the
+working tree, then builds and installs the plugin — no separate setup or push
+first. ``canvas cr-init`` does just the ``origin`` setup, for a developer who
+prefers to publish with **plain git** (``git push origin HEAD:main``) and deploy
+an already-pushed ref.
 
 Commands (registered behind CONTROL_ROOM_BETA in canvas_cli.main):
 
@@ -14,8 +18,9 @@ Commands (registered behind CONTROL_ROOM_BETA in canvas_cli.main):
     mint a push credential via the instance's ``mint-git-jwt`` endpoint.
   * ``canvas cr-init`` — connect a plugin repo to Control Room (points ``origin``
     at CR + registers the credential helper). One-time, idempotent.
-  * ``canvas deploy`` / ``canvas config set`` / ``canvas uninstall`` — dispatch
-    deploy / variable / uninstall operations through the instance's CR proxies.
+  * ``canvas deploy`` — publish the working tree (commit + push) and deploy it,
+    or deploy an existing ref with ``--ref`` / ``--no-push``.
+  * ``canvas config set`` — dispatch variable operations through the CR proxy.
 """
 
 from __future__ import annotations
@@ -363,6 +368,58 @@ def _manifest_name(plugin_dir: Path) -> str:
     return str(name)
 
 
+def _commit_working_tree_interactively(plugin_dir: Path) -> None:
+    """Stage + commit uncommitted changes, gated on an interactive confirmation.
+
+    ``git push`` only sends *commits*, so deploying the working tree means
+    committing it first. When the tree is dirty this shows the pending changes,
+    asks to commit, and prompts for a message. It never commits silently: a dirty
+    tree with no TTY (CI, a script) is an error, because auto-committing someone's
+    working tree unattended is surprising and hard to undo. The one automated
+    caller (the headless smoke) commits before invoking deploy, so it always
+    arrives clean and never reaches the prompt.
+    """
+    status = _git(plugin_dir, "status", "--porcelain")
+    if status.returncode != 0:
+        raise typer.BadParameter(f"git status failed: {status.stderr.strip()}")
+    if not status.stdout.strip():
+        return  # clean tree — nothing to commit
+
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        raise typer.BadParameter(
+            "You have uncommitted changes, and deploy only pushes committed work. "
+            "Commit them and re-run deploy (or use --ref / --no-push to deploy an "
+            "already-published ref)."
+        )
+
+    print("Uncommitted changes to be committed and deployed:")
+    print(status.stdout.rstrip())
+    if not typer.confirm("Commit these and deploy?", default=True):
+        raise typer.Abort()
+    message = typer.prompt("Commit message", default="Deploy via canvas")
+
+    add = _git(plugin_dir, "add", "-A")
+    if add.returncode != 0:
+        raise typer.BadParameter(f"git add failed: {add.stderr.strip()}")
+    commit = _git(plugin_dir, "commit", "-m", message)
+    if commit.returncode != 0:
+        raise typer.BadParameter(f"git commit failed: {commit.stderr.strip()}")
+
+
+def _push_head(plugin_dir: Path, ref: str) -> None:
+    """Push the current HEAD to ``ref`` on Control Room (``origin``).
+
+    Runs with global/system git config ignored (see ``_git(isolate_config=)``) so
+    a host-level credential helper (e.g. macOS ``osxkeychain``) can't shadow the
+    CR helper and 401 the push.
+    """
+    result = _git(plugin_dir, "push", "origin", f"HEAD:{ref}", isolate_config=True)
+    if result.returncode != 0:
+        raise typer.BadParameter(
+            "git push to Control Room failed:\n" + (result.stderr.strip() or "unknown error")
+        )
+
+
 # -- commands ----------------------------------------------------------------
 
 
@@ -463,7 +520,17 @@ def cr_init(
 
 def deploy(
     plugin_name: Path = typer.Argument(..., help="Path to the plugin to deploy"),
-    ref: str = typer.Option("main", "--ref", help="Published git ref to deploy"),
+    ref: str | None = typer.Option(
+        None,
+        "--ref",
+        help=(
+            "Deploy an already-published git ref as-is (e.g. a tag or older commit) "
+            "without pushing. Omit to publish the current HEAD to 'main' and deploy that."
+        ),
+    ),
+    no_push: bool = typer.Option(
+        False, "--no-push", help="Deploy the current 'main' ref as-is, without pushing HEAD first."
+    ),
     host: str | None = typer.Option(
         callback=get_default_host, default=None, help="Canvas instance to connect to"
     ),
@@ -471,29 +538,50 @@ def deploy(
         False, "--yes", "-y", help="Approve all consent prompts non-interactively"
     ),
 ) -> None:
-    """Deploy an already-published plugin ref to this instance via Control Room.
+    """Publish the plugin's current code to Control Room and deploy it.
 
-    Names a ref previously pushed to `origin` (`git push origin HEAD:main`);
-    Control Room builds the artifact and installs it. If the deploy is gated on
-    operator consent
-    (e.g. cross-plugin custom-data access), the requests are shown and approved
-    or denied inline.
+    The happy path needs no setup first: `canvas deploy <dir> --host <instance>`
+    registers the repo with Control Room, points `origin` at it (plus the
+    credential helper), commits any uncommitted changes (with your confirmation),
+    pushes the current HEAD to `main`, then builds and installs the plugin. If the
+    deploy is gated on operator consent (e.g. cross-plugin custom-data access), the
+    requests are shown and approved or denied inline.
+
+    To deploy an already-published ref instead of the working tree, pass
+    `--ref <tag-or-sha>` (deployed as-is, no push) or `--no-push` (deploy the
+    current `main` without pushing). `canvas cr-init` sets up `origin` without
+    deploying.
     """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
     if not plugin_name.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
-    name = _manifest_name(plugin_name)
-    token = get_or_request_api_token(host)
-    _, org_slug, _ = _control_room_info(host, token)
+    # Default (no --ref, no --no-push): publish the working tree — set up origin,
+    # commit + push HEAD, then deploy `main`. `--ref`/`--no-push` deploy an
+    # existing published ref and skip all git work.
+    push_head = ref is None and not no_push
+    target_ref = ref or "main"
 
-    print(f"Deploying {org_slug}/{name}@{ref}…")
+    if push_head:
+        _require_git_repo(plugin_name)  # also asserts git is installed
+        # Register the repo + wire origin/credential-helper (idempotent) so a
+        # fresh plugin's first push isn't rejected and the push authenticates.
+        org_slug, name = _ensure_cr_remote(plugin_name, host)
+        _commit_working_tree_interactively(plugin_name)
+        _push_head(plugin_name, target_ref)
+    else:
+        token = get_or_request_api_token(host)
+        _, org_slug, _ = _control_room_info(host, token)
+        name = _manifest_name(plugin_name)
+
+    token = get_or_request_api_token(host)
+    print(f"Deploying {org_slug}/{name}@{target_ref}…")
     result = _post(
         host,
         token,
         _cr_url(host, "deploy"),
-        {"plugins": [{"orgSlug": org_slug, "name": name, "gitRef": ref}]},
+        {"plugins": [{"orgSlug": org_slug, "name": name, "gitRef": target_ref}]},
     )
 
     if not result.get("ok"):
@@ -508,11 +596,11 @@ def deploy(
     if not matrix_id:
         # No handle to poll (an older home-app/CR that doesn't return one): report
         # dispatch acceptance rather than silently claiming the install landed.
-        print(f"Deploy dispatched for {org_slug}/{name}@{ref} (no matrix id to poll).")
+        print(f"Deploy dispatched for {org_slug}/{name}@{target_ref} (no matrix id to poll).")
         return
     print(f"Deploy dispatched (deploy {matrix_id}); waiting for Control Room to settle…")
     matrix = _poll_matrix(host, token, matrix_id, label="deploy")
-    _report_terminal_outcome(matrix, what=f"Deploy of {org_slug}/{name}@{ref}")
+    _report_terminal_outcome(matrix, what=f"Deploy of {org_slug}/{name}@{target_ref}")
 
 
 def set_variables(

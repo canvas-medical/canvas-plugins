@@ -357,6 +357,9 @@ def _post_router(
     def post(url: str, **kwargs: object) -> Mock:
         if url.endswith("/control-room/deploy/"):
             return _resp(deploy)
+        if url.endswith("/control-room/ensure-repo/"):
+            # The default deploy folds in cr-init's repo registration.
+            return _resp({"ok": True, "created": False})
         if url.endswith("/approve/"):
             return _resp(approve or {"ok": True, "dispatched": True})
         if url.endswith("/deny/"):
@@ -401,7 +404,9 @@ def test_deploy_polls_to_terminal_success(
         }
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code == 0, result.output
     assert "succeeded" in result.output.lower()
@@ -431,7 +436,9 @@ def test_deploy_reports_failure_when_matrix_settles_failed(
         deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code != 0
     assert "did not succeed" in result.output.lower()
@@ -450,7 +457,9 @@ def test_deploy_forbidden_renders_remediation(
         403,
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code != 0
     assert "Ask an admin to grant you either role." in result.output
@@ -505,9 +514,14 @@ def test_set_variables_secret_and_variable_flags(
     result = runner.invoke(
         _app(),
         [
-            "set-variables", "my_plugin", "--host", HOST,
-            "--secret", "API_KEY=abc",
-            "--variable", "API_URL=https://x",
+            "set-variables",
+            "my_plugin",
+            "--host",
+            HOST,
+            "--secret",
+            "API_KEY=abc",
+            "--variable",
+            "API_URL=https://x",
         ],
     )
 
@@ -524,9 +538,7 @@ def test_set_variables_secret_and_variable_flags(
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("requests.post")
-def test_set_variables_requires_at_least_one(
-    mock_post: Mock, mock_get: Mock, _token: Mock
-) -> None:
+def test_set_variables_requires_at_least_one(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
     """With no positional and no flag, the command fails locally — no network call."""
     result = runner.invoke(_app(), ["set-variables", "my_plugin", "--host", HOST])
     assert result.exit_code != 0
@@ -672,7 +684,9 @@ def test_deploy_pending_consent_auto_approves(
         approve={"ok": True, "dispatched": True},
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes", "--no-push"]
+    )
 
     assert result.exit_code == 0, result.output
     assert "dispatched" in result.output.lower()
@@ -698,7 +712,9 @@ def test_deploy_consent_denied_interactively(
     )
 
     result = runner.invoke(
-        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST], input="n\nnot this fork\n"
+        _app(),
+        ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"],
+        input="n\nnot this fork\n",
     )
 
     assert result.exit_code == 1
@@ -728,7 +744,9 @@ def test_deploy_consent_deny_rejected_by_server_surfaces_error(
     )
 
     result = runner.invoke(
-        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST], input="n\nnope\n"
+        _app(),
+        ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"],
+        input="n\nnope\n",
     )
 
     assert result.exit_code == 1
@@ -748,10 +766,179 @@ def test_deploy_failure_exits_nonzero(
         deploy={"ok": False, "error": "Plugins not found: ['acme/my_plugin']"}
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code == 1
     assert "not found" in result.output.lower()
+
+
+# -- deploy: folded git publish (default push path) --------------------------
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+@patch("subprocess.run")
+def test_deploy_default_pushes_working_tree_then_dispatches(
+    mock_run: Mock, mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """The default deploy folds in the git setup: it registers the repo with
+    Control Room, points `origin` at it, pushes the current HEAD to `main`, then
+    dispatches — no separate cr-init / git push first.
+    """
+    mock_get.side_effect = _get_router()  # /info/ + /deploy-status/ → succeeded
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
+    )
+    mock_run.side_effect = _git_side_effect()  # clean tree, no existing remote
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(_app(), ["deploy", str(plugin_dir), "--host", HOST])
+
+    assert result.exit_code == 0, result.output
+    # Registered the repo with CR (ensurePluginRepo) before pushing.
+    assert any(c.args[0].endswith("/control-room/ensure-repo/") for c in mock_post.call_args_list)
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    # origin wired to the discovered CR URL, and HEAD pushed to main.
+    assert any(c[3:5] == ["remote", "add"] and c[-1].endswith("/acme/my_plugin.git") for c in calls)
+    assert any(c[3:] == ["push", "origin", "HEAD:main"] for c in calls)
+    # Deploy dispatched for the pushed ref.
+    body = next(
+        c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
+    )
+    assert body == {"plugins": [{"orgSlug": "acme", "name": "my_plugin", "gitRef": "main"}]}
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+@patch("subprocess.run")
+def test_deploy_ref_deploys_existing_ref_without_pushing(
+    mock_run: Mock, mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """`--ref <tag>` deploys an already-published ref as-is: no repo registration,
+    no remote wiring, no push — just dispatch that ref.
+    """
+    mock_get.side_effect = _get_router()
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
+    )
+    mock_run.side_effect = _git_side_effect()
+
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--ref", "v1.2"]
+    )
+
+    assert result.exit_code == 0, result.output
+    mock_run.assert_not_called()  # no git work at all
+    assert not any(c.args[0].endswith("/ensure-repo/") for c in mock_post.call_args_list)
+    body = next(
+        c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
+    )
+    assert body["plugins"][0]["gitRef"] == "v1.2"
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+@patch("subprocess.run")
+def test_deploy_no_push_deploys_main_without_pushing(
+    mock_run: Mock, mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """`--no-push` deploys the current `main` as-is, without pushing HEAD first."""
+    mock_get.side_effect = _get_router()
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
+    )
+    mock_run.side_effect = _git_side_effect()
+
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
+
+    assert result.exit_code == 0, result.output
+    mock_run.assert_not_called()
+    body = next(
+        c.kwargs["json"] for c in mock_post.call_args_list if c.args[0].endswith("/deploy/")
+    )
+    assert body["plugins"][0]["gitRef"] == "main"
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+@patch("subprocess.run")
+def test_deploy_dirty_tree_noninteractive_errors(
+    mock_run: Mock, mock_post: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+) -> None:
+    """A dirty working tree with no TTY (the CLI runner) errors rather than
+    silently committing on the user's behalf — and never pushes or dispatches.
+    """
+    mock_get.side_effect = _get_router()
+    mock_post.side_effect = _post_router(
+        deploy={"ok": True, "status": "dispatched", "matrix": {"id": "m1"}}
+    )
+    mock_run.side_effect = _git_side_effect(dirty=True)
+
+    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "uncommitted changes" in result.output.lower()
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3:5] == ["push", "origin"] for c in calls)
+    assert not any(c.args[0].endswith("/deploy/") for c in mock_post.call_args_list)
+
+
+@patch("subprocess.run")
+def test_commit_working_tree_commits_on_confirm(
+    mock_run: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On a dirty tree with a TTY, the commit gate stages everything and commits
+    with the message the user supplies.
+    """
+    mock_run.side_effect = _git_side_effect(dirty=True)
+    tty = Mock()
+    tty.isatty.return_value = True
+    monkeypatch.setattr(commands.sys, "stdin", tty)
+    monkeypatch.setattr(commands.sys, "stdout", tty)
+
+    with patch("typer.confirm", return_value=True), patch("typer.prompt", return_value="my msg"):
+        commands._commit_working_tree_interactively(tmp_path)
+
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert any(c[3:5] == ["add", "-A"] for c in calls)
+    assert any(c[3:] == ["commit", "-m", "my msg"] for c in calls)
+
+
+@patch("subprocess.run")
+def test_commit_working_tree_aborts_on_decline(
+    mock_run: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Declining the commit prompt aborts without committing."""
+    mock_run.side_effect = _git_side_effect(dirty=True)
+    tty = Mock()
+    tty.isatty.return_value = True
+    monkeypatch.setattr(commands.sys, "stdin", tty)
+    monkeypatch.setattr(commands.sys, "stdout", tty)
+
+    with patch("typer.confirm", return_value=False), pytest.raises(typer.Abort):
+        commands._commit_working_tree_interactively(tmp_path)
+
+    assert not any(c.args[0][3] == "commit" for c in mock_run.call_args_list)
+
+
+@patch("subprocess.run")
+def test_commit_working_tree_clean_is_noop(mock_run: Mock, tmp_path: Path) -> None:
+    """A clean tree commits nothing — deploy just pushes the existing HEAD."""
+    mock_run.side_effect = _git_side_effect()  # clean
+
+    commands._commit_working_tree_interactively(tmp_path)
+
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3] == "commit" for c in calls)
+    assert not any(c[3:5] == ["add", "-A"] for c in calls)
 
 
 # -- Control Room discovery / proxy transport errors -------------------------
@@ -780,7 +967,9 @@ def test_deploy_control_room_unconfigured_exits(
     """A non-200 from control-room/info surfaces the JSON error detail."""
     mock_get.return_value = _resp({"error": "CR not enabled"}, code=503)
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code != 0
     assert "not available" in result.output.lower()
@@ -796,7 +985,9 @@ def test_deploy_post_transport_error_exits(
     """A transport error POSTing the deploy fails loudly rather than hanging."""
     mock_get.return_value = _resp(INFO)
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code != 0
     assert "could not reach" in result.output.lower()
@@ -814,7 +1005,9 @@ def test_deploy_post_non_200_exits(
     bad.json.side_effect = ValueError("no json")
     mock_post.return_value = bad
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code != 0
     assert "502" in result.output
@@ -898,7 +1091,9 @@ def test_deploy_pending_consent_without_details_exits(
         deploy={"ok": True, "status": "pending_consent", "consent_request_count": 2}
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--no-push"]
+    )
 
     assert result.exit_code == 1
     assert "no request details" in result.output.lower()
@@ -922,7 +1117,9 @@ def test_deploy_consent_approval_failure_exits(
         approve={"ok": False, "error": "operator lacks permission"},
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes", "--no-push"]
+    )
 
     assert result.exit_code == 1
     assert "approval failed" in result.output.lower()
@@ -946,7 +1143,9 @@ def test_deploy_consent_recorded_pending_other_approvals(
         approve={"ok": True, "dispatched": False},
     )
 
-    result = runner.invoke(_app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes"])
+    result = runner.invoke(
+        _app(), ["deploy", str(_plugin_dir(tmp_path)), "--host", HOST, "--yes", "--no-push"]
+    )
 
     assert result.exit_code == 0, result.output
     assert "consent recorded" in result.output.lower()
