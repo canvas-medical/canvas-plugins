@@ -151,17 +151,20 @@ def test_git_credential_forbidden_surfaces_remediation(mock_post: Mock, _token: 
 # -- cr-init -----------------------------------------------------------------
 
 
+@patch("requests.post")
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
 def test_cr_init_configures_remote_and_helper(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+    mock_run: Mock, mock_get: Mock, _token: Mock, mock_post: Mock, tmp_path: Path
 ) -> None:
-    """cr-init discovers CR, points `cr` at the repo, and registers the push
-    credential helper — but never commits or pushes (the user does plain git).
+    """cr-init discovers CR, registers the repo with Control Room, points `origin`
+    at it, and registers the push credential helper — but never commits or pushes
+    (the user does plain git).
     """
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
+    mock_post.return_value = _resp({"ok": True, "created": True})
     mock_run.side_effect = _git_side_effect()
     plugin_dir = _plugin_dir(tmp_path)
 
@@ -169,6 +172,11 @@ def test_cr_init_configures_remote_and_helper(
 
     assert result.exit_code == 0, result.output
     assert "Connected acme/my_plugin to Control Room" in result.output
+    # Registered the repo with CR (ensurePluginRepo) before wiring the remote.
+    ensure = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/ensure-repo/")
+    )
+    assert ensure.kwargs["json"] == {"orgSlug": "acme", "name": "my_plugin"}
     assert "git push origin HEAD:main" in result.output  # guidance for plain-git publish
     calls = [c.args[0] for c in mock_run.call_args_list]
     # origin pointed at the discovered {git_url}/{org}/{name}.git
@@ -197,15 +205,17 @@ def test_cr_init_configures_remote_and_helper(
     assert not any(c[3:5] == ["push", "origin"] for c in calls)
 
 
+@patch("requests.post")
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
 def test_cr_init_idempotent_updates_existing_remote(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+    mock_run: Mock, mock_get: Mock, _token: Mock, mock_post: Mock, tmp_path: Path
 ) -> None:
     """Re-running updates the existing `cr` URL (set-url) rather than re-adding."""
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
+    mock_post.return_value = _resp({"ok": True, "created": False})
     mock_run.side_effect = _git_side_effect(remote_exists=True)
     plugin_dir = _plugin_dir(tmp_path)
 
@@ -217,11 +227,36 @@ def test_cr_init_idempotent_updates_existing_remote(
     assert not any(c[3:6] == ["remote", "add", "origin"] for c in calls)
 
 
+@patch("requests.post")
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("subprocess.run")
+def test_cr_init_aborts_when_repo_registration_fails(
+    mock_run: Mock, mock_get: Mock, _token: Mock, mock_post: Mock, tmp_path: Path
+) -> None:
+    """If Control Room refuses to register the repo (e.g. no push permission),
+    cr-init fails before wiring the `origin` remote.
+    """
+    mock_get.return_value = Mock(status_code=200)
+    mock_get.return_value.json.return_value = INFO
+    mock_post.return_value = _resp({"ok": False, "error": "Permission denied"})
+    mock_run.side_effect = _git_side_effect()
+    plugin_dir = _plugin_dir(tmp_path)
+
+    result = runner.invoke(_app(), ["cr-init", str(plugin_dir), "--host", HOST])
+
+    assert result.exit_code != 0
+    assert "Permission denied" in result.output
+    calls = [c.args[0] for c in mock_run.call_args_list]
+    assert not any(c[3:6] == ["remote", "add", "origin"] for c in calls)
+
+
+@patch("requests.post")
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
 @patch("requests.get")
 @patch("subprocess.run")
 def test_cr_init_repo_name_decouples_git_repo_from_manifest(
-    mock_run: Mock, mock_get: Mock, _token: Mock, tmp_path: Path
+    mock_run: Mock, mock_get: Mock, _token: Mock, mock_post: Mock, tmp_path: Path
 ) -> None:
     """--repo-name sets the git-repo identity independent of the manifest/package
     name (they're separate concepts in Control Room; canvas-plugins#1820). The
@@ -229,6 +264,7 @@ def test_cr_init_repo_name_decouples_git_repo_from_manifest(
     """
     mock_get.return_value = Mock(status_code=200)
     mock_get.return_value.json.return_value = INFO
+    mock_post.return_value = _resp({"ok": True, "created": True})
     mock_run.side_effect = _git_side_effect()
     plugin_dir = _plugin_dir(tmp_path)  # manifest name == "my_plugin"
 
@@ -239,6 +275,11 @@ def test_cr_init_repo_name_decouples_git_repo_from_manifest(
 
     assert result.exit_code == 0, result.output
     assert "Connected acme/acme-abc123-my-plugin" in result.output
+    # The repo registered with CR uses the explicit repo id, not the manifest name.
+    ensure = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/ensure-repo/")
+    )
+    assert ensure.kwargs["json"] == {"orgSlug": "acme", "name": "acme-abc123-my-plugin"}
     calls = [c.args[0] for c in mock_run.call_args_list]
     # remote points at the explicit repo id, NOT the manifest name
     assert [
@@ -420,9 +461,8 @@ def test_deploy_forbidden_renders_remediation(
 @patch("requests.get")
 @patch("requests.post")
 def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token: Mock) -> None:
-    """`config set` (beta) discovers the org and POSTs the variables to the
-    set-variables proxy, marking them sensitive (write-only, like the direct
-    path).
+    """A bare ``KEY=value`` updates an existing variable and sends no ``sensitive``
+    (unspecified) — Control Room keeps the stored sensitivity.
     """
     mock_get.side_effect = _get_router()  # /info/ discovery + /deploy-status/ → succeeded
     mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
@@ -442,12 +482,56 @@ def test_set_variables_routes_through_cr(mock_post: Mock, mock_get: Mock, _token
                 "orgSlug": "acme",
                 "name": "my_plugin",
                 "variables": [
-                    {"key": "API_KEY", "value": "secret", "sensitive": True},
-                    {"key": "URL", "value": "https://x", "sensitive": True},
+                    {"key": "API_KEY", "value": "secret"},
+                    {"key": "URL", "value": "https://x"},
                 ],
             }
         ]
     }
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_set_variables_secret_and_variable_flags(
+    mock_post: Mock, mock_get: Mock, _token: Mock
+) -> None:
+    """``--secret`` declares a sensitive variable, ``--variable`` a plain one; both
+    are mixable in one call and carry an explicit ``sensitive`` flag.
+    """
+    mock_get.side_effect = _get_router()
+    mock_post.return_value = _resp({"ok": True, "matrix": {"id": "m1"}})
+
+    result = runner.invoke(
+        _app(),
+        [
+            "set-variables", "my_plugin", "--host", HOST,
+            "--secret", "API_KEY=abc",
+            "--variable", "API_URL=https://x",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = next(
+        c for c in mock_post.call_args_list if c.args[0].endswith("/control-room/set-variables/")
+    )
+    assert call.kwargs["json"]["plugins"][0]["variables"] == [
+        {"key": "API_KEY", "value": "abc", "sensitive": True},
+        {"key": "API_URL", "value": "https://x", "sensitive": False},
+    ]
+
+
+@patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_set_variables_requires_at_least_one(
+    mock_post: Mock, mock_get: Mock, _token: Mock
+) -> None:
+    """With no positional and no flag, the command fails locally — no network call."""
+    result = runner.invoke(_app(), ["set-variables", "my_plugin", "--host", HOST])
+    assert result.exit_code != 0
+    assert "at least one variable" in result.output.lower()
+    mock_post.assert_not_called()
 
 
 @patch("canvas_cli.apps.control_room.commands.get_or_request_api_token", return_value="tok")

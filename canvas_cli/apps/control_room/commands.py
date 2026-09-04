@@ -298,6 +298,17 @@ def _ensure_cr_remote(
         raise typer.BadParameter(_MISSING_ROLE_MESSAGE)
     name = repo_name or _manifest_name(plugin_dir)
 
+    # Idempotently register the repo with Control Room (create the bare
+    # `/git/<org>/<name>.git` + Plugin record) so the first `git push` isn't
+    # rejected as unregistered. This is the pre-push step the retired
+    # `canvas publish` performed; cr-init owns it now (KOALA-5923).
+    ensure = _post(host, token, _cr_url(host, "ensure-repo"), {"orgSlug": org_slug, "name": name})
+    if not ensure.get("ok"):
+        raise typer.BadParameter(
+            f"Could not register {org_slug}/{name} with Control Room: "
+            + (ensure.get("error") or "unknown error")
+        )
+
     # Control Room is the plugin's authoritative git home, so it IS the repo's
     # `origin`. Naming it `origin` (rather than a side remote) means plain git —
     # and Studio's build agent, which uses `origin` — pushes/fetches CR with no
@@ -506,27 +517,57 @@ def deploy(
 
 def set_variables(
     plugin_name: str = typer.Argument(..., help="Plugin name to configure"),
+    variables: list[str] = typer.Argument(
+        None,
+        help="Update existing variables, e.g. Key=value (keeps their current sensitivity)",
+    ),
+    secret: list[str] = typer.Option(
+        [], "--secret", help="Set a sensitive (write-only) variable, e.g. Key=value (repeatable)"
+    ),
+    variable: list[str] = typer.Option(
+        [], "--variable", help="Set a non-sensitive variable, e.g. Key=value (repeatable)"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host, default=None, help="Canvas instance to connect to"
     ),
-    variables: list[str] = typer.Argument(..., help="Variables to set, e.g. Key=value"),
 ) -> None:
     """Set a plugin's variables through Control Room.
 
     The headless replacement for the direct-to-instance ``config set``: Control
     Room stores the values and pushes them to this instance, so it keeps working
     once ``canvas install``'s write path is locked out for CR-managed plugins.
-    Values are write-only and treated as sensitive, matching the direct path.
+
+    Control Room owns each variable's sensitivity. When first declaring one, say
+    which it is: ``--secret KEY=value`` (sensitive, write-only) or
+    ``--variable KEY=value`` (plain) — both repeatable and mixable in one call. A
+    bare ``KEY=value`` updates an existing variable, keeping its current
+    sensitivity; a new key given that way is rejected until you declare it with a
+    flag. A plain variable can be promoted with ``--secret`` but a secret is never
+    demoted to plain.
     """
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    parsed: list[dict[str, object]] = []
-    for item in variables:
+    def _kv(item: str) -> tuple[str, str]:
         key, sep, value = item.partition("=")
         if not sep or not key:
             raise typer.BadParameter(f"Invalid variable format: '{item}'. Use key=value.")
+        return key, value
+
+    parsed: list[dict[str, object]] = []
+    for item in variables or []:  # unspecified sensitivity — only valid for existing vars
+        key, value = _kv(item)
+        parsed.append({"key": key, "value": value})
+    for item in secret:
+        key, value = _kv(item)
         parsed.append({"key": key, "value": value, "sensitive": True})
+    for item in variable:
+        key, value = _kv(item)
+        parsed.append({"key": key, "value": value, "sensitive": False})
+    if not parsed:
+        raise typer.BadParameter(
+            "Provide at least one variable: KEY=value, --secret KEY=value, or --variable KEY=value."
+        )
 
     token = get_or_request_api_token(host)
     _, org_slug, _ = _control_room_info(host, token)
