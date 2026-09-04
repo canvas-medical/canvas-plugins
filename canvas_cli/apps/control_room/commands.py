@@ -1,0 +1,755 @@
+"""Control Room deploy commands for the `canvas` CLI (KOALA-5923).
+
+Control Room is the authoritative git home for a plugin. The `canvas` CLI never
+talks to Control Room directly — it goes through the developer's own Canvas
+instance (home-app), which proxies to Control Room and signs short-lived JWTs on
+the developer's behalf. ``canvas cr-init`` discovers the CR git server + org
+from the instance and points the repo's ``origin`` at Control Room (+ a
+credential helper); from there the (git-savvy) developer publishes with **plain
+git** (``git push origin HEAD:main``) — the CLI no longer wraps add/commit/push.
+
+Commands (registered behind CONTROL_ROOM_BETA in canvas_cli.main):
+
+  * ``canvas git-credential`` — hidden git credential helper; git invokes it to
+    mint a push credential via the instance's ``mint-git-jwt`` endpoint.
+  * ``canvas cr-init`` — connect a plugin repo to Control Room (points ``origin``
+    at CR + registers the credential helper). One-time, idempotent.
+  * ``canvas deploy`` / ``canvas config set`` / ``canvas uninstall`` — dispatch
+    deploy / variable / uninstall operations through the instance's CR proxies.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+from urllib.parse import urljoin, urlparse
+
+import requests
+import typer
+
+from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+
+_TIMEOUT_SECONDS = 30
+
+
+# -- Control Room endpoint helpers -------------------------------------------
+
+
+def _cr_url(host: str, *paths: str) -> str:
+    """Build a ``/plugin-io/control-room/...`` URL (mirrors plugin_url)."""
+    join = "/".join(["plugin-io/control-room", *paths])
+    if not join.endswith("/"):
+        join += "/"
+    return urljoin(host, join)
+
+
+# Shown when the caller lacks a plugin-developer role. Mirrors home-app's 403
+# `remediation`; used as the fallback when a response body doesn't carry one.
+_MISSING_ROLE_MESSAGE = (
+    "You don't have permission to manage plugins on this instance. Ask a Canvas "
+    "administrator to grant you either the Administrative Developer or Clinical "
+    "Developer role."
+)
+
+
+def _forbidden_message(resp: requests.Response) -> str:
+    """The actionable message for a 403 — prefer the body's ``remediation``."""
+    try:
+        body = resp.json()
+    except ValueError:
+        return _MISSING_ROLE_MESSAGE
+    return body.get("remediation") or body.get("error") or _MISSING_ROLE_MESSAGE
+
+
+def _control_room_info(host: str, token: str) -> tuple[str, str, bool]:
+    """Discover the CR git server URL, this instance's org slug, and whether the
+    caller may manage plugins.
+
+    Returns ``(git_url, org_slug, can_manage_plugins)``. Raises
+    ``typer.BadParameter`` on any failure (unreachable, unconfigured instance,
+    unassigned org). ``info`` itself is not role-gated, so ``can_manage_plugins``
+    lets callers surface the permission gap without provoking a 403.
+    """
+    try:
+        resp = requests.get(
+            _cr_url(host, "info"),
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        raise typer.BadParameter(f"Could not reach {host}: {exc}") from exc
+
+    if resp.status_code == requests.codes.forbidden:
+        raise typer.BadParameter(_forbidden_message(resp))
+    if resp.status_code != requests.codes.ok:
+        detail = _error_detail(resp)
+        raise typer.BadParameter(
+            f"Control Room is not available on {host} ({resp.status_code}): {detail}"
+        )
+
+    data = resp.json()
+    return data["git_url"], data["org_slug"], bool(data.get("can_manage_plugins", True))
+
+
+def _error_detail(resp: requests.Response) -> str:
+    """Best-effort human-readable error from a JSON ``{error}`` body."""
+    try:
+        return str(resp.json().get("error", resp.text))
+    except ValueError:
+        return resp.text
+
+
+def _consent_url(host: str, request_id: int, action: str) -> str:
+    """Build a ``/plugin-io/consent/<id>/<action>/`` URL."""
+    return urljoin(host, f"plugin-io/consent/{request_id}/{action}/")
+
+
+def _post(host: str, token: str, url: str, body: dict[str, object] | None = None) -> dict:
+    """POST to a Control Room proxy endpoint and return the parsed JSON body.
+
+    Raises ``typer.BadParameter`` on transport failure or a non-200 (the proxy
+    surfaces CR *business* failures as HTTP 200 with ``ok: false``, which the
+    caller inspects).
+    """
+    try:
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            json=body,
+            timeout=_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        raise typer.BadParameter(f"Could not reach {host}: {exc}") from exc
+    if resp.status_code == requests.codes.forbidden:
+        raise typer.BadParameter(_forbidden_message(resp))
+    if resp.status_code != requests.codes.ok:
+        raise typer.BadParameter(f"Control Room error ({resp.status_code}): {_error_detail(resp)}")
+    return resp.json()
+
+
+# -- deploy-status polling (KOALA-5923) --------------------------------------
+
+# DeployMatrix.status values that mean the async CR work has settled. A dispatch
+# returns while the matrix is `in_progress` (or `pending_consent`) — the worker
+# settles the install afterward — so these are what "done" looks like.
+_MATRIX_TERMINAL = frozenset({"succeeded", "failed", "partial", "cancelled"})
+_MATRIX_POLL_INTERVAL_SECONDS = 2.0
+_MATRIX_POLL_TIMEOUT_SECONDS = 300.0
+
+
+def _poll_matrix(host: str, token: str, matrix_id: str, *, label: str) -> dict | None:
+    """Poll a matrix's status to a terminal verdict; return the final matrix dict.
+
+    Returns ``None`` if the poll window closes while the matrix is still in
+    progress — dispatched but not confirmed. A dispatch returns the moment the
+    matrix is enqueued, not when the install lands, so this turns "dispatched"
+    into the real outcome (succeeded / failed / partial / cancelled). Transient
+    read failures are tolerated until the deadline so a blip doesn't turn a real
+    success into a reported failure; a 403 (role revoked mid-flight) still raises.
+    """
+    url = _cr_url(host, "deploy-status", matrix_id)
+    deadline = time.monotonic() + _MATRIX_POLL_TIMEOUT_SECONDS
+    last_status: str | None = None
+    while time.monotonic() < deadline:
+        try:
+            resp = requests.get(
+                url, headers={"Authorization": f"Bearer {token}"}, timeout=_TIMEOUT_SECONDS
+            )
+        except requests.RequestException:
+            time.sleep(_MATRIX_POLL_INTERVAL_SECONDS)
+            continue
+        if resp.status_code == requests.codes.forbidden:
+            raise typer.BadParameter(_forbidden_message(resp))
+        if resp.status_code == requests.codes.ok:
+            matrix = (resp.json() or {}).get("matrix") or {}
+            status = str(matrix.get("status") or "")
+            if status and status != last_status:
+                print(f"  {label}: {status}…")
+                last_status = status
+            if status in _MATRIX_TERMINAL:
+                return matrix
+        # A 404 (not yet visible after dispatch) or a non-terminal status: wait.
+        time.sleep(_MATRIX_POLL_INTERVAL_SECONDS)
+    return None
+
+
+def _report_terminal_outcome(matrix: dict | None, *, what: str) -> None:
+    """Print the terminal outcome of a deploy/uninstall and exit nonzero on failure.
+
+    ``None`` means the poll window closed while still in progress (inconclusive) —
+    treated as a failure so a stuck operation isn't reported as done.
+    """
+    if matrix is None:
+        print(
+            f"{what} was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    if status == "succeeded":
+        print(f"{what} succeeded.")
+        return
+    rollup = matrix.get("rollupCounts") or {}
+    print(f"{what} did not succeed (status={status}, {rollup}).")
+    raise typer.Exit(1)
+
+
+# -- git plumbing (all transparent to the author) ----------------------------
+
+
+def _git(
+    plugin_dir: Path,
+    *args: str,
+    isolate_config: bool = False,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command scoped to the plugin repo.
+
+    ``isolate_config`` points ``GIT_CONFIG_GLOBAL``/``GIT_CONFIG_SYSTEM`` at
+    ``/dev/null`` so git reads only the repo-local ``.git/config``. Use it for
+    the network operations (``push``/``fetch``): it structurally prevents
+    anything above the repo — a stale ``cr-login`` ``http.<host>.extraHeader``
+    (in any slash form) or the macOS ``osxkeychain`` credential helper — from
+    shadowing the credential helper we register and 401ing the push. Requires
+    git >= 2.32; older git ignores the vars and falls back to global config.
+
+    Do **not** isolate operations that need the user's identity or transport
+    config: ``merge`` reads ``user.name``/``user.email`` from global config, and
+    a push behind a corporate proxy / custom CA would lose ``http.proxy`` /
+    ``http.sslCAInfo``. Only the auth-during-network path needs isolation.
+    """
+    env = {**os.environ}
+    if isolate_config:
+        env["GIT_CONFIG_GLOBAL"] = os.devnull
+        env["GIT_CONFIG_SYSTEM"] = os.devnull
+    if extra_env:
+        env.update(extra_env)
+    return subprocess.run(
+        ["git", "-C", str(plugin_dir), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+
+def _require_git_installed() -> None:
+    """Fail with an actionable message when git isn't on PATH.
+
+    The headless flow keeps git invisible to plugin authors, so a missing git
+    would otherwise surface as a raw ``FileNotFoundError`` from ``subprocess``
+    (``check=False`` doesn't suppress it — it's raised at spawn time) with no
+    hint that the fix is to install git. ``publish``/``pull`` shell out to git;
+    ``deploy`` is HTTP-only and never reaches here.
+    """
+    if shutil.which("git") is None:
+        raise typer.BadParameter(
+            "git was not found on your PATH. `canvas cr-init` and publishing to "
+            "Control Room use git. Install it from "
+            "https://git-scm.com/downloads and try again."
+        )
+
+
+def _require_git_repo(plugin_dir: Path) -> None:
+    _require_git_installed()
+    result = _git(plugin_dir, "rev-parse", "--is-inside-work-tree")
+    if result.returncode != 0 or result.stdout.strip() != "true":
+        raise typer.BadParameter(
+            f"'{plugin_dir}' is not a git repository. Control Room is your plugin's "
+            "git remote, so the plugin must live in a git repo (run `git init` first)."
+        )
+
+
+def _url_origin(url: str) -> str:
+    """``scheme://host`` for credential-helper scoping."""
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _ensure_cr_remote(
+    plugin_dir: Path, host: str, *, repo_name: str | None = None
+) -> tuple[str, str]:
+    """Discover CR + configure the ``origin`` remote and credential helper.
+
+    Idempotent — safe to call on every ``cr-init``. Returns ``(org_slug,
+    repo_name)``.
+
+    ``repo_name`` is the **git repository** identity, which Control Room tracks
+    separately from the **plugin package name** (the manifest ``name`` — the
+    home-app identity that deploy/config key off, which must be a snake_case
+    Python package matching the source subfolder). When omitted, it defaults to
+    the manifest name (convenient for a git-savvy CLI user who's fine keeping
+    the two equal). Studio passes its own stable id, because it must name the
+    repo before the agent has authored the manifest — so the two names differ,
+    which Control Room supports (see canvas-plugins#1820).
+    """
+    token = get_or_request_api_token(host)
+    git_url, org_slug, can_manage_plugins = _control_room_info(host, token)
+    # Fail fast, before configuring any git remote/credential helper: without a
+    # plugin-developer role the eventual `git push` would fail opaquely (the
+    # credential helper can't mint a token). Surface it here at setup instead.
+    if not can_manage_plugins:
+        raise typer.BadParameter(_MISSING_ROLE_MESSAGE)
+    name = repo_name or _manifest_name(plugin_dir)
+
+    # Idempotently register the repo with Control Room (create the bare
+    # `/git/<org>/<name>.git` + Plugin record) so the first `git push` isn't
+    # rejected as unregistered. This is the pre-push step the retired
+    # `canvas publish` performed; cr-init owns it now (KOALA-5923).
+    ensure = _post(host, token, _cr_url(host, "ensure-repo"), {"orgSlug": org_slug, "name": name})
+    if not ensure.get("ok"):
+        raise typer.BadParameter(
+            f"Could not register {org_slug}/{name} with Control Room: "
+            + (ensure.get("error") or "unknown error")
+        )
+
+    # Control Room is the plugin's authoritative git home, so it IS the repo's
+    # `origin`. Naming it `origin` (rather than a side remote) means plain git —
+    # and Studio's build agent, which uses `origin` — pushes/fetches CR with no
+    # special-casing.
+    remote_url = f"{git_url.rstrip('/')}/{org_slug}/{name}.git"
+    if _git(plugin_dir, "remote", "get-url", "origin").returncode == 0:
+        _git(plugin_dir, "remote", "set-url", "origin", remote_url)
+    else:
+        _git(plugin_dir, "remote", "add", "origin", remote_url)
+
+    # Register our credential helper as the sole helper for the CR git host, so
+    # `canvas git-credential` mints the push JWT. `--replace-all` keeps it a
+    # single entry across repeat inits. We no longer reset inherited helpers
+    # or stale `http.<host>.extraHeader`s here: the network operations run with
+    # global/system git config ignored (see `_git(..., isolate_config=True)`),
+    # which prevents that shadowing structurally rather than key by key. Use the
+    # absolute path to *this* canvas executable — git invokes the helper via a
+    # bare shell, so a plain "canvas" only works if it's on PATH (it isn't when
+    # run from a venv or `uv run`).
+    canvas_bin = shutil.which(sys.argv[0]) or sys.argv[0]
+    cred_host = _url_origin(remote_url)
+    _git(
+        plugin_dir,
+        "config",
+        "--replace-all",
+        f"credential.{cred_host}.helper",
+        f"!{canvas_bin} git-credential --host {host}",
+    )
+    _git(plugin_dir, "config", f"credential.{cred_host}.username", "git")
+
+    return org_slug, name
+
+
+def _manifest_name(plugin_dir: Path) -> str:
+    """The plugin's manifest ``name`` — its home-app *package* name.
+
+    Control Room tracks this separately from the git **repository** name (see
+    ``_ensure_cr_remote``). The CLI deploy/config commands use it as the repo
+    name too, which holds only under the CLI's contract that a git-savvy user
+    keeps the two equal; a consumer that lets them diverge (e.g. Studio) must
+    pass the repo name explicitly. See canvas-plugins#1820.
+    """
+    manifest = plugin_dir / "CANVAS_MANIFEST.json"
+    if not manifest.exists():
+        raise typer.BadParameter(f"'{plugin_dir}' has no CANVAS_MANIFEST.json")
+    try:
+        name = json.loads(manifest.read_text()).get("name")
+    except (ValueError, OSError) as exc:
+        raise typer.BadParameter(f"Could not read {manifest}: {exc}") from exc
+    if not name:
+        raise typer.BadParameter(f'{manifest} is missing a "name"')
+    return str(name)
+
+
+# -- commands ----------------------------------------------------------------
+
+
+def git_credential(
+    operation: str = typer.Argument(..., help="git credential operation (get/store/erase)"),
+    host: str | None = typer.Option(
+        None, "--host", help="Canvas instance to mint the push JWT from"
+    ),
+) -> None:
+    """Git credential helper — mints a short-lived Control Room push JWT.
+
+    Not called directly; git invokes it (configured by `canvas cr-init`) as
+    ``canvas git-credential --host <instance> <get|store|erase>``, feeding the
+    request on stdin. Only ``get`` does anything: it returns ``username=git``
+    and a fresh JWT as the password. Tokens are ephemeral, so store/erase are
+    no-ops.
+    """
+    # Consume git's request on stdin (protocol/host/path); we mint regardless.
+    with contextlib.suppress(Exception):
+        sys.stdin.read()
+
+    if operation != "get":
+        return
+
+    resolved = get_default_host(host)
+    try:
+        token = get_or_request_api_token(resolved)
+        resp = requests.post(
+            _cr_url(resolved, "mint-git-jwt"),
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=_TIMEOUT_SECONDS,
+        )
+        if resp.status_code == requests.codes.forbidden:
+            # A role gate, not a transport error — surface the actionable message
+            # git will show, instead of a raw "403 Client Error" that buries it.
+            print(f"canvas: {_forbidden_message(resp)}", file=sys.stderr)
+            raise typer.Exit(1)
+        resp.raise_for_status()
+        body = resp.json()
+    except (requests.RequestException, ValueError) as exc:
+        # Fail loudly on stderr; a helper that emits no credentials makes git
+        # prompt interactively, which is worse for a CLI push.
+        print(f"canvas: could not mint a Control Room git credential: {exc}", file=sys.stderr)
+        raise typer.Exit(1) from exc
+
+    print("username=git")
+    print(f"password={body['jwt']}")
+    if expires_in := body.get("expires_in"):
+        print(f"password_expiry_utc={int(time.time()) + int(expires_in)}")
+
+
+def cr_init(
+    plugin_name: Path = typer.Argument(..., help="Path to the plugin to connect to Control Room"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    repo_name: str | None = typer.Option(
+        None,
+        "--repo-name",
+        help=(
+            "Git repository name in Control Room. Defaults to the plugin's "
+            "manifest name. Control Room tracks the git repo name separately "
+            "from the plugin package name, so a caller (e.g. Studio) that must "
+            "name the repo before a manifest exists can set this explicitly."
+        ),
+    ),
+) -> None:
+    """Connect a plugin's git repo to Control Room (its ``origin`` remote).
+
+    One-time, idempotent setup: points ``origin`` at Control Room's git backend
+    and registers the credential helper that mints push tokens. After this you
+    publish with **plain git** — Control Room is your ``origin``:
+
+        git add -A && git commit -m "…"
+        git push origin HEAD:main
+
+    then deploy with ``canvas deploy``. (Control Room is the source of truth for
+    plugin history; there is no separate ``publish`` step.)
+
+    With ``--repo-name`` the manifest need not exist yet (the repo name is the
+    git identity, distinct from the manifest/package name); without it, the
+    manifest is read to default the repo name.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+    if not plugin_name.is_dir():
+        raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
+    _require_git_repo(plugin_name)  # also asserts git is installed
+
+    org_slug, name = _ensure_cr_remote(plugin_name, host, repo_name=repo_name)
+
+    print(f"Connected {org_slug}/{name} to Control Room (remote 'origin').")
+    print("Publish with plain git, then deploy:")
+    print("  git add -A && git commit -m 'your message'")
+    print("  git push origin HEAD:main")
+    print(f"  canvas deploy {plugin_name} --host {host}")
+
+
+def deploy(
+    plugin_name: Path = typer.Argument(..., help="Path to the plugin to deploy"),
+    ref: str = typer.Option("main", "--ref", help="Published git ref to deploy"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    assume_yes: bool = typer.Option(
+        False, "--yes", "-y", help="Approve all consent prompts non-interactively"
+    ),
+) -> None:
+    """Deploy an already-published plugin ref to this instance via Control Room.
+
+    Names a ref previously pushed to `origin` (`git push origin HEAD:main`);
+    Control Room builds the artifact and installs it. If the deploy is gated on
+    operator consent
+    (e.g. cross-plugin custom-data access), the requests are shown and approved
+    or denied inline.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+    if not plugin_name.is_dir():
+        raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
+
+    name = _manifest_name(plugin_name)
+    token = get_or_request_api_token(host)
+    _, org_slug, _ = _control_room_info(host, token)
+
+    print(f"Deploying {org_slug}/{name}@{ref}…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "deploy"),
+        {"plugins": [{"orgSlug": org_slug, "name": name, "gitRef": ref}]},
+    )
+
+    if not result.get("ok"):
+        print(f"Deploy failed: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    if result.get("status") == "pending_consent":
+        _handle_consent(host, token, result, assume_yes=assume_yes)
+        return
+
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        # No handle to poll (an older home-app/CR that doesn't return one): report
+        # dispatch acceptance rather than silently claiming the install landed.
+        print(f"Deploy dispatched for {org_slug}/{name}@{ref} (no matrix id to poll).")
+        return
+    print(f"Deploy dispatched (deploy {matrix_id}); waiting for Control Room to settle…")
+    matrix = _poll_matrix(host, token, matrix_id, label="deploy")
+    _report_terminal_outcome(matrix, what=f"Deploy of {org_slug}/{name}@{ref}")
+
+
+def set_variables(
+    plugin_name: str = typer.Argument(..., help="Plugin name to configure"),
+    variables: list[str] = typer.Argument(
+        None,
+        help="Update existing variables, e.g. Key=value (keeps their current sensitivity)",
+    ),
+    secret: list[str] = typer.Option(
+        [], "--secret", help="Set a sensitive (write-only) variable, e.g. Key=value (repeatable)"
+    ),
+    variable: list[str] = typer.Option(
+        [], "--variable", help="Set a non-sensitive variable, e.g. Key=value (repeatable)"
+    ),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+) -> None:
+    """Set a plugin's variables through Control Room.
+
+    The headless replacement for the direct-to-instance ``config set``: Control
+    Room stores the values and pushes them to this instance, so it keeps working
+    once ``canvas install``'s write path is locked out for CR-managed plugins.
+
+    Control Room owns each variable's sensitivity. When first declaring one, say
+    which it is: ``--secret KEY=value`` (sensitive, write-only) or
+    ``--variable KEY=value`` (plain) — both repeatable and mixable in one call. A
+    bare ``KEY=value`` updates an existing variable, keeping its current
+    sensitivity; a new key given that way is rejected until you declare it with a
+    flag. A plain variable can be promoted with ``--secret`` but a secret is never
+    demoted to plain.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    def _kv(item: str) -> tuple[str, str]:
+        key, sep, value = item.partition("=")
+        if not sep or not key:
+            raise typer.BadParameter(f"Invalid variable format: '{item}'. Use key=value.")
+        return key, value
+
+    parsed: list[dict[str, object]] = []
+    for item in variables or []:  # unspecified sensitivity — only valid for existing vars
+        key, value = _kv(item)
+        parsed.append({"key": key, "value": value})
+    for item in secret:
+        key, value = _kv(item)
+        parsed.append({"key": key, "value": value, "sensitive": True})
+    for item in variable:
+        key, value = _kv(item)
+        parsed.append({"key": key, "value": value, "sensitive": False})
+    if not parsed:
+        raise typer.BadParameter(
+            "Provide at least one variable: KEY=value, --secret KEY=value, or --variable KEY=value."
+        )
+
+    token = get_or_request_api_token(host)
+    _, org_slug, _ = _control_room_info(host, token)
+
+    print(f"Setting {len(parsed)} variable(s) on {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "set-variables"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name, "variables": parsed}]},
+    )
+    if not result.get("ok"):
+        print(f"Failed to set variables: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name} (dispatched).")
+        return
+    matrix = _poll_matrix(host, token, matrix_id, label="config")
+    if matrix is None:
+        print(
+            f"Config was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    rollup = matrix.get("rollupCounts") or {}
+    succeeded = int(rollup.get("succeeded", 0) or 0)
+    failed = int(rollup.get("failed", 0) or 0)
+    if failed or status in {"failed", "cancelled"}:
+        print(f"Failed to set variables (status={status}, {rollup}).")
+        raise typer.Exit(1)
+    if succeeded == 0:
+        # An all-SKIPPED CONFIGURE settles `succeeded` in CR, but applied nothing:
+        # the plugin isn't installed on this instance (KOALA-5877 not_installed).
+        # Values are stored and apply on the next deploy.
+        print(
+            f"Variables stored, but '{plugin_name}' is not installed on this instance "
+            "yet, so nothing was applied. Deploy the plugin to apply them."
+        )
+        return
+
+    print(f"Set {len(parsed)} variable(s) on {org_slug}/{plugin_name}.")
+
+
+def unset_variables(
+    plugin_name: str = typer.Argument(..., help="Plugin name to configure"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+    keys: list[str] = typer.Argument(..., help="Variable key names to unset, e.g. API_KEY"),
+) -> None:
+    """Unset a plugin's variables through Control Room.
+
+    The UNSET counterpart of ``config set``: Control Room clears each key's value
+    on this instance and pushes a CONFIGURE so the instance drops them (omission =
+    deletion). Immediate — no redeploy needed. Clearing a key that was never set is
+    a no-op.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    token = get_or_request_api_token(host)
+    _, org_slug, _ = _control_room_info(host, token)
+
+    print(f"Unsetting {len(keys)} variable(s) on {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "clear-variables"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name, "keys": list(keys)}]},
+    )
+    if not result.get("ok"):
+        print(f"Failed to unset variables: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Unset {len(keys)} variable(s) on {org_slug}/{plugin_name} (dispatched).")
+        return
+    matrix = _poll_matrix(host, token, matrix_id, label="unset")
+    if matrix is None:
+        print(
+            f"Unset was dispatched but did not finish within "
+            f"{int(_MATRIX_POLL_TIMEOUT_SECONDS)}s; check Control Room for its status."
+        )
+        raise typer.Exit(1)
+    status = str(matrix.get("status") or "")
+    rollup = matrix.get("rollupCounts") or {}
+    # A CONFIGURE that cleared keys succeeds if nothing FAILED; an all-SKIPPED
+    # settle (plugin not installed) is fine — there was nothing to unset there.
+    if int(rollup.get("failed", 0) or 0) or status in {"failed", "cancelled"}:
+        print(f"Failed to unset variables (status={status}, {rollup}).")
+        raise typer.Exit(1)
+
+    print(f"Unset {len(keys)} variable(s) on {org_slug}/{plugin_name}.")
+
+
+def uninstall(
+    plugin_name: str = typer.Argument(..., help="Plugin name to uninstall"),
+    host: str | None = typer.Option(
+        callback=get_default_host, default=None, help="Canvas instance to connect to"
+    ),
+) -> None:
+    """Uninstall a plugin from this instance through Control Room.
+
+    The headless teardown: home-app refuses a direct CLI uninstall of a
+    ``control_room_managed`` plugin (KOALA-5877), so removal must go through
+    Control Room. Dispatches an uninstall on the calling instance.
+    """
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    token = get_or_request_api_token(host)
+    _, org_slug, _ = _control_room_info(host, token)
+
+    print(f"Uninstalling {org_slug}/{plugin_name} via Control Room…")
+    result = _post(
+        host,
+        token,
+        _cr_url(host, "uninstall"),
+        {"plugins": [{"orgSlug": org_slug, "name": plugin_name}]},
+    )
+    if not result.get("ok"):
+        print(f"Uninstall failed: {result.get('error') or 'unknown error'}")
+        raise typer.Exit(1)
+
+    matrix_id = (result.get("matrix") or {}).get("id")
+    if not matrix_id:
+        print(f"Uninstall dispatched for {org_slug}/{plugin_name} (no matrix id to poll).")
+        return
+    print(f"Uninstall dispatched (matrix {matrix_id}); waiting for Control Room to settle…")
+    matrix = _poll_matrix(host, token, matrix_id, label="uninstall")
+    _report_terminal_outcome(matrix, what=f"Uninstall of {org_slug}/{plugin_name}")
+
+
+def _handle_consent(host: str, token: str, deploy_result: dict, *, assume_yes: bool) -> None:
+    """Walk the operator through the consent requests a gated deploy produced."""
+    requests_list = deploy_result.get("consent_requests") or []
+    count = deploy_result.get("consent_request_count", len(requests_list))
+    print(f"\nThis deploy needs operator consent ({count} request(s)):\n")
+
+    if not requests_list:
+        # The proxy inlines requests on the deploy response; if they're missing
+        # something is off — don't silently proceed.
+        print("Consent is required but no request details were returned; check Control Room.")
+        raise typer.Exit(1)
+
+    denied = False
+    dispatched = False
+    for req in requests_list:
+        request_id = req["id"]
+        heading = req.get("title") or req.get("subject") or f"Consent request {request_id}"
+        print(f"  • {heading}")
+        if implication := req.get("implication"):
+            print(f"    {implication}")
+
+        approve = assume_yes or typer.confirm(f"    Approve request {request_id}?", default=False)
+        if approve:
+            outcome = _post(host, token, _consent_url(host, request_id, "approve"))
+            if not outcome.get("ok"):
+                print(f"    Approval failed: {outcome.get('error') or 'unknown error'}")
+                raise typer.Exit(1)
+            dispatched = dispatched or bool(outcome.get("dispatched"))
+            print("    Approved.")
+        else:
+            reason = "" if assume_yes else typer.prompt("    Reason for denial", default="")
+            outcome = _post(host, token, _consent_url(host, request_id, "deny"), {"reason": reason})
+            if not outcome.get("ok"):
+                # Surface a server-side rejection (e.g. permission) instead of
+                # reporting a denial that didn't take — the request stays live.
+                print(f"    Denial failed: {outcome.get('error') or 'unknown error'}")
+                raise typer.Exit(1)
+            denied = True
+            print("    Denied.")
+
+    print()
+    if denied:
+        print("Deploy was not dispatched — one or more consent requests were denied.")
+        raise typer.Exit(1)
+    if dispatched:
+        print("All consent granted — deploy dispatched.")
+    else:
+        print("Consent recorded; the deploy will dispatch once all approvals are in.")
