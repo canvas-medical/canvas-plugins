@@ -13,7 +13,7 @@ dev = [
   "pytest-django>=4.11,<5",
   "pytest-freezegun>=0.4.2",
   "pytest-mock",
-  "pytest>=8.4,<9",
+  "pytest>=9.0.3,<10",
   "python-semantic-release",
   "requests-mock",
   "ruff",
@@ -40,18 +40,18 @@ dependencies = [
   "jsonschema>=4.21.1,<5",
   "pathspec>=0.12.1",
   "protobuf>=6,<7",
-  "psutil==7.2.2",
+  "psutil>=7.2.2,<8",
   "psycopg[binary,pool]>=3.3.3,<4",
   "pydantic>=2.12.5,<3",
-  "pyjwt==2.10.1",
+  "pyjwt>=2.13.0,<3",
   "python-dotenv>=1.0.1,<2",
   "python-logstash-async>=4.0.2",
   "rapidfuzz>=3.10.1,<4",
   "redis>=5.0.4,<6",
   "requests",
-  "restrictedpython>=8.0,<8.3",
+  "restrictedpython>=8.5,<9",
   "sentry-sdk>=2.33.2",
-  "snowflake-connector-python==4.6.0",
+  "snowflake-connector-python>=4.7.2,<5",
   "statsd>=4.0.1,<5",
   "stripe>=14.1.0",
   "typer",
@@ -207,7 +207,18 @@ match = "main"
 prerelease = false
 
 [tool.uv]
+# Exclude package versions published in the last 7 days from resolution, so
+# resolution is deterministic across CI and every engineer's machine instead of
+# only on the ones carrying this in their global ~/.config/uv/uv.toml.
+exclude-newer = "7 days"
 required-version = ">=0.8.0"
+
+# Lint and type-check tooling tracks latest; the cutoff above is for runtime
+# dependencies.
+[tool.uv.exclude-newer-package]
+ruff = "2035-01-01T00:00:00Z"
+ty = "2035-01-01T00:00:00Z"
+uv = "2035-01-01T00:00:00Z"
 
 [[tool.uv.index]]
 default = true
@@ -216,3 +227,6 @@ url = "https://pypi.org/simple/"
 
 [tool.uv.sources]
 httpretty = {git = "https://github.com/carlsmedstad/HTTPretty.git", rev = "8e96b1e312d473429fbd08bc867376e9932ad42a"}
+# `pytest-canvas` is published from `pytest-canvas/` in this repo; resolve the
+# working copy so its constraints are exercised before it is released.
+pytest-canvas = {path = "pytest-canvas"}

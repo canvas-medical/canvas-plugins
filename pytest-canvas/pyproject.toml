@@ -9,14 +9,14 @@ authors = [
 dependencies = [
   "canvas",
   "pytest-django>=4.11,<5",
-  "pytest>=8.4,<9"
+  "pytest>=8.4,<10"
 ]
 description = "A minimal pytest plugin that streamlines testing for projects using the Canvas SDK."
 license = "MIT"
 name = "pytest-canvas"
 readme = "README.md"
 requires-python = ">=3.11"
-version = "0.1.0"
+version = "0.2.0"
 
 [project.entry-points.pytest11]
 canvas = "pytest_canvas.plugin"
