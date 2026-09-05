@@ -154,8 +154,12 @@ AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 MEDIA_S3_BUCKET_NAME = os.getenv("MEDIA_S3_BUCKET_NAME", "canvas-client-media")
 
 # ONTOLOGIES_SIGNING_KEY = os.getenv("ONTOLOGIES_SIGNING_KEY", "")
+# Every deployed instance sets this; the fallback is so local development and
+# tests need no configuration. `plugin_runner.main` refuses to serve without a
+# key, so an empty value never reaches a token.
 PLUGIN_RUNNER_SIGNING_KEY = os.getenv(
-    "PLUGIN_RUNNER_SIGNING_KEY", "insecure-signing-key-for-tests-only-abcd" if IS_TESTING else ""
+    "PLUGIN_RUNNER_SIGNING_KEY",
+    "" if IS_PRODUCTION else "insecure-signing-key-not-for-production",
 )
 # SCIENCE_SIGNING_KEY = os.getenv("SCIENCE_SIGNING_KEY", "")
 
