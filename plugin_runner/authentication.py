@@ -22,13 +22,6 @@ def token_for_plugin(
     if not extra_kwargs:
         extra_kwargs = {}
 
-    if not jwt_signing_key:
-        raise ValueError(
-            "No JWT signing key is configured, so a token would be signed with an "
-            "empty key and could be forged by anyone. Set the "
-            "PLUGIN_RUNNER_SIGNING_KEY environment variable."
-        )
-
     token = encode(
         {
             "plugin_name": plugin_name,
