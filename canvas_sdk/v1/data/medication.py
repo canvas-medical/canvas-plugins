@@ -2,7 +2,7 @@ from operator import attrgetter
 from typing import Self, cast
 
 from django.db import models
-from django.db.models import TextChoices
+from django.db.models import Prefetch, TextChoices
 
 from canvas_sdk.v1.data.base import (
     BaseModelManager,
@@ -27,6 +27,36 @@ class MedicationQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, Valu
     def active(self) -> Self:
         """Filter by active medications."""
         return self.committed().filter(status=Status.ACTIVE)
+
+    def with_latest_sig(self) -> Self:
+        """Prefetch the sources ``latest_sig`` reads so it resolves without a per-medication query.
+
+        Batches the active prescriptions and non-entered-in-error change medications (each with
+        their note via ``select_related("note")``, deferring the large note body fields) plus the
+        medication statements, mirroring the home-app ``resolve_latest_sig`` GraphQL hint.
+        """
+        from canvas_sdk.v1.data.change_medication import ChangeMedication
+        from canvas_sdk.v1.data.prescription import Prescription
+
+        deferred_note_body = ("note___body", "note___body_content", "note___body_order")
+        return self.prefetch_related(
+            Prefetch(
+                "prescriptions",
+                queryset=Prescription.objects.active()
+                .select_related("note")
+                .defer(*deferred_note_body)
+                .order_by("-dbid"),
+                to_attr="_latest_sig_prescriptions",
+            ),
+            Prefetch(
+                "change_medications",
+                queryset=ChangeMedication.objects.filter(entered_in_error__isnull=True)
+                .select_related("note")
+                .defer(*deferred_note_body),
+                to_attr="_latest_sig_change_medications",
+            ),
+            "medication_statements",
+        )
 
 
 MedicationManager = BaseModelManager.from_queryset(MedicationQuerySet)
@@ -68,12 +98,21 @@ class Medication(IdentifiableModel):
         of service wins; otherwise the latest prescription, then the latest change medication, then
         the latest medication statement (each "latest" being the highest ``dbid``). Prescriptions
         contribute their ``combined_sig``. Returns an empty string when no source has a sig.
+
+        Reads the relations prefetched by ``Medication.objects.with_latest_sig()`` when present,
+        falling back to live queries otherwise; use that helper to avoid an N+1 over medications.
         """
         if not self.dbid:
             return ""
 
-        prescriptions = list(self.prescriptions.active().order_by("-dbid"))
-        change_medications = list(self.change_medications.filter(entered_in_error__isnull=True))
+        if hasattr(self, "_latest_sig_prescriptions"):
+            prescriptions = self._latest_sig_prescriptions
+        else:
+            prescriptions = list(self.prescriptions.active().order_by("-dbid"))
+        if hasattr(self, "_latest_sig_change_medications"):
+            change_medications = self._latest_sig_change_medications
+        else:
+            change_medications = list(self.change_medications.filter(entered_in_error__isnull=True))
         medication_statements = list(self.medication_statements.all())
 
         if prescriptions and change_medications:

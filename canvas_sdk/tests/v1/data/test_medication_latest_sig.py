@@ -1,6 +1,8 @@
 from datetime import timedelta
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from canvas_sdk.test_utils.factories import (
@@ -10,6 +12,7 @@ from canvas_sdk.test_utils.factories import (
     MedicationStatementFactory,
     PrescriptionFactory,
 )
+from canvas_sdk.v1.data.medication import Medication
 
 
 @pytest.mark.django_db
@@ -92,3 +95,56 @@ def test_latest_sig_excludes_entered_in_error_but_keeps_status_error() -> None:
     )
 
     assert medication.latest_sig == "status error sig"
+
+
+@pytest.mark.django_db
+def test_with_latest_sig_avoids_per_medication_queries() -> None:
+    """with_latest_sig() batches every source so latest_sig resolves with no extra query."""
+    med_prescription = MedicationFactory.create()
+    PrescriptionFactory.create(
+        medication=med_prescription,
+        committer=CanvasUserFactory.create(),
+        sig_original_input="presc sig",
+    )
+
+    med_change = MedicationFactory.create()
+    ChangeMedicationFactory.create(medication=med_change, sig_original_input="change sig")
+
+    med_statement = MedicationFactory.create()
+    MedicationStatementFactory.create(medication=med_statement, sig_original_input="statement sig")
+
+    dbids = [med_prescription.dbid, med_change.dbid, med_statement.dbid]
+    medications = list(Medication.objects.with_latest_sig().filter(dbid__in=dbids))
+
+    with CaptureQueriesContext(connection) as ctx:
+        sigs = {m.dbid: m.latest_sig for m in medications}
+
+    assert len(ctx.captured_queries) == 0
+    assert sigs[med_prescription.dbid] == "presc sig"
+    assert sigs[med_change.dbid] == "change sig"
+    assert sigs[med_statement.dbid] == "statement sig"
+
+
+@pytest.mark.django_db
+def test_with_latest_sig_prefetches_notes_for_date_comparison() -> None:
+    """with_latest_sig() select_relates each note so the date-of-service comparison adds no query."""
+    medication = MedicationFactory.create()
+    PrescriptionFactory.create(
+        medication=medication,
+        committer=CanvasUserFactory.create(),
+        sig_original_input="presc sig",
+        note__datetime_of_service=timezone.now() - timedelta(days=1),
+    )
+    ChangeMedicationFactory.create(
+        medication=medication,
+        sig_original_input="change sig",
+        note__datetime_of_service=timezone.now(),
+    )
+
+    fetched = Medication.objects.with_latest_sig().get(dbid=medication.dbid)
+
+    with CaptureQueriesContext(connection) as ctx:
+        latest_sig = fetched.latest_sig
+
+    assert latest_sig == "change sig"
+    assert len(ctx.captured_queries) == 0
