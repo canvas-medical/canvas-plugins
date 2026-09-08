@@ -1,6 +1,7 @@
 import importlib.metadata
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from typing import Any
 
 import deprecation
 
@@ -80,6 +81,7 @@ class ApplicationScope(StrEnum):
 
     NOTE = "note"
     SCHEDULING = "scheduling"
+    DOCKED = "docked"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -95,20 +97,26 @@ class EmbeddedApplication(Application, ABC):
         match self.event.type:
             case EventType.APPLICATION__ON_GET:
                 if self._matches_scope() and self.visible():
-                    return [
-                        ShowApplicationEffect(
-                            name=self.NAME,
-                            identifier=self.identifier,
-                            open_by_default=self.open_by_default(),
-                            priority=self.PRIORITY,
-                        ).apply()
-                    ]
+                    return [ShowApplicationEffect(**self._show_application_values()).apply()]
                 return []
             case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
                 # Explicitly ignore the event here in case it's emitted directly.
                 return []
             case _:
                 return super().compute()
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """What this application tells Canvas about itself on APPLICATION__ON_GET.
+
+        Subclasses whose surface needs more than the common fields extend this rather
+        than reimplementing ``compute``.
+        """
+        return {
+            "name": self.NAME,
+            "identifier": self.identifier,
+            "open_by_default": self.open_by_default(),
+            "priority": self.PRIORITY,
+        }
 
     def _matches_scope(self) -> bool:
         """Check if the event scope matches the application scope."""
@@ -126,6 +134,52 @@ class EmbeddedApplication(Application, ABC):
     def identifier(self) -> str:
         """The application identifier."""
         return self.IDENTIFIER if self.IDENTIFIER else super().identifier
+
+
+class DockEdge(StrEnum):
+    """Which edge of the window a docked pane occupies."""
+
+    LEFT = "left"
+    RIGHT = "right"
+    TOP = "top"
+    BOTTOM = "bottom"
+
+
+class DockedApplication(EmbeddedApplication):
+    """An Application that mounts in a persistent pane on an edge of the window.
+
+    A dock is always shown. It has no launcher entry to be opened from and no control to
+    dismiss it, so its presence is settled by installing the plugin — which is why
+    ``open_by_default`` is not overridable here the way it is for other embedded scopes.
+
+    ``DOCK_EDGE`` and ``DOCK_SIZE`` are required: without them Canvas has nowhere to put
+    the pane and no track to size, so a subclass omitting either is a programming error
+    rather than a pane that quietly never appears.
+    """
+
+    SCOPE = ApplicationScope.DOCKED
+
+    DOCK_EDGE: DockEdge
+    DOCK_SIZE: str
+
+    def open_by_default(self) -> bool:
+        """Always true: a dock is chrome, not a window the user opens."""
+        return True
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the placement Canvas needs to size the pane's track."""
+        for attribute in ("DOCK_EDGE", "DOCK_SIZE"):
+            if not getattr(self, attribute, None):
+                raise NotImplementedError(
+                    f"{type(self).__name__} must set {attribute}: a docked application "
+                    "has nowhere to mount without an edge and a size."
+                )
+
+        return {
+            **super()._show_application_values(),
+            "dock_edge": DockEdge(self.DOCK_EDGE).value,
+            "dock_size": self.DOCK_SIZE,
+        }
 
 
 class NoteApplication(EmbeddedApplication):
@@ -187,6 +241,8 @@ class SchedulingApplication(EmbeddedApplication):
 __exports__ = (
     "Application",
     "ApplicationScope",
+    "DockEdge",
+    "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",
     "SchedulingApplication",

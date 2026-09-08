@@ -140,3 +140,8 @@ def test_manifest_variable_rejects_extra_fields(handler_manifest_example: dict) 
     ]
     with pytest.raises(jsonschema.ValidationError):
         validate_manifest_file(handler_manifest_example)
+
+
+def test_manifest_accepts_an_ordinary_application() -> None:
+    """The application entry carries identity and an icon, and nothing about layout."""
+    validate_manifest_file(_make_application_manifest("patient_specific"))

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from canvas_sdk.v1.data.coverage import Coverage
+from canvas_sdk.v1.data.coverage import Coverage, Transactor
 from canvas_sdk.v1.data.eligibility_response import (
     EligibilityResponse,
     EligibilityResponseStatus,
@@ -298,3 +298,38 @@ def test_coverage_eligibility_status_uses_latest_response(mocker: "MockerFixture
 
     assert Coverage().eligibility_status == EligibilityResponseStatus.INACTIVE
     assert responses.order_by_args == ("-created",)
+
+
+def test_status_enum_includes_not_applicable() -> None:
+    """The SDK enum carries NOT_APPLICABLE so self-pay coverages have a value to report (KOALA-6940)."""
+    assert EligibilityResponseStatus.NOT_APPLICABLE.value == "NotApplicable"
+
+
+def test_transactor_supports_eligibility_check() -> None:
+    """A self-pay transactor (payer_id PATIENT) does not support real-time eligibility."""
+    assert Transactor(payer_id="PATIENT").supports_eligibility_check is False
+    assert Transactor(payer_id="AETNA").supports_eligibility_check is True
+
+
+def test_self_pay_coverage_reports_not_applicable_over_stale_failed(
+    mocker: "MockerFixture",
+) -> None:
+    """A self-pay coverage reports NOT_APPLICABLE even when it carries a stale Failed response."""
+    responses = _FakeEligibilityResponses(SimpleNamespace(status=EligibilityResponseStatus.FAILED))
+    mocker.patch.object(Coverage, "eligibility_responses", responses)
+
+    coverage = Coverage()
+    coverage.issuer = Transactor(payer_id="PATIENT")
+
+    assert coverage.eligibility_status == EligibilityResponseStatus.NOT_APPLICABLE
+
+
+def test_ordinary_payer_coverage_defers_to_last_response(mocker: "MockerFixture") -> None:
+    """A coverage with an ordinary payer still defers to its most recent response's status."""
+    responses = _FakeEligibilityResponses(SimpleNamespace(status=EligibilityResponseStatus.ACTIVE))
+    mocker.patch.object(Coverage, "eligibility_responses", responses)
+
+    coverage = Coverage()
+    coverage.issuer = Transactor(payer_id="AETNA")
+
+    assert coverage.eligibility_status == EligibilityResponseStatus.ACTIVE

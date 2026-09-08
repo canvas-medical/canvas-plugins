@@ -1,6 +1,7 @@
+from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.v1.data.questionnaire import InterviewQuerySet
+from canvas_sdk.v1.data.questionnaire import InterviewQuerySet, InterviewQuestionResponse
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -26,3 +27,10 @@ def test_interview_queryset_codings_uses_value_set_name_not_url() -> None:
     """Lookup uses the code system *name* (LOINC) per ValueSetLookupByNameQuerySetMixin."""
     codings = dict(InterviewQuerySet.codings(_LoincSampleValueSet))
     assert codings == {"LOINC": {"68536-0", "72166-2"}}
+
+
+def test_interview_question_response_exposes_the_date_answer() -> None:
+    """A date answer is available as a real date, and is null for other question types."""
+    field = InterviewQuestionResponse._meta.get_field("response_option_date")
+    assert isinstance(field, models.DateField)
+    assert field.null

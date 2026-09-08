@@ -1,6 +1,87 @@
 # CHANGELOG
 
 
+## v0.219.1 (2026-09-07)
+
+### Bug Fixes
+
+- Add missing response option date to questionnaire
+  ([#1864](https://github.com/canvas-medical/canvas-plugins/pull/1864),
+  [`596eb3d`](https://github.com/canvas-medical/canvas-plugins/commit/596eb3d8be449d05453080baff9e56bdab7c8525))
+
+
+## v0.219.0 (2026-09-02)
+
+### Features
+
+- Add support for note v2 ([#1865](https://github.com/canvas-medical/canvas-plugins/pull/1865),
+  [`1723ae2`](https://github.com/canvas-medical/canvas-plugins/commit/1723ae227a88741bc80ab1b5f914b30d20af140c))
+
+
+## v0.218.0 (2026-09-02)
+
+### Features
+
+- Add plugin automations ([#1845](https://github.com/canvas-medical/canvas-plugins/pull/1845),
+  [`2b293df`](https://github.com/canvas-medical/canvas-plugins/commit/2b293dfa92094fb7f9438c5ccfdea04686d7bb3b))
+
+
+## v0.217.1 (2026-09-01)
+
+### Bug Fixes
+
+- **data**: Report NOT_APPLICABLE eligibility status for self-pay coverages
+  ([#1855](https://github.com/canvas-medical/canvas-plugins/pull/1855),
+  [`d7908f9`](https://github.com/canvas-medical/canvas-plugins/commit/d7908f9632d718beaf75d57fc47ff01ab9547036))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.217.0 (2026-09-01)
+
+### Features
+
+- Add docked panes ([#1814](https://github.com/canvas-medical/canvas-plugins/pull/1814),
+  [`69c4ec4`](https://github.com/canvas-medical/canvas-plugins/commit/69c4ec44a9e000db6fd792b9194228d2e5a55894))
+
+
+## v0.216.1 (2026-09-01)
+
+### Bug Fixes
+
+- **data**: Make prescription change request identifiable
+  ([#1863](https://github.com/canvas-medical/canvas-plugins/pull/1863),
+  [`a702719`](https://github.com/canvas-medical/canvas-plugins/commit/a7027197ac564b0084fdaea217c85f8c0f387391))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+
+## v0.216.0 (2026-09-01)
+
+### Features
+
+- **data**: Add prescription change response to the data module
+  ([#1860](https://github.com/canvas-medical/canvas-plugins/pull/1860),
+  [`dcd7605`](https://github.com/canvas-medical/canvas-plugins/commit/dcd76052789600aa28b2cdff8d64f6fc09f43218))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.215.0 (2026-09-01)
 
 ### Features
