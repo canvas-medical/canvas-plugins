@@ -51,6 +51,7 @@ def _git_side_effect(
     merge_stderr: str = "",
     dirty: bool = False,
     staged_files: list[str] | None = None,
+    in_repo: bool = True,
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Fake `subprocess.run` for the git calls cr-init (and the deploy/consent
     flow) make.
@@ -63,7 +64,9 @@ def _git_side_effect(
     def run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         sub = cmd[3:]  # cmd == ["git", "-C", <dir>, <subcommand>, ...]
         if sub[:2] == ["rev-parse", "--is-inside-work-tree"]:
-            return subprocess.CompletedProcess(cmd, 0, "true\n", "")
+            if in_repo:
+                return subprocess.CompletedProcess(cmd, 0, "true\n", "")
+            return subprocess.CompletedProcess(cmd, 128, "", "fatal: not a git repository")
         if sub[:3] == ["remote", "get-url", "origin"]:
             return subprocess.CompletedProcess(cmd, 0 if remote_exists else 1, "", "")
         if sub[:2] == ["push", "origin"]:
@@ -300,7 +303,7 @@ def test_cr_init_requires_git_repo(mock_run: Mock, tmp_path: Path) -> None:
     mock_run.return_value = subprocess.CompletedProcess([], 128, "", "not a git repository")
     result = runner.invoke(_app(), ["cr-init", str(_plugin_dir(tmp_path)), "--host", HOST])
     assert result.exit_code != 0
-    assert "not a git repository" in result.output
+    assert "not in a git repository" in result.output
 
 
 @patch("subprocess.run", side_effect=FileNotFoundError(2, "No such file or directory", "git"))
@@ -939,6 +942,76 @@ def test_commit_working_tree_clean_is_noop(mock_run: Mock, tmp_path: Path) -> No
     calls = [c.args[0] for c in mock_run.call_args_list]
     assert not any(c[3] == "commit" for c in calls)
     assert not any(c[3:5] == ["add", "-A"] for c in calls)
+
+
+# -- deploy: git-repo init gate ----------------------------------------------
+
+
+@patch("subprocess.run")
+def test_ensure_git_repo_noop_when_already_in_repo(mock_run: Mock, tmp_path: Path) -> None:
+    """Already in a repo: no prompt, no init."""
+    mock_run.side_effect = _git_side_effect(in_repo=True)
+    commands._ensure_git_repo(_plugin_dir(tmp_path))
+    assert not any(c.args[0][3:4] == ["init"] for c in mock_run.call_args_list)
+
+
+@patch("subprocess.run")
+def test_ensure_git_repo_inits_repo_root_on_confirm(
+    mock_run: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not in a repo + a TTY: after confirmation, `git init` runs at the package's
+    PARENT (the repo root) — CR's <repo>/<package>/CANVAS_MANIFEST.json layout —
+    not at the package dir itself.
+    """
+    mock_run.side_effect = _git_side_effect(in_repo=False)
+    tty = Mock()
+    tty.isatty.return_value = True
+    monkeypatch.setattr(commands.sys, "stdin", tty)
+    monkeypatch.setattr(commands.sys, "stdout", tty)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    with patch("typer.confirm", return_value=True):
+        commands._ensure_git_repo(plugin_dir)
+
+    init = next(c.args[0] for c in mock_run.call_args_list if c.args[0][3:4] == ["init"])
+    assert init[2] == str(plugin_dir.resolve().parent)  # git -C <repo_root> init
+
+
+@patch("subprocess.run")
+def test_ensure_git_repo_aborts_on_decline(
+    mock_run: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Declining the init prompt aborts without initializing anything."""
+    mock_run.side_effect = _git_side_effect(in_repo=False)
+    tty = Mock()
+    tty.isatty.return_value = True
+    monkeypatch.setattr(commands.sys, "stdin", tty)
+    monkeypatch.setattr(commands.sys, "stdout", tty)
+
+    with patch("typer.confirm", return_value=False), pytest.raises(typer.Abort):
+        commands._ensure_git_repo(_plugin_dir(tmp_path))
+    assert not any(c.args[0][3:4] == ["init"] for c in mock_run.call_args_list)
+
+
+@patch("subprocess.run")
+def test_ensure_git_repo_noninteractive_errors_naming_repo_root(
+    mock_run: Mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No TTY: never init a possibly-shared parent unattended — raise the
+    actionable error naming the repo root instead.
+    """
+    mock_run.side_effect = _git_side_effect(in_repo=False)
+    notty = Mock()
+    notty.isatty.return_value = False
+    monkeypatch.setattr(commands.sys, "stdin", notty)
+    monkeypatch.setattr(commands.sys, "stdout", notty)
+    plugin_dir = _plugin_dir(tmp_path)
+
+    with pytest.raises(typer.BadParameter) as exc:
+        commands._ensure_git_repo(plugin_dir)
+    assert "repo root" in str(exc.value)
+    assert str(plugin_dir.resolve().parent) in str(exc.value)
+    assert not any(c.args[0][3:4] == ["init"] for c in mock_run.call_args_list)
 
 
 # -- Control Room discovery / proxy transport errors -------------------------

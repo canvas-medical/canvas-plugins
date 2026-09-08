@@ -261,14 +261,60 @@ def _require_git_installed() -> None:
         )
 
 
+def _plugin_repo_root(plugin_dir: Path) -> Path:
+    """The git repo root for a plugin package: its parent directory.
+
+    Control Room requires the ``canvas init`` layout
+    ``<repo>/<package>/CANVAS_MANIFEST.json`` and rejects a manifest at the repo
+    root, so the repo must be rooted one level above the package (the dir handed
+    to ``deploy``/``cr-init``), not at the package itself.
+    """
+    return plugin_dir.resolve().parent
+
+
+def _in_git_repo(plugin_dir: Path) -> bool:
+    return _git(plugin_dir, "rev-parse", "--is-inside-work-tree").stdout.strip() == "true"
+
+
 def _require_git_repo(plugin_dir: Path) -> None:
     _require_git_installed()
-    result = _git(plugin_dir, "rev-parse", "--is-inside-work-tree")
-    if result.returncode != 0 or result.stdout.strip() != "true":
+    if not _in_git_repo(plugin_dir):
         raise typer.BadParameter(
-            f"'{plugin_dir}' is not a git repository. Control Room is your plugin's "
-            "git remote, so the plugin must live in a git repo (run `git init` first)."
+            f"'{plugin_dir}' is not in a git repository. Control Room is your plugin's "
+            f"git remote, so it must live in a repo. Run `git init` in the repo root "
+            f"({_plugin_repo_root(plugin_dir)}) — the directory containing the plugin "
+            "package — then try again."
         )
+
+
+def _ensure_git_repo(plugin_dir: Path) -> None:
+    """Ensure the plugin is in a git repo, offering to create one at a TTY.
+
+    Deploy pushes a committed HEAD (Control Room is the git remote), so it needs a
+    repo. When the plugin isn't in one, offer to ``git init`` the **repo root**
+    (the package's parent — see ``_plugin_repo_root``). The prompt names the exact
+    directory so the operator can catch the case where that parent is a shared
+    folder (many plugins) they don't want swept into one repo. Non-interactively,
+    fall back to ``_require_git_repo``'s actionable error rather than initializing
+    a possibly-shared parent unattended.
+    """
+    _require_git_installed()
+    if _in_git_repo(plugin_dir):
+        return
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        _require_git_repo(plugin_dir)  # raises the actionable non-interactive error
+
+    repo_root = _plugin_repo_root(plugin_dir)
+    print(f"'{plugin_dir}' is not in a git repository.")
+    if not typer.confirm(
+        f"Initialize a git repository at {repo_root} (the plugin's repo root) and continue?",
+        default=False,
+    ):
+        raise typer.Abort()
+    result = _git(repo_root, "init")
+    if result.returncode != 0:
+        raise typer.BadParameter(f"git init failed: {result.stderr.strip()}")
+    print(f"Initialized a git repository at {repo_root}.")
 
 
 def _url_origin(url: str) -> str:
@@ -541,9 +587,10 @@ def deploy(
     """Publish the plugin's current code to Control Room and deploy it.
 
     The happy path needs no setup first: `canvas deploy <dir> --host <instance>`
-    registers the repo with Control Room, points `origin` at it (plus the
-    credential helper), commits any uncommitted changes (with your confirmation),
-    pushes the current HEAD to `main`, then builds and installs the plugin. If the
+    initializes a git repo if the plugin isn't in one (asking first), registers the
+    repo with Control Room, points `origin` at it (plus the credential helper),
+    commits any uncommitted changes (with your confirmation), pushes the current
+    HEAD to `main`, then builds and installs the plugin. If the
     deploy is gated on operator consent (e.g. cross-plugin custom-data access), the
     requests are shown and approved or denied inline.
 
@@ -564,7 +611,7 @@ def deploy(
     target_ref = ref or "main"
 
     if push_head:
-        _require_git_repo(plugin_name)  # also asserts git is installed
+        _ensure_git_repo(plugin_name)  # in a repo (offer to init at a TTY) + git installed
         # Register the repo + wire origin/credential-helper (idempotent) so a
         # fresh plugin's first push isn't rejected and the push authenticates.
         org_slug, name = _ensure_cr_remote(plugin_name, host)
