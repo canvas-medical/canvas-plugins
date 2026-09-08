@@ -5,12 +5,12 @@ from uuid import UUID
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.v1.data import NoteType, ReasonForVisitSettingCoding
 
 
-class FollowUpCommand(_BaseCommand):
+class FollowUpCommand(_AssessmentLinkedCommand):
     """A class for managing a Follow-Up command within a specific note."""
 
     class Meta:

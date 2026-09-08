@@ -134,6 +134,9 @@ class NoteTask(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="note_tasks")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="note_tasks", null=True
+    )
     task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient",

@@ -157,6 +157,24 @@ class _BaseCommand(TrackableFieldsModel):
 
         return None
 
+    def _anchor_note_id(self) -> str | None:
+        """The note this command is written in, when that can be known.
+
+        Returns:
+            The note's id, or None when there is nothing to resolve it from *or* the anchor is not
+            persisted yet, for the same reason `_anchor_patient_id` returns None in that case.
+        """
+        if note_uuid := self.note_uuid:
+            note_id = Note.objects.filter(id=note_uuid).values_list("id", flat=True).first()
+        elif command_uuid := self.command_uuid:
+            note_id = (
+                Command.objects.filter(id=command_uuid).values_list("note__id", flat=True).first()
+            )
+        else:
+            return None
+
+        return str(note_id) if note_id is not None else None
+
     def _is_target_patient(self, patient_id: str) -> bool:
         """Whether the given patient is the one whose chart this command writes to.
 
