@@ -1,3 +1,4 @@
+from canvas_sdk.commands.commands.add_condition import AddConditionCommand
 from canvas_sdk.commands.commands.adjust_prescription import AdjustPrescriptionCommand
 from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
@@ -48,6 +49,7 @@ from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
 
 __all__ = __exports__ = (
+    "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
