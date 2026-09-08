@@ -233,7 +233,7 @@ def test_plugin_originates_command_in_note(
 
     assert len(commands_in_note) == 1
 
-    command_uuid = commands_in_note[0]["data"]["commandUuid"]
+    command_uuid = commands_in_note[0]["command_uuid"]
     command = get_command(command_uuid, token=token)
 
     schema = command_cls.model_json_schema()

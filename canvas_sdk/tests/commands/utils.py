@@ -39,6 +39,13 @@ COMMANDS: list[type[_BaseCommand]] = [
 CommandCode = TypedDict("CommandCode", {"class": type[_BaseCommand], "data": str})
 
 
+class NoteCommand(TypedDict):
+    """A command line in a note body."""
+
+    command_uuid: str
+    key: str
+
+
 def command_event_prefix(command: type[_BaseCommand]) -> str:
     """Get the event prefix for the command events."""
     if command.Meta.key == "hpi":
@@ -78,13 +85,41 @@ def get_command_fields(
     return requests.get(url, headers={"Authorization": f"Bearer {token.value}"}).json()["fields"]
 
 
+def _commands_from_body(body: list[dict[str, Any]]) -> list[NoteCommand]:
+    """Extract the commands from a version 1 note body, which is a list of lines."""
+    return [
+        NoteCommand(command_uuid=line["data"]["commandUuid"], key=line["value"])
+        for line in body
+        if line["type"] == "command"
+        and "data" in line
+        and "commandUuid" in line["data"]
+        and "id" in line["data"]
+    ]
+
+
+def _commands_from_body_content(
+    body_content: dict[str, dict[str, Any]],
+    body_order: list[str],
+) -> list[NoteCommand]:
+    """Extract the commands from a version 2 note body, which is keyed by line uuid.
+
+    A command's line uuid is its command uuid, and `body_order` holds the line
+    order, so the commands come back in the order they appear in the note.
+    """
+    return [
+        NoteCommand(command_uuid=line_uuid, key=body_content[line_uuid]["value"])
+        for line_uuid in body_order
+        if body_content.get(line_uuid, {}).get("type") == "command"
+    ]
+
+
 def get_commands_in_note(
     note_id: int,
     token: MaskedValue,
     command_key: str | None = None,
     command_uuid: str | None = None,
-) -> list[dict[str, Any]]:
-    """Get the commands from the original note body."""
+) -> list[NoteCommand]:
+    """Get the commands in the note body, optionally filtered by key or command uuid."""
     response = requests.get(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/{note_id}",
         headers={
@@ -95,18 +130,19 @@ def get_commands_in_note(
     )
     response.raise_for_status()
 
-    original_note = response.json()
+    note = response.json()
 
-    body = original_note["body"]
+    commands = (
+        _commands_from_body_content(note["bodyContent"], note["bodyOrder"])
+        if note.get("version") == 2
+        else _commands_from_body(note["body"])
+    )
+
     return [
-        line
-        for line in body
-        if "data" in line
-        and "commandUuid" in line["data"]
-        and "id" in line["data"]
-        and line["type"] == "command"
-        and ((command_key and line["value"] == command_key) or not command_key)
-        and ((command_uuid and line["data"]["commandUuid"] == command_uuid) or not command_uuid)
+        command
+        for command in commands
+        if (command_key is None or command["key"] == command_key)
+        and (command_uuid is None or command["command_uuid"] == command_uuid)
     ]
 
 
