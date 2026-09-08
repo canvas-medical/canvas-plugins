@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.219.1 (2026-09-07)
+
+### Bug Fixes
+
+- Add missing response option date to questionnaire
+  ([#1864](https://github.com/canvas-medical/canvas-plugins/pull/1864),
+  [`596eb3d`](https://github.com/canvas-medical/canvas-plugins/commit/596eb3d8be449d05453080baff9e56bdab7c8525))
+
+
 ## v0.219.0 (2026-09-02)
 
 ### Features
