@@ -16,6 +16,8 @@ class ShowApplicationEffect(_BaseEffect):
     identifier: str = Field(min_length=1)
     open_by_default: bool = Field(default=False)
     priority: int = Field(default=0)
+    dock_edge: str | None = Field(default=None)
+    dock_size: str | None = Field(default=None)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -25,6 +27,8 @@ class ShowApplicationEffect(_BaseEffect):
             "identifier": self.identifier,
             "open_by_default": self.open_by_default,
             "priority": self.priority,
+            "dock_edge": self.dock_edge,
+            "dock_size": self.dock_size,
         }
 
     @property

@@ -342,6 +342,7 @@
   "canvas_sdk.commands.commands.questionnaire.question": [
     "BaseQuestion",
     "CheckboxQuestion",
+    "DateQuestion",
     "IntegerQuestion",
     "RadioQuestion",
     "ResponseOption",
@@ -952,6 +953,8 @@
   "canvas_sdk.handlers.application": [
     "Application",
     "ApplicationScope",
+    "DockEdge",
+    "DockedApplication",
     "EmbeddedApplication",
     "NoteApplication",
     "SchedulingApplication"
@@ -1106,6 +1109,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
     "BannerAlert",
@@ -1118,6 +1122,9 @@
     "BulkPatientPosting",
     "BusinessLine",
     "Calendar",
+    "CancelPrescription",
+    "CancelPrescriptionResponse",
+    "CancelPrescriptionStatus",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -1149,10 +1156,12 @@
     "ContentType",
     "Coverage",
     "CoveragePosting",
+    "CreateCodingGapEvent",
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
     "CustomModel",
+    "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -1180,6 +1189,7 @@
     "FamilyHistoryCoding",
     "FieldType",
     "FieldValueTooLarge",
+    "FollowUp",
     "Goal",
     "HistoryOfPresentIllness",
     "ImagingOrder",
@@ -1276,12 +1286,20 @@
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
+    "Plan",
     "PluginCommand",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "Prescription",
+    "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
+    "PrescriptionChangeRequestType",
+    "PrescriptionChangeResponse",
+    "PrescriptionChangeResponseStatus",
+    "PrescriptionChangeResponseType",
     "PrescriptionResponse",
     "PrescriptionStatus",
     "Procedure",
@@ -1292,6 +1310,8 @@
     "Question",
     "Questionnaire",
     "QuestionnaireQuestionMap",
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
@@ -1299,6 +1319,8 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemoveAllergyEvent",
+    "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1332,6 +1354,7 @@
     "Vaccine",
     "VaccineLot",
     "VaccineManufacturer",
+    "ValidateCodingGapEvent",
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
@@ -1381,6 +1404,13 @@
     "Calendar",
     "Event"
   ],
+  "canvas_sdk.v1.data.cancel_prescription": [
+    "CancelPrescription",
+    "CancelPrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.cancel_prescription_response": [
+    "CancelPrescriptionResponse"
+  ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
     "CareTeamMembershipStatus",
@@ -1429,6 +1459,12 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.coding_gap_event": [
+    "AssessCodingGapEvent",
+    "CreateCodingGapEvent",
+    "DeferCodingGapEvent",
+    "ValidateCodingGapEvent"
   ],
   "canvas_sdk.v1.data.command": [
     "Command",
@@ -1532,6 +1568,9 @@
   "canvas_sdk.v1.data.family_history": [
     "FamilyHistory",
     "FamilyHistoryCoding"
+  ],
+  "canvas_sdk.v1.data.follow_up": [
+    "FollowUp"
   ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
@@ -1697,6 +1736,9 @@
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
   ],
+  "canvas_sdk.v1.data.plan": [
+    "Plan"
+  ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
   ],
@@ -1718,6 +1760,15 @@
     "Prescription",
     "PrescriptionResponse",
     "PrescriptionStatus"
+  ],
+  "canvas_sdk.v1.data.prescription_change": [
+    "PrescriptionChangeRequest",
+    "PrescriptionChangeRequestCoding",
+    "PrescriptionChangeRequestSubType",
+    "PrescriptionChangeRequestType",
+    "PrescriptionChangeResponse",
+    "PrescriptionChangeResponseStatus",
+    "PrescriptionChangeResponseType"
   ],
   "canvas_sdk.v1.data.procedure": [
     "Procedure",
@@ -1749,6 +1800,8 @@
     "ResponseOptionSet"
   ],
   "canvas_sdk.v1.data.reason_for_visit": [
+    "ReasonForVisit",
+    "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
@@ -1761,11 +1814,17 @@
     "RefillRequest",
     "RefillRequestCoding"
   ],
+  "canvas_sdk.v1.data.remove_allergy_event": [
+    "RemoveAllergyEvent"
+  ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
     "BaseReportTemplateField",
     "BaseReportTemplateFieldOption",
     "BaseReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.resolve_condition_event": [
+    "ResolveConditionEvent"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"

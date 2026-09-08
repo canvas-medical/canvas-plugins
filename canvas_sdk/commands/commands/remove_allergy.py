@@ -1,9 +1,8 @@
-from uuid import UUID
-
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.base import _OptionalId
 from canvas_sdk.v1.data import AllergyIntolerance
 
 
@@ -13,7 +12,7 @@ class RemoveAllergyCommand(BaseCommand):
     class Meta:
         key = "removeAllergy"
 
-    allergy_id: UUID | None = Field(
+    allergy_id: _OptionalId = Field(
         description="The external ID of the allergy to remove.",
         default=None,
         json_schema_extra={"commands_api_name": "allergy"},

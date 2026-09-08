@@ -7,6 +7,7 @@ from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.questionnaire.question import (
     BaseQuestion,
     CheckboxQuestion,
+    DateQuestion,
     IntegerQuestion,
     RadioQuestion,
     ResponseOption,
@@ -17,6 +18,7 @@ from canvas_sdk.v1.data import Command, Questionnaire
 QUESTION_CLASSES: dict[str, type[BaseQuestion]] = {
     ResponseOption.TYPE_TEXT: TextQuestion,
     ResponseOption.TYPE_INTEGER: IntegerQuestion,
+    ResponseOption.TYPE_DATE: DateQuestion,
     ResponseOption.TYPE_RADIO: RadioQuestion,
     ResponseOption.TYPE_CHECKBOX: CheckboxQuestion,
 }
@@ -161,7 +163,9 @@ class QuestionnaireCommand(_BaseCommand):
                 question.add_response(integer=answer.response)
             elif question.type == ResponseOption.TYPE_RADIO:
                 question.add_response(option=self._option(question, str(answer.response)))
-            else:
+            elif question.type == ResponseOption.TYPE_DATE:
+                question.add_response(date=answer.response)
+            elif question.type == ResponseOption.TYPE_CHECKBOX:
                 if not isinstance(answer.response, list):
                     raise ValueError(
                         f"Question '{question.label}' is answered with a list of selections"
@@ -173,6 +177,11 @@ class QuestionnaireCommand(_BaseCommand):
                         selected=selection.selected,
                         comment=selection.comment,
                     )
+            else:
+                raise ValueError(
+                    f"Question '{question.label}' has type {question.type}, "
+                    f"which an answer cannot set"
+                )
 
     @property
     def values(self) -> dict:
