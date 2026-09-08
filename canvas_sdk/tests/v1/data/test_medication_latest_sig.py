@@ -148,3 +148,31 @@ def test_with_latest_sig_prefetches_notes_for_date_comparison() -> None:
 
     assert latest_sig == "change sig"
     assert len(ctx.captured_queries) == 0
+
+
+@pytest.mark.django_db
+def test_latest_sig_prescription_wins_when_its_note_is_later() -> None:
+    """Both exist and the prescription's note is later -> its combined_sig wins."""
+    medication = MedicationFactory.create()
+    earlier = timezone.now() - timedelta(days=2)
+    later = timezone.now()
+
+    PrescriptionFactory.create(
+        medication=medication,
+        committer=CanvasUserFactory.create(),
+        sig_original_input="presc sig",
+        maximum_daily_dose="3 tabs",
+        note__datetime_of_service=later,
+    )
+    ChangeMedicationFactory.create(
+        medication=medication,
+        sig_original_input="change sig",
+        note__datetime_of_service=earlier,
+    )
+
+    assert medication.latest_sig == "presc sig. Maximum Daily Dose: 3 tabs"
+
+
+def test_latest_sig_empty_when_unsaved() -> None:
+    """An unsaved medication (no dbid) returns an empty string without a DB query."""
+    assert Medication().latest_sig == ""
