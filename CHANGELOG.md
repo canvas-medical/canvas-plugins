@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.222.0 (2026-09-09)
+
+### Features
+
+- Add phone dial configuration and click events
+  ([#1866](https://github.com/canvas-medical/canvas-plugins/pull/1866),
+  [`4e7976c`](https://github.com/canvas-medical/canvas-plugins/commit/4e7976c6c0341f5ce95e7e3c5702d78ebcf349f7))
+
+
 ## v0.221.0 (2026-09-09)
 
 ### Features
