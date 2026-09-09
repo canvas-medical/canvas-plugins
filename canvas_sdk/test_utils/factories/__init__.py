@@ -109,6 +109,7 @@ from .prescription_change import (
     PrescriptionChangeRequestFactory,
     PrescriptionChangeResponseFactory,
 )
+from .private_note import PrivateNoteFactory
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
@@ -248,6 +249,7 @@ __all__ = (
     "PrescriptionChangeRequestCodingFactory",
     "PrescriptionChangeResponseFactory",
     "PrescriptionFactory",
+    "PrivateNoteFactory",
     "ProcedureFactory",
     "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
