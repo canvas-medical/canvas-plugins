@@ -1111,6 +1111,22 @@ def test_compile_errors() -> None:
         sandbox.execute()
 
 
+def test_source_the_parser_cannot_encode_is_reported_as_invalid() -> None:
+    """Test that a non-syntax parse failure is reported rather than raised.
+
+    A lone surrogate is a valid `str` that cannot be encoded, so `ast.parse`
+    raises `UnicodeEncodeError` (a `ValueError`) rather than a `SyntaxError`,
+    exercising the error path that records the exception instead of letting it
+    escape the compile. Such a string never survives a UTF-8 source file, so it
+    is set on the sandbox directly.
+    """
+    sandbox = _sandbox_from_code("result = 1")
+    sandbox.source_code = "result = 1  # " + chr(0xD800)
+
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
 def test_sandbox_scope() -> None:
     """Verify the sandbox scope includes expected built-ins and utility functions."""
     sandbox = _sandbox_from_code(VALID_CODE)
