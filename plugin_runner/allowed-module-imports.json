@@ -817,6 +817,11 @@
     "PaymentProcessorMetadata",
     "RemovePaymentMethodResponse"
   ],
+  "canvas_sdk.effects.phone_dial_configuration": [
+    "PhoneDialClickHandling",
+    "PhoneDialConfiguration",
+    "PhoneDialSection"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
@@ -1109,6 +1114,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
     "BannerAlert",
@@ -1155,10 +1161,12 @@
     "ContentType",
     "Coverage",
     "CoveragePosting",
+    "CreateCodingGapEvent",
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
     "CustomModel",
+    "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -1311,6 +1319,7 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
+    "Reference",
     "Referral",
     "ReferralReport",
     "ReferralReportCoding",
@@ -1352,6 +1361,7 @@
     "Vaccine",
     "VaccineLot",
     "VaccineManufacturer",
+    "ValidateCodingGapEvent",
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
@@ -1456,6 +1466,12 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.coding_gap_event": [
+    "AssessCodingGapEvent",
+    "CreateCodingGapEvent",
+    "DeferCodingGapEvent",
+    "ValidateCodingGapEvent"
   ],
   "canvas_sdk.v1.data.command": [
     "Command",
@@ -1797,6 +1813,9 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
+  ],
+  "canvas_sdk.v1.data.reference": [
+    "Reference"
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
