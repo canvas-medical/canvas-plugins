@@ -114,6 +114,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reference import ReferenceFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
@@ -256,6 +257,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReferenceFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",

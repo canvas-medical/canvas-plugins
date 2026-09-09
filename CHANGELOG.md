@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.221.0 (2026-09-09)
+
+### Features
+
+- **data**: Add reference to the data module
+  ([#1868](https://github.com/canvas-medical/canvas-plugins/pull/1868),
+  [`4e1a47f`](https://github.com/canvas-medical/canvas-plugins/commit/4e1a47feea25fd05026fbebcc2040564074337f2))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.220.0 (2026-09-08)
 
 ### Chores
