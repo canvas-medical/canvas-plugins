@@ -21,6 +21,12 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .coding_gap_event import (
+    AssessCodingGapEventFactory,
+    CreateCodingGapEventFactory,
+    DeferCodingGapEventFactory,
+    ValidateCodingGapEventFactory,
+)
 from .coverage import CoverageFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
@@ -107,6 +113,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reference import ReferenceFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
@@ -163,6 +170,10 @@ __all__ = (
     "ClaimSupervisingProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "AssessCodingGapEventFactory",
+    "CreateCodingGapEventFactory",
+    "DeferCodingGapEventFactory",
+    "ValidateCodingGapEventFactory",
     "CoverageFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",
@@ -244,6 +255,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReferenceFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
