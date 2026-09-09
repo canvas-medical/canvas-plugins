@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.220.0 (2026-09-08)
+
+### Chores
+
+- **tests**: Read commands from the note body content for version 2
+  ([#1873](https://github.com/canvas-medical/canvas-plugins/pull/1873),
+  [`0b6f6ca`](https://github.com/canvas-medical/canvas-plugins/commit/0b6f6ca1ed427b94ef1ec0394f3a2f92e1bc05db))
+
+### Features
+
+- **data**: Add coding gap command events to the data module
+  ([#1861](https://github.com/canvas-medical/canvas-plugins/pull/1861),
+  [`ea317fa`](https://github.com/canvas-medical/canvas-plugins/commit/ea317fa9ee3fbaa8774116d30c4e7910aeffd95a))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.219.1 (2026-09-07)
 
 ### Bug Fixes
