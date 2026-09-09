@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic_core import ValidationError
@@ -120,6 +120,34 @@ def test_an_assessment_id_that_names_nothing_is_refused(note: Note) -> None:
 def test_no_assessment_means_nothing_to_check(note: Note) -> None:
     """The link is optional, so a command committed without one is valid."""
     assert InstructCommand(note_uuid=str(note.id), comment="Rest and fluids").originate()
+
+
+def test_a_note_that_is_not_persisted_yet_is_not_refused(db: None) -> None:
+    """One handler can create the note and write into it in the same batch of effects.
+
+    `[note.create(id=x), command.originate(note_uuid=x)]` names a note that does not exist when
+    the effects are built, so there is nothing to check the assessment against and the command
+    must not be refused. The interpreter checks the link once the note exists.
+    """
+    unborn_note_id = str(uuid4())
+
+    assert not Note.objects.filter(id=unborn_note_id).exists()
+    assert InstructCommand(
+        note_uuid=unborn_note_id, assessment_id=UNKNOWN_ASSESSMENT_ID
+    ).originate()
+
+
+def test_a_commit_carrying_an_assessment_is_not_checked(
+    patient: Patient, stored_command: Command, other_note: Note
+) -> None:
+    """A commit addresses a command that already holds whatever link it has.
+
+    Re-checking the link at that point can only refuse a commit over a field the caller is not
+    changing, so the check is limited to the methods that write the link.
+    """
+    foreign = _assessment(patient, other_note)
+
+    assert InstructCommand(command_uuid=str(stored_command.id), assessment_id=foreign.id).commit()
 
 
 def test_the_check_holds_on_an_edit_which_carries_no_note(
