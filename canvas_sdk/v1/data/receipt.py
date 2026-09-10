@@ -45,21 +45,23 @@ class Receipt(AuditedModel, IdentifiableModel):
     @property
     def total_posted_amount(self) -> Decimal:
         """Total posted with this collection: the sum of payments and write-off adjustments."""
-        if not self.payment_collection_id:
+        payment_collection = self.payment_collection
+        if payment_collection is None:
             return quantize(0)
         return quantize(
-            sum(posting.posted_amount for posting in self.payment_collection.postings.active())
+            sum(posting.posted_amount for posting in payment_collection.postings.active())
         )
 
     @property
     def copay_amount(self) -> Decimal:
         """The amount posted as copays on this collection."""
-        if not self.payment_collection_id:
+        payment_collection = self.payment_collection
+        if payment_collection is None:
             return quantize(0)
         return quantize(
             sum(
                 posting.paid_amount
-                for posting in self.payment_collection.postings.active()
+                for posting in payment_collection.postings.active()
                 if hasattr(posting, "patientposting") and posting.patientposting.copay
             )
         )
