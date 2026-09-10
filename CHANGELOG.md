@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.223.0 (2026-09-10)
+
+### Features
+
+- **data**: Add group to the data module
+  ([#1869](https://github.com/canvas-medical/canvas-plugins/pull/1869),
+  [`55d8164`](https://github.com/canvas-medical/canvas-plugins/commit/55d8164bb4003575fb7d5ea037f408bb894ad1f4))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.222.0 (2026-09-09)
 
 ### Features
