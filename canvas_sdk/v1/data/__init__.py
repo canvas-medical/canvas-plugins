@@ -215,6 +215,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisit, ReasonForVisitCoding, ReasonForVisitSettingCoding
+from .receipt import Receipt
 from .reference import Reference
 from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .refill_request import RefillRequest, RefillRequestCoding
@@ -462,6 +463,7 @@ __all__ = __exports__ = (
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
+    "Receipt",
     "Reference",
     "Referral",
     "ReferralReport",
