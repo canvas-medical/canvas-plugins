@@ -82,6 +82,7 @@ from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
+from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
     ImagingOrder,
@@ -338,6 +339,7 @@ __all__ = __exports__ = (
     "FieldType",
     "FollowUp",
     "Goal",
+    "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",

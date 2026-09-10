@@ -817,6 +817,11 @@
     "PaymentProcessorMetadata",
     "RemovePaymentMethodResponse"
   ],
+  "canvas_sdk.effects.phone_dial_configuration": [
+    "PhoneDialClickHandling",
+    "PhoneDialConfiguration",
+    "PhoneDialSection"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
@@ -1191,6 +1196,7 @@
     "FieldValueTooLarge",
     "FollowUp",
     "Goal",
+    "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",
@@ -1579,6 +1585,9 @@
     "GoalLifecycleStatus",
     "GoalPriority",
     "UpdateGoal"
+  ],
+  "canvas_sdk.v1.data.group": [
+    "Group"
   ],
   "canvas_sdk.v1.data.history_present_illness": [
     "HistoryOfPresentIllness"
