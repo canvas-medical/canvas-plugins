@@ -44,8 +44,7 @@ class MedicationQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, Valu
                 "prescriptions",
                 queryset=Prescription.objects.active()
                 .select_related("note")
-                .defer(*deferred_note_body)
-                .order_by("-dbid"),
+                .defer(*deferred_note_body),
                 to_attr="_latest_sig_prescriptions",
             ),
             Prefetch(
@@ -55,7 +54,7 @@ class MedicationQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, Valu
                 .defer(*deferred_note_body),
                 to_attr="_latest_sig_change_medications",
             ),
-            "medication_statements",
+            Prefetch("medication_statements", to_attr="_latest_sig_medication_statements"),
         )
 
 
@@ -106,31 +105,46 @@ class Medication(IdentifiableModel):
             return ""
 
         if hasattr(self, "_latest_sig_prescriptions"):
-            prescriptions = self._latest_sig_prescriptions
+            latest_prescription = max(
+                self._latest_sig_prescriptions, key=attrgetter("dbid"), default=None
+            )
         else:
-            prescriptions = list(self.prescriptions.active().order_by("-dbid"))
+            latest_prescription = (
+                self.prescriptions.active().select_related("note").order_by("-dbid").first()
+            )
         if hasattr(self, "_latest_sig_change_medications"):
-            change_medications = self._latest_sig_change_medications
+            latest_change_medication = max(
+                self._latest_sig_change_medications, key=attrgetter("dbid"), default=None
+            )
         else:
-            change_medications = list(self.change_medications.filter(entered_in_error__isnull=True))
-        medication_statements = list(self.medication_statements.all())
+            latest_change_medication = (
+                self.change_medications.filter(entered_in_error__isnull=True)
+                .select_related("note")
+                .order_by("-dbid")
+                .first()
+            )
 
-        if prescriptions and change_medications:
-            latest_prescription = prescriptions[0]
-            latest_change_med = max(change_medications, key=attrgetter("dbid"))
+        if latest_prescription and latest_change_medication:
             if (
                 latest_prescription.note
                 and latest_prescription.note.datetime_of_service
-                > latest_change_med.note.datetime_of_service
+                > latest_change_medication.note.datetime_of_service
             ):
                 return latest_prescription.combined_sig
-            return latest_change_med.sig_original_input
-        if prescriptions:
-            return prescriptions[0].combined_sig
-        if change_medications:
-            return max(change_medications, key=attrgetter("dbid")).sig_original_input
-        if medication_statements:
-            return max(medication_statements, key=attrgetter("dbid")).sig_original_input
+            return latest_change_medication.sig_original_input
+        if latest_prescription:
+            return latest_prescription.combined_sig
+        if latest_change_medication:
+            return latest_change_medication.sig_original_input
+
+        if hasattr(self, "_latest_sig_medication_statements"):
+            latest_statement = max(
+                self._latest_sig_medication_statements, key=attrgetter("dbid"), default=None
+            )
+        else:
+            latest_statement = self.medication_statements.order_by("-dbid").first()
+        if latest_statement:
+            return latest_statement.sig_original_input
         return ""
 
 
