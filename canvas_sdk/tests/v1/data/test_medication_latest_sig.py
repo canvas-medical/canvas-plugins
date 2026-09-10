@@ -78,6 +78,21 @@ def test_latest_sig_prescription_and_change_medication_compare_note_date() -> No
 
 
 @pytest.mark.django_db
+def test_latest_sig_falls_back_to_change_medication_when_prescription_note_is_null() -> None:
+    """A prescription with a null note falls back to the change medication sig, not an error."""
+    medication = MedicationFactory.create()
+    PrescriptionFactory.create(
+        medication=medication,
+        committer=CanvasUserFactory.create(),
+        sig_original_input="presc sig",
+        note=None,
+    )
+    ChangeMedicationFactory.create(medication=medication, sig_original_input="change sig")
+
+    assert medication.latest_sig == "change sig"
+
+
+@pytest.mark.django_db
 def test_latest_sig_excludes_entered_in_error_but_keeps_status_error() -> None:
     """Entered-in-error prescriptions are excluded; status=error prescriptions are kept."""
     medication = MedicationFactory.create()
