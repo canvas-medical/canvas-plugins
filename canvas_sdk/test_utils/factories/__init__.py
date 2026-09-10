@@ -38,6 +38,7 @@ from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
+from .group import GroupFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
     ImagingOrderFactory,
@@ -113,6 +114,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reference import ReferenceFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
@@ -190,6 +192,7 @@ __all__ = (
     "FamilyHistoryCodingFactory",
     "FollowUpFactory",
     "GoalFactory",
+    "GroupFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
     "ImagingReportFactory",
@@ -254,6 +257,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReferenceFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",

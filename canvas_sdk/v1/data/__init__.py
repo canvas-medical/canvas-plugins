@@ -82,6 +82,7 @@ from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
+from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
     ImagingOrder,
@@ -214,6 +215,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisit, ReasonForVisitCoding, ReasonForVisitSettingCoding
+from .reference import Reference
 from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .refill_request import RefillRequest, RefillRequestCoding
 from .remove_allergy_event import RemoveAllergyEvent
@@ -337,6 +339,7 @@ __all__ = __exports__ = (
     "FieldType",
     "FollowUp",
     "Goal",
+    "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
     "ImagingReport",
@@ -459,6 +462,7 @@ __all__ = __exports__ = (
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
+    "Reference",
     "Referral",
     "ReferralReport",
     "ReferralReportCoding",
