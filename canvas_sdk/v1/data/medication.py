@@ -113,7 +113,6 @@ class Medication(IdentifiableModel):
             change_medications = self._latest_sig_change_medications
         else:
             change_medications = list(self.change_medications.filter(entered_in_error__isnull=True))
-        medication_statements = list(self.medication_statements.all())
 
         if prescriptions and change_medications:
             latest_prescription = prescriptions[0]
@@ -128,6 +127,8 @@ class Medication(IdentifiableModel):
             return prescriptions[0].combined_sig
         if change_medications:
             return max(change_medications, key=attrgetter("dbid")).sig_original_input
+
+        medication_statements = list(self.medication_statements.all())
         if medication_statements:
             return max(medication_statements, key=attrgetter("dbid")).sig_original_input
         return ""
