@@ -1,0 +1,52 @@
+<!-- PDMP Narx Scores Component -->
+<section class="section pdmp-section"
+         data-component="narx-scores-component"
+         data-component-type="risk-scores"
+         aria-label="Narx scores">
+  <div class="header pdmp-flex-header"
+       data-component="scores-header">
+    <h2 class="pdmp-title-section">Narx Scores</h2>
+  </div>
+
+  <div class="scores pdmp-grid-auto"
+       data-component="scores-grid">
+    {% for score in scores %}
+      <article class="score"
+               data-component="score-card"
+               data-score-type="{{ score.type }}"
+               role="group"
+               aria-label="{{ score.display_name }} risk score">
+        <h3>{{ score.display_name }}</h3>
+        <div class="value"
+             data-component="score-value"
+             aria-live="polite">{{ score.value }}</div>
+        <div class="meter"
+             data-component="score-meter"
+             role="meter"
+             aria-valuemin="0"
+             aria-valuemax="999"
+             aria-valuenow="{{ score.numeric_value }}"
+             aria-label="{{ score.display_name }} score">
+          <div class="pin"
+               data-component="score-pin"
+               data-percentage="{{ [0, score.percentage | default(0, true)] | min | round(2) }}"></div>
+
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+
+  <div class="legend"
+       data-component="scores-legend"
+       aria-hidden="true">
+    <span>
+      <span class="dot"></span>0-199: Low exposure, low risk
+    </span>
+    <span>
+      <span class="dot"></span>200-499: Moderate complexity
+    </span>
+    <span>
+      <span class="dot"></span>>500: Multiple prescribers, pharmacies, overlaps
+    </span>
+  </div>
+</section>
