@@ -21,10 +21,11 @@ from RestrictedPython import (
     CompileResult,
     PrintCollector,
     RestrictingNodeTransformer,
-    compile_restricted_exec,
     safe_builtins,
     utility_builtins,
 )
+from RestrictedPython._types import T_pos_ast
+from RestrictedPython.compile import syntax_error_template
 from RestrictedPython.Guards import (
     guarded_iter_unpack_sequence,
     guarded_unpack_sequence,
@@ -82,6 +83,27 @@ def suppress_model_registration() -> Generator[None, None, None]:
     finally:
         apps.register_model = _orig_register  # type: ignore[method-assign]
         apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
+
+
+# Names the sandbox injects into the execution scope to enforce its policy.
+# RestrictedPython rewrites attribute access, item access, writes, unpacking and
+# printing into calls to these, and compiles class bodies against
+# `__metaclass__`, so they belong to the sandbox rather than to plugin code and
+# are reserved: binding one is an error in any syntax.
+PROTECTED_SCOPE_NAMES = frozenset(
+    {
+        "__metaclass__",
+        "_apply_",
+        "_getattr_",
+        "_getitem_",
+        "_getiter_",
+        "_inplacevar_",
+        "_iter_unpack_sequence_",
+        "_print_",
+        "_unpack_sequence_",
+        "_write_",
+    }
+)
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
@@ -630,15 +652,12 @@ class Sandbox:
     class Transformer(RestrictingNodeTransformer):
         """A node transformer for customizing the sandbox compiler."""
 
+        imported_names: ImportedNames
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             super().__init__(*args, **kwargs)
 
-            # we can't just add a self attribute here so we abuse used_names
-            # which gets returned as part of the CompileResult
-            self.used_names["__imported_names__"] = {
-                "names": [],
-                "names_to_module": {},
-            }
+            self.imported_names = {"names": [], "names_to_module": {}}
 
         def handle_names(self, node: ast.Import | ast.ImportFrom) -> None:
             """
@@ -649,30 +668,30 @@ class Sandbox:
             for name in node.names:
                 name_string = name.asname if name.asname else name.name
 
-                self.used_names["__imported_names__"]["names"].append(name_string)
+                self.imported_names["names"].append(name_string)
 
                 if module:
-                    self.used_names["__imported_names__"]["names_to_module"][name_string] = module
+                    self.imported_names["names_to_module"][name_string] = module
 
         def visit_Import(self, node: ast.Import) -> ast.Import:
             """
             Store imported names.
             """
-            node = super().visit_Import(node)
+            visited = cast(ast.Import, super().visit_Import(node))
 
-            self.handle_names(node)
+            self.handle_names(visited)
 
-            return node
+            return visited
 
         def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
             """
             Store imported names.
             """
-            node = super().visit_ImportFrom(node)
+            visited = cast(ast.ImportFrom, super().visit_ImportFrom(node))
 
-            self.handle_names(node)
+            self.handle_names(visited)
 
-            return node
+            return visited
 
         def visit_AnnAssign(self, node: AnnAssign) -> AnnAssign:
             """Allow type annotations."""
@@ -722,7 +741,7 @@ class Sandbox:
             """Allow `match`."""
             return self.node_contents_visit(node)
 
-        def check_import_names(self, node: ast.ImportFrom) -> ast.AST:
+        def check_import_names(self, node: ast.ImportFrom | ast.Import) -> ast.AST:
             """Check the names being imported.
 
             This is a protection against rebinding dunder names like
@@ -730,8 +749,10 @@ class Sandbox:
 
             => 'from _a import x' is ok, because '_a' is not added to the scope.
             """
+            module = node.module if isinstance(node, ast.ImportFrom) else None
+
             for name in node.names:
-                if "*" in name.name and node.module and not _is_known_module(node.module):
+                if "*" in name.name and module and not _is_known_module(module):
                     self.error(node, '"*" imports are not allowed.')
 
                 self.check_name(node, name.name)
@@ -743,7 +764,7 @@ class Sandbox:
 
         def check_name(
             self,
-            node: ast.ImportFrom,
+            node: T_pos_ast,
             name: str | None,
             allow_magic_methods: bool = False,
         ) -> None:
@@ -752,12 +773,16 @@ class Sandbox:
             If ``allow_magic_methods is True`` names in `ALLOWED_FUNC_NAMES`
             are additionally allowed although their names start with `_`.
 
-            Override to turn errors into warnings for leading underscores.
+            A leading underscore is a warning rather than an error, so plugins
+            can use private names. The names reserved for the sandbox's policy
+            hooks are the exception, and are rejected outright.
             """
             if name is None:
                 return
 
-            if (
+            if name in PROTECTED_SCOPE_NAMES:
+                self.error(node, f'"{name}" is a reserved name.')
+            elif (
                 name.startswith("_")
                 and name != "_"
                 and not (
@@ -788,7 +813,7 @@ class Sandbox:
                 elif isinstance(target, ast.Tuple | ast.List):
                     self.check_for_name_in_iterable(target)
 
-            return super().visit_Assign(node)
+            return cast(ast.AST, super().visit_Assign(node))
 
         def check_for_name_in_iterable(self, iterable_node: ast.Tuple | ast.List) -> None:
             """Check if any element of an iterable is a forbidden assignment."""
@@ -971,18 +996,61 @@ class Sandbox:
         }
 
     @cached_property
-    def compile_result(self) -> CompileResult:
-        """Compile the source code into bytecode."""
-        return compile_restricted_exec(
-            source=self.source_code,
-            policy=self.Transformer,
-            filename=self.source_code_path,
+    def _compiled(self) -> tuple[CompileResult, ImportedNames]:
+        """Compile the source code into bytecode, and collect the names it imports.
+
+        This mirrors `RestrictedPython.compile.compile_restricted_exec` but
+        compiles with `dont_inherit=True`. RestrictedPython's own wrapper
+        leaves that at the default, so plugin code inherits the `__future__`
+        flags of whichever module calls `compile()` — and RestrictedPython's
+        `compile` module uses `from __future__ import annotations`, which
+        stringifies plugin annotations (PEP 563) and breaks `dataclass` and
+        anything else that reads `__annotations__` at runtime.
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+        used_names: dict[str, bool] = {}
+        no_imports: ImportedNames = {"names": [], "names_to_module": {}}
+
+        try:
+            parsed = ast.parse(self.source_code, self.source_code_path, "exec")
+        except SyntaxError as error:
+            errors.append(
+                syntax_error_template.format(
+                    lineno=error.lineno,
+                    type=error.__class__.__name__,
+                    msg=error.msg,
+                    statement=error.text.strip() if error.text else None,
+                )
+            )
+            return CompileResult(None, tuple(errors), warnings, used_names), no_imports
+        except (TypeError, ValueError) as error:
+            errors.append(str(error))
+            return CompileResult(None, tuple(errors), warnings, used_names), no_imports
+
+        transformer = self.Transformer(errors, warnings, used_names)
+        transformer.visit(parsed)
+
+        code = (
+            None
+            if errors
+            else compile(parsed, self.source_code_path, mode="exec", dont_inherit=True)
+        )
+
+        return (
+            CompileResult(code, tuple(errors), warnings, used_names),
+            transformer.imported_names,
         )
 
     @property
+    def compile_result(self) -> CompileResult:
+        """Return the result of compiling the source code."""
+        return self._compiled[0]
+
+    @property
     def imported_names(self) -> ImportedNames:
-        """Return the imported names collecting during parsing."""
-        return self.compile_result.used_names["__imported_names__"]
+        """Return the names imported by the source code."""
+        return self._compiled[1]
 
     @property
     def errors(self) -> tuple[str, ...]:
@@ -1246,10 +1314,12 @@ class Sandbox:
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""
-        if self.errors:
+        code = self.compile_result.code
+
+        if self.errors or code is None:
             raise RuntimeError(f"Code is invalid: {self.errors}")
 
-        exec(self.compile_result.code, self.scope)
+        exec(code, self.scope)
 
         return self.scope
 

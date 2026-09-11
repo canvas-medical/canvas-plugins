@@ -1,3 +1,5 @@
+import __future__
+
 import importlib
 import logging
 import re
@@ -8,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from django.db import models as django_models
+from RestrictedPython import compile_restricted_exec
 
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.v1.data.base import (
@@ -21,6 +24,7 @@ from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
+    PROTECTED_SCOPE_NAMES,
     Sandbox,
     sandbox_from_module,
 )
@@ -931,6 +935,156 @@ def test_forbidden_assignment(code: str) -> None:
         sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "module_assignment": """
+                _getattr_ = None
+            """,
+            "positional_only_argument": """
+                def handler(value, _getattr_=None, /):
+                    return value
+            """,
+            "regular_argument": """
+                def handler(value, _getattr_=None):
+                    return value
+            """,
+            "keyword_only_argument": """
+                def handler(value, *, _getattr_=None):
+                    return value
+            """,
+            "lambda_positional_only_argument": """
+                handler = lambda value, _getattr_=None, /: value
+            """,
+            "vararg": """
+                def handler(*_getattr_):
+                    return _getattr_
+            """,
+            "kwarg": """
+                def handler(**_getattr_):
+                    return _getattr_
+            """,
+            "function_name": """
+                def _getattr_():
+                    return None
+            """,
+            "class_name": """
+                class _getattr_:
+                    pass
+            """,
+            "import_alias": """
+                import json as _getattr_
+            """,
+            "import_from_alias": """
+                from json import loads as _getattr_
+            """,
+            "for_target": """
+                for _getattr_ in []:
+                    pass
+            """,
+            "with_target": """
+                from contextlib import suppress
+
+                with suppress(Exception) as _getattr_:
+                    pass
+            """,
+            "except_target": """
+                try:
+                    pass
+                except Exception as _getattr_:
+                    pass
+            """,
+            "walrus": """
+                result = (_getattr_ := None)
+            """,
+            "tuple_unpacking": """
+                a, _getattr_ = 1, 2
+            """,
+            "comprehension_target": """
+                result = [_getattr_ for _getattr_ in []]
+            """,
+        }
+    ),
+)
+def test_sandbox_denies_binding_a_reserved_name(code: str) -> None:
+    """Test that no syntax lets plugin code bind a name reserved for a policy hook.
+
+    A leading underscore is otherwise only a warning, so each binding form needs
+    its own case: the name check has to run for arguments, targets, aliases and
+    definitions alike.
+    """
+    sandbox = _sandbox_from_code(code)
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
+def test_sandbox_denies_binding_every_protected_name(name: str) -> None:
+    """Test that every reserved name is rejected, not just the ones with cases above."""
+    sandbox = _sandbox_from_code(f"def handler(value, {name}=None, /):\n    return value\n")
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+def test_protected_scope_names_covers_every_injected_guard() -> None:
+    """Test that every guard the sandbox injects is a name plugins cannot bind.
+
+    Guards are named `_like_this_`; the remaining underscore-prefixed entries in
+    the scope (`__builtins__`, `__name__`, ...) are readable by plugin code.
+    """
+    sandbox = _sandbox_from_code("result = 1")
+
+    injected_guards = {
+        name
+        for name in sandbox.scope
+        if name.startswith("_") and name.endswith("_") and not name.startswith("__")
+    }
+
+    assert injected_guards
+    assert injected_guards <= PROTECTED_SCOPE_NAMES
+
+
+def test_plugin_annotations_are_not_stringified() -> None:
+    """Test that annotations in plugin code evaluate to objects rather than strings.
+
+    Plugin code is compiled with `dont_inherit=True` so it does not pick up the
+    `from __future__ import annotations` of the module that calls `compile()`.
+    Without that, `dataclass` and anything else reading `__annotations__` at
+    runtime sees strings.
+    """
+    sandbox = _sandbox_from_code(
+        """
+            class Annotated:
+                name: str
+                count: int
+
+            result = Annotated.__annotations__
+        """
+    )
+
+    assert sandbox.execute()["result"] == {"name": str, "count": int}
+
+
+def test_restricted_python_leaks_its_future_flags() -> None:
+    """Test that `compile_restricted_exec` still compiles with inherited `__future__` flags.
+
+    `Sandbox._compiled` compiles plugin code itself instead of calling
+    `compile_restricted_exec` only because that wrapper hardcodes
+    `dont_inherit`, so plugin code picks up the `from __future__ import
+    annotations` of RestrictedPython's own `compile` module.
+    """
+    compiled = compile_restricted_exec("x = 1")
+
+    assert compiled.code is not None
+    assert compiled.code.co_flags & __future__.annotations.compiler_flag, (
+        "compile_restricted_exec no longer leaks its __future__ flags; replace "
+        "the local compile in plugin_runner.sandbox.Sandbox._compiled with it."
+    )
+
+
 def test_code_with_warnings() -> None:
     """Test that the sandbox captures warnings for restricted names or usage."""
     sandbox = _sandbox_from_code(
@@ -952,6 +1106,22 @@ def test_compile_errors() -> None:
                 return 42
         """
     )
+
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
+def test_source_the_parser_cannot_encode_is_reported_as_invalid() -> None:
+    """Test that a non-syntax parse failure is reported rather than raised.
+
+    A lone surrogate is a valid `str` that cannot be encoded, so `ast.parse`
+    raises `UnicodeEncodeError` (a `ValueError`) rather than a `SyntaxError`,
+    exercising the error path that records the exception instead of letting it
+    escape the compile. Such a string never survives a UTF-8 source file, so it
+    is set on the sandbox directly.
+    """
+    sandbox = _sandbox_from_code("result = 1")
+    sandbox.source_code = "result = 1  # " + chr(0xD800)
 
     with pytest.raises(RuntimeError, match="Code is invalid"):
         sandbox.execute()
@@ -1357,7 +1527,7 @@ def test_type_is_inaccessible() -> None:
                 client = Http()
 
                 name = "_" + "_session"
-                pvt = _getattr_(client, name)
+                pvt = getattr(client, name)
             """,
             "private_attr_session": """
                 from canvas_sdk.utils import Http
