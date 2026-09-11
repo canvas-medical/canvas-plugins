@@ -41,6 +41,7 @@ effect = LinkDocumentToPatient(
         {"text": "AI 95%", "color": "#00AA00"},
         {"text": "Auto-linked", "color": "#2196F3"},
     ],
+    source_protocol="llm_v1",                            # Optional: protocol/plugin identifier
 )
 ```
 
@@ -49,6 +50,7 @@ effect = LinkDocumentToPatient(
 - `document_id` (str/int, required): The IntegrationTask UUID to link
 - `patient_key` (str, required): The patient's key (32-character hex string, not a UUID)
 - `annotations` (list[dict], optional): Display annotations with `text` and `color` fields
+- `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Behavior:**
 
@@ -62,7 +64,7 @@ effect = LinkDocumentToPatient(
 Assigns a reviewer (staff member or team) to a document in the Data Integration queue.
 
 ```python
-from canvas_sdk.effects.data_integration import AssignDocumentReviewer, ReviewMode
+from canvas_sdk.effects.data_integration import AssignDocumentReviewer, Priority, ReviewMode
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
@@ -70,11 +72,13 @@ effect = AssignDocumentReviewer(
     document_id="12345",         # Required: IntegrationTask ID
     reviewer_id="staff-uuid",    # Optional: Staff member key to assign as reviewer
     team_id="team-uuid",         # Optional: Team UUID to assign as reviewer
+    priority=Priority.HIGH,      # Optional: Priority level (NORMAL or HIGH), defaults to NORMAL
     review_mode=ReviewMode.REVIEW_REQUIRED,  # Optional: Review mode, defaults to REVIEW_REQUIRED
     annotations=[                # Optional: display annotations
         AnnotationItem(text="Auto-assigned", color="#FF9800"),
         AnnotationItem(text="Data integration", color="#2196F3"),
     ],
+    source_protocol="my_plugin", # Optional: protocol/plugin identifier
 )
 ```
 
@@ -83,8 +87,10 @@ effect = AssignDocumentReviewer(
 - `document_id` (str/int, required): The IntegrationTask ID to assign a reviewer to
 - `reviewer_id` (str, optional): Staff member key to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
 - `team_id` (str, optional): Team UUID to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
+- `priority` (Priority, optional): Priority level - `Priority.NORMAL` or `Priority.HIGH`, defaults to `Priority.NORMAL`
 - `review_mode` (ReviewMode, optional): Review mode - `ReviewMode.REVIEW_REQUIRED`, `ReviewMode.ALREADY_REVIEWED`, or `ReviewMode.REVIEW_NOT_REQUIRED`, defaults to `ReviewMode.REVIEW_REQUIRED`
 - `annotations` (list[AnnotationItem], optional): Display annotations with `text` and `color` fields
+- `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Review Modes:**
 
@@ -96,6 +102,7 @@ effect = AssignDocumentReviewer(
 
 - Validates the document exists
 - Assigns either a staff member or team as the reviewer
+- Sets the priority level for the review
 - Configures the review mode based on document status
 - At least one of `reviewer_id` or `team_id` must be provided
 
@@ -108,15 +115,13 @@ from canvas_sdk.effects.data_integration import CategorizeDocument
 from canvas_sdk.effects.data_integration.types import (
     AnnotationItem,
     DocumentType,
-    ReportType,
-    TemplateType,
 )
 
 document_type: DocumentType = {
     "key": "lab-report-key",
     "name": "Lab Report",
-    "report_type": ReportType.CLINICAL,
-    "template_type": TemplateType.LabReportTemplate,  # Optional, None for administrative docs
+    "report_type": "CLINICAL",
+    "template_type": "LabReportTemplate",  # Optional
 }
 
 annotations: list[AnnotationItem] = [
@@ -128,6 +133,7 @@ effect = CategorizeDocument(
     document_id="12345",
     document_type=document_type,
     annotations=annotations,
+    source_protocol="data_integration_example",
 )
 ```
 
@@ -137,9 +143,10 @@ effect = CategorizeDocument(
 - `document_type` (DocumentType, required): The document type to assign, containing:
   - `key` (str): Unique key for the document type
   - `name` (str): Display name
-  - `report_type` (ReportType): `ReportType.CLINICAL` or `ReportType.ADMINISTRATIVE`
-  - `template_type` (TemplateType | None, optional): `TemplateType.LabReportTemplate`, `TemplateType.ImagingReportTemplate`, `TemplateType.SpecialtyReportTemplate`, or `None` for administrative docs
+  - `report_type` (str): Report type ("CLINICAL" or "ADMINISTRATIVE")
+  - `template_type` (str, optional): Template type identifier ("LabReportTemplate", "ImagingReportTemplate", "SpecialtyReportTemplate", or null)
 - `annotations` (list[AnnotationItem], optional): Display annotations
+- `source_protocol` (str, optional): Protocol/plugin identifier
 
 **Behavior:**
 
@@ -243,6 +250,7 @@ This is an **example plugin** that demonstrates the structure and usage of Data 
 4. **Assign Reviewers** (for `AssignDocumentReviewer`):
    - Determine appropriate reviewer based on document type, specialty, or workload
    - Assign to staff member or team based on routing rules
+   - Set priority level based on document urgency
    - Configure review mode based on document status
 
 ## Annotations
@@ -260,11 +268,9 @@ annotations = [
 
 ## Testing
 
-Run the test suite from the plugin root:
+To test this plugin:
 
-```bash
-uv run pytest tests/ -v
-```
-
-The tests cover routing, all four effect creators, error handling, and the
-`ReportType`/`TemplateType` enum enforcement for `CategorizeDocument`.
+1. Ensure the plugin is registered in your Canvas instance
+2. Send a `DOCUMENT_RECEIVED` event with a document
+3. Verify the appropriate effects are applied
+4. Check the logs for document lifecycle event handling

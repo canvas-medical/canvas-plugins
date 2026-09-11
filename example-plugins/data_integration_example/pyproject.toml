@@ -4,7 +4,7 @@ requires = ["hatchling"]
 
 [project]
 dependencies = [
-  "canvas[test-utils]"
+  "canvas-sdk"
 ]
 description = "Example plugin demonstrating all Data Integration effects"
 name = "data-integration-example"
@@ -14,6 +14,3 @@ version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["data_integration_example"]
-
-[tool.pytest.ini_options]
-python_files = ["*_tests.py", "test_*.py", "tests.py"]

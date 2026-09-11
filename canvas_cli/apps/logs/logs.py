@@ -8,7 +8,12 @@ import sys
 import zlib
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from typing import Any, TypedDict, cast
+from typing import Any, cast
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 from urllib.parse import urlparse
 
 import requests

@@ -1,8 +1,14 @@
 import functools
 import json
+import sys
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import yaml
 from jsonschema import Draft7Validator, validators

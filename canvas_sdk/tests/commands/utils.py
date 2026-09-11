@@ -1,10 +1,16 @@
 import ast
 import inspect
 import json
+import sys
 from collections.abc import Callable
 from contextlib import chdir
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, cast
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import requests
 from django.conf import settings
