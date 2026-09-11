@@ -1,11 +1,11 @@
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
 
 
-class InstructCommand(BaseCommand):
+class InstructCommand(_AssessmentLinkedCommand):
     """A class for managing an Instruct command within a specific note."""
 
     class Meta:

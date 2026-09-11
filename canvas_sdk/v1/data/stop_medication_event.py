@@ -24,6 +24,9 @@ class StopMedicationEvent(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="stopped_medications"
     )
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="stopped_medications", null=True
+    )
     medication = models.ForeignKey(
         "v1.Medication",
         on_delete=models.DO_NOTHING,

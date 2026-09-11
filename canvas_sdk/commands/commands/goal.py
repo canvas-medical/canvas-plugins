@@ -3,10 +3,10 @@ from enum import StrEnum
 
 from pydantic import Field
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 
 
-class GoalCommand(_BaseCommand):
+class GoalCommand(_AssessmentLinkedCommand):
     """A class for managing a Goal command within a specific note."""
 
     class Meta:

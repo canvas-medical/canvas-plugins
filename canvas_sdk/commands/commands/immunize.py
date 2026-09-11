@@ -5,13 +5,13 @@ from uuid import UUID
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.v1.data.vaccine import Vaccine, VaccineLot
 
 LOT_NUMBER_MAX_LENGTH = 20
 
 
-class ImmunizeCommand(_BaseCommand):
+class ImmunizeCommand(_AssessmentLinkedCommand):
     """A class for managing an Immunize command within a specific note."""
 
     class Meta:

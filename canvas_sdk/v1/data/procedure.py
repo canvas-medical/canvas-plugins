@@ -46,6 +46,9 @@ class Procedure(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="procedures"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="procedures")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="procedures", null=True
+    )
     provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="procedures", null=True, default=None
     )
