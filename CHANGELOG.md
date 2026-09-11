@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.225.0 (2026-09-11)
+
+### Features
+
+- Add effect to charge a stored payment card
+  ([#1779](https://github.com/canvas-medical/canvas-plugins/pull/1779),
+  [`61f7c66`](https://github.com/canvas-medical/canvas-plugins/commit/61f7c66871a095d2d2d204fa308fdc54cc8ec558))
+
+
 ## v0.224.0 (2026-09-11)
 
 ### Features
