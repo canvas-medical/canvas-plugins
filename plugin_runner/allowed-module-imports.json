@@ -1099,6 +1099,10 @@
     "pharmacy_http",
     "science_http"
   ],
+  "canvas_sdk.utils.patient_portal": [
+    "PatientPortalLinkError",
+    "patient_portal_http"
+  ],
   "canvas_sdk.utils.pdf": [
     "PdfAuthRequest",
     "pdf_generator"
