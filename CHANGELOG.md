@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.224.0 (2026-09-11)
+
+### Features
+
+- Link Plan/Procedures commands to a same-note Assessment
+  ([#1874](https://github.com/canvas-medical/canvas-plugins/pull/1874),
+  [`556b37b`](https://github.com/canvas-medical/canvas-plugins/commit/556b37bbc7dfbb6dffc8093b3320655fd2a2692d))
+
+
 ## v0.223.0 (2026-09-10)
 
 ### Features
