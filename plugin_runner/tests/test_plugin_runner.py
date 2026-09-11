@@ -44,7 +44,7 @@ from plugin_runner.plugin_runner import (
     synchronize_plugins_and_report_errors,
     unload_plugin,
 )
-from plugin_runner.sandbox import Sandbox
+from plugin_runner.sandbox import Sandbox, sandbox_from_module
 from settings import PLUGIN_DIRECTORY
 
 
@@ -365,6 +365,65 @@ def test_load_plugin_handlers_flags_foreign_package_without_reporting(
     assert foreign
     assert all("foreign package" in str(r.error) for r in foreign)
     assert all(r.name_and_class is None for r in foreign)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["shared_module_handlers"], indirect=True)
+def test_load_plugin_handlers_executes_each_module_once(install_test_plugin: Path) -> None:
+    """Handlers declared from the same module execute that module a single time.
+
+    A plugin that groups N handlers into one module used to compile and execute
+    that module N times, which dominates load time for handler-dense plugins.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+    executed: list[str] = []
+
+    def _counting_sandbox_from_module(
+        base_path: Path, module_name: str, evaluated_modules: dict[str, bool] | None = None
+    ) -> Sandbox:
+        executed.append(module_name)
+        return sandbox_from_module(base_path, module_name, evaluated_modules)
+
+    with patch("plugin_runner.plugin_runner.sandbox_from_module", _counting_sandbox_from_module):
+        results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert len(results) == len(handlers)
+    assert all(r.error is None for r in results)
+
+    # Four handlers, but only the two distinct modules they live in are executed.
+    assert sorted(executed) == [
+        "shared_module_handlers.handlers.grouped",
+        "shared_module_handlers.handlers.solo",
+    ]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["shared_module_handlers"], indirect=True)
+def test_load_plugin_handlers_shares_scope_within_a_module(install_test_plugin: Path) -> None:
+    """Handlers from one module share that module's scope; separate modules do not.
+
+    Sharing keeps module-level state single-instance, so two handlers in the same
+    file see the same objects rather than one copy each.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    scopes = {r.handler["class"].split(":")[0]: r.scope for r in results if r.scope is not None}
+    grouped = [r.scope for r in results if "grouped:" in r.handler["class"]]
+    solo = [r.scope for r in results if "solo:" in r.handler["class"]]
+
+    assert len(grouped) == 3
+    assert all(scope is grouped[0] for scope in grouped)
+    assert len(solo) == 1
+    assert solo[0] is not grouped[0]
+
+    grouped_scope, solo_scope = grouped[0], solo[0]
+    assert grouped_scope is not None
+    assert solo_scope is not None
+
+    # Each module's classes resolve out of its own shared scope.
+    assert {"AlphaHandler", "BetaHandler", "GammaHandler"} <= set(grouped_scope)
+    assert "SoloHandler" in solo_scope
+    assert len(scopes) == 2
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)

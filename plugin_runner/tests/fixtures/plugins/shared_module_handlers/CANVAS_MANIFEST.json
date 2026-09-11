@@ -1,0 +1,56 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "shared_module_handlers",
+    "description": "Declares several handlers from a single module to exercise per-module sandbox reuse.",
+    "components": {
+        "handlers": [
+            {
+                "class": "shared_module_handlers.handlers.grouped:AlphaHandler",
+                "description": "First handler sharing the grouped module",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "shared_module_handlers.handlers.grouped:BetaHandler",
+                "description": "Second handler sharing the grouped module",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "shared_module_handlers.handlers.grouped:GammaHandler",
+                "description": "Third handler sharing the grouped module",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "shared_module_handlers.handlers.solo:SoloHandler",
+                "description": "Only handler in its own module",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
