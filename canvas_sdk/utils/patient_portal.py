@@ -57,8 +57,11 @@ class PatientPortalHttp:
     """
 
     def __init__(self) -> None:
+        # CANVAS_PUBLIC_HOST is the instance's own URL and is set on every deployment. The
+        # runner does not share a listening port with the web process, so an address that
+        # resolves only inside the web container reaches nothing.
         self._http_client = _PortalHttp(
-            base_url=os.getenv("HOME_APP_ENDPOINT", "http://localhost:8000")
+            base_url=os.getenv("CANVAS_PUBLIC_HOST", "http://localhost:8000")
         )
 
         self._http_client._session.headers.update(
