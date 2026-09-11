@@ -15,6 +15,11 @@ _current_handler_name: ContextVar[str | None] = ContextVar("_current_handler_nam
 _current_plugin_name: ContextVar[str | None] = ContextVar("_current_plugin_name", default=None)
 
 
+def current_plugin_name() -> str | None:
+    """The plugin whose handler is executing, or None outside a handler."""
+    return _current_plugin_name.get()
+
+
 @contextmanager
 def plugin_context(handler_name: str | None) -> Generator[None, None, None]:
     """Bind the active plugin's handler name (and derived plugin name)."""
