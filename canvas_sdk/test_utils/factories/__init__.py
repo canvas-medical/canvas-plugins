@@ -28,6 +28,7 @@ from .coding_gap_event import (
     ValidateCodingGapEventFactory,
 )
 from .coverage import CoverageFactory
+from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
@@ -176,6 +177,7 @@ __all__ = (
     "DeferCodingGapEventFactory",
     "ValidateCodingGapEventFactory",
     "CoverageFactory",
+    "CustomCommandFactory",
     "DiagnosticReportFactory",
     "ContentTypeFactory",
     "DocumentCodingFactory",
