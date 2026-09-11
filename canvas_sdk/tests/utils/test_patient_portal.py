@@ -7,7 +7,11 @@ import pytest
 import requests
 
 from canvas_sdk.utils.http import ontologies_http, science_http
-from canvas_sdk.utils.patient_portal import PatientPortalLinkError, patient_portal_http
+from canvas_sdk.utils.patient_portal import (
+    PatientPortalHttp,
+    PatientPortalLinkError,
+    patient_portal_http,
+)
 from logger.logger import plugin_context
 
 
@@ -197,3 +201,22 @@ def test_post_is_not_added_to_the_shared_json_only_base() -> None:
     """
     assert not hasattr(ontologies_http, "post_json")
     assert not hasattr(science_http, "post_json")
+
+
+@pytest.mark.parametrize(
+    "public_host",
+    ["https://example.canvasmedical.com", "https://example.canvasmedical.com/"],
+)
+@patch("requests.Session.post")
+def test_patient_portal_uses_the_instance_public_host(
+    mock_post: MagicMock, public_host: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The base URL is the instance's own host, with or without a trailing slash."""
+    monkeypatch.setenv("CANVAS_PUBLIC_HOST", public_host)
+    mock_post.return_value = FakePortalResponse(payload={"login_url": "https://x/app/reset/"})
+
+    PatientPortalHttp().get_login_url("e" * 32)
+
+    assert (
+        mock_post.call_args[0][0] == "https://example.canvasmedical.com/patient-portal/login-url/"
+    )
