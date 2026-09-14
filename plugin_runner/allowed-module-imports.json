@@ -1313,6 +1313,7 @@
     "PrescriptionChangeResponseType",
     "PrescriptionResponse",
     "PrescriptionStatus",
+    "PrivateNote",
     "Procedure",
     "ProcedureCoding",
     "ProcedureStatus",
@@ -1787,6 +1788,9 @@
     "PrescriptionChangeResponse",
     "PrescriptionChangeResponseStatus",
     "PrescriptionChangeResponseType"
+  ],
+  "canvas_sdk.v1.data.private_note": [
+    "PrivateNote"
   ],
   "canvas_sdk.v1.data.procedure": [
     "Procedure",

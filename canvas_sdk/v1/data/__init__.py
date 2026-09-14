@@ -202,6 +202,7 @@ from .prescription_change import (
     PrescriptionChangeResponseStatus,
     PrescriptionChangeResponseType,
 )
+from .private_note import PrivateNote
 from .procedure import Procedure, ProcedureCoding, ProcedureStatus
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
@@ -453,6 +454,7 @@ __all__ = __exports__ = (
     "PrescriptionChangeResponseType",
     "PrescriptionResponse",
     "PrescriptionStatus",
+    "PrivateNote",
     "Procedure",
     "ProcedureCoding",
     "ProcedureStatus",
