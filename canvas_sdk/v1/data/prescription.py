@@ -138,5 +138,12 @@ class Prescription(IdentifiableModel, AuditedModel):
     related_refill = models.OneToOneField("self", on_delete=models.CASCADE, null=True, blank=True)
     is_epcs = models.BooleanField(null=True, default=False)
 
+    @property
+    def combined_sig(self) -> str:
+        """Combine sig_original_input with maximum_daily_dose, if one is set."""
+        if self.maximum_daily_dose:
+            return f"{self.sig_original_input}. Maximum Daily Dose: {self.maximum_daily_dose}"
+        return self.sig_original_input
+
 
 __exports__ = ("Prescription", "PrescriptionStatus", "PrescriptionResponse")

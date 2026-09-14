@@ -1,6 +1,42 @@
 # CHANGELOG
 
 
+## v0.226.0 (2026-09-14)
+
+### Features
+
+- **data**: Add latest_sig computed property to medication
+  ([#1872](https://github.com/canvas-medical/canvas-plugins/pull/1872),
+  [`26a646d`](https://github.com/canvas-medical/canvas-plugins/commit/26a646d3cebc453ac3081f30db35dd01661fe21b))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.225.0 (2026-09-11)
+
+### Features
+
+- Add effect to charge a stored payment card
+  ([#1779](https://github.com/canvas-medical/canvas-plugins/pull/1779),
+  [`61f7c66`](https://github.com/canvas-medical/canvas-plugins/commit/61f7c66871a095d2d2d204fa308fdc54cc8ec558))
+
+
+## v0.224.0 (2026-09-11)
+
+### Features
+
+- Link Plan/Procedures commands to a same-note Assessment
+  ([#1874](https://github.com/canvas-medical/canvas-plugins/pull/1874),
+  [`556b37b`](https://github.com/canvas-medical/canvas-plugins/commit/556b37bbc7dfbb6dffc8093b3320655fd2a2692d))
+
+
 ## v0.223.0 (2026-09-10)
 
 ### Features

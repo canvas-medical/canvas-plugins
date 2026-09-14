@@ -21,6 +21,9 @@ class Plan(TypeAheadNarrativeMixin, AuditedModel, IdentifiableModel):
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="plans")
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="plans")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="plans", null=True
+    )
 
 
 __exports__ = ("Plan",)
