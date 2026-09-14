@@ -23,14 +23,6 @@ def test_receipt_url_is_none_when_unset() -> None:
     assert Receipt(receipt=None).receipt_url is None
 
 
-def test_amounts_are_zero_without_postings() -> None:
-    """The posted/copay amounts are zero when there is nothing to sum."""
-    receipt = Receipt(receipt="receipts/r.pdf")
-
-    assert receipt.total_posted_amount == Decimal("0.00")
-    assert receipt.copay_amount == Decimal("0.00")
-
-
 @pytest.mark.django_db
 def test_committed_and_reachable_via_payment_collection() -> None:
     """A committed receipt is reachable from its PaymentCollection; amounts are zero with no postings."""
@@ -43,8 +35,17 @@ def test_committed_and_reachable_via_payment_collection() -> None:
         deposit_date=date(2026, 1, 1),
         description="",
     )
+    other_payment_collection = PaymentCollection.objects.create(
+        total_collected=Decimal("25.00"),
+        method="cash",
+        check_number="",
+        check_date=date(2026, 1, 1),
+        deposit_date=date(2026, 1, 1),
+        description="",
+    )
     receipt = ReceiptFactory.create(payment_collection=payment_collection, committer=committer)
-    ReceiptFactory.create(committer=None)  # uncommitted, filtered out by committed()
+    # uncommitted, filtered out by committed()
+    ReceiptFactory.create(payment_collection=other_payment_collection, committer=None)
 
     assert set(Receipt.objects.committed()) == {receipt}
     assert payment_collection.receipt == receipt

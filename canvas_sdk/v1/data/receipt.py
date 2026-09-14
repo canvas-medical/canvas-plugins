@@ -27,12 +27,12 @@ class Receipt(AuditedModel, IdentifiableModel):
     objects = cast(CommittableQuerySet, CommittableModelManager())
 
     payment_collection = models.OneToOneField(
-        "v1.PaymentCollection", on_delete=models.DO_NOTHING, related_name="receipt", null=True
+        "v1.PaymentCollection", on_delete=models.DO_NOTHING, related_name="receipt"
     )
     account_balance_before_collection = models.DecimalField(max_digits=8, decimal_places=2)
     account_balance_after_collection = models.DecimalField(max_digits=8, decimal_places=2)
-    discount = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
-    template = models.CharField(max_length=250, blank=True, null=True)
+    discount = models.DecimalField(max_digits=8, decimal_places=2)
+    template = models.CharField(max_length=250, blank=True, default="")
     receipt = models.CharField(max_length=255, null=True, blank=True)
 
     @property
@@ -45,23 +45,17 @@ class Receipt(AuditedModel, IdentifiableModel):
     @property
     def total_posted_amount(self) -> Decimal:
         """Total posted with this collection: the sum of payments and write-off adjustments."""
-        payment_collection = self.payment_collection
-        if payment_collection is None:
-            return quantize(0)
         return quantize(
-            sum(posting.posted_amount for posting in payment_collection.postings.active())
+            sum(posting.posted_amount for posting in self.payment_collection.postings.active())
         )
 
     @property
     def copay_amount(self) -> Decimal:
         """The amount posted as copays on this collection."""
-        payment_collection = self.payment_collection
-        if payment_collection is None:
-            return quantize(0)
         return quantize(
             sum(
                 posting.paid_amount
-                for posting in payment_collection.postings.active()
+                for posting in self.payment_collection.postings.active()
                 if hasattr(posting, "patientposting") and posting.patientposting.copay
             )
         )
