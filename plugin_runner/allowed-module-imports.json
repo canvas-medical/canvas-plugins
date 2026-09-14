@@ -201,6 +201,7 @@
   ],
   "canvas_sdk.commands": [
     "*",
+    "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
@@ -251,6 +252,9 @@
     "_BaseCommand",
     "_ReviewableCommandMixin",
     "_SendableCommandMixin"
+  ],
+  "canvas_sdk.commands.commands.add_condition": [
+    "AddConditionCommand"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
     "AdjustPrescriptionCommand"
