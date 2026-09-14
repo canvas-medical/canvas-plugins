@@ -514,10 +514,13 @@ def synchronize_plugins(run_once: bool = False) -> None:
                         log.info(
                             f'synchronize_plugins: installing/reloading plugin "{plugin_name}" for action=reload'
                         )
-                        unload_plugin(plugin_name)
+                        # Install the new package before touching the running handlers, so
+                        # the current version keeps serving requests during the slow download
+                        # and namespace wait. reload_plugin then swaps it in atomically, so a
+                        # reload never leaves the plugin's routes returning 404.
                         install_plugin(plugin_name, attributes=plugin)
                         plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
-                        load_plugin(plugin_dir.resolve())
+                        reload_plugin(plugin_name, plugin_dir.resolve())
                 else:
                     log.info("synchronize_plugins: installing/reloading plugins for action=reload")
                     install_plugins()
@@ -1119,6 +1122,53 @@ def load_plugin(path: pathlib.Path) -> None:
     except Exception as e:
         log.exception(f"Unexpected error loading plugin from '{path}'")
         sentry_sdk.capture_exception(e)
+    refresh_event_type_map()
+
+
+def reload_plugin(name: str, path: pathlib.Path) -> None:
+    """Reload a single plugin in place without dropping its routes mid-reload.
+
+    The plugin's currently-loaded handlers keep serving until the new version has
+    finished importing; only then is the event map rebuilt. This avoids the window
+    in which the plugin's routes return 404 because its handlers were unloaded
+    before the replacement was ready. If the new version fails to load, the
+    previous one is left active rather than unloaded.
+    """
+    prefix = f"{name}:"
+
+    # Mark the plugin's current handlers inactive but leave them registered, so
+    # they keep serving while the new version imports.
+    for handler_name, plugin in LOADED_PLUGINS.items():
+        if handler_name.startswith(prefix):
+            plugin["active"] = False
+
+    # Drop stale module objects so the import picks up the new code instead of
+    # reusing the already-imported (old) modules.
+    stale_modules = [mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")]
+    for mod in stale_modules:
+        del sys.modules[mod]
+
+    try:
+        loaded = load_or_reload_plugin(path)
+    except Exception as e:
+        loaded = False
+        log.exception(f"Unexpected error reloading plugin from '{path}'")
+        sentry_sdk.capture_exception(e)
+
+    if not loaded:
+        # The new version didn't load — keep the previous one live rather than
+        # dropping its routes, and leave the event map untouched.
+        for handler_name, plugin in LOADED_PLUGINS.items():
+            if handler_name.startswith(prefix):
+                plugin["active"] = True
+        return
+
+    # Remove handlers that existed in the previous version but are gone from the
+    # new one, then rebuild the event map once so the swap is atomic.
+    for handler_name, plugin in LOADED_PLUGINS.copy().items():
+        if handler_name.startswith(prefix) and not plugin["active"]:
+            del LOADED_PLUGINS[handler_name]
+
     refresh_event_type_map()
 
 
