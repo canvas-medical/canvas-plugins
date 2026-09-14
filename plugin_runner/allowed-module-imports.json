@@ -700,6 +700,11 @@
   "canvas_sdk.effects.note_footer_configuration": [
     "NoteFooterConfiguration"
   ],
+  "canvas_sdk.effects.note_header_assignee_options": [
+    "AssigneeOption",
+    "AssigneeType",
+    "NoteHeaderAssigneeOptions"
+  ],
   "canvas_sdk.effects.observation": [
     "CodingData",
     "Observation",
