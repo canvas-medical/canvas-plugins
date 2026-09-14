@@ -23,6 +23,9 @@ class FollowUp(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="follow_ups"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="follow_ups")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="follow_ups", null=True
+    )
     appointment_note = models.OneToOneField(
         "v1.Note", on_delete=models.DO_NOTHING, null=True, related_name="appointment_request"
     )
