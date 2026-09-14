@@ -796,6 +796,13 @@ def load_plugin_handlers(
 
     results: list[HandlerLoadResult] = []
 
+    # A plugin may declare many handlers from one module. Executing that module
+    # once per handler recompiles and re-runs the same file N times, which
+    # dominates load time for handler-dense plugins. Key the outcome — scope or
+    # the exception it raised — on the module so each file costs one execution
+    # and every handler in it still gets its own result.
+    module_outcomes: dict[str, dict[str, Any] | Exception] = {}
+
     for handler in handlers:
         # TODO add class colon validation to existing schema validation
         try:
@@ -822,26 +829,34 @@ def load_plugin_handlers(
 
         name_and_class = f"{name}:{handler_module}:{handler_class}"
 
-        try:
-            # Suppress Django's "Model was already registered" RuntimeWarning.
-            # When importlib.reload re-imports model modules, Django's metaclass
-            # calls apps.register_model() again for each model class.
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message=r"Model '.*' was already registered",
-                    category=RuntimeWarning,
-                )
-                sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
-                scope = sandbox.execute()
-        except Exception as e:
+        if handler_module not in module_outcomes:
+            try:
+                # Suppress Django's "Model was already registered" RuntimeWarning.
+                # When importlib.reload re-imports model modules, Django's metaclass
+                # calls apps.register_model() again for each model class.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=r"Model '.*' was already registered",
+                        category=RuntimeWarning,
+                    )
+                    sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
+                    module_outcomes[handler_module] = sandbox.execute()
+            except Exception as e:
+                module_outcomes[handler_module] = e
+
+        outcome = module_outcomes[handler_module]
+
+        if isinstance(outcome, Exception):
             results.append(
-                HandlerLoadResult(handler, name_and_class, handler_class, None, e, report=True)
+                HandlerLoadResult(
+                    handler, name_and_class, handler_class, None, outcome, report=True
+                )
             )
             continue
 
         results.append(
-            HandlerLoadResult(handler, name_and_class, handler_class, scope, None, report=False)
+            HandlerLoadResult(handler, name_and_class, handler_class, outcome, None, report=False)
         )
 
     # Re-register the AppConfig so that the freshly-created model classes are
