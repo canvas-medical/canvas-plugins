@@ -34,10 +34,19 @@ def is_schema_manager() -> bool:
     """Return True if this process should perform DDL operations.
 
     Schema creation, partition setup, and table migrations should only run
-    once per deployment. In Aptible this means the first 'cmd' container
-    (APTIBLE_PROCESS_TYPE=cmd, APTIBLE_PROCESS_INDEX=0). Outside Aptible
-    (local development) DDL is always allowed.
+    once per deployment. ``PLUGIN_RUNNER_IS_SCHEMA_MANAGER`` (truthy/falsy
+    string) takes precedence — local-dev setups that run multiple
+    plugin-runner subprocesses against the same Postgres (e.g. home-app's
+    web + worker containers) need to nominate exactly one as the schema
+    manager to avoid racing on pg_namespace / pg_class DDL.
+
+    Falls back to the Aptible discriminator (first ``cmd`` container) when
+    that env var is unset. With no env hints at all (single-container
+    local dev) DDL is allowed.
     """
+    explicit = os.getenv("PLUGIN_RUNNER_IS_SCHEMA_MANAGER")
+    if explicit is not None:
+        return explicit.strip().lower() in ("1", "true", "yes")
     aptible_process_type = os.getenv("APTIBLE_PROCESS_TYPE")
     if not aptible_process_type:
         return True
