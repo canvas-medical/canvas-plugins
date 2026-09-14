@@ -1324,6 +1324,7 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
+    "Receipt",
     "Reference",
     "Referral",
     "ReferralReport",
@@ -1821,6 +1822,9 @@
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding"
+  ],
+  "canvas_sdk.v1.data.receipt": [
+    "Receipt"
   ],
   "canvas_sdk.v1.data.reference": [
     "Reference"
