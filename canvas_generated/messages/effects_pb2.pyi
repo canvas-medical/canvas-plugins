@@ -379,6 +379,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REVENUE__STORED_CARD__CHARGE: _ClassVar[EffectType]
     GENERATE_FULL_CHART_PDF: _ClassVar[EffectType]
     BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
+    BATCH_COMMIT_COMMANDS: _ClassVar[EffectType]
     CALENDAR__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__UPDATE: _ClassVar[EffectType]
@@ -776,6 +777,7 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: EffectType
 REVENUE__STORED_CARD__CHARGE: EffectType
 GENERATE_FULL_CHART_PDF: EffectType
 BATCH_ORIGINATE_COMMANDS: EffectType
+BATCH_COMMIT_COMMANDS: EffectType
 CALENDAR__CREATE: EffectType
 CALENDAR__EVENT__CREATE: EffectType
 CALENDAR__EVENT__UPDATE: EffectType
