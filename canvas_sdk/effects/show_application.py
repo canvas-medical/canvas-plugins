@@ -18,6 +18,10 @@ class ShowApplicationEffect(_BaseEffect):
     priority: int = Field(default=0)
     dock_edge: str | None = Field(default=None)
     dock_size: str | None = Field(default=None)
+    icon_url: str | None = Field(default=None)
+    badge_count: int | None = Field(default=None, ge=0)
+    menu_position: str | None = Field(default=None)
+    show_in_panel: bool | None = Field(default=None)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -29,6 +33,10 @@ class ShowApplicationEffect(_BaseEffect):
             "priority": self.priority,
             "dock_edge": self.dock_edge,
             "dock_size": self.dock_size,
+            "icon_url": self.icon_url,
+            "badge_count": self.badge_count,
+            "menu_position": self.menu_position,
+            "show_in_panel": self.show_in_panel,
         }
 
     @property
