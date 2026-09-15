@@ -82,6 +82,15 @@ class ApplicationScope(StrEnum):
     NOTE = "note"
     SCHEDULING = "scheduling"
     DOCKED = "docked"
+    PROVIDER_MENU = "provider_menu"
+    PANEL = "panel"
+
+
+class MenuPosition(StrEnum):
+    """Which group of the provider menu an entry joins."""
+
+    TOP = "top"
+    BOTTOM = "bottom"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -91,6 +100,9 @@ class EmbeddedApplication(Application, ABC):
     SCOPE: ApplicationScope
     IDENTIFIER: str | None = None
     PRIORITY: int = 0
+    ICON_URL: str | None = None
+    MENU_POSITION: MenuPosition = MenuPosition.TOP
+    SHOW_IN_PANEL: bool = False
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
@@ -111,11 +123,21 @@ class EmbeddedApplication(Application, ABC):
         Subclasses whose surface needs more than the common fields extend this rather
         than reimplementing ``compute``.
         """
+        if self.SCOPE == ApplicationScope.PANEL and not self.ICON_URL:
+            raise NotImplementedError(
+                f"{type(self).__name__} must set ICON_URL: the panel bar renders the icon "
+                "and nothing else, so there is nothing to click without one."
+            )
+
         return {
             "name": self.NAME,
             "identifier": self.identifier,
             "open_by_default": self.open_by_default(),
             "priority": self.PRIORITY,
+            "icon_url": self.ICON_URL,
+            "badge_count": self.compute_notification_badge(),
+            "menu_position": MenuPosition(self.MENU_POSITION).value,
+            "show_in_panel": self.SHOW_IN_PANEL,
         }
 
     def _matches_scope(self) -> bool:
@@ -244,6 +266,7 @@ __exports__ = (
     "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
+    "MenuPosition",
     "NoteApplication",
     "SchedulingApplication",
 )
