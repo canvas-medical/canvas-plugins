@@ -965,6 +965,7 @@
     "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
+    "MenuPosition",
     "NoteApplication",
     "SchedulingApplication"
   ],
