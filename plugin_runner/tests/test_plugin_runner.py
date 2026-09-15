@@ -546,6 +546,31 @@ def test_handle_plugin_event_returns_expected_result(
     assert result[0].effects[0].payload == "Hello, world!"
 
 
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_handle_plugin_event_emits_no_per_handler_log_lines(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A successful event produces no runner log line of its own.
+
+    Per-handler timing and counts are carried by the ``plugins_timings``
+    metric, and one line per handler per event is the single largest
+    contributor to log volume across the fleet.
+    """
+    with caplog.at_level(logging.DEBUG, logger="plugin_runner_logger"):
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    runner_messages = [
+        record.message for record in caplog.records if record.name == "plugin_runner_logger"
+    ]
+
+    assert not [m for m in runner_messages if "compute() completed" in m], runner_messages
+    assert not [m for m in runner_messages if "Responded to Event" in m], runner_messages
+
+
 @pytest.mark.parametrize("install_test_plugin", ["test_none_compute"], indirect=True)
 def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
     install_test_plugin: Path,
