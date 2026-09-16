@@ -332,21 +332,32 @@ class Note(TimestampedModel, IdentifiableModel):
         """Return the note body content, handling any necessary transformations for v2 notes."""
         if self._version == 2:
             # For version 2 notes, we need to reconstruct the body using the content and order fields
-            legacy_body: list[dict] = []
-            for line_uuid in self._body_order:
-                line_uuid_str = str(line_uuid)
-                line = self._body_content.get(line_uuid_str)
-
-                if line is None:
-                    legacy_body.append({"type": "text", "value": ""})
-                elif line.get("type") == "command":
-                    legacy_body.append({"type": "command", "value": line["value"]})
-                else:
-                    legacy_body.append({"type": "text", "value": line.get("value", "")})
-            return legacy_body
+            return self._build_legacy_body()
         else:
             # for legacy notes we can return the body directly, as it is already in the expected format
             return self._body
+
+    def _build_legacy_body(self) -> list[dict]:
+        """Convert _body_content/_body_order to the legacy _body format."""
+        legacy_body: list[dict] = []
+        for line_uuid in self._body_order:
+            line_uuid_str = str(line_uuid)
+            line = self._body_content.get(line_uuid_str)
+
+            if line is None:
+                legacy_body.append({"type": "text", "value": ""})
+            elif line.get("type") == "command":
+                legacy_body.append(
+                    {
+                        "type": "command",
+                        "value": line["value"],
+                        "data": {"command_uuid": line_uuid_str},
+                    }
+                )
+            else:
+                legacy_body.append({"type": "text", "value": line.get("value", "")})
+
+        return legacy_body
 
     def body_checksum(self) -> str:
         """Compute an MD5 checksum of the note body content only."""
