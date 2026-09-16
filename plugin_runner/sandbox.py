@@ -706,7 +706,14 @@ class Sandbox:
             return self.node_contents_visit(node)
 
         def visit_MatchAs(self, node: ast.MatchAs) -> ast.MatchAs:
-            """Allow `match`."""
+            """Allow `match`, and check the name a capture pattern binds.
+
+            A capture pattern assigns the subject to a plain `str` field on the
+            pattern node rather than to an `ast.Name`, so the name reaches the
+            check only from here.
+            """
+            self.check_name(node, node.name)
+
             return self.node_contents_visit(node)
 
         def visit_MatchClass(self, node: ast.MatchClass) -> ast.MatchClass:
@@ -714,7 +721,9 @@ class Sandbox:
             return self.node_contents_visit(node)
 
         def visit_MatchMapping(self, node: ast.MatchMapping) -> ast.MatchMapping:
-            """Allow `match`."""
+            """Allow `match`, and check the name a `**rest` pattern binds."""
+            self.check_name(node, node.rest)
+
             return self.node_contents_visit(node)
 
         def visit_MatchOr(self, node: ast.MatchOr) -> ast.MatchOr:
@@ -730,7 +739,9 @@ class Sandbox:
             return self.node_contents_visit(node)
 
         def visit_MatchStar(self, node: ast.MatchStar) -> ast.MatchStar:
-            """Allow `match`."""
+            """Allow `match`, and check the name a `*rest` pattern binds."""
+            self.check_name(node, node.name)
+
             return self.node_contents_visit(node)
 
         def visit_MatchValue(self, node: ast.MatchValue) -> ast.MatchValue:
@@ -749,6 +760,13 @@ class Sandbox:
 
             => 'from _a import x' is ok, because '_a' is not added to the scope.
             """
+            if getattr(node, "is_lazy", 0):
+                # PEP 810's `lazy import` resolves through the `__lazy_import__`
+                # builtin at first use, so it never reaches the `__import__` the
+                # scope replaces with `_safe_import` and the module policy goes
+                # unconsulted.
+                self.error(node, "Lazy import statements are not allowed.")
+
             module = node.module if isinstance(node, ast.ImportFrom) else None
 
             for name in node.names:
