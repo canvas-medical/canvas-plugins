@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.226.1 (2026-09-16)
+
+### Bug Fixes
+
+- Note body property for v2 notes
+  ([#1885](https://github.com/canvas-medical/canvas-plugins/pull/1885),
+  [`5447c9e`](https://github.com/canvas-medical/canvas-plugins/commit/5447c9e6d697bc45bae02deb6ea8bcb85f69393f))
+
+### Performance Improvements
+
+- **plugin-runner**: Stop logging a line per handler and per event
+  ([#1881](https://github.com/canvas-medical/canvas-plugins/pull/1881),
+  [`bb0482e`](https://github.com/canvas-medical/canvas-plugins/commit/bb0482e7eb34a35f5f3a2bc889de81b38238102a))
+
+
 ## v0.226.0 (2026-09-14)
 
 ### Features
