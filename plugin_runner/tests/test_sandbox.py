@@ -1,5 +1,6 @@
 import __future__
 
+import ast
 import importlib
 import logging
 import re
@@ -13,6 +14,7 @@ from django.db import models as django_models
 from RestrictedPython import compile_restricted_exec
 
 from canvas_sdk.tests.shared import params_from_dict
+from canvas_sdk.utils.http import Http
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
     BulkOperationTooLarge,
@@ -1004,6 +1006,32 @@ def test_forbidden_assignment(code: str) -> None:
             "comprehension_target": """
                 result = [_getattr_ for _getattr_ in []]
             """,
+            # A bare name in a `case` is a capture pattern, so it always matches
+            # and assigns the subject. The name is a `str` field on the pattern
+            # node rather than an `ast.Name`, so it reaches none of the visitors
+            # the other forms go through. None of these four cases may mention
+            # the captured name in an expression, which would reach the check
+            # through `visit_Name` and pass whatever the match visitors do.
+            "match_capture": """
+                match 1:
+                    case _getattr_:
+                        pass
+            """,
+            "match_as": """
+                match 1:
+                    case 1 as _getattr_:
+                        pass
+            """,
+            "match_star": """
+                match [1]:
+                    case [*_getattr_]:
+                        pass
+            """,
+            "match_mapping_rest": """
+                match {"a": 1}:
+                    case {**_getattr_}:
+                        pass
+            """,
         }
     ),
 )
@@ -1027,6 +1055,72 @@ def test_sandbox_denies_binding_every_protected_name(name: str) -> None:
 
     with pytest.raises(RuntimeError, match="is a reserved name"):
         sandbox.execute()
+
+
+@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
+def test_sandbox_denies_capturing_every_protected_name_in_a_match(name: str) -> None:
+    """Test that a `case` capture pattern cannot bind a name reserved for a policy hook.
+
+    A capture pattern assigns the subject to the name, so binding one of the
+    guards replaces it in the scope the sandbox seeded, and every guarded
+    operation compiled into the module then routes through plugin code.
+    """
+    sandbox = _sandbox_from_code(f"match 1:\n    case {name}:\n        pass\n")
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+def test_sandbox_denies_a_match_capture_that_replaces_the_write_guard() -> None:
+    """Test that a capture pattern cannot turn a guarded write into an unguarded one.
+
+    `_write_(ob, name, attr)` is a call the transformer inserts and resolves by
+    name at runtime, and module-level code executes with one dict as both
+    globals and locals, so a capture that binds `_write_` to a function
+    returning its first argument leaves every write in the module unguarded.
+    The attribute would land on a class shared by every plugin in the process.
+    """
+    sandbox = _sandbox_from_code(
+        dedent(
+            """
+            from canvas_sdk.utils import Http
+
+            def identity(ob, *args, **kwargs):
+                return ob
+
+            match identity:
+                case _write_:
+                    pass
+
+            Http.pwned = "yes"
+            """
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+    assert not hasattr(Http, "pwned"), (
+        "the sandbox let a plugin write an attribute onto a shared SDK class"
+    )
+
+
+def test_sandbox_denies_a_lazy_import() -> None:
+    """Test that a lazy import is rejected.
+
+    PEP 810's `lazy import` resolves through the `__lazy_import__` builtin at
+    first use rather than the `__import__` the sandbox replaces with
+    `_safe_import`, so the module policy would never be consulted. Python 3.15
+    is the first interpreter that parses the syntax, so the flag the parser
+    would set is set directly here.
+    """
+    errors: list[str] = []
+    tree = ast.parse("import json")
+    tree.body[0].is_lazy = 1  # type: ignore[attr-defined]
+
+    Sandbox.Transformer(errors, [], {}).visit(tree)
+
+    assert any("Lazy import" in error for error in errors), errors
 
 
 def test_protected_scope_names_covers_every_injected_guard() -> None:
