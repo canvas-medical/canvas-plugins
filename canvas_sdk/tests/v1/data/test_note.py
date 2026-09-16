@@ -127,7 +127,21 @@ def test_body_v2_command_lines() -> None:
         _body_content={str(line_uuid): {"type": "command", "value": "plan"}},
     )
 
-    assert note.body == [{"type": "command", "value": "plan"}]
+    assert note.body == [
+        {"type": "command", "value": "plan", "data": {"command_uuid": str(line_uuid)}}
+    ]
+
+
+def test_body_v2_command_uuid_is_the_line_uuid() -> None:
+    """A command node carries its line uuid, which is the command's uuid."""
+    line_uuid = uuid.uuid4()
+    note = Note(
+        _version=2,
+        _body_order=[line_uuid],
+        _body_content={str(line_uuid): {"type": "command", "value": "diagnose"}},
+    )
+
+    assert note.body[0]["data"]["command_uuid"] == str(line_uuid)
 
 
 def test_body_v2_mixed_content_preserves_order() -> None:
@@ -146,7 +160,7 @@ def test_body_v2_mixed_content_preserves_order() -> None:
 
     assert note.body == [
         {"type": "text", "value": ""},
-        {"type": "command", "value": "plan"},
+        {"type": "command", "value": "plan", "data": {"command_uuid": str(command_uuid)}},
         {"type": "text", "value": "some note text"},
     ]
 
