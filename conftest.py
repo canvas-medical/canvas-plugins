@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
+from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, reconcile_plugins
 
 BASE_DIR = Path(__file__).parent
 FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
@@ -59,7 +59,7 @@ def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None,
 def load_test_plugins() -> Generator[None, None, None]:
     """Manages the lifecycle of test plugins by loading and unloading them."""
     try:
-        load_plugins()
+        reconcile_plugins()
         yield
     finally:
         LOADED_PLUGINS.clear()

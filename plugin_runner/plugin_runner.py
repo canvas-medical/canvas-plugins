@@ -520,14 +520,14 @@ def synchronize_plugins(run_once: bool = False) -> None:
                         # reload never leaves the plugin's routes returning 404.
                         install_plugin(plugin_name, attributes=plugin)
                         plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
-                        reload_plugin(plugin_name, plugin_dir.resolve())
+                        reload_plugin(plugin_dir.resolve())
                 else:
                     log.info("synchronize_plugins: installing/reloading plugins for action=reload")
                     install_plugins()
-                    load_plugins()
+                    reconcile_plugins()
             elif data["action"] == "unload" and plugin_name:
                 log.info(f'synchronize_plugins: uninstalling plugin "{plugin_name}"')
-                unload_plugin(plugin_name)
+                remove_plugin(plugin_name)
                 uninstall_plugin(plugin_name)
         except Exception as e:
             if isinstance(e, PluginInstallationError):
@@ -535,7 +535,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
             elif isinstance(e, PluginUninstallationError):
                 message = "uninstall_plugin failed"
             else:
-                message = "load_plugins failed"
+                message = "reconcile_plugins failed"
 
             if plugin_name:
                 message += f' for plugin "{plugin_name}"'
@@ -768,7 +768,7 @@ class HandlerLoadResult:
     report: bool
 
 
-def load_plugin_handlers(
+def sandbox_plugin_handlers(
     name: str,
     path: pathlib.Path,
     handlers: list[dict[str, Any]],
@@ -780,7 +780,7 @@ def load_plugin_handlers(
     ``execute``) plus the Django model-registration reset, but mutates no global
     plugin state (``LOADED_PLUGINS``) and does no logging or Sentry reporting —
     callers decide what to do with the returned results. Shared by
-    ``load_or_reload_plugin`` and the ``canvas validate`` pre-flight so the two
+    ``import_plugin`` and the ``canvas validate`` pre-flight so the two
     cannot drift on sandbox semantics.
     """
     if evaluated_modules is None:
@@ -854,15 +854,19 @@ def load_plugin_handlers(
     return results
 
 
-def load_or_reload_plugin(path: pathlib.Path) -> bool:
-    """Given a path, load or reload a plugin."""
+def import_plugin(path: pathlib.Path) -> bool:
+    """Import a plugin's handlers into LOADED_PLUGINS, returning True if all loaded.
+
+    Leaves EVENT_HANDLER_MAP untouched, so a caller must follow with
+    rebuild_event_routes() before the plugin's routes reflect this import.
+    """
     log.info(f'Loading plugin at "{path}"')
 
     # the name is the folder name underneath the plugins directory
     name = path.name
 
     with metrics.measure(
-        "load_or_reload_plugin",
+        "import_plugin",
         track_memory_usage=True,
         extra_tags={"plugin": name},
     ):
@@ -956,7 +960,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             return False
 
         # TODO when we encounter an exception here, disable the plugin in response
-        results = load_plugin_handlers(name, path, handlers)
+        results = sandbox_plugin_handlers(name, path, handlers)
 
         any_failed = False
         loaded_handler_count = 0
@@ -1020,8 +1024,12 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         return not any_failed
 
 
-def unload_plugin(name: str) -> None:
-    """Unload a plugin by its name."""
+def remove_plugin(name: str) -> None:
+    """Tear a plugin down by name: drop its handlers and rebuild its routes.
+
+    This is the disable/uninstall path. A version swap goes through
+    reload_plugin, which keeps the plugin's routes served throughout.
+    """
     handlers_removed = False
 
     for handler_name in LOADED_PLUGINS.copy():
@@ -1039,12 +1047,12 @@ def unload_plugin(name: str) -> None:
 
     if handlers_removed:
         # Refresh the event type map to remove any handlers for the unloaded plugin
-        refresh_event_type_map()
+        rebuild_event_routes()
     else:
         log.warning(f"No handlers found for plugin '{name}' to unload.")
 
 
-def refresh_event_type_map() -> None:
+def rebuild_event_routes() -> None:
     """Ensure the event subscriptions are up to date."""
     EVENT_HANDLER_MAP.clear()
 
@@ -1062,8 +1070,12 @@ def refresh_event_type_map() -> None:
 
 
 @measured
-def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
-    """Load the plugins."""
+def reconcile_plugins(specified_plugin_paths: list[str] | None = None) -> None:
+    """Reconcile LOADED_PLUGINS against what is on disk, then rebuild the routes.
+
+    Disk is the source of truth: plugins present are imported, and plugins that
+    have gone are dropped. This is the only path that removes in bulk.
+    """
     # first mark each plugin as inactive since we want to remove it from
     # LOADED_PLUGINS if it no longer exists on disk
     for plugin in LOADED_PLUGINS.values():
@@ -1095,7 +1107,7 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     # load or reload each plugin
     for plugin_path in plugin_paths:
         try:
-            load_or_reload_plugin(plugin_path)
+            import_plugin(plugin_path)
         except NamespaceAccessError as e:
             log.error(f"Namespace access error loading plugin from '{plugin_path}': {e}")
             sentry_sdk.capture_exception(e)
@@ -1108,32 +1120,20 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
         if not plugin["active"]:
             del LOADED_PLUGINS[name]
 
-    refresh_event_type_map()
+    rebuild_event_routes()
 
 
 @measured
-def load_plugin(path: pathlib.Path) -> None:
-    """Load a plugin from the specified path."""
-    try:
-        load_or_reload_plugin(path)
-    except NamespaceAccessError as e:
-        log.error(f"Namespace access error loading plugin from '{path}': {e}")
-        sentry_sdk.capture_exception(e)
-    except Exception as e:
-        log.exception(f"Unexpected error loading plugin from '{path}'")
-        sentry_sdk.capture_exception(e)
-    refresh_event_type_map()
+def reload_plugin(path: pathlib.Path) -> None:
+    """Load a single plugin in place, keeping its routes served throughout.
 
-
-def reload_plugin(name: str, path: pathlib.Path) -> None:
-    """Reload a single plugin in place without dropping its routes mid-reload.
-
-    The plugin's currently-loaded handlers keep serving until the new version has
-    finished importing; only then is the event map rebuilt. This avoids the window
-    in which the plugin's routes return 404 because its handlers were unloaded
-    before the replacement was ready. If the new version fails to load, the
-    previous one is left active rather than unloaded.
+    The plugin's currently-loaded handlers stay registered and keep serving while
+    the new version imports; the event map is rebuilt once, after the swap. If the
+    new version fails to load, the previous one stays active.
     """
+    # Derive the name the same way import_plugin does, so the handler-key
+    # prefix always matches the keys that a load populates.
+    name = path.name
     prefix = f"{name}:"
 
     # Mark the plugin's current handlers inactive but leave them registered, so
@@ -1149,27 +1149,32 @@ def reload_plugin(name: str, path: pathlib.Path) -> None:
         del sys.modules[mod]
 
     try:
-        loaded = load_or_reload_plugin(path)
+        loaded = import_plugin(path)
+    except NamespaceAccessError as e:
+        loaded = False
+        log.error(f"Namespace access error loading plugin from '{path}': {e}")
+        sentry_sdk.capture_exception(e)
     except Exception as e:
         loaded = False
-        log.exception(f"Unexpected error reloading plugin from '{path}'")
+        log.exception(f"Unexpected error loading plugin from '{path}'")
         sentry_sdk.capture_exception(e)
 
-    if not loaded:
-        # The new version didn't load — keep the previous one live rather than
-        # dropping its routes, and leave the event map untouched.
+    if loaded:
+        # Remove handlers that existed in the previous version but are gone from
+        # the new one.
+        for handler_name, plugin in LOADED_PLUGINS.copy().items():
+            if handler_name.startswith(prefix) and not plugin["active"]:
+                del LOADED_PLUGINS[handler_name]
+    else:
+        # Keep the previous handlers live rather than dropping their routes.
         for handler_name, plugin in LOADED_PLUGINS.items():
             if handler_name.startswith(prefix):
                 plugin["active"] = True
-        return
 
-    # Remove handlers that existed in the previous version but are gone from the
-    # new one, then rebuild the event map once so the swap is atomic.
-    for handler_name, plugin in LOADED_PLUGINS.copy().items():
-        if handler_name.startswith(prefix) and not plugin["active"]:
-            del LOADED_PLUGINS[handler_name]
-
-    refresh_event_type_map()
+    # Rebuild the event map once, whichever branch ran. A partial load has already
+    # swapped new handler classes into LOADED_PLUGINS, so the map has to reflect
+    # them even when import_plugin reports failure.
+    rebuild_event_routes()
 
 
 # NOTE: specified_plugin_paths powers the `canvas run-plugins` command
@@ -1200,7 +1205,7 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
         STOP_SYNCHRONIZER.clear()
         synchronizer_thread.start()
 
-    load_plugins(specified_plugin_paths)
+    reconcile_plugins(specified_plugin_paths)
 
     server.start()
 
