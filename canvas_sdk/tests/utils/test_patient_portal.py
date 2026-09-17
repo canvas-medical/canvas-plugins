@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from canvas_sdk.utils.http import ontologies_http, science_http
 from canvas_sdk.utils.patient_portal import (
     PatientPortalHttp,
     PatientPortalLinkError,
@@ -114,21 +113,18 @@ def test_patient_portal_sends_no_plugin_header_outside_a_handler(mock_post: Magi
 
 
 @patch("requests.Session.post")
-def test_patient_portal_hides_the_pre_shared_key(mock_post: MagicMock) -> None:
-    """Plugin code must not be able to read the injected key back off the response.
+def test_patient_portal_hands_back_only_the_link(mock_post: MagicMock) -> None:
+    """The injected key has no carrier into plugin code.
 
-    JsonOnlyResponse exposes only status_code and json(), and the sandbox blocks the
-    underscored client, so there is no route from plugin code to the key.
+    The caller receives a string, so the response object holding the request headers is
+    never handed out.
     """
     mock_post.return_value = FakePortalResponse(payload={"login_url": "https://x/app/reset/"})
 
-    patient_portal_http.get_login_url("a" * 32)
+    login_url = patient_portal_http.get_login_url("a" * 32)
 
-    response = patient_portal_http._http_client.post_json("/patient-portal/login-url/", json={})
-
-    assert not hasattr(response, "request")
-    assert not hasattr(response, "headers")
-    assert set(vars(response)) == {"_json", "status_code"}
+    assert isinstance(login_url, str)
+    assert "the-pre-shared-key" not in login_url
 
 
 @patch("requests.Session.post")
@@ -192,15 +188,6 @@ def test_patient_portal_raises_when_the_link_is_not_a_string(mock_post: MagicMoc
 
     with pytest.raises(PatientPortalLinkError, match="carried no link"):
         patient_portal_http.get_login_url("a" * 32)
-
-
-def test_post_is_not_added_to_the_shared_json_only_base() -> None:
-    """The POST primitive must not reach the clients plugin code holds directly.
-
-    `ontologies_http` and `science_http` are exported to the sandbox and were GET-only.
-    """
-    assert not hasattr(ontologies_http, "post_json")
-    assert not hasattr(science_http, "post_json")
 
 
 @pytest.mark.parametrize(

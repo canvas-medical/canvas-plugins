@@ -1,10 +1,9 @@
 import os
-from collections.abc import Mapping
 from typing import Any, Literal
 
 import requests
 
-from canvas_sdk.utils.http import Http, JsonOnlyHttp, JsonOnlyResponse
+from canvas_sdk.utils.http import Http, JsonOnlyResponse
 from logger.logger import current_plugin_name
 
 
@@ -28,41 +27,22 @@ class PatientPortalLinkError(RuntimeError):
         self.message = message
 
 
-class _PortalHttp(JsonOnlyHttp):
-    """A JSON-only client that can also POST.
-
-    `JsonOnlyHttp` deliberately exposes GET alone. The POST the mint needs lives here rather
-    than on that base class so it is not inherited by the ontologies and science clients,
-    which plugin code holds directly.
-    """
-
-    def post_json(
-        self,
-        url: str,
-        json: dict | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> JsonOnlyResponse:
-        """Send a POST and expose only the status code and the decoded body."""
-        return JsonOnlyResponse(Http.post(self, url, json=json, headers=headers))
-
-
 class PatientPortalHttp:
     """
     A client for minting patient portal links.
 
-    Composition rather than a JsonOnlyHttp subclass: this client's base URL is Canvas itself,
-    so a general-purpose request method on it would be a way to reach other Canvas endpoints
-    with the pre-shared key attached. Keeping the client private is a smaller target, not a
-    containment boundary — the sandbox is what confines plugin code.
+    The HTTP client is held privately rather than inherited, because its base URL is Canvas
+    itself and a public request method here would be a way to reach other Canvas endpoints
+    with the pre-shared key attached. `get_login_url` hands back a string, so plugin code
+    holds the link and nothing else. That is a smaller target rather than a containment
+    boundary: the sandbox is what confines plugin code.
     """
 
     def __init__(self) -> None:
-        # CANVAS_PUBLIC_HOST is the instance's own URL and is set on every deployment. The
+        # CANVAS_PUBLIC_HOST is the instance's own URL and is required by its settings. The
         # runner does not share a listening port with the web process, so an address that
         # resolves only inside the web container reaches nothing.
-        self._http_client = _PortalHttp(
-            base_url=os.getenv("CANVAS_PUBLIC_HOST", "http://localhost:8000")
-        )
+        self._http_client = Http(base_url=os.getenv("CANVAS_PUBLIC_HOST", ""))
 
         self._http_client._session.headers.update(
             {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
@@ -111,8 +91,8 @@ class PatientPortalHttp:
         headers = {"X-Canvas-Plugin-Name": plugin_name} if plugin_name else None
 
         try:
-            response = self._http_client.post_json(
-                "/patient-portal/login-url/", json=payload, headers=headers
+            response = JsonOnlyResponse(
+                self._http_client.post("/patient-portal/login-url/", json=payload, headers=headers)
             )
         except requests.RequestException as error:
             # `requests` is not importable from a plugin, so its exceptions are uncatchable
