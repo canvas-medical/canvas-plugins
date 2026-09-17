@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any
 
 import deprecation
+from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.application_notification_badge import ApplicationNotificationBadge
@@ -100,9 +101,6 @@ class EmbeddedApplication(Application, ABC):
     SCOPE: ApplicationScope
     IDENTIFIER: str | None = None
     PRIORITY: int = 0
-    ICON_URL: str | None = None
-    MENU_POSITION: MenuPosition = MenuPosition.TOP
-    SHOW_IN_PANEL: bool = False
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
@@ -123,21 +121,11 @@ class EmbeddedApplication(Application, ABC):
         Subclasses whose surface needs more than the common fields extend this rather
         than reimplementing ``compute``.
         """
-        if self.SCOPE == ApplicationScope.PANEL and not self.ICON_URL:
-            raise NotImplementedError(
-                f"{type(self).__name__} must set ICON_URL: the panel bar renders the icon "
-                "and nothing else, so there is nothing to click without one."
-            )
-
         return {
             "name": self.NAME,
             "identifier": self.identifier,
             "open_by_default": self.open_by_default(),
             "priority": self.PRIORITY,
-            "icon_url": self.ICON_URL,
-            "badge_count": self.compute_notification_badge(),
-            "menu_position": MenuPosition(self.MENU_POSITION).value,
-            "show_in_panel": self.SHOW_IN_PANEL,
         }
 
     def _matches_scope(self) -> bool:
@@ -260,6 +248,82 @@ class SchedulingApplication(EmbeddedApplication):
     SCOPE = ApplicationScope.SCHEDULING
 
 
+class ProviderMenuApplication(EmbeddedApplication):
+    """An Application that appears in the provider menu, the side navigation panel.
+
+    The side menu renders the application's ``NAME`` as text, so ``ICON_URL`` is optional
+    here. ``MENU_POSITION`` selects which group of the menu the entry joins.
+
+    ``ICON_URL`` is a URL the plugin serves, rather than a file Canvas stores, because an
+    application discovered through ``APPLICATION__ON_GET`` need not have an installed row
+    to hang an uploaded image on. Note that the manifest's ``icon`` is a path inside the
+    plugin package, which is a different thing.
+    """
+
+    SCOPE = ApplicationScope.PROVIDER_MENU
+
+    ICON_URL: str | None = None
+    MENU_POSITION: MenuPosition = MenuPosition.TOP
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the side menu draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "menu_position": MenuPosition(self.MENU_POSITION).value,
+            "badge_count": self.compute_notification_badge(),
+        }
+
+
+class PanelApplication(EmbeddedApplication):
+    """An Application that appears in the panel bar at the top of the window.
+
+    The bar is present on the worklist and on a patient chart. One class covers both:
+    ``visible()`` reads ``self.event.context`` and a ``patient`` key means a chart is
+    open.
+
+    ``SHOW_IN_DRAWER`` picks between the two places the bar puts an application. The
+    default puts it in the drawer behind the grid button; clearing it renders the icon
+    inline in the bar itself.
+
+    ``ICON_URL`` is required, because the bar renders the icon and no label. A subclass
+    omitting it raises when the class is defined, which for a plugin is load time, rather
+    than leaving an invisible click target for someone to find later. A subclass that
+    exists to share behaviour rather than to be rendered sets ``abstract = True`` to defer
+    the icon to its own subclasses.
+    """
+
+    SCOPE = ApplicationScope.PANEL
+
+    ICON_URL: str
+    SHOW_IN_DRAWER: bool = True
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require an icon, unless this subclass only exists to be subclassed itself."""
+        super().__init_subclass__(**kwargs)
+
+        # Read the class's own namespace rather than the inherited attribute, so that
+        # `abstract` applies to the class that sets it and never to what inherits from
+        # it. Django's model meta treats it the same way.
+        if cls.__dict__.get("abstract", False):
+            return
+
+        if not getattr(cls, "ICON_URL", None):
+            raise ImproperlyConfigured(
+                f"{cls.__name__!r} must define ICON_URL: the panel bar renders the icon "
+                "and nothing else, so there is nothing to click without one."
+            )
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the panel bar draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "show_in_panel": not self.SHOW_IN_DRAWER,
+            "badge_count": self.compute_notification_badge(),
+        }
+
+
 __exports__ = (
     "Application",
     "ApplicationScope",
@@ -268,5 +332,7 @@ __exports__ = (
     "EmbeddedApplication",
     "MenuPosition",
     "NoteApplication",
+    "PanelApplication",
+    "ProviderMenuApplication",
     "SchedulingApplication",
 )
