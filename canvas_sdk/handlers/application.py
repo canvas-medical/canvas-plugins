@@ -249,16 +249,7 @@ class SchedulingApplication(EmbeddedApplication):
 
 
 class ProviderMenuApplication(EmbeddedApplication):
-    """An Application that appears in the provider menu, the side navigation panel.
-
-    The side menu renders the application's ``NAME`` as text, so ``ICON_URL`` is optional
-    here. ``MENU_POSITION`` selects which group of the menu the entry joins.
-
-    ``ICON_URL`` is a URL the plugin serves, rather than a file Canvas stores, because an
-    application discovered through ``APPLICATION__ON_GET`` need not have an installed row
-    to hang an uploaded image on. Note that the manifest's ``icon`` is a path inside the
-    plugin package, which is a different thing.
-    """
+    """An Application that appears in the provider menu, the side navigation panel."""
 
     SCOPE = ApplicationScope.PROVIDER_MENU
 
@@ -276,22 +267,7 @@ class ProviderMenuApplication(EmbeddedApplication):
 
 
 class PanelApplication(EmbeddedApplication):
-    """An Application that appears in the panel bar at the top of the window.
-
-    The bar is present on the worklist and on a patient chart. One class covers both:
-    ``visible()`` reads ``self.event.context`` and a ``patient`` key means a chart is
-    open.
-
-    ``SHOW_IN_DRAWER`` picks between the two places the bar puts an application. The
-    default puts it in the drawer behind the grid button; clearing it renders the icon
-    inline in the bar itself.
-
-    ``ICON_URL`` is required, because the bar renders the icon and no label. A subclass
-    omitting it raises when the class is defined, which for a plugin is load time, rather
-    than leaving an invisible click target for someone to find later. A subclass that
-    exists to share behaviour rather than to be rendered sets ``abstract = True`` to defer
-    the icon to its own subclasses.
-    """
+    """An Application that appears in the panel bar at the top of the window."""
 
     SCOPE = ApplicationScope.PANEL
 
@@ -302,9 +278,6 @@ class PanelApplication(EmbeddedApplication):
         """Require an icon, unless this subclass only exists to be subclassed itself."""
         super().__init_subclass__(**kwargs)
 
-        # Read the class's own namespace rather than the inherited attribute, so that
-        # `abstract` applies to the class that sets it and never to what inherits from
-        # it. Django's model meta treats it the same way.
         if cls.__dict__.get("abstract", False):
             return
 
