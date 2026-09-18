@@ -1,3 +1,6 @@
+import __future__
+
+import ast
 import importlib
 import logging
 import re
@@ -8,8 +11,10 @@ from unittest.mock import patch
 
 import pytest
 from django.db import models as django_models
+from RestrictedPython import compile_restricted_exec
 
 from canvas_sdk.tests.shared import params_from_dict
+from canvas_sdk.utils.http import Http
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
     BulkOperationTooLarge,
@@ -21,6 +26,7 @@ from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
+    PROTECTED_SCOPE_NAMES,
     Sandbox,
     sandbox_from_module,
 )
@@ -931,6 +937,248 @@ def test_forbidden_assignment(code: str) -> None:
         sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "module_assignment": """
+                _getattr_ = None
+            """,
+            "positional_only_argument": """
+                def handler(value, _getattr_=None, /):
+                    return value
+            """,
+            "regular_argument": """
+                def handler(value, _getattr_=None):
+                    return value
+            """,
+            "keyword_only_argument": """
+                def handler(value, *, _getattr_=None):
+                    return value
+            """,
+            "lambda_positional_only_argument": """
+                handler = lambda value, _getattr_=None, /: value
+            """,
+            "vararg": """
+                def handler(*_getattr_):
+                    return _getattr_
+            """,
+            "kwarg": """
+                def handler(**_getattr_):
+                    return _getattr_
+            """,
+            "function_name": """
+                def _getattr_():
+                    return None
+            """,
+            "class_name": """
+                class _getattr_:
+                    pass
+            """,
+            "import_alias": """
+                import json as _getattr_
+            """,
+            "import_from_alias": """
+                from json import loads as _getattr_
+            """,
+            "for_target": """
+                for _getattr_ in []:
+                    pass
+            """,
+            "with_target": """
+                from contextlib import suppress
+
+                with suppress(Exception) as _getattr_:
+                    pass
+            """,
+            "except_target": """
+                try:
+                    pass
+                except Exception as _getattr_:
+                    pass
+            """,
+            "walrus": """
+                result = (_getattr_ := None)
+            """,
+            "tuple_unpacking": """
+                a, _getattr_ = 1, 2
+            """,
+            "comprehension_target": """
+                result = [_getattr_ for _getattr_ in []]
+            """,
+            # A bare name in a `case` is a capture pattern, so it always matches
+            # and assigns the subject. The name is a `str` field on the pattern
+            # node rather than an `ast.Name`, so it reaches none of the visitors
+            # the other forms go through. None of these four cases may mention
+            # the captured name in an expression, which would reach the check
+            # through `visit_Name` and pass whatever the match visitors do.
+            "match_capture": """
+                match 1:
+                    case _getattr_:
+                        pass
+            """,
+            "match_as": """
+                match 1:
+                    case 1 as _getattr_:
+                        pass
+            """,
+            "match_star": """
+                match [1]:
+                    case [*_getattr_]:
+                        pass
+            """,
+            "match_mapping_rest": """
+                match {"a": 1}:
+                    case {**_getattr_}:
+                        pass
+            """,
+        }
+    ),
+)
+def test_sandbox_denies_binding_a_reserved_name(code: str) -> None:
+    """Test that no syntax lets plugin code bind a name reserved for a policy hook.
+
+    A leading underscore is otherwise only a warning, so each binding form needs
+    its own case: the name check has to run for arguments, targets, aliases and
+    definitions alike.
+    """
+    sandbox = _sandbox_from_code(code)
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
+def test_sandbox_denies_binding_every_protected_name(name: str) -> None:
+    """Test that every reserved name is rejected, not just the ones with cases above."""
+    sandbox = _sandbox_from_code(f"def handler(value, {name}=None, /):\n    return value\n")
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
+def test_sandbox_denies_capturing_every_protected_name_in_a_match(name: str) -> None:
+    """Test that a `case` capture pattern cannot bind a name reserved for a policy hook.
+
+    A capture pattern assigns the subject to the name, so binding one of the
+    guards replaces it in the scope the sandbox seeded, and every guarded
+    operation compiled into the module then routes through plugin code.
+    """
+    sandbox = _sandbox_from_code(f"match 1:\n    case {name}:\n        pass\n")
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+
+def test_sandbox_denies_a_match_capture_that_replaces_the_write_guard() -> None:
+    """Test that a capture pattern cannot turn a guarded write into an unguarded one.
+
+    `_write_(ob, name, attr)` is a call the transformer inserts and resolves by
+    name at runtime, and module-level code executes with one dict as both
+    globals and locals, so a capture that binds `_write_` to a function
+    returning its first argument leaves every write in the module unguarded.
+    The attribute would land on a class shared by every plugin in the process.
+    """
+    sandbox = _sandbox_from_code(
+        dedent(
+            """
+            from canvas_sdk.utils import Http
+
+            def identity(ob, *args, **kwargs):
+                return ob
+
+            match identity:
+                case _write_:
+                    pass
+
+            Http.pwned = "yes"
+            """
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+    assert not hasattr(Http, "pwned"), (
+        "the sandbox let a plugin write an attribute onto a shared SDK class"
+    )
+
+
+def test_sandbox_denies_a_lazy_import() -> None:
+    """Test that a lazy import is rejected.
+
+    PEP 810's `lazy import` resolves through the `__lazy_import__` builtin at
+    first use rather than the `__import__` the sandbox replaces with
+    `_safe_import`, so the module policy would never be consulted. Python 3.15
+    is the first interpreter that parses the syntax, so the flag the parser
+    would set is set directly here.
+    """
+    errors: list[str] = []
+    tree = ast.parse("import json")
+    tree.body[0].is_lazy = 1  # type: ignore[attr-defined]
+
+    Sandbox.Transformer(errors, [], {}).visit(tree)
+
+    assert any("Lazy import" in error for error in errors), errors
+
+
+def test_protected_scope_names_covers_every_injected_guard() -> None:
+    """Test that every guard the sandbox injects is a name plugins cannot bind.
+
+    Guards are named `_like_this_`; the remaining underscore-prefixed entries in
+    the scope (`__builtins__`, `__name__`, ...) are readable by plugin code.
+    """
+    sandbox = _sandbox_from_code("result = 1")
+
+    injected_guards = {
+        name
+        for name in sandbox.scope
+        if name.startswith("_") and name.endswith("_") and not name.startswith("__")
+    }
+
+    assert injected_guards
+    assert injected_guards <= PROTECTED_SCOPE_NAMES
+
+
+def test_plugin_annotations_are_not_stringified() -> None:
+    """Test that annotations in plugin code evaluate to objects rather than strings.
+
+    Plugin code is compiled with `dont_inherit=True` so it does not pick up the
+    `from __future__ import annotations` of the module that calls `compile()`.
+    Without that, `dataclass` and anything else reading `__annotations__` at
+    runtime sees strings.
+    """
+    sandbox = _sandbox_from_code(
+        """
+            class Annotated:
+                name: str
+                count: int
+
+            result = Annotated.__annotations__
+        """
+    )
+
+    assert sandbox.execute()["result"] == {"name": str, "count": int}
+
+
+def test_restricted_python_leaks_its_future_flags() -> None:
+    """Test that `compile_restricted_exec` still compiles with inherited `__future__` flags.
+
+    `Sandbox._compiled` compiles plugin code itself instead of calling
+    `compile_restricted_exec` only because that wrapper hardcodes
+    `dont_inherit`, so plugin code picks up the `from __future__ import
+    annotations` of RestrictedPython's own `compile` module.
+    """
+    compiled = compile_restricted_exec("x = 1")
+
+    assert compiled.code is not None
+    assert compiled.code.co_flags & __future__.annotations.compiler_flag, (
+        "compile_restricted_exec no longer leaks its __future__ flags; replace "
+        "the local compile in plugin_runner.sandbox.Sandbox._compiled with it."
+    )
+
+
 def test_code_with_warnings() -> None:
     """Test that the sandbox captures warnings for restricted names or usage."""
     sandbox = _sandbox_from_code(
@@ -1357,7 +1605,7 @@ def test_type_is_inaccessible() -> None:
                 client = Http()
 
                 name = "_" + "_session"
-                pvt = _getattr_(client, name)
+                pvt = getattr(client, name)
             """,
             "private_attr_session": """
                 from canvas_sdk.utils import Http
