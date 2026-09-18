@@ -1,0 +1,33 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_sdk_effect_create_questionnaire",
+    "description": "Builds a questionnaire in Python from a caller's screening definition and creates it with the CreateQuestionnaire effect",
+    "components": {
+        "handlers": [
+            {
+                "class": "example_sdk_effect_create_questionnaire.routes.create_questionnaire:CreateQuestionnaireAPI",
+                "description": "Creates a questionnaire from a posted screening definition"
+            },
+            {
+                "class": "example_sdk_effect_create_questionnaire.routes.read_questionnaire:ReadQuestionnaireAPI",
+                "description": "Reads a questionnaire back, including its branching logic"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [
+        {
+            "name": "api-key",
+            "sensitive": true
+        }
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

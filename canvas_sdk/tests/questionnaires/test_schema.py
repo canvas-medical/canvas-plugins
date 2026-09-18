@@ -52,3 +52,38 @@ def test_date_is_in_the_response_type_enum() -> None:
     question_properties = json_schema()["properties"]["questions"]["items"]["properties"]
 
     assert "DATE" in question_properties["responses_type"]["enum"]
+
+
+@pytest.mark.parametrize(
+    "path,value",
+    [
+        (("name",), "x" * 256),
+        (("code",), "x" * 101),
+    ],
+    ids=["name", "code"],
+)
+def test_schema_rejects_values_too_long_for_their_column(path: tuple[str, ...], value: str) -> None:
+    """Length limits mirror the home-app columns each field is written to."""
+    definition = _questionnaire("SING")
+    definition[path[0]] = value
+
+    with pytest.raises(ValidationError, match="too long"):
+        ExtendedDraft7Validator(json_schema()).validate(definition)
+
+
+def test_schema_rejects_an_over_long_question_content() -> None:
+    """Question content is written to two 1024-character columns."""
+    definition = _questionnaire("SING")
+    definition["questions"][0]["content"] = "x" * 1025
+
+    with pytest.raises(ValidationError, match="too long"):
+        ExtendedDraft7Validator(json_schema()).validate(definition)
+
+
+def test_schema_rejects_an_over_long_response_value() -> None:
+    """Response value is written to a 1000-character column."""
+    definition = _questionnaire("SING")
+    definition["questions"][0]["responses"][0]["value"] = "x" * 1001
+
+    with pytest.raises(ValidationError, match="too long"):
+        ExtendedDraft7Validator(json_schema()).validate(definition)
