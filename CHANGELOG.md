@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.228.0 (2026-09-18)
+
+### Features
+
+- **utils**: Add a utility that returns a patient's portal login link
+  ([#1878](https://github.com/canvas-medical/canvas-plugins/pull/1878),
+  [`3757466`](https://github.com/canvas-medical/canvas-plugins/commit/37574663d078fcb35f14ecb516d19da433a0eae0))
+
+
 ## v0.227.0 (2026-09-18)
 
 ### Features
