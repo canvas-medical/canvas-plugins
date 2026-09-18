@@ -7,9 +7,10 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
-ruff = "2035-01-01T00:00:00Z"
 ty = "2035-01-01T00:00:00Z"
 uv = "2035-01-01T00:00:00Z"
+canvas = false
+ruff = "2035-01-01T00:00:00Z"
 
 [[package]]
 name = "annotated-types"
