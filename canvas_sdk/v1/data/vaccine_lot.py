@@ -16,21 +16,4 @@ class VaccineCatalog(TimestampedModel, IdentifiableModel):
     active = models.BooleanField(default=True)
 
 
-class VaccineLot(TimestampedModel, IdentifiableModel):
-    """A specific lot of a Vaccine, tracked per inventory."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_vaccinelot_001"
-
-    vaccine = models.ForeignKey(
-        VaccineCatalog,
-        on_delete=models.DO_NOTHING,
-        related_name="lots",
-    )
-    lot_number = models.CharField(max_length=64)
-    expiration_date = models.DateField()
-    quantity_on_hand = models.IntegerField(default=0)
-    active = models.BooleanField(default=True)
-
-
-__exports__ = ("VaccineCatalog", "VaccineLot")
+__exports__ = ("VaccineCatalog",)
