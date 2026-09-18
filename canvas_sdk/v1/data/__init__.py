@@ -57,6 +57,7 @@ from .custom_attribute import (
     CustomAttribute,
     CustomAttributeAwareManager,
 )
+from .custom_command import CustomCommand
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
@@ -305,6 +306,7 @@ __all__ = __exports__ = (
     "Coverage",
     "CustomAttribute",
     "CustomAttributeAwareManager",
+    "CustomCommand",
     "ModelExtension",
     "CustomModel",
     "CoveragePosting",
