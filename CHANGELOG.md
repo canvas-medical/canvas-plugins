@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.227.0 (2026-09-18)
+
+### Features
+
+- Add effect to create a questionnaire
+  ([#1879](https://github.com/canvas-medical/canvas-plugins/pull/1879),
+  [`638a358`](https://github.com/canvas-medical/canvas-plugins/commit/638a35847c459bbca2e02b4b4264dbc0074245aa))
+
+
 ## v0.226.1 (2026-09-16)
 
 ### Bug Fixes
