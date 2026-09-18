@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.228.0 (2026-09-18)
+
+### Features
+
+- **utils**: Add a utility that returns a patient's portal login link
+  ([#1878](https://github.com/canvas-medical/canvas-plugins/pull/1878),
+  [`3757466`](https://github.com/canvas-medical/canvas-plugins/commit/37574663d078fcb35f14ecb516d19da433a0eae0))
+
+
+## v0.227.0 (2026-09-18)
+
+### Features
+
+- Add effect to create a questionnaire
+  ([#1879](https://github.com/canvas-medical/canvas-plugins/pull/1879),
+  [`638a358`](https://github.com/canvas-medical/canvas-plugins/commit/638a35847c459bbca2e02b4b4264dbc0074245aa))
+
+
+## v0.226.1 (2026-09-16)
+
+### Bug Fixes
+
+- Note body property for v2 notes
+  ([#1885](https://github.com/canvas-medical/canvas-plugins/pull/1885),
+  [`5447c9e`](https://github.com/canvas-medical/canvas-plugins/commit/5447c9e6d697bc45bae02deb6ea8bcb85f69393f))
+
+### Performance Improvements
+
+- **plugin-runner**: Stop logging a line per handler and per event
+  ([#1881](https://github.com/canvas-medical/canvas-plugins/pull/1881),
+  [`bb0482e`](https://github.com/canvas-medical/canvas-plugins/commit/bb0482e7eb34a35f5f3a2bc889de81b38238102a))
+
+
 ## v0.226.0 (2026-09-14)
 
 ### Features

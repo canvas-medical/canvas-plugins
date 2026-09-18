@@ -837,6 +837,9 @@
   "canvas_sdk.effects.provider_menu_configuration": [
     "ProviderMenuConfiguration"
   ],
+  "canvas_sdk.effects.questionnaire": [
+    "CreateQuestionnaire"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
@@ -1072,8 +1075,11 @@
   ],
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
+    "EnabledCondition",
     "ExtendedDraft7Validator",
+    "Question",
     "QuestionnaireConfig",
+    "Response",
     "from_yaml"
   ],
   "canvas_sdk.templates": [
@@ -1102,6 +1108,10 @@
     "ontologies_http",
     "pharmacy_http",
     "science_http"
+  ],
+  "canvas_sdk.utils.patient_portal": [
+    "PatientPortalLinkError",
+    "patient_portal_http"
   ],
   "canvas_sdk.utils.pdf": [
     "PdfAuthRequest",
@@ -1319,6 +1329,7 @@
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisit",
@@ -1813,6 +1824,7 @@
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ResponseOption",
