@@ -1,0 +1,4 @@
+{% set lvl = level|default(3) %}
+<h{{ lvl }} data-component="modal-title" data-title-level="{{ lvl }}" class="pdmp-title-no-margin pdmp-title-lg" style="color: {{ color|default('var(--text)') }};">
+  {{ text }}
+</h{{ lvl }}>
