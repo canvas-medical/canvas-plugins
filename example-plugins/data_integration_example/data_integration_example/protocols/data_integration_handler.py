@@ -6,13 +6,12 @@ from canvas_sdk.effects.data_integration import (
     CategorizeDocument,
     LinkDocumentToPatient,
     PrefillDocumentFields,
+    Priority,
     ReviewMode,
 )
 from canvas_sdk.effects.data_integration.types import (
     AnnotationItem,
     DocumentType,
-    ReportType,
-    TemplateType,
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
@@ -191,11 +190,7 @@ class DataIntegrationHandler(BaseProtocol):
         return []
 
     def _handle_document_fields_updated(self, document_id: str) -> list[Effect]:
-        """Handle DOCUMENT_FIELDS_UPDATED: log changed fields and re-emit a prefill effect.
-
-        Unlike the other lifecycle handlers, this one returns effects — it refreshes the
-        prefill data whenever fields are updated so the UI stays in sync.
-        """
+        """Handle DOCUMENT_FIELDS_UPDATED: Create prefill effect."""
         ctx = self.event.context
         updated_fields = ctx.get("updated_fields", [])
         updated_at = ctx.get("updated_at")
@@ -273,12 +268,7 @@ class DataIntegrationHandler(BaseProtocol):
         return []
 
     def _create_link_document_effect(self, document_id: str) -> Effect | None:
-        """Create a LinkDocumentToPatient effect using the first available patient.
-
-        In production this would use OCR/LLM-extracted demographics to find the correct
-        patient. Here we simply use the first patient in the database for demonstration.
-        Returns None if no patient exists or validation fails.
-        """
+        """Create a LinkDocumentToPatient effect using patient key."""
         try:
             # Fetch first available patient - in production, this would come from patient matching
             patient = Patient.objects.first()
@@ -296,6 +286,7 @@ class DataIntegrationHandler(BaseProtocol):
                     AnnotationItem(text="AI 95%", color="#00AA00"),
                     AnnotationItem(text="Auto-linked", color="#2196F3"),
                 ],
+                source_protocol="data_integration_example",
             )
             return effect.apply()
         except ValidationError as e:
@@ -303,12 +294,7 @@ class DataIntegrationHandler(BaseProtocol):
             return None
 
     def _create_assign_reviewer_effect(self, document_id: str) -> Effect | None:
-        """Create an AssignDocumentReviewer effect using the first available staff or team.
-
-        Staff is preferred over team. In production, reviewer assignment would be based on
-        document type, specialty, workload, or routing rules. Returns None if neither
-        staff nor team is available.
-        """
+        """Create an AssignDocumentReviewer effect using first available staff/team."""
         # Fetch first available staff member
         staff = Staff.objects.first()
 
@@ -324,22 +310,26 @@ class DataIntegrationHandler(BaseProtocol):
                     document_id=str(document_id),
                     reviewer_id=str(staff.id),
                     team_id=str(team.id) if team else None,
+                    priority=Priority.HIGH,
                     review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                     annotations=[
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),
                         AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
+                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned staff {staff.id} to document {document_id}")
             elif team:
                 effect = AssignDocumentReviewer(
                     document_id=str(document_id),
                     team_id=str(team.id),
+                    priority=Priority.HIGH,
                     review_mode=ReviewMode.ALREADY_REVIEWED,
                     annotations=[
                         AnnotationItem(text="Auto-assigned", color="#FF9800"),
                         AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
+                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned team {team.id} to document {document_id}")
             else:
@@ -353,13 +343,7 @@ class DataIntegrationHandler(BaseProtocol):
             return None
 
     def _create_categorize_document_effect(self, document_id: str) -> Effect | None:
-        """Create a CategorizeDocument effect from the event context's available_document_types.
-
-        Prefers "Lab Report" if present, otherwise falls back to the first available type.
-        report_type and template_type must be ReportType/TemplateType enum instances — plain
-        strings are rejected by the SDK's Pydantic model. Returns None if no document types
-        are available or construction fails.
-        """
+        """Create a CategorizeDocument effect using available document types."""
         available_document_types = self.event.context.get("available_document_types", [])
 
         if not available_document_types:
@@ -380,12 +364,11 @@ class DataIntegrationHandler(BaseProtocol):
             )
 
         try:
-            template_type_str = lab_report_type.get("template_type")
             document_type: DocumentType = {
                 "key": lab_report_type["key"],
                 "name": lab_report_type["name"],
-                "report_type": ReportType(lab_report_type["report_type"]),
-                "template_type": TemplateType(template_type_str) if template_type_str else None,
+                "report_type": lab_report_type["report_type"],
+                "template_type": lab_report_type.get("template_type"),
             }
 
             annotations: list[AnnotationItem] = [
@@ -397,6 +380,7 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 document_type=document_type,
                 annotations=annotations,
+                source_protocol="data_integration_example",
             )
             return effect.apply()
 
@@ -405,11 +389,7 @@ class DataIntegrationHandler(BaseProtocol):
             return None
 
     def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
-        """Create a PrefillDocumentFields effect with hardcoded lab template data.
-
-        Uses PREFILL_TEMPLATES (thyroid, CBC, lipid panel) as stand-ins for values that
-        would be extracted from the document by OCR or an LLM in production.
-        """
+        """Create a PrefillDocumentFields effect with multiple template suggestions."""
         try:
             annotations: list[AnnotationItem] = [
                 AnnotationItem(text="Prefilled via AI", color="#FF9800"),
@@ -420,6 +400,7 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 templates=PREFILL_TEMPLATES,
                 annotations=annotations,
+                source_protocol="data_integration_example",
             )
             return effect.apply()
         except ValidationError as e:
