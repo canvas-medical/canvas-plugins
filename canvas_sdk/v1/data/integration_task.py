@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, cast
 from uuid import UUID
 
 from django.db import models
@@ -82,6 +82,9 @@ class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
         return self.filter(channel=IntegrationTaskChannel.FROM_PATIENT_PORTAL)
 
 
+IntegrationTaskManager = models.Manager.from_queryset(IntegrationTaskQuerySet)
+
+
 class IntegrationTaskReviewQuerySet(BaseQuerySet):
     """QuerySet for IntegrationTaskReview with custom filter methods."""
 
@@ -110,6 +113,9 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
         return self.filter(team_reviewer__id=team_id)
 
 
+IntegrationTaskReviewManager = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)
+
+
 class IntegrationTask(TimestampedModel, IdentifiableModel):
     """IntegrationTask - represents incoming documents that need processing.
 
@@ -119,7 +125,7 @@ class IntegrationTask(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_data_integration_integrationtask_001"
 
-    objects = models.Manager.from_queryset(IntegrationTaskQuerySet)()
+    objects = cast(IntegrationTaskQuerySet, IntegrationTaskManager())
 
     status = models.CharField(
         max_length=3,
@@ -175,7 +181,7 @@ class IntegrationTaskReview(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_data_integration_integrationtaskreview_001"
 
-    objects = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)()
+    objects = cast(IntegrationTaskReviewQuerySet, IntegrationTaskReviewManager())
 
     task = models.ForeignKey(
         IntegrationTask,
