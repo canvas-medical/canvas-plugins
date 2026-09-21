@@ -45,5 +45,19 @@ class CustomCommand(AuditedModel, IdentifiableModel):
 
         return PluginCommand.objects.filter(schema_key=schema_key).first()
 
+    @property
+    def data(self) -> dict | None:
+        """The data of the Command this anchor was created from."""
+        from canvas_sdk.v1.data.command import Command
+
+        return (
+            Command.objects.filter(
+                anchor_object_type=self._meta.model_name,
+                anchor_object_dbid=self.dbid,
+            )
+            .values_list("data", flat=True)
+            .first()
+        )
+
 
 __exports__ = ("CustomCommand",)

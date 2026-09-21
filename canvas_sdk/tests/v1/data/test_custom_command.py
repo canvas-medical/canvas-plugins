@@ -59,3 +59,15 @@ def test_plugin_command_is_none_without_a_match() -> None:
     _anchor_command(orphan, schema_key="not_registered")
 
     assert orphan.plugin_command is None
+
+
+@pytest.mark.django_db
+def test_data_returns_anchoring_command_data() -> None:
+    """data returns the anchoring command's data, or None when there is no anchoring command."""
+    custom_command = CustomCommandFactory.create()
+    command = _anchor_command(custom_command, schema_key="my_plugin_command")
+    command.data = {"foo": "bar"}
+    command.save()
+
+    assert custom_command.data == {"foo": "bar"}
+    assert CustomCommandFactory.create().data is None
