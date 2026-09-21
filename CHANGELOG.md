@@ -1,6 +1,145 @@
 # CHANGELOG
 
 
+## v0.228.0 (2026-09-18)
+
+### Features
+
+- **utils**: Add a utility that returns a patient's portal login link
+  ([#1878](https://github.com/canvas-medical/canvas-plugins/pull/1878),
+  [`3757466`](https://github.com/canvas-medical/canvas-plugins/commit/37574663d078fcb35f14ecb516d19da433a0eae0))
+
+
+## v0.227.0 (2026-09-18)
+
+### Features
+
+- Add effect to create a questionnaire
+  ([#1879](https://github.com/canvas-medical/canvas-plugins/pull/1879),
+  [`638a358`](https://github.com/canvas-medical/canvas-plugins/commit/638a35847c459bbca2e02b4b4264dbc0074245aa))
+
+
+## v0.226.1 (2026-09-16)
+
+### Bug Fixes
+
+- Note body property for v2 notes
+  ([#1885](https://github.com/canvas-medical/canvas-plugins/pull/1885),
+  [`5447c9e`](https://github.com/canvas-medical/canvas-plugins/commit/5447c9e6d697bc45bae02deb6ea8bcb85f69393f))
+
+### Performance Improvements
+
+- **plugin-runner**: Stop logging a line per handler and per event
+  ([#1881](https://github.com/canvas-medical/canvas-plugins/pull/1881),
+  [`bb0482e`](https://github.com/canvas-medical/canvas-plugins/commit/bb0482e7eb34a35f5f3a2bc889de81b38238102a))
+
+
+## v0.226.0 (2026-09-14)
+
+### Features
+
+- **data**: Add latest_sig computed property to medication
+  ([#1872](https://github.com/canvas-medical/canvas-plugins/pull/1872),
+  [`26a646d`](https://github.com/canvas-medical/canvas-plugins/commit/26a646d3cebc453ac3081f30db35dd01661fe21b))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.225.0 (2026-09-11)
+
+### Features
+
+- Add effect to charge a stored payment card
+  ([#1779](https://github.com/canvas-medical/canvas-plugins/pull/1779),
+  [`61f7c66`](https://github.com/canvas-medical/canvas-plugins/commit/61f7c66871a095d2d2d204fa308fdc54cc8ec558))
+
+
+## v0.224.0 (2026-09-11)
+
+### Features
+
+- Link Plan/Procedures commands to a same-note Assessment
+  ([#1874](https://github.com/canvas-medical/canvas-plugins/pull/1874),
+  [`556b37b`](https://github.com/canvas-medical/canvas-plugins/commit/556b37bbc7dfbb6dffc8093b3320655fd2a2692d))
+
+
+## v0.223.0 (2026-09-10)
+
+### Features
+
+- **data**: Add group to the data module
+  ([#1869](https://github.com/canvas-medical/canvas-plugins/pull/1869),
+  [`55d8164`](https://github.com/canvas-medical/canvas-plugins/commit/55d8164bb4003575fb7d5ea037f408bb894ad1f4))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.222.0 (2026-09-09)
+
+### Features
+
+- Add phone dial configuration and click events
+  ([#1866](https://github.com/canvas-medical/canvas-plugins/pull/1866),
+  [`4e7976c`](https://github.com/canvas-medical/canvas-plugins/commit/4e7976c6c0341f5ce95e7e3c5702d78ebcf349f7))
+
+
+## v0.221.0 (2026-09-09)
+
+### Features
+
+- **data**: Add reference to the data module
+  ([#1868](https://github.com/canvas-medical/canvas-plugins/pull/1868),
+  [`4e1a47f`](https://github.com/canvas-medical/canvas-plugins/commit/4e1a47feea25fd05026fbebcc2040564074337f2))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.220.0 (2026-09-08)
+
+### Chores
+
+- **tests**: Read commands from the note body content for version 2
+  ([#1873](https://github.com/canvas-medical/canvas-plugins/pull/1873),
+  [`0b6f6ca`](https://github.com/canvas-medical/canvas-plugins/commit/0b6f6ca1ed427b94ef1ec0394f3a2f92e1bc05db))
+
+### Features
+
+- **data**: Add coding gap command events to the data module
+  ([#1861](https://github.com/canvas-medical/canvas-plugins/pull/1861),
+  [`ea317fa`](https://github.com/canvas-medical/canvas-plugins/commit/ea317fa9ee3fbaa8774116d30c4e7910aeffd95a))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v0.219.1 (2026-09-07)
+
+### Bug Fixes
+
+- Add missing response option date to questionnaire
+  ([#1864](https://github.com/canvas-medical/canvas-plugins/pull/1864),
+  [`596eb3d`](https://github.com/canvas-medical/canvas-plugins/commit/596eb3d8be449d05453080baff9e56bdab7c8525))
+
+
 ## v0.219.0 (2026-09-02)
 
 ### Features

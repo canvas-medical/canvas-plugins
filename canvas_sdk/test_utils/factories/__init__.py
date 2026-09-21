@@ -21,6 +21,12 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .coding_gap_event import (
+    AssessCodingGapEventFactory,
+    CreateCodingGapEventFactory,
+    DeferCodingGapEventFactory,
+    ValidateCodingGapEventFactory,
+)
 from .coverage import CoverageFactory
 from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
@@ -33,6 +39,7 @@ from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
+from .group import GroupFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
     ImagingOrderFactory,
@@ -90,6 +97,7 @@ from .patient_administrative_document import (
     PatientAdministrativeDocumentFactory,
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
+from .payment_card import PaymentCardFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
@@ -108,6 +116,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reference import ReferenceFactory
 from .referral import (
     ReferralFactory,
     ReferralReportCodingFactory,
@@ -164,6 +173,10 @@ __all__ = (
     "ClaimSupervisingProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "AssessCodingGapEventFactory",
+    "CreateCodingGapEventFactory",
+    "DeferCodingGapEventFactory",
+    "ValidateCodingGapEventFactory",
     "CoverageFactory",
     "CustomCommandFactory",
     "DiagnosticReportFactory",
@@ -182,6 +195,7 @@ __all__ = (
     "FamilyHistoryCodingFactory",
     "FollowUpFactory",
     "GoalFactory",
+    "GroupFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
     "ImagingReportFactory",
@@ -229,6 +243,7 @@ __all__ = (
     "PatientFactory",
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
+    "PaymentCardFactory",
     "PatientPhotoFactory",
     "PlanFactory",
     "PluginCommandFactory",
@@ -246,6 +261,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReferenceFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",

@@ -63,7 +63,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "0.219.0"
+version = "0.228.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas"]
@@ -207,7 +207,20 @@ match = "main"
 prerelease = false
 
 [tool.uv]
-required-version = ">=0.8.0"
+# Resolve against the index as it stood 7 days ago, so a release published
+# minutes ago cannot change a lock or a CI run. This lives here rather than in
+# each contributor's uv config so that every machine, CI, and the semantic
+# release job produce the same lock. uv records it as `exclude-newer-span` in
+# uv.lock; 0.11.8 is the first version that writes that form.
+exclude-newer = "7 days"
+required-version = ">=0.11.8"
+
+[tool.uv.exclude-newer-package]
+# Lint and type-check tooling tracks latest: the cutoff above is for the
+# dependencies we ship.
+ruff = "2035-01-01T00:00:00Z"
+ty = "2035-01-01T00:00:00Z"
+uv = "2035-01-01T00:00:00Z"
 
 [[tool.uv.index]]
 default = true

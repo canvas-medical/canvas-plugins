@@ -4,7 +4,7 @@ from typing import NotRequired
 
 from typing_extensions import TypedDict
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.v1.data.task import TaskPriority
 
 
@@ -24,7 +24,7 @@ class TaskAssigner(TypedDict):
     id: NotRequired[int]
 
 
-class TaskCommand(BaseCommand):
+class TaskCommand(_AssessmentLinkedCommand):
     """A class for managing a Task command within a specific note."""
 
     class Meta:

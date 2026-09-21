@@ -38,6 +38,9 @@ class Instruction(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="instructions"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="instructions")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="instructions", null=True
+    )
     narrative = models.CharField(max_length=4000)
 
 

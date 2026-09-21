@@ -1,0 +1,46 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "click_to_dial",
+    "description": "Makes chart phone numbers clickable with a PhoneDialConfiguration, routing the patient and contact sections through the plugin and leaving the external care team to the device's phone app, then acts on PHONE_NUMBER_CLICKED to dial a contact through Zoom with a RedirectEffect.",
+    "components": {
+        "handlers": [
+            {
+                "class": "click_to_dial.handlers.phone_dial:ClickToDialConfiguration",
+                "description": "Declares which chart sections have clickable phone numbers and who dials each.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "click_to_dial.handlers.phone_dial:PlaceCall",
+                "description": "Dials a contact through Zoom, or records the click, depending on the section.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [
+        {
+            "name": "REDIRECT_ALLOWLIST_EXTERNAL",
+            "default": "zoomus://zoom.us/call"
+        }
+    ],
+    "tags": {},
+    "references": [
+        "https://docs.canvasmedical.com/sdk/events/",
+        "https://docs.canvasmedical.com/sdk/effect-redirect/"
+    ],
+    "license": "MIT",
+    "diagram": false,
+    "readme": "./README.md"
+}
