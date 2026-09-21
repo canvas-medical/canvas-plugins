@@ -22,7 +22,7 @@ class Clipboard(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="clipboards"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="clipboards")
-    text = models.TextField()
+    text = models.TextField(default="", blank=True)
 
 
 __exports__ = ("Clipboard",)
