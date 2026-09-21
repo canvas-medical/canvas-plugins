@@ -57,7 +57,7 @@ class Team(TimestampedModel, IdentifiableModel):
     group_id = models.UUIDField(null=True)
 
 
-class TeamContactPoint(IdentifiableModel):
+class TeamContactPoint(TimestampedModel, IdentifiableModel):
     """TeamContactPoint."""
 
     class Meta:

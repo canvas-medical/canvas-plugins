@@ -421,7 +421,7 @@ class ClaimLabel(IdentifiableModel):
     label = models.ForeignKey("v1.TaskLabel", on_delete=models.PROTECT, related_name="claim_labels")
 
 
-class ClaimSubmission(IdentifiableModel):
+class ClaimSubmission(TimestampedModel, IdentifiableModel):
     """ClaimSubmission."""
 
     class Meta:

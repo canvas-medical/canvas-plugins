@@ -3,7 +3,7 @@ from datetime import date
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -250,7 +250,7 @@ class Coverage(TimestampedModel, IdentifiableModel):
         return f"id={self.id}"
 
 
-class Transactor(Model):
+class Transactor(TimestampedModel):
     """Transactor."""
 
     class Meta:
