@@ -63,7 +63,7 @@ def test_plugin_command_is_none_without_a_match() -> None:
 
 @pytest.mark.django_db
 def test_data_returns_anchoring_command_data() -> None:
-    """data returns the anchoring command's data, or None when there is no anchoring command."""
+    """Data returns the anchoring command's data, or None when there is no anchoring command."""
     custom_command = CustomCommandFactory.create()
     command = _anchor_command(custom_command, schema_key="my_plugin_command")
     command.data = {"foo": "bar"}
