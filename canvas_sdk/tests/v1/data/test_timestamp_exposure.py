@@ -7,8 +7,11 @@ filterable and that they populate on create, plus a guard for the NoteType MRO
 fix and the explicitly-declared fields on ``Application``.
 """
 
+from typing import Any
+
 import pytest
 from django.utils import timezone
+from factory.django import DjangoModelFactory
 
 from canvas_sdk.test_utils.factories import (
     CalendarFactory,
@@ -19,6 +22,7 @@ from canvas_sdk.test_utils.factories import (
     ReasonForVisitCodingFactory,
 )
 from canvas_sdk.v1.data.application import Application
+from canvas_sdk.v1.data.base import TimestampedModel
 from canvas_sdk.v1.data.calendar import Calendar, Event
 from canvas_sdk.v1.data.lab import (
     LabReportTemplate,
@@ -52,24 +56,24 @@ TIMESTAMP_FACTORIES = [
 
 
 @pytest.mark.parametrize("model", TIMESTAMP_MODELS)
-def test_timestamp_columns_are_selected(model: type) -> None:
+def test_timestamp_columns_are_selected(model: type[TimestampedModel]) -> None:
     """The default queryset SELECTs both timestamp columns (no DB needed)."""
-    sql = str(model.objects.all().query)
+    sql = str(model._default_manager.all().query)
     assert "created" in sql
     assert "modified" in sql
 
 
 @pytest.mark.parametrize("model", TIMESTAMP_MODELS)
-def test_modified_is_filterable(model: type) -> None:
+def test_modified_is_filterable(model: type[TimestampedModel]) -> None:
     """`modified` resolves as a real field, so the lookup compiles without FieldError."""
     # Would raise FieldError if `modified` were not a declared field.
-    sql = str(model.objects.filter(modified__gte=timezone.now()).query)
+    sql = str(model._default_manager.filter(modified__gte=timezone.now()).query)
     assert "modified" in sql
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("factory", TIMESTAMP_FACTORIES)
-def test_timestamps_populated_on_create(factory: type) -> None:
+def test_timestamps_populated_on_create(factory: type[DjangoModelFactory[Any]]) -> None:
     """Creating a row populates both timestamps via auto_now_add / auto_now."""
     obj = factory.create()
     assert obj.created is not None
