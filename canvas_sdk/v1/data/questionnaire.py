@@ -62,6 +62,30 @@ class Question(TimestampedModel, IdentifiableModel):
     show_prologue = models.BooleanField()
     code_system = models.CharField(max_length=255)
     code = models.CharField(max_length=100)
+    enable_behavior = models.CharField(max_length=4, null=True)
+
+
+class QuestionEnablementCondition(TimestampedModel):
+    """A condition controlling when a Question is enabled, following FHIR's enableWhen pattern."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_questionenablementcondition_001"
+
+    status = models.CharField(max_length=2)
+    question = models.ForeignKey(
+        Question, on_delete=models.DO_NOTHING, related_name="dependent_conditions"
+    )
+    dependent_on = models.ForeignKey(
+        Question, on_delete=models.DO_NOTHING, related_name="triggers_condition"
+    )
+    operator = models.CharField(max_length=10)
+    answer_option = models.ForeignKey(
+        ResponseOption,
+        on_delete=models.DO_NOTHING,
+        null=True,
+        related_name="enablement_conditions",
+    )
+    answer_value = models.CharField(max_length=255, null=True)
 
 
 class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
@@ -201,6 +225,7 @@ __exports__ = (
     "ResponseOptionSet",
     "ResponseOption",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "InterviewQuerySet",

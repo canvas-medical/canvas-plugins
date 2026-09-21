@@ -5,11 +5,12 @@ from typing import Any
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand, _OptionalId
+from canvas_sdk.commands.base import _OptionalId
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.v1.data import Goal
 
 
-class UpdateGoalCommand(_BaseCommand):
+class UpdateGoalCommand(_AssessmentLinkedCommand):
     """A class for managing an UpdateGoal command within a specific note."""
 
     class Meta:

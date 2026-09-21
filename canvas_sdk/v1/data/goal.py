@@ -57,6 +57,9 @@ class AbstractGoal(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="%(class)ss"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="%(class)ss")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="%(class)ss", null=True
+    )
     lifecycle_status = models.CharField(
         max_length=20,
         choices=GoalLifecycleStatus.choices,

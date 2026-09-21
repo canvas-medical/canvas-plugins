@@ -2,12 +2,12 @@ from typing import Any
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.v1.data import Goal
 
 
-class CloseGoalCommand(BaseCommand):
+class CloseGoalCommand(_AssessmentLinkedCommand):
     """A class for managing a CloseGoal command within a specific note."""
 
     class Meta:

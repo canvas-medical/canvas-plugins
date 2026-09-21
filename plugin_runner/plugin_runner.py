@@ -362,8 +362,6 @@ class PluginRunner(PluginRunnerServicer):
 
                             apply_effects_to_context(effects, event=event)
 
-                            log.info(f"{plugin_name}.compute() completed.")
-
                     except Exception as e:
                         log.exception(f"Encountered exception in plugin {plugin_name}")
                         sentry_sdk.capture_exception(e)
@@ -398,12 +396,10 @@ class PluginRunner(PluginRunnerServicer):
                     )
                     effect_list = [DenyConnection().apply().to_proto()]
 
-            # Don't log anything if a plugin handler didn't actually run.
+            # Only bookend the request if a plugin handler actually ran.
             if relevant_plugins:
                 # Send the Django request_finished signal
                 request_finished.send(sender=self.__class__)
-
-                log.info(f"Responded to Event {event_name}.")
 
             yield EventResponse(success=True, effects=effect_list)
 

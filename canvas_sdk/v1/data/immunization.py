@@ -60,6 +60,9 @@ class Immunization(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="immunizations", null=True
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="immunizations")
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="immunizations", null=True
+    )
     status = models.CharField(
         choices=ImmunizationStatus.choices,
         max_length=20,
