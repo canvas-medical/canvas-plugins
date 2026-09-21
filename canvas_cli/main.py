@@ -60,7 +60,7 @@ if _CONTROL_ROOM_BETA:
     )(git_credential)
     app.command(
         name="cr-init",
-        short_help="Connect a plugin's git repo to Control Room (sets up the 'cr' remote).",
+        short_help="Connect a plugin's git repo to Control Room (sets up the 'origin' remote).",
     )(cr_init)
     app.command(short_help="Deploy a published plugin to this instance via Control Room.")(deploy)
 
