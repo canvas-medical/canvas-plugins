@@ -127,6 +127,27 @@ def test_as_search_result_text_has_no_stray_whitespace() -> None:
 
 
 @pytest.mark.django_db
+def test_full_name_falls_back_to_practice_name_for_a_practice() -> None:
+    """A practice provider with no personal name shows its practice name, not a blank."""
+    provider = ServiceProviderFactory.create(
+        first_name="", last_name="", practice_name="Northside Clinic", specialty="Cardiology"
+    )
+
+    assert provider.full_name == "Northside Clinic"
+    assert provider.as_search_result()["text"] == "Northside Clinic"
+
+
+@pytest.mark.django_db
+def test_full_name_and_specialty_has_no_leading_space_for_a_practice() -> None:
+    """A blank first name must not leave a leading empty component in the org-entity name."""
+    provider = ServiceProviderFactory.create(
+        first_name="", last_name="", practice_name="Northside Clinic", specialty="Cardiology"
+    )
+
+    assert provider.full_name_and_specialty == "(Northside Clinic), Cardiology"
+
+
+@pytest.mark.django_db
 def test_as_search_contact_threads_the_provider_id() -> None:
     """The contact record carries serviceProviderId, so the care team mutation attaches to it."""
     provider = ServiceProviderFactory.create(first_name="Casey", business_fax="5550101")
