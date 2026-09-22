@@ -148,6 +148,16 @@ def test_full_name_and_specialty_has_no_leading_space_for_a_practice() -> None:
 
 
 @pytest.mark.django_db
+def test_full_name_and_specialty_leads_with_the_name_for_an_individual() -> None:
+    """An individual provider keeps their personal name ahead of the practice and specialty."""
+    provider = ServiceProviderFactory.create(
+        first_name="Jane", last_name="Doe", practice_name="Acme Clinic", specialty="Cardiology"
+    )
+
+    assert provider.full_name_and_specialty == "Jane Doe (Acme Clinic), Cardiology"
+
+
+@pytest.mark.django_db
 def test_as_search_contact_threads_the_provider_id() -> None:
     """The contact record carries serviceProviderId, so the care team mutation attaches to it."""
     provider = ServiceProviderFactory.create(first_name="Casey", business_fax="5550101")
