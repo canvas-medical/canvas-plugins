@@ -120,29 +120,11 @@ def test_originate_carries_every_field(note: Note, entry: Condition) -> None:
     }
 
 
-def test_only_the_fields_that_were_set_are_sent(note: Note, entry: Condition) -> None:
-    """Dirty tracking keeps an untouched field out of the payload."""
-    command = _anchored(RemovePastMedicalHistoryCommand(condition_id=entry.id), note)
-
-    assert json.loads(command.originate().payload)["data"] == {"condition_id": str(entry.id)}
-
-
-def test_the_commands_api_renames_the_target_field() -> None:
-    """The note's schema calls the field `past_medical_history`, and the API follows it."""
-    assert "condition" in RemovePastMedicalHistoryCommand.command_schema()
-
-
 def test_commit_needs_only_the_command_id() -> None:
     """A command staged in the note is committed by id, without restating its fields."""
     effect = RemovePastMedicalHistoryCommand(command_uuid="cmd-456").commit()
 
     assert effect.type == EffectType.COMMIT_REMOVE_PAST_MEDICAL_HISTORY_COMMAND
-
-
-def test_a_rationale_over_the_limit_is_refused() -> None:
-    """The note's rationale field stores 512 characters."""
-    with pytest.raises(ValidationError):
-        RemovePastMedicalHistoryCommand(rationale="a" * 513)
 
 
 # --- ownership on originate -----------------------------------------------

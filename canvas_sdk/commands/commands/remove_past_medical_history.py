@@ -31,11 +31,11 @@ class RemovePastMedicalHistoryCommand(BaseCommand):
         entry = (
             Condition.objects.committed()
             .filter(id=self.condition_id)
-            .values_list("patient__id", "clinical_status", "surgical")
+            .values("patient__id", "clinical_status", "surgical")
             .first()
         )
 
-        if entry is None or not self._is_target_patient(entry[0]):
+        if entry is None or not self._is_target_patient(entry["patient__id"]):
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -45,12 +45,10 @@ class RemovePastMedicalHistoryCommand(BaseCommand):
             )
             return errors
 
-        _, clinical_status, surgical = entry
-
         # The Past Medical History command anchors to a Condition and originates it with a
         # "resolved" clinical status, so that status is what separates history from an active
         # problem. Surgical history is recorded by its own command.
-        if clinical_status != ClinicalStatus.RESOLVED or surgical:
+        if entry["clinical_status"] != ClinicalStatus.RESOLVED or entry["surgical"]:
             errors.append(
                 self._create_error_detail(
                     "value",
