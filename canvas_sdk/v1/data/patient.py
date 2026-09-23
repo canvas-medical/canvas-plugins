@@ -227,7 +227,7 @@ class PatientContactPoint(IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom", null=True
     )
     has_consent = models.BooleanField()
-    last_verified = models.DateTimeField
+    last_verified = models.DateTimeField(null=True, blank=True)
     verification_token = models.CharField(max_length=32)
     opted_out = models.BooleanField()
 

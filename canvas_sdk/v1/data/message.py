@@ -66,8 +66,8 @@ class MessageTransmission(TimestampedModel, IdentifiableModel):
     message = models.ForeignKey(
         "v1.Message", on_delete=models.DO_NOTHING, related_name="transmissions", null=True
     )
-    delivered = models.BooleanField()
-    failed = models.BooleanField()
+    delivered = models.DateTimeField(null=True, blank=True)
+    failed = models.DateTimeField(null=True, blank=True)
 
     contact_point_system = models.CharField(choices=TransmissionChannel.choices, max_length=20)
     contact_point_value = models.CharField(max_length=255)
