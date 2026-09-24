@@ -18,7 +18,7 @@
             }
         ]
     },
-    "secrets": [],
+    "variables": [],
     "tags": {},
     "references": [],
     "license": "",
