@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.230.0 (2026-09-24)
+
+### Features
+
+- Add a "Remove Past Medical History" SDK command
+  ([#1886](https://github.com/canvas-medical/canvas-plugins/pull/1886),
+  [`cade9ed`](https://github.com/canvas-medical/canvas-plugins/commit/cade9ed3db07bd5ec4b24e9cf0c895653e958487))
+
+- Add an "Add Condition" SDK command
+  ([#1871](https://github.com/canvas-medical/canvas-plugins/pull/1871),
+  [`b74a1ef`](https://github.com/canvas-medical/canvas-plugins/commit/b74a1ef9fc1dd30e42508d631d0921879a6e3d0b))
+
+
 ## v0.229.0 (2026-09-22)
 
 ### Bug Fixes
