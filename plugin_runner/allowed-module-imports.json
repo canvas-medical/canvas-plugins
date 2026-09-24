@@ -201,6 +201,7 @@
   ],
   "canvas_sdk.commands": [
     "*",
+    "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
@@ -234,6 +235,7 @@
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
+    "RemovePastMedicalHistoryCommand",
     "ResolveConditionCommand",
     "ReviewOfSystemsCommand",
     "StopMedicationCommand",
@@ -251,6 +253,9 @@
     "_BaseCommand",
     "_ReviewableCommandMixin",
     "_SendableCommandMixin"
+  ],
+  "canvas_sdk.commands.commands.add_condition": [
+    "AddConditionCommand"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
     "AdjustPrescriptionCommand"
@@ -362,6 +367,9 @@
   ],
   "canvas_sdk.commands.commands.remove_allergy": [
     "RemoveAllergyCommand"
+  ],
+  "canvas_sdk.commands.commands.remove_past_medical_history": [
+    "RemovePastMedicalHistoryCommand"
   ],
   "canvas_sdk.commands.commands.resolve_condition": [
     "ResolveConditionCommand"
@@ -837,6 +845,9 @@
   "canvas_sdk.effects.provider_menu_configuration": [
     "ProviderMenuConfiguration"
   ],
+  "canvas_sdk.effects.questionnaire": [
+    "CreateQuestionnaire"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
@@ -1072,8 +1083,11 @@
   ],
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
+    "EnabledCondition",
     "ExtendedDraft7Validator",
+    "Question",
     "QuestionnaireConfig",
+    "Response",
     "from_yaml"
   ],
   "canvas_sdk.templates": [
@@ -1102,6 +1116,10 @@
     "ontologies_http",
     "pharmacy_http",
     "science_http"
+  ],
+  "canvas_sdk.utils.patient_portal": [
+    "PatientPortalLinkError",
+    "patient_portal_http"
   ],
   "canvas_sdk.utils.pdf": [
     "PdfAuthRequest",
@@ -1156,6 +1174,7 @@
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -1169,6 +1188,7 @@
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
+    "CustomCommand",
     "CustomModel",
     "DeferCodingGapEvent",
     "DetectedIssue",
@@ -1319,6 +1339,7 @@
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisit",
@@ -1472,6 +1493,9 @@
     "FamilyPlanningOptions",
     "LineItemCodes"
   ],
+  "canvas_sdk.v1.data.clipboard": [
+    "Clipboard"
+  ],
   "canvas_sdk.v1.data.coding_gap_event": [
     "AssessCodingGapEvent",
     "CreateCodingGapEvent",
@@ -1527,6 +1551,9 @@
     "CustomAttributeQuerySet",
     "VALUE_FIELDS",
     "VALUE_FIELD_MAP"
+  ],
+  "canvas_sdk.v1.data.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
@@ -1812,6 +1839,7 @@
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ResponseOption",

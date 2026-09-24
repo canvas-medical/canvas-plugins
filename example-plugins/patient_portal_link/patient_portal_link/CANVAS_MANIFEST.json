@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "patient_portal_link",
+    "description": "Mints a patient's portal link and delivers it over a custom transport",
+    "components": {
+        "handlers": [
+            {
+                "class": "patient_portal_link.routes.portal_link:SendPortalLinkAPI",
+                "description": "Mints a patient portal link and sends it over this practice's own provider"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [
+        {"name": "my-api-key", "sensitive": true},
+        {"name": "sms-provider-url", "sensitive": false},
+        {"name": "sms-provider-token", "sensitive": true}
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
