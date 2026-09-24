@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.232.0 (2026-09-24)
+
+### Features
+
+- **data**: Add clipboard command anchor to the data module
+  ([#1887](https://github.com/canvas-medical/canvas-plugins/pull/1887),
+  [`4500e8c`](https://github.com/canvas-medical/canvas-plugins/commit/4500e8c6afc587befc36e57103db3c6ffde57351))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.231.0 (2026-09-24)
 
 ### Features
