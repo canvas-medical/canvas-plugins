@@ -16,6 +16,6 @@ introduced alongside the handler:
 
 Running locally (after `canvas install`):
 
-    canvas install example-plugins/instance_config_settings_page
+    canvas install example-plugins/instance_config_settings_page/instance_config_settings_page
 
 then open `/set-up/fasting_program/` in your Canvas instance.
