@@ -23,6 +23,7 @@ class AbstractLineItemTransaction(TimestampedModel):
     posting = models.ForeignKey(
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
+    # Deprecated: can return an unrelated charge. Use claim_line_item.billing_line_item instead.
     billing_line_item = models.ForeignKey(
         "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
