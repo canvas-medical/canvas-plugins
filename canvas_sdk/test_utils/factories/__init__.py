@@ -21,6 +21,7 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .clipboard import ClipboardFactory
 from .coding_gap_event import (
     AssessCodingGapEventFactory,
     CreateCodingGapEventFactory,
@@ -173,6 +174,7 @@ __all__ = (
     "ClaimSupervisingProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "ClipboardFactory",
     "AssessCodingGapEventFactory",
     "CreateCodingGapEventFactory",
     "DeferCodingGapEventFactory",

@@ -1174,6 +1174,7 @@
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -1491,6 +1492,9 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.clipboard": [
+    "Clipboard"
   ],
   "canvas_sdk.v1.data.coding_gap_event": [
     "AssessCodingGapEvent",
