@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.231.0 (2026-09-24)
+
+### Features
+
+- **data**: Add custom command and plugin_command accessor to the data module
+  ([#1870](https://github.com/canvas-medical/canvas-plugins/pull/1870),
+  [`6c62435`](https://github.com/canvas-medical/canvas-plugins/commit/6c6243527121162c3fe7049744b2755f4059305e))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.230.0 (2026-09-24)
 
 ### Features
