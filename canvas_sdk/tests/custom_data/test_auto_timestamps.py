@@ -3,7 +3,7 @@
 Tests verify that:
 1. A concrete CustomModel is given created and modified
 2. The generated fields are auto_now_add / auto_now and nullable
-3. Abstract and proxy CustomModels are left alone
+3. An abstract intermediate passes them down exactly once
 4. A model bringing its own created or modified keeps it
 5. Each model gets its own field instances
 6. The columns reach the generated DDL
@@ -21,7 +21,6 @@ from canvas_sdk.v1.data.base import (
     CustomModel,
     CustomModelManager,
     auto_now_field_names,
-    build_auto_timestamp_fields,
 )
 from plugin_runner.ddl import execute_create_table_sql, generate_create_table_sql
 
@@ -47,7 +46,7 @@ class SecondPlainCustomModel(CustomModel):
 
 
 class AbstractCustomBase(CustomModel):
-    """An abstract intermediate, which should get no columns of its own."""
+    """An abstract intermediate between CustomModel and a concrete table."""
 
     class Meta:
         abstract = True
@@ -69,7 +68,28 @@ class DeclaresOwnCreated(CustomModel):
     class Meta:
         app_label = "test_plugin"
 
-    created = models.TextField(null=True)
+    created = models.TextField(null=True)  # type: ignore[assignment]
+
+
+class DeclaresOwnModifiedAsText(CustomModel):
+    """A model holding modified as an ISO-8601 string, as some deployed plugins do."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    modified = models.CharField(max_length=64, null=True)  # type: ignore[assignment]
+
+
+class CreatedIsAProperty(CustomModel):
+    """A model exposing created as a computed property rather than a column."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    @property
+    def created(self) -> str:  # type: ignore[override]
+        """Return a computed value."""
+        return "computed"
 
 
 class LegacyTimestampMixin(models.Model):
@@ -146,14 +166,6 @@ def test_each_model_gets_its_own_field_instances() -> None:
     assert first is not second
 
 
-def test_abstract_custom_model_gets_no_timestamps() -> None:
-    """An abstract intermediate should not declare the columns itself."""
-    field_names = {field.name for field in AbstractCustomBase._meta.local_fields}
-
-    assert "created" not in field_names
-    assert "modified" not in field_names
-
-
 def test_concrete_child_of_abstract_gets_them_exactly_once() -> None:
     """The concrete model below an abstract CustomModel gets one of each."""
     names = [field.name for field in ConcreteFromAbstract._meta.local_fields]
@@ -178,24 +190,28 @@ def test_declared_created_still_receives_modified() -> None:
 
 
 def test_created_inherited_from_a_mixin_does_not_clash() -> None:
-    """A created supplied by a plain abstract mixin suppresses the generated one.
-
-    Two fields of the same name is a hard error at class-definition time, which
-    would keep the plugin from loading at all.
-    """
+    """A created supplied by an abstract mixin listed first wins over CustomModel's."""
     names = [field.name for field in InheritsCreatedFromMixin._meta.local_fields]
 
     assert names.count("created") == 1
     assert names.count("modified") == 1
 
 
-def test_build_auto_timestamp_fields_returns_new_objects() -> None:
-    """Each call should hand back unattached field instances."""
-    first = build_auto_timestamp_fields()
-    second = build_auto_timestamp_fields()
+def test_declared_modified_string_is_left_alone() -> None:
+    """A model storing modified as ISO-8601 text keeps its text column."""
+    modified = DeclaresOwnModifiedAsText._meta.get_field("modified")
 
-    assert first.keys() == {"created", "modified"}
-    assert first["created"] is not second["created"]
+    assert isinstance(modified, models.CharField)
+    assert auto_now_field_names(DeclaresOwnModifiedAsText) == []
+
+
+def test_created_property_suppresses_the_column() -> None:
+    """A model defining created as a property keeps the property and gets no column."""
+    field_names = {field.name for field in CreatedIsAProperty._meta.local_fields}
+
+    assert "created" not in field_names
+    assert "modified" in field_names
+    assert CreatedIsAProperty(dbid=1).created == "computed"
 
 
 def test_auto_now_field_names_finds_only_auto_now_fields() -> None:
