@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Builds a questionnaire in Python and creates it with the CreateQuestionnaire effect"
+license = "MIT"
+name = "example_sdk_effect_create_questionnaire"
+readme = "example_sdk_effect_create_questionnaire/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

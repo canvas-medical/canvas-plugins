@@ -772,7 +772,7 @@ def test_end_to_end_register_clean_references(tmp_path: Path) -> None:
 
     Model registration is suppressed during generate_plugin_migrations so
     schema-manager containers have the same registry state as non-schema-
-    manager containers before load_or_reload_plugin runs.
+    manager containers before import_plugin runs.
 
     Verifies that after generate_plugin_migrations:
     - Plugin is NOT in app_configs (no AppConfig created)
