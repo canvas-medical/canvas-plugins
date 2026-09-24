@@ -31,8 +31,8 @@ class Receipt(AuditedModel, IdentifiableModel):
     )
     account_balance_before_collection = models.DecimalField(max_digits=8, decimal_places=2)
     account_balance_after_collection = models.DecimalField(max_digits=8, decimal_places=2)
-    discount = models.DecimalField(max_digits=8, decimal_places=2)
-    template = models.CharField(max_length=250, blank=True, default="")
+    discount = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+    template = models.CharField(max_length=250, blank=True, null=True)
     receipt = models.CharField(max_length=255, null=True, blank=True)
 
     @property

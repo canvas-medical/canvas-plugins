@@ -3,7 +3,11 @@ from decimal import Decimal
 
 import pytest
 
-from canvas_sdk.test_utils.factories import CanvasUserFactory, ReceiptFactory
+from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
+    PaymentCollectionFactory,
+    ReceiptFactory,
+)
 from canvas_sdk.v1.data import PaymentCollection
 from canvas_sdk.v1.data.receipt import Receipt
 
@@ -51,3 +55,17 @@ def test_committed_and_reachable_via_payment_collection() -> None:
     assert payment_collection.receipt == receipt
     assert receipt.total_posted_amount == Decimal("0.00")
     assert receipt.copay_amount == Decimal("0.00")
+
+
+@pytest.mark.django_db
+def test_template_is_nullable_and_discount_defaults_to_zero() -> None:
+    """Matches home-app: legacy receipts store a NULL template, and discount defaults to zero."""
+    receipt = Receipt.objects.create(
+        payment_collection=PaymentCollectionFactory.create(),
+        account_balance_before_collection=Decimal("100.00"),
+        account_balance_after_collection=Decimal("50.00"),
+    )
+    receipt.refresh_from_db()
+
+    assert receipt.template is None
+    assert receipt.discount == Decimal("0.00")
