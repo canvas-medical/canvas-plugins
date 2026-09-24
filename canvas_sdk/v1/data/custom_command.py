@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from django.db import models
 
@@ -8,9 +8,8 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySet,
     IdentifiableModel,
 )
-
-if TYPE_CHECKING:
-    from canvas_sdk.v1.data.plugin_command import PluginCommand
+from canvas_sdk.v1.data.command import Command
+from canvas_sdk.v1.data.plugin_command import PluginCommand
 
 
 class CustomCommand(AuditedModel, IdentifiableModel):
@@ -27,11 +26,8 @@ class CustomCommand(AuditedModel, IdentifiableModel):
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="custom_commands")
 
     @property
-    def plugin_command(self) -> "PluginCommand | None":
+    def plugin_command(self) -> PluginCommand | None:
         """The PluginCommand this anchor was created from, resolved by the command's schema_key."""
-        from canvas_sdk.v1.data.command import Command
-        from canvas_sdk.v1.data.plugin_command import PluginCommand
-
         schema_key = (
             Command.objects.filter(
                 anchor_object_type=self._meta.model_name,
@@ -48,8 +44,6 @@ class CustomCommand(AuditedModel, IdentifiableModel):
     @property
     def data(self) -> dict | None:
         """The data of the Command this anchor was created from."""
-        from canvas_sdk.v1.data.command import Command
-
         return (
             Command.objects.filter(
                 anchor_object_type=self._meta.model_name,
