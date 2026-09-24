@@ -107,26 +107,6 @@ class Model(models.Model, metaclass=ModelMetaclass):
             )
 
 
-def build_auto_timestamp_fields() -> dict[str, models.DateTimeField]:
-    """Build the timestamp fields every custom table carries.
-
-    Fresh instances on every call: a Field instance belongs to the single model
-    it is attached to, so the same object cannot be shared across classes.
-
-    Both are ``null=True`` because the DDL pipeline adds a column to an existing
-    table with no default, leaving every row written before that deploy NULL
-    forever. Declaring them non-null would describe a constraint the pipeline
-    never emits.
-
-    Returns:
-        A mapping of field name to a new field instance.
-    """
-    return {
-        "created": models.DateTimeField(auto_now_add=True, null=True),
-        "modified": models.DateTimeField(auto_now=True, null=True),
-    }
-
-
 def auto_now_field_names(model_class: type[models.Model]) -> list[str]:
     """Return the names of the model's ``auto_now`` datetime fields.
 
@@ -212,22 +192,6 @@ class CustomModelMetaclass(ModelMetaclass):
         # Set dynamic attributes
         meta.db_table = attrs["__qualname__"].lower()
         meta.app_label = attrs["__module__"].split(".")[0]
-
-        # Give every concrete custom table created/modified. The fields are
-        # generated here rather than declared on CustomModel so that a model
-        # bringing its own field of either name keeps it: an inherited field
-        # of the same name is a hard error at class-definition time, which
-        # would stop the plugin from loading at all.
-        if not getattr(meta, "abstract", False) and not getattr(meta, "proxy", False):
-            inherited = {
-                field.name
-                for base in bases
-                if hasattr(base, "_meta")
-                for field in base._meta.fields
-            }
-            for field_name, field in build_auto_timestamp_fields().items():
-                if field_name not in attrs and field_name not in inherited:
-                    attrs[field_name] = field
 
         # Only OneToOneField may declare primary_key=True, which replaces
         # the inherited dbid. Reject primary_key=True on all other fields.
@@ -414,6 +378,14 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
 
     class Meta:
         abstract = True
+
+    # Every concrete custom table carries these. Django copies an abstract
+    # base's fields into each subclass unless the subclass declares that name
+    # itself, so a plugin model with its own created or modified keeps it.
+    # Both are nullable because the DDL pipeline adds a column to an existing
+    # table with no default, leaving rows written before that deploy NULL.
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    modified = models.DateTimeField(auto_now=True, null=True)
 
     objects = CustomModelManager()
 
