@@ -24,7 +24,7 @@ class AbstractLineItemTransaction(TimestampedModel):
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
     billing_line_item = models.ForeignKey(
-        "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
+        "v1.ClaimLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
