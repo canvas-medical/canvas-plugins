@@ -1,6 +1,55 @@
 # CHANGELOG
 
 
+## v0.230.0 (2026-09-24)
+
+### Features
+
+- Add a "Remove Past Medical History" SDK command
+  ([#1886](https://github.com/canvas-medical/canvas-plugins/pull/1886),
+  [`cade9ed`](https://github.com/canvas-medical/canvas-plugins/commit/cade9ed3db07bd5ec4b24e9cf0c895653e958487))
+
+- Add an "Add Condition" SDK command
+  ([#1871](https://github.com/canvas-medical/canvas-plugins/pull/1871),
+  [`b74a1ef`](https://github.com/canvas-medical/canvas-plugins/commit/b74a1ef9fc1dd30e42508d631d0921879a6e3d0b))
+
+
+## v0.229.0 (2026-09-22)
+
+### Bug Fixes
+
+- Reload plugins without dropping their routes mid-reload
+  ([#1811](https://github.com/canvas-medical/canvas-plugins/pull/1811),
+  [`3fbe496`](https://github.com/canvas-medical/canvas-plugins/commit/3fbe496a769915d7fddc91059e35733f5d9cf79f))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: David Jantzen <david.jantzen@canvasmedical.com>
+
+Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
+### Documentation
+
+- Cr-init short_help names the 'origin' remote
+  ([#1889](https://github.com/canvas-medical/canvas-plugins/pull/1889),
+  [`33f6483`](https://github.com/canvas-medical/canvas-plugins/commit/33f6483bdb4773213e875c16c6de5846920c0d6f))
+
+Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- Headless deploy CLI for Control Room (KOALA-5923)
+  ([#1820](https://github.com/canvas-medical/canvas-plugins/pull/1820),
+  [`070daa4`](https://github.com/canvas-medical/canvas-plugins/commit/070daa46fef5c76ce26d52def13aaf874fdc761c))
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.228.0 (2026-09-18)
 
 ### Features

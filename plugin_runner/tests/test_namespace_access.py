@@ -3,7 +3,7 @@
 Tests verify that:
 1. NamespaceAccessError is raised appropriately
 2. check_namespace_auth_key function works correctly
-3. Error handling in load_plugins catches NamespaceAccessError
+3. Error handling in reconcile_plugins catches NamespaceAccessError
 """
 
 import hashlib
@@ -207,19 +207,19 @@ class TestSecretNameDetermination:
 
 
 class TestLoadPluginsHandlesNamespaceErrors:
-    """Tests for error handling in load_plugins functions."""
+    """Tests for error handling in reconcile_plugins functions."""
 
-    @patch("plugin_runner.plugin_runner.refresh_event_type_map")
-    @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
+    @patch("plugin_runner.plugin_runner.rebuild_event_routes")
+    @patch("plugin_runner.plugin_runner.import_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugins_catches_namespace_access_error(
+    def test_reconcile_plugins_catches_namespace_access_error(
         self, mock_sentry: MagicMock, mock_load: MagicMock, mock_refresh: MagicMock
     ) -> None:
-        """load_plugins should catch NamespaceAccessError and continue."""
+        """reconcile_plugins should catch NamespaceAccessError and continue."""
         import os
         import tempfile
 
-        from plugin_runner.plugin_runner import load_plugins
+        from plugin_runner.plugin_runner import reconcile_plugins
 
         # Create temp directories to act as plugin paths
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -235,7 +235,7 @@ class TestLoadPluginsHandlesNamespaceErrors:
             ]
 
             # Should not raise, should continue loading other plugins
-            load_plugins(specified_plugin_paths=[plugin1, plugin2])
+            reconcile_plugins(specified_plugin_paths=[plugin1, plugin2])
 
             # Both plugins should have been attempted
             assert mock_load.call_count == 2
@@ -243,17 +243,17 @@ class TestLoadPluginsHandlesNamespaceErrors:
             # Error should be captured by Sentry
             mock_sentry.capture_exception.assert_called_once()
 
-    @patch("plugin_runner.plugin_runner.refresh_event_type_map")
-    @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
+    @patch("plugin_runner.plugin_runner.rebuild_event_routes")
+    @patch("plugin_runner.plugin_runner.import_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugins_continues_after_namespace_error(
+    def test_reconcile_plugins_continues_after_namespace_error(
         self, mock_sentry: MagicMock, mock_load: MagicMock, mock_refresh: MagicMock
     ) -> None:
-        """load_plugins should continue loading other plugins after NamespaceAccessError."""
+        """reconcile_plugins should continue loading other plugins after NamespaceAccessError."""
         import os
         import tempfile
 
-        from plugin_runner.plugin_runner import load_plugins
+        from plugin_runner.plugin_runner import reconcile_plugins
 
         with tempfile.TemporaryDirectory() as tmpdir:
             plugin1 = os.path.join(tmpdir, "plugin1")
@@ -270,44 +270,44 @@ class TestLoadPluginsHandlesNamespaceErrors:
                 None,  # Plugin 3 succeeds
             ]
 
-            load_plugins(specified_plugin_paths=[plugin1, plugin2, plugin3])
+            reconcile_plugins(specified_plugin_paths=[plugin1, plugin2, plugin3])
 
             # All three plugins should have been attempted
             assert mock_load.call_count == 3
 
-    @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
+    @patch("plugin_runner.plugin_runner.import_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugin_catches_namespace_access_error(
+    def test_reload_plugin_catches_namespace_access_error(
         self, mock_sentry: MagicMock, mock_load: MagicMock
     ) -> None:
-        """load_plugin should catch NamespaceAccessError and not raise."""
+        """reload_plugin should catch NamespaceAccessError and not raise."""
         import pathlib
 
-        from plugin_runner.plugin_runner import load_plugin
+        from plugin_runner.plugin_runner import reload_plugin
 
         mock_load.side_effect = NamespaceAccessError("Access denied")
 
         # Should not raise
-        load_plugin(pathlib.Path("/path/to/plugin"))
+        reload_plugin(pathlib.Path("/path/to/plugin"))
 
         # Error should be captured by Sentry
         mock_sentry.capture_exception.assert_called_once()
 
-    @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
+    @patch("plugin_runner.plugin_runner.import_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugin_logs_namespace_access_error(
+    def test_reload_plugin_logs_namespace_access_error(
         self, mock_sentry: MagicMock, mock_load: MagicMock
     ) -> None:
-        """load_plugin should log NamespaceAccessError with context."""
+        """reload_plugin should log NamespaceAccessError with context."""
         import pathlib
 
-        from plugin_runner.plugin_runner import load_plugin
+        from plugin_runner.plugin_runner import reload_plugin
 
         error_msg = "Plugin 'test' denied access to namespace 'org__data'"
         mock_load.side_effect = NamespaceAccessError(error_msg)
 
         with patch("plugin_runner.plugin_runner.log") as mock_log:
-            load_plugin(pathlib.Path("/path/to/plugin"))
+            reload_plugin(pathlib.Path("/path/to/plugin"))
 
             # Check that error was logged
             mock_log.error.assert_called_once()

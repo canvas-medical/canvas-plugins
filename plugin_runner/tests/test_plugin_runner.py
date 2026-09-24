@@ -4,6 +4,7 @@ import logging
 import pickle
 import shutil
 import signal
+import sys
 from base64 import b64encode
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
@@ -36,13 +37,13 @@ from plugin_runner.plugin_runner import (
     STARTUP_RETRY_LIMIT,
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
-    load_or_reload_plugin,
-    load_plugin,
-    load_plugin_handlers,
-    load_plugins,
+    import_plugin,
+    reconcile_plugins,
+    reload_plugin,
+    remove_plugin,
+    sandbox_plugin_handlers,
     synchronize_plugins,
     synchronize_plugins_and_report_errors,
-    unload_plugin,
 )
 from plugin_runner.sandbox import Sandbox
 from settings import PLUGIN_DIRECTORY
@@ -57,19 +58,21 @@ def plugin_runner() -> PluginRunner:
 
 
 @pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
-def test_load_plugin_rejects_foreign_package_handler(
+def test_import_plugin_rejects_foreign_package_handler(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that a plugin cannot load a handler from a different plugin's package."""
     with caplog.at_level(logging.ERROR):
-        result = load_or_reload_plugin(install_test_plugin)
+        result = import_plugin(install_test_plugin)
 
     assert result is False
     assert any("foreign package" in record.message for record in caplog.records)
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
+def test_reconcile_plugins_with_valid_plugin(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
     """Test loading plugins with a valid plugin."""
     assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
@@ -79,7 +82,7 @@ def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plu
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
-def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_package(
+def test_reconcile_plugins_with_imports_within_plugin_package(
     install_test_plugin: Path,
     plugin_runner: PluginRunner,
     load_test_plugins: None,
@@ -145,12 +148,12 @@ def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> No
     ],
     indirect=True,
 )
-def test_load_plugins_with_plugin_that_imports_other_modules_outside_plugin_package(
+def test_import_plugin_with_imports_outside_plugin_package(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test loading plugins with an invalid plugin that imports other modules outside the current plugin package."""
     with caplog.at_level(logging.ERROR):
-        load_or_reload_plugin(install_test_plugin)
+        import_plugin(install_test_plugin)
 
     assert any("Error importing module" in record.message for record in caplog.records), (
         "log.error() was not called with the expected message."
@@ -164,12 +167,12 @@ def test_load_plugins_with_plugin_that_imports_other_modules_outside_plugin_pack
     ],
     indirect=True,
 )
-def test_load_plugins_with_plugin_that_imports_forbidden_modules(
+def test_import_plugin_with_forbidden_imports(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test loading plugins with an invalid plugin that imports forbidden modules."""
     with caplog.at_level(logging.ERROR):
-        load_or_reload_plugin(install_test_plugin)
+        import_plugin(install_test_plugin)
 
     assert any("Error importing module" in record.message for record in caplog.records), (
         "log.error() was not called with the expected message."
@@ -183,12 +186,12 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules(
     ],
     indirect=True,
 )
-def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
+def test_import_plugin_with_forbidden_imports_at_runtime(
     install_test_plugin: Path,
 ) -> None:
     """Test loading plugins with an invalid plugin that imports forbidden modules at runtime."""
     with pytest.raises(ImportError, match="is not an allowed import."):
-        load_or_reload_plugin(install_test_plugin)
+        import_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
             "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.handlers.my_handler:Handler"
         ]["class"]
@@ -207,7 +210,7 @@ def test_plugin_that_implicitly_imports_allowed_modules(
 ) -> None:
     """Test loading plugins with a plugin that implicitly imports allowed modules."""
     with caplog.at_level(logging.INFO):
-        load_or_reload_plugin(install_test_plugin)
+        import_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
             "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Allowed"
         ]["class"]
@@ -233,7 +236,7 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
         caplog.at_level(logging.INFO),
         pytest.raises(ImportError, match="'os' is not an allowed import."),
     ):
-        load_or_reload_plugin(install_test_plugin)
+        import_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
             "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Forbidden"
         ]["class"]
@@ -245,7 +248,7 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugin_with_missing_manifest(
+def test_import_plugin_with_missing_manifest(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that a plugin with a missing manifest file fails to load gracefully."""
@@ -253,7 +256,7 @@ def test_load_plugin_with_missing_manifest(
     manifest_file.unlink()
 
     with caplog.at_level(logging.ERROR):
-        result = load_or_reload_plugin(install_test_plugin)
+        result = import_plugin(install_test_plugin)
 
     assert result is False
     assert any("missing CANVAS_MANIFEST.json" in record.message for record in caplog.records), (
@@ -262,12 +265,12 @@ def test_load_plugin_with_missing_manifest(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugin_logs_success_with_version_and_handler_count(
+def test_import_plugin_logs_success_with_version_and_handler_count(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test that load_or_reload_plugin emits a success log including version and handler count."""
+    """Test that import_plugin emits a success log including version and handler count."""
     with caplog.at_level(logging.INFO):
-        result = load_or_reload_plugin(install_test_plugin)
+        result = import_plugin(install_test_plugin)
 
     assert result is True
 
@@ -286,12 +289,12 @@ def test_load_plugin_logs_success_with_version_and_handler_count(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
-def test_load_plugin_logs_warning_when_handler_fails(
+def test_import_plugin_logs_warning_when_handler_fails(
     install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test that load_or_reload_plugin emits a warning log when at least one handler fails."""
+    """Test that import_plugin emits a warning log when at least one handler fails."""
     with caplog.at_level(logging.WARNING):
-        result = load_or_reload_plugin(install_test_plugin)
+        result = import_plugin(install_test_plugin)
 
     assert result is False
 
@@ -317,11 +320,11 @@ def _manifest_handlers(path: Path) -> list[dict[str, Any]]:
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugin_handlers_returns_success_results(install_test_plugin: Path) -> None:
-    """load_plugin_handlers returns a success result, with its executed scope, per handler."""
+def test_sandbox_plugin_handlers_returns_success_results(install_test_plugin: Path) -> None:
+    """sandbox_plugin_handlers returns a success result, with its executed scope, per handler."""
     handlers = _manifest_handlers(install_test_plugin)
 
-    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert len(results) == len(handlers)
     assert all(r.error is None for r in results)
@@ -332,14 +335,14 @@ def test_load_plugin_handlers_returns_success_results(install_test_plugin: Path)
 @pytest.mark.parametrize(
     "install_test_plugin", ["test_module_forbidden_imports_plugin"], indirect=True
 )
-def test_load_plugin_handlers_reports_forbidden_import(install_test_plugin: Path) -> None:
+def test_sandbox_plugin_handlers_reports_forbidden_import(install_test_plugin: Path) -> None:
     """A forbidden module-level import surfaces as a reportable error result, and
-    load_plugin_handlers does not mutate global LOADED_PLUGINS.
+    sandbox_plugin_handlers does not mutate global LOADED_PLUGINS.
     """
     before = set(LOADED_PLUGINS)
     handlers = _manifest_handlers(install_test_plugin)
 
-    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     failures = [r for r in results if r.error is not None]
     assert failures
@@ -351,7 +354,7 @@ def test_load_plugin_handlers_reports_forbidden_import(install_test_plugin: Path
 
 
 @pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
-def test_load_plugin_handlers_flags_foreign_package_without_reporting(
+def test_sandbox_plugin_handlers_flags_foreign_package_without_reporting(
     install_test_plugin: Path,
 ) -> None:
     """A handler declared from a foreign package is flagged as an error but not
@@ -359,7 +362,7 @@ def test_load_plugin_handlers_flags_foreign_package_without_reporting(
     """
     handlers = _manifest_handlers(install_test_plugin)
 
-    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     foreign = [r for r in results if r.error is not None and not r.report]
     assert foreign
@@ -368,9 +371,11 @@ def test_load_plugin_handlers_flags_foreign_package_without_reporting(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
+def test_reconcile_plugins_keeps_existing_plugin_active(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
     """Test reloading a plugin."""
-    load_plugins()
+    reconcile_plugins()
 
     assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
@@ -379,25 +384,213 @@ def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> No
     )
 
 
+EXAMPLE_HANDLER_KEY = "example_plugin:example_plugin.handlers.my_handler:Handler"
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_remove_plugin_should_be_removed_from_loaded_plugins(
+def test_reload_plugin_keeps_routes_registered_during_reload(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """reload_plugin keeps the previous handlers routable until the new version
+    has finished importing, so a reload never drops the plugin's routes.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    observed: dict[str, bool] = {}
+    real_load = import_plugin
+
+    def spy(path: Path) -> bool:
+        # While the new version is importing, the old handler must still be routed.
+        observed["still_routed"] = all(
+            EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before
+        )
+        return real_load(path)
+
+    with patch("plugin_runner.plugin_runner.import_plugin", side_effect=spy):
+        reload_plugin(install_test_plugin)
+
+    assert observed["still_routed"] is True
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_preserves_previous_version_on_import_error(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """If the new version raises while importing, the previous version stays live
+    and routed rather than being unloaded.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    with patch(
+        "plugin_runner.plugin_runner.import_plugin",
+        side_effect=RuntimeError("boom"),
+    ):
+        reload_plugin(install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_preserves_previous_version_when_load_reports_failure(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """If the new version fails to load (returns False), the previous version
+    stays live and routed rather than being unloaded.
+    """
+    events_before = {
+        event for event, names in EVENT_HANDLER_MAP.items() if EXAMPLE_HANDLER_KEY in names
+    }
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert events_before
+
+    with patch("plugin_runner.plugin_runner.import_plugin", return_value=False):
+        reload_plugin(install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    assert all(EXAMPLE_HANDLER_KEY in EVENT_HANDLER_MAP[event] for event in events_before)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_prunes_handlers_absent_from_new_version(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Handlers present in the previous version but absent from the new one are
+    removed once the reload succeeds.
+    """
+    stale_key = "example_plugin:example_plugin.handlers.removed:Gone"
+    LOADED_PLUGINS[stale_key] = {
+        "active": True,
+        "class": Mock(),
+        "sandbox": {},
+        "handler": {},
+        "secrets": {},
+        "namespace_config": None,
+    }
+
+    reload_plugin(install_test_plugin)
+
+    assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+    assert stale_key not in LOADED_PLUGINS
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_routes_handlers_loaded_by_a_partial_load(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """A load that reports failure can still have swapped new handlers into
+    LOADED_PLUGINS, so the event map is rebuilt even on the failure path.
+
+    import_plugin returns False when ANY declared handler fails, after
+    having already registered the ones that succeeded. Those have to be routed.
+    """
+    new_key = "example_plugin:example_plugin.handlers.new_handler:NewHandler"
+    real_load = import_plugin
+
+    def partial_load(path: Path) -> bool:
+        real_load(path)
+        handler_class = Mock()
+        handler_class.RESPONDS_TO = EventType.Name(EventType.PATIENT_CREATED)
+        LOADED_PLUGINS[new_key] = {
+            "active": True,
+            "class": handler_class,
+            "sandbox": {},
+            "handler": {},
+            "secrets": {},
+            "namespace_config": None,
+        }
+        # One other handler failed to import, so the load reports failure.
+        return False
+
+    try:
+        with patch("plugin_runner.plugin_runner.import_plugin", side_effect=partial_load):
+            reload_plugin(install_test_plugin)
+
+        assert new_key in LOADED_PLUGINS
+        assert new_key in EVENT_HANDLER_MAP[EventType.Name(EventType.PATIENT_CREATED)]
+        # The previous version's handlers keep their routes too.
+        assert EXAMPLE_HANDLER_KEY in LOADED_PLUGINS
+        assert LOADED_PLUGINS[EXAMPLE_HANDLER_KEY]["active"] is True
+    finally:
+        LOADED_PLUGINS.pop(new_key, None)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+def test_reload_plugin_drops_stale_modules_before_reimport(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """reload_plugin drops the plugin's already-imported modules from sys.modules
+    before importing the new version, so the reload picks up the new code instead
+    of reusing the stale (old) module objects.
+    """
+    name = "test_module_imports_plugin"
+    stale_modules = {
+        mod: module
+        for mod, module in sys.modules.items()
+        if mod == name or mod.startswith(f"{name}.")
+    }
+    assert stale_modules  # loading the plugin registered its modules in sys.modules
+
+    dropped_before_import: dict[str, bool] = {}
+    real_load = import_plugin
+
+    def spy(path: Path) -> bool:
+        # The stale module objects must already be gone when the new version imports.
+        dropped_before_import["all_gone"] = all(mod not in sys.modules for mod in stale_modules)
+        return real_load(path)
+
+    with patch("plugin_runner.plugin_runner.import_plugin", side_effect=spy):
+        reload_plugin(install_test_plugin)
+
+    assert dropped_before_import["all_gone"] is True
+    # The reload succeeded and the plugin's handlers are active again.
+    assert any(
+        handler_name.startswith(f"{name}:") and plugin["active"]
+        for handler_name, plugin in LOADED_PLUGINS.items()
+    )
+    # The re-import registered fresh module objects rather than the stale ones.
+    reimported = {
+        mod: module
+        for mod, module in sys.modules.items()
+        if mod == name or mod.startswith(f"{name}.")
+    }
+    assert all(
+        reimported[mod] is not stale_modules[mod] for mod in reimported if mod in stale_modules
+    )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reconcile_plugins_drops_plugin_removed_from_disk(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test removing a plugin."""
     assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     shutil.rmtree(install_test_plugin)
-    load_plugins()
+    reconcile_plugins()
     assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 @pytest.mark.parametrize("load_test_plugins", [None], indirect=True)
-def test_load_plugins_should_refresh_event_handler_map(
+def test_reconcile_plugins_should_rebuild_event_routes(
     load_test_plugins: None, install_test_plugin: Path
 ) -> None:
     """Test that the event handler map is refreshed when loading plugins."""
     assert EVENT_HANDLER_MAP == {}
-    load_plugins()
+    reconcile_plugins()
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
         "example_plugin:example_plugin.handlers.my_handler:Handler"
@@ -406,12 +599,12 @@ def test_load_plugins_should_refresh_event_handler_map(
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 @pytest.mark.parametrize("load_test_plugins", [None], indirect=True)
-def test_load_plugin_should_refresh_event_handler_map(
+def test_reload_plugin_should_rebuild_event_routes(
     load_test_plugins: None, install_test_plugin: Path
 ) -> None:
     """Test that the event handler map is refreshed when loading a specific plugin."""
     assert EVENT_HANDLER_MAP == {}
-    load_plugin(install_test_plugin)
+    reload_plugin(install_test_plugin)
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
         "example_plugin:example_plugin.handlers.my_handler:Handler"
@@ -419,7 +612,7 @@ def test_load_plugin_should_refresh_event_handler_map(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_unload_plugin_should_remove_from_loaded_plugins(
+def test_remove_plugin_should_drop_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin successfully removes it from loaded plugins."""
@@ -428,12 +621,12 @@ def test_unload_plugin_should_remove_from_loaded_plugins(
         LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
-    unload_plugin("example_plugin")
+    remove_plugin("example_plugin")
     assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_unload_plugin_should_refresh_event_handler_map(
+def test_remove_plugin_should_rebuild_event_routes(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin should refresh event handler map."""
@@ -449,7 +642,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
         "secrets": {},
     }
 
-    unload_plugin("example_plugin")
+    remove_plugin("example_plugin")
     assert (
         "example_plugin:example_plugin.handlers.my_handler:Handler"
         not in EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]
@@ -459,7 +652,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
-def test_unload_plugin_should_clean_sys_modules(
+def test_remove_plugin_should_clean_sys_modules(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin removes its entries from sys.modules."""
@@ -470,7 +663,7 @@ def test_unload_plugin_should_clean_sys_modules(
     plugin_modules_before = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
     assert len(plugin_modules_before) > 0
 
-    unload_plugin("test_module_imports_plugin")
+    remove_plugin("test_module_imports_plugin")
 
     # After unloading, plugin modules should be removed from sys.modules
     plugin_modules_after = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
@@ -478,7 +671,7 @@ def test_unload_plugin_should_clean_sys_modules(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
-def test_unload_and_reload_plugin_loads_cleanly(
+def test_remove_then_import_plugin_loads_cleanly(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading then reloading a plugin works without stale sys.modules."""
@@ -490,12 +683,12 @@ def test_unload_and_reload_plugin_loads_cleanly(
     assert handler_a in LOADED_PLUGINS
     assert handler_b in LOADED_PLUGINS
 
-    unload_plugin("test_shared_modules_plugin")
+    remove_plugin("test_shared_modules_plugin")
     assert handler_a not in LOADED_PLUGINS
     assert not any(m.startswith("test_shared_modules_plugin") for m in sys.modules)
 
     # Reload should succeed without stale module interference
-    assert load_or_reload_plugin(install_test_plugin) is True
+    assert import_plugin(install_test_plugin) is True
     assert handler_a in LOADED_PLUGINS
     assert handler_b in LOADED_PLUGINS
 
@@ -515,7 +708,7 @@ def test_shared_modules_evaluated_once_per_load(
         return original_execute(self)
 
     with mock_patch.object(Sandbox, "execute", tracking_execute):
-        load_plugins()
+        reconcile_plugins()
 
     # The shared constants module should be sandbox-exec'd exactly once,
     # not once per handler that imports it.
@@ -641,14 +834,16 @@ def test_plugin_runner_event_publishes_message(
     assert result[0].success is True
 
 
-def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
-    """Test that synchronize_plugins calls install_plugins and load_plugins."""
+def test_synchronize_plugins_calls_install_and_reconcile_plugins() -> None:
+    """Test that synchronize_plugins calls install_plugins and reconcile_plugins."""
     with (
         patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
         patch(
             "plugin_runner.plugin_runner.install_plugins", new_callable=Mock
         ) as mock_install_plugins,
-        patch("plugin_runner.plugin_runner.load_plugins", new_callable=Mock) as mock_load_plugins,
+        patch(
+            "plugin_runner.plugin_runner.reconcile_plugins", new_callable=Mock
+        ) as mock_reconcile_plugins,
     ):
         mock_client = Mock()
         mock_pubsub = Mock()
@@ -661,26 +856,34 @@ def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
         synchronize_plugins(run_once=True)
 
         mock_install_plugins.assert_called_once()
-        mock_load_plugins.assert_called_once()
+        mock_reconcile_plugins.assert_called_once()
 
 
 def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
-    """Test that synchronize_plugins installs and loads only the given enabled plugin."""
+    """Test that synchronize_plugins installs a plugin before swapping it in.
+
+    The install (slow download + namespace wait) must run before the in-memory
+    reload so the running version keeps serving; reload_plugin then swaps it in
+    atomically. The destructive remove_plugin must not be used on this path.
+    """
     plugin_name = "my_enabled_plugin"
 
+    manager = Mock()
     with (
         patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
         patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
         patch("plugin_runner.plugin_runner.install_plugin") as mock_install_plugin,
-        patch("plugin_runner.plugin_runner.load_or_reload_plugin") as mock_load_or_reload_plugin,
-        patch("plugin_runner.plugin_runner.unload_plugin") as mock_unload_plugin,
+        patch("plugin_runner.plugin_runner.reload_plugin") as mock_reload_plugin,
+        patch("plugin_runner.plugin_runner.remove_plugin") as mock_remove_plugin,
         patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
-        patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
+        patch("plugin_runner.plugin_runner.reconcile_plugins") as mock_reconcile_plugins,
     ):
         mock_client = Mock()
         mock_pubsub = Mock()
         mock_get_client.return_value = (mock_client, mock_pubsub)
         mock_enabled_plugins.return_value = {plugin_name: {"version": "0.1.0"}}
+        manager.attach_mock(mock_install_plugin, "install_plugin")
+        manager.attach_mock(mock_reload_plugin, "reload_plugin")
 
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
@@ -692,11 +895,14 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
         mock_install_plugin.assert_called_once_with(plugin_name, attributes={"version": "0.1.0"})
 
         expected_path = (Path(PLUGIN_DIRECTORY) / plugin_name).resolve()
-        mock_load_or_reload_plugin.assert_called_once_with(expected_path)
-        mock_unload_plugin.assert_called_once_with(plugin_name)
+        mock_reload_plugin.assert_called_once_with(expected_path)
 
+        # The install must run before the in-memory swap so routes keep serving.
+        assert [call[0] for call in manager.mock_calls] == ["install_plugin", "reload_plugin"]
+
+        mock_remove_plugin.assert_not_called()
         mock_install_plugins.assert_not_called()
-        mock_load_plugins.assert_not_called()
+        mock_reconcile_plugins.assert_not_called()
 
 
 def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
@@ -707,9 +913,9 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
         patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
         patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
         patch("plugin_runner.plugin_runner.uninstall_plugin") as mock_uninstall_plugin,
-        patch("plugin_runner.plugin_runner.unload_plugin") as mock_unload_plugin,
+        patch("plugin_runner.plugin_runner.remove_plugin") as mock_remove_plugin,
         patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
-        patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
+        patch("plugin_runner.plugin_runner.reconcile_plugins") as mock_reconcile_plugins,
     ):
         mock_client = Mock()
         mock_pubsub = Mock()
@@ -725,10 +931,10 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
         synchronize_plugins(run_once=True)
 
         mock_uninstall_plugin.assert_called_once_with(plugin_name)
-        mock_unload_plugin.assert_called_once_with(plugin_name)
+        mock_remove_plugin.assert_called_once_with(plugin_name)
 
         mock_install_plugins.assert_not_called()
-        mock_load_plugins.assert_not_called()
+        mock_reconcile_plugins.assert_not_called()
 
 
 # HOME-APP-11Y5 / KOALA-5359 — on container cold start in CI, redis DNS is
@@ -911,7 +1117,7 @@ def import_me() -> str:
     file_path.write_text(NEW_CODE, encoding="utf-8")
 
     # Reload the plugin
-    load_plugins()
+    reconcile_plugins()
 
     result = []
     for response in plugin_runner.HandleEvent(event, None):
@@ -1232,7 +1438,7 @@ def test_payment_processor(
     assert result[0].effects == expected_effects
 
 
-@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
 @patch("plugin_runner.plugin_runner.install_plugins")
 @patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
 @patch("plugin_runner.plugin_runner.grpc")
@@ -1271,7 +1477,7 @@ def test_main_logs_sigterm_on_signal(
     assert any("Server stopped" in r.message for r in caplog.records)
 
 
-@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
 @patch("plugin_runner.plugin_runner.install_plugins")
 @patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
 @patch("plugin_runner.plugin_runner.grpc")
