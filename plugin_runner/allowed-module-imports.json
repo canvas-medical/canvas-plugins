@@ -235,6 +235,7 @@
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
+    "RemovePastMedicalHistoryCommand",
     "ResolveConditionCommand",
     "ReviewOfSystemsCommand",
     "StopMedicationCommand",
@@ -366,6 +367,9 @@
   ],
   "canvas_sdk.commands.commands.remove_allergy": [
     "RemoveAllergyCommand"
+  ],
+  "canvas_sdk.commands.commands.remove_past_medical_history": [
+    "RemovePastMedicalHistoryCommand"
   ],
   "canvas_sdk.commands.commands.resolve_condition": [
     "ResolveConditionCommand"
