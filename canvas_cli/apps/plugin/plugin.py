@@ -24,7 +24,7 @@ from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_toke
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
-from plugin_runner.plugin_runner import load_plugin_handlers
+from plugin_runner.plugin_runner import sandbox_plugin_handlers
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
@@ -634,7 +634,7 @@ def _find_unresolvable_handlers(
     components = manifest_json.get("components", {})
 
     # The runner loads protocols + applications + handlers; mirror that exact
-    # set (see plugin_runner.load_or_reload_plugin).
+    # set (see plugin_runner.import_plugin).
     class_refs = []
     for key in ("protocols", "applications", "handlers"):
         for item in components.get(key, []):
@@ -761,7 +761,7 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
     print(f"Loading {len(handlers)} handler(s) in the sandbox:")
 
-    results = load_plugin_handlers(plugin_path.name, plugin_path, handlers)
+    results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
 
     failures = [r for r in results if r.error is not None]
     for r in results:

@@ -18,7 +18,7 @@ from canvas_generated.messages.events_pb2 import PLUGIN_CREATED
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_sdk.events.base import Event
 from canvas_sdk.handlers.base import BaseHandler
-from plugin_runner.plugin_runner import LOADED_PLUGINS, load_or_reload_plugin
+from plugin_runner.plugin_runner import LOADED_PLUGINS, import_plugin
 
 ORIGINAL_PATH = sys.path.copy()
 
@@ -88,7 +88,7 @@ def main() -> None:
         plugin_runner_logger.handlers = [logging.StreamHandler(output)]
 
         with redirect_stdout(output), redirect_stderr(output):
-            success = load_or_reload_plugin(path)
+            success = import_plugin(path)
 
         output_string = output.getvalue()
 

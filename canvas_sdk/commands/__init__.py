@@ -1,3 +1,4 @@
+from canvas_sdk.commands.commands.add_condition import AddConditionCommand
 from canvas_sdk.commands.commands.adjust_prescription import AdjustPrescriptionCommand
 from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
@@ -32,6 +33,9 @@ from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.reference import ReferenceCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
+from canvas_sdk.commands.commands.remove_past_medical_history import (
+    RemovePastMedicalHistoryCommand,
+)
 from canvas_sdk.commands.commands.resolve_condition import ResolveConditionCommand
 from canvas_sdk.commands.commands.review.imaging import ImagingReviewCommand
 from canvas_sdk.commands.commands.review.lab import LabReviewCommand
@@ -48,6 +52,7 @@ from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
 
 __all__ = __exports__ = (
+    "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
@@ -81,6 +86,7 @@ __all__ = __exports__ = (
     "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
+    "RemovePastMedicalHistoryCommand",
     "ResolveConditionCommand",
     "ReviewOfSystemsCommand",
     "StopMedicationCommand",
