@@ -233,5 +233,7 @@ url = "https://pypi.org/simple/"
 [tool.uv.sources]
 httpretty = {git = "https://github.com/carlsmedstad/HTTPretty.git", rev = "8e96b1e312d473429fbd08bc867376e9932ad42a"}
 # `pytest-canvas` is published from `pytest-canvas/` in this repo; resolve the
-# working copy so its constraints are exercised before it is released.
-pytest-canvas = {path = "pytest-canvas"}
+# working copy so its constraints are exercised before it is released. Editable
+# to match example plugins that point their own source at the same directory,
+# since uv refuses one path requested both editable and non-editable.
+pytest-canvas = {editable = true, path = "pytest-canvas"}

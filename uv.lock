@@ -7,9 +7,9 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
+uv = "2035-01-01T00:00:00Z"
 ruff = "2035-01-01T00:00:00Z"
 ty = "2035-01-01T00:00:00Z"
-uv = "2035-01-01T00:00:00Z"
 
 [[package]]
 name = "annotated-types"
@@ -204,7 +204,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3.3,<4" },
     { name = "pydantic", specifier = ">=2.12.5,<3" },
     { name = "pyjwt", specifier = ">=2.13.0,<3" },
-    { name = "pytest-canvas", marker = "extra == 'test-utils'", directory = "pytest-canvas" },
+    { name = "pytest-canvas", marker = "extra == 'test-utils'", editable = "pytest-canvas" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2" },
     { name = "python-logstash-async", specifier = ">=4.0.2" },
     { name = "rapidfuzz", specifier = ">=3.10.1,<4" },
@@ -1657,7 +1657,7 @@ wheels = [
 [[package]]
 name = "pytest-canvas"
 version = "0.2.0"
-source = { directory = "pytest-canvas" }
+source = { editable = "pytest-canvas" }
 dependencies = [
     { name = "canvas" },
     { name = "pytest" },
