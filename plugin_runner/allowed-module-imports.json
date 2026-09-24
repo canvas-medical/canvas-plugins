@@ -1300,11 +1300,6 @@
     "get_current_plugin"
   ],
   "canvas_sdk.v1.data": [
-    "AdminCommandType",
-    "AdminDiagnosticView",
-    "AdminLabel",
-    "AdminProtocolTemplate",
-    "AdminQueue",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Application",
@@ -1396,7 +1391,6 @@
     "FaxDirection",
     "FaxStatus",
     "FaxStatusModel",
-    "FeeSchedule",
     "FieldType",
     "FieldValueTooLarge",
     "FollowUp",
@@ -1481,9 +1475,7 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
-    "OrganizationSetting",
     "OrganizationalEntity",
-    "POCLabTemplate",
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
@@ -1505,7 +1497,6 @@
     "PaymentCard",
     "PaymentCollection",
     "PayorSpecificCharge",
-    "PermissionGroup",
     "Plan",
     "PluginCommand",
     "PostingRule",
@@ -1550,8 +1541,6 @@
     "ResponseOption",
     "ResponseOptionSet",
     "Role",
-    "RoleDomain",
-    "RolePermissionGroup",
     "ScheduleDuration",
     "ServiceProvider",
     "Snapshot",
@@ -1582,7 +1571,6 @@
     "UncategorizedClinicalDocumentReview",
     "UpdateGoal",
     "Vaccine",
-    "VaccineCatalog",
     "VaccineLot",
     "VaccineManufacturer",
     "ValidateCodingGapEvent",
@@ -1590,13 +1578,6 @@
     "VitalSign",
     "VitalSignReading",
     "proxy_field"
-  ],
-  "canvas_sdk.v1.data.admin_catalog": [
-    "AdminCommandType",
-    "AdminDiagnosticView",
-    "AdminLabel",
-    "AdminProtocolTemplate",
-    "AdminQueue"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
@@ -1819,9 +1800,6 @@
     "FaxStatus",
     "FaxStatusModel"
   ],
-  "canvas_sdk.v1.data.fee_schedule": [
-    "FeeSchedule"
-  ],
   "canvas_sdk.v1.data.follow_up": [
     "FollowUp"
   ],
@@ -1907,7 +1885,8 @@
     "LetterActionEvent"
   ],
   "canvas_sdk.v1.data.letter_template": [
-    "LetterTemplate"
+    "LetterTemplate",
+    "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
@@ -1958,9 +1937,6 @@
     "OrganizationAddress",
     "OrganizationContactPoint"
   ],
-  "canvas_sdk.v1.data.organization_setting": [
-    "OrganizationSetting"
-  ],
   "canvas_sdk.v1.data.organizational_entity": [
     "OrganizationalEntity"
   ],
@@ -2005,18 +1981,11 @@
   "canvas_sdk.v1.data.payor_specific_charge": [
     "PayorSpecificCharge"
   ],
-  "canvas_sdk.v1.data.permission_group": [
-    "PermissionGroup",
-    "RolePermissionGroup"
-  ],
   "canvas_sdk.v1.data.plan": [
     "Plan"
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
-  ],
-  "canvas_sdk.v1.data.poc_lab_template": [
-    "POCLabTemplate"
   ],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
@@ -2026,7 +1995,9 @@
     "PatientPosting"
   ],
   "canvas_sdk.v1.data.posting_rule": [
-    "PostingRule"
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
   ],
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
@@ -2118,7 +2089,7 @@
   ],
   "canvas_sdk.v1.data.role": [
     "Role",
-    "RoleDomain"
+    "RoleType"
   ],
   "canvas_sdk.v1.data.schedule_duration": [
     "ScheduleDuration"
@@ -2177,9 +2148,6 @@
     "Vaccine",
     "VaccineLot",
     "VaccineManufacturer"
-  ],
-  "canvas_sdk.v1.data.vaccine_lot": [
-    "VaccineCatalog"
   ],
   "canvas_sdk.v1.data.visual_exam_finding": [
     "VisualExamFinding"
