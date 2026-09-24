@@ -24,7 +24,15 @@ class AbstractLineItemTransaction(TimestampedModel):
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
     billing_line_item = models.ForeignKey(
-        "v1.ClaimLineItem", related_name="%(class)ss", on_delete=models.PROTECT
+        "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
+    )
+    # The column holds a ClaimLineItem id; billing_line_item keeps its old lookup for compatibility.
+    claim_line_item = models.ForeignObject(
+        "v1.ClaimLineItem",
+        on_delete=models.PROTECT,
+        from_fields=["billing_line_item"],
+        to_fields=["dbid"],
+        related_name="%(class)ss",
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
