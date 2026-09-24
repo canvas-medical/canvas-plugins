@@ -42,6 +42,7 @@ from .claim import (
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
+from .clipboard import Clipboard
 from .coding_gap_event import (
     AssessCodingGapEvent,
     CreateCodingGapEvent,
@@ -57,6 +58,7 @@ from .custom_attribute import (
     CustomAttribute,
     CustomAttributeAwareManager,
 )
+from .custom_command import CustomCommand
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
@@ -297,6 +299,7 @@ __all__ = __exports__ = (
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -305,6 +308,7 @@ __all__ = __exports__ = (
     "Coverage",
     "CustomAttribute",
     "CustomAttributeAwareManager",
+    "CustomCommand",
     "ModelExtension",
     "CustomModel",
     "CoveragePosting",
