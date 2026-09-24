@@ -1,8 +1,5 @@
-import warnings
-
 from django.db import models
 from django.db.models import QuerySet
-from django.db.models.fields.related_descriptors import ForwardManyToOneDescriptor
 
 from canvas_sdk.v1.data.base import TimestampedModel
 
@@ -13,24 +10,6 @@ class AbstractLineItemQuerySet(models.QuerySet):
     def active(self) -> QuerySet:
         """Filter out line items that have been entered in error."""
         return self.filter(entered_in_error__isnull=True)
-
-
-class _DeprecatedBillingLineItemDescriptor(ForwardManyToOneDescriptor):
-    def __get__(
-        self, instance: models.Model | None, cls: type[models.Model] | None = None
-    ) -> models.Model | ForwardManyToOneDescriptor | None:
-        if instance is not None:
-            warnings.warn(
-                f"{type(instance).__name__}.billing_line_item is deprecated because it can "
-                "return an unrelated charge. Use claim_line_item.billing_line_item instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        return super().__get__(instance, cls)
-
-
-class _DeprecatedBillingLineItemField(models.ForeignKey):
-    forward_related_accessor_class = _DeprecatedBillingLineItemDescriptor
 
 
 class AbstractLineItemTransaction(TimestampedModel):
@@ -45,7 +24,7 @@ class AbstractLineItemTransaction(TimestampedModel):
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
     # Deprecated: can return an unrelated charge. Use claim_line_item.billing_line_item instead.
-    billing_line_item = _DeprecatedBillingLineItemField(
+    billing_line_item = models.ForeignKey(
         "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
     # The view aliases billing_line_item_id, which holds a ClaimLineItem id, as claim_line_item_id.
