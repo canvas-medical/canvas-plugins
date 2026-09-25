@@ -99,6 +99,7 @@ from .patient_administrative_document import (
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
 from .payment_card import PaymentCardFactory
+from .payment_collection import PaymentCollectionFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .practicelocation import (
@@ -117,6 +118,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .receipt import ReceiptFactory
 from .reference import ReferenceFactory
 from .referral import (
     ReferralFactory,
@@ -247,6 +249,7 @@ __all__ = (
     "PatientGroupFactory",
     "PatientGroupMemberFactory",
     "PaymentCardFactory",
+    "PaymentCollectionFactory",
     "PatientPhotoFactory",
     "PlanFactory",
     "PluginCommandFactory",
@@ -264,6 +267,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReceiptFactory",
     "ReferenceFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",

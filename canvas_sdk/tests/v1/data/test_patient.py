@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -5,6 +6,7 @@ import pytest
 from canvas_sdk.v1.data.patient import (
     DEFAULT_AVATAR_URL,
     Patient,
+    PatientContactPoint,
     PatientIdentificationCard,
     PatientMetadata,
     PatientPhoto,
@@ -100,3 +102,20 @@ def test_patient_photo_url_returns_default_avatar_when_no_photo() -> None:
     patient = MagicMock(spec=Patient)
     patient.photo = None
     assert Patient.photo_url.fget(patient) == DEFAULT_AVATAR_URL  # type: ignore[attr-defined]
+
+
+@pytest.mark.django_db
+def test_contact_point_last_verified_is_a_queryable_datetime() -> None:
+    """last_verified reads back as a datetime or None, and can be filtered on."""
+    verified_at = datetime(2026, 9, 1, 12, 30, tzinfo=UTC)
+    verified = PatientContactPoint.objects.create(
+        rank=1, has_consent=True, opted_out=False, last_verified=verified_at
+    )
+    unverified = PatientContactPoint.objects.create(rank=2, has_consent=True, opted_out=False)
+
+    verified.refresh_from_db()
+    unverified.refresh_from_db()
+
+    assert verified.last_verified == verified_at
+    assert unverified.last_verified is None
+    assert list(PatientContactPoint.objects.filter(last_verified__isnull=False)) == [verified]
