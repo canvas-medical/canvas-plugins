@@ -3,7 +3,11 @@ from typing import Any
 
 import pytest
 
-from canvas_sdk.test_utils.factories import ClaimFactory, ClaimLineItemFactory
+from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
+    ClaimFactory,
+    ClaimLineItemFactory,
+)
 from canvas_sdk.v1.data import (
     BasePosting,
     BillingLineItem,
@@ -114,13 +118,17 @@ def test_exclude_removed_line_items_without_balances() -> None:
 
 @pytest.mark.django_db
 def test_exclude_removed_line_items_without_balances_sums_each_transaction_type() -> None:
-    """Each balance annotation totals its own transaction type on the line item."""
+    """Each balance annotation totals its own type, even with several types on one line."""
     line_item = ClaimLineItemFactory.create(status=ClaimLineItemStatus.REMOVED)
-    _post(NewLineItemPayment, line_item, "10.00")
-    _post(NewLineItemPayment, line_item, "5.00")
+    _post(NewLineItemPayment, line_item, "41.00")
+    _post(NewLineItemPayment, line_item, "21.00")
+    _post(NewLineItemAdjustment, line_item, "38.00")
     other_line_item = ClaimLineItemFactory.create(claim=line_item.claim)
-    _post(NewLineItemAdjustment, other_line_item, "20.00")
-    _post(LineItemTransfer, other_line_item, "30.00")
+    _post(NewLineItemPayment, other_line_item, "10.00")
+    _post(NewLineItemAdjustment, other_line_item, "5.00")
+    _post(NewLineItemAdjustment, other_line_item, "5.00")
+    _post(LineItemTransfer, other_line_item, "3.00")
+    _post(LineItemTransfer, other_line_item, "4.00")
 
     kept = {
         item.dbid: (
@@ -134,6 +142,27 @@ def test_exclude_removed_line_items_without_balances_sums_each_transaction_type(
     }
 
     assert kept == {
-        line_item.dbid: (Decimal("15.00"), Decimal("0"), Decimal("0")),
-        other_line_item.dbid: (Decimal("0"), Decimal("20.00"), Decimal("30.00")),
+        line_item.dbid: (Decimal("62.00"), Decimal("38.00"), Decimal("0")),
+        other_line_item.dbid: (Decimal("10.00"), Decimal("10.00"), Decimal("7.00")),
     }
+
+
+@pytest.mark.django_db
+def test_exclude_removed_line_item_without_active_posting() -> None:
+    """Removed line items are kept only while an active transaction is posted to them."""
+    claim = ClaimFactory.create()
+    active = ClaimLineItemFactory.create(claim=claim)
+    paid, voided, untouched = (
+        ClaimLineItemFactory.create(claim=claim, status=ClaimLineItemStatus.REMOVED)
+        for _ in range(3)
+    )
+    _post(NewLineItemPayment, paid, "10.00")
+    voided_payment = _post(NewLineItemPayment, voided, "10.00")
+    voided_payment.entered_in_error = CanvasUserFactory.create()
+    voided_payment.save()
+
+    kept = ClaimLineItem.objects.filter(
+        claim=claim
+    ).exclude_removed_line_item_without_active_posting()
+
+    assert set(kept) == {active, paid}
