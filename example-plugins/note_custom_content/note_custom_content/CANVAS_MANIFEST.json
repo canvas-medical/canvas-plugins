@@ -1,0 +1,36 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "note_custom_content",
+    "description": "Reports what each note section holds, offers to add to it, and puts the patient and provider above the note",
+    "components": {
+        "handlers": [
+            {
+                "class": "note_custom_content.handlers.note_content:NoteContent",
+                "description": "Answers NOTE__GET_CUSTOM_CONTENT with a summary above the note and a card per section"
+            },
+            {
+                "class": "note_custom_content.handlers.api:NoteContentAPI",
+                "description": "Serves the note's blocks and adds the command a section's button offers"
+            },
+            {
+                "class": "note_custom_content.handlers.websocket:NoteContentSocket",
+                "description": "Authenticates a note's cards onto the channel carrying its counts"
+            },
+            {
+                "class": "note_custom_content.handlers.refresh:BroadcastCounts",
+                "description": "Broadcasts the note's section counts whenever its commands change"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
