@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.234.0 (2026-09-25)
+
+### Features
+
+- **data**: Expose created and modified on timestamped sdk data models
+  ([#1888](https://github.com/canvas-medical/canvas-plugins/pull/1888),
+  [`3d0dca9`](https://github.com/canvas-medical/canvas-plugins/commit/3d0dca913119615a84918b48b60b627cfb8b2738))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.233.0 (2026-09-25)
 
 ### Features
