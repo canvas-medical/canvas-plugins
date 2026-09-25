@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any
 
 import deprecation
+from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.application_notification_badge import ApplicationNotificationBadge
@@ -82,6 +83,15 @@ class ApplicationScope(StrEnum):
     NOTE = "note"
     SCHEDULING = "scheduling"
     DOCKED = "docked"
+    PROVIDER_MENU = "provider_menu"
+    PANEL = "panel"
+
+
+class MenuPosition(StrEnum):
+    """Which group of the provider menu an entry joins."""
+
+    TOP = "top"
+    BOTTOM = "bottom"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -238,12 +248,64 @@ class SchedulingApplication(EmbeddedApplication):
     SCOPE = ApplicationScope.SCHEDULING
 
 
+class ProviderMenuApplication(EmbeddedApplication):
+    """An Application that appears in the provider menu, the side navigation panel."""
+
+    SCOPE = ApplicationScope.PROVIDER_MENU
+
+    ICON_URL: str | None = None
+    MENU_POSITION: MenuPosition = MenuPosition.TOP
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the side menu draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "menu_position": MenuPosition(self.MENU_POSITION).value,
+            "badge_count": self.compute_notification_badge(),
+        }
+
+
+class PanelApplication(EmbeddedApplication):
+    """An Application that appears in the panel bar at the top of the window."""
+
+    SCOPE = ApplicationScope.PANEL
+
+    ICON_URL: str
+    SHOW_IN_DRAWER: bool = True
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require an icon, unless this subclass only exists to be subclassed itself."""
+        super().__init_subclass__(**kwargs)
+
+        if cls.__dict__.get("abstract", False):
+            return
+
+        if not getattr(cls, "ICON_URL", None):
+            raise ImproperlyConfigured(
+                f"{cls.__name__!r} must define ICON_URL: the panel bar renders the icon "
+                "and nothing else, so there is nothing to click without one."
+            )
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the panel bar draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "show_in_panel": not self.SHOW_IN_DRAWER,
+            "badge_count": self.compute_notification_badge(),
+        }
+
+
 __exports__ = (
     "Application",
     "ApplicationScope",
     "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
+    "MenuPosition",
     "NoteApplication",
+    "PanelApplication",
+    "ProviderMenuApplication",
     "SchedulingApplication",
 )
