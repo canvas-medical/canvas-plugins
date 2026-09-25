@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v0.233.0 (2026-09-25)
+
+### Features
+
+- Refuse assessed conditions in RemovePastMedicalHistoryCommand and add
+  RemovePastMedicalHistoryEvent
+  ([#1893](https://github.com/canvas-medical/canvas-plugins/pull/1893),
+  [`a3cb915`](https://github.com/canvas-medical/canvas-plugins/commit/a3cb9159d1b4dbae805ee7febb4d44683c05659e))
+
+
 ## v0.232.0 (2026-09-24)
 
 ### Features
