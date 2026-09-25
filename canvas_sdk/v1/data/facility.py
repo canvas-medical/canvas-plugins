@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class Facility(IdentifiableModel):
+class Facility(TimestampedModel, IdentifiableModel):
     """Facility model representing a healthcare facility."""
 
     class Meta:

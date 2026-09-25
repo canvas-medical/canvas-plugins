@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class BusinessLineState(models.TextChoices):
@@ -11,7 +11,7 @@ class BusinessLineState(models.TextChoices):
     STATE_ERROR = "error", "Deleted"
 
 
-class BusinessLine(IdentifiableModel):
+class BusinessLine(TimestampedModel, IdentifiableModel):
     """Business Line."""
 
     class Meta:

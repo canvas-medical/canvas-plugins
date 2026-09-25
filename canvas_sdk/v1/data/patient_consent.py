@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import presigned_url
 
@@ -63,7 +63,7 @@ class PatientConsentStatus(models.TextChoices):
     REJECTED_VIA_PORTAL = "rejected_via_patient_portal", "Rejected Via Patient Portal"
 
 
-class PatientConsent(IdentifiableModel):
+class PatientConsent(TimestampedModel, IdentifiableModel):
     """Patient Consent."""
 
     class Meta:

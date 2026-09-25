@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
 class InvoiceRecipients(models.TextChoices):
@@ -33,7 +33,7 @@ class InvoiceSentMeans(models.TextChoices):
     EMAIL = "e-mail", "E-mail"
 
 
-class Invoice(Model):
+class Invoice(TimestampedModel):
     """Represents a full invoice for a patient."""
 
     class Meta:

@@ -10,7 +10,6 @@ from django.db.models import TextChoices
 from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     MetadataModel,
-    Model,
     TimestampedModel,
 )
 from canvas_sdk.v1.data.common import (
@@ -211,7 +210,7 @@ class Patient(TimestampedModel):
         return DEFAULT_AVATAR_URL
 
 
-class PatientContactPoint(IdentifiableModel):
+class PatientContactPoint(TimestampedModel, IdentifiableModel):
     """A class representing a patient contact point."""
 
     class Meta:
@@ -232,7 +231,7 @@ class PatientContactPoint(IdentifiableModel):
     opted_out = models.BooleanField()
 
 
-class PatientAddress(IdentifiableModel):
+class PatientAddress(TimestampedModel, IdentifiableModel):
     """A class representing a patient address."""
 
     class Meta:
@@ -322,7 +321,7 @@ class PatientFacilityAddress(PatientAddress):
     )
 
 
-class ContactCategory(Model):
+class ContactCategory(TimestampedModel):
     """A contact-category coding available in this Canvas instance.
 
     Use this to look up a valid coding before attaching it to a patient contact. Writing a

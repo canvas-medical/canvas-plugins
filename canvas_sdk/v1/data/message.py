@@ -32,7 +32,7 @@ class Message(TimestampedModel, IdentifiableModel):
     read = models.DateTimeField(null=True, blank=True)
 
 
-class MessageAttachment(IdentifiableModel):
+class MessageAttachment(TimestampedModel, IdentifiableModel):
     """Message attachment."""
 
     class Meta:

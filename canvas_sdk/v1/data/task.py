@@ -90,7 +90,7 @@ class TaskComment(TimestampedModel, IdentifiableModel):
     body = models.TextField()
 
 
-class TaskLabel(IdentifiableModel):
+class TaskLabel(TimestampedModel, IdentifiableModel):
     """TaskLabel."""
 
     class Meta:

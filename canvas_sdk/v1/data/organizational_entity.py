@@ -1,10 +1,10 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.service_provider import ServiceProvider
 
 
-class OrganizationalEntity(IdentifiableModel):
+class OrganizationalEntity(TimestampedModel, IdentifiableModel):
     """An external entity (e.g. a ServiceProvider) referenced by a generic relation."""
 
     class Meta:

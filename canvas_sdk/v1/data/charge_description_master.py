@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
 class CDMCodeSystem(models.TextChoices):
@@ -10,7 +10,7 @@ class CDMCodeSystem(models.TextChoices):
     CPT = "CPT", "CPT"
 
 
-class ChargeDescriptionMaster(Model):
+class ChargeDescriptionMaster(TimestampedModel):
     """Charge Description Master."""
 
     class Meta:

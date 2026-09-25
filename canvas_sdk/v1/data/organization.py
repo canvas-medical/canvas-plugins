@@ -35,7 +35,7 @@ class Organization(TimestampedModel):
     )
 
 
-class OrganizationAddress(IdentifiableModel):
+class OrganizationAddress(TimestampedModel, IdentifiableModel):
     """Organization Address."""
 
     class Meta:
@@ -65,7 +65,7 @@ class OrganizationAddress(IdentifiableModel):
     postal_code = models.CharField(max_length=255)
 
 
-class OrganizationContactPoint(IdentifiableModel):
+class OrganizationContactPoint(TimestampedModel, IdentifiableModel):
     """OrganizationContactPoint."""
 
     class Meta:
