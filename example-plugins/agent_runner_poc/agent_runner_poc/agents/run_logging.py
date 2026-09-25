@@ -59,7 +59,7 @@ class RunLoggingMixin:
         """Close the row as errored, recording the exception type + truncated message."""
         if self._run_log is None:
             return
-        self._run_log.error_type = type(exc).__name__
+        self._run_log.error_type = exc.__class__.__name__
         # Truncate to avoid bloating the row on giant tracebacks.
         self._run_log.error_message = str(exc)[:500]
         self._close_run_log(status="error")
