@@ -3,7 +3,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.base import _OptionalId
-from canvas_sdk.v1.data import Condition
+from canvas_sdk.v1.data import Assessment, Condition
 from canvas_sdk.v1.data.condition import ClinicalStatus
 
 
@@ -54,6 +54,19 @@ class RemovePastMedicalHistoryCommand(BaseCommand):
                     "value",
                     f"Condition {self.condition_id} is not a past medical history "
                     "entry, so this command cannot remove it",
+                    self.condition_id,
+                )
+            )
+            return errors
+
+        # An assessment is a clinician's note against the condition, and withdrawing the
+        # condition would leave it describing nothing. The note's picker leaves these out too.
+        if Assessment.objects.committed().filter(condition__id=self.condition_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Condition {self.condition_id} has assessments recorded against it, "
+                    "so this command cannot remove it",
                     self.condition_id,
                 )
             )
