@@ -1,0 +1,71 @@
+from datetime import date
+from decimal import Decimal
+
+import pytest
+
+from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
+    PaymentCollectionFactory,
+    ReceiptFactory,
+)
+from canvas_sdk.v1.data import PaymentCollection
+from canvas_sdk.v1.data.receipt import Receipt
+
+
+def test_receipt_url_presigns_the_pdf(monkeypatch: pytest.MonkeyPatch) -> None:
+    """receipt_url returns a presigned URL when the receipt PDF is set."""
+    monkeypatch.setattr(
+        "canvas_sdk.v1.data.receipt.presigned_url",
+        lambda key: f"https://s3.example.com/{key}",
+    )
+
+    assert Receipt(receipt="receipts/r.pdf").receipt_url == "https://s3.example.com/receipts/r.pdf"
+
+
+def test_receipt_url_is_none_when_unset() -> None:
+    """receipt_url is None when there is no receipt PDF."""
+    assert Receipt(receipt=None).receipt_url is None
+
+
+@pytest.mark.django_db
+def test_committed_and_reachable_via_payment_collection() -> None:
+    """A committed receipt is reachable from its PaymentCollection; amounts are zero with no postings."""
+    committer = CanvasUserFactory.create()
+    payment_collection = PaymentCollection.objects.create(
+        total_collected=Decimal("50.00"),
+        method="card",
+        check_number="",
+        check_date=date(2026, 1, 1),
+        deposit_date=date(2026, 1, 1),
+        description="",
+    )
+    other_payment_collection = PaymentCollection.objects.create(
+        total_collected=Decimal("25.00"),
+        method="cash",
+        check_number="",
+        check_date=date(2026, 1, 1),
+        deposit_date=date(2026, 1, 1),
+        description="",
+    )
+    receipt = ReceiptFactory.create(payment_collection=payment_collection, committer=committer)
+    # uncommitted, filtered out by committed()
+    ReceiptFactory.create(payment_collection=other_payment_collection, committer=None)
+
+    assert set(Receipt.objects.committed()) == {receipt}
+    assert payment_collection.receipt == receipt
+    assert receipt.total_posted_amount == Decimal("0.00")
+    assert receipt.copay_amount == Decimal("0.00")
+
+
+@pytest.mark.django_db
+def test_template_is_nullable_and_discount_defaults_to_zero() -> None:
+    """Matches home-app: legacy receipts store a NULL template, and discount defaults to zero."""
+    receipt = Receipt.objects.create(
+        payment_collection=PaymentCollectionFactory.create(),
+        account_balance_before_collection=Decimal("100.00"),
+        account_balance_after_collection=Decimal("50.00"),
+    )
+    receipt.refresh_from_db()
+
+    assert receipt.template is None
+    assert receipt.discount == Decimal("0.00")
