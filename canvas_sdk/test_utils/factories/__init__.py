@@ -123,6 +123,7 @@ from .referral import (
     ReferralReviewFactory,
 )
 from .remove_allergy_event import RemoveAllergyEventFactory
+from .remove_past_medical_history_event import RemovePastMedicalHistoryEventFactory
 from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
@@ -265,6 +266,7 @@ __all__ = (
     "ReferralReportFactory",
     "ReferralReviewFactory",
     "RemoveAllergyEventFactory",
+    "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",

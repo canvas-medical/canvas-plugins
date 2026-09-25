@@ -1351,6 +1351,7 @@
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "RemovePastMedicalHistoryEvent",
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
@@ -1857,6 +1858,9 @@
   ],
   "canvas_sdk.v1.data.remove_allergy_event": [
     "RemoveAllergyEvent"
+  ],
+  "canvas_sdk.v1.data.remove_past_medical_history_event": [
+    "RemovePastMedicalHistoryEvent"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
