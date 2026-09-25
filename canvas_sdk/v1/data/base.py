@@ -9,6 +9,7 @@ from django.db import connection, models
 from django.db.models import ForeignKey, OneToOneField, Q
 from django.db.models.base import ModelBase
 from django.db.models.constraints import UniqueConstraint
+from django.utils import timezone
 
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
@@ -104,6 +105,78 @@ class Model(models.Model, metaclass=ModelMetaclass):
                 f"Write operation denied: namespace '{schema}' is read-only. "
                 f"Plugin must declare 'read_write' access to perform write operations."
             )
+
+
+def auto_now_field_names(model_class: type[models.Model]) -> list[str]:
+    """Return the names of the model's ``auto_now`` datetime fields.
+
+    Args:
+        model_class: The model to inspect.
+
+    Returns:
+        Field names Django stamps with the current time on every ``save()``.
+    """
+    return [
+        field.name
+        for field in model_class._meta.local_fields
+        if isinstance(field, models.DateTimeField) and field.auto_now
+    ]
+
+
+class CustomModelQuerySet(models.QuerySet):
+    """A QuerySet that keeps ``auto_now`` fields truthful on set-based writes.
+
+    Django stamps an ``auto_now`` field from ``Model.save()``, which a queryset
+    ``update()`` or ``bulk_update()`` never calls. Left alone, a row changed
+    that way reports the time of the write before it.
+    """
+
+    def update(self, **kwargs: Any) -> int:
+        """Update the matched rows, stamping any auto_now field left unset.
+
+        Args:
+            kwargs: Field values to write. An explicit value for an auto_now
+                field wins, so a caller restoring a known timestamp still can.
+
+        Returns:
+            The number of rows updated.
+        """
+        now = timezone.now()
+        for field_name in auto_now_field_names(self.model):
+            kwargs.setdefault(field_name, now)
+
+        return super().update(**kwargs)
+
+    def bulk_update(
+        self, objs: Any, fields: Any, batch_size: int | None = None, **kwargs: Any
+    ) -> int:
+        """Bulk-update the objects, stamping their auto_now fields.
+
+        Args:
+            objs: The model instances to write.
+            fields: The field names to write.
+            batch_size: Rows per query, passed through to Django.
+            kwargs: Further arguments passed through to Django.
+
+        Returns:
+            The number of rows updated.
+        """
+        stamped = auto_now_field_names(self.model)
+        fields = list(fields)
+
+        if stamped:
+            now = timezone.now()
+            objs = list(objs)
+            for obj in objs:
+                for field_name in stamped:
+                    setattr(obj, field_name, now)
+            fields.extend(field_name for field_name in stamped if field_name not in fields)
+
+        return super().bulk_update(objs, fields, batch_size=batch_size, **kwargs)
+
+
+class CustomModelManager(models.Manager.from_queryset(CustomModelQuerySet)):  # type: ignore[misc]
+    """The default manager for custom tables."""
 
 
 class CustomModelMetaclass(ModelMetaclass):
@@ -305,6 +378,16 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
 
     class Meta:
         abstract = True
+
+    # Every concrete custom table carries these. Django copies an abstract
+    # base's fields into each subclass unless the subclass declares that name
+    # itself, so a plugin model with its own created or modified keeps it.
+    # Both are nullable because the DDL pipeline adds a column to an existing
+    # table with no default, leaving rows written before that deploy NULL.
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    modified = models.DateTimeField(auto_now=True, null=True)
+
+    objects = CustomModelManager()
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the model instance, checking write permissions and field sizes first."""
