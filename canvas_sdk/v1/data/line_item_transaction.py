@@ -23,8 +23,13 @@ class AbstractLineItemTransaction(TimestampedModel):
     posting = models.ForeignKey(
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
+    # Deprecated: can return an unrelated charge. Use claim_line_item.billing_line_item instead.
     billing_line_item = models.ForeignKey(
         "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
+    )
+    # The view aliases billing_line_item_id, which holds a ClaimLineItem id, as claim_line_item_id.
+    claim_line_item = models.ForeignKey(
+        "v1.ClaimLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     entered_in_error = models.ForeignKey(
