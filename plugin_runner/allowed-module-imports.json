@@ -705,6 +705,9 @@
     "NoteRestrictionsEffect",
     "NoteRestrictionsUpdatedEffect"
   ],
+  "canvas_sdk.effects.note_custom_content": [
+    "NoteCustomContent"
+  ],
   "canvas_sdk.effects.note_footer_configuration": [
     "NoteFooterConfiguration"
   ],

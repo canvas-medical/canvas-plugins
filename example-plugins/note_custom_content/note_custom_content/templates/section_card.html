@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #fff;
+      }
+      .card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #0059ff;
+      }
+      .count {
+        flex: 1;
+      }
+      .label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+      button {
+        font: inherit;
+        font-size: 12px;
+        padding: 5px 10px;
+        border: 1px solid #d1d5dc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        background: #f3f4f6;
+      }
+      body.is-stale .card {
+        opacity: 0.6;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="count">
+        <div class="label">{{ label }}</div>
+        <div><span id="count">{{ count }}</span> <span id="noun">commands</span> in this section</div>
+      </div>
+      {% if add_label %}
+        <button id="add" type="button">Add {{ add_label }}</button>
+      {% endif %}
+    </div>
+    <script>
+      const button = document.getElementById('add');
+      const count = document.getElementById('count');
+      const noun = document.getElementById('noun');
+
+      function render(value) {
+        count.textContent = value;
+        noun.textContent = value === 1 ? 'command' : 'commands';
+      }
+
+      render(Number(count.textContent));
+
+      // The counts arrive on the plugin's own socket, so nothing here is ever re-rendered
+      // by Canvas: the block is drawn once and keeps itself current.
+      function listen(onCounts) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${protocol}//${window.location.host}/plugin-io/ws/note_custom_content/{{ channel }}/`;
+        const socket = new WebSocket(url);
+
+
+        socket.addEventListener('message', event => {
+          let payload;
+
+          try {
+            payload = JSON.parse(event.data);
+          } catch (error) {
+            return;
+          }
+
+          if (payload.message?.event_type === 'counts') {
+            onCounts(payload.message.counts);
+          }
+        });
+
+        // A dropped socket leaves the numbers frozen, so say so rather than lying.
+        socket.addEventListener('close', () => {
+          setState('closed');
+          document.body.classList.add('is-stale');
+        });
+      }
+
+      listen(counts => {
+        render(counts['{{ section }}']);
+
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Add {{ add_label }}';
+        }
+      });
+
+      button?.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = 'Adding...';
+
+        try {
+          const response = await fetch('/plugin-io/api/note_custom_content/originate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note_id: '{{ note_id }}', section: '{{ section }}' })
+          });
+
+          if (response.ok) {
+            button.disabled = false;
+            button.textContent = 'Add {{ add_label }}';
+          }
+          else {
+            throw new Error(await response.text());
+          }
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = 'Add {{ add_label }}';
+          console.error(error);
+        }
+      });
+
+      window.addEventListener('message', event => {
+        if (event.data?.type !== 'INIT_CHANNEL') {
+          return;
+        }
+
+        const port = event.ports[0];
+        const report = () =>
+        port.postMessage({ type: 'RESIZE', height: document.body.scrollHeight });
+
+        report();
+        new ResizeObserver(report).observe(document.body);
+      });
+    </script>
+  </body>
+</html>
