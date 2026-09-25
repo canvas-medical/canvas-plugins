@@ -35,8 +35,8 @@ class ServiceProvider(IdentifiableModel):
 
     @property
     def full_name(self) -> str:
-        """Service provider full name."""
-        return f"{self.first_name} {self.last_name}"
+        """Service provider full name, falling back to the practice name for an organization."""
+        return f"{self.first_name} {self.last_name}".strip() or (self.practice_name or "")
 
     @cached_property
     def full_name_and_specialty(self) -> str:
@@ -44,7 +44,7 @@ class ServiceProvider(IdentifiableModel):
         name_components: list[str] = []
 
         # Note 1: if firstName is (TBD) then insert at the end instead of the beginning
-        if self.first_name != "(TBD)":
+        if self.first_name and self.first_name != "(TBD)":
             name_components.append(self.first_name)
 
         if self.first_name != self.last_name:
