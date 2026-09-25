@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.234.1 (2026-09-25)
+
+### Bug Fixes
+
+- Make line item transaction active() usable and correct two field types
+  ([#1891](https://github.com/canvas-medical/canvas-plugins/pull/1891),
+  [`82c32ad`](https://github.com/canvas-medical/canvas-plugins/commit/82c32ad9d6169bea87874ef55483404ce7045ecf))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.234.0 (2026-09-25)
 
 ### Features

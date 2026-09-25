@@ -27,6 +27,9 @@ class AbstractLineItemTransaction(TimestampedModel):
         "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
+    )
 
 
 class NewLineItemPayment(AbstractLineItemTransaction):
