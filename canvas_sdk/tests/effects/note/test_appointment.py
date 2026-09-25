@@ -327,6 +327,40 @@ def test_appointment_partial_update(mock_db_queries: dict[str, MagicMock]) -> No
     assert payload["data"]["meeting_link"] == "https://updated-link.com"
 
 
+def test_appointment_update_note_type(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test updating an appointment's note type via update()."""
+    new_note_type_id = str(uuid4())
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.appointment_note_type_id = new_note_type_id
+
+    effect = appointment.update()
+
+    assert effect.type == EffectType.UPDATE_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert set(payload["data"].keys()) == {"instance_id", "appointment_note_type_id"}
+    assert payload["data"]["appointment_note_type_id"] == new_note_type_id
+
+
+def test_appointment_update_note_type_invalid_category(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that updating to a non-ENCOUNTER note type is rejected."""
+    mock_note_type = mock_db_queries["note_type"]
+    mock_note_type.values_list.return_value.filter.return_value.get.return_value = (
+        NoteTypeCategories.SCHEDULE_EVENT,
+        True,
+    )
+
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.appointment_note_type_id = str(uuid4())
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.update()
+
+    errors = exc_info.value.errors()
+    assert any("must be of type, encounter" in str(e) for e in errors)
+
+
 def test_appointment_nonexistent_references(
     mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
 ) -> None:
