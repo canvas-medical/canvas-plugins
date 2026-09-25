@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
-class Coding(Model):
+class Coding(TimestampedModel):
     """A representation of a coding from a terminology system."""
 
     class Meta:

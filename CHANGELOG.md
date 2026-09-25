@@ -1,6 +1,64 @@
 # CHANGELOG
 
 
+## v0.234.0 (2026-09-25)
+
+### Features
+
+- **data**: Expose created and modified on timestamped sdk data models
+  ([#1888](https://github.com/canvas-medical/canvas-plugins/pull/1888),
+  [`3d0dca9`](https://github.com/canvas-medical/canvas-plugins/commit/3d0dca913119615a84918b48b60b627cfb8b2738))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.233.0 (2026-09-25)
+
+### Features
+
+- Refuse assessed conditions in RemovePastMedicalHistoryCommand and add
+  RemovePastMedicalHistoryEvent
+  ([#1893](https://github.com/canvas-medical/canvas-plugins/pull/1893),
+  [`a3cb915`](https://github.com/canvas-medical/canvas-plugins/commit/a3cb9159d1b4dbae805ee7febb4d44683c05659e))
+
+
+## v0.232.0 (2026-09-24)
+
+### Features
+
+- **data**: Add clipboard command anchor to the data module
+  ([#1887](https://github.com/canvas-medical/canvas-plugins/pull/1887),
+  [`4500e8c`](https://github.com/canvas-medical/canvas-plugins/commit/4500e8c6afc587befc36e57103db3c6ffde57351))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.231.0 (2026-09-24)
+
+### Features
+
+- **data**: Add custom command and plugin_command accessor to the data module
+  ([#1870](https://github.com/canvas-medical/canvas-plugins/pull/1870),
+  [`6c62435`](https://github.com/canvas-medical/canvas-plugins/commit/6c6243527121162c3fe7049744b2755f4059305e))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.230.0 (2026-09-24)
 
 ### Features

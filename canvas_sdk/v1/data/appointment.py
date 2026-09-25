@@ -16,7 +16,7 @@ class AppointmentProgressStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
-class Appointment(IdentifiableModel):
+class Appointment(TimestampedModel, IdentifiableModel):
     """Appointment."""
 
     class Meta:

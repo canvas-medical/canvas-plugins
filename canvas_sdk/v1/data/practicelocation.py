@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -89,7 +89,7 @@ class PracticeLocation(TimestampedModel, IdentifiableModel):
         return self.full_name
 
 
-class PracticeLocationAddress(Model):
+class PracticeLocationAddress(TimestampedModel):
     """PracticeLocationAddress."""
 
     class Meta:
@@ -119,7 +119,7 @@ class PracticeLocationAddress(Model):
         return f"Address for {self.practice_location}"
 
 
-class PracticeLocationSetting(Model):
+class PracticeLocationSetting(TimestampedModel):
     """PracticeLocationSetting."""
 
     class Meta:
@@ -135,7 +135,7 @@ class PracticeLocationSetting(Model):
         return self.name
 
 
-class PracticeLocationContactPoint(IdentifiableModel):
+class PracticeLocationContactPoint(TimestampedModel, IdentifiableModel):
     """PracticeLocationContactPoint."""
 
     class Meta:

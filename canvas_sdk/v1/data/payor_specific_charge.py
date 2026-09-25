@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
-class PayorSpecificCharge(Model):
+class PayorSpecificCharge(TimestampedModel):
     """Payor Specific Charge."""
 
     class Meta:

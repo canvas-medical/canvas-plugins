@@ -1174,6 +1174,7 @@
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -1187,6 +1188,7 @@
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
+    "CustomCommand",
     "CustomModel",
     "DeferCodingGapEvent",
     "DetectedIssue",
@@ -1351,6 +1353,7 @@
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "RemovePastMedicalHistoryEvent",
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
@@ -1491,6 +1494,9 @@
     "FamilyPlanningOptions",
     "LineItemCodes"
   ],
+  "canvas_sdk.v1.data.clipboard": [
+    "Clipboard"
+  ],
   "canvas_sdk.v1.data.coding_gap_event": [
     "AssessCodingGapEvent",
     "CreateCodingGapEvent",
@@ -1546,6 +1552,9 @@
     "CustomAttributeQuerySet",
     "VALUE_FIELDS",
     "VALUE_FIELD_MAP"
+  ],
+  "canvas_sdk.v1.data.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
@@ -1857,6 +1866,9 @@
   ],
   "canvas_sdk.v1.data.remove_allergy_event": [
     "RemoveAllergyEvent"
+  ],
+  "canvas_sdk.v1.data.remove_past_medical_history_event": [
+    "RemovePastMedicalHistoryEvent"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",

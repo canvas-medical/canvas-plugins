@@ -2,7 +2,7 @@ from typing import Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, Model
+from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, TimestampedModel
 
 
 class BaseReportTemplateQuerySet(BaseQuerySet):
@@ -21,7 +21,7 @@ class BaseReportTemplateQuerySet(BaseQuerySet):
         return self.filter(custom=False)
 
 
-class BaseReportTemplate(IdentifiableModel):
+class BaseReportTemplate(TimestampedModel, IdentifiableModel):
     """Abstract base model for report templates."""
 
     class Meta:
@@ -38,7 +38,7 @@ class BaseReportTemplate(IdentifiableModel):
         return self.name
 
 
-class BaseReportTemplateField(Model):
+class BaseReportTemplateField(TimestampedModel):
     """Abstract base model for report template fields."""
 
     class Meta:
@@ -56,7 +56,7 @@ class BaseReportTemplateField(Model):
         return self.label
 
 
-class BaseReportTemplateFieldOption(Model):
+class BaseReportTemplateFieldOption(TimestampedModel):
     """Abstract base model for report template field options."""
 
     class Meta:

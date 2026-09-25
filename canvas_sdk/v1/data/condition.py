@@ -9,6 +9,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    TimestampedModel,
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -40,7 +41,7 @@ class ConditionQuerySet(
 ConditionManager = BaseModelManager.from_queryset(ConditionQuerySet)
 
 
-class Condition(IdentifiableModel):
+class Condition(TimestampedModel, IdentifiableModel):
     """Condition."""
 
     class Meta:
