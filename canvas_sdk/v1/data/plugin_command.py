@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class PluginCommand(IdentifiableModel):
+class PluginCommand(TimestampedModel, IdentifiableModel):
     """A custom command registered by a plugin via customize_custom_command."""
 
     class Meta:

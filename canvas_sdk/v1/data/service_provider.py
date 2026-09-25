@@ -3,10 +3,10 @@ from typing import Any
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class ServiceProvider(IdentifiableModel):
+class ServiceProvider(TimestampedModel, IdentifiableModel):
     """ServiceProvider."""
 
     class Meta:

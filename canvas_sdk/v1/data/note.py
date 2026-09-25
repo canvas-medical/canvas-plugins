@@ -130,7 +130,7 @@ class NoteStates(models.TextChoices):
     CONFIRM_IMPORT = "CNF", "Confirmed"
 
 
-class NoteType(TimestampedModel, IdentifiableModel, Coding):
+class NoteType(IdentifiableModel, Coding):
     """NoteType."""
 
     objects: models.Manager["NoteType"]

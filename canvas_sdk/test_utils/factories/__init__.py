@@ -21,6 +21,7 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
+from .clipboard import ClipboardFactory
 from .coding_gap_event import (
     AssessCodingGapEventFactory,
     CreateCodingGapEventFactory,
@@ -126,6 +127,7 @@ from .referral import (
     ReferralReviewFactory,
 )
 from .remove_allergy_event import RemoveAllergyEventFactory
+from .remove_past_medical_history_event import RemovePastMedicalHistoryEventFactory
 from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
 from .staff import (
@@ -175,6 +177,7 @@ __all__ = (
     "ClaimSupervisingProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "ClipboardFactory",
     "AssessCodingGapEventFactory",
     "CreateCodingGapEventFactory",
     "DeferCodingGapEventFactory",
@@ -271,6 +274,7 @@ __all__ = (
     "ReferralReportFactory",
     "ReferralReviewFactory",
     "RemoveAllergyEventFactory",
+    "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
     "ServiceProviderFactory",
     "StaffFactory",

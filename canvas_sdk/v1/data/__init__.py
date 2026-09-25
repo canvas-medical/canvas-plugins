@@ -42,6 +42,7 @@ from .claim import (
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
+from .clipboard import Clipboard
 from .coding_gap_event import (
     AssessCodingGapEvent,
     CreateCodingGapEvent,
@@ -223,6 +224,7 @@ from .reference import Reference
 from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .refill_request import RefillRequest, RefillRequestCoding
 from .remove_allergy_event import RemoveAllergyEvent
+from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .resolve_condition_event import ResolveConditionEvent
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
@@ -299,6 +301,7 @@ __all__ = __exports__ = (
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -478,6 +481,7 @@ __all__ = __exports__ = (
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "RemovePastMedicalHistoryEvent",
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",

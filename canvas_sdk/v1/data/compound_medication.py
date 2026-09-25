@@ -1,10 +1,10 @@
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class CompoundMedication(IdentifiableModel):
+class CompoundMedication(TimestampedModel, IdentifiableModel):
     """CompoundMedication."""
 
     class Meta:

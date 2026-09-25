@@ -9,6 +9,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    TimestampedModel,
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -61,7 +62,7 @@ class MedicationQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, Valu
 MedicationManager = BaseModelManager.from_queryset(MedicationQuerySet)
 
 
-class Medication(IdentifiableModel):
+class Medication(TimestampedModel, IdentifiableModel):
     """Medication."""
 
     class Meta:

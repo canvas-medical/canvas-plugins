@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models.manager import BaseManager
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel
+from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, TimestampedModel
 
 
 class CalendarQuerySet(BaseQuerySet):
@@ -20,7 +20,7 @@ class CalendarQuerySet(BaseQuerySet):
 CalendarManager = BaseManager.from_queryset(CalendarQuerySet)
 
 
-class Calendar(IdentifiableModel):
+class Calendar(TimestampedModel, IdentifiableModel):
     """Model to represent the Calendar."""
 
     class Meta:
@@ -33,7 +33,7 @@ class Calendar(IdentifiableModel):
     description = models.TextField(blank=True, null=True)
 
 
-class Event(IdentifiableModel):
+class Event(TimestampedModel, IdentifiableModel):
     """Model to represent the Calendar Event."""
 
     class Meta:

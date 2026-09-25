@@ -8,7 +8,7 @@ from pydantic_core import ValidationError
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands import RemovePastMedicalHistoryCommand
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
-from canvas_sdk.v1.data import Command, Condition, Note, Patient
+from canvas_sdk.v1.data import Assessment, Command, Condition, Note, Patient
 
 
 @pytest.fixture
@@ -209,6 +209,63 @@ def test_surgical_history_is_refused(note: Note, patient: Patient) -> None:
         RemovePastMedicalHistoryCommand(note_uuid=str(note.id), condition_id=surgery.id).originate()
 
     assert "is not a past medical history entry" in str(caught.value)
+
+
+def _assessment(
+    patient: Patient,
+    entry: Condition,
+    note: Note,
+    committer_id: int | None = 1,
+    entered_in_error_id: int | None = None,
+) -> Assessment:
+    """An assessment recorded against a past medical history entry."""
+    return Assessment.objects.create(
+        patient=patient,
+        note=note,
+        condition=entry,
+        status="stable",
+        narrative="Stable on current regimen.",
+        background="",
+        care_team="",
+        committer_id=committer_id,
+        entered_in_error_id=entered_in_error_id,
+    )
+
+
+def test_an_assessed_entry_is_refused(note: Note, patient: Patient, entry: Condition) -> None:
+    """An assessment is a clinician's note against the condition.
+
+    Withdrawing the condition would leave the assessment describing nothing, so the note's
+    picker does not offer an assessed entry and the command refuses one too.
+    """
+    _assessment(patient, entry, note)
+
+    with pytest.raises(ValidationError) as caught:
+        RemovePastMedicalHistoryCommand(note_uuid=str(note.id), condition_id=entry.id).originate()
+
+    assert f"Condition {entry.id} has assessments recorded against it" in str(caught.value)
+
+
+def test_an_entry_whose_assessment_was_entered_in_error_is_accepted(
+    note: Note, patient: Patient, entry: Condition
+) -> None:
+    """A withdrawn assessment describes nothing already, so it does not hold the entry."""
+    _assessment(patient, entry, note, entered_in_error_id=1)
+
+    assert RemovePastMedicalHistoryCommand(
+        note_uuid=str(note.id), condition_id=entry.id
+    ).originate()
+
+
+def test_an_entry_with_only_an_uncommitted_assessment_is_accepted(
+    note: Note, patient: Patient, entry: Condition
+) -> None:
+    """A staged assessment is not on the chart yet, which is how the note's picker treats it."""
+    _assessment(patient, entry, note, committer_id=None)
+
+    assert RemovePastMedicalHistoryCommand(
+        note_uuid=str(note.id), condition_id=entry.id
+    ).originate()
 
 
 # --- ownership on edit ----------------------------------------------------

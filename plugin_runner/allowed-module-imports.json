@@ -1174,6 +1174,7 @@
     "ClaimQueue",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
+    "Clipboard",
     "Command",
     "CommandMetadata",
     "CompoundMedication",
@@ -1353,6 +1354,7 @@
     "RefillRequest",
     "RefillRequestCoding",
     "RemoveAllergyEvent",
+    "RemovePastMedicalHistoryEvent",
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
@@ -1492,6 +1494,9 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.clipboard": [
+    "Clipboard"
   ],
   "canvas_sdk.v1.data.coding_gap_event": [
     "AssessCodingGapEvent",
@@ -1865,6 +1870,9 @@
   ],
   "canvas_sdk.v1.data.remove_allergy_event": [
     "RemoveAllergyEvent"
+  ],
+  "canvas_sdk.v1.data.remove_past_medical_history_event": [
+    "RemovePastMedicalHistoryEvent"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",

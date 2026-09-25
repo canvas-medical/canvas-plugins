@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -145,7 +145,7 @@ class Staff(TimestampedModel):
         return " ".join(filter(bool, [self.full_name, self.top_role_abbreviation or ""]))
 
 
-class StaffContactPoint(IdentifiableModel):
+class StaffContactPoint(TimestampedModel, IdentifiableModel):
     """StaffContactPoint."""
 
     class Meta:
@@ -164,7 +164,7 @@ class StaffContactPoint(IdentifiableModel):
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
 
 
-class StaffAddress(IdentifiableModel):
+class StaffAddress(TimestampedModel, IdentifiableModel):
     """StaffAddress."""
 
     class Meta:
@@ -202,7 +202,7 @@ class StaffPhoto(TimestampedModel):
     title = models.CharField(max_length=255, blank=True, default="")
 
 
-class StaffRole(Model):
+class StaffRole(TimestampedModel):
     """StaffRole."""
 
     class Meta:
@@ -239,7 +239,7 @@ class StaffRole(Model):
     role_type = models.CharField(max_length=50, choices=RoleType.choices, blank=True)
 
 
-class StaffLicense(IdentifiableModel):
+class StaffLicense(TimestampedModel, IdentifiableModel):
     """StaffLicense."""
 
     class Meta:
