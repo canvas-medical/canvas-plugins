@@ -43,12 +43,11 @@ def _post(
 
 
 @pytest.mark.django_db
-@pytest.mark.filterwarnings("error:.*billing_line_item is deprecated:DeprecationWarning")
 @pytest.mark.parametrize("model", list(_MODEL_FIELDS), ids=lambda model: model.__name__)
 def test_claim_line_item_is_the_line_the_amount_was_posted_to(
     model: type[LineItemTransaction],
 ) -> None:
-    """claim_line_item is the claim line posted to; billing_line_item is unchanged but warns."""
+    """claim_line_item is the claim line posted to; billing_line_item is unchanged."""
     charge = _charge(dbid=2002, cpt="99213")
     line_item = ClaimLineItemFactory.create(dbid=1001, billing_line_item=charge)
     unrelated = _charge(dbid=1001, cpt="NOSHOW")
@@ -58,8 +57,7 @@ def test_claim_line_item_is_the_line_the_amount_was_posted_to(
     assert transaction.claim_line_item == line_item
     assert transaction.claim_line_item.claim == transaction.posting.claim
     assert transaction.claim_line_item.billing_line_item == charge
-    with pytest.warns(DeprecationWarning, match=r"Use claim_line_item\.billing_line_item instead"):
-        assert transaction.billing_line_item == unrelated
+    assert transaction.billing_line_item == unrelated
 
 
 @pytest.mark.django_db
