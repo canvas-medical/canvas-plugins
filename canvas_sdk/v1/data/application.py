@@ -8,6 +8,8 @@ class Application(models.Model):
         db_table = "canvas_sdk_data_plugin_io_application_001"
 
     identifier = models.CharField(max_length=512, primary_key=True)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     name = models.TextField(null=False, max_length=32)
     description = models.TextField(null=False, max_length=256)
 

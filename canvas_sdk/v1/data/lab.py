@@ -292,7 +292,7 @@ class LabOrderReasonCondition(TimestampedModel):
     )
 
 
-class LabTest(IdentifiableModel):
+class LabTest(TimestampedModel, IdentifiableModel):
     """A class representing a lab test."""
 
     class LabTestOrderStatus(models.TextChoices):
@@ -331,7 +331,7 @@ class LabTest(IdentifiableModel):
         return f"{self.ontology_test_name}: f{self.ontology_test_code}"
 
 
-class LabPartner(IdentifiableModel):
+class LabPartner(TimestampedModel, IdentifiableModel):
     """A class representing a lab partner."""
 
     class Meta:
@@ -346,7 +346,7 @@ class LabPartner(IdentifiableModel):
     default_lab_account_number = models.CharField(max_length=256)
 
 
-class LabPartnerTest(IdentifiableModel):
+class LabPartnerTest(TimestampedModel, IdentifiableModel):
     """A class representing a lab partner's test."""
 
     class Meta:
