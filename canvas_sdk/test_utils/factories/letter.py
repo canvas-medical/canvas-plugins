@@ -1,6 +1,12 @@
 import factory
 
-from canvas_sdk.v1.data import Language, Letter, LetterActionEvent
+from canvas_sdk.v1.data import (
+    Language,
+    Letter,
+    LetterActionEvent,
+    LetterLanguageTemplate,
+    LetterTemplate,
+)
 from canvas_sdk.v1.data.letter import EventTypeChoices
 
 
@@ -39,3 +45,27 @@ class LetterActionEventFactory(factory.django.DjangoModelFactory[LetterActionEve
     fax_result_msg = factory.Faker("paragraph")
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     letter = factory.SubFactory("canvas_sdk.test_utils.factories.LetterFactory")
+
+
+class LetterTemplateFactory(factory.django.DjangoModelFactory[LetterTemplate]):
+    """Factory for creating LetterTemplate."""
+
+    class Meta:
+        model = LetterTemplate
+
+    name = factory.Faker("sentence", nb_words=3)
+    active = True
+    restrict_editing = False
+
+
+class LetterLanguageTemplateFactory(factory.django.DjangoModelFactory[LetterLanguageTemplate]):
+    """Factory for creating LetterLanguageTemplate."""
+
+    class Meta:
+        model = LetterLanguageTemplate
+
+    template = factory.SubFactory("canvas_sdk.test_utils.factories.LetterTemplateFactory")
+    language = factory.SubFactory("canvas_sdk.test_utils.factories.LanguageFactory")
+    header = ""
+    content = factory.Faker("paragraph")
+    footer = ""
