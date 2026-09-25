@@ -1157,6 +1157,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     FAX__RECIPIENT__PRE_SEARCH: _ClassVar[EventType]
     FAX__RECIPIENT__POST_SEARCH: _ClassVar[EventType]
     PHONE_DIAL__GET_CONFIGURATION: _ClassVar[EventType]
+    NOTE__GET_CUSTOM_CONTENT: _ClassVar[EventType]
     CLAIM__CONDITIONS: _ClassVar[EventType]
     PLUGIN_CREATED: _ClassVar[EventType]
     PLUGIN_UPDATED: _ClassVar[EventType]
@@ -2408,6 +2409,7 @@ PATIENT_PROFILE__EXTERNAL_CARE_TEAM__POST_SEARCH: EventType
 FAX__RECIPIENT__PRE_SEARCH: EventType
 FAX__RECIPIENT__POST_SEARCH: EventType
 PHONE_DIAL__GET_CONFIGURATION: EventType
+NOTE__GET_CUSTOM_CONTENT: EventType
 CLAIM__CONDITIONS: EventType
 PLUGIN_CREATED: EventType
 PLUGIN_UPDATED: EventType

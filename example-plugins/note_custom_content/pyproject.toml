@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Renders plugin-supplied content inside a note, demonstrating NoteCustomContent and the NOTE__GET_CUSTOM_CONTENT event."
+license = "MIT"
+name = "note_custom_content"
+readme = "note_custom_content/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

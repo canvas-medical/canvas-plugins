@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #101828;
+      }
+      .banner {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 20px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f9fafb;
+      }
+      .name {
+        flex-basis: 100%;
+        font-weight: 600;
+      }
+      .fact {
+        color: #4a5565;
+        font-size: 12px;
+      }
+      body.is-stale .banner {
+        opacity: 0.6;
+      }
+      .label {
+        color: #99a1af;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 10px;
+        margin-right: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      <span class="name">{{ patient_name }}</span>
+      <span class="fact"><span class="label">Born</span>{{ birth_date }}</span>
+      <span class="fact"><span class="label">Sex at birth</span>{{ sex_at_birth }}</span>
+      <span class="fact"><span class="label">Provider</span>{{ provider_name }}</span>
+      <span class="fact"><span class="label">Service date</span>{{ date_of_service }}</span>
+      <span class="fact"><span class="label">Commands</span><span id="total">{{ total }}</span></span>
+    </div>
+    <script>
+      // The counts arrive on the plugin's own socket, so nothing here is ever re-rendered
+      // by Canvas: the block is drawn once and keeps itself current.
+      function listen(onCounts) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${protocol}//${window.location.host}/plugin-io/ws/note_custom_content/{{ channel }}/`;
+        const socket = new WebSocket(url);
+
+        socket.addEventListener('message', event => {
+          let payload;
+
+          try {
+            payload = JSON.parse(event.data);
+          } catch (error) {
+            return;
+          }
+
+          if (payload.message?.event_type === 'counts') {
+            onCounts(payload.message.counts);
+          }
+        });
+
+        // A dropped socket leaves the numbers frozen, so say so rather than lying.
+        socket.addEventListener('close', () => {
+          setState('closed');
+          document.body.classList.add('is-stale');
+        });
+      }
+
+      listen(counts => {
+        document.getElementById('total').textContent = counts.total;
+      });
+
+      window.addEventListener('message', event => {
+        if (event.data?.type !== 'INIT_CHANNEL') {
+          return;
+        }
+
+        const port = event.ports[0];
+        const report = () =>
+        port.postMessage({ type: 'RESIZE', height: document.body.scrollHeight });
+
+        report();
+        new ResizeObserver(report).observe(document.body);
+      });
+    </script>
+  </body>
+</html>
