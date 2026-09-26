@@ -429,6 +429,9 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects._config_crud": [
+    "ConfigCrudEffect"
+  ],
   "canvas_sdk.effects.action_button": [
     "ReloadNoteActionButtonsEffect",
     "ReloadPatientActionButtonsEffect"
@@ -466,6 +469,30 @@
   ],
   "canvas_sdk.effects.batch_originate": [
     "BatchOriginateCommandEffect"
+  ],
+  "canvas_sdk.effects.billing_catalog": [
+    "Discount",
+    "FeeSchedule",
+    "FeeScheduleCodeSystem",
+    "PayorCharge",
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
+  ],
+  "canvas_sdk.effects.billing_catalog.discount": [
+    "Discount"
+  ],
+  "canvas_sdk.effects.billing_catalog.fee_schedule": [
+    "FeeSchedule",
+    "FeeScheduleCodeSystem"
+  ],
+  "canvas_sdk.effects.billing_catalog.payor_charge": [
+    "PayorCharge"
+  ],
+  "canvas_sdk.effects.billing_catalog.posting_rule": [
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
   ],
   "canvas_sdk.effects.billing_line_item": [
     "AddBillingLineItem",
@@ -551,6 +578,22 @@
   "canvas_sdk.effects.claim_queue": [
     "MoveClaimToQueue"
   ],
+  "canvas_sdk.effects.codings": [
+    "ConsentExpirationRule",
+    "PatientConsentCoding",
+    "PatientConsentRejectionCoding",
+    "ReasonForVisitSettingCoding"
+  ],
+  "canvas_sdk.effects.codings.patient_consent_coding": [
+    "ConsentExpirationRule",
+    "PatientConsentCoding"
+  ],
+  "canvas_sdk.effects.codings.patient_consent_rejection_coding": [
+    "PatientConsentRejectionCoding"
+  ],
+  "canvas_sdk.effects.codings.reason_for_visit_setting_coding": [
+    "ReasonForVisitSettingCoding"
+  ],
   "canvas_sdk.effects.command_metadata": [
     "CommandMetadataCreateFormEffect",
     "FormField",
@@ -629,6 +672,11 @@
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
+  "canvas_sdk.effects.form": [
+    "BaseCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
   "canvas_sdk.effects.generate_full_chart_pdf": [
     "GenerateFullChartPDFEffect"
   ],
@@ -638,6 +686,14 @@
   "canvas_sdk.effects.http_request": [
     "HttpMethod",
     "HttpRequestEffect"
+  ],
+  "canvas_sdk.effects.insurer": [
+    "Insurer",
+    "InsurerType"
+  ],
+  "canvas_sdk.effects.insurer.insurer": [
+    "Insurer",
+    "InsurerType"
   ],
   "canvas_sdk.effects.lab_order": [
     "HealthGorillaLabOrderIngest",
@@ -707,6 +763,14 @@
   ],
   "canvas_sdk.effects.note_footer_configuration": [
     "NoteFooterConfiguration"
+  ],
+  "canvas_sdk.effects.note_type": [
+    "NoteType",
+    "NoteTypeCategory"
+  ],
+  "canvas_sdk.effects.note_type.note_type": [
+    "NoteType",
+    "NoteTypeCategory"
   ],
   "canvas_sdk.effects.observation": [
     "CodingData",
@@ -834,6 +898,28 @@
     "PhoneDialConfiguration",
     "PhoneDialSection"
   ],
+  "canvas_sdk.effects.practice_location": [
+    "PracticeLocation",
+    "PracticeLocationAddress",
+    "PracticeLocationAddressType",
+    "PracticeLocationAddressUse",
+    "PracticeLocationSetting",
+    "PracticeLocationSettingName",
+    "TaxIdType"
+  ],
+  "canvas_sdk.effects.practice_location.practice_location": [
+    "PracticeLocation",
+    "TaxIdType"
+  ],
+  "canvas_sdk.effects.practice_location.practice_location_address": [
+    "PracticeLocationAddress",
+    "PracticeLocationAddressType",
+    "PracticeLocationAddressUse"
+  ],
+  "canvas_sdk.effects.practice_location.practice_location_setting": [
+    "PracticeLocationSetting",
+    "PracticeLocationSettingName"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
@@ -862,6 +948,9 @@
   ],
   "canvas_sdk.effects.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.effects.settings_page_form": [
+    "SettingsPageForm"
   ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
@@ -917,8 +1006,32 @@
     "TaskStatus",
     "UpdateTask"
   ],
+  "canvas_sdk.effects.team": [
+    "CareTeamRole",
+    "Team",
+    "TeamMember",
+    "TeamResponsibility"
+  ],
+  "canvas_sdk.effects.team.care_team_role": [
+    "CareTeamRole"
+  ],
+  "canvas_sdk.effects.team.team": [
+    "Team",
+    "TeamMember",
+    "TeamResponsibility"
+  ],
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
+  ],
+  "canvas_sdk.effects.vaccine_catalog": [
+    "Vaccine",
+    "VaccineLot"
+  ],
+  "canvas_sdk.effects.vaccine_catalog.vaccine": [
+    "Vaccine"
+  ],
+  "canvas_sdk.effects.vaccine_catalog.vaccine_lot": [
+    "VaccineLot"
   ],
   "canvas_sdk.effects.validation": [
     "EventValidationError",
@@ -961,7 +1074,8 @@
     "TherapeuticAlternative"
   ],
   "canvas_sdk.handlers": [
-    "BaseHandler"
+    "BaseHandler",
+    "SettingsPageHandler"
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
@@ -994,6 +1108,9 @@
   ],
   "canvas_sdk.handlers.payment_processors.card": [
     "CardPaymentProcessor"
+  ],
+  "canvas_sdk.handlers.settings_page": [
+    "SettingsPageHandler"
   ],
   "canvas_sdk.handlers.simple_api": [
     "APIKeyAuthMixin",
@@ -1265,6 +1382,7 @@
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterTemplate",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
@@ -1319,6 +1437,7 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PostingRule",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
@@ -1358,6 +1477,8 @@
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "Role",
+    "ScheduleDuration",
     "ServiceProvider",
     "Snapshot",
     "SnapshotImage",
@@ -1691,6 +1812,10 @@
     "Letter",
     "LetterActionEvent"
   ],
+  "canvas_sdk.v1.data.letter_template": [
+    "LetterTemplate",
+    "LetterTemplateType"
+  ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
     "NewLineItemAdjustment",
@@ -1796,6 +1921,11 @@
     "CoveragePosting",
     "PatientPosting"
   ],
+  "canvas_sdk.v1.data.posting_rule": [
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
+  ],
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
     "PracticeLocationAddress",
@@ -1882,6 +2012,13 @@
   ],
   "canvas_sdk.v1.data.resolve_condition_event": [
     "ResolveConditionEvent"
+  ],
+  "canvas_sdk.v1.data.role": [
+    "Role",
+    "RoleType"
+  ],
+  "canvas_sdk.v1.data.schedule_duration": [
+    "ScheduleDuration"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
