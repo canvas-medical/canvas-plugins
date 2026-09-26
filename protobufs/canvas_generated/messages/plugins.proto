@@ -22,3 +22,14 @@ message UnloadPluginRequest {
 message UnloadPluginResponse {
   bool success = 1;
 }
+
+message GetRegisteredEventTypesRequest {}
+
+message GetRegisteredEventTypesResponse {
+  // event types with at least one loaded handler, as of registry_version
+  repeated string event_types = 1;
+  // "<runner boot id>:<generation>"; matches the registry stamp file content when ready
+  string registry_version = 2;
+  // false while the runner is starting or rebuilding its routes; callers must send every event
+  bool ready = 3;
+}

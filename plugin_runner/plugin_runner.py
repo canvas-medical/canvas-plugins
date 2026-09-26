@@ -29,6 +29,8 @@ from sentry_sdk.integrations.logging import ignore_logger
 import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
+    GetRegisteredEventTypesRequest,
+    GetRegisteredEventTypesResponse,
     ReloadPluginRequest,
     ReloadPluginResponse,
     ReloadPluginsRequest,
@@ -53,6 +55,7 @@ from logger import log
 from logger.logger import plugin_context
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.ddl import generate_plugin_migrations
+from plugin_runner.event_registry import EventRegistry
 from plugin_runner.exceptions import (
     NamespaceAccessError,
     PluginInstallationError,
@@ -74,6 +77,7 @@ from settings import (
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
+    PLUGIN_RUNNER_EVENT_REGISTRY_PATH,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
@@ -132,6 +136,9 @@ ENVIRONMENT: dict = {
 
 # a global dictionary of events to handler class names
 EVENT_HANDLER_MAP: dict[str, list] = defaultdict(list)
+
+# the event types in EVENT_HANDLER_MAP, published to home-app so it can skip the rest
+EVENT_REGISTRY = EventRegistry(PLUGIN_RUNNER_EVENT_REGISTRY_PATH)
 
 
 class DataAccess(TypedDict):
@@ -451,6 +458,18 @@ class PluginRunner(PluginRunnerServicer):
             yield UnloadPluginResponse(success=False)
         else:
             yield UnloadPluginResponse(success=True)
+
+    def GetRegisteredEventTypes(
+        self, request: GetRegisteredEventTypesRequest, context: Any
+    ) -> GetRegisteredEventTypesResponse:
+        """Return the event types that have at least one registered handler."""
+        snapshot = EVENT_REGISTRY.snapshot()
+
+        return GetRegisteredEventTypesResponse(
+            event_types=sorted(snapshot.event_types),
+            registry_version=snapshot.version,
+            ready=snapshot.ready,
+        )
 
 
 STOP_SYNCHRONIZER = threading.Event()
@@ -1064,20 +1083,21 @@ def remove_plugin(name: str) -> None:
 
 
 def rebuild_event_routes() -> None:
-    """Ensure the event subscriptions are up to date."""
-    EVENT_HANDLER_MAP.clear()
+    """Ensure the event subscriptions are up to date, then republish the event registry."""
+    with EVENT_REGISTRY.rebuilding(EVENT_HANDLER_MAP):
+        EVENT_HANDLER_MAP.clear()
 
-    for name, plugin in LOADED_PLUGINS.items():
-        if hasattr(plugin["class"], "RESPONDS_TO"):
-            responds_to = plugin["class"].RESPONDS_TO
+        for name, plugin in LOADED_PLUGINS.items():
+            if hasattr(plugin["class"], "RESPONDS_TO"):
+                responds_to = plugin["class"].RESPONDS_TO
 
-            if isinstance(responds_to, str):
-                EVENT_HANDLER_MAP[responds_to].append(name)
-            elif isinstance(responds_to, list):
-                for event in responds_to:
-                    EVENT_HANDLER_MAP[event].append(name)
-            else:
-                log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
+                if isinstance(responds_to, str):
+                    EVENT_HANDLER_MAP[responds_to].append(name)
+                elif isinstance(responds_to, list):
+                    for event in responds_to:
+                        EVENT_HANDLER_MAP[event].append(name)
+                else:
+                    log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
 @measured
@@ -1193,6 +1213,10 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server and the synchronize_plugins loop."""
     port = "50051"
 
+    # A stamp left by a previous runner process describes routes this process has
+    # not loaded yet, so home-app sends every event until the first rebuild.
+    EVENT_REGISTRY.mark_not_ready()
+
     executor = ThreadPoolExecutor(max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS)
     server = grpc.server(
         thread_pool=executor,
@@ -1238,6 +1262,7 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
         shutdown_reason = f"exception: {ex}"
     finally:
         log.info(f"Server shutting down (reason: {shutdown_reason})")
+        EVENT_REGISTRY.mark_not_ready()
         executor.shutdown(wait=True, cancel_futures=True)
         if synchronizer_thread.is_alive():
             STOP_SYNCHRONIZER.set()
