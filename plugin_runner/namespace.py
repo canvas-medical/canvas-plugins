@@ -93,6 +93,11 @@ def open_database_connection() -> Connection:
 
     When running within Aptible, use the database URL, otherwise pull from
     the environment variables.
+
+    This always connects to Postgres directly, never through the
+    CANVAS_PLUGINS_BOUNCER_DATABASE_URL pooler: wait_for_namespace relies on
+    LISTEN, which needs a dedicated Postgres session that a transaction-mode
+    pooler does not provide.
     """
     if os.getenv("DATABASE_URL"):
         parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
