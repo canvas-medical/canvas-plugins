@@ -8,32 +8,27 @@ from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
 
 
-class CodingCrudEffect(TrackableFieldsModel):
-    """
-    Shared base for the three configuration "coding" effects
-    (patient consent, patient consent rejection, reason for visit setting).
+class ConfigCrudEffect(TrackableFieldsModel):
+    """Create / update / delete plumbing shared by the instance configuration effects.
 
-    Subclasses set `Meta.effect_type` to the protobuf base name and inherit the
-    CRUD methods. The field set is the FHIR coding shape:
-    display + code + system + active.
+    Subclasses set ``Meta.effect_type`` to the protobuf base name (``CREATE_<name>``,
+    ``UPDATE_<name>``, ``DELETE_<name>``) and ``_create_required`` to the fields a
+    create must carry. Update and delete identify the record by ``id``.
     """
 
     class Meta:
-        effect_type = "CODING"
+        effect_type = "CONFIG_ENTRY"
 
-    id: str | UUID | None = None
-    display: str | None = None
-    code: str | None = None
-    system: str | None = None
-    active: bool | None = None
+    id: str | UUID | int | None = None
 
-    _entity_label: str = "coding"
+    _entity_label: str = "record"
+    _create_required: tuple[str, ...] = ()
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
         if method == "create":
-            for required in ("display", "code", "system"):
-                if not getattr(self, required):
+            for required in self._create_required:
+                if getattr(self, required) in (None, ""):
                     errors.append(
                         self._create_error_detail(
                             "missing",
@@ -76,4 +71,4 @@ class CodingCrudEffect(TrackableFieldsModel):
         )
 
 
-__exports__ = ("CodingCrudEffect",)
+__exports__ = ("ConfigCrudEffect",)
