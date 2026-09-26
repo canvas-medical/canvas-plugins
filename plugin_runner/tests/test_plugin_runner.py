@@ -387,7 +387,7 @@ def test_load_plugin_handlers_executes_each_module_once(install_test_plugin: Pat
         return sandbox_from_module(base_path, module_name, evaluated_modules)
 
     with patch("plugin_runner.plugin_runner.sandbox_from_module", _counting_sandbox_from_module):
-        results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert len(results) == len(handlers)
     assert all(r.error is None for r in results)
@@ -408,7 +408,7 @@ def test_load_plugin_handlers_shares_scope_within_a_module(install_test_plugin: 
     """
     handlers = _manifest_handlers(install_test_plugin)
 
-    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     scopes = {r.handler["class"].split(":")[0]: r.scope for r in results if r.scope is not None}
     grouped = [r.scope for r in results if "grouped:" in r.handler["class"]]
