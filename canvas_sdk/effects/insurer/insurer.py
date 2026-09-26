@@ -1,87 +1,57 @@
-import json
-from typing import Any
-from uuid import UUID
+from enum import StrEnum
 
-from pydantic_core import InitErrorDetails
+from pydantic import Field
 
-from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects._config_crud import ConfigCrudEffect
 
 
-class Insurer(TrackableFieldsModel):
-    """
-    Effect to create, update, or delete an Insurer (a.k.a. Transactor) record.
+class InsurerType(StrEnum):
+    """Kind of payer."""
 
-    Insurers are the largest registry section in instance config — 15 fields.
-    """
+    COMMERCIAL = "commercial"
+    WORKERS_COMP = "workerscomp"
+    CHAMPUS = "champus"
+    MEDICAID = "medicaid"
+    MEDICARE = "medicare"
+    MEDICARE_ADVANTAGE = "medicare_advantage"
+    CHIP = "CHIP"
+    AUTOMOBILE = "automobile"
+    EMPLOYER = "employer"
+    DIRECT_CARE = "direct_care"
+    BCBS = "bcbs"
+
+
+class Insurer(ConfigCrudEffect):
+    """Create, update, or delete an insurer (payer). ``id`` is the insurer's id."""
 
     class Meta:
         effect_type = "INSURER"
 
-    id: str | UUID | None = None
+    _entity_label: str = "insurer"
+    _create_required: tuple[str, ...] = ("name",)
+
     name: str | None = None
-    short_name: str | None = None
-    transactor_type: str | None = None
     payer_id: str | None = None
-    naic_code: str | None = None
-    npi_number: str | None = None
-    tax_id: str | None = None
-    phone: str | None = None
-    fax: str | None = None
-    email: str | None = None
-    website: str | None = None
-    address_line1: str | None = None
-    address_line2: str | None = None
-    city: str | None = None
+    type: str | None = None
+    transactor_type: InsurerType | None = Field(default=None, strict=False)
+    description: str | None = None
     state: str | None = None
-    postal_code: str | None = None
     active: bool | None = None
-
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)
-        if method == "create":
-            for required in ("name", "transactor_type"):
-                if not getattr(self, required):
-                    errors.append(
-                        self._create_error_detail(
-                            "missing",
-                            f"Field '{required}' is required to create an insurer.",
-                            getattr(self, required),
-                        )
-                    )
-        if method in ("update", "delete") and not self.id:
-            errors.append(
-                self._create_error_detail(
-                    "missing",
-                    f"Field 'id' is required to {method} an insurer.",
-                    self.id,
-                )
-            )
-        return errors
-
-    def create(self) -> Effect:
-        """Build the CREATE effect."""
-        self._validate_before_effect("create")
-        return Effect(
-            type=f"CREATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": self.values}),
-        )
-
-    def update(self) -> Effect:
-        """Build the UPDATE effect."""
-        self._validate_before_effect("update")
-        return Effect(
-            type=f"UPDATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": self.values}),
-        )
-
-    def delete(self) -> Effect:
-        """Build the DELETE effect (carries only the id)."""
-        self._validate_before_effect("delete")
-        return Effect(
-            type=f"DELETE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": {"id": str(self.id)}}),
-        )
+    clearinghouse_payer: bool | None = None
+    institutional: bool | None = None
+    institutional_enrollment_req: bool | None = None
+    professional: bool | None = None
+    professional_enrollment_req: bool | None = None
+    era: bool | None = None
+    era_enrollment_req: bool | None = None
+    eligibility: bool | None = None
+    eligibility_enrollment_req: bool | None = None
+    workers_comp: bool | None = None
+    secondary_support: bool | None = None
+    claim_fee: bool | None = None
+    remit_fee: bool | None = None
+    use_provider_for_eligibility: bool | None = None
+    coverage_types: list[str] | None = None
 
 
-__exports__ = ("Insurer",)
+__exports__ = ("Insurer", "InsurerType")

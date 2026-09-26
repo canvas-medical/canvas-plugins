@@ -1,22 +1,19 @@
 """Settings page form effect.
 
 Returned by `SettingsPageHandler.compute()` when home-app emits
-`INSTANCE_CONFIG__GET_SETTINGS_PAGE`. The shape mirrors the registry-driven
-forms home-app already renders under `/set-up/` so a plugin can register a
-native-feeling settings section without rolling its own UI.
+`INSTANCE_CONFIG__GET_SETTINGS_PAGE`; home-app renders it at
+``/plugin-io/settings/<section_key>/``.
 
 The effect carries:
 
-- `section_key`: the same value as the handler's `SECTION_KEY` (a sanity
-  echo so the renderer can route in the rare case the handler is reused).
-- `title` / `description`: rendered at the top of the form.
-- `category`: the sidebar grouping (General / Clinical / Billing / Workflow /
-  Access & Permissions / Facilities / Documents). Defaults to "General".
-- `record_count`: optional, shown next to the section name on the dashboard.
+- `section_key`: the same value as the handler's `SECTION_KEY`.
+- `title` / `description`: rendered at the top of the page.
+- `category`: a grouping label. Defaults to "General".
+- `record_count`: optional count shown next to the title.
 - `form_fields`: the field list, each a :class:`FormField` describing one
   input via the widget primitives in :mod:`canvas_sdk.effects.form`.
-- `audit_footer`: optional, free-form string like "Last saved 2026-05-22
-  by Plugin Author". Renders in the same slot home-app's native forms use.
+- `audit_footer`: optional free-form footer, e.g. "Last saved 2026-05-22 by
+  Plugin Author".
 """
 
 import json
