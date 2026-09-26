@@ -14,34 +14,18 @@ def mock_connect(mocker: MockerFixture) -> MagicMock:
     return mocker.patch("plugin_runner.namespace.psycopg.connect")
 
 
-def test_bouncer_url_takes_precedence_over_database_url(
+def test_bouncer_url_is_ignored(
     monkeypatch: pytest.MonkeyPatch,
     mock_connect: MagicMock,
 ) -> None:
-    """The pgdog bouncer URL is used when both it and DATABASE_URL are set."""
+    """Schema management connects straight to Postgres even when the pgdog URL is set.
+
+    wait_for_namespace uses LISTEN, which a transaction-mode pooler cannot serve.
+    """
     monkeypatch.setenv("DATABASE_URL", "postgres://direct:pw@db.example.com:5432/home-app")
     monkeypatch.setenv(
         "CANVAS_PLUGINS_BOUNCER_DATABASE_URL", "postgres://direct:pw@127.0.0.1:6432/home-app"
     )
-
-    open_database_connection()
-
-    mock_connect.assert_called_once_with(
-        dbname="home-app",
-        user="direct",
-        password="pw",
-        host="127.0.0.1",
-        port=6432,
-    )
-
-
-def test_database_url_used_without_bouncer_url(
-    monkeypatch: pytest.MonkeyPatch,
-    mock_connect: MagicMock,
-) -> None:
-    """DATABASE_URL is used when the bouncer URL is unset."""
-    monkeypatch.delenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", "postgres://direct:pw@db.example.com:5432/home-app")
 
     open_database_connection()
 

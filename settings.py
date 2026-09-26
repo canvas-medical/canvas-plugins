@@ -97,11 +97,22 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
         "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
     }
 
-    # When going through pgdog (bouncer), let it handle connection pooling.
-    # Keep connections persistent so threads reuse their connection to pgdog.
+    # When going through pgdog (bouncer), pgdog pools server connections in
+    # transaction mode, so consecutive transactions from one Django connection
+    # can land on different Postgres sessions:
+    # - CONN_MAX_AGE=None keeps each thread's client connection to pgdog open;
+    #   pgdog only holds a server connection for the length of a transaction.
+    # - Server-side (named) cursors live on one Postgres session and outlive
+    #   the transaction under autocommit, so they are disabled.
+    # - Prepared statements are per session; prepare_threshold=None keeps
+    #   psycopg from creating them (Django's default, stated explicitly).
+    # - Session state such as search_path must be transaction-scoped; see
+    #   canvas_sdk/v1/plugin_database_context.py.
     # Otherwise, use Django's built-in psycopg connection pool.
     if USING_BOUNCER:
         db_config["CONN_MAX_AGE"] = None
+        db_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+        db_config["OPTIONS"] = {"prepare_threshold": None}
     else:
         db_config["OPTIONS"] = {
             "pool": {
