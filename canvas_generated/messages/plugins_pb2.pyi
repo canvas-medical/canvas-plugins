@@ -45,7 +45,11 @@ class GetRegisteredEventTypesRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetRegisteredEventTypesResponse(_message.Message):
-    __slots__ = ("event_types",)
+    __slots__ = ("event_types", "registry_version", "ready")
     EVENT_TYPES_FIELD_NUMBER: _ClassVar[int]
+    REGISTRY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    READY_FIELD_NUMBER: _ClassVar[int]
     event_types: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, event_types: _Optional[_Iterable[str]] = ...) -> None: ...
+    registry_version: str
+    ready: bool
+    def __init__(self, event_types: _Optional[_Iterable[str]] = ..., registry_version: _Optional[str] = ..., ready: bool = ...) -> None: ...

@@ -167,6 +167,9 @@ PLUGIN_DIRECTORY = os.getenv(
         else (BASE_DIR / "custom-plugins").as_posix()
     ),
 )
+# Container-local file the runner stamps with its event registry version; home-app
+# reads it to decide which events it can skip. Unset disables the stamp.
+PLUGIN_RUNNER_EVENT_REGISTRY_PATH = os.getenv("PLUGIN_RUNNER_EVENT_REGISTRY_PATH")
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
 CHANNEL_NAME = f"{CUSTOMER_IDENTIFIER}:{PLUGINS_PUBSUB_CHANNEL}"
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
