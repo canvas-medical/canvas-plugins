@@ -1,8 +1,8 @@
-from canvas_sdk.effects.codings._base import CodingCrudEffect
+from canvas_sdk.effects.codings._coding import CodingEffect
 
 
-class PatientConsentRejectionCoding(CodingCrudEffect):
-    """Effect to create/update/delete a Patient Consent Rejection coding entry."""
+class PatientConsentRejectionCoding(CodingEffect):
+    """Create, update, or delete a consent rejection reason. ``id`` is its ``dbid``."""
 
     class Meta:
         effect_type = "PATIENT_CONSENT_REJECTION_CODING"

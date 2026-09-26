@@ -1532,42 +1532,16 @@ enum EventType {
   CALENDAR_EVENT_DELETED = 180005;
 
   // Instance Configuration lifecycle events
-  // Organization (single record) + branding + settings
-  // NOTE: 180000-180005 are taken by the CALENDAR_* block above (from main);
-  // these Organization events were renumbered off 180000-180002 to avoid the
-  // collision during rebase.
-  ORGANIZATION_UPDATED = 180006;
-  ORGANIZATION_BRANDING_UPDATED = 180007;
-  ORGANIZATION_SETTING_UPDATED = 180008;
-
   // Practice Location + per-location settings
   PRACTICE_LOCATION_CREATED = 180100;
   PRACTICE_LOCATION_UPDATED = 180101;
   PRACTICE_LOCATION_DELETED = 180102;
   PRACTICE_LOCATION_SETTING_UPDATED = 180110;
 
-  // Staff lifecycle (STAFF_CREATED/UPDATED/ACTIVATED/DEACTIVATED already exist
-  // earlier in this enum); fill in the remaining gaps
-  STAFF_DELETED = 180200;
-  STAFF_LICENSE_CREATED = 180210;
-  STAFF_LICENSE_UPDATED = 180211;
-  STAFF_LICENSE_DELETED = 180212;
-  STAFF_ROLE_CHANGED = 180220;
-
-  // Role + PermissionGroup
-  ROLE_CREATED = 180300;
-  ROLE_UPDATED = 180301;
-  ROLE_DELETED = 180302;
-  PERMISSION_GROUP_CREATED = 180310;
-  PERMISSION_GROUP_UPDATED = 180311;
-  PERMISSION_GROUP_DELETED = 180312;
-
   // Team + CareTeamRole
   TEAM_CREATED = 180400;
   TEAM_UPDATED = 180401;
   TEAM_DELETED = 180402;
-  TEAM_MEMBER_ADDED = 180410;
-  TEAM_MEMBER_REMOVED = 180411;
   CARE_TEAM_ROLE_CREATED = 180420;
   CARE_TEAM_ROLE_UPDATED = 180421;
   CARE_TEAM_ROLE_DELETED = 180422;
@@ -1615,15 +1589,8 @@ enum EventType {
   VACCINE_LOT_UPDATED = 180911;
   VACCINE_LOT_DELETED = 180912;
 
-  // Cross-cutting: constance, audit, file upload, setup completion, first run
-  CONSTANCE_VALUE_UPDATED = 181000;
-  AUDIT_LOG_WRITTEN = 181010;
-  FILE_UPLOADED = 181020;
-  SETUP_SECTION_COMPLETED = 181030;
-  FIRST_RUN = 181031;
-
-  // Settings-page handler discovery event. Home-app emits this when the
-  // user opens a /set-up/<section_id>/ page; the SettingsPageHandler whose
+  // Settings-page handler discovery event. Home-app emits this when a user
+  // opens /plugin-io/settings/<section_key>/; the SettingsPageHandler whose
   // SECTION_KEY matches responds with a SettingsPageForm effect.
   INSTANCE_CONFIG__GET_SETTINGS_PAGE = 181100;
 }

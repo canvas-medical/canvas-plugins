@@ -10,11 +10,8 @@ from canvas_sdk.effects import _BaseEffect
 class InputType(StrEnum):
     """Type of input for a form field.
 
-    The first three values (text / select / date) are the legacy minimum.
-    The remaining values are the widget primitives the Notion gap analysis
-    flagged for the Instance Configuration UI — none of these existed in
-    the SDK before. Adding them here lets a SettingsPageHandler render the
-    same widgets home-app uses in `/set-up/` without rolling its own UI.
+    ``TEXT``, ``SELECT``, and ``DATE`` work in every form. The remaining values
+    describe widgets for plugin settings pages rendered from a SettingsPageForm.
     """
 
     TEXT = "text"

@@ -246,6 +246,9 @@
     "UpdateGoalCommand",
     "VitalsCommand"
   ],
+  "canvas_sdk.commands.api": [
+    "CommandAPI"
+  ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
     "_ReviewableCommandMixin",
@@ -426,17 +429,12 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects._config_crud": [
+    "ConfigCrudEffect"
+  ],
   "canvas_sdk.effects.action_button": [
     "ReloadNoteActionButtonsEffect",
     "ReloadPatientActionButtonsEffect"
-  ],
-  "canvas_sdk.effects.address": [
-    "Address",
-    "AddressUse"
-  ],
-  "canvas_sdk.effects.address.address": [
-    "Address",
-    "AddressUse"
   ],
   "canvas_sdk.effects.application_notification_badge": [
     "ApplicationNotificationBadge"
@@ -454,14 +452,6 @@
   ],
   "canvas_sdk.effects.appointments_metadata.base": [
     "AppointmentsMetadata"
-  ],
-  "canvas_sdk.effects.audit_log": [
-    "AuditAction",
-    "AuditLog"
-  ],
-  "canvas_sdk.effects.audit_log.audit_log": [
-    "AuditAction",
-    "AuditLog"
   ],
   "canvas_sdk.effects.banner_alert": [
     "AddBannerAlert",
@@ -483,23 +473,26 @@
   "canvas_sdk.effects.billing_catalog": [
     "Discount",
     "FeeSchedule",
+    "FeeScheduleCodeSystem",
     "PayorCharge",
-    "PostingRule"
-  ],
-  "canvas_sdk.effects.billing_catalog._base": [
-    "BillingCatalogCrudEffect"
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
   ],
   "canvas_sdk.effects.billing_catalog.discount": [
     "Discount"
   ],
   "canvas_sdk.effects.billing_catalog.fee_schedule": [
-    "FeeSchedule"
+    "FeeSchedule",
+    "FeeScheduleCodeSystem"
   ],
   "canvas_sdk.effects.billing_catalog.payor_charge": [
     "PayorCharge"
   ],
   "canvas_sdk.effects.billing_catalog.posting_rule": [
-    "PostingRule"
+    "PostingRule",
+    "PostingRuleBehavior",
+    "PostingRulePayerOrder"
   ],
   "canvas_sdk.effects.billing_line_item": [
     "AddBillingLineItem",
@@ -586,14 +579,13 @@
     "MoveClaimToQueue"
   ],
   "canvas_sdk.effects.codings": [
+    "ConsentExpirationRule",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
     "ReasonForVisitSettingCoding"
   ],
-  "canvas_sdk.effects.codings._base": [
-    "CodingCrudEffect"
-  ],
   "canvas_sdk.effects.codings.patient_consent_coding": [
+    "ConsentExpirationRule",
     "PatientConsentCoding"
   ],
   "canvas_sdk.effects.codings.patient_consent_rejection_coding": [
@@ -620,12 +612,6 @@
   ],
   "canvas_sdk.effects.configure_command_buttons": [
     "ConfigureCommandButtons"
-  ],
-  "canvas_sdk.effects.constance": [
-    "ConstanceValue"
-  ],
-  "canvas_sdk.effects.constance.constance": [
-    "ConstanceValue"
   ],
   "canvas_sdk.effects.data_integration": [
     "AnnotationItem",
@@ -686,12 +672,6 @@
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
-  "canvas_sdk.effects.file_upload": [
-    "FileUpload"
-  ],
-  "canvas_sdk.effects.file_upload.file_upload": [
-    "FileUpload"
-  ],
   "canvas_sdk.effects.form": [
     "BaseCreateFormEffect",
     "FormField",
@@ -708,10 +688,12 @@
     "HttpRequestEffect"
   ],
   "canvas_sdk.effects.insurer": [
-    "Insurer"
+    "Insurer",
+    "InsurerType"
   ],
   "canvas_sdk.effects.insurer.insurer": [
-    "Insurer"
+    "Insurer",
+    "InsurerType"
   ],
   "canvas_sdk.effects.lab_order": [
     "HealthGorillaLabOrderIngest",
@@ -799,17 +781,6 @@
     "CodingData",
     "Observation",
     "ObservationComponentData"
-  ],
-  "canvas_sdk.effects.organization": [
-    "Organization",
-    "OrganizationBranding",
-    "OrganizationSetting"
-  ],
-  "canvas_sdk.effects.organization.organization": [
-    "Organization",
-    "OrganizationBranding",
-    "OrganizationSetting",
-    "TaxIdType"
   ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"
@@ -929,13 +900,25 @@
   ],
   "canvas_sdk.effects.practice_location": [
     "PracticeLocation",
-    "PracticeLocationSetting"
+    "PracticeLocationAddress",
+    "PracticeLocationAddressType",
+    "PracticeLocationAddressUse",
+    "PracticeLocationSetting",
+    "PracticeLocationSettingName",
+    "TaxIdType"
   ],
   "canvas_sdk.effects.practice_location.practice_location": [
-    "PracticeLocation"
+    "PracticeLocation",
+    "TaxIdType"
+  ],
+  "canvas_sdk.effects.practice_location.practice_location_address": [
+    "PracticeLocationAddress",
+    "PracticeLocationAddressType",
+    "PracticeLocationAddressUse"
   ],
   "canvas_sdk.effects.practice_location.practice_location_setting": [
-    "PracticeLocationSetting"
+    "PracticeLocationSetting",
+    "PracticeLocationSettingName"
   ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
@@ -957,22 +940,6 @@
   "canvas_sdk.effects.redirect": [
     "RedirectEffect"
   ],
-  "canvas_sdk.effects.role": [
-    "PermissionGroup",
-    "Role",
-    "RoleDomain",
-    "RolePermissionGroup",
-    "StaffRole"
-  ],
-  "canvas_sdk.effects.role.permission_group": [
-    "PermissionGroup",
-    "RolePermissionGroup"
-  ],
-  "canvas_sdk.effects.role.role": [
-    "Role",
-    "RoleDomain",
-    "StaffRole"
-  ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
@@ -984,14 +951,6 @@
   ],
   "canvas_sdk.effects.settings_page_form": [
     "SettingsPageForm"
-  ],
-  "canvas_sdk.effects.setup_completion": [
-    "SetupCompletion",
-    "SetupCompletionStatus"
-  ],
-  "canvas_sdk.effects.setup_completion.setup_completion": [
-    "SetupCompletion",
-    "SetupCompletionStatus"
   ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
@@ -1010,20 +969,10 @@
     "Response"
   ],
   "canvas_sdk.effects.staff": [
-    "LicenseType",
-    "Staff",
-    "StaffExternalIdentifier",
-    "StaffLicense"
-  ],
-  "canvas_sdk.effects.staff.staff": [
-    "Staff"
+    "StaffExternalIdentifier"
   ],
   "canvas_sdk.effects.staff.staff_external_identifier": [
     "StaffExternalIdentifier"
-  ],
-  "canvas_sdk.effects.staff.staff_license": [
-    "LicenseType",
-    "StaffLicense"
   ],
   "canvas_sdk.effects.staff_metadata": [
     "StaffMetadata"

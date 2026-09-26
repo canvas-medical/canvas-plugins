@@ -415,34 +415,13 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_SERVICE_PROVIDER: _ClassVar[EffectType]
     UPDATE_SERVICE_PROVIDER: _ClassVar[EffectType]
     DEACTIVATE_SERVICE_PROVIDER: _ClassVar[EffectType]
-    UPDATE_ORGANIZATION: _ClassVar[EffectType]
-    UPDATE_ORGANIZATION_BRANDING: _ClassVar[EffectType]
-    UPSERT_ORGANIZATION_SETTING: _ClassVar[EffectType]
     CREATE_PRACTICE_LOCATION: _ClassVar[EffectType]
     UPDATE_PRACTICE_LOCATION: _ClassVar[EffectType]
     DELETE_PRACTICE_LOCATION: _ClassVar[EffectType]
     UPSERT_PRACTICE_LOCATION_SETTING: _ClassVar[EffectType]
-    CREATE_ADDRESS: _ClassVar[EffectType]
-    UPDATE_ADDRESS: _ClassVar[EffectType]
-    DELETE_ADDRESS: _ClassVar[EffectType]
-    CREATE_STAFF: _ClassVar[EffectType]
-    UPDATE_STAFF: _ClassVar[EffectType]
-    DELETE_STAFF: _ClassVar[EffectType]
-    ACTIVATE_STAFF: _ClassVar[EffectType]
-    DEACTIVATE_STAFF: _ClassVar[EffectType]
-    CREATE_STAFF_LICENSE: _ClassVar[EffectType]
-    UPDATE_STAFF_LICENSE: _ClassVar[EffectType]
-    DELETE_STAFF_LICENSE: _ClassVar[EffectType]
-    CREATE_ROLE: _ClassVar[EffectType]
-    UPDATE_ROLE: _ClassVar[EffectType]
-    DELETE_ROLE: _ClassVar[EffectType]
-    ASSIGN_STAFF_ROLE: _ClassVar[EffectType]
-    REMOVE_STAFF_ROLE: _ClassVar[EffectType]
-    CREATE_PERMISSION_GROUP: _ClassVar[EffectType]
-    UPDATE_PERMISSION_GROUP: _ClassVar[EffectType]
-    DELETE_PERMISSION_GROUP: _ClassVar[EffectType]
-    ASSIGN_ROLE_PERMISSION_GROUP: _ClassVar[EffectType]
-    REMOVE_ROLE_PERMISSION_GROUP: _ClassVar[EffectType]
+    CREATE_PRACTICE_LOCATION_ADDRESS: _ClassVar[EffectType]
+    UPDATE_PRACTICE_LOCATION_ADDRESS: _ClassVar[EffectType]
+    DELETE_PRACTICE_LOCATION_ADDRESS: _ClassVar[EffectType]
     CREATE_TEAM: _ClassVar[EffectType]
     UPDATE_TEAM: _ClassVar[EffectType]
     DELETE_TEAM: _ClassVar[EffectType]
@@ -484,10 +463,6 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_VACCINE_LOT: _ClassVar[EffectType]
     UPDATE_VACCINE_LOT: _ClassVar[EffectType]
     DELETE_VACCINE_LOT: _ClassVar[EffectType]
-    SET_CONSTANCE_VALUE: _ClassVar[EffectType]
-    WRITE_AUDIT_LOG: _ClassVar[EffectType]
-    UPLOAD_FILE: _ClassVar[EffectType]
-    UPSERT_SETUP_COMPLETION: _ClassVar[EffectType]
     SHOW_SETTINGS_PAGE_FORM: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
@@ -897,34 +872,13 @@ REMOVE_DOCUMENT_FROM_PATIENT: EffectType
 CREATE_SERVICE_PROVIDER: EffectType
 UPDATE_SERVICE_PROVIDER: EffectType
 DEACTIVATE_SERVICE_PROVIDER: EffectType
-UPDATE_ORGANIZATION: EffectType
-UPDATE_ORGANIZATION_BRANDING: EffectType
-UPSERT_ORGANIZATION_SETTING: EffectType
 CREATE_PRACTICE_LOCATION: EffectType
 UPDATE_PRACTICE_LOCATION: EffectType
 DELETE_PRACTICE_LOCATION: EffectType
 UPSERT_PRACTICE_LOCATION_SETTING: EffectType
-CREATE_ADDRESS: EffectType
-UPDATE_ADDRESS: EffectType
-DELETE_ADDRESS: EffectType
-CREATE_STAFF: EffectType
-UPDATE_STAFF: EffectType
-DELETE_STAFF: EffectType
-ACTIVATE_STAFF: EffectType
-DEACTIVATE_STAFF: EffectType
-CREATE_STAFF_LICENSE: EffectType
-UPDATE_STAFF_LICENSE: EffectType
-DELETE_STAFF_LICENSE: EffectType
-CREATE_ROLE: EffectType
-UPDATE_ROLE: EffectType
-DELETE_ROLE: EffectType
-ASSIGN_STAFF_ROLE: EffectType
-REMOVE_STAFF_ROLE: EffectType
-CREATE_PERMISSION_GROUP: EffectType
-UPDATE_PERMISSION_GROUP: EffectType
-DELETE_PERMISSION_GROUP: EffectType
-ASSIGN_ROLE_PERMISSION_GROUP: EffectType
-REMOVE_ROLE_PERMISSION_GROUP: EffectType
+CREATE_PRACTICE_LOCATION_ADDRESS: EffectType
+UPDATE_PRACTICE_LOCATION_ADDRESS: EffectType
+DELETE_PRACTICE_LOCATION_ADDRESS: EffectType
 CREATE_TEAM: EffectType
 UPDATE_TEAM: EffectType
 DELETE_TEAM: EffectType
@@ -966,10 +920,6 @@ DELETE_VACCINE: EffectType
 CREATE_VACCINE_LOT: EffectType
 UPDATE_VACCINE_LOT: EffectType
 DELETE_VACCINE_LOT: EffectType
-SET_CONSTANCE_VALUE: EffectType
-WRITE_AUDIT_LOG: EffectType
-UPLOAD_FILE: EffectType
-UPSERT_SETUP_COMPLETION: EffectType
 SHOW_SETTINGS_PAGE_FORM: EffectType
 
 class Effect(_message.Message):

@@ -1,24 +1,22 @@
-from canvas_sdk.effects.billing_catalog._base import BillingCatalogCrudEffect
+from canvas_sdk.effects._config_crud import ConfigCrudEffect
 
 
-class Discount(BillingCatalogCrudEffect):
-    """Effect to create/update/delete a Discount template.
+class Discount(ConfigCrudEffect):
+    """Create, update, or delete a discount (a percentage adjustment with its adjustment codes).
 
-    Percentages and fixed amounts are passed as strings to preserve decimal
-    precision on the wire.
+    ``id`` is the discount's ``dbid``. ``discount`` is a percentage passed as a string.
     """
 
     class Meta:
         effect_type = "DISCOUNT"
 
     _entity_label: str = "discount"
-    _create_required: tuple[str, ...] = ("name",)
+    _create_required: tuple[str, ...] = ("name", "adjustment_group", "adjustment_code")
 
     name: str | None = None
-    description: str | None = None
-    percentage: str | None = None
-    fixed_amount: str | None = None
-    active: bool | None = None
+    adjustment_group: str | None = None
+    adjustment_code: str | None = None
+    discount: str | None = None
 
 
 __exports__ = ("Discount",)
