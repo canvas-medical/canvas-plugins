@@ -1,8 +1,7 @@
-"""SettingsPageHandler — the new handler type the Notion gap analysis calls
-out as priority #4 for instance-configuration plugins.
+"""SettingsPageHandler: a plugin-provided settings page.
 
-Plugins subclass this to register a section under home-app's `/set-up/` UI
-with the same visual treatment as built-in sections. The handler responds to
+Plugins subclass this to describe a settings page that home-app renders at
+``/plugin-io/settings/<SECTION_KEY>/``. The handler responds to
 ``EventType.INSTANCE_CONFIG__GET_SETTINGS_PAGE`` and returns a
 :class:`SettingsPageForm` effect describing the form's fields and category.
 
@@ -40,7 +39,7 @@ from canvas_sdk.handlers import BaseHandler
 
 
 class SettingsPageHandler(BaseHandler):
-    """Register a native section under home-app's /set-up/ UI."""
+    """Describe a plugin settings page rendered by home-app."""
 
     SECTION_KEY: str
     SECTION_TITLE: str = ""
