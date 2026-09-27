@@ -1592,11 +1592,6 @@ enum EventType {
   VACCINE_LOT_CREATED = 180910;
   VACCINE_LOT_UPDATED = 180911;
   VACCINE_LOT_DELETED = 180912;
-
-  // Settings-page handler discovery event. Home-app emits this when a user
-  // opens /plugin-io/settings/<section_key>/; the SettingsPageHandler whose
-  // SECTION_KEY matches responds with a SettingsPageForm effect.
-  INSTANCE_CONFIG__GET_SETTINGS_PAGE = 181100;
 }
 
 message Event {

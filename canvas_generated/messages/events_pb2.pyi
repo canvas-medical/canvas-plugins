@@ -1307,7 +1307,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     VACCINE_LOT_CREATED: _ClassVar[EventType]
     VACCINE_LOT_UPDATED: _ClassVar[EventType]
     VACCINE_LOT_DELETED: _ClassVar[EventType]
-    INSTANCE_CONFIG__GET_SETTINGS_PAGE: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -2605,7 +2604,6 @@ VACCINE_DELETED: EventType
 VACCINE_LOT_CREATED: EventType
 VACCINE_LOT_UPDATED: EventType
 VACCINE_LOT_DELETED: EventType
-INSTANCE_CONFIG__GET_SETTINGS_PAGE: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type", "actor", "source")

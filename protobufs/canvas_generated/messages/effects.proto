@@ -588,10 +588,6 @@ enum EffectType {
   CREATE_VACCINE_LOT = 11910;
   UPDATE_VACCINE_LOT = 11911;
   DELETE_VACCINE_LOT = 11912;
-
-  // Render a settings-page form. Returned by SettingsPageHandler.compute()
-  // in response to INSTANCE_CONFIG__GET_SETTINGS_PAGE.
-  SHOW_SETTINGS_PAGE_FORM = 12100;
 }
 
 message Effect {

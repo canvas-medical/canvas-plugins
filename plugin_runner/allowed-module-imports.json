@@ -672,11 +672,6 @@
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
-  "canvas_sdk.effects.form": [
-    "BaseCreateFormEffect",
-    "FormField",
-    "InputType"
-  ],
   "canvas_sdk.effects.generate_full_chart_pdf": [
     "GenerateFullChartPDFEffect"
   ],
@@ -952,9 +947,6 @@
   "canvas_sdk.effects.service_provider": [
     "ServiceProvider"
   ],
-  "canvas_sdk.effects.settings_page_form": [
-    "SettingsPageForm"
-  ],
   "canvas_sdk.effects.show_application": [
     "ShowApplicationEffect"
   ],
@@ -1077,8 +1069,7 @@
     "TherapeuticAlternative"
   ],
   "canvas_sdk.handlers": [
-    "BaseHandler",
-    "SettingsPageHandler"
+    "BaseHandler"
   ],
   "canvas_sdk.handlers.action_button": [
     "ActionButton",
@@ -1111,9 +1102,6 @@
   ],
   "canvas_sdk.handlers.payment_processors.card": [
     "CardPaymentProcessor"
-  ],
-  "canvas_sdk.handlers.settings_page": [
-    "SettingsPageHandler"
   ],
   "canvas_sdk.handlers.simple_api": [
     "APIKeyAuthMixin",
