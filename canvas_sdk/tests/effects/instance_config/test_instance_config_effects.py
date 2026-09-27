@@ -181,6 +181,26 @@ def test_practice_location_setting_rejects_unknown_name() -> None:
 
 
 @pytest.mark.parametrize(
+    "name",
+    [
+        "labReviewEmailSubject",
+        "labReviewEmailTemplate",
+        "labReviewTextMessageTemplate",
+        "providerMessageEmailSubject",
+        "providerMessageEmailTemplate",
+        "providerMessageTextMessageTemplate",
+    ],
+)
+def test_practice_location_setting_rejects_patient_message_templates(name: str) -> None:
+    """The email and text templates home-app sends to patients are not settable."""
+    with pytest.raises(ValidationError):
+        PracticeLocationSetting(
+            practice_location_id="x",
+            name=name,  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize(
     ("method", "effect_type"),
     [("assign", EffectType.ASSIGN_TEAM_MEMBER), ("remove", EffectType.REMOVE_TEAM_MEMBER)],
 )

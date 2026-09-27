@@ -11,16 +11,13 @@ from canvas_sdk.effects import Effect
 
 
 class PracticeLocationSettingName(StrEnum):
-    """Per-location settings a plugin may set."""
+    """Per-location settings a plugin may set.
 
-    LAB_REVIEW_EMAIL_SUBJECT = "labReviewEmailSubject"
-    LAB_REVIEW_EMAIL_TEMPLATE = "labReviewEmailTemplate"
-    LAB_REVIEW_TEXT_MESSAGE_TEMPLATE = "labReviewTextMessageTemplate"
+    The patient-facing lab review and provider message templates are not settable from plugins.
+    """
+
     PREFERRED_LAB_PARTNER = "preferredLabPartner"
     PRINTED_PRESCRIPTION_FORMAT = "printedPrescriptionFormat"
-    PROVIDER_MESSAGE_EMAIL_SUBJECT = "providerMessageEmailSubject"
-    PROVIDER_MESSAGE_EMAIL_TEMPLATE = "providerMessageEmailTemplate"
-    PROVIDER_MESSAGE_TEXT_MESSAGE_TEMPLATE = "providerMessageTextMessageTemplate"
     SCANNER_INTEGRATION = "scannerIntegration"
     SERVICE_AREA_ZIP_CODES = "serviceAreaZipCodes"
 
