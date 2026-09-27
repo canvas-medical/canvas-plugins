@@ -1,6 +1,6 @@
 import datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic_core import ValidationError
@@ -46,7 +46,7 @@ def test_add_task_basic_success(valid_add_task_data: dict[str, Any]) -> None:
 
 def test_add_task_with_linked_note_ids(valid_add_task_data: dict[str, Any]) -> None:
     """Test that linked_note_ids are serialized as strings in the effect values."""
-    note_ids = [uuid4(), str(uuid4())]
+    note_ids: list[str | UUID] = [uuid4(), str(uuid4())]
     task = AddTask(**valid_add_task_data, linked_note_ids=note_ids)
 
     assert task.values["linked_note_ids"] == [str(note_id) for note_id in note_ids]
