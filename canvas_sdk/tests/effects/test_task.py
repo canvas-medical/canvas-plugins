@@ -41,6 +41,37 @@ def test_add_task_basic_success(valid_add_task_data: dict[str, Any]) -> None:
     assert values["title"] == valid_add_task_data["title"]
     assert values["status"] == "OPEN"
     assert values["priority"] is None
+    assert values["linked_note_ids"] == []
+
+
+def test_add_task_with_linked_note_ids(valid_add_task_data: dict[str, Any]) -> None:
+    """Test that linked_note_ids are serialized as strings in the effect values."""
+    note_ids = [uuid4(), str(uuid4())]
+    task = AddTask(**valid_add_task_data, linked_note_ids=note_ids)
+
+    assert task.values["linked_note_ids"] == [str(note_id) for note_id in note_ids]
+
+
+def test_add_task_rejects_more_than_five_linked_note_ids(
+    valid_add_task_data: dict[str, Any],
+) -> None:
+    """Test that AddTask rejects more than five linked notes."""
+    with pytest.raises(ValidationError) as exc_info:
+        AddTask(**valid_add_task_data, linked_note_ids=[str(uuid4()) for _ in range(6)])
+
+    assert any("linked_note_ids" in str(e["loc"]) for e in exc_info.value.errors())
+
+
+def test_add_task_requires_patient_id_with_linked_note_ids(
+    valid_add_task_data: dict[str, Any],
+) -> None:
+    """Test that AddTask requires patient_id when linked_note_ids is set."""
+    valid_add_task_data.pop("patient_id")
+
+    with pytest.raises(ValidationError) as exc_info:
+        AddTask(**valid_add_task_data, linked_note_ids=[str(uuid4())])
+
+    assert "'patient_id' must be set if 'linked_note_ids' is provided" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(

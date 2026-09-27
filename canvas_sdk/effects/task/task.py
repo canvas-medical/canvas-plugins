@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum, StrEnum
-from typing import Any, Self, cast
+from typing import Annotated, Any, Self, cast
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -46,11 +46,15 @@ class AddTask(_BaseEffect):
     labels: list[str] = []
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
+    linked_note_ids: Annotated[list[str | UUID], Field(max_length=5)] = []
     author_id: str | UUID | None = None
 
     @model_validator(mode="after")
     def check_needed_together_fields(self) -> Self:
-        """Check that linked_object_id and linked_object_type are set together."""
+        """Check that linked_object_id and linked_object_type are set together.
+
+        Also check that patient_id is set when linked_note_ids is provided.
+        """
         if self.linked_object_id is not None and self.linked_object_type is None:
             raise ValueError(
                 "'linked_object_id' must be set with 'linked_object_type' if it is provided"
@@ -59,6 +63,8 @@ class AddTask(_BaseEffect):
             raise ValueError(
                 "'linked_object_type' must be set with 'linked_object_id' if it is provided"
             )
+        if self.linked_note_ids and self.patient_id is None:
+            raise ValueError("'patient_id' must be set if 'linked_note_ids' is provided")
 
         return self
 
@@ -80,6 +86,7 @@ class AddTask(_BaseEffect):
                 "id": str(self.linked_object_id) if self.linked_object_id else None,
                 "type": self.linked_object_type.value if self.linked_object_type else None,
             },
+            "linked_note_ids": [str(note_id) for note_id in self.linked_note_ids],
         }
 
 
