@@ -464,7 +464,6 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_VACCINE_LOT: _ClassVar[EffectType]
     UPDATE_VACCINE_LOT: _ClassVar[EffectType]
     DELETE_VACCINE_LOT: _ClassVar[EffectType]
-    SHOW_SETTINGS_PAGE_FORM: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -922,7 +921,6 @@ DELETE_VACCINE: EffectType
 CREATE_VACCINE_LOT: EffectType
 UPDATE_VACCINE_LOT: EffectType
 DELETE_VACCINE_LOT: EffectType
-SHOW_SETTINGS_PAGE_FORM: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
