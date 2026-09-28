@@ -1025,6 +1025,51 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "secrets": """
+                import secrets
+
+                token = secrets.token_urlsafe(16) + secrets.token_hex(8)
+                raw = secrets.token_bytes(8)
+                number = secrets.randbelow(10)
+                pick = secrets.choice(["a", "b"])
+                same = secrets.compare_digest("a", "a")
+            """,
+            "re_I": """
+                import re
+
+                matched = re.search("abc", "ABC", re.I)
+            """,
+            "base64_urlsafe": """
+                import base64
+
+                decoded = base64.urlsafe_b64decode(base64.urlsafe_b64encode(b"a?b/c"))
+            """,
+            "bisect": """
+                import bisect
+
+                values = [1, 3, 5]
+                index = bisect.bisect_left(values, 3) + bisect.bisect_right(values, 3)
+                bisect.insort(values, 4)
+            """,
+            "django_length": """
+                from django.db.models.functions import Length
+            """,
+            "django_database_error": """
+                from django.db import DatabaseError
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_safe_standard_library_and_django_names(code: str) -> None:
+    """Names plugins reach for that read no files and open no connections."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
 def test_urllib() -> None:
     """Test that urllib.parse (and modules like it) work, but only with the allowed attributes."""
     sandbox = _sandbox_from_code("""
