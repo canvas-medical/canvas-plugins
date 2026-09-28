@@ -7,6 +7,7 @@ from factory.django import DjangoModelFactory
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     FaxFactory,
+    FaxStatusModelFactory,
     ImagingOrderActionEventFactory,
     IntegrationTaskActionEventFactory,
     LabOrderActionEventFactory,
@@ -15,7 +16,7 @@ from canvas_sdk.test_utils.factories import (
     ReferralActionEventFactory,
 )
 from canvas_sdk.v1.data import NoteActionEvent
-from canvas_sdk.v1.data.fax import EventTypeChoices
+from canvas_sdk.v1.data.fax import EventTypeChoices, FaxDirection, FaxStatus
 
 ACTION_EVENTS = [
     pytest.param(
@@ -107,3 +108,15 @@ def test_failed_faxes_report_sender_and_recipient_number() -> None:
     )
 
     assert list(rows) == [(failed.id, sender.dbid, "+15555550100")]
+
+
+@pytest.mark.django_db
+def test_fax_statuses_are_reachable_from_the_fax() -> None:
+    """A fax's status rows are reachable from the fax, and each one points back to it."""
+    fax = FaxFactory.create(direction=FaxDirection.INBOUND)
+    received = FaxStatusModelFactory.create(fax=fax, status=FaxStatus.RECEIVED)
+    FaxStatusModelFactory.create(status=FaxStatus.ERROR)
+
+    assert list(fax.fax_statuses.all()) == [received]
+    assert received.fax == fax
+    assert received.get_status_display() == "Received"

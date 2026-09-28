@@ -82,7 +82,7 @@ from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
-from .fax import Fax, FaxDirection
+from .fax import Fax, FaxDirection, FaxStatus, FaxStatusModel
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
 from .group import Group
@@ -362,6 +362,8 @@ __all__ = __exports__ = (
     "FamilyHistoryCoding",
     "Fax",
     "FaxDirection",
+    "FaxStatus",
+    "FaxStatusModel",
     "FieldValueTooLarge",
     "FieldType",
     "FollowUp",

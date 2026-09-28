@@ -1218,6 +1218,8 @@
     "FamilyHistoryCoding",
     "Fax",
     "FaxDirection",
+    "FaxStatus",
+    "FaxStatusModel",
     "FieldType",
     "FieldValueTooLarge",
     "FollowUp",
@@ -1619,7 +1621,9 @@
   ],
   "canvas_sdk.v1.data.fax": [
     "Fax",
-    "FaxDirection"
+    "FaxDirection",
+    "FaxStatus",
+    "FaxStatusModel"
   ],
   "canvas_sdk.v1.data.follow_up": [
     "FollowUp"

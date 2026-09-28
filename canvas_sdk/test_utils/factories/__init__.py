@@ -38,7 +38,7 @@ from .eligibility_response import EligibilityRequestFactory, EligibilityResponse
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
-from .fax import FaxFactory
+from .fax import FaxFactory, FaxStatusModelFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
 from .group import GroupFactory
@@ -210,6 +210,7 @@ __all__ = (
     "ExternalVisitFactory",
     "FacilityFactory",
     "FaxFactory",
+    "FaxStatusModelFactory",
     "HistoryOfPresentIllnessFactory",
     "FamilyHistoryFactory",
     "FamilyHistoryCodingFactory",

@@ -25,6 +25,25 @@ class Fax(TimestampedModel, IdentifiableModel):
     success = models.BooleanField(default=False)
 
 
+class FaxStatus(models.TextChoices):
+    """The status recorded for a fax."""
+
+    PROCESSING = "P", "Processing"
+    SENT = "S", "Sent"
+    RECEIVED = "R", "Received"
+    ERROR = "E", "Error"
+
+
+class FaxStatusModel(TimestampedModel, IdentifiableModel):
+    """A status recorded for a fax."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_faxstatusmodel_001"
+
+    fax = models.ForeignKey("v1.Fax", on_delete=models.CASCADE, related_name="fax_statuses")
+    status = models.CharField(max_length=1, choices=FaxStatus.choices, db_index=True)
+
+
 class EventTypeChoices(models.TextChoices):
     """Choices for types of events that can occur on a document."""
 
@@ -52,4 +71,6 @@ class BaseActionEvent(TimestampedModel, IdentifiableModel):
 __exports__ = (
     "Fax",
     "FaxDirection",
+    "FaxStatus",
+    "FaxStatusModel",
 )
