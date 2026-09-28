@@ -11,6 +11,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from dataclasses import dataclass
 from http import HTTPStatus
 from time import sleep
@@ -232,9 +233,17 @@ class PluginRunner(PluginRunnerServicer):
     def HandleEvent(self, request: EventRequest, context: Any) -> Iterable[EventResponse]:
         """This is invoked when an event comes in."""
         event = Event(request)
-        with metrics.measure(
-            metrics.get_qualified_name(self.HandleEvent), extra_tags={"event": event.name}
-        ):
+        # Only time events a loaded handler responds to: an event-tagged series for
+        # every no-op event type would dominate plugins.timings cardinality.
+        timing = (
+            metrics.measure(
+                metrics.get_qualified_name(self.HandleEvent), extra_tags={"event": event.name}
+            )
+            if EVENT_HANDLER_MAP.get(event.name)
+            else nullcontext()
+        )
+
+        with timing:
             event_type = event.type
             event_name = event.name
             relevant_plugins = EVENT_HANDLER_MAP[event_name]

@@ -31,6 +31,7 @@ from canvas_sdk.effects.payment_processor import (
 )
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
+from canvas_sdk.utils import metrics
 from plugin_runner.event_registry import NOT_READY, EventRegistry
 from plugin_runner.plugin_runner import (
     ENVIRONMENT,
@@ -140,6 +141,43 @@ def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> No
     assert len(result) == 1
     assert result[0].success is True
     assert len(result[0].effects) == 0
+
+
+def _handle_event_measure_calls(measure: Mock) -> list:
+    """Return the calls to metrics.measure that time HandleEvent itself."""
+    return [
+        c
+        for c in measure.call_args_list
+        if (c.args[0] if c.args else c.kwargs["name"]).endswith("PluginRunner.HandleEvent")
+    ]
+
+
+def test_handle_event_is_not_timed_when_no_handler_responds(plugin_runner: PluginRunner) -> None:
+    """An event no loaded handler responds to records no HandleEvent timing."""
+    EVENT_HANDLER_MAP.clear()
+
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        result = list(plugin_runner.HandleEvent(EventRequest(type=EventType.PATIENT_CREATED), None))
+
+    assert result[0].success is True
+    assert _handle_event_measure_calls(measure) == []
+    EVENT_HANDLER_MAP.clear()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_handle_event_is_timed_when_a_handler_responds(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """An event a loaded handler responds to records a HandleEvent timing tagged with the event."""
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    calls = _handle_event_measure_calls(measure)
+    assert len(calls) == 1
+    assert calls[0].kwargs["extra_tags"] == {"event": "UNKNOWN"}
 
 
 @pytest.mark.parametrize(
