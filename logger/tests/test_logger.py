@@ -161,7 +161,7 @@ def test_logstash_formatters_skip_exception_fields_with_no_active_exception(
     records outside an ``except`` block.
     """
     record = _make_record()
-    record.exc_info = (None, None, None)  # type: ignore[assignment]
+    record.exc_info = (None, None, None)
     PluginNameFilter().filter(record)
 
     output = json.loads(formatter_class().format(record))
