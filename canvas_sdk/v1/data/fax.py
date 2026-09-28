@@ -16,7 +16,7 @@ class Fax(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_data_integration_fax_001"
 
-    fax_id = models.CharField(max_length=255, null=True)
+    fax_id = models.CharField(max_length=255, null=True, db_index=True)
     to_fax_number = models.CharField(max_length=16, default="", blank=True)
     from_fax_number = models.CharField(max_length=16, default="", blank=True)
     date_utc = models.DateTimeField(null=True)
