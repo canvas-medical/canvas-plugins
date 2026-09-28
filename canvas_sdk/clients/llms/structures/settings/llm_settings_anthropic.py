@@ -15,6 +15,10 @@ class LlmSettingsAnthropic(LlmSettings):
         temperature: Controls randomness in responses (0.0-1.0). None omits it from the request,
             which models from Claude Opus 4.7 onward require (they reject sampling parameters).
         max_tokens: Maximum number of tokens to generate, including thinking tokens.
+        structured_outputs: Request schema output with Anthropic structured outputs instead of a
+            forced tool call. Models that reject forced tool use (Claude Opus 5.5, Claude Sonnet 5.5,
+            Claude Fable 5.1) require it. The schema must fit structured outputs' limits: at most
+            24 optional fields and 16 union-typed fields.
     example:
         ```python3
         LlmSettingsAnthropic(
@@ -22,12 +26,14 @@ class LlmSettingsAnthropic(LlmSettings):
             model="claude-opus-5-5",
             temperature=None,
             max_tokens=16000,
+            structured_outputs=True,
         )
         ```
     """
 
     temperature: float | None
     max_tokens: float
+    structured_outputs: bool = False
 
     def to_dict(self) -> dict:
         """Convert settings to Anthropic API request format.

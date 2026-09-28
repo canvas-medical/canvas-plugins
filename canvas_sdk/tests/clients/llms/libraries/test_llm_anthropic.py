@@ -1,4 +1,5 @@
 import base64
+import json
 from datetime import date
 from http import HTTPStatus
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 from canvas_sdk.clients.llms.structures.llm_turn import LlmTurn
 from canvas_sdk.clients.llms.structures.settings.llm_settings import LlmSettings
+from canvas_sdk.clients.llms.structures.settings.llm_settings_anthropic import LlmSettingsAnthropic
 
 
 @pytest.mark.parametrize(
@@ -345,10 +347,13 @@ def test_to_dict__schema() -> None:
             },
         ],
         "model": "test_model",
-        "output_config": {
-            "format": {
-                "type": "json_schema",
-                "schema": {
+        "tool_choice": {
+            "name": "SchemaLlm",
+            "type": "tool",
+        },
+        "tools": [
+            {
+                "input_schema": {
                     "additionalProperties": False,
                     "properties": {
                         "firstField": {
@@ -372,79 +377,11 @@ def test_to_dict__schema() -> None:
                     "title": "SchemaLlm",
                     "type": "object",
                 },
+                "name": "SchemaLlm",
             },
-        },
+        ],
     }
     assert result == expected
-
-
-def test_to_dict__schema_unsupported_keywords() -> None:
-    """Test that JSON Schema keywords structured outputs rejects are moved into descriptions."""
-
-    class ItemLlm(BaseModelLlmJson):
-        label: str = Field(description="the label", min_length=1, max_length=40)
-
-    class SchemaLlm(BaseModelLlmJson):
-        confidence: float = Field(description="the confidence", ge=0.0, le=1.0)
-        items: list[ItemLlm] = Field(description="the items", min_length=1, max_length=5)
-        tags: list[str] = Field(description="the tags", min_length=2)
-        secret: str = Field(json_schema_extra={"format": "password"})
-
-    settings = LlmSettings(api_key="test_key", model="test_model")
-    tested = LlmAnthropic(settings)
-    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
-
-    tested.set_schema(SchemaLlm)
-    result = tested.to_dict()["output_config"]["format"]["schema"]
-    expected = {
-        "$defs": {
-            "ItemLlm": {
-                "additionalProperties": False,
-                "properties": {
-                    "label": {
-                        "description": "the label (maxLength: 40, minLength: 1)",
-                        "title": "Label",
-                        "type": "string",
-                    },
-                },
-                "required": ["label"],
-                "title": "ItemLlm",
-                "type": "object",
-            },
-        },
-        "additionalProperties": False,
-        "properties": {
-            "confidence": {
-                "description": "the confidence (maximum: 1.0, minimum: 0.0)",
-                "title": "Confidence",
-                "type": "number",
-            },
-            "items": {
-                "description": "the items (maxItems: 5)",
-                "items": {"$ref": "#/$defs/ItemLlm"},
-                "minItems": 1,
-                "title": "Items",
-                "type": "array",
-            },
-            "tags": {
-                "description": "the tags (minItems: 2)",
-                "items": {"type": "string"},
-                "title": "Tags",
-                "type": "array",
-            },
-            "secret": {
-                "description": "(format: password)",
-                "title": "Secret",
-                "type": "string",
-            },
-        },
-        "required": ["confidence", "items", "tags", "secret"],
-        "title": "SchemaLlm",
-        "type": "object",
-    }
-    assert result == expected
-    # the schema itself is left untouched
-    assert SchemaLlm.model_json_schema()["properties"]["confidence"]["minimum"] == 0.0
 
 
 def test__api_base_url() -> None:
@@ -463,7 +400,7 @@ def test__api_base_url() -> None:
             SimpleNamespace(
                 status_code=200,
                 text="{"
-                '"content": [{"type": "text", "text": "response text"}], '
+                '"content": [{"text": "response text"}], '
                 '"usage": {"input_tokens": 10, "output_tokens": 20}'
                 "}",
             ),
@@ -479,36 +416,16 @@ def test__api_base_url() -> None:
             SimpleNamespace(
                 status_code=200,
                 text="{"
-                '"content": [{"type": "text", "text": "{\\"firstField\\":7,\\"secondField\\":\\"second\\",\\"thirdField\\":\\"2025-12-01\\"}"}], '
+                '"content": [{"input": {"firstField":7,"secondField":"second","thirdField":"2025-12-01"}}], '
                 '"usage": {"input_tokens": 10, "output_tokens": 20}'
                 "}",
             ),
             LlmResponse(
                 code=HTTPStatus.OK,
-                response='{"firstField":7,"secondField":"second","thirdField":"2025-12-01"}',
+                response='{"firstField": 7, "secondField": "second", "thirdField": "2025-12-01"}',
                 tokens=LlmTokens(prompt=10, generated=20),
             ),
             id="all_good_with_schema",
-        ),
-        pytest.param(
-            True,
-            SimpleNamespace(
-                status_code=200,
-                text="{"
-                '"content": ['
-                '{"type": "thinking", "thinking": "", "signature": "sig"}, '
-                '{"type": "text", "text": "{\\"firstField\\":7,"}, '
-                '{"type": "text", "text": "\\"secondField\\":\\"second\\",\\"thirdField\\":\\"2025-12-01\\"}"}'
-                "], "
-                '"usage": {"input_tokens": 10, "output_tokens": 20}'
-                "}",
-            ),
-            LlmResponse(
-                code=HTTPStatus.OK,
-                response='{"firstField":7,"secondField":"second","thirdField":"2025-12-01"}',
-                tokens=LlmTokens(prompt=10, generated=20),
-            ),
-            id="thinking_block_first",
         ),
         pytest.param(
             False,
@@ -600,17 +517,263 @@ def test_request(
             },
             data="{"
             '"model": "test_model", '
-            '"output_config": {"format": {'
-            '"type": "json_schema", '
-            '"schema": {'
+            '"tool_choice": {"type": "tool", "name": "SchemaLlm"}, '
+            '"tools": [{'
+            '"name": "SchemaLlm", '
+            '"input_schema": {'
             '"additionalProperties": false, '
             '"properties": {'
             '"firstField": {"description": "the first field", "title": "Firstfield", "type": "integer"}, '
             '"secondField": {"description": "the second field", "title": "Secondfield", "type": "string"}, '
             '"thirdField": {"description": "the third field", "format": "date", "title": "Thirdfield", "type": "string"}}, '
             '"required": ["firstField", "secondField", "thirdField"], '
-            '"title": "SchemaLlm", "type": "object"}}}, '
+            '"title": "SchemaLlm", "type": "object"}}], '
             '"messages": [{"role": "user", "content": [{"type": "text", "text": "test"}]}]}',
         )
 
     assert mock_http.mock_calls == exp_calls
+
+
+def _structured_settings() -> LlmSettingsAnthropic:
+    return LlmSettingsAnthropic(
+        api_key="test_key",
+        model="test_model",
+        temperature=None,
+        max_tokens=16000,
+        structured_outputs=True,
+    )
+
+
+class _EffortSettings(LlmSettingsAnthropic):
+    def to_dict(self) -> dict:
+        return super().to_dict() | {"output_config": {"effort": "high"}}
+
+
+def test_to_dict__schema_structured_outputs_keeps_settings_output_config() -> None:
+    """Test that the schema format merges into an output_config the settings already set."""
+
+    class SchemaLlm(BaseModelLlmJson):
+        first_field: int = Field(description="the first field")
+
+    settings = _EffortSettings(
+        api_key="test_key",
+        model="test_model",
+        temperature=None,
+        max_tokens=16000,
+        structured_outputs=True,
+    )
+    tested = LlmAnthropic(settings)
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(SchemaLlm)
+    result = tested.to_dict()["output_config"]
+    assert result["effort"] == "high"
+    assert result["format"]["type"] == "json_schema"
+    assert result["format"]["schema"]["title"] == "SchemaLlm"
+
+
+def test_to_dict__schema_structured_outputs() -> None:
+    """Test that structured_outputs requests the schema through output_config instead of a tool."""
+
+    class SchemaLlm(BaseModelLlmJson):
+        first_field: int = Field(description="the first field")
+        second_field: date = Field(description="the second field")
+
+    tested = LlmAnthropic(_structured_settings())
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(SchemaLlm)
+    result = tested.to_dict()
+    expected = {
+        "messages": [{"content": [{"text": "user message", "type": "text"}], "role": "user"}],
+        "model": "test_model",
+        "max_tokens": 16000,
+        "output_config": {
+            "format": {
+                "type": "json_schema",
+                "schema": {
+                    "additionalProperties": False,
+                    "properties": {
+                        "firstField": {
+                            "description": "the first field",
+                            "title": "Firstfield",
+                            "type": "integer",
+                        },
+                        "secondField": {
+                            "description": "the second field",
+                            "format": "date",
+                            "title": "Secondfield",
+                            "type": "string",
+                        },
+                    },
+                    "required": ["firstField", "secondField"],
+                    "title": "SchemaLlm",
+                    "type": "object",
+                },
+            },
+        },
+    }
+    assert result == expected
+
+
+class _ConstrainedItemLlm(BaseModelLlmJson):
+    label: str = Field(description="the label", min_length=1, max_length=40)
+
+
+class _ConstrainedSchemaLlm(BaseModelLlmJson):
+    confidence: float = Field(description="the confidence", ge=0.0, le=1.0)
+    items: list[_ConstrainedItemLlm] = Field(description="the items", min_length=1, max_length=5)
+    tags: list[str] = Field(description="the tags", min_length=2)
+    secret: str = Field(json_schema_extra={"format": "password"})
+
+
+def test_to_dict__schema_structured_outputs_unsupported_keywords() -> None:
+    """Test that JSON Schema keywords structured outputs rejects are moved into descriptions."""
+    tested = LlmAnthropic(_structured_settings())
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(_ConstrainedSchemaLlm)
+    result = tested.to_dict()["output_config"]["format"]["schema"]
+    expected = {
+        "$defs": {
+            "_ConstrainedItemLlm": {
+                "additionalProperties": False,
+                "properties": {
+                    "label": {
+                        "description": "the label (maxLength: 40, minLength: 1)",
+                        "title": "Label",
+                        "type": "string",
+                    },
+                },
+                "required": ["label"],
+                "title": "_ConstrainedItemLlm",
+                "type": "object",
+            },
+        },
+        "additionalProperties": False,
+        "properties": {
+            "confidence": {
+                "description": "the confidence (maximum: 1.0, minimum: 0.0)",
+                "title": "Confidence",
+                "type": "number",
+            },
+            "items": {
+                "description": "the items (maxItems: 5)",
+                "items": {"$ref": "#/$defs/_ConstrainedItemLlm"},
+                "minItems": 1,
+                "title": "Items",
+                "type": "array",
+            },
+            "tags": {
+                "description": "the tags (minItems: 2)",
+                "items": {"type": "string"},
+                "title": "Tags",
+                "type": "array",
+            },
+            "secret": {
+                "description": "(format: password)",
+                "title": "Secret",
+                "type": "string",
+            },
+        },
+        "required": ["confidence", "items", "tags", "secret"],
+        "title": "_ConstrainedSchemaLlm",
+        "type": "object",
+    }
+    assert result == expected
+    # the model's own schema is left untouched
+    assert _ConstrainedSchemaLlm.model_json_schema()["properties"]["confidence"]["minimum"] == 0.0
+
+
+def test_to_dict__schema_tool_keeps_keywords() -> None:
+    """Test that the default forced-tool path sends the schema unchanged, constraints included."""
+    settings = LlmSettingsAnthropic(
+        api_key="test_key", model="test_model", temperature=0.0, max_tokens=8192
+    )
+    tested = LlmAnthropic(settings)
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(_ConstrainedSchemaLlm)
+    result = tested.to_dict()
+    assert result["tool_choice"] == {"type": "tool", "name": "_ConstrainedSchemaLlm"}
+    assert result["tools"][0]["input_schema"] == _ConstrainedSchemaLlm.model_json_schema()
+    assert result["temperature"] == 0.0
+    assert "output_config" not in result
+
+
+@pytest.mark.parametrize(
+    ("structured_outputs", "with_schema", "content", "expected"),
+    [
+        pytest.param(
+            True,
+            True,
+            [
+                {"type": "thinking", "thinking": "", "signature": "sig"},
+                {"type": "text", "text": '{"firstField":7,'},
+                {"type": "text", "text": '"secondField":"second"}'},
+            ],
+            '{"firstField":7,"secondField":"second"}',
+            id="structured_outputs--thinking_then_split_text",
+        ),
+        pytest.param(
+            False,
+            False,
+            [
+                {"type": "thinking", "thinking": "", "signature": "sig"},
+                {"type": "text", "text": "the answer"},
+            ],
+            "the answer",
+            id="no_schema--thinking_then_text",
+        ),
+        pytest.param(
+            False,
+            False,
+            [{"type": "text", "text": "first"}, {"type": "text", "text": "second"}],
+            "first",
+            id="no_schema--first_text_block",
+        ),
+        pytest.param(
+            False,
+            False,
+            [{"type": "thinking", "thinking": "", "signature": "sig"}],
+            "",
+            id="no_schema--no_text_block",
+        ),
+    ],
+)
+def test_request__content_blocks(
+    mocker: MockerFixture,
+    structured_outputs: bool,
+    with_schema: bool,
+    content: list[dict],
+    expected: str,
+) -> None:
+    """Test that the response is read from content blocks by type, skipping thinking blocks."""
+
+    class SchemaLlm(BaseModelLlmJson):
+        first_field: int = Field(description="the first field")
+        second_field: str = Field(description="the second field")
+
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.post.side_effect = [
+        SimpleNamespace(
+            status_code=200,
+            text=json.dumps(
+                {"content": content, "usage": {"input_tokens": 10, "output_tokens": 20}}
+            ),
+        )
+    ]
+
+    settings = _structured_settings()
+    settings.structured_outputs = structured_outputs
+    tested = LlmAnthropic(settings)
+    tested.add_prompt(LlmTurn(role="user", text=["test"]))
+    if with_schema:
+        tested.set_schema(SchemaLlm)
+
+    result = tested.request()
+    assert result == LlmResponse(
+        code=HTTPStatus.OK,
+        response=expected,
+        tokens=LlmTokens(prompt=10, generated=20),
+    )
