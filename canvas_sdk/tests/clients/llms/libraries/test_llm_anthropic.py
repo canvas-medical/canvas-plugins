@@ -345,13 +345,10 @@ def test_to_dict__schema() -> None:
             },
         ],
         "model": "test_model",
-        "tool_choice": {
-            "name": "SchemaLlm",
-            "type": "tool",
-        },
-        "tools": [
-            {
-                "input_schema": {
+        "output_config": {
+            "format": {
+                "type": "json_schema",
+                "schema": {
                     "additionalProperties": False,
                     "properties": {
                         "firstField": {
@@ -375,11 +372,79 @@ def test_to_dict__schema() -> None:
                     "title": "SchemaLlm",
                     "type": "object",
                 },
-                "name": "SchemaLlm",
             },
-        ],
+        },
     }
     assert result == expected
+
+
+def test_to_dict__schema_unsupported_keywords() -> None:
+    """Test that JSON Schema keywords structured outputs rejects are moved into descriptions."""
+
+    class ItemLlm(BaseModelLlmJson):
+        label: str = Field(description="the label", min_length=1, max_length=40)
+
+    class SchemaLlm(BaseModelLlmJson):
+        confidence: float = Field(description="the confidence", ge=0.0, le=1.0)
+        items: list[ItemLlm] = Field(description="the items", min_length=1, max_length=5)
+        tags: list[str] = Field(description="the tags", min_length=2)
+        secret: str = Field(json_schema_extra={"format": "password"})
+
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmAnthropic(settings)
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(SchemaLlm)
+    result = tested.to_dict()["output_config"]["format"]["schema"]
+    expected = {
+        "$defs": {
+            "ItemLlm": {
+                "additionalProperties": False,
+                "properties": {
+                    "label": {
+                        "description": "the label (maxLength: 40, minLength: 1)",
+                        "title": "Label",
+                        "type": "string",
+                    },
+                },
+                "required": ["label"],
+                "title": "ItemLlm",
+                "type": "object",
+            },
+        },
+        "additionalProperties": False,
+        "properties": {
+            "confidence": {
+                "description": "the confidence (maximum: 1.0, minimum: 0.0)",
+                "title": "Confidence",
+                "type": "number",
+            },
+            "items": {
+                "description": "the items (maxItems: 5)",
+                "items": {"$ref": "#/$defs/ItemLlm"},
+                "minItems": 1,
+                "title": "Items",
+                "type": "array",
+            },
+            "tags": {
+                "description": "the tags (minItems: 2)",
+                "items": {"type": "string"},
+                "title": "Tags",
+                "type": "array",
+            },
+            "secret": {
+                "description": "(format: password)",
+                "title": "Secret",
+                "type": "string",
+            },
+        },
+        "required": ["confidence", "items", "tags", "secret"],
+        "title": "SchemaLlm",
+        "type": "object",
+    }
+    assert result == expected
+    # the schema itself is left untouched
+    assert SchemaLlm.model_json_schema()["properties"]["confidence"]["minimum"] == 0.0
 
 
 def test__api_base_url() -> None:
@@ -398,7 +463,7 @@ def test__api_base_url() -> None:
             SimpleNamespace(
                 status_code=200,
                 text="{"
-                '"content": [{"text": "response text"}], '
+                '"content": [{"type": "text", "text": "response text"}], '
                 '"usage": {"input_tokens": 10, "output_tokens": 20}'
                 "}",
             ),
@@ -414,16 +479,36 @@ def test__api_base_url() -> None:
             SimpleNamespace(
                 status_code=200,
                 text="{"
-                '"content": [{"input": {"firstField":7,"secondField":"second","thirdField":"2025-12-01"}}], '
+                '"content": [{"type": "text", "text": "{\\"firstField\\":7,\\"secondField\\":\\"second\\",\\"thirdField\\":\\"2025-12-01\\"}"}], '
                 '"usage": {"input_tokens": 10, "output_tokens": 20}'
                 "}",
             ),
             LlmResponse(
                 code=HTTPStatus.OK,
-                response='{"firstField": 7, "secondField": "second", "thirdField": "2025-12-01"}',
+                response='{"firstField":7,"secondField":"second","thirdField":"2025-12-01"}',
                 tokens=LlmTokens(prompt=10, generated=20),
             ),
             id="all_good_with_schema",
+        ),
+        pytest.param(
+            True,
+            SimpleNamespace(
+                status_code=200,
+                text="{"
+                '"content": ['
+                '{"type": "thinking", "thinking": "", "signature": "sig"}, '
+                '{"type": "text", "text": "{\\"firstField\\":7,"}, '
+                '{"type": "text", "text": "\\"secondField\\":\\"second\\",\\"thirdField\\":\\"2025-12-01\\"}"}'
+                "], "
+                '"usage": {"input_tokens": 10, "output_tokens": 20}'
+                "}",
+            ),
+            LlmResponse(
+                code=HTTPStatus.OK,
+                response='{"firstField":7,"secondField":"second","thirdField":"2025-12-01"}',
+                tokens=LlmTokens(prompt=10, generated=20),
+            ),
+            id="thinking_block_first",
         ),
         pytest.param(
             False,
@@ -515,17 +600,16 @@ def test_request(
             },
             data="{"
             '"model": "test_model", '
-            '"tool_choice": {"type": "tool", "name": "SchemaLlm"}, '
-            '"tools": [{'
-            '"name": "SchemaLlm", '
-            '"input_schema": {'
+            '"output_config": {"format": {'
+            '"type": "json_schema", '
+            '"schema": {'
             '"additionalProperties": false, '
             '"properties": {'
             '"firstField": {"description": "the first field", "title": "Firstfield", "type": "integer"}, '
             '"secondField": {"description": "the second field", "title": "Secondfield", "type": "string"}, '
             '"thirdField": {"description": "the third field", "format": "date", "title": "Thirdfield", "type": "string"}}, '
             '"required": ["firstField", "secondField", "thirdField"], '
-            '"title": "SchemaLlm", "type": "object"}}], '
+            '"title": "SchemaLlm", "type": "object"}}}, '
             '"messages": [{"role": "user", "content": [{"type": "text", "text": "test"}]}]}',
         )
 

@@ -12,32 +12,33 @@ class LlmSettingsAnthropic(LlmSettings):
     Attributes:
         api_key: API authentication key for the LLM service (inherited).
         model: Name or identifier of the LLM model to use (inherited).
-        temperature: Controls randomness in responses (0.0-1.0).
-        max_tokens: Maximum number of tokens to generate.
+        temperature: Controls randomness in responses (0.0-1.0). None omits it from the request,
+            which models from Claude Opus 4.7 onward require (they reject sampling parameters).
+        max_tokens: Maximum number of tokens to generate, including thinking tokens.
     example:
         ```python3
         LlmSettingsAnthropic(
             api_key=environ.get("anthropic_key"),
-            model="claude-sonnet-4-5-20250929",
-            temperature=0.78,
-            max_tokens=8192,
+            model="claude-opus-5-5",
+            temperature=None,
+            max_tokens=16000,
         )
         ```
     """
 
-    temperature: float
+    temperature: float | None
     max_tokens: float
 
     def to_dict(self) -> dict:
         """Convert settings to Anthropic API request format.
 
         Returns:
-            Dictionary containing model name, temperature, and max_tokens.
+            Dictionary containing model name, max_tokens, and temperature when set.
         """
-        return super().to_dict() | {
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-        }
+        result = super().to_dict() | {"max_tokens": self.max_tokens}
+        if self.temperature is not None:
+            result["temperature"] = self.temperature
+        return result
 
 
 __exports__ = ("LlmSettingsAnthropic",)
