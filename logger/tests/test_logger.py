@@ -120,6 +120,22 @@ def test_logstash_formatter_emits_labels_plugin_and_handler() -> None:
     assert "customer" in output["labels"]
 
 
+def test_logstash_formatter_handles_exception_logged_with_no_active_exception() -> None:
+    """``log.exception()`` outside an ``except`` block records ``(None, None, None)``;
+    the formatter still emits the message instead of raising on ``None.__module__``.
+    """
+    formatter = LogstashFormatterECS()
+    record = _make_record()
+    record.exc_info = (None, None, None)
+    PluginNameFilter().filter(record)
+
+    output = json.loads(formatter.format(record))
+
+    assert output["message"] == "hello"
+    assert "exception_type" not in output
+    assert "stack_trace" not in output
+
+
 def test_logstash_formatter_omits_plugin_labels_when_no_plugin_context() -> None:
     """Without an active plugin the ECS output keeps only the static labels
     (no spurious ``plugin``/``handler`` keys).

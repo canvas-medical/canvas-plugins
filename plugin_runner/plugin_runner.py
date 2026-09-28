@@ -887,7 +887,7 @@ def import_plugin(path: pathlib.Path) -> bool:
         # existing. If installed via another method we still need to avoid crashing
         # the entire runner if there's no manifest.
         if not manifest_file.exists():
-            log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
+            log.error(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
             return False
 
         manifest_json_str = manifest_file.read_text()

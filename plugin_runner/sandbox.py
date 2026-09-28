@@ -1216,7 +1216,13 @@ class Sandbox:
                     raise AttributeError(
                         f'"{name}" is an invalid attribute name because it starts with "__"'
                     )
-        elif is_module and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module]):
+        # A plugin's own modules hold only what passed these guards when they were
+        # evaluated, so they need no ALLOWED_MODULES entry, as with _safe_import
+        elif (
+            is_module
+            and not self._same_module(module)
+            and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module])
+        ):
             raise AttributeError(
                 f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
             )
