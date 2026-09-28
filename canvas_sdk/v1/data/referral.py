@@ -16,6 +16,7 @@ from canvas_sdk.v1.data.base import (
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.task import Task
 
 
@@ -153,4 +154,21 @@ class ReferralReportCoding(Coding):
     value = models.CharField(max_length=1000)
 
 
-__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding", "ReferralReportQuerySet")
+class ReferralActionEvent(BaseActionEvent):
+    """Event representing an action taken on a referral, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralactionevent_001"
+
+    referral = models.ForeignKey(
+        "v1.Referral", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
+__exports__ = (
+    "Referral",
+    "ReferralReport",
+    "ReferralReportCoding",
+    "ReferralReportQuerySet",
+    "ReferralActionEvent",
+)

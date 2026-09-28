@@ -1216,6 +1216,8 @@
     "Facility",
     "FamilyHistory",
     "FamilyHistoryCoding",
+    "Fax",
+    "FaxDirection",
     "FieldType",
     "FieldValueTooLarge",
     "FollowUp",
@@ -1223,6 +1225,7 @@
     "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
+    "ImagingOrderActionEvent",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportTemplate",
@@ -1238,6 +1241,7 @@
     "Instruction",
     "InstructionCoding",
     "IntegrationTask",
+    "IntegrationTaskActionEvent",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
     "IntegrationTaskStatus",
@@ -1246,6 +1250,7 @@
     "InterviewQuestionnaireMap",
     "Invoice",
     "LabOrder",
+    "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabPartner",
@@ -1283,6 +1288,7 @@
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteActionEvent",
     "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
@@ -1348,6 +1354,7 @@
     "Receipt",
     "Reference",
     "Referral",
+    "ReferralActionEvent",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
@@ -1610,6 +1617,10 @@
     "FamilyHistory",
     "FamilyHistoryCoding"
   ],
+  "canvas_sdk.v1.data.fax": [
+    "Fax",
+    "FaxDirection"
+  ],
   "canvas_sdk.v1.data.follow_up": [
     "FollowUp"
   ],
@@ -1628,6 +1639,7 @@
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
+    "ImagingOrderActionEvent",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportQuerySet",
@@ -1651,6 +1663,7 @@
   ],
   "canvas_sdk.v1.data.integration_task": [
     "IntegrationTask",
+    "IntegrationTaskActionEvent",
     "IntegrationTaskChannel",
     "IntegrationTaskQuerySet",
     "IntegrationTaskReview",
@@ -1667,6 +1680,7 @@
   "canvas_sdk.v1.data.lab": [
     "FieldType",
     "LabOrder",
+    "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabPartner",
@@ -1719,6 +1733,7 @@
   "canvas_sdk.v1.data.note": [
     "CurrentNoteStateEvent",
     "Note",
+    "NoteActionEvent",
     "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteStates",
@@ -1860,6 +1875,7 @@
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
+    "ReferralActionEvent",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReportQuerySet"

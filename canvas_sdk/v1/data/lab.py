@@ -16,6 +16,7 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
     BaseReportTemplateField,
@@ -470,6 +471,17 @@ class LabReportTemplateFieldOption(BaseReportTemplateFieldOption):
     )
 
 
+class LabOrderActionEvent(BaseActionEvent):
+    """Event representing an action taken on a lab order, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_laborderactionevent_001"
+
+    lab_order = models.ForeignKey(
+        "v1.LabOrder", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
 __exports__ = (
     "TransmissionType",
     "LabReport",
@@ -491,4 +503,5 @@ __exports__ = (
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
+    "LabOrderActionEvent",
 )

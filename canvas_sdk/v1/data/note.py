@@ -17,6 +17,7 @@ from canvas_sdk.v1.data.base import (
 )
 from canvas_sdk.v1.data.claim import Claim
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.utils import empty_note_body
 
 
@@ -422,6 +423,15 @@ class NoteMetadata(MetadataModel):
     )
 
 
+class NoteActionEvent(BaseActionEvent):
+    """Event representing an action taken on a note, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_noteactionevent_001"
+
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="action_events")
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
@@ -432,4 +442,5 @@ __exports__ = (
     "NoteStates",
     "NoteStateChangeEvent",
     "CurrentNoteStateEvent",
+    "NoteActionEvent",
 )
