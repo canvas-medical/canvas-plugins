@@ -21,3 +21,7 @@ except ImportError:
 
 
 __all__ = ["query_tags"]
+
+# The plugin runner tags queries on a plugin's behalf; plugins themselves get
+# nothing from this module, so they cannot set their own tags.
+__exports__ = ()
