@@ -3,13 +3,13 @@ from uuid import UUID
 
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     ForPatientQuerySetMixin,
     IdentifiableModel,
     TimestampedModel,
 )
-from canvas_sdk.v1.data.fax import BaseActionEvent
 
 
 class IntegrationTaskStatus(models.TextChoices):

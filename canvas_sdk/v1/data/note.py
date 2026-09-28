@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models.manager import BaseManager
 from django.utils import timezone
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     IdentifiableModel,
@@ -17,7 +18,6 @@ from canvas_sdk.v1.data.base import (
 )
 from canvas_sdk.v1.data.claim import Claim
 from canvas_sdk.v1.data.coding import Coding
-from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.utils import empty_note_body
 
 

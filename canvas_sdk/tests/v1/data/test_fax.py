@@ -16,7 +16,8 @@ from canvas_sdk.test_utils.factories import (
     ReferralActionEventFactory,
 )
 from canvas_sdk.v1.data import NoteActionEvent
-from canvas_sdk.v1.data.fax import EventTypeChoices, FaxDirection, FaxStatus
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
+from canvas_sdk.v1.data.fax import FaxDirection, FaxStatus
 
 ACTION_EVENTS = [
     pytest.param(

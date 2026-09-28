@@ -3,6 +3,7 @@ from typing import Self, cast
 from django.db import models
 from django.db.models import Prefetch, Q
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
@@ -16,7 +17,6 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
-from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
     BaseReportTemplateField,

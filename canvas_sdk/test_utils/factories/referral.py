@@ -13,7 +13,7 @@ from canvas_sdk.v1.data import (
     ReferralReportCoding,
     ReferralReview,
 )
-from canvas_sdk.v1.data.fax import EventTypeChoices
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 
 
 class ReferralFactory(factory.django.DjangoModelFactory[Referral]):

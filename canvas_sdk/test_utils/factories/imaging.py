@@ -15,13 +15,13 @@ from canvas_sdk.v1.data import (
     ImagingReportTemplateFieldOption,
     ImagingReview,
 )
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
-from canvas_sdk.v1.data.fax import EventTypeChoices
 from canvas_sdk.v1.data.imaging import ImagingReport as ImagingReportModel
 
 

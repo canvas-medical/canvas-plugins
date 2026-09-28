@@ -3,6 +3,7 @@ from typing import cast
 
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
@@ -16,7 +17,6 @@ from canvas_sdk.v1.data.base import (
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
-from canvas_sdk.v1.data.fax import BaseActionEvent
 from canvas_sdk.v1.data.task import Task
 
 

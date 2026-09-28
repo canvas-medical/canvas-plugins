@@ -3,7 +3,7 @@ import uuid
 import factory
 
 from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskActionEvent, IntegrationTaskReview
-from canvas_sdk.v1.data.fax import EventTypeChoices
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.integration_task import IntegrationTaskChannel, IntegrationTaskStatus
 
 

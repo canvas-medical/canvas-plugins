@@ -1,7 +1,7 @@
 import factory
 
 from canvas_sdk.v1.data import Language, Letter, LetterActionEvent
-from canvas_sdk.v1.data.fax import EventTypeChoices
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 
 
 class LanguageFactory(factory.django.DjangoModelFactory[Language]):

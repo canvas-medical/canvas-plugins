@@ -1,7 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
-from canvas_sdk.v1.data.fax import BaseActionEvent
 
 
 class Language(TimestampedModel):

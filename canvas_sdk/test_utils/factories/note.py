@@ -9,7 +9,7 @@ from canvas_sdk.v1.data import (
     NoteStateChangeEvent,
     NoteType,
 )
-from canvas_sdk.v1.data.fax import EventTypeChoices
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.note import NoteStates
 
 
