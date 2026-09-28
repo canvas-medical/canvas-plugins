@@ -1,4 +1,5 @@
 import datetime
+import json
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -6,6 +7,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_sdk.effects.task import AddTask, TaskStatus, UpdateTask
+from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data.task import TaskPriority
 
 
@@ -62,16 +64,83 @@ def test_add_task_rejects_more_than_five_linked_note_ids(
     assert any("linked_note_ids" in str(e["loc"]) for e in exc_info.value.errors())
 
 
-def test_add_task_requires_patient_id_with_linked_note_ids(
-    valid_add_task_data: dict[str, Any],
+@pytest.mark.parametrize("patient_id", [None, ""])
+def test_add_task_apply_requires_patient_id_with_linked_note_ids(
+    valid_add_task_data: dict[str, Any], patient_id: str | None
 ) -> None:
-    """Test that AddTask requires patient_id when linked_note_ids is set."""
-    valid_add_task_data.pop("patient_id")
+    """Test that apply() requires a patient_id when linked_note_ids is set."""
+    valid_add_task_data["patient_id"] = patient_id
+    task = AddTask(**valid_add_task_data, linked_note_ids=[str(uuid4())])
 
     with pytest.raises(ValidationError) as exc_info:
-        AddTask(**valid_add_task_data, linked_note_ids=[str(uuid4())])
+        task.apply()
 
-    assert "'patient_id' must be set if 'linked_note_ids' is provided" in str(exc_info.value)
+    assert "'patient_id' is required when 'linked_note_ids' is provided" in str(exc_info.value)
+
+
+def test_add_task_accepts_linked_note_ids_before_patient_id(
+    valid_add_task_data: dict[str, Any],
+) -> None:
+    """Test that linked_note_ids can be assigned before patient_id."""
+    patient_id = valid_add_task_data.pop("patient_id")
+    task = AddTask(**valid_add_task_data)
+
+    task.linked_note_ids = [str(uuid4())]
+    task.patient_id = patient_id
+
+    assert task.patient_id == patient_id
+
+
+def test_add_task_apply_rejects_malformed_linked_note_id(
+    valid_add_task_data: dict[str, Any],
+) -> None:
+    """Test that apply() rejects a linked note id that is not a UUID."""
+    task = AddTask(**valid_add_task_data, linked_note_ids=["not-a-uuid"])
+
+    with pytest.raises(ValidationError) as exc_info:
+        task.apply()
+
+    assert "Linked note id not-a-uuid is not a valid UUID" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_add_task_apply_accepts_notes_of_the_task_patient() -> None:
+    """Test that apply() accepts notes that belong to the task's patient."""
+    patient = PatientFactory.create()
+    notes = [NoteFactory.create(patient=patient), NoteFactory.create(patient=patient)]
+    note_ids: list[str | UUID] = [str(note.id) for note in notes]
+
+    effect = AddTask(title="Review notes", patient_id=patient.id, linked_note_ids=note_ids).apply()
+
+    assert json.loads(effect.payload)["data"]["linked_note_ids"] == note_ids
+
+
+@pytest.mark.django_db
+def test_add_task_apply_rejects_note_of_another_patient() -> None:
+    """Test that apply() rejects an existing note that belongs to a different patient."""
+    patient = PatientFactory.create()
+    other_patient_note = NoteFactory.create()
+    task = AddTask(
+        title="Review note", patient_id=patient.id, linked_note_ids=[str(other_patient_note.id)]
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        task.apply()
+
+    assert f"Note {other_patient_note.id} is not associated with the task's patient" in str(
+        exc_info.value
+    )
+
+
+@pytest.mark.django_db
+def test_add_task_apply_accepts_note_id_with_no_note_yet() -> None:
+    """Test that apply() accepts an id with no note, such as a note created in the same batch."""
+    patient = PatientFactory.create()
+    note_id = str(uuid4())
+
+    effect = AddTask(title="Review note", patient_id=patient.id, linked_note_ids=[note_id]).apply()
+
+    assert json.loads(effect.payload)["data"]["linked_note_ids"] == [note_id]
 
 
 @pytest.mark.parametrize(

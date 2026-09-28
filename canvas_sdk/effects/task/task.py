@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum, StrEnum
-from typing import Annotated, Any, Self, cast
+from typing import Annotated, Any, Literal, Self, cast
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.effects.metadata import BaseMetadata
-from canvas_sdk.v1.data import Task
+from canvas_sdk.v1.data import Note, Task
 from canvas_sdk.v1.data.task import TaskPriority
 
 
@@ -51,10 +51,7 @@ class AddTask(_BaseEffect):
 
     @model_validator(mode="after")
     def check_needed_together_fields(self) -> Self:
-        """Check that linked_object_id and linked_object_type are set together.
-
-        Also check that patient_id is set when linked_note_ids is provided.
-        """
+        """Check that linked_object_id and linked_object_type are set together."""
         if self.linked_object_id is not None and self.linked_object_type is None:
             raise ValueError(
                 "'linked_object_id' must be set with 'linked_object_type' if it is provided"
@@ -63,10 +60,61 @@ class AddTask(_BaseEffect):
             raise ValueError(
                 "'linked_object_type' must be set with 'linked_object_id' if it is provided"
             )
-        if self.linked_note_ids and self.patient_id is None:
-            raise ValueError("'patient_id' must be set if 'linked_note_ids' is provided")
 
         return self
+
+    def _get_error_details(self, method: Literal["apply"]) -> list[InitErrorDetails]:
+        """Validate linked_note_ids when the effect is applied.
+
+        Requires patient_id and well-formed note ids, and rejects existing notes that belong to
+        another patient. Ids with no note yet pass, since a note created earlier in the same batch
+        of effects does not exist until the effects are handled.
+        """
+        errors = super()._get_error_details(method)
+
+        if not self.linked_note_ids:
+            return errors
+
+        if not self.patient_id:
+            errors.append(
+                self._create_error_detail(
+                    "missing",
+                    "'patient_id' is required when 'linked_note_ids' is provided",
+                    self.patient_id,
+                )
+            )
+            return errors
+
+        note_ids = []
+        invalid_ids = False
+        for note_id in self.linked_note_ids:
+            try:
+                note_ids.append(UUID(str(note_id)))
+            except ValueError:
+                invalid_ids = True
+                errors.append(
+                    self._create_error_detail(
+                        "value", f"Linked note id {note_id} is not a valid UUID", note_id
+                    )
+                )
+        if invalid_ids:
+            return errors
+
+        other_patient_note_ids = (
+            Note.objects.filter(id__in=note_ids)
+            .exclude(patient__id=self.patient_id)
+            .values_list("id", flat=True)
+        )
+        for note_id in other_patient_note_ids:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Note {note_id} is not associated with the task's patient",
+                    str(note_id),
+                )
+            )
+
+        return errors
 
     @property
     def values(self) -> dict[str, Any]:
