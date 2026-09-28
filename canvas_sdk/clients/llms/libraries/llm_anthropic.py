@@ -11,12 +11,86 @@ from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 
+# JSON Schema keywords that structured outputs rejects with a 400.
+_UNSUPPORTED_SCHEMA_KEYWORDS = (
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+    "minLength",
+    "maxLength",
+    "maxItems",
+    "uniqueItems",
+    "minContains",
+    "maxContains",
+    "minProperties",
+    "maxProperties",
+)
+_SUPPORTED_MIN_ITEMS = (0, 1)
+_SUPPORTED_STRING_FORMATS = (
+    "date-time",
+    "time",
+    "date",
+    "duration",
+    "email",
+    "hostname",
+    "uri",
+    "ipv4",
+    "ipv6",
+    "uuid",
+)
+# Keywords whose value is a map of subschemas, or a subschema or list of subschemas.
+_SUBSCHEMA_MAP_KEYWORDS = ("properties", "$defs", "definitions")
+_SUBSCHEMA_KEYWORDS = (
+    "items",
+    "prefixItems",
+    "anyOf",
+    "allOf",
+    "oneOf",
+    "not",
+    "additionalProperties",
+)
+
 
 class LlmAnthropic(LlmApi):
     """Anthropic Claude LLM API client.
 
     Implements the LlmBase interface for Anthropic's Claude API.
     """
+
+    @classmethod
+    def _output_schema(cls, schema: dict) -> dict:
+        """Return a copy of a JSON schema that structured outputs accepts.
+
+        Unsupported constraints are removed and noted in the description instead,
+        so the model still sees them.
+        """
+        result: dict = {}
+        removed: dict = {}
+        for key, value in schema.items():
+            if (
+                key in _UNSUPPORTED_SCHEMA_KEYWORDS
+                or (key == "minItems" and value not in _SUPPORTED_MIN_ITEMS)
+                or (key == "format" and value not in _SUPPORTED_STRING_FORMATS)
+            ):
+                removed[key] = value
+            elif key in _SUBSCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+                result[key] = {name: cls._output_schema(sub) for name, sub in value.items()}
+            elif key in _SUBSCHEMA_KEYWORDS and isinstance(value, dict):
+                result[key] = cls._output_schema(value)
+            elif key in _SUBSCHEMA_KEYWORDS and isinstance(value, list):
+                result[key] = [cls._output_schema(sub) for sub in value]
+            else:
+                result[key] = value
+
+        if removed:
+            constraints = ", ".join(f"{key}: {removed[key]}" for key in sorted(removed))
+            description = result.get("description")
+            result["description"] = (
+                f"{description} ({constraints})" if description else f"({constraints})"
+            )
+        return result
 
     def _file_url_to_content_item(self, file_url: LlmFileUrl) -> dict | None:
         """Convert a file URL to an Anthropic content item."""
@@ -99,16 +173,13 @@ class LlmAnthropic(LlmApi):
         # structured output requested
         structured = {}
         if self.schema:
-            name = self.schema.__name__
             structured = {
-                "tool_choice": {"type": "tool", "name": name},
-                "tools": [
-                    {
-                        "name": name,
-                        # "description": "Provide the response using well-structured JSON.",
-                        "input_schema": self.schema.model_json_schema(),
-                    }
-                ],
+                "output_config": {
+                    "format": {
+                        "type": "json_schema",
+                        "schema": self._output_schema(self.schema.model_json_schema()),
+                    },
+                },
             }
 
         return self.settings.to_dict() | structured | {"messages": messages}
@@ -137,11 +208,12 @@ class LlmAnthropic(LlmApi):
             response = request.text
             if code == HTTPStatus.OK.value:
                 content = json.loads(request.text)
-                output = content.get("content", [{}])[0]
-                if self.schema:
-                    response = json.dumps(output.get("input", {}))
-                else:
-                    response = output.get("text", "")
+                # thinking blocks can precede the answer, so read only the text blocks
+                response = "".join(
+                    block.get("text", "")
+                    for block in content.get("content", [])
+                    if block.get("type") == "text"
+                )
 
                 usage = content.get("usage", {})
                 tokens = LlmTokens(
