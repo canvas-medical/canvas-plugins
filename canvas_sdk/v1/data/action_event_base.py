@@ -24,7 +24,9 @@ class BaseActionEvent(TimestampedModel, IdentifiableModel):
     originator = models.ForeignKey(
         "v1.CanvasUser", null=True, blank=True, on_delete=models.SET_NULL
     )
-    fax = models.ForeignKey("v1.Fax", null=True, blank=True, on_delete=models.SET_NULL)
+    fax = models.ForeignKey(
+        "v1.Fax", null=True, blank=True, on_delete=models.SET_NULL, related_name="%(class)ss"
+    )
 
 
 __exports__ = ()
