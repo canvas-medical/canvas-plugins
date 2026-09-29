@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from canvas_sdk.test_utils.factories import CanvasUserFactory, ClaimFactory
+from canvas_sdk.test_utils.factories import CanvasUserFactory, ClaimFactory, ClaimLineItemFactory
 from canvas_sdk.v1.data import (
     BasePosting,
     BillingLineItem,
@@ -32,6 +32,7 @@ def test_active_excludes_transactions_entered_in_error(
         "billing_line_item": BillingLineItem.objects.create(
             charge=Decimal("100.00"), units=1, command_id=1
         ),
+        "claim_line_item": ClaimLineItemFactory.create(),
         "amount": Decimal("10.00"),
         **_MODEL_FIELDS[model],
     }
