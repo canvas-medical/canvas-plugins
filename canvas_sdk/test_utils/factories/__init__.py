@@ -32,6 +32,7 @@ from .coverage import CoverageFactory
 from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
+from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .educational_material import EducationalMaterialFactory
 from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
@@ -201,6 +202,7 @@ __all__ = (
     "DiagnosticReportFactory",
     "ContentTypeFactory",
     "DocumentCodingFactory",
+    "DocumentHistoryEventFactory",
     "DocumentReviewDelegationFactory",
     "EducationalMaterialFactory",
     "EligibilityRequestFactory",

@@ -1202,6 +1202,8 @@
     "DiagnosticView",
     "Discount",
     "DocumentCoding",
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -1588,6 +1590,10 @@
   ],
   "canvas_sdk.v1.data.django_content_type": [
     "ContentType"
+  ],
+  "canvas_sdk.v1.data.document_history_event": [
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
