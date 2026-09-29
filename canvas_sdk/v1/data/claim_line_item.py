@@ -2,11 +2,32 @@ from decimal import Decimal
 from typing import Any, Self
 
 from django.db import models
-from django.db.models import Q, Sum
+from django.db.models import OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.line_item_transaction import (
+    LineItemTransfer,
+    NewLineItemAdjustment,
+    NewLineItemPayment,
+)
 from canvas_sdk.v1.data.note import PracticeLocationPOS
+
+
+def _total_posted(
+    model: type[NewLineItemPayment | NewLineItemAdjustment | LineItemTransfer],
+) -> Coalesce:
+    # A subquery per type: summing all three over joins counts each amount once per row of the others.
+    return Coalesce(
+        Subquery(
+            model.objects.filter(claim_line_item=OuterRef("pk"))
+            .order_by()
+            .values("claim_line_item")
+            .annotate(total=Sum("amount"))
+            .values("total")
+        ),
+        Decimal(0),
+    )
 
 
 class ClaimLineItemStatus(models.TextChoices):
@@ -76,9 +97,9 @@ class ClaimLineItemQuerySet(models.QuerySet):
         """Exclude removed line items with zero balances."""
         return (
             self.annotate(
-                sum_of_all_payments=Coalesce(Sum("newlineitempayments__amount"), Decimal(0)),
-                sum_of_all_adjustments=Coalesce(Sum("newlineitemadjustments__amount"), Decimal(0)),
-                sum_of_all_transfers=Coalesce(Sum("lineitemtransfers__amount"), Decimal(0)),
+                sum_of_all_payments=_total_posted(NewLineItemPayment),
+                sum_of_all_adjustments=_total_posted(NewLineItemAdjustment),
+                sum_of_all_transfers=_total_posted(LineItemTransfer),
             )
             .exclude(
                 Q(
