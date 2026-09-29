@@ -3,6 +3,7 @@ from typing import cast
 
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
@@ -153,4 +154,21 @@ class ReferralReportCoding(Coding):
     value = models.CharField(max_length=1000)
 
 
-__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding", "ReferralReportQuerySet")
+class ReferralActionEvent(BaseActionEvent):
+    """Event representing an action taken on a referral, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralactionevent_001"
+
+    referral = models.ForeignKey(
+        "v1.Referral", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
+__exports__ = (
+    "Referral",
+    "ReferralReport",
+    "ReferralReportCoding",
+    "ReferralReportQuerySet",
+    "ReferralActionEvent",
+)

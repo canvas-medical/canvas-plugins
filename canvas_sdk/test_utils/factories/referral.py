@@ -6,7 +6,14 @@ import factory
 from django.utils import timezone
 from factory.fuzzy import FuzzyDate
 
-from canvas_sdk.v1.data import Referral, ReferralReport, ReferralReportCoding, ReferralReview
+from canvas_sdk.v1.data import (
+    Referral,
+    ReferralActionEvent,
+    ReferralReport,
+    ReferralReportCoding,
+    ReferralReview,
+)
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 
 
 class ReferralFactory(factory.django.DjangoModelFactory[Referral]):
@@ -93,3 +100,19 @@ class ReferralReportCodingFactory(factory.django.DjangoModelFactory[ReferralRepo
     code = factory.Faker("bothify", text="#####-#")
     display = factory.Faker("text", max_nb_chars=200)
     value = factory.Faker("text", max_nb_chars=200)
+
+
+class ReferralActionEventFactory(factory.django.DjangoModelFactory[ReferralActionEvent]):
+    """Factory for creating ReferralActionEvent."""
+
+    class Meta:
+        model = ReferralActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    referral = factory.SubFactory("canvas_sdk.test_utils.factories.ReferralFactory")

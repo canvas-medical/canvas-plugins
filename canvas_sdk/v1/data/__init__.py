@@ -82,12 +82,14 @@ from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .family_history import FamilyHistory, FamilyHistoryCoding
+from .fax import Fax, FaxDirection, FaxStatus, FaxStatusModel
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
 from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
     ImagingOrder,
+    ImagingOrderActionEvent,
     ImagingReport,
     ImagingReportCoding,
     ImagingReportTemplate,
@@ -105,6 +107,7 @@ from .immunization import (
 from .instruction import Instruction, InstructionCoding
 from .integration_task import (
     IntegrationTask,
+    IntegrationTaskActionEvent,
     IntegrationTaskChannel,
     IntegrationTaskReview,
     IntegrationTaskStatus,
@@ -113,6 +116,7 @@ from .invoice import Invoice
 from .lab import (
     FieldType,
     LabOrder,
+    LabOrderActionEvent,
     LabOrderReason,
     LabOrderReasonCondition,
     LabPartner,
@@ -145,7 +149,14 @@ from .medication_history import (
 )
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import CurrentNoteStateEvent, Note, NoteMetadata, NoteStateChangeEvent, NoteType
+from .note import (
+    CurrentNoteStateEvent,
+    Note,
+    NoteActionEvent,
+    NoteMetadata,
+    NoteStateChangeEvent,
+    NoteType,
+)
 from .observation import (
     Observation,
     ObservationCoding,
@@ -221,7 +232,13 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisit, ReasonForVisitCoding, ReasonForVisitSettingCoding
 from .receipt import Receipt
 from .reference import Reference
-from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
+from .referral import (
+    Referral,
+    ReferralActionEvent,
+    ReferralReport,
+    ReferralReportCoding,
+    ReferralReview,
+)
 from .refill_request import RefillRequest, RefillRequestCoding
 from .remove_allergy_event import RemoveAllergyEvent
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
@@ -343,6 +360,10 @@ __all__ = __exports__ = (
     "Facility",
     "FamilyHistory",
     "FamilyHistoryCoding",
+    "Fax",
+    "FaxDirection",
+    "FaxStatus",
+    "FaxStatusModel",
     "FieldValueTooLarge",
     "FieldType",
     "FollowUp",
@@ -350,6 +371,7 @@ __all__ = __exports__ = (
     "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
+    "ImagingOrderActionEvent",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportTemplate",
@@ -365,6 +387,7 @@ __all__ = __exports__ = (
     "Instruction",
     "InstructionCoding",
     "IntegrationTask",
+    "IntegrationTaskActionEvent",
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
     "IntegrationTaskStatus",
@@ -373,6 +396,7 @@ __all__ = __exports__ = (
     "InterviewQuestionResponse",
     "Invoice",
     "LabOrder",
+    "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabPartner",
@@ -409,6 +433,7 @@ __all__ = __exports__ = (
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteActionEvent",
     "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
@@ -475,6 +500,7 @@ __all__ = __exports__ = (
     "Receipt",
     "Reference",
     "Referral",
+    "ReferralActionEvent",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",

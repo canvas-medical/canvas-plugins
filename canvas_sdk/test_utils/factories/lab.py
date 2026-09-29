@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from canvas_sdk.v1.data import (
     LabOrder,
+    LabOrderActionEvent,
     LabOrderReason,
     LabOrderReasonCondition,
     LabPartner,
@@ -18,6 +19,7 @@ from canvas_sdk.v1.data import (
     LabValue,
     LabValueCoding,
 )
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     ReviewPatientCommunicationMethod,
@@ -230,3 +232,19 @@ class LabPartnerTestQuestionChoiceFactory(
     lab_partner_test_question = factory.SubFactory(LabPartnerTestQuestionFactory)
     label = factory.Faker("word")
     value = factory.Faker("bothify", text="##")
+
+
+class LabOrderActionEventFactory(factory.django.DjangoModelFactory[LabOrderActionEvent]):
+    """Factory for creating LabOrderActionEvent."""
+
+    class Meta:
+        model = LabOrderActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    lab_order = factory.SubFactory("canvas_sdk.test_utils.factories.LabOrderFactory")

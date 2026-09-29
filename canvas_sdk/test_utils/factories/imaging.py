@@ -7,6 +7,7 @@ from factory.fuzzy import FuzzyDate
 
 from canvas_sdk.v1.data import (
     ImagingOrder,
+    ImagingOrderActionEvent,
     ImagingReport,
     ImagingReportCoding,
     ImagingReportTemplate,
@@ -14,6 +15,7 @@ from canvas_sdk.v1.data import (
     ImagingReportTemplateFieldOption,
     ImagingReview,
 )
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
@@ -141,3 +143,19 @@ class ImagingReportTemplateFieldOptionFactory(
     field = factory.SubFactory(ImagingReportTemplateFieldFactory)
     label = factory.Faker("text", max_nb_chars=100)
     key = factory.Faker("slug")
+
+
+class ImagingOrderActionEventFactory(factory.django.DjangoModelFactory[ImagingOrderActionEvent]):
+    """Factory for creating ImagingOrderActionEvent."""
+
+    class Meta:
+        model = ImagingOrderActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    imaging_order = factory.SubFactory("canvas_sdk.test_utils.factories.ImagingOrderFactory")

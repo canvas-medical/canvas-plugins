@@ -2,7 +2,8 @@ import uuid
 
 import factory
 
-from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskReview
+from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskActionEvent, IntegrationTaskReview
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.integration_task import IntegrationTaskChannel, IntegrationTaskStatus
 
 
@@ -34,3 +35,21 @@ class IntegrationTaskReviewFactory(factory.django.DjangoModelFactory[Integration
     reviewer = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     team_reviewer = None
     junked = False
+
+
+class IntegrationTaskActionEventFactory(
+    factory.django.DjangoModelFactory[IntegrationTaskActionEvent]
+):
+    """Factory for creating IntegrationTaskActionEvent."""
+
+    class Meta:
+        model = IntegrationTaskActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    integration_task = factory.SubFactory("canvas_sdk.test_utils.factories.IntegrationTaskFactory")

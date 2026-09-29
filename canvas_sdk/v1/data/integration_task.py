@@ -3,6 +3,7 @@ from uuid import UUID
 
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     ForPatientQuerySetMixin,
@@ -205,6 +206,17 @@ class IntegrationTaskReview(TimestampedModel, IdentifiableModel):
         return not self.junked
 
 
+class IntegrationTaskActionEvent(BaseActionEvent):
+    """Event representing an action taken on an integration task, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_integrationtaskactionevent_001"
+
+    integration_task = models.ForeignKey(
+        "v1.IntegrationTask", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
 __exports__ = (
     "IntegrationTask",
     "IntegrationTaskStatus",
@@ -212,4 +224,5 @@ __exports__ = (
     "IntegrationTaskQuerySet",
     "IntegrationTaskReview",
     "IntegrationTaskReviewQuerySet",
+    "IntegrationTaskActionEvent",
 )

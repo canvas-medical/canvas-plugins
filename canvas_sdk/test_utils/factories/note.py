@@ -2,7 +2,14 @@ from typing import Any
 
 import factory
 
-from canvas_sdk.v1.data import Note, NoteMetadata, NoteStateChangeEvent, NoteType
+from canvas_sdk.v1.data import (
+    Note,
+    NoteActionEvent,
+    NoteMetadata,
+    NoteStateChangeEvent,
+    NoteType,
+)
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.note import NoteStates
 
 
@@ -61,3 +68,19 @@ class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):
     system = factory.Faker("sentence", nb_words=1)
     icon = factory.Faker("sentence", nb_words=1)
     display = factory.Faker("sentence", nb_words=1)
+
+
+class NoteActionEventFactory(factory.django.DjangoModelFactory[NoteActionEvent]):
+    """Factory for creating NoteActionEvent."""
+
+    class Meta:
+        model = NoteActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")

@@ -3,6 +3,7 @@ from typing import Self, cast
 from django.db import models
 from django.db.models import Prefetch, Q
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
@@ -470,6 +471,17 @@ class LabReportTemplateFieldOption(BaseReportTemplateFieldOption):
     )
 
 
+class LabOrderActionEvent(BaseActionEvent):
+    """Event representing an action taken on a lab order, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_laborderactionevent_001"
+
+    lab_order = models.ForeignKey(
+        "v1.LabOrder", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
 __exports__ = (
     "TransmissionType",
     "LabReport",
@@ -491,4 +503,5 @@ __exports__ = (
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
+    "LabOrderActionEvent",
 )

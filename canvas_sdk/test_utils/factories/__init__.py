@@ -38,11 +38,13 @@ from .eligibility_response import EligibilityRequestFactory, EligibilityResponse
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
+from .fax import FaxFactory, FaxStatusModelFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
 from .group import GroupFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
+    ImagingOrderActionEventFactory,
     ImagingOrderFactory,
     ImagingReportCodingFactory,
     ImagingReportFactory,
@@ -51,8 +53,13 @@ from .imaging import (
     ImagingReportTemplateFieldOptionFactory,
     ImagingReviewFactory,
 )
-from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
+from .integration_task import (
+    IntegrationTaskActionEventFactory,
+    IntegrationTaskFactory,
+    IntegrationTaskReviewFactory,
+)
 from .lab import (
+    LabOrderActionEventFactory,
     LabOrderFactory,
     LabOrderReasonConditionFactory,
     LabOrderReasonFactory,
@@ -80,7 +87,13 @@ from .medication_history import (
     MedicationHistoryResponseFactory,
 )
 from .medication_statement import MedicationStatementFactory
-from .note import NoteFactory, NoteMetadataFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .note import (
+    NoteActionEventFactory,
+    NoteFactory,
+    NoteMetadataFactory,
+    NoteStateChangeEventFactory,
+    NoteTypeFactory,
+)
 from .organization import (
     OrganizationAddressFactory,
     OrganizationContactPointFactory,
@@ -121,6 +134,7 @@ from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
 from .receipt import ReceiptFactory
 from .reference import ReferenceFactory
 from .referral import (
+    ReferralActionEventFactory,
     ReferralFactory,
     ReferralReportCodingFactory,
     ReferralReportFactory,
@@ -195,12 +209,15 @@ __all__ = (
     "ExternalEventFactory",
     "ExternalVisitFactory",
     "FacilityFactory",
+    "FaxFactory",
+    "FaxStatusModelFactory",
     "HistoryOfPresentIllnessFactory",
     "FamilyHistoryFactory",
     "FamilyHistoryCodingFactory",
     "FollowUpFactory",
     "GoalFactory",
     "GroupFactory",
+    "ImagingOrderActionEventFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
     "ImagingReportFactory",
@@ -208,8 +225,10 @@ __all__ = (
     "ImagingReportTemplateFieldFactory",
     "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
+    "IntegrationTaskActionEventFactory",
     "IntegrationTaskFactory",
     "IntegrationTaskReviewFactory",
+    "LabOrderActionEventFactory",
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",
@@ -234,6 +253,7 @@ __all__ = (
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
     "MedicationStatementFactory",
+    "NoteActionEventFactory",
     "NoteFactory",
     "NoteMetadataFactory",
     "NoteStateChangeEventFactory",
@@ -269,6 +289,7 @@ __all__ = (
     "ReasonForVisitFactory",
     "ReceiptFactory",
     "ReferenceFactory",
+    "ReferralActionEventFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",

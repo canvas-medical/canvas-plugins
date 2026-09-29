@@ -5,6 +5,7 @@ from typing import Self, cast
 from django.conf import settings
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseQuerySet,
@@ -199,6 +200,17 @@ class ImagingReportTemplateFieldOption(BaseReportTemplateFieldOption):
     )
 
 
+class ImagingOrderActionEvent(BaseActionEvent):
+    """Event representing an action taken on an imaging order, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_imagingorderactionevent_001"
+
+    imaging_order = models.ForeignKey(
+        "v1.ImagingOrder", on_delete=models.CASCADE, related_name="action_events"
+    )
+
+
 __exports__ = (
     "ImagingOrder",
     "ImagingReview",
@@ -209,4 +221,5 @@ __exports__ = (
     "ImagingReportTemplateQuerySet",
     "ImagingReportTemplateField",
     "ImagingReportTemplateFieldOption",
+    "ImagingOrderActionEvent",
 )
