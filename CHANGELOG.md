@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.237.0 (2026-09-29)
+
+### Features
+
+- **data**: Expose fax delivery status for all faxable documents
+  ([#1904](https://github.com/canvas-medical/canvas-plugins/pull/1904),
+  [`994eb85`](https://github.com/canvas-medical/canvas-plugins/commit/994eb855eb6e15656afb538d9a53b576afd3c259))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.236.1 (2026-09-29)
 
 ### Bug Fixes
