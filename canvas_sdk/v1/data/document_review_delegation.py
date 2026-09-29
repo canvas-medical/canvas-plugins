@@ -4,12 +4,13 @@ from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class DocumentReviewDelegation(TimestampedModel, IdentifiableModel):
-    """A hand-off of a reviewable document from one staff member (or team) to another.
+    """A signature release written when a reviewable document is reassigned.
 
-    Append-only log with a single active row per document (``is_active``). Delegation is
-    A<->B only: an owner delegates the document out, and the recipient may only route it
-    back. ``on_behalf_of`` identifies the original owner and, when ``signature_consent`` is
-    set, the staff member whose signature the recipient may apply while annotating.
+    Append-only log with a single active row per document (``is_active``). ``on_behalf_of``
+    is the staff member who released their signature; with ``signature_consent`` set, the
+    recipients (a staff member, a team, or both) may apply that signature while annotating.
+    A later plain reassign deactivates the row, so a release reaches only its direct
+    recipients.
 
     ``content_type`` + ``object_id`` form a generic link to the delegated document (e.g. an
     UncategorizedClinicalDocument).
