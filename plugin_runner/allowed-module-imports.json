@@ -1243,6 +1243,8 @@
     "DmeProduct",
     "DmeProductCodeSystem",
     "DocumentCoding",
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -1643,6 +1645,10 @@
     "DmeOrder",
     "DmeProduct",
     "DmeProductCodeSystem"
+  ],
+  "canvas_sdk.v1.data.document_history_event": [
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
