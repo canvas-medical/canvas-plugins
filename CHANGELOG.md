@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v0.236.0 (2026-09-29)
+
+### Bug Fixes
+
+- Execute each handler module once per plugin load
+  ([#1816](https://github.com/canvas-medical/canvas-plugins/pull/1816),
+  [`bfc7c9c`](https://github.com/canvas-medical/canvas-plugins/commit/bfc7c9cb7a3655e44ef2eaeee45aee0b9cef2774))
+
+### Features
+
+- Add a patient portal post-login event
+  ([#1895](https://github.com/canvas-medical/canvas-plugins/pull/1895),
+  [`5a0fd73`](https://github.com/canvas-medical/canvas-plugins/commit/5a0fd73b7a9675ba80d4932fcdb09ddf583d003f))
+
+### Testing
+
+- Call sandbox_plugin_handlers in the shared-module loader tests
+  ([#1896](https://github.com/canvas-medical/canvas-plugins/pull/1896),
+  [`1829c45`](https://github.com/canvas-medical/canvas-plugins/commit/1829c45234f1ac54fc1dbb37873ac3c69446079b))
+
+
 ## v0.235.0 (2026-09-25)
 
 ### Features

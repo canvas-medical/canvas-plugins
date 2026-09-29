@@ -371,7 +371,7 @@ def test_sandbox_plugin_handlers_flags_foreign_package_without_reporting(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["shared_module_handlers"], indirect=True)
-def test_load_plugin_handlers_executes_each_module_once(install_test_plugin: Path) -> None:
+def test_sandbox_plugin_handlers_executes_each_module_once(install_test_plugin: Path) -> None:
     """Handlers declared from the same module execute that module a single time.
 
     A plugin that groups N handlers into one module used to compile and execute
@@ -387,7 +387,7 @@ def test_load_plugin_handlers_executes_each_module_once(install_test_plugin: Pat
         return sandbox_from_module(base_path, module_name, evaluated_modules)
 
     with patch("plugin_runner.plugin_runner.sandbox_from_module", _counting_sandbox_from_module):
-        results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert len(results) == len(handlers)
     assert all(r.error is None for r in results)
@@ -400,7 +400,7 @@ def test_load_plugin_handlers_executes_each_module_once(install_test_plugin: Pat
 
 
 @pytest.mark.parametrize("install_test_plugin", ["shared_module_handlers"], indirect=True)
-def test_load_plugin_handlers_shares_scope_within_a_module(install_test_plugin: Path) -> None:
+def test_sandbox_plugin_handlers_shares_scope_within_a_module(install_test_plugin: Path) -> None:
     """Handlers from one module share that module's scope; separate modules do not.
 
     Sharing keeps module-level state single-instance, so two handlers in the same
@@ -408,7 +408,7 @@ def test_load_plugin_handlers_shares_scope_within_a_module(install_test_plugin: 
     """
     handlers = _manifest_handlers(install_test_plugin)
 
-    results = load_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     scopes = {r.handler["class"].split(":")[0]: r.scope for r in results if r.scope is not None}
     grouped = [r.scope for r in results if "grouped:" in r.handler["class"]]
