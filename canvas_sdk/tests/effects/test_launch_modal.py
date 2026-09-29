@@ -90,3 +90,17 @@ def test_existing_targets_are_unchanged(target: LaunchModalEffect.TargetType) ->
     effect = LaunchModalEffect(url="/plugin-io/api/my_plugin/ui", target=target)
 
     assert _payload(effect)["target"] == target.value
+
+
+def test_a_modal_is_dismissible_by_default() -> None:
+    """Plugins that never set `dismissible` keep a modal the user can close."""
+    effect = LaunchModalEffect(url="/plugin-io/api/my_plugin/ui")
+
+    assert _payload(effect)["dismissible"] is True
+
+
+def test_a_blocking_modal_reaches_the_wire_as_not_dismissible() -> None:
+    """`dismissible=False` is what tells Canvas to render a modal only its frame can close."""
+    effect = LaunchModalEffect(content="<p>Sign to continue</p>", dismissible=False)
+
+    assert _payload(effect)["dismissible"] is False
