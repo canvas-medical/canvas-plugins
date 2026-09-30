@@ -25,6 +25,9 @@ class LaunchModalEffect(_BaseEffect):
     content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
     title: str = "Untitled"
+    # A modal that is not dismissible ignores Escape, backdrop clicks and navigation, and
+    # closes only when its own frame posts CLOSE_MODAL. Applies to DEFAULT_MODAL.
+    dismissible: bool = True
 
     @property
     def values(self) -> dict[str, Any]:
@@ -34,6 +37,7 @@ class LaunchModalEffect(_BaseEffect):
             "content": self.content,
             "target": self.target.value,
             "title": self.title,
+            "dismissible": self.dismissible,
         }
 
     @model_validator(mode="after")
