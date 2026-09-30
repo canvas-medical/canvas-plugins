@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.239.0 (2026-09-30)
+
+### Features
+
+- Let a LaunchModalEffect be blocking with dismissible=False
+  ([#1907](https://github.com/canvas-medical/canvas-plugins/pull/1907),
+  [`e94e0a7`](https://github.com/canvas-medical/canvas-plugins/commit/e94e0a74fc18775cb516080fa0474aec4eeca626))
+
+
 ## v0.238.0 (2026-09-30)
 
 ### Features
