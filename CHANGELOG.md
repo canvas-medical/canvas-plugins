@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.238.0 (2026-09-30)
+
+### Features
+
+- Add a patient portal document downloaded event
+  ([#1902](https://github.com/canvas-medical/canvas-plugins/pull/1902),
+  [`be9a3e4`](https://github.com/canvas-medical/canvas-plugins/commit/be9a3e4258ace6a579de1c0ed073c7202fde8c9a))
+
+
 ## v0.237.0 (2026-09-29)
 
 ### Features
