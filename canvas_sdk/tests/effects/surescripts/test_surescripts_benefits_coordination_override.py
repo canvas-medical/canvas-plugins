@@ -7,7 +7,7 @@ from canvas_sdk.events import EventType
 
 def test_effect_type_enum_value_is_pinned() -> None:
     """Pin the proto enum value so a re-numbering fails the test."""
-    assert EffectType.SURESCRIPTS_BENEFITS_COORDINATION_OVERRIDE == 1606
+    assert EffectType.SURESCRIPTS_BENEFITS_COORDINATION_OVERRIDE == 1610
 
 
 def test_pre_send_event_enum_value_is_pinned() -> None:
