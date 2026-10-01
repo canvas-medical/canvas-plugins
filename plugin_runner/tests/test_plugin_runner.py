@@ -37,6 +37,7 @@ from plugin_runner.plugin_runner import (
     STARTUP_RETRY_LIMIT,
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
+    drop_foreign_menu_entries,
     import_plugin,
     reconcile_plugins,
     reload_plugin,
@@ -851,6 +852,60 @@ def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
     assert len(result) == 1
     assert result[0].success is True
     assert len(result[0].effects) == 0
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_show_application_identity"], indirect=True)
+def test_handle_event_drops_a_menu_entry_reported_for_another_application(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An application can report only its own menu entry.
+
+    Canvas replaces a menu entry by the identifier in the effect, and an effect names no
+    application of its own. A handler reporting another identifier could hide or rename
+    an entry that belongs to a different application, so the runner keeps only the
+    entries whose identifier is the handler's own.
+    """
+    event = EventRequest(
+        type=EventType.APPLICATION__ON_CONTEXT_CHANGE,
+        context=json.dumps({"url": "/schedule"}),
+    )
+
+    with caplog.at_level(logging.WARNING, logger="plugin_runner_logger"):
+        result = list(plugin_runner.HandleEvent(event, None))
+
+    entries = [
+        json.loads(effect.payload)["data"]
+        for effect in result[0].effects
+        if effect.type == EffectType.SHOW_APPLICATION
+    ]
+
+    assert [(entry["identifier"], entry["name"]) for entry in entries] == [
+        ("test_show_application_identity__honest", "Honest")
+    ]
+    assert sum("another application" in record.message for record in caplog.records) == 2
+
+
+@pytest.mark.parametrize(
+    "payload",
+    ["not json", json.dumps({"data": {}}), json.dumps(["no", "data"])],
+    ids=["unreadable", "no-identifier", "wrong-shape"],
+)
+def test_a_menu_entry_with_no_readable_identifier_is_dropped(payload: str) -> None:
+    """An entry Canvas cannot attribute to the handler is not the handler's own."""
+    effect = Effect(type=EffectType.SHOW_APPLICATION, payload=payload)
+
+    assert drop_foreign_menu_entries([effect], "plugin__app", "plugin.App.compute") == []
+
+
+def test_effects_of_other_types_pass_through() -> None:
+    """The check applies to menu entries only."""
+    effect = Effect(type=EffectType.LOG, payload="Hello, world!")
+
+    assert drop_foreign_menu_entries([effect], None, "plugin.Handler.compute") == [effect]
 
 
 @pytest.mark.parametrize(
