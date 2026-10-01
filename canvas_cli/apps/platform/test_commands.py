@@ -468,25 +468,82 @@ def _pending_consent() -> dict:
     return deployment
 
 
-def test_deploy_approves_consent_with_yes_and_waits_for_the_outcome(
+def _consent_answers(mock: requests_mock_module.Mocker) -> list:
+    return [r for r in mock.request_history if "/consent-requests/" in r.url]
+
+
+def test_deploy_with_yes_lists_consent_and_answers_none(
+    api: requests_mock_module.Mocker,
+    package: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--yes never answers consent, even at a terminal: it lists the requests and exits non-zero."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging", "--yes"])
+
+    assert result.exit_code == 1
+    output = " ".join(result.output.split())
+    assert "read access to the custom data namespace 'beta__reader' on acme-staging" in output
+    assert "Deployment 6f1c is waiting on these requests, and --yes does not answer" in output
+    assert _consent_answers(api) == []
+    assert not _requests_to(api, "GET", "/deployments/6f1c")
+
+
+def test_deploy_without_a_terminal_lists_consent_and_answers_none(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:
-    """--yes approves each pending request, then the deployment is followed to its outcome."""
+    """With nobody at the terminal to ask, consent requests are listed and left unanswered."""
     api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
-    api.post(f"{API}/consent-requests/41/approve", json={})
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "there is no terminal to ask at" in result.output
+    assert _consent_answers(api) == []
+
+
+def test_deploy_with_yes_commits_a_dirty_tree_without_prompting(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """--yes commits uncommitted work with the default message, with no terminal to prompt at."""
+    (package / "handler.py").write_text("x = 1\n")
 
     result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging", "--yes"])
 
     assert result.exit_code == 0, result.output
-    assert "read access to the custom data namespace 'beta__reader'" in result.output
+    assert "Commit these and deploy?" not in result.output
+    assert _git(bare, "log", "-1", "--format=%s", "main") == git.DEFAULT_COMMIT_MESSAGE
+
+
+def test_deploy_approves_consent_interactively(
+    api: requests_mock_module.Mocker,
+    package: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """At a terminal, an approved request is approved and the deployment followed to its outcome."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
+    api.post(f"{API}/consent-requests/41/approve", json={})
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"], input="y\n")
+
+    assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/consent-requests/41/approve")
     assert f"Deploy of {NAME} succeeded." in result.output
 
 
 def test_deploy_denies_consent_interactively(
-    api: requests_mock_module.Mocker, package: Path, signed_in: None
+    api: requests_mock_module.Mocker,
+    package: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Declining a request denies it with the reason given and ends the deploy."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
     api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
     api.post(f"{API}/consent-requests/41/deny", json={})
 

@@ -167,12 +167,17 @@ def connect_remote(repo: Path, git_url: str, platform: str) -> None:
             raise typer.BadParameter(f"Could not set {key}: {result.stderr.strip()}")
 
 
-def commit_working_tree_interactively(plugin_dir: Path) -> None:
+DEFAULT_COMMIT_MESSAGE = "Deploy via canvas"
+
+
+def commit_working_tree(plugin_dir: Path, *, assume_yes: bool) -> None:
     """Stage and commit uncommitted changes, after the person confirms.
 
     ``git push`` sends only commits, so deploying the working tree means
-    committing it first. Without a TTY a dirty tree is an error, because
-    committing someone's working tree unattended is surprising and hard to undo.
+    committing it first. ``assume_yes`` answers the confirmation and takes the
+    default commit message. Without it and without a TTY a dirty tree is an
+    error, because committing someone's working tree unasked is surprising and
+    hard to undo.
     """
     status = run(plugin_dir, "status", "--porcelain")
     if status.returncode != 0:
@@ -180,18 +185,21 @@ def commit_working_tree_interactively(plugin_dir: Path) -> None:
     if not status.stdout.strip():
         return
 
-    if not interactive():
+    if not assume_yes and not interactive():
         raise typer.BadParameter(
             "You have uncommitted changes, and deploy only pushes committed work. "
-            "Commit them and run deploy again, or pass --ref / --no-push to deploy a "
-            "ref that is already pushed."
+            "Commit them and run deploy again, pass --yes to commit them, or pass "
+            "--ref / --no-push to deploy a ref that is already pushed."
         )
 
     print("Uncommitted changes to be committed and deployed:")
     print(status.stdout.rstrip())
-    if not typer.confirm("Commit these and deploy?", default=True):
-        raise typer.Abort()
-    message = typer.prompt("Commit message", default="Deploy via canvas")
+    if assume_yes:
+        message = DEFAULT_COMMIT_MESSAGE
+    else:
+        if not typer.confirm("Commit these and deploy?", default=True):
+            raise typer.Abort()
+        message = typer.prompt("Commit message", default=DEFAULT_COMMIT_MESSAGE)
 
     add = run(plugin_dir, "add", "-A")
     if add.returncode != 0:

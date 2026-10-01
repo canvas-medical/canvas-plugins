@@ -166,19 +166,37 @@ def _resolve_instances(
 # -- deployments -------------------------------------------------------------
 
 
+def _describe_consent(request: dict[str, Any]) -> None:
+    instances = ", ".join(request.get("instances", []))
+    print(
+        f"  • {request.get('plugin')} asks for {request.get('access')} access to the "
+        f"custom data namespace '{request.get('namespace')}' on {instances}."
+    )
+
+
 def _walk_consent(client: PlatformClient, deployment: dict[str, Any], *, assume_yes: bool) -> None:
-    """Ask the person to approve or deny each consent request a deployment waits on."""
+    """Ask the person to approve or deny each consent request a deployment waits on.
+
+    Approving a request grants one plugin another plugin's custom data, so only a
+    person answering at a terminal decides it. Under ``--yes`` or without a TTY
+    the requests are printed and the command exits non-zero, answering none.
+    """
     pending = [r for r in deployment.get("consent_requests", []) if r.get("status") == "pending"]
     if not pending:
         return
     print(f"\nThis deployment needs consent ({len(pending)} request(s)):\n")
-    for request in pending:
-        instances = ", ".join(request.get("instances", []))
+    if assume_yes or not git.interactive():
+        for request in pending:
+            _describe_consent(request)
+        why = "--yes does not answer consent" if assume_yes else "there is no terminal to ask at"
         print(
-            f"  • {request.get('plugin')} asks for {request.get('access')} access to the "
-            f"custom data namespace '{request.get('namespace')}' on {instances}."
+            f"\nDeployment {deployment['id']} is waiting on these requests, and {why}. "
+            "Run the command again at a terminal, without --yes, to approve or deny them."
         )
-        if assume_yes or typer.confirm(f"    Approve request {request['id']}?", default=False):
+        raise typer.Exit(1)
+    for request in pending:
+        _describe_consent(request)
+        if typer.confirm(f"    Approve request {request['id']}?", default=False):
             client.answer_consent(request["id"], approve=True)
             print("    Approved.")
             continue
@@ -387,7 +405,14 @@ def deploy(
         False, "--no-push", help="Deploy the pushed 'main' as-is, without pushing HEAD first."
     ),
     assume_yes: bool = typer.Option(
-        False, "--yes", "-y", help="Approve all consent requests non-interactively"
+        False,
+        "--yes",
+        "-y",
+        help=(
+            "Commit uncommitted changes without prompting, with the default message. "
+            "Does not approve consent requests: a deployment that needs consent exits "
+            "non-zero and lists them."
+        ),
     ),
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
@@ -402,7 +427,8 @@ def deploy(
 
     With no --instance, deploy targets the only instance you can deploy to and
     otherwise lists the choices. Consent requests for cross-plugin custom data
-    access are shown and answered inline.
+    access are shown and answered inline at a terminal. Under --yes, or without a
+    terminal, they are listed and deploy exits non-zero without answering them.
     """
     if not plugin_dir.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
@@ -420,7 +446,7 @@ def deploy(
         _require_package_at_repo_root(plugin_dir)
         registered = client.register_plugin(publisher, name)
         git.connect_remote(plugin_dir, registered["git_url"], platform)
-        git.commit_working_tree_interactively(plugin_dir)
+        git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
         branch = registered.get("default_branch") or "main"
         git.push_head(plugin_dir, branch)
         deploy_ref = git.head_sha(plugin_dir)
