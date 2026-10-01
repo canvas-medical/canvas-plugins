@@ -374,11 +374,6 @@ class PluginRunner(PluginRunnerServicer):
                                 )
                                 for effect in _effects
                             ]
-                            effects = drop_foreign_menu_entries(
-                                effects,
-                                getattr(handler, "identifier", None),
-                                handler_name,
-                            )
                             effects = validate_effects(effects)
 
                             apply_effects_to_context(effects, event=event)
@@ -611,38 +606,6 @@ def synchronize_plugins_and_report_errors() -> None:
 
         # don't crush redis if we're retrying in a tight loop
         sleep(0.5)
-
-
-def drop_foreign_menu_entries(
-    effects: list[Effect],
-    own_identifier: str | None,
-    handler_name: str,
-) -> list[Effect]:
-    """Keep only the SHOW_APPLICATION effects that describe the handler's own application.
-
-    Canvas replaces a menu entry by the identifier in the effect, and an effect names no
-    application of its own. An entry reported for another identifier could hide or rename
-    an application that belongs to a different handler.
-    """
-    kept = []
-
-    for effect in effects:
-        if effect.type == EffectType.SHOW_APPLICATION:
-            try:
-                identifier = json.loads(effect.payload)["data"]["identifier"]
-            except (KeyError, TypeError, ValueError):
-                identifier = None
-
-            if identifier is None or identifier != own_identifier:
-                log.warning(
-                    f"Discarding a SHOW_APPLICATION effect from {handler_name} "
-                    "that reports another application."
-                )
-                continue
-
-        kept.append(effect)
-
-    return kept
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
