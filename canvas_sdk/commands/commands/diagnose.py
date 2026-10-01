@@ -6,7 +6,11 @@ from canvas_sdk.commands.base import _BaseCommand
 
 
 class DiagnoseCommand(_BaseCommand):
-    """A class for managing a Diagnose command within a specific note."""
+    """A class for managing a Diagnose command within a specific note.
+
+    Deprecated: use `AssessCommand` with `icd10_code`. Diagnose keeps working and records the same
+    result as Assess, reusing the patient's charted condition instead of creating a duplicate.
+    """
 
     class Meta:
         key = "diagnose"
