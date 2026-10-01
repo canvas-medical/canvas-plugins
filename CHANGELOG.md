@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.240.0 (2026-10-01)
+
+### Features
+
+- Add note custom content ([#1894](https://github.com/canvas-medical/canvas-plugins/pull/1894),
+  [`124fd69`](https://github.com/canvas-medical/canvas-plugins/commit/124fd6926c3d58682cc6170b96cd244071be1ef4))
+
+
 ## v0.239.0 (2026-09-30)
 
 ### Features
