@@ -292,9 +292,7 @@ def _listener(callback: _Callback) -> HTTPServer:
         def log_message(self, format: str, *args: Any) -> None:
             """Keep the request log out of the terminal."""
 
-    server = HTTPServer(("127.0.0.1", 0), Handler)
-
-    return server
+    return HTTPServer(("127.0.0.1", 0), Handler)
 
 
 def authorization_url(platform: str, redirect_uri: str, challenge: str, state: str) -> str:

@@ -7,8 +7,12 @@ disk through a ``file://`` URL standing in for platform's git server.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
+import threading
 from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
@@ -919,3 +923,77 @@ def test_platform_commands_are_registered_and_say_platform() -> None:
         text = runner.invoke(app, args).output
         assert "Control Room" not in text
         assert "--repo-name" not in text
+
+
+def test_config_on_an_instance_without_the_plugin_says_the_values_wait(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """A configure target skipped because the plugin is not installed says when the values apply."""
+    requests_mock.put(f"{API}/instances/acme-prod/plugins/{NAME}/variables/A", json={})
+    skipped = _deployment(
+        "succeeded",
+        action="configure",
+        targets=[{"plugin": NAME, "instance": "acme-prod", "status": "skipped", "error": ""}],
+    )
+    requests_mock.get(f"{API}/deployments/6f1c", json=skipped)
+
+    result = runner.invoke(app, ["config", "set", NAME, "A=1", "--instance", "acme-prod"])
+
+    assert result.exit_code == 0, result.output
+    assert "acme-prod: skipped (not installed there; the stored values apply" in result.output
+
+
+def test_git_runs_the_credential_helper_with_the_repository_path(
+    tmp_path: Path, package: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Real git, configured the way deploy configures a repository, runs `canvas git-credential`
+    with the repository path, and the helper answers with a token minted by platform.
+    """
+    canvas = Path(sys.executable).parent / "canvas"
+    if not canvas.exists():
+        pytest.skip("the canvas entry point is not installed beside this interpreter")
+
+    minted: list[tuple[str, str]] = []
+
+    class FakePlatform(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            minted.append((self.path, self.headers["Authorization"]))
+            body = json.dumps({"username": "dana", "password": "cnvs_git_1"}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Keep the request log out of the test output."""
+
+    server = HTTPServer(("127.0.0.1", 0), FakePlatform)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    platform = f"http://127.0.0.1:{server.server_address[1]}"
+    home = tmp_path / "home"
+    (home / ".canvas").mkdir(parents=True)
+    tokens = {"access_token": "cnvs_ua_9", "refresh_token": "cnvs_rt_9", "expires_at": 4102444800}
+    (home / ".canvas" / "platform-credentials.json").write_text(
+        json.dumps({"default": platform, "platforms": {platform: tokens}})
+    )
+    git_url = f"https://git.platform.example/acme/{NAME}.git"
+    monkeypatch.setattr(sys, "argv", [str(canvas)])
+    for key, value in git.credential_config(git_url, platform):
+        _git(package, "config", key, value)
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(package), "credential", "fill"],
+            input=f"protocol=https\nhost=git.platform.example\npath=acme/{NAME}.git\n\n",
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(home), "GIT_CONFIG_GLOBAL": os.devnull},
+            timeout=60,
+        )
+    finally:
+        server.shutdown()
+
+    assert result.returncode == 0, result.stderr
+    assert "password=cnvs_git_1" in result.stdout.splitlines()
+    assert minted == [(f"/api/v1/plugins/{NAME}/git-credentials", "Bearer cnvs_ua_9")]
