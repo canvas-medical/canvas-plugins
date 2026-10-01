@@ -87,6 +87,12 @@ class ApplicationScope(StrEnum):
     PANEL = "panel"
 
 
+# The scopes whose menu merges these entries with the plugin's manifest-declared rows.
+# A row carries the same identifier as the handler that declares it, so on these scopes
+# an absent effect and a hidden application have to stay distinguishable.
+LAUNCHER_SCOPES = frozenset({ApplicationScope.PROVIDER_MENU, ApplicationScope.PANEL})
+
+
 class MenuPosition(StrEnum):
     """Which group of the provider menu an entry joins."""
 
@@ -106,9 +112,28 @@ class EmbeddedApplication(Application, ABC):
         """Handle the application events."""
         match self.event.type:
             case EventType.APPLICATION__ON_GET:
-                if self._matches_scope() and self.visible():
-                    return [ShowApplicationEffect(**self._show_application_values()).apply()]
-                return []
+                if not self._matches_scope():
+                    return []
+
+                visible = self.visible()
+
+                if not visible and self.SCOPE not in LAUNCHER_SCOPES:
+                    return []
+
+                values = self._show_application_values()
+                if self.SCOPE in LAUNCHER_SCOPES:
+                    values["badge_count"] = self.compute_notification_badge()
+
+                return [ShowApplicationEffect(**values, visible=visible).apply()]
+            case EventType.APPLICATION__ON_CONTEXT_CHANGE if not self.event.target.id:
+                if self.SCOPE not in LAUNCHER_SCOPES:
+                    return []
+
+                return [
+                    ShowApplicationEffect(
+                        **self._show_application_values(), visible=self.visible()
+                    ).apply()
+                ]
             case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
                 # Explicitly ignore the event here in case it's emitted directly.
                 return []
@@ -116,7 +141,7 @@ class EmbeddedApplication(Application, ABC):
                 return super().compute()
 
     def _show_application_values(self) -> dict[str, Any]:
-        """What this application tells Canvas about itself on APPLICATION__ON_GET.
+        """What this application tells Canvas about itself, on a load or a navigation.
 
         Subclasses whose surface needs more than the common fields extend this rather
         than reimplementing ``compute``.
@@ -262,7 +287,6 @@ class ProviderMenuApplication(EmbeddedApplication):
             **super()._show_application_values(),
             "icon_url": self.ICON_URL,
             "menu_position": MenuPosition(self.MENU_POSITION).value,
-            "badge_count": self.compute_notification_badge(),
         }
 
 
@@ -293,7 +317,6 @@ class PanelApplication(EmbeddedApplication):
             **super()._show_application_values(),
             "icon_url": self.ICON_URL,
             "show_in_panel": not self.SHOW_IN_DRAWER,
-            "badge_count": self.compute_notification_badge(),
         }
 
 
