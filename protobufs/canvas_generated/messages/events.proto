@@ -198,6 +198,8 @@ enum EventType {
   CLAIM_SUPERVISING_PROVIDER_CHANGED = 401;
   // Fired when a claim's incident_to billing flag is toggled.
   CLAIM_INCIDENT_TO_CHANGED = 402;
+  // Fired once per claim after commit when its patient or aggregate coverage balance changed.
+  CLAIM_BALANCE_CHANGED = 403;
 
   // Payment events
 
