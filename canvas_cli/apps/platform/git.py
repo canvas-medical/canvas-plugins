@@ -124,13 +124,20 @@ def credential_helper_command(platform: str) -> str:
 
 
 def credential_config(git_url: str, platform: str) -> list[tuple[str, str]]:
-    """The git config that sends a git server's credential requests to ``canvas``.
+    """The git config that sends a git server's credential requests to ``canvas``, in order.
+
+    The empty helper comes first because git runs every helper configured for a
+    URL, system ones included: on macOS that is ``osxkeychain``, which would
+    otherwise answer with a stale password and store each short-lived token in the
+    keychain. An empty value resets the list, so only ``canvas`` answers. Every
+    entry is added rather than replaced, since the helper key holds both.
 
     ``useHttpPath`` makes git include the repository path in the request, which
     is how the helper knows which plugin to mint a token for.
     """
     host = url_origin(git_url)
     return [
+        (f"credential.{host}.helper", ""),
         (f"credential.{host}.helper", credential_helper_command(platform)),
         (f"credential.{host}.useHttpPath", "true"),
     ]
@@ -139,7 +146,8 @@ def credential_config(git_url: str, platform: str) -> list[tuple[str, str]]:
 def connect_remote(repo: Path, git_url: str, platform: str) -> None:
     """Point ``origin`` at the plugin's repository and register the credential helper.
 
-    Idempotent. ``--replace-all`` keeps the helper a single entry across repeat runs.
+    Idempotent: each key is cleared before its entries are added, so repeat runs
+    leave the same configuration.
     """
     if run(repo, "remote", "get-url", REMOTE).returncode == 0:
         result = run(repo, "remote", "set-url", REMOTE, git_url)
@@ -147,8 +155,14 @@ def connect_remote(repo: Path, git_url: str, platform: str) -> None:
         result = run(repo, "remote", "add", REMOTE, git_url)
     if result.returncode != 0:
         raise typer.BadParameter(f"Could not set the '{REMOTE}' remote: {result.stderr.strip()}")
-    for key, value in credential_config(git_url, platform):
-        result = run(repo, "config", "--replace-all", key, value)
+    entries = credential_config(git_url, platform)
+    for key in dict.fromkeys(key for key, _ in entries):
+        # Exit status 5 is "nothing to unset", which a first run always is.
+        result = run(repo, "config", "--unset-all", key)
+        if result.returncode not in (0, 5):
+            raise typer.BadParameter(f"Could not clear {key}: {result.stderr.strip()}")
+    for key, value in entries:
+        result = run(repo, "config", "--add", key, value)
         if result.returncode != 0:
             raise typer.BadParameter(f"Could not set {key}: {result.stderr.strip()}")
 

@@ -87,6 +87,17 @@ def _git(directory: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+def _helpers(directory: Path) -> list[str]:
+    """Every credential helper entry for the git server, in order, empty ones included."""
+    output = subprocess.run(
+        ["git", "-C", str(directory), "config", "--get-all", "credential.file://.helper"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return output.removesuffix("\n").split("\n")
+
+
 @pytest.fixture(autouse=True)
 def _git_identity_and_fast_polling(monkeypatch: pytest.MonkeyPatch) -> None:
     for variable in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
@@ -233,7 +244,10 @@ def test_deploy_registers_pushes_and_deploys_the_pushed_commit(
 
     assert _git(package, "remote", "get-url", "origin") == bare.as_uri()
     assert _git(package, "config", "credential.file://.useHttpPath") == "true"
-    helper = _git(package, "config", "credential.file://.helper")
+    # The empty entry resets helpers inherited from above the repository, such as
+    # macOS's osxkeychain, so only `canvas` answers for the git server.
+    reset, helper = _helpers(package)
+    assert reset == ""
     assert helper.startswith("!") and helper.endswith(f"git-credential --platform {PLATFORM}")
 
     assert f"{NAME} on acme-staging: succeeded" in result.output
@@ -800,7 +814,9 @@ def test_clone_checks_out_the_repository_ready_to_push(
     assert (destination / NAME / "CANVAS_MANIFEST.json").exists()
     assert _git(destination, "remote", "get-url", "origin") == bare.as_uri()
     assert _git(destination, "config", "credential.file://.useHttpPath") == "true"
-    assert "git-credential --platform" in _git(destination, "config", "credential.file://.helper")
+    helpers = _helpers(destination)
+    assert helpers[0] == ""
+    assert "git-credential --platform" in helpers[1]
     assert f"canvas deploy {destination / NAME}" in result.output
 
 
