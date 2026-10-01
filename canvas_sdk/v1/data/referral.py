@@ -129,6 +129,12 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
     assigned_date = models.DateTimeField(null=True)
     team_assigned_date = models.DateTimeField(null=True)
     team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True)
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_referralreport_reviewers_001",
+        blank=True,
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="referral_reports"
     )
