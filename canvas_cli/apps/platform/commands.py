@@ -38,6 +38,12 @@ DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
 POLL_TIMEOUT_SECONDS = 300.0
 
+# Why a target settles `skipped`, by deployment action.
+_SKIPPED_BECAUSE = {
+    "configure": "not installed there; the stored values apply when it is next deployed",
+    "uninstall": "not installed there",
+}
+
 _INSTANCE_HELP = "Instance slug to target (repeatable)"
 
 
@@ -217,12 +223,13 @@ def _report(deployment: dict[str, Any] | None, deployment_id: str, *, what: str)
             f"(deployment {deployment_id})."
         )
         raise typer.Exit(1)
+    skipped_because = _SKIPPED_BECAUSE.get(str(deployment.get("action")), "nothing to do there")
     for target in deployment.get("targets", []):
         line = f"  {target.get('plugin')} on {target.get('instance')}: {target.get('status')}"
         if target.get("error"):
             line += f": {target['error']}"
         elif target.get("status") == "skipped":
-            line += " (nothing to do there)"
+            line += f" ({skipped_because})"
         print(line)
         if undeclared := target.get("undeclared_values"):
             print(
