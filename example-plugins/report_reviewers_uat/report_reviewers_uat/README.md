@@ -24,7 +24,7 @@ canvas install example-plugins/report_reviewers_uat/report_reviewers_uat --host 
 ## UAT script
 
 1. Install the plugin and open `/run`. Every type should read without an error.
-2. Make sure some documents have a reviewer. For example, upload a document to a patient's chart and assign it to yourself for review, or delegate an existing lab report's review to another staff member.
+2. From the Data Integration queue, file documents as a lab report, an imaging report, a specialist report and an uncategorized clinical document, choosing yourself as the reviewer each time.
 3. Open `/queue`. The documents assigned to you are listed under their type, with you among their reviewers.
-4. Reassign one of them to a colleague in Canvas, then open `/document?type=<type>&id=<document id>`. The reviewer list shows the colleague and not you, and the document drops out of your `/queue`.
+4. Open the uncategorized clinical document's review, click Delegate and delegate it to a colleague. Open `/document?type=uncategorized_clinical_document&id=<document id>`: the reviewer list shows the colleague and not you, and the document drops out of your `/queue`.
 5. Open `/run` again. `all_passed` is `true`, and the types you assigned documents for no longer appear in `types_without_assigned_documents`.
