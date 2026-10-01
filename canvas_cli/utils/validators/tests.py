@@ -145,3 +145,11 @@ def test_manifest_variable_rejects_extra_fields(handler_manifest_example: dict) 
 def test_manifest_accepts_an_ordinary_application() -> None:
     """The application entry carries identity and an icon, and nothing about layout."""
     validate_manifest_file(_make_application_manifest("patient_specific"))
+
+
+@pytest.mark.parametrize("name", ["intake", "acme__intake"])
+def test_manifest_name_needs_no_publisher_prefix(name: str) -> None:
+    """The schema accepts a name with or without a publisher prefix, so plugins installed with
+    `canvas install` keep validating; only `canvas deploy` requires the prefix.
+    """
+    validate_manifest_file(_make_application_manifest("global") | {"name": name})

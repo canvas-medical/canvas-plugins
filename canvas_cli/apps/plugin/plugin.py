@@ -39,6 +39,34 @@ def plugin_url(host: str, *paths: str) -> str:
     return urljoin(host, join)
 
 
+PLATFORM_MANAGED_ERROR_CODE = "control_room_managed"
+
+
+def _print_failure(response: requests.Response) -> None:
+    """Print why an instance refused a plugin request.
+
+    An instance refuses to let the CLI change a plugin Canvas Platform deploys,
+    and the way to change one of those is through platform.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    if (
+        response.status_code == requests.codes.forbidden
+        and isinstance(body, dict)
+        and body.get("error_code") == PLATFORM_MANAGED_ERROR_CODE
+    ):
+        print(
+            "This plugin is managed by Canvas Platform on this instance, so the instance "
+            "refuses changes made directly. Publish new code with `canvas deploy`, and change "
+            "its variables or remove it with `canvas config set --instance` or "
+            "`canvas uninstall --instance` while signed in with `canvas login`."
+        )
+        return
+    print(f"Status code {response.status_code}: {response.text}")
+
+
 def validate_package(package: Path) -> Path:
     """Validate if `package` Path exists and it is a file."""
     if not package.exists():
@@ -231,20 +259,21 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
     return parsed_secrets
 
 
-def init(
-    plugin_type: str = typer.Argument(
-        "handler",
-        help="The type of plugin to create. Options are 'application' or 'handler'.",
-    ),
-) -> None:
-    """Create a new plugin."""
+def scaffold(plugin_type: str, prefix: str = "") -> Path:
+    """Create a new plugin from the template for ``plugin_type`` and return its directory.
+
+    A ``prefix`` names the package ``<prefix>__<package>``, the publisher-prefixed
+    name Canvas Platform requires.
+    """
     template = get_base_plugin_template_path(plugin_type)
+    extra_context = {"__plugin_prefix": prefix} if prefix else None
     try:
-        project_dir = cookiecutter(str(template))
+        project_dir = cookiecutter(str(template), extra_context=extra_context)
     except OutputDirExistsException:
         raise typer.BadParameter("The supplied directory already exists") from None
 
     print(f"Project created in {project_dir}")
+    return Path(project_dir)
 
 
 def install(
@@ -325,7 +354,7 @@ def install(
         print(f"Plugin {package_name} already exists, updating instead...")
         update(package_name, built_package_path, is_enabled=is_enabled, secrets=all_vars, host=host)
     else:
-        print(f"Status code {r.status_code}: {r.text}")
+        _print_failure(r)
         raise typer.Exit(1)
 
 
@@ -365,7 +394,7 @@ def uninstall(
     if r.status_code == requests.codes.no_content:
         print(f"Plugin {name} successfully uninstalled!")
     else:
-        print(f"Status code {r.status_code}: {r.text}")
+        _print_failure(r)
         raise typer.Exit(1)
 
 
@@ -402,7 +431,7 @@ def enable(
     if r.ok:
         print(f"Plugin {name} successfully enabled!")
     else:
-        print(f"Status code {r.status_code}: {r.text}")
+        _print_failure(r)
         raise typer.Exit(1)
 
 
@@ -439,7 +468,7 @@ def disable(
     if r.ok:
         print(f"Plugin {name} successfully disabled!")
     else:
-        print(f"Status code {r.status_code}: {r.text}")
+        _print_failure(r)
         raise typer.Exit(1)
 
 
@@ -891,5 +920,5 @@ def update(
             print("Plugin secrets successfully updated.")
 
     else:
-        print(f"Status code {r.status_code}: {r.text}")
+        _print_failure(r)
         raise typer.Exit(1)

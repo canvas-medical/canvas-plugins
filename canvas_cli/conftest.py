@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 import canvas_cli.main
+from canvas_cli.apps.platform import auth as platform_auth
 from canvas_cli.utils.context import context
 
 
@@ -14,6 +15,15 @@ def monkeypatch_app_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
         return str(tmp_path)
 
     monkeypatch.setattr(canvas_cli.main, "get_app_dir", app_dir)
+
+
+@pytest.fixture(autouse=True)
+def isolate_platform_credentials(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Keep every test away from the developer's real Canvas Platform session."""
+    path = tmp_path / "platform-credentials.json"
+    monkeypatch.setattr(platform_auth, "CREDENTIALS_PATH", path)
+    monkeypatch.delenv(platform_auth.PLATFORM_URL_ENV, raising=False)
+    return path
 
 
 @pytest.fixture(autouse=True)
