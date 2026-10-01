@@ -93,7 +93,6 @@
 
         // A dropped socket leaves the numbers frozen, so say so rather than lying.
         socket.addEventListener('close', () => {
-          setState('closed');
           document.body.classList.add('is-stale');
         });
       }
