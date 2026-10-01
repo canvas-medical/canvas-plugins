@@ -31,6 +31,17 @@ Canvas Platform hosts a plugin's git repository and deploys it to the instances 
 
 A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org prefix>__<package>` (for example `acme__intake`), used for the manifest `name`, the package folder and its imports. `canvas login` lists the prefix of each organization you belong to, and the prefix decides which organization publishes the plugin. `canvas install` and `canvas validate` accept names with or without a prefix.
 
+#### Which plugins go through Canvas Platform
+
+`canvas config`, `canvas uninstall` and `canvas install` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
+
+- A name without a prefix, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
+- Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
+
+`--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
+
+git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
+
 ```console
 $ canvas login
 $ canvas init                                   # scaffolds acme__my_cool_plugin and registers it
@@ -116,7 +127,7 @@ $ canvas init [OPTIONS] [PLUGIN_TYPE]
 
 ## `canvas deploy`
 
-Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline. The repository is rooted at the directory containing the package.
+Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed.
 
 **Usage**:
 
