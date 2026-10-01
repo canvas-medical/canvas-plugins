@@ -26,6 +26,12 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
     team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True, related_name="+")
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_patientadministrativedocument_reviewers_001",
+        blank=True,
+    )
     integration_task_review = models.ForeignKey(
         "v1.IntegrationTaskReview", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )

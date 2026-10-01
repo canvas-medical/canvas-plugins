@@ -127,6 +127,12 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     junked = models.BooleanField()
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_imagingreport_reviewers_001",
+        blank=True,
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )
