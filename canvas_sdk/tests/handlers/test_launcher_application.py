@@ -10,6 +10,7 @@ from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.application import (
     ApplicationScope,
     DockedApplication,
+    DockEdge,
     EmbeddedApplication,
     MenuPosition,
     NoteApplication,
@@ -320,15 +321,181 @@ def test_a_directly_emitted_badge_event_still_returns_nothing() -> None:
     assert BadgedMenuApplication(event).compute() == []
 
 
-def test_invisible_launcher_returns_no_effects() -> None:
-    """visible() is the whole point: no patient in context, no entry."""
-    assert ConditionalMenuApplication(_on_get("provider_menu")).compute() == []
+def test_invisible_launcher_reports_that_it_is_hidden() -> None:
+    """A launcher menu draws a manifest row that no handler claims, so silence shows it.
+
+    The row's identifier is the handler's class path, so a hidden launcher answers with
+    ``visible`` false rather than nothing, and Canvas drops the entry and the row.
+    """
+    payload = _payload(ConditionalMenuApplication(_on_get("provider_menu")))
+
+    assert payload["identifier"] == "test_plugin__care_gaps"
+    assert payload["visible"] is False
+
+
+def test_a_hidden_launcher_still_reports_its_chrome() -> None:
+    """The menu keeps a hidden entry, so it can show it again on a later page."""
+
+    class HiddenBadgedMenuApplication(BadgedMenuApplication):
+        def visible(self) -> bool:
+            return False
+
+    payload = _payload(HiddenBadgedMenuApplication(_on_get("provider_menu")))
+
+    assert payload["name"] == "Care gaps"
+    assert payload["menu_position"] == "top"
+    assert payload["badge_count"] == 7
 
 
 def test_visible_launcher_returns_its_effect() -> None:
     """With the condition met the entry appears."""
     event = _on_get("provider_menu", patient={"id": "abc"})
-    assert _payload(ConditionalMenuApplication(event))["identifier"] == "test_plugin__care_gaps"
+    payload = _payload(ConditionalMenuApplication(event))
+
+    assert payload["identifier"] == "test_plugin__care_gaps"
+    assert payload["visible"] is True
+
+
+class HiddenNoteApplication(NoteApplication):
+    """A note application that hides itself."""
+
+    NAME = "Hidden note tool"
+
+    def visible(self) -> bool:
+        """Hide on every page."""
+        return False
+
+    def on_open(self) -> Effect | list[Effect]:
+        """Launch nothing."""
+        return []
+
+
+class HiddenDockedApplication(DockedApplication):
+    """A docked application that hides itself."""
+
+    NAME = "Hidden dock"
+    DOCK_EDGE = DockEdge.RIGHT
+    DOCK_SIZE = "320px"
+
+    def visible(self) -> bool:
+        """Hide on every page."""
+        return False
+
+    def on_open(self) -> Effect | list[Effect]:
+        """Launch nothing."""
+        return []
+
+
+@pytest.mark.parametrize(
+    "app_class",
+    [HiddenNoteApplication, HiddenDockedApplication],
+    ids=["note", "docked"],
+)
+def test_a_hidden_non_launcher_scope_stays_silent(
+    app_class: type[EmbeddedApplication],
+) -> None:
+    """Only a launcher menu merges manifest rows, so other scopes have no row to suppress."""
+    assert app_class(_on_get(app_class.SCOPE)).compute() == []
+
+
+# --- a navigation: an untargeted APPLICATION__ON_CONTEXT_CHANGE -----------------------
+
+
+def _context_change(target: str = "", **context: object) -> Event:
+    """An APPLICATION__ON_CONTEXT_CHANGE event; with no target it reports a navigation."""
+    return Event(
+        EventRequest(
+            type=EventType.APPLICATION__ON_CONTEXT_CHANGE,
+            target=target,
+            context=json.dumps(context),
+        )
+    )
+
+
+class UnbadgeableMenuApplication(ExampleProviderMenuApplication):
+    """A provider menu entry whose badge must not be computed."""
+
+    def compute_notification_badge(self) -> int | None:
+        """Fail the test if a navigation asks for the count."""
+        raise AssertionError("a navigation computed a badge")
+
+
+class ContextAwareMenuApplication(ExampleProviderMenuApplication):
+    """A provider menu entry that reacts to context changes while open."""
+
+    def on_context_change(self) -> Effect | list[Effect] | None:
+        """Relaunch with the new page."""
+        return [LaunchModalEffect(url="https://example.com/care-gaps?moved").apply()]
+
+
+@pytest.mark.parametrize(
+    "app_class",
+    [ExampleProviderMenuApplication, ExamplePanelApplication],
+    ids=["provider-menu", "panel"],
+)
+def test_a_navigation_makes_a_launcher_report_its_entry(
+    app_class: type[EmbeddedApplication],
+) -> None:
+    """The menu replaces the entry by identifier, so the update carries the whole entry."""
+    payload = _payload(app_class(_context_change(url="/schedule")))
+
+    assert payload["identifier"] == app_class.IDENTIFIER
+    assert payload["name"] == app_class.NAME
+    assert payload["visible"] is True
+
+
+def test_a_navigation_reports_a_launcher_hidden_on_the_new_page() -> None:
+    """visible() runs against the new page, and a hidden entry still answers."""
+    payload = _payload(ConditionalMenuApplication(_context_change(url="/schedule")))
+
+    assert payload["visible"] is False
+
+
+def test_a_navigation_shows_a_launcher_its_new_context() -> None:
+    """visible() reads the context the navigation carries."""
+    event = _context_change(url="/patient/abc", patient={"id": "abc"})
+
+    assert _payload(ConditionalMenuApplication(event))["visible"] is True
+
+
+def test_a_navigation_computes_no_badge() -> None:
+    """A badge costs the plugin a computation, so it travels only on the first load."""
+    payload = _payload(UnbadgeableMenuApplication(_context_change(url="/schedule")))
+
+    assert payload["badge_count"] is None
+
+
+def test_a_navigation_does_not_reach_on_context_change() -> None:
+    """on_context_change() is for an open surface, which gets its own targeted event."""
+    result = ContextAwareMenuApplication(_context_change(url="/schedule")).compute()
+
+    assert [effect.type for effect in result] == [EffectType.SHOW_APPLICATION]
+
+
+def test_a_targeted_context_change_reaches_the_open_launcher_only() -> None:
+    """An open launcher gets its targeted event as before, with no menu update in it."""
+    result = ContextAwareMenuApplication(_context_change(target="test_plugin__care_gaps")).compute()
+
+    assert [effect.type for effect in result] == [EffectType.LAUNCH_MODAL]
+
+
+@pytest.mark.parametrize(
+    "app_class",
+    [HiddenNoteApplication, HiddenDockedApplication],
+    ids=["note", "docked"],
+)
+def test_a_navigation_leaves_other_scopes_silent(app_class: type[EmbeddedApplication]) -> None:
+    """Only the launcher menus redraw on a navigation."""
+    assert app_class(_context_change(url="/schedule")).compute() == []
+
+
+def test_an_untargeted_open_still_launches_nothing() -> None:
+    """Only a context change is untargeted; an open goes to one application."""
+    event = Event(
+        EventRequest(type=EventType.APPLICATION__ON_OPEN, target="", context=json.dumps({}))
+    )
+
+    assert ExampleProviderMenuApplication(event).compute() == []
 
 
 @pytest.mark.parametrize(

@@ -22,6 +22,7 @@ class ShowApplicationEffect(_BaseEffect):
     badge_count: int | None = Field(default=None, ge=0)
     menu_position: str | None = Field(default=None)
     show_in_panel: bool | None = Field(default=None)
+    visible: bool = Field(default=True)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -37,6 +38,7 @@ class ShowApplicationEffect(_BaseEffect):
             "badge_count": self.badge_count,
             "menu_position": self.menu_position,
             "show_in_panel": self.show_in_panel,
+            "visible": self.visible,
         }
 
     @property
