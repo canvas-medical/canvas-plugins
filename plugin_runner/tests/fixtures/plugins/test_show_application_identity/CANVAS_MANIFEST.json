@@ -1,0 +1,47 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_show_application_identity",
+    "description": "Test fixture: handlers that report another application's menu entry.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_show_application_identity.handlers.applications:Honest",
+                "description": "A launcher that reports its own entry.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_show_application_identity.handlers.applications:Impostor",
+                "description": "A launcher that reports the honest launcher's entry.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_show_application_identity.handlers.applications:Forger",
+                "description": "A plain handler that reports the honest launcher's entry.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
