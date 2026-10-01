@@ -127,7 +127,7 @@ $ canvas init [OPTIONS] [PLUGIN_TYPE]
 
 ## `canvas deploy`
 
-Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed.
+Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline at a terminal; under `--yes` or without a terminal, deploy lists them with the deployment id and exits non-zero without answering them. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed unless `--yes` is passed.
 
 **Usage**:
 
@@ -144,7 +144,7 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--instance TEXT`: Instance to deploy to, repeatable. Without it, deploy targets the only instance you can deploy to and otherwise lists the choices
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
-- `-y, --yes`: Approve all consent requests
+- `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
 - `--help`: Show this message and exit.
 
 ## `canvas clone`
