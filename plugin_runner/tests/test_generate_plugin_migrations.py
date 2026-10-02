@@ -25,6 +25,7 @@ from plugin_runner.ddl import (
     discover_model_files,
     execute_create_table_sql,
     extract_models_from_module,
+    generate_create_table_sql,
     generate_plugin_migrations,
     should_create_table,
 )
@@ -130,6 +131,32 @@ def test_extract_finds_custom_model_subclass(tmp_path: Path) -> None:
     assert len(result) >= 1
     model_names = [m.__name__ for m in result]
     assert "MyModel" in model_names
+
+
+def test_sandbox_loaded_model_carries_the_metadata_columns(tmp_path: Path) -> None:
+    """A model declaring no metadata should reach the DDL with created and modified.
+
+    Runs the path a deploy takes: plugin source through the sandbox, then the
+    table SQL the installer executes.
+    """
+    model_file = _make_plugin_tree(
+        tmp_path,
+        "test_plugin",
+        """\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import TextField
+
+        class BareModel(CustomModel):
+            name = TextField()
+        """,
+    )
+
+    (model_class,) = extract_models_from_module("test_plugin", model_file)
+    sql = generate_create_table_sql("test_plugin", model_class)
+
+    assert {"created", "modified"} <= {field.name for field in model_class._meta.local_fields}
+    assert "created" in sql
+    assert "modified" in sql
 
 
 def test_extract_excludes_constants(tmp_path: Path) -> None:
