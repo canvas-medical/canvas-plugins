@@ -12,7 +12,9 @@ from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.test_utils.factories import (
     ImagingReportFactory,
     LabReportFactory,
+    PatientAdministrativeDocumentFactory,
     StaffFactory,
+    TeamFactory,
 )
 from canvas_sdk.v1.data import Staff
 
@@ -121,3 +123,31 @@ def test_document_rejects_unknown_type_and_missing_document() -> None:
 
     status, _ = _call("document", "type=lab_report&id=00000000-0000-0000-0000-000000000000")
     assert status == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_document_returns_the_assigned_team() -> None:
+    """/document returns the team a lab report is assigned to, with no individual reviewers."""
+    team = TeamFactory.create()
+    report = LabReportFactory.create(team=team)
+
+    status, body = _call("document", f"type=lab_report&id={report.id}")
+
+    assert status == HTTPStatus.OK
+    assert body["team"] == {"id": str(team.id), "name": team.name}
+    assert body["reviewers"] == []
+
+
+@pytest.mark.django_db
+def test_document_reads_a_patient_administrative_document() -> None:
+    """/document reads a patient administrative document, which has no review relation."""
+    reviewer = StaffFactory.create()
+    document = PatientAdministrativeDocumentFactory.create()
+    document.reviewers.add(reviewer)
+
+    status, body = _call("document", f"type=patient_administrative_document&id={document.id}")
+
+    assert status == HTTPStatus.OK
+    assert body["reviewed"] is None
+    assert body["team"] is None
+    assert [staff["id"] for staff in body["reviewers"]] == [str(reviewer.id)]

@@ -2,6 +2,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.utils import presigned_url
 
 
@@ -12,7 +13,7 @@ class DocumentCoding(Coding):
         db_table = "canvas_sdk_data_api_documentcoding_001"
 
 
-class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
+class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel, Report):
     """Model to read PatientAdministrativeDocument data."""
 
     class Meta:
@@ -22,10 +23,6 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
-    assigned_by = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True, related_name="+")
     reviewers = models.ManyToManyField(
         "v1.Staff",
         related_name="+",
@@ -40,10 +37,6 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel):
     )
 
     name = models.CharField(max_length=255)
-    review_mode = models.CharField(max_length=2)
-    junked = models.BooleanField(default=False)
-    assigned_date = models.DateTimeField(null=True)
-    team_assigned_date = models.DateTimeField(null=True)
     original_date = models.DateField(null=True)
     comment = models.TextField(default="", blank=True)
     priority = models.BooleanField(default=False)

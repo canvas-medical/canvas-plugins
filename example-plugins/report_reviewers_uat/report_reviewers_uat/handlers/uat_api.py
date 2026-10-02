@@ -45,12 +45,25 @@ def serialize_staff(staff: Staff) -> dict[str, str]:
 
 
 def serialize_document(document: Document) -> dict[str, Any]:
-    """Return a document's identifiers, review state and assigned reviewers (no clinical content)."""
+    """Return a document's identifiers, review state and assignment (no clinical content).
+
+    `reviewed` is None for patient administrative documents, which have no review relation.
+    """
     return {
         "id": str(document.id),
         "assigned_date": document.assigned_date.isoformat() if document.assigned_date else None,
-        "reviewed": document.review_id is not None,
+        "reviewed": (
+            None
+            if isinstance(document, PatientAdministrativeDocument)
+            else document.review_id is not None
+        ),
         "reviewers": [serialize_staff(staff) for staff in document.reviewers.all()],
+        "team": {"id": str(document.team.id), "name": document.team.name}
+        if document.team
+        else None,
+        "team_assigned_date": (
+            document.team_assigned_date.isoformat() if document.team_assigned_date else None
+        ),
     }
 
 
@@ -59,6 +72,7 @@ def assigned_documents(model: type[Document]) -> QuerySet[Document]:
     return (
         model.objects.filter(reviewers__isnull=False)
         .distinct()
+        .select_related("team")
         .prefetch_related("reviewers")
         .order_by("-dbid")
     )
@@ -128,6 +142,7 @@ class ReportReviewersUatAPI(StaffSessionAuthMixin, SimpleAPI):
             name: [
                 serialize_document(document)
                 for document in model.objects.filter(reviewers__id=staff.id)
+                .select_related("team")
                 .prefetch_related("reviewers")
                 .order_by("-dbid")
             ]
@@ -150,6 +165,7 @@ class ReportReviewersUatAPI(StaffSessionAuthMixin, SimpleAPI):
 
         document = (
             model.objects.filter(id=self.request.query_params.get("id"))
+            .select_related("team")
             .prefetch_related("reviewers")
             .first()
         )
