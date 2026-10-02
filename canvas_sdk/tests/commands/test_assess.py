@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import pytest
 from pydantic_core import ValidationError
@@ -212,3 +213,43 @@ def test_originate_without_an_anchor_skips_the_ownership_check(condition: Condit
         assess.originate()
 
     assert "does not belong to this command's patient" not in str(exc_info.value)
+
+
+# --- assessing by ICD-10 code ----------------------------------------------
+
+
+def test_originate_sends_icd10_code(note: Note) -> None:
+    """An ICD-10 code is sent so home-app can reuse a charted condition or create a new one."""
+    effect = AssessCommand(note_uuid=str(note.id), icd10_code="E119").originate()
+
+    assert json.loads(effect.payload)["data"]["icd10_code"] == "E119"
+
+
+@pytest.mark.parametrize("method", ["originate", "edit"])
+def test_condition_id_and_icd10_code_are_mutually_exclusive(
+    command: Command, condition: Condition, method: str
+) -> None:
+    """A command names its condition one way, by charted condition or by ICD-10 code."""
+    assess = AssessCommand(
+        note_uuid=str(command.note.id),
+        command_uuid=str(command.id),
+        condition_id=str(condition.id),
+        icd10_code="E119",
+    )
+
+    with pytest.raises(ValidationError, match="either condition_id or icd10_code"):
+        getattr(assess, method)()
+
+
+# --- onset date ------------------------------------------------------------
+
+
+def test_originate_sends_approximate_date_of_onset(note: Note) -> None:
+    """The onset date is sent as an ISO date."""
+    effect = AssessCommand(
+        note_uuid=str(note.id),
+        icd10_code="E119",
+        approximate_date_of_onset=datetime.date(2020, 5, 1),
+    ).originate()
+
+    assert json.loads(effect.payload)["data"]["approximate_date_of_onset"] == "2020-05-01"
