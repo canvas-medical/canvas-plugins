@@ -261,6 +261,13 @@ STANDARD_LIBRARY_MODULES = {
     "base64": {
         "b64decode",
         "b64encode",
+        "urlsafe_b64decode",
+        "urlsafe_b64encode",
+    },
+    "bisect": {
+        "bisect_left",
+        "bisect_right",
+        "insort",
     },
     "collections": {
         "Counter",
@@ -334,6 +341,7 @@ STANDARD_LIBRARY_MODULES = {
     "re": {
         "compile",
         "DOTALL",
+        "I",
         "IGNORECASE",
         "findall",
         "fullmatch",
@@ -341,6 +349,15 @@ STANDARD_LIBRARY_MODULES = {
         "search",
         "split",
         "sub",
+    },
+    # Cryptographically secure randomness; `random` is predictable from its output
+    "secrets": {
+        "choice",
+        "compare_digest",
+        "randbelow",
+        "token_bytes",
+        "token_hex",
+        "token_urlsafe",
     },
     "string": {
         "ascii_lowercase",
@@ -408,6 +425,7 @@ THIRD_PARTY_MODULES = {
         "GinIndex",
     },
     "django.db": {
+        "DatabaseError",
         "IntegrityError",
     },
     "django.db.transaction": {
@@ -470,6 +488,7 @@ THIRD_PARTY_MODULES = {
         "Lag",
         "LastValue",
         "Lead",
+        "Length",
         "NthValue",
         "Ntile",
         "PercentRank",
