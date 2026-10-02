@@ -1109,6 +1109,9 @@
   "canvas_sdk.utils.db": [
     "thread_cleanup"
   ],
+  "canvas_sdk.utils.html": [
+    "sanitize_html"
+  ],
   "canvas_sdk.utils.http": [
     "Http",
     "ThreadPoolExecutor",

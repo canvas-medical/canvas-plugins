@@ -56,3 +56,30 @@ def test_render_to_string_forbidden_template(
     ]
     with pytest.raises(PermissionError):
         plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_render_template"], indirect=True)
+def test_sanitize_html_importable_from_plugin(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """A sandboxed plugin can import and call canvas_sdk.utils.html.sanitize_html."""
+    plugin = LOADED_PLUGINS[
+        "test_render_template:test_render_template.handlers.my_handler:SanitizeHtmlImport"
+    ]
+    result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+    assert result[0].payload == "<p>hi</p>"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_render_template"], indirect=True)
+def test_sanitize_html_template_filter(install_test_plugin: Path, load_test_plugins: None) -> None:
+    """Plugin templates can use the sanitize_html filter without a {% load %} tag."""
+    plugin = LOADED_PLUGINS[
+        "test_render_template:test_render_template.handlers.my_handler:SanitizeHtmlFilter"
+    ]
+    result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+    assert '<div id="message"><b>hi</b></div>' in result[0].payload
+    assert "onerror" not in result[0].payload.split('<div id="escaped">')[0]
+    assert (
+        '<div id="escaped">&lt;b&gt;hi&lt;/b&gt;&lt;img src=&quot;x&quot; '
+        "onerror=&quot;alert(1)&quot;&gt;</div>" in result[0].payload
+    )
