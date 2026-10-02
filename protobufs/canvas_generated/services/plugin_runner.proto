@@ -13,4 +13,8 @@ service PluginRunner {
   rpc ReloadPlugin (ReloadPluginRequest) returns (stream ReloadPluginResponse);
 
   rpc UnloadPlugin (UnloadPluginRequest) returns (stream UnloadPluginResponse);
+
+  // Agent Runner Framework (KOALA-5544). Reuses EventResponse so emitted
+  // agent effects flow back through the same shape handler-emitted effects do.
+  rpc RunAgent (RunAgentRequest) returns (stream EventResponse);
 }
