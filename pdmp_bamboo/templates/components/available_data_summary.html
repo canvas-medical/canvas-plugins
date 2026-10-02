@@ -1,0 +1,13 @@
+<!-- Available Data Summary -->
+<section class="section pdmp-section">
+  <div class="card pdmp-card pdmp-card-padded">
+    <h4 class="pdmp-color-text pdmp-title-no-margin pdmp-title-bottom-margin pdmp-title-flex">
+      <span class="pdmp-icon-sm">i</span> Available Data Summary
+    </h4>
+    <ul class="pdmp-text-muted pdmp-list-reset pdmp-text-small">
+      {% for item in items %}
+        <li class="pdmp-list-spaced"><strong>{{ item.label }}:</strong> {{ item.value }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

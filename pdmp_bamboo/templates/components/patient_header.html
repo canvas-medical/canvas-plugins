@@ -1,0 +1,11 @@
+<!-- PDMP Patient Header Component -->
+<section class="patient-card card pdmp-card pdmp-patient-card pdmp-margin-bottom"
+         data-component="patient-header-component"
+         data-component-type="patient-info"
+         aria-label="Patient information">
+  <div class="name pdmp-name"
+       data-component="patient-name"
+       aria-label="Patient name">{{ full_name }}, {{ formatted_sex }}</div>
+  <div data-component="patient-dob"
+       aria-label="Birth date">{{ formatted_dob }}</div>
+</section>
