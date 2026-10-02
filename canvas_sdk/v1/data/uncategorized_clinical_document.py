@@ -11,6 +11,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.utils import presigned_url
 
 if TYPE_CHECKING:
@@ -52,7 +53,7 @@ class UncategorizedClinicalDocumentReview(AuditedModel, IdentifiableModel):
     patient_communication_method = models.CharField(max_length=30)
 
 
-class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
+class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel, Report):
     """UncategorizedClinicalDocument."""
 
     class Meta:
@@ -62,9 +63,6 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
-    assigned_by = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     review = models.ForeignKey(
         "v1.UncategorizedClinicalDocumentReview",
         related_name="reports",
@@ -72,7 +70,6 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
         blank=True,
         on_delete=models.SET_NULL,
     )
-    team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True)
     reviewers = models.ManyToManyField(
         "v1.Staff",
         related_name="+",
@@ -84,11 +81,7 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
     )
 
     name = models.CharField(max_length=255)
-    review_mode = models.CharField(max_length=2)
-    junked = models.BooleanField(default=False)
     requires_signature = models.BooleanField(default=False)
-    assigned_date = models.DateTimeField(null=True)
-    team_assigned_date = models.DateTimeField(null=True)
     original_date = models.DateField(null=True)
     comment = models.TextField(default="", blank=True)
     priority = models.BooleanField(default=False)
