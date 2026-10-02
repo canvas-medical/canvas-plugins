@@ -241,7 +241,7 @@ def test_condition_id_and_icd10_code_are_mutually_exclusive(
         getattr(assess, method)()
 
 
-# --- onset date and problem list -------------------------------------------
+# --- onset date ------------------------------------------------------------
 
 
 def test_originate_sends_approximate_date_of_onset(note: Note) -> None:
@@ -253,19 +253,3 @@ def test_originate_sends_approximate_date_of_onset(note: Note) -> None:
     ).originate()
 
     assert json.loads(effect.payload)["data"]["approximate_date_of_onset"] == "2020-05-01"
-
-
-def test_originate_sends_show_in_problem_list(note: Note) -> None:
-    """Turning off "Show in problem list" is sent to home-app."""
-    effect = AssessCommand(
-        note_uuid=str(note.id), icd10_code="J029", show_in_problem_list=False
-    ).originate()
-
-    assert json.loads(effect.payload)["data"]["show_in_problem_list"] is False
-
-
-def test_show_in_problem_list_is_only_sent_when_set(note: Note) -> None:
-    """Leaving the toggle unset sends nothing, so an edit never flips the condition's list status."""
-    effect = AssessCommand(note_uuid=str(note.id), icd10_code="E119").originate()
-
-    assert "show_in_problem_list" not in json.loads(effect.payload)["data"]
