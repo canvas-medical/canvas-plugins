@@ -979,7 +979,10 @@
     "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
+    "MenuPosition",
     "NoteApplication",
+    "PanelApplication",
+    "ProviderMenuApplication",
     "SchedulingApplication"
   ],
   "canvas_sdk.handlers.base": [

@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any
 
 import deprecation
+from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.application_notification_badge import ApplicationNotificationBadge
@@ -82,6 +83,21 @@ class ApplicationScope(StrEnum):
     NOTE = "note"
     SCHEDULING = "scheduling"
     DOCKED = "docked"
+    PROVIDER_MENU = "provider_menu"
+    PANEL = "panel"
+
+
+# The scopes whose menu merges these entries with the plugin's manifest-declared rows.
+# A row carries the same identifier as the handler that declares it, so on these scopes
+# an absent effect and a hidden application have to stay distinguishable.
+LAUNCHER_SCOPES = frozenset({ApplicationScope.PROVIDER_MENU, ApplicationScope.PANEL})
+
+
+class MenuPosition(StrEnum):
+    """Which group of the provider menu an entry joins."""
+
+    TOP = "top"
+    BOTTOM = "bottom"
 
 
 class EmbeddedApplication(Application, ABC):
@@ -96,9 +112,28 @@ class EmbeddedApplication(Application, ABC):
         """Handle the application events."""
         match self.event.type:
             case EventType.APPLICATION__ON_GET:
-                if self._matches_scope() and self.visible():
-                    return [ShowApplicationEffect(**self._show_application_values()).apply()]
-                return []
+                if not self._matches_scope():
+                    return []
+
+                visible = self.visible()
+
+                if not visible and self.SCOPE not in LAUNCHER_SCOPES:
+                    return []
+
+                values = self._show_application_values()
+                if self.SCOPE in LAUNCHER_SCOPES:
+                    values["badge_count"] = self.compute_notification_badge()
+
+                return [ShowApplicationEffect(**values, visible=visible).apply()]
+            case EventType.APPLICATION__ON_CONTEXT_CHANGE if not self.event.target.id:
+                if self.SCOPE not in LAUNCHER_SCOPES:
+                    return []
+
+                return [
+                    ShowApplicationEffect(
+                        **self._show_application_values(), visible=self.visible()
+                    ).apply()
+                ]
             case EventType.APPLICATION__GET_NOTIFICATION_BADGE:
                 # Explicitly ignore the event here in case it's emitted directly.
                 return []
@@ -106,7 +141,7 @@ class EmbeddedApplication(Application, ABC):
                 return super().compute()
 
     def _show_application_values(self) -> dict[str, Any]:
-        """What this application tells Canvas about itself on APPLICATION__ON_GET.
+        """What this application tells Canvas about itself, on a load or a navigation.
 
         Subclasses whose surface needs more than the common fields extend this rather
         than reimplementing ``compute``.
@@ -238,12 +273,62 @@ class SchedulingApplication(EmbeddedApplication):
     SCOPE = ApplicationScope.SCHEDULING
 
 
+class ProviderMenuApplication(EmbeddedApplication):
+    """An Application that appears in the provider menu, the side navigation panel."""
+
+    SCOPE = ApplicationScope.PROVIDER_MENU
+
+    ICON_URL: str | None = None
+    MENU_POSITION: MenuPosition = MenuPosition.TOP
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the side menu draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "menu_position": MenuPosition(self.MENU_POSITION).value,
+        }
+
+
+class PanelApplication(EmbeddedApplication):
+    """An Application that appears in the panel bar at the top of the window."""
+
+    SCOPE = ApplicationScope.PANEL
+
+    ICON_URL: str
+    SHOW_IN_DRAWER: bool = True
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require an icon, unless this subclass only exists to be subclassed itself."""
+        super().__init_subclass__(**kwargs)
+
+        if cls.__dict__.get("abstract", False):
+            return
+
+        if not getattr(cls, "ICON_URL", None):
+            raise ImproperlyConfigured(
+                f"{cls.__name__!r} must define ICON_URL: the panel bar renders the icon "
+                "and nothing else, so there is nothing to click without one."
+            )
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Add the chrome the panel bar draws."""
+        return {
+            **super()._show_application_values(),
+            "icon_url": self.ICON_URL,
+            "show_in_panel": not self.SHOW_IN_DRAWER,
+        }
+
+
 __exports__ = (
     "Application",
     "ApplicationScope",
     "DockEdge",
     "DockedApplication",
     "EmbeddedApplication",
+    "MenuPosition",
     "NoteApplication",
+    "PanelApplication",
+    "ProviderMenuApplication",
     "SchedulingApplication",
 )
