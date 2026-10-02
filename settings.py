@@ -68,7 +68,8 @@ CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "canvas_sdk_read_on
 CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "canvas_sdk_read_only")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
-CANVAS_SDK_DB_URL = os.getenv("DATABASE_URL")
+CANVAS_SDK_DB_URL = os.getenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL") or os.getenv("DATABASE_URL")
+USING_BOUNCER = bool(os.getenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL"))
 
 if IS_TESTING:
     CANVAS_SDK_DB_BACKEND = "sqlite3"
@@ -94,13 +95,31 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
         "ENGINE": "django.db.backends.postgresql",
         "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
-        "OPTIONS": {
+    }
+
+    # When going through pgdog (bouncer), pgdog pools server connections in
+    # transaction mode, so consecutive transactions from one Django connection
+    # can land on different Postgres sessions:
+    # - CONN_MAX_AGE=None keeps each thread's client connection to pgdog open;
+    #   pgdog only holds a server connection for the length of a transaction.
+    # - Server-side (named) cursors live on one Postgres session and outlive
+    #   the transaction under autocommit, so they are disabled.
+    # - Prepared statements are per session; prepare_threshold=None keeps
+    #   psycopg from creating them (Django's default, stated explicitly).
+    # - Session state such as search_path must be transaction-scoped; see
+    #   canvas_sdk/v1/plugin_database_context.py.
+    # Otherwise, use Django's built-in psycopg connection pool.
+    if USING_BOUNCER:
+        db_config["CONN_MAX_AGE"] = None
+        db_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+        db_config["OPTIONS"] = {"prepare_threshold": None}
+    else:
+        db_config["OPTIONS"] = {
             "pool": {
                 "min_size": 2,
                 "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
             }
-        },
-    }
+        }
 
     if CANVAS_SDK_DB_URL:
         parsed_url = parse.urlparse(CANVAS_SDK_DB_URL)

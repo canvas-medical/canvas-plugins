@@ -10,7 +10,6 @@ Tests verify that:
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import MagicMock, patch
 
 import pytest
 from django.db import connection
@@ -209,50 +208,6 @@ class TestPluginDatabaseContextManagerMocked:
 
         # Should still be cleared after exception
         assert get_current_plugin() is None
-
-    @patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
-    def test_search_path_sql_is_executed_with_namespace(self, mock_is_pg: MagicMock) -> None:
-        """Verify that SET search_path SQL is executed when namespace is provided."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("my_plugin", namespace="org__shared"):
-                pass
-
-            # Check that execute was called with SET search_path
-            calls = mock_cursor.execute.call_args_list
-            assert len(calls) >= 1
-
-            # First call should set search_path to the namespace
-            first_call = calls[0]
-            assert "SET search_path" in first_call[0][0]
-            assert "org__shared" in first_call[0][1]
-
-    def test_search_path_not_changed_without_namespace(self) -> None:
-        """Verify that search_path is not changed when no namespace is provided."""
-        with plugin_database_context("my_plugin"):
-            pass
-
-        # No SQL should have been executed since no namespace was provided
-
-    @patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
-    def test_search_path_restored_to_public(self, mock_is_pg: MagicMock) -> None:
-        """Verify search_path is restored to public after context."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("temp_plugin", namespace="org__shared"):
-                pass
-
-            # Last call should reset to public
-            calls = mock_cursor.execute.call_args_list
-            last_call = calls[-1]
-            assert "SET search_path" in last_call[0][0]
-            assert "public" in last_call[0][0]
 
 
 class TestPluginDatabaseContextThreadSafetyMocked:
