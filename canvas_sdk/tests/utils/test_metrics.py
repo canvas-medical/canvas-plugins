@@ -17,13 +17,13 @@ def _make_client() -> tuple[MagicMock, MagicMock]:
 
 
 # ---------------------------------------------------------------------------
-# Basic timing, execution count, and tags
+# Basic timing and tags
 # ---------------------------------------------------------------------------
 
 
 @patch("canvas_sdk.utils.metrics.time")
-def test_records_timing_and_execution_count(mock_time: MagicMock) -> None:
-    """measure() should emit a timing metric and an execution increment."""
+def test_records_timing_only(mock_time: MagicMock) -> None:
+    """measure() should emit one timing metric; its count field is the execution count."""
     mock_time.perf_counter_ns.side_effect = [0, 5_000_000]
     client, pipeline = _make_client()
 
@@ -32,7 +32,7 @@ def test_records_timing_and_execution_count(mock_time: MagicMock) -> None:
 
     expected_tags = {"name": "my_block", "status": "success"}
     pipeline.timing.assert_called_once_with("plugins.timings", 5.0, tags=expected_tags)
-    pipeline.incr.assert_called_once_with("plugins.executions", tags=expected_tags)
+    pipeline.incr.assert_not_called()
     pipeline.send.assert_called_once()
 
 
