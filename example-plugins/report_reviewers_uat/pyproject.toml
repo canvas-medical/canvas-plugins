@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "UAT plugin for the reviewers relation on report and document data models"
+license = "MIT"
+name = "report_reviewers_uat"
+readme = "report_reviewers_uat/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
