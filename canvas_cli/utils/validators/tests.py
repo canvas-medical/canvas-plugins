@@ -190,7 +190,6 @@ ACCEPTED = {
     "full": LISTING,
     "minimal": MINIMAL,
     "no-keywords": {**MINIMAL, "keywords": []},
-    "dots-inside-a-name": {**MINIMAL, "screenshots": [{"path": "shots/a..b.png", "alt": "a"}]},
 }
 
 REFUSED = {
@@ -207,6 +206,7 @@ REFUSED = {
     "plugin-with-boundary": {**MINIMAL, "agent": AGENT},
     "agent-extra-field": {**MINIMAL, "kind": "agent", "agent": {**AGENT, "budget": 3}},
     "screenshot-escapes": {**MINIMAL, "screenshots": [{"path": "../x.png", "alt": "a"}]},
+    "double-dot-in-a-name": {**MINIMAL, "screenshots": [{"path": "shots/a..b.png", "alt": "a"}]},
     "screenshot-absolute": {**MINIMAL, "screenshots": [{"path": "/x.png", "alt": "a"}]},
     "screenshot-gif": {**MINIMAL, "screenshots": [{"path": "x.gif", "alt": "a"}]},
     "screenshot-uppercase": {**MINIMAL, "screenshots": [{"path": "x.PNG", "alt": "a"}]},
