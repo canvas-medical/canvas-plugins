@@ -67,6 +67,7 @@ manifest_schema = {
         "diagram": {"type": ["boolean", "string"]},
         "readme": {"type": ["boolean", "string"]},
         "custom_data": {"$ref": "#/$defs/custom_data"},
+        "catalog": {"$ref": "#/$defs/catalog"},
     },
     "required": [
         "sdk_version",
@@ -223,6 +224,140 @@ manifest_schema = {
             },
             "required": ["namespace", "access"],
             "additionalProperties": False,
+        },
+        "catalog": {
+            "description": (
+                "The plugin's listing in the Canvas Platform plugin catalog. Listing copy "
+                "ships only from the repository, so the catalog and the running code cannot "
+                "disagree. Platform enforces the same rules when the plugin is pushed "
+                "(plugins/manifest.py in canvas-medical/platform), and the two copies change "
+                "together."
+            ),
+            "type": "object",
+            "properties": {
+                "title": {
+                    "description": "What the plugin is called on its card and its page.",
+                    "$ref": "#/$defs/catalog_text",
+                    "maxLength": 64,
+                },
+                "kind": {
+                    "description": "'agent' calls a model and acts with latitude; 'plugin' is deterministic.",
+                    "enum": ["agent", "plugin"],
+                    "default": "plugin",
+                },
+                "category": {
+                    "enum": [
+                        "Billing & RCM",
+                        "Charting",
+                        "Decision support",
+                        "Interoperability",
+                        "Labs & devices",
+                        "Operations",
+                        "Patient engagement",
+                        "Population health",
+                        "Prescribing",
+                        "Scheduling",
+                    ],
+                },
+                "surfaces": {
+                    "description": "Every place in Canvas the plugin's work shows up.",
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            "Note",
+                            "Chart app",
+                            "Command",
+                            "Background",
+                            "Patient portal",
+                            "Waffle",
+                        ]
+                    },
+                    "minItems": 1,
+                    "uniqueItems": True,
+                },
+                "keywords": {
+                    "description": "Free search terms, distinct from the fixed 'tags' taxonomy.",
+                    "type": "array",
+                    "items": {"type": "string", "pattern": r"^[a-z0-9][a-z0-9-]{0,31}$"},
+                },
+                "screenshots": {
+                    "description": "Images inside the package folder, in display order.",
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "description": "Ends in .png, .jpg, .jpeg or .webp, in lowercase.",
+                                "type": "string",
+                                "pattern": r"^(?!/)(?!(?:.*/)?\.\.(?:/|$))[^\\]+\.(?:png|jpe?g|webp)$",
+                            },
+                            "caption": {"type": "string", "maxLength": 40},
+                            "alt": {"$ref": "#/$defs/catalog_text", "maxLength": 200},
+                        },
+                        "required": ["path", "alt"],
+                        "additionalProperties": False,
+                    },
+                },
+                "agent": {
+                    "description": "What an agent decides and what it is not allowed to.",
+                    "type": "object",
+                    "properties": {
+                        "does": {"$ref": "#/$defs/catalog_text"},
+                        "does_not": {"$ref": "#/$defs/catalog_text"},
+                        "runs_when": {"$ref": "#/$defs/catalog_text"},
+                        "models": {
+                            "type": "array",
+                            "items": {"type": "string", "minLength": 1},
+                            "minItems": 1,
+                        },
+                    },
+                    "required": ["does", "does_not", "runs_when", "models"],
+                    "additionalProperties": False,
+                },
+                "integration": {
+                    "description": "Present when the plugin is an integration; 'unit' names what its volume counts.",
+                    "type": "object",
+                    "properties": {"unit": {"$ref": "#/$defs/catalog_text"}},
+                    "required": ["unit"],
+                    "additionalProperties": False,
+                },
+                "setup_instructions": {
+                    "description": "Path inside the package folder to the file Studio's agent reads when an organization installs the plugin.",
+                    "$ref": "#/$defs/catalog_path",
+                },
+                "release_notes": {
+                    "description": "What changed in this plugin_version.",
+                    "type": "object",
+                    "properties": {
+                        "kind": {"enum": ["fix", "performance", "breaking"]},
+                        "title": {"$ref": "#/$defs/catalog_text"},
+                        "body": {"type": "string"},
+                    },
+                    "required": ["kind", "title"],
+                    "additionalProperties": False,
+                },
+            },
+            "required": ["title", "category", "surfaces"],
+            "additionalProperties": False,
+            "allOf": [
+                {
+                    "description": "An agent states its boundary; a deterministic plugin has none.",
+                    "if": {"properties": {"kind": {"const": "agent"}}, "required": ["kind"]},
+                    "then": {"required": ["agent"]},
+                    "else": {"not": {"required": ["agent"]}},
+                }
+            ],
+        },
+        "catalog_text": {
+            "description": "Text with at least one character that is not whitespace.",
+            "type": "string",
+            "pattern": r"\S",
+        },
+        "catalog_path": {
+            "description": "A path inside the package folder: no leading '/', no '..' segment, no backslash.",
+            "type": "string",
+            "pattern": r"^(?!/)(?!(?:.*/)?\.\.(?:/|$))[^\\]+$",
         },
     },
 }
