@@ -290,7 +290,7 @@ manifest_schema = {
                             "path": {
                                 "description": "Ends in .png, .jpg, .jpeg or .webp, in lowercase.",
                                 "type": "string",
-                                "pattern": r"^(?!/)(?!(?:.*/)?\.\.(?:/|$))[^\\]+\.(?:png|jpe?g|webp)$",
+                                "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
                             },
                             "caption": {"type": "string", "maxLength": 40},
                             "alt": {"$ref": "#/$defs/catalog_text", "maxLength": 200},
@@ -355,9 +355,9 @@ manifest_schema = {
             "pattern": r"\S",
         },
         "catalog_path": {
-            "description": "A path inside the package folder: no leading '/', no '..' segment, no backslash.",
+            "description": "A path inside the package folder: no leading '/', no '..' anywhere, no backslash.",
             "type": "string",
-            "pattern": r"^(?!/)(?!(?:.*/)?\.\.(?:/|$))[^\\]+$",
+            "pattern": r"^(?!/)(?!.*\.\.)[^\\]+$",
         },
     },
 }
