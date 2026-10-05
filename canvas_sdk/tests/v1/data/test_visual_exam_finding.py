@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from django.db.models.fields.files import FieldFile
+
 from canvas_sdk.v1.data.visual_exam_finding import VisualExamFinding
 
 
@@ -14,6 +16,15 @@ def test_image_url_with_image() -> None:
     ) as mock:
         assert finding.image_url == "https://s3.example.com/presigned"
         mock.assert_called_once_with("visual_exam_findings/finding.png")
+
+
+def test_image_reads_as_a_file() -> None:
+    """Image reads back as a file whose name is the stored S3 key."""
+    finding = VisualExamFinding()
+    finding.image = "visual_exam_findings/finding.png"
+
+    assert isinstance(finding.image, FieldFile)
+    assert finding.image.name == "visual_exam_findings/finding.png"
 
 
 def test_image_url_without_image() -> None:

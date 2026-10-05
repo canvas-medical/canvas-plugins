@@ -59,8 +59,16 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
     delegated = models.BooleanField(default=False)
+    document = models.FileField(null=True)
 
     task_ids = models.CharField(max_length=1024)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a presigned URL for the order's PDF, or None if unset."""
+        if self.document:
+            return presigned_url(self.document.name)
+        return None
 
     def get_task_objects(self) -> "models.QuerySet[Task]":
         """Convert task IDs to Task objects."""

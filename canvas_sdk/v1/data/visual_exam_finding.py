@@ -25,7 +25,7 @@ class VisualExamFinding(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="visual_exam_findings"
     )
-    image = models.CharField(max_length=255, null=True, blank=True)
+    image = models.FileField(max_length=255, null=True, blank=True)
     title = models.CharField(max_length=255, default="", blank=True)
     narrative = models.TextField(default="", blank=True)
 
@@ -33,7 +33,7 @@ class VisualExamFinding(AuditedModel, IdentifiableModel):
     def image_url(self) -> str | None:
         """Return a short-lived presigned URL for the image, or None when unset."""
         if self.image:
-            return presigned_url(self.image)
+            return presigned_url(self.image.name)
         return None
 
 

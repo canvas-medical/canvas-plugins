@@ -1,5 +1,7 @@
 """Tests for UncategorizedClinicalDocument review-delegation properties."""
 
+from unittest.mock import patch
+
 import pytest
 
 from canvas_sdk.test_utils.factories import (
@@ -51,3 +53,34 @@ def test_code_coding_round_trips() -> None:
     fetched = UncategorizedClinicalDocument.objects.get(dbid=document.dbid)
 
     assert fetched.code_id == coding.dbid
+
+
+def test_document_url_with_document() -> None:
+    """document_url returns a presigned URL when a document is set."""
+    document = UncategorizedClinicalDocument()
+    document.document = "clinical/report.pdf"
+
+    with patch(
+        "canvas_sdk.v1.data.uncategorized_clinical_document.presigned_url",
+        return_value="https://s3.example.com/presigned",
+    ) as mock:
+        assert document.document_url == "https://s3.example.com/presigned"
+        mock.assert_called_once_with("clinical/report.pdf")
+
+
+def test_document_url_returns_none_when_unset() -> None:
+    """document_url returns None when no document is set."""
+    document = UncategorizedClinicalDocument()
+    document.document = ""
+
+    assert document.document_url is None
+
+
+@pytest.mark.django_db
+def test_document_round_trips() -> None:
+    """The document's S3 key is readable through the data model."""
+    document = UncategorizedClinicalDocumentFactory.create(document="clinical/report.pdf")
+
+    fetched = UncategorizedClinicalDocument.objects.get(dbid=document.dbid)
+
+    assert fetched.document.name == "clinical/report.pdf"

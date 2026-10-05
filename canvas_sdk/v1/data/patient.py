@@ -206,7 +206,7 @@ class Patient(TimestampedModel):
         """Return a presigned URL for the patient's photo, or the default avatar."""
         photo = self.photo
         if photo:
-            return presigned_url(photo.url)
+            return presigned_url(photo.url.name)
         return DEFAULT_AVATAR_URL
 
 
@@ -391,7 +391,7 @@ class PatientPhoto(TimestampedModel):
         db_table = "canvas_sdk_data_api_patientphoto_001"
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="photos")
-    url = models.CharField(max_length=255)
+    url = models.FileField(max_length=255)
     title = models.CharField(max_length=255, blank=True, default="")
 
 
@@ -404,7 +404,7 @@ class PatientIdentificationCard(TimestampedModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="identification_cards"
     )
-    image = models.CharField(max_length=255)
+    image = models.FileField(max_length=255)
     title = models.CharField(max_length=255, blank=True, default="")
     active = models.BooleanField(default=True)
 
@@ -420,7 +420,7 @@ class PatientIdentificationCard(TimestampedModel):
         otherwise returns None.
         """
         if self.image:
-            return presigned_url(self.image)
+            return presigned_url(self.image.name)
         return None
 
 

@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.db.models.fields.files import FieldFile
 
 from canvas_sdk.v1.data.patient import (
     DEFAULT_AVATAR_URL,
@@ -45,6 +46,23 @@ def test_patient_identification_card_image_url_with_image() -> None:
     ) as mock:
         assert card.image_url == "https://s3.example.com/presigned"
         mock.assert_called_once_with("id_cards/front.jpg")
+
+
+def test_patient_identification_card_image_reads_as_a_file() -> None:
+    """Image reads back as a file whose name is the stored S3 key."""
+    card = PatientIdentificationCard()
+    card.image = "id_cards/front.jpg"
+
+    assert isinstance(card.image, FieldFile)
+    assert card.image.name == "id_cards/front.jpg"
+
+
+def test_patient_photo_url_field_reads_as_a_file() -> None:
+    """PatientPhoto.url reads back as a file whose name is the stored S3 key."""
+    photo = PatientPhoto(url="patient-avatars/abc/photo.jpg")
+
+    assert isinstance(photo.url, FieldFile)
+    assert photo.url.name == "patient-avatars/abc/photo.jpg"
 
 
 def test_patient_identification_card_image_url_without_image() -> None:

@@ -11,6 +11,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.utils import presigned_url
 
 if TYPE_CHECKING:
     from canvas_sdk.v1.data.document_review_delegation import DocumentReviewDelegation
@@ -85,6 +86,14 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
     original_date = models.DateField(null=True)
     comment = models.TextField(default="", blank=True)
     priority = models.BooleanField(default=False)
+    document = models.FileField(max_length=255)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a presigned URL for the document file, or None if unset."""
+        if self.document:
+            return presigned_url(self.document.name)
+        return None
 
     @property
     def delegations(self) -> "models.QuerySet[DocumentReviewDelegation]":

@@ -1,6 +1,7 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import TimestampedModel
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class InvoiceRecipients(models.TextChoices):
@@ -45,12 +46,19 @@ class Invoice(TimestampedModel):
     recipient = models.ForeignKey("v1.Patient", on_delete=models.CASCADE, related_name="invoices")
     recipient_type = models.CharField(max_length=10, choices=InvoiceRecipients.choices)
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
-    # invoice_pdf = models.FileField(blank=True, null=True, upload_to=invoice_upload)
+    invoice_pdf = models.FileField(null=True)
     status = models.CharField(max_length=10, choices=InvoiceStatus.choices)
     workflow = models.CharField(max_length=10, choices=InvoiceWorkflow.choices)
     # claims = models.ManyToManyField("v1.Claim", related_name="full_invoices")
     error_message = models.TextField()
     sent_mean = models.CharField(max_length=6, choices=InvoiceSentMeans.choices)
+
+    @property
+    def invoice_pdf_url(self) -> str | None:
+        """Return a presigned URL for the invoice PDF, or None if unset."""
+        if self.invoice_pdf:
+            return presigned_url(self.invoice_pdf.name)
+        return None
 
 
 __exports__ = (
