@@ -27,7 +27,7 @@ class BusinessLine(TimestampedModel, IdentifiableModel):
     organization = models.ForeignKey(
         "v1.Organization", on_delete=models.DO_NOTHING, related_name="business_lines"
     )
-    logo = models.FileField()
+    logo = models.FileField(blank=False)
 
     @property
     def logo_url(self) -> str | None:
