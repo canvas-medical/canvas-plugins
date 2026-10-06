@@ -21,6 +21,7 @@ def test_items_enum_values() -> None:
     assert Items.MULTI_FACTOR_AUTHENTICATION.value == "multi_factor_authentication"
     assert Items.CHANGELOG.value == "changelog"
     assert Items.HELP_CENTER.value == "help_center"
+    assert Items.GOOGLE_CALENDAR.value == "google_calendar"
 
 
 def test_apply_uses_the_show_provider_menu_items_effect_type() -> None:
