@@ -16,6 +16,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
+    GetRegisteredEventTypesRequest,
     ReloadPluginRequest,
     ReloadPluginsRequest,
     UnloadPluginRequest,
@@ -30,6 +31,8 @@ from canvas_sdk.effects.payment_processor import (
 )
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
+from canvas_sdk.utils import metrics
+from plugin_runner.event_registry import NOT_READY, EventRegistry
 from plugin_runner.plugin_runner import (
     ENVIRONMENT,
     EVENT_HANDLER_MAP,
@@ -38,6 +41,7 @@ from plugin_runner.plugin_runner import (
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
     import_plugin,
+    main,
     reconcile_plugins,
     reload_plugin,
     remove_plugin,
@@ -137,6 +141,43 @@ def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> No
     assert len(result) == 1
     assert result[0].success is True
     assert len(result[0].effects) == 0
+
+
+def _handle_event_measure_calls(measure: Mock) -> list:
+    """Return the calls to metrics.measure that time HandleEvent itself."""
+    return [
+        c
+        for c in measure.call_args_list
+        if (c.args[0] if c.args else c.kwargs["name"]).endswith("PluginRunner.HandleEvent")
+    ]
+
+
+def test_handle_event_is_not_timed_when_no_handler_responds(plugin_runner: PluginRunner) -> None:
+    """An event no loaded handler responds to records no HandleEvent timing."""
+    EVENT_HANDLER_MAP.clear()
+
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        result = list(plugin_runner.HandleEvent(EventRequest(type=EventType.PATIENT_CREATED), None))
+
+    assert result[0].success is True
+    assert _handle_event_measure_calls(measure) == []
+    EVENT_HANDLER_MAP.clear()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_handle_event_is_timed_when_a_handler_responds(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """An event a loaded handler responds to records a HandleEvent timing tagged with the event."""
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    calls = _handle_event_measure_calls(measure)
+    assert len(calls) == 1
+    assert calls[0].kwargs["extra_tags"] == {"event": "UNKNOWN"}
 
 
 @pytest.mark.parametrize(
@@ -1559,3 +1600,146 @@ def test_main_logs_keyboard_interrupt(
 
     assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
     assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@pytest.fixture
+def event_registry(tmp_path: Path) -> Iterator[EventRegistry]:
+    """Swap in an event registry that stamps a temporary file."""
+    registry = EventRegistry((tmp_path / "event-registry").as_posix())
+    with patch("plugin_runner.plugin_runner.EVENT_REGISTRY", registry):
+        yield registry
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_get_registered_event_types_returns_loaded_event_types(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    event_registry: EventRegistry,
+    load_test_plugins: None,
+) -> None:
+    """GetRegisteredEventTypes returns the loaded event types with a ready version."""
+    response = plugin_runner.GetRegisteredEventTypes(GetRegisteredEventTypesRequest(), None)
+
+    assert EventType.Name(EventType.UNKNOWN) in response.event_types
+    assert response.ready is True
+    assert response.registry_version == event_registry.snapshot().version
+
+
+def test_get_registered_event_types_not_ready_before_first_load(
+    plugin_runner: PluginRunner, event_registry: EventRegistry
+) -> None:
+    """Before the first route build the runner reports not-ready, never an authoritative empty set."""
+    response = plugin_runner.GetRegisteredEventTypes(GetRegisteredEventTypesRequest(), None)
+
+    assert response.ready is False
+    assert list(response.event_types) == []
+
+
+def test_get_registered_event_types_excludes_event_types_only_seen_by_handle_event(
+    plugin_runner: PluginRunner, event_registry: EventRegistry
+) -> None:
+    """HandleEvent's defaultdict reads leave empty map entries; they are not reported as handled."""
+    LOADED_PLUGINS.clear()
+    reconcile_plugins(specified_plugin_paths=[])
+
+    list(plugin_runner.HandleEvent(EventRequest(type=EventType.PATIENT_CREATED), None))
+    assert EventType.Name(EventType.PATIENT_CREATED) in EVENT_HANDLER_MAP
+
+    response = plugin_runner.GetRegisteredEventTypes(GetRegisteredEventTypesRequest(), None)
+
+    assert response.ready is True
+    assert EventType.Name(EventType.PATIENT_CREATED) not in response.event_types
+    EVENT_HANDLER_MAP.clear()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin_publishes_new_registry_version(
+    install_test_plugin: Path,
+    event_registry: EventRegistry,
+    load_test_plugins: None,
+    tmp_path: Path,
+) -> None:
+    """Installing or reloading a plugin changes the stamp, so home-app refetches at once."""
+    stamp_path = tmp_path / "event-registry"
+    stamp_before = stamp_path.read_text()
+
+    reload_plugin(install_test_plugin)
+
+    snapshot = event_registry.snapshot()
+    assert stamp_path.read_text() == snapshot.version != stamp_before
+    assert EventType.Name(EventType.UNKNOWN) in snapshot.event_types
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_remove_plugin_publishes_new_registry_version(
+    install_test_plugin: Path, event_registry: EventRegistry, load_test_plugins: None
+) -> None:
+    """Unloading a plugin republishes the registry without its event types."""
+    remove_plugin("example_plugin")
+
+    assert EventType.Name(EventType.UNKNOWN) not in event_registry.snapshot().event_types
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_registry_is_not_ready_while_a_reload_imports(
+    install_test_plugin: Path,
+    event_registry: EventRegistry,
+    load_test_plugins: None,
+    tmp_path: Path,
+) -> None:
+    """The stamp says not-ready from before the routes change until they are rebuilt."""
+    stamp_path = tmp_path / "event-registry"
+    observed: dict[str, str] = {}
+
+    class StampObservingHandler:
+        """Records the stamp at the moment rebuild_event_routes reads its routes."""
+
+        @property
+        def RESPONDS_TO(self) -> str:
+            observed["stamp_during_rebuild"] = stamp_path.read_text()
+            return EventType.Name(EventType.PATIENT_CREATED)
+
+    LOADED_PLUGINS["observer:observer.handlers:Handler"] = {
+        "active": True,
+        "class": StampObservingHandler(),
+        "sandbox": None,
+        "handler": None,
+        "secrets": {},
+    }
+
+    reload_plugin(install_test_plugin)
+
+    assert observed["stamp_during_rebuild"] == NOT_READY
+    assert stamp_path.read_text() == event_registry.snapshot().version
+
+
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_marks_registry_not_ready_before_loading_and_on_shutdown(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    mock_reconcile: MagicMock,
+    event_registry: EventRegistry,
+    tmp_path: Path,
+) -> None:
+    """A restarted runner overrides the previous process's stamp before it loads anything."""
+    stamp_path = tmp_path / "event-registry"
+    stamp_path.write_text("previous-process:7")
+    observed: dict[str, str] = {}
+
+    def fake_reconcile(_paths: list[str] | None) -> None:
+        observed["stamp_during_load"] = stamp_path.read_text()
+
+    mock_reconcile.side_effect = fake_reconcile
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    main(specified_plugin_paths=[])
+
+    assert observed["stamp_during_load"] == NOT_READY
+    assert stamp_path.read_text() == NOT_READY
+    assert event_registry.snapshot().ready is False
