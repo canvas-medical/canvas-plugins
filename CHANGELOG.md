@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.242.0 (2026-10-06)
+
+### Features
+
+- Expose plugin event registry to home-app
+  ([#1512](https://github.com/canvas-medical/canvas-plugins/pull/1512),
+  [`af4fcee`](https://github.com/canvas-medical/canvas-plugins/commit/af4fceed04d32a3d40767f0a72d5eeaf6c604173))
+
+### Performance Improvements
+
+- Drop the redundant plugins.executions counter
+  ([#1906](https://github.com/canvas-medical/canvas-plugins/pull/1906),
+  [`8f23405`](https://github.com/canvas-medical/canvas-plugins/commit/8f23405861822aae9176c711e509f152ea56580f))
+
+
 ## v0.241.0 (2026-10-06)
 
 ### Features
