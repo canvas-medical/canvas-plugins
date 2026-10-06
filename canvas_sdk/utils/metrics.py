@@ -172,7 +172,6 @@ def measure(
     finally:
         duration_ms = (time.perf_counter_ns() - timing_start) / 1_000_000
         pipeline.timing("plugins.timings", duration_ms, tags=tags)
-        pipeline.incr("plugins.executions", tags=tags)
         if track_queries:
             query_count = len(connection.queries)
             query_duration_seconds = sum(float(q["time"]) for q in connection.queries)
