@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.241.0 (2026-10-06)
+
+### Features
+
+- Add CLAIM_BALANCE_CHANGED event type
+  ([#1908](https://github.com/canvas-medical/canvas-plugins/pull/1908),
+  [`92af20a`](https://github.com/canvas-medical/canvas-plugins/commit/92af20a8e63956ea57d69340c50f6ac9deee8ef8))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Allow secrets, bisect, re.I, urlsafe base64, Length and DatabaseError in the sandbox
+  ([#1901](https://github.com/canvas-medical/canvas-plugins/pull/1901),
+  [`dc3e630`](https://github.com/canvas-medical/canvas-plugins/commit/dc3e6307f823a638e2feed8bef1c17019bea5638))
+
+
 ## v0.240.0 (2026-10-01)
 
 ### Features
