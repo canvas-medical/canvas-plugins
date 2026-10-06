@@ -135,6 +135,26 @@ def test_stamp_write_failure_removes_stamp(stamp_path: Path) -> None:
     assert capture.called
 
 
+def test_stamp_removal_failure_is_reported(stamp_path: Path) -> None:
+    """If the stale stamp cannot be removed either, both failures go to Sentry."""
+    registry = EventRegistry(stamp_path.as_posix())
+
+    with (
+        patch("plugin_runner.event_registry.os.replace", side_effect=OSError("disk full")),
+        patch.object(Path, "unlink", side_effect=OSError("read-only")),
+        patch("plugin_runner.event_registry.sentry_sdk.capture_exception") as capture,
+        registry.rebuilding({"PATIENT_CREATED": ["plugin:handlers:Handler"]}),
+    ):
+        pass
+
+    assert [str(call.args[0]) for call in capture.call_args_list] == [
+        "disk full",
+        "read-only",
+        "disk full",
+        "read-only",
+    ]
+
+
 def test_no_stamp_path_writes_nothing(tmp_path: Path) -> None:
     """Without a configured path the registry still tracks state but writes no file."""
     registry = EventRegistry(None)

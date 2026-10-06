@@ -42,6 +42,7 @@ from plugin_runner.plugin_runner import (
     PluginRunner,
     import_plugin,
     main,
+    rebuild_event_routes,
     reconcile_plugins,
     reload_plugin,
     remove_plugin,
@@ -1678,6 +1679,33 @@ def test_remove_plugin_publishes_new_registry_version(
     remove_plugin("example_plugin")
 
     assert EventType.Name(EventType.UNKNOWN) not in event_registry.snapshot().event_types
+
+
+def test_rebuild_event_routes_skips_unknown_responds_to_type(
+    event_registry: EventRegistry, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A RESPONDS_TO that is neither a string nor a list routes nothing and logs a warning."""
+
+    class IntRespondsToHandler:
+        RESPONDS_TO = 42
+
+    LOADED_PLUGINS["bad:bad.handlers:Handler"] = {
+        "active": True,
+        "class": IntRespondsToHandler,
+        "sandbox": None,
+        "handler": None,
+        "secrets": {},
+    }
+
+    try:
+        with caplog.at_level(logging.WARNING):
+            rebuild_event_routes()
+    finally:
+        del LOADED_PLUGINS["bad:bad.handlers:Handler"]
+
+    assert "Unknown RESPONDS_TO type: <class 'int'>" in caplog.text
+    assert all("bad:bad.handlers:Handler" not in names for names in EVENT_HANDLER_MAP.values())
+    assert event_registry.snapshot().ready is True
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
