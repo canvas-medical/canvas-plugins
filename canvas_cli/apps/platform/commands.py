@@ -393,6 +393,31 @@ def _require_package_at_repo_root(plugin_dir: Path) -> None:
         )
 
 
+def _push(
+    client: PlatformClient,
+    plugin_dir: Path,
+    publisher: str,
+    name: str,
+    platform: str,
+    *,
+    assume_yes: bool,
+) -> str:
+    """Register the plugin, connect its repository and push HEAD to the default branch.
+
+    Returns the pushed commit.
+    """
+    git.ensure_repo(plugin_dir)
+    _require_package_at_repo_root(plugin_dir)
+    registered = client.register_plugin(publisher, name)
+    git.connect_remote(plugin_dir, registered["git_url"], platform)
+    git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
+    branch = registered.get("default_branch") or "main"
+    git.push_head(plugin_dir, branch)
+    sha = git.head_sha(plugin_dir)
+    print(f"Pushed {sha[:12]} to {branch}.")
+    return sha
+
+
 def deploy(
     plugin_dir: Path = typer.Argument(..., help="Path to the plugin package to deploy"),
     instance: list[str] = typer.Option([], "--instance", help=_INSTANCE_HELP),
@@ -403,6 +428,9 @@ def deploy(
     ),
     no_push: bool = typer.Option(
         False, "--no-push", help="Deploy the pushed 'main' as-is, without pushing HEAD first."
+    ),
+    push_only: bool = typer.Option(
+        False, "--push-only", help="Push HEAD to 'main' without deploying it to any instance."
     ),
     assume_yes: bool = typer.Option(
         False,
@@ -429,7 +457,15 @@ def deploy(
     otherwise lists the choices. Consent requests for cross-plugin custom data
     access are shown and answered inline at a terminal. Under --yes, or without a
     terminal, they are listed and deploy exits non-zero without answering them.
+
+    With --push-only, deploy registers and pushes the same way and stops there, so
+    it needs no instance: the plugin's code, and its catalog listing, are updated
+    on Canvas Platform without being deployed anywhere.
     """
+    if push_only and (instance or ref is not None or no_push):
+        raise typer.BadParameter(
+            "--push-only pushes without deploying, so it takes no --instance, --ref or --no-push."
+        )
     if not plugin_dir.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
     name = manifest_name(plugin_dir)
@@ -439,18 +475,15 @@ def deploy(
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
     publisher = _publisher(client, name, pushing=pushing)
-    targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
+    if push_only:
+        sha = _push(client, plugin_dir, publisher, name, platform, assume_yes=assume_yes)
+        print(f"Not deployed. Deploy it with: canvas deploy {plugin_dir} --ref {sha[:12]}")
+        return
 
+    # Resolved before pushing, so a deploy with no clear target moves nothing.
+    targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
     if pushing:
-        git.ensure_repo(plugin_dir)
-        _require_package_at_repo_root(plugin_dir)
-        registered = client.register_plugin(publisher, name)
-        git.connect_remote(plugin_dir, registered["git_url"], platform)
-        git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
-        branch = registered.get("default_branch") or "main"
-        git.push_head(plugin_dir, branch)
-        deploy_ref = git.head_sha(plugin_dir)
-        print(f"Pushed {deploy_ref[:12]} to {branch}.")
+        deploy_ref = _push(client, plugin_dir, publisher, name, platform, assume_yes=assume_yes)
     else:
         deploy_ref = ref or "main"
 

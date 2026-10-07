@@ -328,6 +328,69 @@ def test_deploy_ref_deploys_that_ref(
     mock_run.assert_not_called()
 
 
+def test_deploy_push_only_pushes_head_and_deploys_nothing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """--push-only registers the plugin and pushes HEAD to main, and never looks for an
+    instance or starts a deployment.
+    """
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    head = _git(package, "rev-parse", "HEAD")
+    assert _git(bare, "rev-parse", "main") == head
+    assert _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert not _requests_to(api, "GET", "/instances")
+    assert not _requests_to(api, "POST", "/deployments")
+    assert f"Pushed {head[:12]} to main." in result.output
+    assert "Not deployed" in result.output
+
+
+def test_deploy_push_only_needs_no_instance(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A publisher with no instance it can deploy to can still push."""
+    api.get(f"{API}/instances", json={"instances": []})
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "main") == _git(package, "rev-parse", "HEAD")
+
+
+@pytest.mark.parametrize(
+    "extra", [["--instance", "acme-staging"], ["--ref", "v1.2.0"], ["--no-push"]]
+)
+def test_deploy_push_only_refuses_the_deploy_options(
+    extra: list[str],
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    signed_in: None,
+) -> None:
+    """--push-only with an option only a deployment uses is refused before anything runs."""
+    result = runner.invoke(app, ["deploy", str(package), "--push-only", *extra])
+
+    assert result.exit_code == 2
+    assert "--push-only pushes without deploying" in result.output
+    assert not api.called
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_push_only_still_needs_the_push_capability(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A member without the Plugin developer role cannot push with --push-only either."""
+    reader = {**ACME, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(f"{API}/me", json={**ME, "organizations": [reader]})
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "Plugin developer" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
 def test_deploy_commits_a_dirty_tree_after_confirmation(
     api: requests_mock_module.Mocker,
     bare: Path,

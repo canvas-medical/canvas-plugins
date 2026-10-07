@@ -167,6 +167,7 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--instance TEXT`: Instance to deploy to, repeatable. Without it, deploy targets the only instance you can deploy to and otherwise lists the choices
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
+- `--push-only`: Push HEAD to `main` without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
 - `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
 - `--help`: Show this message and exit.
 
