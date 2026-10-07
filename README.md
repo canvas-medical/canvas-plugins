@@ -20,7 +20,7 @@ A machine can hold both at once, and the CLI picks per command and per plugin as
 
 #### Migrating from `credentials.ini` to Canvas Platform
 
-Installing plugins straight onto an instance with `credentials.ini` is deprecated in favor of deploying through Canvas Platform. Canvas will announce the deprecation window through its standard channels, and `credentials.ini` keeps working alongside `canvas login` until that window closes. `canvas install` prints a deprecation warning on every run, and every other command points to this section at most once a day. To move a plugin over:
+Installing plugins straight onto an instance with `credentials.ini` is deprecated in favor of deploying through Canvas Platform, and is no longer supported as of December 14, 2026. Until then it keeps working alongside `canvas login`. `canvas install` prints a deprecation warning on every run, and every other command points to this section at most once a day. To move a plugin over:
 
 1. Run `canvas login`. It lists the prefix of each organization you belong to.
 2. Rename the plugin to `<org prefix>__<package>`: the manifest `name`, the package folder, and the package's own imports.

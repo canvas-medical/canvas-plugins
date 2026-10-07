@@ -8,6 +8,9 @@ from pathlib import Path
 MIGRATION_URL = "https://github.com/canvas-medical/canvas-plugins#migrating-from-credentialsini-to-canvas-platform"
 CACHE_FILENAME = "platform_notice.json"
 NOTICE_INTERVAL_SECONDS = 24 * 60 * 60
+# The date Canvas announces everywhere (docs, Slack) for the end of installing
+# straight onto an instance with credentials.ini.
+END_OF_SUPPORT = "December 14, 2026"
 
 
 def _notice_label() -> str:
@@ -18,8 +21,8 @@ def print_install_deprecation() -> None:
     """Warn that installing straight onto an instance is deprecated."""
     print(
         f"{_notice_label()} Installing plugins straight onto an instance with credentials.ini "
-        "is deprecated in favor of `canvas login` and `canvas deploy`. The deprecation window "
-        f"will be announced through Canvas's standard channels. See {MIGRATION_URL}",
+        "is deprecated in favor of `canvas login` and `canvas deploy`, and is no longer "
+        f"supported as of {END_OF_SUPPORT}. See {MIGRATION_URL}",
         file=sys.stderr,
     )
 
@@ -38,7 +41,8 @@ def show_platform_notice(app_dir: str) -> None:
 
     print(
         f"{_notice_label()} Changes to authentication and deployment are coming to the canvas "
-        f"CLI. See {MIGRATION_URL} for more.",
+        f"CLI: installing plugins with credentials.ini is no longer supported as of "
+        f"{END_OF_SUPPORT}. See {MIGRATION_URL} for more.",
         file=sys.stderr,
     )
     try:

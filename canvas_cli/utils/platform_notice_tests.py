@@ -23,7 +23,9 @@ def test_notice_prints_and_records_when_never_shown(
     """The first run prints the notice and records when it was shown."""
     show_platform_notice(str(tmp_path))
 
-    assert MIGRATION_URL in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert MIGRATION_URL in err
+    assert "December 14, 2026" in err
     assert json.loads((tmp_path / "platform_notice.json").read_text())["last_shown"] > 0
 
 
@@ -90,4 +92,5 @@ def test_install_warns_that_direct_installs_are_deprecated(
 
     err = capsys.readouterr().err
     assert "deprecated" in err
+    assert "no longer supported as of December 14, 2026" in err
     assert MIGRATION_URL in err
