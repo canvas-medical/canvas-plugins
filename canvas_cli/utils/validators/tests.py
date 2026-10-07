@@ -1,3 +1,5 @@
+from typing import Any
+
 import jsonschema
 import pytest
 from jsonschema import ValidationError
@@ -153,3 +155,89 @@ def test_manifest_name_needs_no_publisher_prefix(name: str) -> None:
     `canvas install` keep validating; only `canvas deploy` requires the prefix.
     """
     validate_manifest_file(_make_application_manifest("global") | {"name": name})
+
+
+LISTING: dict[str, Any] = {
+    "title": "Scribe",
+    "kind": "agent",
+    "category": "Charting",
+    "surfaces": ["Note", "Command"],
+    "keywords": ["ambient", "llm"],
+    "screenshots": [{"path": "shots/chart.png", "caption": "In the chart", "alt": "A note"}],
+    "agent": {
+        "does": "Drafts commands.",
+        "does_not": "Does not commit a draft.",
+        "runs_when": "Note",
+        "models": ["claude-sonnet-5"],
+    },
+    "integration": {"unit": "visits"},
+    "setup_instructions": "setup_instructions.md",
+    "release_notes": {"kind": "fix", "title": "Cache transcripts", "body": "Cheaper."},
+}
+
+# The same cases, under the same ids, are in canvas-medical/platform's
+# `plugins/tests/test_manifest.py`, which checks the copy of these rules Platform
+# enforces when a plugin is pushed. Change both together: a listing `canvas validate`
+# accepts and a push refuses, or the other way round, is a plugin nobody can publish.
+MINIMAL: dict[str, Any] = {
+    "title": "Claims",
+    "category": "Billing & RCM",
+    "surfaces": ["Background"],
+}
+AGENT: dict[str, Any] = LISTING["agent"]
+
+ACCEPTED = {
+    "full": LISTING,
+    "minimal": MINIMAL,
+    "no-keywords": {**MINIMAL, "keywords": []},
+}
+
+REFUSED = {
+    "unknown-field": {**MINIMAL, "tagline": "x"},
+    "missing-title": {"category": "Charting", "surfaces": ["Note"]},
+    "blank-title": {**MINIMAL, "title": "   "},
+    "long-title": {**MINIMAL, "title": "x" * 65},
+    "missing-category": {"title": "No category", "surfaces": ["Note"]},
+    "unknown-category": {**MINIMAL, "category": "Fun"},
+    "no-surfaces": {**MINIMAL, "surfaces": []},
+    "repeated-surface": {**MINIMAL, "surfaces": ["Note", "Note"]},
+    "bad-keyword": {**MINIMAL, "keywords": ["Not OK"]},
+    "agent-without-boundary": {**MINIMAL, "kind": "agent"},
+    "plugin-with-boundary": {**MINIMAL, "agent": AGENT},
+    "agent-extra-field": {**MINIMAL, "kind": "agent", "agent": {**AGENT, "budget": 3}},
+    "screenshot-escapes": {**MINIMAL, "screenshots": [{"path": "../x.png", "alt": "a"}]},
+    "double-dot-in-a-name": {**MINIMAL, "screenshots": [{"path": "shots/a..b.png", "alt": "a"}]},
+    "screenshot-absolute": {**MINIMAL, "screenshots": [{"path": "/x.png", "alt": "a"}]},
+    "screenshot-gif": {**MINIMAL, "screenshots": [{"path": "x.gif", "alt": "a"}]},
+    "screenshot-uppercase": {**MINIMAL, "screenshots": [{"path": "x.PNG", "alt": "a"}]},
+    "screenshot-no-alt": {**MINIMAL, "screenshots": [{"path": "x.png"}]},
+    "screenshot-extra-field": {
+        **MINIMAL,
+        "screenshots": [{"path": "x.png", "alt": "a", "width": 3}],
+    },
+    "unknown-release-kind": {**MINIMAL, "release_notes": {"kind": "feature", "title": "t"}},
+    "release-extra-field": {
+        **MINIMAL,
+        "release_notes": {"kind": "fix", "title": "t", "author": "me"},
+    },
+    "null-release-notes": {**MINIMAL, "release_notes": None},
+    "setup-outside-package": {**MINIMAL, "setup_instructions": "/etc/passwd"},
+    "setup-escapes": {**MINIMAL, "setup_instructions": "../setup.md"},
+}
+
+
+@pytest.mark.parametrize("catalog", ACCEPTED.values(), ids=ACCEPTED.keys())
+def test_manifest_accepts_catalog_listing(handler_manifest_example: dict, catalog: dict) -> None:
+    """Test that a well-formed catalog listing validates."""
+    handler_manifest_example["catalog"] = catalog
+    validate_manifest_file(handler_manifest_example)
+
+
+@pytest.mark.parametrize("catalog", REFUSED.values(), ids=REFUSED.keys())
+def test_manifest_rejects_malformed_catalog_listing(
+    handler_manifest_example: dict, catalog: dict
+) -> None:
+    """Test that a malformed catalog listing fails manifest validation."""
+    handler_manifest_example["catalog"] = catalog
+    with pytest.raises(ValidationError):
+        validate_manifest_file(handler_manifest_example)
