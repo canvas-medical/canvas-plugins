@@ -36,6 +36,10 @@ import requests
 CLIENT_ID = "canvas-cli"
 DEFAULT_PLATFORM_URL = "https://platform.canvasmedical.com"
 PLATFORM_URL_ENV = "CANVAS_PLATFORM_URL"
+# A service account's token, which CI sets in place of signing in. It is used as it
+# is: there is nothing to refresh, and a person rotates it on Platform's Credentials
+# page.
+SERVICE_TOKEN_ENV = "CANVAS_PLATFORM_TOKEN"
 CREDENTIALS_PATH = Path.home() / ".canvas" / "platform-credentials.json"
 
 # Refresh this many seconds before the access token's stated expiry, so a token
@@ -110,8 +114,19 @@ def _save(data: dict[str, Any]) -> None:
     os.replace(temporary, CREDENTIALS_PATH)
 
 
+def service_token() -> str | None:
+    """The service account token CI set in ``CANVAS_PLATFORM_TOKEN``, if any."""
+    return os.environ.get(SERVICE_TOKEN_ENV, "").strip() or None
+
+
 def stored_tokens(platform: str) -> dict[str, Any] | None:
-    """The stored token set for a platform origin, or None when signed out."""
+    """The token set for a platform origin, or None when signed out.
+
+    A service account token in the environment wins over a stored sign-in, so a CI
+    runner acts as its service account whatever a previous ``canvas login`` left.
+    """
+    if token := service_token():
+        return {"access_token": token, "service": True}
     return _load().get("platforms", {}).get(platform)
 
 
@@ -230,6 +245,8 @@ def valid_tokens(platform: str) -> dict[str, Any]:
     tokens = stored_tokens(platform)
     if tokens is None:
         raise not_signed_in(platform)
+    if tokens.get("service"):
+        return tokens
     if _expired(tokens):
         return refresh(platform, tokens["refresh_token"])
     return tokens
