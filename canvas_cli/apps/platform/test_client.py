@@ -139,3 +139,52 @@ def test_calls_without_a_session_ask_for_a_login(
     with pytest.raises(auth.PlatformAuthError, match="canvas login"):
         PlatformClient(PLATFORM).me()
     assert not requests_mock.called
+
+
+# -- a service account's token, as CI sets it ---------------------------------
+
+
+def test_ci_calls_with_the_service_account_token(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``CANVAS_PLATFORM_TOKEN`` is the bearer token, with no sign-in stored."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.get(f"{PLATFORM}/api/v1/me", json={"email": "github-actions"})
+
+    assert PlatformClient(PLATFORM).me() == {"email": "github-actions"}
+    assert _last(requests_mock).headers["Authorization"] == "Bearer cnvs_sa_ci"
+
+
+def test_the_service_account_token_wins_over_a_stored_sign_in(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A runner that once ran ``canvas login`` still acts as its service account."""
+    _sign_in()
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.get(f"{PLATFORM}/api/v1/me", json={})
+
+    PlatformClient(PLATFORM).me()
+    assert _last(requests_mock).headers["Authorization"] == "Bearer cnvs_sa_ci"
+
+
+def test_a_refused_service_account_token_says_so_and_never_refreshes(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """There is no refresh token to spend; the token was rotated or revoked."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.get(f"{PLATFORM}/api/v1/me", status_code=401)
+    refresh = requests_mock.post(f"{PLATFORM}/oauth/token", json={})
+
+    with pytest.raises(auth.PlatformAuthError, match="CANVAS_PLATFORM_TOKEN"):
+        PlatformClient(PLATFORM).me()
+    assert not refresh.called
+
+
+def test_with_a_service_account_token_the_cli_counts_as_signed_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Commands that ask whether there is a session see one, so CI takes the platform path."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+
+    assert auth.stored_tokens(PLATFORM) is not None
+    assert auth.valid_tokens(PLATFORM)["access_token"] == "cnvs_sa_ci"

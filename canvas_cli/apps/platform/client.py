@@ -76,6 +76,11 @@ class PlatformClient:
         """Send one call and return its parsed JSON body (None for an empty one)."""
         tokens = auth.valid_tokens(self.platform)
         response = self._send(method, path, tokens["access_token"], body)
+        if response.status_code == requests.codes.unauthorized and tokens.get("service"):
+            raise auth.PlatformAuthError(
+                f"Canvas Platform at {self.platform} did not accept {auth.SERVICE_TOKEN_ENV}. "
+                "It may have been rotated or revoked on the Credentials page."
+            )
         if response.status_code == requests.codes.unauthorized:
             tokens = auth.refresh(self.platform, tokens["refresh_token"])
             response = self._send(method, path, tokens["access_token"], body)

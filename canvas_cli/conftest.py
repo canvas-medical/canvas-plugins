@@ -23,6 +23,7 @@ def isolate_platform_credentials(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     path = tmp_path / "platform-credentials.json"
     monkeypatch.setattr(platform_auth, "CREDENTIALS_PATH", path)
     monkeypatch.delenv(platform_auth.PLATFORM_URL_ENV, raising=False)
+    monkeypatch.delenv(platform_auth.SERVICE_TOKEN_ENV, raising=False)
     return path
 
 
