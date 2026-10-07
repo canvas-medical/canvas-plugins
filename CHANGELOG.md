@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.243.0 (2026-10-07)
+
+### Features
+
+- Add google_calendar to the provider menu configuration items
+  ([#1917](https://github.com/canvas-medical/canvas-plugins/pull/1917),
+  [`125ac30`](https://github.com/canvas-medical/canvas-plugins/commit/125ac300e428db54aef34a8ab78b633fb951a07d))
+
+- Add new scopes to embedded applications
+  ([#1883](https://github.com/canvas-medical/canvas-plugins/pull/1883),
+  [`87025a4`](https://github.com/canvas-medical/canvas-plugins/commit/87025a441029957318785a15807e78f5ebafbe3c))
+
+
 ## v0.242.0 (2026-10-06)
 
 ### Features
