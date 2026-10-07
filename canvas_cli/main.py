@@ -9,6 +9,7 @@ from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
+from canvas_cli.utils.platform_notice import show_platform_notice
 from canvas_cli.utils.update_check import check_for_updates
 
 APP_NAME = "canvas_cli"
@@ -115,6 +116,7 @@ atexit.register(check_for_updates, __version__, get_app_dir())
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: bool | None = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
@@ -124,6 +126,10 @@ def main(
     config_file = get_or_create_config_file()
 
     context.load_from_file(config_file)
+
+    # git runs `git-credential` itself, so its stderr is not read by the person at the terminal.
+    if ctx.invoked_subcommand != "git-credential":
+        show_platform_notice(get_app_dir())
 
 
 if __name__ == "__main__":

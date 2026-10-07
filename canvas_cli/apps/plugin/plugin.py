@@ -23,6 +23,7 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
+from canvas_cli.utils.platform_notice import print_install_deprecation
 from canvas_cli.utils.validators import validate_manifest_file
 from plugin_runner.plugin_runner import sandbox_plugin_handlers
 
@@ -300,6 +301,8 @@ def install(
     ),
 ) -> None:
     """Install a plugin into a Canvas instance."""
+    print_install_deprecation()
+
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 

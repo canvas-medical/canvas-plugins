@@ -2,6 +2,33 @@
 
 ### Getting Started
 
+`pip install canvas`
+
+### Authentication
+
+The CLI authenticates in two ways, and which one a command uses depends on where it sends the request:
+
+| | Canvas Platform sign-in | Instance API credentials |
+| --- | --- | --- |
+| Set up with | `canvas login`, in your browser | `~/.canvas/credentials.ini`, written by hand |
+| Signs in as | you, as a member of your Canvas Platform organizations | an OAuth client (`client_id` / `client_secret`) registered on one instance |
+| Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
+| Stored in | `~/.canvas/platform-credentials.json` | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
+| Used by | `login`, `logout`, `init`, `deploy`, `clone`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs`, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
+
+A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform).
+
+#### Migrating from `credentials.ini` to Canvas Platform
+
+Installing plugins straight onto an instance with `credentials.ini` is deprecated in favor of deploying through Canvas Platform. Canvas will announce the deprecation window through its standard channels, and `credentials.ini` keeps working alongside `canvas login` until that window closes. `canvas install` prints a deprecation warning on every run, and every other command points to this section at most once a day. To move a plugin over:
+
+1. Run `canvas login`. It lists the prefix of each organization you belong to.
+2. Rename the plugin to `<org prefix>__<package>`: the manifest `name`, the package folder, and the package's own imports.
+3. Run `canvas deploy <plugin dir> --instance <instance>`, then set its variables with `canvas config set <name> KEY=VALUE --instance <instance>`.
+4. The renamed plugin is a separate plugin from the one installed under the old name, so remove the old one from the instance with `canvas disable <old name> --host <instance>` and `canvas uninstall <old name> --host <instance>`.
+
+#### Instance API credentials
+
 Create a file `~/.canvas/credentials.ini` and add the client_id and client_secret credentials for each of your Canvas instances. You can define your default host with `is_default=true`. If no default is explicitly defined, the Canvas CLI will use the first instance in the file as the default for each of the CLI commands.
 
 **Example:**
@@ -21,10 +48,6 @@ client_id=localclientid
 client_secret=localclientsecret
 ```
 
-Next, you're ready to install canvas.
-
-`pip install canvas`
-
 ### Canvas Platform
 
 Canvas Platform hosts a plugin's git repository and deploys it to the instances it manages. Sign in once per machine with `canvas login`, which opens your browser; the session is stored per platform in `~/.canvas/platform-credentials.json`, readable only by you, and refreshes itself. `canvas login --platform <url>` or `CANVAS_PLATFORM_URL` points the CLI at a platform other than https://platform.canvasmedical.com, and later commands keep using the platform you last signed in to.
@@ -33,7 +56,7 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 #### Which plugins go through Canvas Platform
 
-`canvas config`, `canvas uninstall` and `canvas install` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
+`canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
 - A name without a prefix, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
 - Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
