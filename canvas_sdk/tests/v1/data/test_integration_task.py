@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from canvas_sdk.test_utils.factories.integration_task import (
@@ -312,3 +314,34 @@ def test_review_is_active(junked: bool, expected: bool) -> None:
     """Test that is_active reflects the inverse of junked status."""
     review = IntegrationTaskReviewFactory.create(junked=junked)
     assert review.is_active is expected
+
+
+def test_document_url_with_document() -> None:
+    """document_url returns a presigned URL when a document is set."""
+    task = IntegrationTask()
+    task.document = "faxes/incoming.pdf"
+
+    with patch(
+        "canvas_sdk.v1.data.integration_task.presigned_url",
+        return_value="https://s3.example.com/presigned",
+    ) as mock:
+        assert task.document_url == "https://s3.example.com/presigned"
+        mock.assert_called_once_with("faxes/incoming.pdf")
+
+
+def test_document_url_returns_none_when_unset() -> None:
+    """document_url returns None when no document is set."""
+    task = IntegrationTask()
+    task.document = ""
+
+    assert task.document_url is None
+
+
+@pytest.mark.django_db
+def test_document_round_trips() -> None:
+    """The document's S3 key is readable through the data model."""
+    task = IntegrationTaskFactory.create(document="faxes/incoming.pdf")
+
+    fetched = IntegrationTask.objects.get(dbid=task.dbid)
+
+    assert fetched.document.name == "faxes/incoming.pdf"

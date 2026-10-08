@@ -2,6 +2,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class Language(TimestampedModel):
@@ -29,6 +30,14 @@ class Letter(TimestampedModel, IdentifiableModel):
     staff = models.ForeignKey(
         "v1.Staff", on_delete=models.SET_NULL, related_name="letters", null=True
     )
+    printed_document = models.FileField(null=True)
+
+    @property
+    def printed_document_url(self) -> str | None:
+        """Return a presigned URL for the printed attachments PDF, or None if unset."""
+        if self.printed_document:
+            return presigned_url(self.printed_document.name)
+        return None
 
 
 class LetterActionEvent(BaseActionEvent):

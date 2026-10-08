@@ -1,6 +1,7 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class BusinessLineState(models.TextChoices):
@@ -26,6 +27,14 @@ class BusinessLine(TimestampedModel, IdentifiableModel):
     organization = models.ForeignKey(
         "v1.Organization", on_delete=models.DO_NOTHING, related_name="business_lines"
     )
+    logo = models.FileField(blank=False)
+
+    @property
+    def logo_url(self) -> str | None:
+        """Return a presigned URL for the logo image, or None if unset."""
+        if self.logo:
+            return presigned_url(self.logo.name)
+        return None
 
 
 __exports__ = (

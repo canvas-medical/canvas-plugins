@@ -10,6 +10,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class IntegrationTaskStatus(models.TextChoices):
@@ -130,6 +131,7 @@ class IntegrationTask(TimestampedModel, IdentifiableModel):
     )
     type = models.CharField(max_length=125, blank=True, default="")
     title = models.CharField(max_length=256, blank=True, default="")
+    document = models.FileField(max_length=255)
     channel = models.CharField(max_length=50, choices=IntegrationTaskChannel.choices, db_index=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, null=True, related_name="integration_tasks"
@@ -140,6 +142,13 @@ class IntegrationTask(TimestampedModel, IdentifiableModel):
         null=True,
         related_name="integration_tasks",
     )
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a presigned URL for the document file, or None if unset."""
+        if self.document:
+            return presigned_url(self.document.name)
+        return None
 
     @property
     def is_fax(self) -> bool:

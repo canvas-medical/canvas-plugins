@@ -86,7 +86,7 @@ class Staff(TimestampedModel):
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
-    signature = models.CharField(max_length=100, null=True, blank=True)
+    signature = models.FileField(null=True, blank=True)
 
     @property
     def photo_url(self) -> str:
@@ -98,7 +98,7 @@ class Staff(TimestampedModel):
     def signature_url(self) -> str | None:
         """Return a presigned URL for accessing the staff's signature file."""
         if self.signature:
-            return presigned_url(self.signature)
+            return presigned_url(self.signature.name)
         return None
 
     @cached_property

@@ -1,11 +1,14 @@
+from unittest.mock import patch
+
 import pytest
 from pytest_django.fixtures import SettingsWrapper
 
 from canvas_sdk.test_utils.factories import (
+    ImagingOrderFactory,
     ImagingReportCodingFactory,
     ImagingReportFactory,
 )
-from canvas_sdk.v1.data.imaging import ImagingReport
+from canvas_sdk.v1.data.imaging import ImagingOrder, ImagingReport
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -106,3 +109,35 @@ def test_document_url_returns_none_when_no_url() -> None:
     report.s3_report_url = ""
 
     assert report.document_url is None
+
+
+def test_imaging_order_document_url_with_document() -> None:
+    """ImagingOrder.document_url returns a presigned URL when a document is set."""
+    order = ImagingOrder()
+    order.document = "imaging_order_abc.pdf"
+
+    with patch(
+        "canvas_sdk.v1.data.imaging.presigned_url",
+        return_value="https://s3.example.com/presigned",
+    ) as mock:
+        assert order.document_url == "https://s3.example.com/presigned"
+        mock.assert_called_once_with("imaging_order_abc.pdf")
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_imaging_order_document_url_returns_none_when_unset(value: str | None) -> None:
+    """ImagingOrder.document_url returns None when no document is set."""
+    order = ImagingOrder()
+    order.document = value
+
+    assert order.document_url is None
+
+
+@pytest.mark.django_db
+def test_imaging_order_document_round_trips() -> None:
+    """The imaging order's document S3 key is readable through the data model."""
+    order = ImagingOrderFactory.create(document="imaging_order_abc.pdf")
+
+    fetched = ImagingOrder.objects.get(dbid=order.dbid)
+
+    assert fetched.document.name == "imaging_order_abc.pdf"

@@ -4,6 +4,7 @@ import datetime
 from unittest.mock import patch
 
 import pytest
+from django.db.models.fields.files import FieldFile
 
 from canvas_sdk.v1.data.staff import Staff, StaffExternalIdentifier, StaffMetadata
 
@@ -27,6 +28,15 @@ def test_signature_url_returns_none_when_empty() -> None:
     staff.signature = ""
 
     assert staff.signature_url is None
+
+
+def test_signature_reads_as_a_file() -> None:
+    """Signature reads back as a file whose name is the stored S3 key."""
+    staff = Staff()
+    staff.signature = "signatures/staff_abc.png"
+
+    assert isinstance(staff.signature, FieldFile)
+    assert staff.signature.name == "signatures/staff_abc.png"
 
 
 def test_signature_url_returns_none_when_null() -> None:
