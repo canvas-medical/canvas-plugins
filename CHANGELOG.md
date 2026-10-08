@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.244.0 (2026-10-08)
+
+### Features
+
+- Add portal default homepage application
+  ([#1918](https://github.com/canvas-medical/canvas-plugins/pull/1918),
+  [`e31e763`](https://github.com/canvas-medical/canvas-plugins/commit/e31e763143a07c0530a3169d4ddfc2cb8d4b870f))
+
+- **cli**: Sign in to and deploy plugins through Canvas Platform, with catalog listings, deprecating
+  credentials.ini ([#1912](https://github.com/canvas-medical/canvas-plugins/pull/1912),
+  [`5f31357`](https://github.com/canvas-medical/canvas-plugins/commit/5f313579d9b04742fcadc62318b37ea8fc988c22))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.243.0 (2026-10-07)
 
 ### Features
