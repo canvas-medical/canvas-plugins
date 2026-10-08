@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.245.0 (2026-10-08)
+
+### Features
+
+- **data**: Expose missing file fields on SDK data models
+  ([#1916](https://github.com/canvas-medical/canvas-plugins/pull/1916),
+  [`b03778e`](https://github.com/canvas-medical/canvas-plugins/commit/b03778e40d90693c3bc27dce712c3f1bd9a7a740))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.244.0 (2026-10-08)
 
 ### Features
