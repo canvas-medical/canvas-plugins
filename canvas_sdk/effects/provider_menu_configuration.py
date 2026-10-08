@@ -24,6 +24,7 @@ class ProviderMenuConfiguration(_BaseEffect):
         MULTI_FACTOR_AUTHENTICATION = "multi_factor_authentication"
         CHANGELOG = "changelog"
         HELP_CENTER = "help_center"
+        GOOGLE_CALENDAR = "google_calendar"
 
     items: list[Items]
 

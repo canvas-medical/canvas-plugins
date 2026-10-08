@@ -33,6 +33,7 @@ class HideScheduleMenuItem(BaseHandler):
                     Items.MULTI_FACTOR_AUTHENTICATION,
                     Items.CHANGELOG,
                     Items.HELP_CENTER,
+                    Items.GOOGLE_CALENDAR,
                 ]
             ).apply()
         ]

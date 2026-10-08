@@ -21,6 +21,8 @@ from .plugin import (
     _find_unresolvable_handlers,
     _lint_plugin_static,
     _validate_plugin_loads,
+    disable,
+    enable,
     install,
     list_secrets,
     parse_secrets,
@@ -1826,3 +1828,65 @@ class Handler(BaseHandler):
     captured = capsys.readouterr()
     assert "✓ multimod_plugin.handlers.my_handler:Handler" in captured.out
     assert "load cleanly" in captured.out
+
+
+# Tests for how a refused enable, disable or update is reported
+
+
+@pytest.fixture
+def instance_token() -> Generator[None, None, None]:
+    """An instance API token without reading credentials.ini."""
+    with patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token", return_value="tok"):
+        yield
+
+
+def test_enable_refused_for_a_platform_managed_plugin_names_canvas_deploy(
+    requests_mock: Any, instance_token: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A 403 naming a platform-managed plugin points at `canvas deploy`."""
+    requests_mock.patch(
+        "https://x.example/plugin-io/plugins/intake/",
+        status_code=403,
+        json={"error": "managed elsewhere", "error_code": "control_room_managed"},
+    )
+
+    with pytest.raises(typer.Exit):
+        enable(name="intake", host="https://x.example")
+
+    output = capsys.readouterr().out
+    assert "`canvas deploy`" in output
+    assert "managed elsewhere" not in output
+
+
+def test_disable_refused_with_a_non_json_body_prints_status_and_body(
+    requests_mock: Any, instance_token: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A refusal that is not JSON prints the status code and the body as sent."""
+    requests_mock.patch(
+        "https://x.example/plugin-io/plugins/intake/", status_code=502, text="bad gateway"
+    )
+
+    with pytest.raises(typer.Exit):
+        disable(name="intake", host="https://x.example")
+
+    assert "Status code 502: bad gateway" in capsys.readouterr().out
+
+
+def test_update_refused_prints_status_and_body(
+    requests_mock: Any, instance_token: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A refused update prints the status code and the instance's answer."""
+    requests_mock.patch(
+        "https://x.example/plugin-io/plugins/intake/", status_code=400, text='{"error": "bad"}'
+    )
+
+    with pytest.raises(typer.Exit):
+        update(
+            name="intake",
+            package_path=None,
+            is_enabled=None,
+            secrets=["A=1"],
+            host="https://x.example",
+        )
+
+    assert 'Status code 400: {"error": "bad"}' in capsys.readouterr().out

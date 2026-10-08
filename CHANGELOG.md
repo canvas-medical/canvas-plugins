@@ -1,6 +1,52 @@
 # CHANGELOG
 
 
+## v0.243.0 (2026-10-07)
+
+### Features
+
+- Add google_calendar to the provider menu configuration items
+  ([#1917](https://github.com/canvas-medical/canvas-plugins/pull/1917),
+  [`125ac30`](https://github.com/canvas-medical/canvas-plugins/commit/125ac300e428db54aef34a8ab78b633fb951a07d))
+
+- Add new scopes to embedded applications
+  ([#1883](https://github.com/canvas-medical/canvas-plugins/pull/1883),
+  [`87025a4`](https://github.com/canvas-medical/canvas-plugins/commit/87025a441029957318785a15807e78f5ebafbe3c))
+
+
+## v0.242.0 (2026-10-06)
+
+### Features
+
+- Expose plugin event registry to home-app
+  ([#1512](https://github.com/canvas-medical/canvas-plugins/pull/1512),
+  [`af4fcee`](https://github.com/canvas-medical/canvas-plugins/commit/af4fceed04d32a3d40767f0a72d5eeaf6c604173))
+
+### Performance Improvements
+
+- Drop the redundant plugins.executions counter
+  ([#1906](https://github.com/canvas-medical/canvas-plugins/pull/1906),
+  [`8f23405`](https://github.com/canvas-medical/canvas-plugins/commit/8f23405861822aae9176c711e509f152ea56580f))
+
+
+## v0.241.0 (2026-10-06)
+
+### Features
+
+- Add CLAIM_BALANCE_CHANGED event type
+  ([#1908](https://github.com/canvas-medical/canvas-plugins/pull/1908),
+  [`92af20a`](https://github.com/canvas-medical/canvas-plugins/commit/92af20a8e63956ea57d69340c50f6ac9deee8ef8))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Allow secrets, bisect, re.I, urlsafe base64, Length and DatabaseError in the sandbox
+  ([#1901](https://github.com/canvas-medical/canvas-plugins/pull/1901),
+  [`dc3e630`](https://github.com/canvas-medical/canvas-plugins/commit/dc3e6307f823a638e2feed8bef1c17019bea5638))
+
+
 ## v0.240.0 (2026-10-01)
 
 ### Features

@@ -69,6 +69,7 @@ the links to `/admin` and to MFA enrollment.
 | `MULTI_FACTOR_AUTHENTICATION` | Multi-Factor Authentication |
 | `CHANGELOG`                   | Changelog                  |
 | `HELP_CENTER`                 | Help center                |
+| `GOOGLE_CALENDAR`             | Google Calendar            |
 
 The avatar and Sign out are always rendered and cannot be hidden.
 
