@@ -10,10 +10,10 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 
 | | Canvas Platform sign-in | Instance API credentials |
 | --- | --- | --- |
-| Set up with | `canvas login`, in your browser | `~/.canvas/credentials.ini`, written by hand |
-| Signs in as | you, as a member of your Canvas Platform organizations | an OAuth client (`client_id` / `client_secret`) registered on one instance |
+| Set up with | `canvas login`, in your browser, or a [service account token](#service-accounts-for-cicd) in `CANVAS_PLATFORM_TOKEN` | `~/.canvas/credentials.ini`, written by hand |
+| Signs in as | you, as a member of your Canvas Platform organizations, or a service account of one organization | an OAuth client (`client_id` / `client_secret`) registered on one instance |
 | Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
-| Stored in | `~/.canvas/platform-credentials.json` | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
+| Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
 | Used by | `login`, `logout`, `init`, `deploy`, `clone`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs`, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
 
 A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform).
@@ -72,6 +72,24 @@ $ canvas deploy my-cool-plugin/acme__my_cool_plugin --instance acme-staging
 $ canvas config set acme__my_cool_plugin API_URL=https://api.example.com --instance acme-staging
 ```
 
+#### Service accounts for CI/CD
+
+A CI/CD pipeline (GitHub Actions, GitLab CI, and the like) signs in to Canvas Platform as a service account, an identity that belongs to an organization rather than to a person, so the pipeline keeps working when whoever set it up leaves, and Platform's audit log names the account behind each push and deploy. An organization admin, plugin developer or deploy manager creates one on the Credentials page in Canvas Platform. A service account can hold the plugin developer and deploy manager roles, and never more than its creator holds. Its token is shown once and is valid for a year.
+
+Store the token as a CI secret and expose it to the job as `CANVAS_PLATFORM_TOKEN`; no `canvas login` is needed:
+
+```yaml
+- run: pip install canvas
+- run: canvas deploy my-plugin/acme__my_plugin --instance acme-staging --yes
+  env:
+    CANVAS_PLATFORM_TOKEN: ${{ secrets.CANVAS_PLATFORM_TOKEN }}
+```
+
+- When `CANVAS_PLATFORM_TOKEN` is set, every command uses it in place of a `canvas login` session, including the git pushes `canvas deploy` makes, and it takes precedence over a session already stored on the machine.
+- The token does not refresh. Rotating or revoking the service account on the Credentials page ends it, and the CLI's next request says so. `canvas logout` does not touch it.
+- `--yes` commits uncommitted changes without prompting. A deployment that needs consent for another plugin's custom data exits non-zero and lists the requests, since only a person at a terminal answers those.
+- `CANVAS_PLATFORM_URL` points the job at a platform other than https://platform.canvasmedical.com.
+
 **Usage**:
 
 ```console
@@ -116,7 +134,7 @@ $ canvas login [OPTIONS]
 
 ## `canvas logout`
 
-Revoke this machine's Canvas Platform session and delete its stored tokens.
+Revoke this machine's Canvas Platform session and delete its stored tokens. A service account token in `CANVAS_PLATFORM_TOKEN` is left alone, and the command says that commands still act as that account.
 
 **Usage**:
 
