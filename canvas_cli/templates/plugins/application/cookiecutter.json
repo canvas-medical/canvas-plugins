@@ -1,4 +1,5 @@
 {
     "project_name": "My Cool Application",
-    "__project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}"
+    "__plugin_prefix": "",
+    "__project_slug": "{{ (cookiecutter.__plugin_prefix ~ '__') if cookiecutter.__plugin_prefix else '' }}{{ cookiecutter.project_name.lower().replace(' ', '_') }}"
 }

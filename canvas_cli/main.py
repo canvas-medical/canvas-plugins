@@ -1,23 +1,15 @@
 import atexit
 import importlib.metadata
-import os
 from pathlib import Path
 
 import typer
 
-from canvas_cli.apps import namespace, plugin
-from canvas_cli.apps.control_room import (
-    cr_init,
-    deploy,
-    git_credential,
-    set_variables,
-    uninstall,
-    unset_variables,
-)
+from canvas_cli.apps import namespace, platform, plugin
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
+from canvas_cli.utils.platform_notice import show_platform_notice
 from canvas_cli.utils.update_check import check_for_updates
 
 APP_NAME = "canvas_cli"
@@ -25,17 +17,14 @@ APP_NAME = "canvas_cli"
 # The main app
 app = typer.Typer(no_args_is_help=True, rich_markup_mode=None, add_completion=False)
 
-_CONTROL_ROOM_BETA = os.environ.get("CONTROL_ROOM_BETA", "").lower() == "true"
-
 # Commands
-app.command(short_help="Create a new plugin")(plugin.init)
+app.command(short_help="Sign in to Canvas Platform through your browser")(platform.login)
+app.command(short_help="Sign out of Canvas Platform")(platform.logout)
+app.command(short_help="Create a new plugin")(platform.init)
+app.command(short_help="Publish a plugin to Canvas Platform and deploy it")(platform.deploy)
+app.command(short_help="Clone a plugin's repository from Canvas Platform")(platform.clone)
 app.command(short_help="Install a plugin into a Canvas instance")(plugin.install)
-# In the beta, `uninstall` routes through Control Room (home-app refuses a direct
-# CLI uninstall of a control_room_managed plugin — KOALA-5877); otherwise direct.
-if _CONTROL_ROOM_BETA:
-    app.command(short_help="Uninstall a plugin via Control Room.")(uninstall)
-else:
-    app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.uninstall)
+app.command(short_help="Uninstall a plugin")(platform.uninstall)
 app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
@@ -51,18 +40,11 @@ app.command(
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
-
-if _CONTROL_ROOM_BETA:
-    app.command(
-        name="git-credential",
-        hidden=True,
-        short_help="Git credential helper for Control Room pushes (invoked by git).",
-    )(git_credential)
-    app.command(
-        name="cr-init",
-        short_help="Connect a plugin's git repo to Control Room (sets up the 'origin' remote).",
-    )(cr_init)
-    app.command(short_help="Deploy a published plugin to this instance via Control Room.")(deploy)
+app.command(
+    name="git-credential",
+    hidden=True,
+    short_help="Git credential helper for Canvas Platform pushes (invoked by git).",
+)(platform.git_credential)
 
 # Config app
 config_app = typer.Typer(
@@ -74,23 +56,10 @@ app.add_typer(config_app, name="config")
 config_app.command(name="list", short_help="List plugin variables on a Canvas instance.")(
     plugin.list_secrets
 )
-# In the Control Room beta, `config set` routes through CR (the headless path
-# that survives the KOALA-5877 install-write lockout) instead of writing the
-# instance directly; the CR path errors clearly if the instance isn't
-# CR-managed, mirroring publish/deploy. Outside the beta it stays direct.
-if _CONTROL_ROOM_BETA:
-    config_app.command(name="set", short_help="Set plugin variables via Control Room.")(
-        set_variables
-    )
-    # Unset is CR-only — the headless clear + reconcile path (KOALA-5923). There's
-    # no direct-instance equivalent, so it's registered only in the beta.
-    config_app.command(name="unset", short_help="Unset plugin variables via Control Room.")(
-        unset_variables
-    )
-else:
-    config_app.command(name="set", short_help="Set plugin variables on a Canvas instance.")(
-        plugin.set_secrets
-    )
+config_app.command(name="set", short_help="Set plugin variables.")(platform.set_variables)
+config_app.command(name="unset", short_help="Clear plugin variable values.")(
+    platform.unset_variables
+)
 
 # Namespace app
 namespace_app = typer.Typer(
@@ -147,6 +116,7 @@ atexit.register(check_for_updates, __version__, get_app_dir())
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: bool | None = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
@@ -156,6 +126,10 @@ def main(
     config_file = get_or_create_config_file()
 
     context.load_from_file(config_file)
+
+    # git runs `git-credential` itself, so its stderr is not read by the person at the terminal.
+    if ctx.invoked_subcommand != "git-credential":
+        show_platform_notice(get_app_dir())
 
 
 if __name__ == "__main__":
