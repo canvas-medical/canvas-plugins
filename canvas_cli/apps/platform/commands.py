@@ -5,6 +5,7 @@ instances it manages. These commands talk to platform's ``/api/v1/`` as the
 person signed in with ``canvas login``:
 
   * ``canvas login`` / ``canvas logout``: the browser sign-in and its revocation.
+  * ``canvas whoami``: which platform, and who the CLI signs in as there.
   * ``canvas init``: scaffolds a plugin; signed in, it names it
     ``<prefix>__<package>`` and registers it with platform.
   * ``canvas deploy``: commits and pushes the working tree, then deploys it.
@@ -74,6 +75,24 @@ def require_prefixed_name(name: str) -> None:
         f"publisher-prefixed name like `<your org prefix>__{package}`, made of lowercase "
         "letters, digits and underscores, in the manifest, the package folder and its "
         "imports. `canvas login` lists your organizations' prefixes."
+    )
+
+
+def require_folder_matches_name(plugin_dir: Path, name: str) -> None:
+    """Refuse a package whose folder is not named after the plugin.
+
+    The folder is the Python package an instance imports, so Canvas Platform's git
+    server refuses a push where the two differ. Checking here refuses it before
+    anything is committed or pushed.
+    """
+    folder = plugin_dir.resolve().name
+    if folder == name:
+        return
+    raise typer.BadParameter(
+        f"The package folder is '{folder}', but the manifest name is '{name}'. They have to "
+        "match, because the folder is the Python package an instance imports. Rename the "
+        f"folder to '{name}', and update the imports and manifest class paths that name "
+        f"'{folder}'."
     )
 
 
@@ -323,6 +342,57 @@ def logout(
         )
 
 
+# The capabilities `canvas whoami` reports, as the commands they unlock.
+_PLUGIN_CAPABILITIES = {
+    "push_plugin_code": "push",
+    "deploy_plugin": "deploy",
+    "configure_plugin": "configure",
+    "uninstall_plugin": "uninstall",
+}
+
+
+def whoami(
+    platform: str | None = typer.Option(None, "--platform", help="Canvas Platform URL"),
+) -> None:
+    """Show which Canvas Platform the CLI uses, and who it signs in as there.
+
+    It asks platform, so a revoked or expired credential is reported rather than
+    assumed valid. No token is printed.
+    """
+    url, source = auth.platform_url_source(platform)
+    print(f"Platform: {url} (from {source})")
+    service = auth.service_token() is not None
+    session = auth.stored_session(url)
+    if not service and session is None:
+        login_command = f"canvas login --platform {url}" if platform else "canvas login"
+        print(f"Not signed in. Run `{login_command}`.")
+        raise typer.Exit(1)
+
+    me = PlatformClient(url).me()
+    credential = (
+        f"service account token from {auth.SERVICE_TOKEN_ENV}"
+        if service
+        else "browser session from `canvas login`"
+    )
+    employee = ", Canvas employee" if me.get("canvas_employee") else ""
+    print(f"Signed in as {me.get('email')} ({credential}{employee})")
+    if service and session is not None:
+        print(
+            f"  A `canvas login` session is also stored for this platform; "
+            f"{auth.SERVICE_TOKEN_ENV} takes precedence while it is set."
+        )
+    organizations = me.get("organizations", [])
+    if not organizations:
+        print("  No organization memberships.")
+    for organization in organizations:
+        held = organization.get("capabilities", [])
+        can = [word for capability, word in _PLUGIN_CAPABILITIES.items() if capability in held]
+        print(
+            f"  {organization.get('name')} ({organization['slug']}): plugin prefix "
+            f"{organization.get('plugin_prefix')}__, can {', '.join(can) or 'view only'}"
+        )
+
+
 # -- git credential helper ---------------------------------------------------
 
 
@@ -475,8 +545,10 @@ def deploy(
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
     name = manifest_name(plugin_dir)
     require_prefixed_name(name)
-
     pushing = ref is None and not no_push
+    if pushing:
+        require_folder_matches_name(plugin_dir, name)
+
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
     publisher = _publisher(client, name, pushing=pushing)
@@ -576,6 +648,12 @@ def init(
     """
     platform = auth.resolve_platform_url()
     if auth.stored_tokens(platform) is None:
+        print(
+            f"You are not signed in to Canvas Platform at {platform}, so this plugin is "
+            "scaffolded without a publisher prefix, registration or git repository, and "
+            "`canvas deploy` refuses it. For a plugin you can deploy, run `canvas login`, "
+            "then `canvas init` again."
+        )
         instance_plugin.scaffold(plugin_type)
         return
 
@@ -610,7 +688,7 @@ def init(
     if git.repo_root(package_dir) == project_dir.resolve():
         result = git.run(project_dir, "init")
         if result.returncode != 0:
-            raise typer.BadParameter(f"git init failed: {result.stderr.strip()}")
+            raise git.GitError(f"git init failed: {result.stderr.strip()}")
         git.connect_remote(project_dir, registered["git_url"], platform)
         print(f"Initialized a git repository at {project_dir} with origin {registered['git_url']}.")
     print(f"Deploy it with: canvas deploy {package_dir}")
