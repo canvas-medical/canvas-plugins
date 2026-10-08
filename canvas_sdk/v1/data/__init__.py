@@ -185,6 +185,7 @@ from .patient_consent import (
     PatientConsent,
     PatientConsentCoding,
     PatientConsentRejectionCoding,
+    PatientConsentStatus,
 )
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_card import PaymentCard
@@ -464,6 +465,7 @@ __all__ = __exports__ = (
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientConsentStatus",
     "PatientGroup",
     "PatientGroupMember",
     "PayorSpecificCharge",
