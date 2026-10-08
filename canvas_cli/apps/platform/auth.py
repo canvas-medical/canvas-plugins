@@ -394,8 +394,10 @@ def logout(platform: str) -> str | None:
     Returns None when there was no session, or an error sentence when platform
     could not revoke it. The local tokens are deleted either way, since keeping
     them would leave the person signed in on this machine after asking not to be.
+    A service account token in ``CANVAS_PLATFORM_TOKEN`` is not a session: it is
+    rotated or revoked on Platform's Credentials page, so logout leaves it alone.
     """
-    tokens = stored_tokens(platform)
+    tokens = _load().get("platforms", {}).get(platform)
     if tokens is None:
         return None
     try:

@@ -1044,6 +1044,25 @@ def test_init_org_option_must_be_one_the_person_can_publish_in(
     assert not [path for path in tmp_path.iterdir() if path.is_dir()]
 
 
+# -- logout ------------------------------------------------------------------
+
+
+def test_logout_says_a_service_account_token_still_signs_commands_in(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Logout under CANVAS_PLATFORM_TOKEN succeeds and says the token still applies."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+
+    result = runner.invoke(app, ["logout", "--platform", PLATFORM])
+
+    assert result.exit_code == 0
+    assert f"You were not signed in to {PLATFORM}." in result.output
+    assert "CANVAS_PLATFORM_TOKEN is set, so commands still act as its service account" in (
+        result.output
+    )
+    assert not requests_mock.called
+
+
 # -- registration ------------------------------------------------------------
 
 

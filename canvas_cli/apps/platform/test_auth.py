@@ -295,3 +295,25 @@ def test_logout_forgets_tokens_even_when_platform_is_unreachable(
 def test_logout_without_a_session() -> None:
     """Logging out when signed out says so."""
     assert auth.logout(PLATFORM) is None
+
+
+def test_logout_leaves_a_service_account_token_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A service account token has no session to revoke, so logout finds nothing."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+
+    assert auth.logout(PLATFORM) is None
+
+
+def test_logout_revokes_the_stored_session_under_a_service_account_token(
+    requests_mock: requests_mock_module.Mocker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With a service account token set, logout still revokes the browser sign-in."""
+    auth.save_tokens(PLATFORM, _token_response(1), make_default=True)
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.post(f"{PLATFORM}/oauth/revoke", status_code=200)
+
+    assert auth.logout(PLATFORM) == ""
+    assert parse_qs(_last(requests_mock).text)["token"] == ["cnvs_rt_1"]
+    monkeypatch.delenv(auth.SERVICE_TOKEN_ENV)
+    assert auth.stored_tokens(PLATFORM) is None

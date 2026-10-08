@@ -316,6 +316,11 @@ def logout(
         print(f"Signed out of {url} on this machine, but revoking the session failed: {problem}.")
     else:
         print(f"Signed out of {url}.")
+    if auth.service_token():
+        print(
+            f"{auth.SERVICE_TOKEN_ENV} is set, so commands still act as its service account. "
+            "Unset it, or revoke it on the Credentials page in Canvas Platform."
+        )
 
 
 # -- git credential helper ---------------------------------------------------
