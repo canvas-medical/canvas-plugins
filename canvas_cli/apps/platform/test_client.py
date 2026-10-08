@@ -188,3 +188,26 @@ def test_with_a_service_account_token_the_cli_counts_as_signed_in(
 
     assert auth.stored_tokens(PLATFORM) is not None
     assert auth.valid_tokens(PLATFORM)["access_token"] == "cnvs_sa_ci"
+
+
+def test_a_refusal_whose_json_is_not_an_object_still_names_the_status(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A JSON body that is not an object carries no sentence, so the status is named."""
+    _sign_in()
+    requests_mock.get(f"{PLATFORM}/api/v1/me", status_code=400, json=["unexpected"])
+
+    with pytest.raises(PlatformError, match="Canvas Platform answered 400."):
+        PlatformClient(PLATFORM).me()
+
+
+def test_plugin_raises_for_errors_other_than_a_404(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """Only a 404 reads as "no such plugin"; a server error is raised."""
+    _sign_in()
+    requests_mock.get(f"{PLATFORM}/api/v1/plugins/acme__intake", status_code=500, json={})
+
+    with pytest.raises(PlatformError) as raised:
+        PlatformClient(PLATFORM).plugin("acme__intake")
+    assert raised.value.status == 500

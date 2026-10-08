@@ -94,3 +94,15 @@ def test_install_warns_that_direct_installs_are_deprecated(
     assert "deprecated" in err
     assert "no longer supported as of December 14, 2026" in err
     assert MIGRATION_URL in err
+
+
+def test_notice_prints_even_when_it_cannot_be_recorded(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An app directory that cannot hold the record still shows the notice, without failing."""
+    not_a_directory = tmp_path / "app_dir"
+    not_a_directory.write_text("")
+
+    show_platform_notice(str(not_a_directory))
+
+    assert MIGRATION_URL in capsys.readouterr().err

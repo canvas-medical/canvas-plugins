@@ -9,11 +9,13 @@ import os
 import stat
 import threading
 import time
+import urllib.error
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
+import click
 import pytest
 import requests
 import requests_mock as requests_mock_module
@@ -96,6 +98,9 @@ def test_tokens_are_stored_per_platform_with_owner_only_permissions(
     assert auth.stored_tokens(PLATFORM) is None
     assert auth.stored_tokens("https://other.example") is not None
     assert "default" not in json.loads(isolate_platform_credentials.read_text())
+
+    auth.forget_tokens("https://other.example")
+    assert auth.stored_tokens("https://other.example") is None
 
 
 def test_valid_tokens_requires_a_session() -> None:
@@ -317,3 +322,108 @@ def test_logout_revokes_the_stored_session_under_a_service_account_token(
     assert parse_qs(_last(requests_mock).text)["token"] == ["cnvs_rt_1"]
     monkeypatch.delenv(auth.SERVICE_TOKEN_ENV)
     assert auth.stored_tokens(PLATFORM) is None
+
+
+# -- failure paths -----------------------------------------------------------
+
+
+def test_normalize_platform_url_refuses_a_url_without_a_host() -> None:
+    """A URL with a scheme and no host is refused rather than stored."""
+    with pytest.raises(click.BadParameter, match="is not a platform URL"):
+        auth.normalize_platform_url("https://")
+
+
+def test_a_corrupt_credentials_file_names_the_file(isolate_platform_credentials: Path) -> None:
+    """Credentials that are not JSON say which file to move aside."""
+    isolate_platform_credentials.write_text("{not json")
+
+    with pytest.raises(auth.PlatformAuthError, match="is not valid JSON"):
+        auth.stored_tokens(PLATFORM)
+
+
+def test_refresh_gives_up_on_a_lock_another_process_holds(
+    isolate_platform_credentials: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A fresh lock held past the wait ends with a sentence naming the lock file."""
+    auth.save_tokens(PLATFORM, _token_response(1), make_default=True)
+    isolate_platform_credentials.with_name(f"{isolate_platform_credentials.name}.lock").touch()
+    monkeypatch.setattr(auth, "LOCK_WAIT_SECONDS", 0.2)
+
+    with pytest.raises(auth.PlatformAuthError, match="Timed out waiting for"):
+        auth.refresh(PLATFORM, "cnvs_rt_1")
+
+
+def test_refresh_without_a_session_asks_for_a_login() -> None:
+    """Refreshing a platform with no stored session asks for `canvas login`."""
+    with pytest.raises(auth.PlatformAuthError, match="canvas login"):
+        auth.refresh(PLATFORM, "cnvs_rt_1")
+
+
+def test_refresh_reports_an_unreachable_platform(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A transport failure on the token endpoint names the platform, and the session is kept."""
+    auth.save_tokens(PLATFORM, _token_response(1), make_default=True)
+    requests_mock.post(f"{PLATFORM}/oauth/token", exc=requests.exceptions.ConnectionError("down"))
+
+    with pytest.raises(
+        auth.PlatformAuthError, match=f"Could not reach Canvas Platform at {PLATFORM}"
+    ):
+        auth.refresh(PLATFORM, "cnvs_rt_1")
+    assert auth.stored_tokens(PLATFORM) is not None
+
+
+def test_refresh_reports_a_server_error_without_signing_out(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A non-JSON server error is reported by status code, and the session is kept."""
+    auth.save_tokens(PLATFORM, _token_response(1), make_default=True)
+    requests_mock.post(f"{PLATFORM}/oauth/token", status_code=502, text="<html>bad gateway</html>")
+
+    with pytest.raises(
+        auth.PlatformAuthError, match="Could not refresh your Canvas Platform session: 502"
+    ):
+        auth.refresh(PLATFORM, "cnvs_rt_1")
+    assert auth.stored_tokens(PLATFORM) is not None
+
+
+def test_login_ignores_requests_for_other_paths(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A request to the listener for anything but /callback, such as a favicon, is a 404 and
+    the listener keeps waiting for the redirect.
+    """
+    requests_mock.post(f"{PLATFORM}/oauth/token", json=_token_response(1))
+    statuses: list[int] = []
+
+    def open_browser(url: str) -> bool:
+        query = parse_qs(urlparse(url).query)
+        redirect = query["redirect_uri"][0]
+        answer = {"state": query["state"][0], "code": "the-code"}
+
+        def follow() -> None:
+            try:
+                urllib.request.urlopen(redirect.replace("/callback", "/favicon.ico"), timeout=5)
+            except urllib.error.HTTPError as error:
+                statuses.append(error.code)
+            with urllib.request.urlopen(f"{redirect}?{urlencode(answer)}", timeout=5) as page:
+                page.read()
+
+        threading.Thread(target=follow, daemon=True).start()
+        return True
+
+    auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
+
+    assert statuses == [404]
+    assert auth.stored_tokens(PLATFORM) is not None
+
+
+def test_login_refuses_a_redirect_without_a_code(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A redirect with the right state but no code and no error is refused before any exchange."""
+    open_browser, _ = _browser({"unexpected": "value"})
+
+    with pytest.raises(auth.PlatformAuthError, match="carried no authorization code"):
+        auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
+    assert not requests_mock.called

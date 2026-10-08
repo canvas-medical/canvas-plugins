@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock as requests_mock_module
+import typer
 from typer.testing import CliRunner
 
 from canvas_cli.apps.platform import auth, commands, git
@@ -1152,3 +1153,333 @@ def test_git_runs_the_credential_helper_with_the_repository_path(
     assert result.returncode == 0, result.stderr
     assert "password=cnvs_git_1" in result.stdout.splitlines()
     assert minted == [(f"/api/v1/plugins/{NAME}/git-credentials", "Bearer cnvs_ua_9")]
+
+
+# -- manifest names ----------------------------------------------------------
+
+
+def test_manifest_name_requires_a_manifest(tmp_path: Path) -> None:
+    """A directory without CANVAS_MANIFEST.json is refused by name."""
+    with pytest.raises(typer.BadParameter, match="has no CANVAS_MANIFEST.json"):
+        commands.manifest_name(tmp_path)
+
+
+def test_manifest_name_reports_an_unreadable_manifest(tmp_path: Path) -> None:
+    """A manifest that is not JSON names the file."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text("{not json")
+
+    with pytest.raises(typer.BadParameter, match="Could not read"):
+        commands.manifest_name(tmp_path)
+
+
+def test_manifest_name_requires_a_name(tmp_path: Path) -> None:
+    """A manifest without a `name` is refused."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"description": "x"}))
+
+    with pytest.raises(typer.BadParameter, match='is missing a "name"'):
+        commands.manifest_name(tmp_path)
+
+
+def test_package_dir_is_the_project_when_the_manifest_sits_at_its_root(tmp_path: Path) -> None:
+    """A template that puts the manifest at the project root has the project as its package."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+
+    assert commands._package_dir(tmp_path) == tmp_path
+
+
+# -- deploy: more paths ------------------------------------------------------
+
+
+def test_deploy_refuses_a_path_that_is_not_a_directory(signed_in: None, tmp_path: Path) -> None:
+    """A file or missing path is refused before platform is called."""
+    result = runner.invoke(app, ["deploy", str(tmp_path / "missing")])
+
+    assert result.exit_code == 2
+    assert "needs to be a valid directory" in result.output
+
+
+def test_deploy_with_no_deployable_instance_says_to_name_one(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """Without --instance and with no managed instance to deploy to, the person is told to name one."""
+    api.get(
+        f"{API}/instances",
+        json={"instances": [_instance("acme-old", "deploy_plugin", managed=False)]},
+    )
+
+    result = runner.invoke(app, ["deploy", str(package)])
+
+    assert result.exit_code == 2
+    assert (
+        "There is no instance Canvas Platform manages that you can deploy plugins to"
+        in result.output
+    )
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+def test_canvas_employee_deploys_a_plugin_under_its_existing_publisher(
+    requests_mock: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A Canvas employee outside the plugin's organization deploys it as its existing publisher."""
+    directory = tmp_path / "other__intake"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "other__intake"}))
+    requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
+    requests_mock.get(
+        f"{API}/plugins/other__intake", json={"name": "other__intake", "publisher": "other"}
+    )
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("succeeded"))
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--no-push", "--instance", "other-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(requests_mock, "POST", "/deployments")[0].json()["instances"] == [
+        "other-staging"
+    ]
+
+
+def test_deploy_waits_through_consent_another_person_already_answered(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """A deployment pending consent with no request left to answer is waited on, not prompted."""
+    api.post(
+        f"{API}/deployments",
+        status_code=202,
+        json={
+            **_deployment("pending_consent"),
+            "consent_requests": [{"id": 7, "status": "approved"}],
+        },
+    )
+
+    result = runner.invoke(app, ["deploy", str(package), "--no-push", "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert "needs consent" not in result.output
+    assert f"Deploy of {NAME} succeeded." in result.output
+
+
+def test_deploy_stops_polling_when_platform_refuses_the_status_request(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """A client error while polling ends the command rather than being retried."""
+    api.post(f"{API}/deployments", status_code=202, json=_deployment("in_progress"))
+    api.get(f"{API}/deployments/6f1c", status_code=404, json={"error": "Not found."})
+
+    result = runner.invoke(app, ["deploy", str(package), "--no-push", "--instance", "acme-staging"])
+
+    assert result.exit_code != 0
+    assert len(_requests_to(api, "GET", "/deployments/6f1c")) == 1
+
+
+# -- login and logout --------------------------------------------------------
+
+
+def test_login_lists_each_organization_and_its_prefix(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After the browser sign-in, login names the account and each organization's prefix."""
+
+    def fake_login(url: str) -> None:
+        auth.save_tokens(
+            url,
+            {"access_token": "cnvs_ua_1", "refresh_token": "cnvs_rt_1", "expires_in": 3600},
+            make_default=True,
+        )
+
+    monkeypatch.setattr(auth, "login", fake_login)
+    requests_mock.get(f"{API}/me", json=ME)
+
+    result = runner.invoke(app, ["login", "--platform", PLATFORM])
+
+    assert result.exit_code == 0, result.output
+    assert f"Signed in to {PLATFORM} as dana@acme.example." in result.output
+    assert "Acme Health (acme): plugin prefix acme__" in result.output
+
+
+def test_logout_revokes_the_session(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Logout with a session revokes it and says so."""
+    requests_mock.post(f"{PLATFORM}/oauth/revoke", status_code=200)
+
+    result = runner.invoke(app, ["logout", "--platform", PLATFORM])
+
+    assert result.exit_code == 0, result.output
+    assert f"Signed out of {PLATFORM}." in result.output
+    assert "CANVAS_PLATFORM_TOKEN" not in result.output
+
+
+def test_logout_says_when_revoking_failed(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A revocation platform refuses is reported, and the machine is still signed out."""
+    requests_mock.post(f"{PLATFORM}/oauth/revoke", status_code=503)
+
+    result = runner.invoke(app, ["logout", "--platform", PLATFORM])
+
+    assert result.exit_code == 0, result.output
+    assert "revoking the session failed: platform answered 503" in result.output
+    assert auth.stored_tokens(PLATFORM) is None
+
+
+# -- clone and init: more paths ----------------------------------------------
+
+
+def test_clone_refuses_an_existing_destination(
+    requests_mock: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A destination that already exists is refused before git runs."""
+    requests_mock.get(
+        f"{API}/plugins/{NAME}", json={"name": NAME, "publisher": "acme", "git_url": "file:///x"}
+    )
+
+    result = runner.invoke(app, ["clone", NAME, str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "already exists" in result.output
+
+
+def test_init_org_option_picks_that_organization(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--org names the publisher without a prompt, among several organizations."""
+    monkeypatch.chdir(tmp_path)
+    second = {**ACME, "slug": "big-leap", "name": "Big Leap", "plugin_prefix": "big_leap"}
+    requests_mock.get(f"{API}/me", json={**ME, "organizations": [ACME, second]})
+    requests_mock.post(
+        f"{API}/orgs/big-leap/plugins", status_code=201, json={"git_url": bare.as_uri()}
+    )
+
+    result = runner.invoke(app, ["init", "--org", "big-leap"], input="Intake\n")
+
+    assert result.exit_code == 0, result.output
+    assert "Which organization" not in result.output
+    assert (tmp_path / "intake" / "big_leap__intake" / "CANVAS_MANIFEST.json").exists()
+
+
+def test_init_without_a_publishing_organization_scaffolds_unprefixed(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Signed in without the right to push code anywhere, init scaffolds without a prefix and
+    registers nothing.
+    """
+    monkeypatch.chdir(tmp_path)
+    viewer = {**ACME, "capabilities": ["view_org_assets"]}
+    requests_mock.get(f"{API}/me", json={**ME, "organizations": [viewer]})
+
+    result = runner.invoke(app, ["init"], input="Intake\n")
+
+    assert result.exit_code == 0, result.output
+    assert "scaffolded without a publisher prefix" in result.output
+    assert (tmp_path / "intake" / "intake" / "CANVAS_MANIFEST.json").exists()
+    assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
+
+
+def test_init_refuses_a_scaffolded_name_platform_would_reject(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A project name that yields an invalid plugin name is refused before registering."""
+    monkeypatch.chdir(tmp_path)
+    requests_mock.get(f"{API}/me", json=ME)
+
+    result = runner.invoke(app, ["init"], input="1 Intake\n")
+
+    assert result.exit_code == 2
+    assert "is not a valid plugin name" in result.output
+    assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
+
+
+def test_init_reports_a_failed_git_init(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A git init that fails names git's own error."""
+    monkeypatch.chdir(tmp_path)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(f"{API}/orgs/acme/plugins", status_code=201, json={"git_url": bare.as_uri()})
+    monkeypatch.setattr(
+        git,
+        "run",
+        lambda directory, *args: subprocess.CompletedProcess(args, 1, "", "permission denied\n"),
+    )
+
+    result = runner.invoke(app, ["init"], input="Intake\n")
+
+    assert result.exit_code == 2
+    assert "git init failed: permission denied" in result.output
+
+
+# -- config: argument checks -------------------------------------------------
+
+
+def test_config_refuses_both_instance_and_host(requests_mock: requests_mock_module.Mocker) -> None:
+    """Signed out, --instance and --host together are refused."""
+    result = runner.invoke(
+        app, ["config", "set", NAME, "A=1", "--instance", "one", "--host", "https://x.example"]
+    )
+
+    assert result.exit_code == 2
+    assert "either --instance or --host" in result.output
+
+
+def test_config_set_refuses_a_value_without_a_key(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """A value with no `=` is refused before anything is written."""
+    result = runner.invoke(app, ["config", "set", NAME, "--secret", "nokey"])
+
+    assert result.exit_code == 2
+    assert "Invalid variable format: 'nokey'" in result.output
+    assert not requests_mock.called
+
+
+def test_config_set_requires_a_variable(requests_mock: requests_mock_module.Mocker) -> None:
+    """Config set with no variables is refused."""
+    result = runner.invoke(app, ["config", "set", NAME])
+
+    assert result.exit_code == 2
+    assert "Provide at least one variable" in result.output
+
+
+def test_init_application_registers_without_creating_a_repository(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The application template puts the manifest at the project root, so the project is the
+    package: it is registered, but no repository is created around it.
+    """
+    monkeypatch.chdir(tmp_path)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(f"{API}/orgs/acme/plugins", status_code=201, json={"git_url": bare.as_uri()})
+
+    result = runner.invoke(app, ["init", "application"], input="Intake App\n")
+
+    assert result.exit_code == 0, result.output
+    package_dir = tmp_path / "acme__intake_app"
+    assert json.loads((package_dir / "CANVAS_MANIFEST.json").read_text())["name"] == (
+        "acme__intake_app"
+    )
+    assert _requests_to(requests_mock, "POST", "/orgs/acme/plugins")[0].json() == {
+        "name": "acme__intake_app"
+    }
+    assert "Initialized a git repository" not in result.output
+    assert not (package_dir / ".git").exists()
+    assert f"canvas deploy {package_dir}" in result.output
