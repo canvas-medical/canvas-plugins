@@ -226,6 +226,9 @@ class LabOrder(AuditedModel, IdentifiableModel):
     ontology_lab_partner = models.CharField(max_length=128)
 
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, null=True)
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="linked_lab_orders", null=True
+    )
     comment = models.CharField(max_length=128)
     requisition_number = models.CharField(max_length=32)
     is_patient_bill = models.BooleanField(null=True)
