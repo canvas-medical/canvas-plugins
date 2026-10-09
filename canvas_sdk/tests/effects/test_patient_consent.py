@@ -31,6 +31,7 @@ def db() -> Iterator[dict[str, MagicMock]]:
     ):
         for mock in (patient, coding, rejection):
             mock.filter.return_value.exists.return_value = True
+            mock.filter.return_value.count.return_value = 1
         yield {"patient": patient, "coding": coding, "rejection": rejection}
 
 
@@ -125,6 +126,7 @@ def test_document_filename_is_required() -> None:
 def test_unknown_references_are_rejected(db: dict[str, MagicMock], key: str, message: str) -> None:
     """A patient or coding that does not exist fails at apply()."""
     db[key].filter.return_value.exists.return_value = False
+    db[key].filter.return_value.count.return_value = 0
     reason = ConsentCodingReference(system="INTERNAL", code="R1")
 
     with pytest.raises(ValidationError, match=message):
@@ -149,3 +151,25 @@ def test_document_content_is_required() -> None:
     """Empty content fails when the document is built, so no empty proof is filed."""
     with pytest.raises(ValidationError):
         ConsentDocument(filename="x.pdf", content="")
+
+
+@pytest.mark.parametrize(("key", "message"), [("coding", "consent"), ("rejection", "rejection")])
+def test_ambiguous_coding_reference_is_rejected(
+    db: dict[str, MagicMock], key: str, message: str
+) -> None:
+    """A reference that matches more than one coding fails, so Canvas never picks one at random."""
+    db[key].filter.return_value.count.return_value = 2
+    reason = ConsentCodingReference(system="INTERNAL", display="Declined")
+
+    with pytest.raises(ValidationError, match=f"{message} .*more than one coding"):
+        _effect(state=PatientConsentStatus.REJECTED, rejection_reason=reason).apply()
+
+
+def test_document_content_may_contain_newlines(db: dict[str, MagicMock]) -> None:
+    """Line-wrapped base64, as base64.encodebytes() makes it, is accepted."""
+    content = base64.encodebytes(b"%PDF-1.4 " * 20).decode()
+    assert "\n" in content
+
+    effect = _effect(document=ConsentDocument(filename="signed.pdf", content=content)).apply()
+
+    assert json.loads(effect.payload)["data"]["document"]["content"] == content
