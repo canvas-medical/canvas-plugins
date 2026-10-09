@@ -43,7 +43,9 @@ class AssessCommand(_BaseCommand):
         if method not in CONDITION_VALIDATED_METHODS:
             return errors
 
-        if self.condition_id and self.icd10_code:
+        # Both keys name the condition, so sending both (even one empty) would let one overwrite
+        # the other.
+        if self.is_dirty("condition_id") and self.is_dirty("icd10_code"):
             errors.append(
                 self._create_error_detail(
                     "value",

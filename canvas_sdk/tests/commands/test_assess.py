@@ -241,6 +241,22 @@ def test_condition_id_and_icd10_code_are_mutually_exclusive(
         getattr(assess, method)()
 
 
+@pytest.mark.parametrize("empty", ["icd10_code", "condition_id"])
+def test_condition_id_and_icd10_code_cannot_both_be_sent_even_when_one_is_empty(
+    command: Command, condition: Condition, empty: str
+) -> None:
+    """Sending both keys, even with one empty, is rejected: the empty one would clear the other."""
+    assess = AssessCommand(
+        note_uuid=str(command.note.id),
+        command_uuid=str(command.id),
+        condition_id=None if empty == "condition_id" else str(condition.id),
+        icd10_code=None if empty == "icd10_code" else "E119",
+    )
+
+    with pytest.raises(ValidationError, match="either condition_id or icd10_code"):
+        assess.originate()
+
+
 # --- onset date ------------------------------------------------------------
 
 
