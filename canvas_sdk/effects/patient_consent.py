@@ -58,12 +58,16 @@ class RecordPatientConsent(_BaseEffect):
     """Record a patient's decision on one consent.
 
     Each patient has one consent record per consent coding. The first decision creates it, and
-    a later decision updates it. A document is added to the consent's document stack and the
-    newest one becomes the active document, so earlier signed copies stay on the chart.
+    a later decision updates it. A document is added to the consent's document stack with
+    effective_date as its date. The document with the latest date is the active document, and
+    earlier signed copies stay on the chart.
 
     Canvas computes the expiration date from the coding's expiration rule. An accepted state
     clears any earlier rejection reason. The effect changes only the named consent, so a consent
     the patient did not answer stays pending.
+
+    The fields are strictly typed: state takes a PatientConsentStatus member, not a string, and
+    effective_date takes a datetime.date, not a datetime.
 
     Example:
         RecordPatientConsent(
@@ -96,15 +100,8 @@ class RecordPatientConsent(_BaseEffect):
                 )
             )
 
-        if (
-            self.consent
-            and not PatientConsentCoding.objects.filter(**self.consent.lookup()).exists()
-        ):
-            errors.append(
-                self._create_error_detail(
-                    "value", "The consent coding does not exist.", self.consent.lookup()
-                )
-            )
+        if self.consent:
+            errors.extend(self._coding_errors(PatientConsentCoding, self.consent, "consent"))
 
         if self.rejection_reason:
             if self.state not in REJECTED_STATES:
@@ -113,20 +110,17 @@ class RecordPatientConsent(_BaseEffect):
                         "value", "Set rejection_reason only with a rejected state.", self.state
                     )
                 )
-            elif not PatientConsentRejectionCoding.objects.filter(
-                **self.rejection_reason.lookup()
-            ).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "The rejection coding does not exist.",
-                        self.rejection_reason.lookup(),
+            else:
+                errors.extend(
+                    self._coding_errors(
+                        PatientConsentRejectionCoding, self.rejection_reason, "rejection"
                     )
                 )
 
         if self.document:
             try:
-                base64.b64decode(self.document.content, validate=True)
+                # Line breaks are allowed, as base64.encodebytes() writes them.
+                base64.b64decode("".join(self.document.content.split()), validate=True)
             except binascii.Error:
                 errors.append(
                     self._create_error_detail(
@@ -135,6 +129,23 @@ class RecordPatientConsent(_BaseEffect):
                 )
 
         return errors
+
+    def _coding_errors(
+        self,
+        model: type[PatientConsentCoding] | type[PatientConsentRejectionCoding],
+        reference: ConsentCodingReference,
+        label: str,
+    ) -> list[InitErrorDetails]:
+        """Require the reference to match exactly one coding."""
+        matches = model.objects.filter(**reference.lookup()).count()
+        if matches == 1:
+            return []
+        message = (
+            f"The {label} coding does not exist."
+            if matches == 0
+            else f"The {label} coding reference matches more than one coding. Add a code."
+        )
+        return [self._create_error_detail("value", message, reference.lookup())]
 
     @property
     def values(self) -> dict[str, Any]:
