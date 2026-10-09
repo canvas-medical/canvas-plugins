@@ -64,6 +64,9 @@ class Prescription(IdentifiableModel, AuditedModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.CASCADE, related_name="prescriptions", null=True
     )
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="linked_prescriptions", null=True
+    )
     supervising_provider = models.ForeignKey(
         "v1.Staff",
         on_delete=models.SET_NULL,

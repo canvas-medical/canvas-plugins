@@ -4,11 +4,11 @@ from uuid import UUID
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.v1.data import Medication
 
 
-class ChangeMedicationCommand(BaseCommand):
+class ChangeMedicationCommand(_AssessmentLinkedCommand):
     """A class for managing a ChangeMedication command within a specific note."""
 
     class Meta:

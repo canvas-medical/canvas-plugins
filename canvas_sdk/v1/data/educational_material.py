@@ -57,6 +57,12 @@ class EducationalMaterial(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="education_material"
     )
+    assessment = models.ForeignKey(
+        "v1.Assessment",
+        on_delete=models.DO_NOTHING,
+        related_name="linked_educational_materials",
+        null=True,
+    )
     article_id = models.TextField(blank=True, default="")
     selected_language = models.CharField(
         max_length=6,
