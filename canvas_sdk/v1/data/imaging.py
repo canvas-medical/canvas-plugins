@@ -17,11 +17,11 @@ from canvas_sdk.v1.data.base import (
 )
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
-    DocumentReviewMode,
     OrderStatus,
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
+from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
     BaseReportTemplateField,
@@ -110,7 +110,7 @@ class ImagingReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
 
 
-class ImagingReport(TimestampedModel, IdentifiableModel):
+class ImagingReport(TimestampedModel, IdentifiableModel, Report):
     """Model to read ImagingReport data."""
 
     class ImagingReportSource(models.TextChoices):
@@ -123,10 +123,13 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
 
     objects = cast(ImagingReportQuerySet, models.Manager.from_queryset(ImagingReportQuerySet)())
 
-    review_mode = models.CharField(choices=DocumentReviewMode.choices, max_length=2)
-    junked = models.BooleanField()
     requires_signature = models.BooleanField()
-    assigned_date = models.DateTimeField()
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_imagingreport_reviewers_001",
+        blank=True,
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )

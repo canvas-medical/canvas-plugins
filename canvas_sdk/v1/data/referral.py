@@ -17,6 +17,7 @@ from canvas_sdk.v1.data.base import (
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.task import Task
 
 
@@ -108,7 +109,7 @@ class ReferralReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
 
 
-class ReferralReport(TimestampedModel, IdentifiableModel):
+class ReferralReport(TimestampedModel, IdentifiableModel, Report):
     """ReferralReport."""
 
     class Meta:
@@ -120,15 +121,13 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
 
-    review_mode = models.CharField(max_length=2)
-    assigned_by = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    junked = models.BooleanField()
     requires_signature = models.BooleanField()
-    assigned_date = models.DateTimeField(null=True)
-    team_assigned_date = models.DateTimeField(null=True)
-    team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True)
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_referralreport_reviewers_001",
+        blank=True,
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="referral_reports"
     )
