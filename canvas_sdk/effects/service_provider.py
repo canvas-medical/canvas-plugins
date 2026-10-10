@@ -25,15 +25,15 @@ UPDATABLE_FIELDS: tuple[str, ...] = (
     "direct_address",
 )
 
-# The subset of fields that identify a provider for create-time deduplication.
-# `last_name` is intentionally excluded: organization providers legitimately have
-# no last name, so requiring it would reject them.
-CREATE_REQUIRED_FIELDS: tuple[str, ...] = ("first_name", "specialty", "business_address")
+# The fields required to create a provider. `first_name` and `last_name` are both
+# excluded: a provider may represent a practice/organization rather than an individual,
+# which has neither a first nor a last name (the practice name goes in `practice_name`).
+CREATE_REQUIRED_FIELDS: tuple[str, ...] = ("specialty", "business_address")
 
-# NOT NULL identifier columns that must never be set to null on update. `last_name`
-# is excluded (it is legitimately blank-able and is coerced to "" downstream);
-# `business_address` is excluded (it is a nullable column).
-UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = ("first_name", "specialty")
+# NOT NULL identifier columns that must never be set to null on update. `first_name` and
+# `last_name` are excluded (both are legitimately blank-able for an organization provider
+# and are coerced to "" downstream); `business_address` is excluded (a nullable column).
+UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = ("specialty",)
 
 NPI_LENGTH = cast(int, ServiceProviderModel._meta.get_field("npi").max_length)
 DIRECT_ADDRESS_MAX_LENGTH = cast(
@@ -58,13 +58,20 @@ class ServiceProvider(TrackableFieldsModel):
     """
     Effect to create, update, or deactivate a ServiceProvider.
 
-    Example (create):
+    Example (create an individual provider):
         ServiceProvider(
             first_name="Jane",
             last_name="Doe",
             specialty="Cardiology",
             business_address="123 Main St",
             npi="1234567890",
+        ).create()
+
+    Example (create a practice/organization provider, no personal name):
+        ServiceProvider(
+            practice_name="Acme Imaging Center",
+            specialty="Radiology",
+            business_address="1 Hospital Way",
         ).create()
 
     Example (update):
