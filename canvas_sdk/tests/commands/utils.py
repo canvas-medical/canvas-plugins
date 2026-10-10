@@ -24,9 +24,6 @@ COMMANDS_TO_SKIP = [
     "AddConditionCommand",
     "RemovePastMedicalHistoryCommand",
     "ImmunizeCommand",
-    "LabReviewCommand",
-    "ReferralReviewCommand",
-    "ImagingReviewCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
 ]
