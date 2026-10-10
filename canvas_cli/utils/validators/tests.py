@@ -172,6 +172,8 @@ LISTING: dict[str, Any] = {
     },
     "integration": {"unit": "visits"},
     "setup_instructions": "setup_instructions.md",
+    "setup_guide": "setup_guide.md",
+    "icon": "assets/icon.png",
     "release_notes": {"kind": "fix", "title": "Cache transcripts", "body": "Cheaper."},
 }
 
@@ -223,6 +225,13 @@ REFUSED = {
     "null-release-notes": {**MINIMAL, "release_notes": None},
     "setup-outside-package": {**MINIMAL, "setup_instructions": "/etc/passwd"},
     "setup-escapes": {**MINIMAL, "setup_instructions": "../setup.md"},
+    "setup-guide-outside-package": {**MINIMAL, "setup_guide": "/etc/passwd"},
+    "setup-guide-escapes": {**MINIMAL, "setup_guide": "../guide.md"},
+    "null-setup-guide": {**MINIMAL, "setup_guide": None},
+    "icon-escapes": {**MINIMAL, "icon": "../icon.png"},
+    "icon-not-an-image": {**MINIMAL, "icon": "icon.svg"},
+    "icon-uppercase": {**MINIMAL, "icon": "icon.PNG"},
+    "null-icon": {**MINIMAL, "icon": None},
 }
 
 
