@@ -222,6 +222,7 @@
     "LabReviewCommand",
     "MedicalHistoryCommand",
     "MedicationStatementCommand",
+    "OrderDmeCommand",
     "POCLabTestCommand",
     "PastSurgicalHistoryCommand",
     "PerformCommand",
@@ -318,6 +319,9 @@
   ],
   "canvas_sdk.commands.commands.medication_statement": [
     "MedicationStatementCommand"
+  ],
+  "canvas_sdk.commands.commands.order_dme": [
+    "OrderDmeCommand"
   ],
   "canvas_sdk.commands.commands.past_surgical_history": [
     "PastSurgicalHistoryCommand"
