@@ -1,6 +1,8 @@
 from typing import TypedDict, cast
 from urllib.parse import urlencode
 
+from requests import Response
+
 from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.utils.http import Http
 from settings import CUSTOMER_IDENTIFIER
@@ -37,7 +39,7 @@ class CanvasFhir:
 
         response.raise_for_status()
 
-        return response.json()
+        return self._write_result(response)
 
     def read(self, resource_type: str, resource_id: str) -> dict:
         """Reads a resource via the FHIR API."""
@@ -73,7 +75,24 @@ class CanvasFhir:
 
         response.raise_for_status()
 
-        return response.json()
+        return self._write_result(response)
+
+    @staticmethod
+    def _write_result(response: Response) -> dict:
+        """Return the response body, or the id from the ``Location`` header when it is empty.
+
+        FHIR create/update respond with ``201``/``200`` and an empty body, putting the new
+        resource id in the ``Location`` header (``/<type>/<id>``). Calling ``response.json()``
+        on that empty content raises ``JSONDecodeError`` even though the write succeeded.
+        """
+        if response.content:
+            parsed = response.json()
+            if isinstance(parsed, dict):
+                return parsed
+
+        location = response.headers.get("Location", "")
+        resource_id = location.rstrip("/").rsplit("/", 1)[-1] if location else ""
+        return {"id": resource_id} if resource_id else {}
 
     def _get_headers(self) -> dict:
         """Returns the headers for the FHIR API request."""
