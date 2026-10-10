@@ -119,4 +119,5 @@ __exports__ = (
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientConsentStatus",
 )

@@ -766,6 +766,11 @@
   "canvas_sdk.effects.patient_chart_summary_custom_section": [
     "PatientChartSummaryCustomSection"
   ],
+  "canvas_sdk.effects.patient_consent": [
+    "ConsentCodingReference",
+    "ConsentDocument",
+    "RecordPatientConsent"
+  ],
   "canvas_sdk.effects.patient_facility_address": [
     "AddressType",
     "PatientFacilityAddress"
@@ -1316,6 +1321,7 @@
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientConsentStatus",
     "PatientContactCategory",
     "PatientContactPerson",
     "PatientContactPoint",
@@ -1792,7 +1798,8 @@
   "canvas_sdk.v1.data.patient_consent": [
     "PatientConsent",
     "PatientConsentCoding",
-    "PatientConsentRejectionCoding"
+    "PatientConsentRejectionCoding",
+    "PatientConsentStatus"
   ],
   "canvas_sdk.v1.data.patient_group": [
     "PatientGroup",
