@@ -8,6 +8,7 @@ from canvas_cli.apps.platform.commands import (
     set_variables,
     uninstall,
     unset_variables,
+    whoami,
 )
 
 __all__ = (
@@ -20,4 +21,5 @@ __all__ = (
     "set_variables",
     "uninstall",
     "unset_variables",
+    "whoami",
 )
