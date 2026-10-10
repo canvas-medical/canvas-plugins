@@ -30,6 +30,9 @@ class Referral(AuditedModel, IdentifiableModel):
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING)
+    assessment = models.ForeignKey(
+        "v1.Assessment", on_delete=models.DO_NOTHING, related_name="linked_referrals", null=True
+    )
     service_provider = models.ForeignKey(
         "v1.ServiceProvider",
         on_delete=models.CASCADE,
