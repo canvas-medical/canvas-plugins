@@ -200,6 +200,8 @@ enum EventType {
   CLAIM_INCIDENT_TO_CHANGED = 402;
   // Fired once per claim after commit when its patient or aggregate coverage balance changed.
   CLAIM_BALANCE_CHANGED = 403;
+  // Fired when a claim's assignee (staff or team) is set, changed, or cleared.
+  CLAIM_ASSIGNEE_CHANGED = 404;
 
   // Payment events
 
