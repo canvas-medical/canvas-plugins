@@ -1070,6 +1070,72 @@ def test_sandbox_allows_safe_standard_library_and_django_names(code: str) -> Non
     sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    ("package", "handler_code"),
+    [
+        (
+            "own_modules_from_import",
+            """
+            from own_modules_from_import.lib import store
+
+            result = store.get_latest()
+            terminal = store.TERMINAL
+            """,
+        ),
+        (
+            "own_modules_import_as",
+            """
+            import own_modules_import_as.lib.store as store
+
+            result = store.get_latest()
+            terminal = store.TERMINAL
+            """,
+        ),
+    ],
+)
+def test_sandbox_allows_attributes_of_the_plugins_own_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    package: str,
+    handler_code: str,
+) -> None:
+    """A plugin reads functions and constants off its own modules, which ALLOWED_MODULES never lists."""
+    base_path = _make_plugin_tree(
+        tmp_path,
+        package,
+        {
+            "__init__.py": "",
+            "lib/__init__.py": "",
+            "lib/store.py": """
+                TERMINAL = "terminal"
+
+                def get_latest():
+                    return 7
+            """,
+            "handlers/__init__.py": "",
+            "handlers/handler.py": handler_code,
+        },
+    )
+    monkeypatch.syspath_prepend(str(base_path))
+
+    scope = sandbox_from_module(base_path, f"{package}.handlers.handler").execute()
+
+    assert scope["result"] == 7
+    assert scope["terminal"] == "terminal"
+
+
+def test_sandbox_still_checks_attributes_of_modules_outside_the_plugin() -> None:
+    """Allowing a plugin's own modules leaves the ALLOWED_MODULES check on everything else."""
+    sandbox = _sandbox_from_code("""
+        import json
+
+        json.JSONDecoder
+    """)
+
+    with pytest.raises(AttributeError, match=r'"json.JSONDecoder" is an invalid attribute name'):
+        sandbox.execute()
+
+
 def test_urllib() -> None:
     """Test that urllib.parse (and modules like it) work, but only with the allowed attributes."""
     sandbox = _sandbox_from_code("""
