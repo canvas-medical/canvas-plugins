@@ -1,0 +1,43 @@
+<!-- PDMP Report Button Component -->
+<section class="section pdmp-section"
+         data-component="report-button-component"
+         data-component-type="report-access">
+  <div class="header pdmp-flex-header"
+       data-component="report-header">
+    <h2 class="pdmp-title-section">PDMP Report</h2>
+  </div>
+  <button class="btn pdmp-btn pdmp-btn-full"
+          id="reportHeaderBtn"
+          data-component="report-button"
+          data-report-url="{{ report_url }}"
+          data-patient-id="{{ patient_id }}"
+          data-practitioner-id="{{ practitioner_id }}"
+          data-organization-id="{{ organization_id }}"
+          data-staff-id="{{ staff_id }}"
+          type="button">
+    View PDMP Report</button>
+
+  <div data-component="report-expiration" class="pdmp-text-tiny pdmp-text-opacity pdmp-text-right">
+    Expires: {{ expiration_date }}
+  </div>
+
+  <div id="pdmp-skeleton-loader"
+       data-component="skeleton-loader"
+       class="pdmp-skeleton-container">
+    <div class="pdmp-skeleton-flex">
+      <div class="skeleton-spinner pdmp-skeleton-spinner pdmp-skeleton-spinner-gray"></div>
+      <div class="pdmp-flex-1">
+        <div class="pdmp-skeleton-text-header">Loading PDMP Report...</div>
+        <div class="pdmp-skeleton-text-sub">Please wait while we fetch your prescription monitoring data</div>
+      </div>
+    </div>
+
+    <div class="pdmp-skeleton-grid">
+      <div class="skeleton-line pdmp-skeleton-line pdmp-skeleton-line-md"></div>
+      <div class="skeleton-line pdmp-skeleton-line pdmp-skeleton-line-sm"></div>
+      <div class="skeleton-line pdmp-skeleton-line pdmp-skeleton-line-xs"></div>
+    </div>
+  </div>
+</section>
+
+<script src="/plugin-io/static/pdmp_bamboo/js/report-loader.js"></script>
