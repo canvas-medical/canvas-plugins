@@ -21,6 +21,7 @@ import grpc
 import redis
 import sentry_sdk
 from django.apps import apps as django_apps
+from django.core.exceptions import ImproperlyConfigured
 from django.core.signals import request_finished, request_started
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import ConnectionError, TimeoutError
@@ -1220,6 +1221,13 @@ def reload_plugin(path: pathlib.Path) -> None:
 # NOTE: specified_plugin_paths powers the `canvas run-plugins` command
 def main(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server and the synchronize_plugins loop."""
+    if not settings.PLUGIN_RUNNER_SIGNING_KEY:
+        raise ImproperlyConfigured(
+            "PLUGIN_RUNNER_SIGNING_KEY is not set. Every event hands each plugin a "
+            "signed token for GraphQL access, and an empty key signs one that anyone "
+            "can forge."
+        )
+
     port = "50051"
 
     # A stamp left by a previous runner process describes routes this process has
