@@ -1,16 +1,21 @@
 """Tests for PrefillDocumentFields effect."""
 
 import json
+from typing import Any, cast
+
+import pytest
+from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import PrefillDocumentFields
+from canvas_sdk.effects.data_integration.prefill_document_fields import PrefillTemplate
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 def test_create_effect_with_all_required_fields() -> None:
     """Test creating effect with all required fields succeeds."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -31,7 +36,7 @@ def test_create_effect_with_all_required_fields() -> None:
     assert applied.type == EffectType.UPDATE_DOCUMENT_FIELDS
 
     payload = json.loads(applied.payload)
-    assert payload["data"]["document_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    assert payload["data"]["document_id"] == "12345"
     assert len(payload["data"]["templates"]) == 1
     assert payload["data"]["templates"][0]["template_id"] == 620
 
@@ -39,7 +44,7 @@ def test_create_effect_with_all_required_fields() -> None:
 def test_create_effect_with_top_level_annotations() -> None:
     """Test creating effect with top-level annotations succeeds."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -62,7 +67,7 @@ def test_create_effect_with_top_level_annotations() -> None:
 def test_create_effect_with_multiple_templates() -> None:
     """Test creating effect with multiple templates succeeds."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -85,7 +90,7 @@ def test_create_effect_with_multiple_templates() -> None:
 def test_values_property_returns_correct_structure() -> None:
     """Test values property returns correctly structured dict."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -95,23 +100,185 @@ def test_values_property_returns_correct_structure() -> None:
         ],
     )
 
-    assert effect.values == {
-        "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "templates": [
+    values = effect.values
+
+    assert values["document_id"] == "12345"
+    assert "templates" in values
+    assert values["templates"][0]["template_id"] == 620
+
+
+def test_values_property_excludes_none_annotations() -> None:
+    """Test values property excludes annotations when None."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
             {
                 "template_id": 620,
                 "template_name": "Test Template",
                 "fields": {"field1": {"value": "val1"}},
             }
         ],
-        "annotations": None,
-    }
+        annotations=None,
+    )
+
+    values = effect.values
+
+    assert "annotations" not in values
+
+
+def test_apply_raises_error_when_document_id_missing() -> None:
+    """Test apply raises error when document_id is missing."""
+    effect = PrefillDocumentFields(
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "document_id" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_templates_missing() -> None:
+    """Test apply raises error when templates is missing."""
+    effect = PrefillDocumentFields(document_id="12345")
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "templates" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_templates_empty() -> None:
+    """Test apply raises error when templates is empty list."""
+    effect = PrefillDocumentFields(document_id="12345", templates=[])
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "templates" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_document_id_is_empty() -> None:
+    """Test apply raises error when document_id is empty string."""
+    effect = PrefillDocumentFields(
+        document_id="",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "document_id must be a non-empty string" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_document_id_is_whitespace() -> None:
+    """Test apply raises error when document_id is only whitespace."""
+    effect = PrefillDocumentFields(
+        document_id="   ",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "document_id must be a non-empty string" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_template_missing_id() -> None:
+    """Test apply raises error when template missing template_id."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert (
+        "templateid" in str(exc_info.value).lower() or "template_id" in str(exc_info.value).lower()
+    )
+
+
+def test_apply_raises_error_when_template_missing_name() -> None:
+    """Test apply raises error when template missing template_name."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert (
+        "templatename" in str(exc_info.value).lower()
+        or "template_name" in str(exc_info.value).lower()
+    )
+
+
+def test_apply_raises_error_when_template_name_empty() -> None:
+    """Test apply raises error when template_name is empty."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert (
+        "templatename" in str(exc_info.value).lower()
+        or "template_name" in str(exc_info.value).lower()
+    )
+
+
+def test_apply_raises_error_when_field_missing_value() -> None:
+    """Test apply raises error when field missing value key."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"unit": "mg"}},
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "value" in str(exc_info.value).lower()
 
 
 def test_apply_succeeds_with_minimal_field() -> None:
     """Test apply succeeds when field has only value."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -129,7 +296,7 @@ def test_apply_succeeds_with_minimal_field() -> None:
 def test_apply_succeeds_with_abnormal_field() -> None:
     """Test apply succeeds when field has abnormal flag."""
     effect = PrefillDocumentFields(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         templates=[
             {
                 "template_id": 620,
@@ -149,3 +316,179 @@ def test_apply_succeeds_with_abnormal_field() -> None:
 
     payload = json.loads(applied.payload)
     assert payload["data"]["templates"][0]["fields"]["f1"]["abnormal"] is True
+
+
+def test_apply_raises_error_when_annotation_missing_text() -> None:
+    """Test apply raises error when annotation missing text."""
+    with pytest.raises(ValidationError) as exc_info:
+        PrefillDocumentFields(
+            document_id="12345",
+            templates=[
+                {
+                    "template_id": 620,
+                    "template_name": "Test",
+                    "fields": {
+                        "f1": {
+                            "value": "v1",
+                            "annotations": cast(Any, [{"color": "#FF0000"}]),
+                        }
+                    },
+                }
+            ],
+            annotations=cast(Any, [{"color": "#FF0000"}]),
+        )
+
+    assert "text" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_annotation_missing_color() -> None:
+    """Test apply raises error when annotation missing color."""
+    with pytest.raises(ValidationError) as exc_info:
+        PrefillDocumentFields(
+            document_id="12345",
+            templates=[
+                {
+                    "template_id": 620,
+                    "template_name": "Test",
+                    "fields": {"f1": {"value": "v1"}},
+                }
+            ],
+            annotations=cast(Any, [{"text": "AI 95%"}]),
+        )
+
+    assert "color" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_field_annotation_missing_text() -> None:
+    """Test apply raises error when field annotation missing text."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {
+                    "f1": {
+                        "value": "v1",
+                        "annotations": cast(Any, [{"color": "#FF0000"}]),
+                    }
+                },
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "text" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_field_annotation_missing_color() -> None:
+    """Test apply raises error when a field annotation is missing color."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {
+                    "f1": {
+                        "value": "v1",
+                        "annotations": cast(Any, [{"text": "AI 95%"}]),
+                    }
+                },
+            }
+        ],
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "color" in str(exc_info.value).lower()
+
+
+def test_apply_raises_error_when_field_annotation_not_a_dict() -> None:
+    """Test apply raises error when a field annotation is not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [
+                {
+                    "template_id": 620,
+                    "template_name": "Test",
+                    "fields": {"f1": {"value": "v1", "annotations": ["not-a-dict"]}},
+                }
+            ],
+        ),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "must be a dict" in str(exc_info.value)
+
+
+def test_apply_raises_error_when_field_value_not_a_dict() -> None:
+    """Test apply raises error when a field's data is not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [{"template_id": 620, "template_name": "Test", "fields": {"f1": "not-a-dict"}}],
+        ),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "must be a dict" in str(exc_info.value)
+
+
+def test_apply_succeeds_when_template_fields_not_a_dict() -> None:
+    """Test apply ignores template fields that are not a dict."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=cast(
+            Any,
+            [{"template_id": 620, "template_name": "Test", "fields": "not-a-dict"}],
+        ),
+    )
+    applied = effect.apply()
+
+    assert applied.type == EffectType.UPDATE_DOCUMENT_FIELDS
+
+
+def test_values_serializes_missing_templates_as_empty_list() -> None:
+    """Test values property serializes missing templates as an empty list."""
+    effect = PrefillDocumentFields(document_id="12345")
+
+    assert effect.values["templates"] == []
+
+
+def test_values_includes_stripped_source_protocol() -> None:
+    """Test values property includes source_protocol with whitespace stripped."""
+    effect = PrefillDocumentFields(
+        document_id="12345",
+        templates=[
+            {
+                "template_id": 620,
+                "template_name": "Test",
+                "fields": {"f1": {"value": "v1"}},
+            }
+        ],
+        source_protocol="  llm_v1  ",
+    )
+
+    assert effect.values["source_protocol"] == "llm_v1"
+
+
+def test_prefill_template_accepts_valid_template_name() -> None:
+    """Test PrefillTemplate accepts a non-empty template_name."""
+    template = PrefillTemplate(template_id=1, template_name="Thyroid Profile", fields={})
+
+    assert template.template_name == "Thyroid Profile"
+
+
+def test_prefill_template_rejects_blank_template_name() -> None:
+    """Test PrefillTemplate rejects a whitespace-only template_name."""
+    with pytest.raises(ValidationError) as exc_info:
+        PrefillTemplate(template_id=1, template_name="   ", fields={})
+
+    assert "template_name must be a non-empty string" in str(exc_info.value)
