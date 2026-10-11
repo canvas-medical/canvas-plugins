@@ -337,6 +337,7 @@ manifest_schema = {
                     "required": ["kind", "title"],
                     "additionalProperties": False,
                 },
+                "pricing": {"$ref": "#/$defs/catalog_pricing"},
             },
             "required": ["title", "category", "surfaces"],
             "additionalProperties": False,
@@ -358,6 +359,199 @@ manifest_schema = {
             "description": "A path inside the package folder: no leading '/', no '..' anywhere, no backslash.",
             "type": "string",
             "pattern": r"^(?!/)(?!.*\.\.)[^\\]+$",
+        },
+        "catalog_pricing": {
+            "description": (
+                "Canvas's price book for the plugin, the same for every organization. Three "
+                "independent questions: what Canvas charges (canvas_fee), what a vendor charges "
+                "(vendor_fee), and where the plugin's model calls are billed (model_use)."
+            ),
+            "type": "object",
+            "properties": {
+                "canvas_fee": {"$ref": "#/$defs/catalog_canvas_fee"},
+                "vendor_fee": {"$ref": "#/$defs/catalog_vendor_fee"},
+                "model_use": {
+                    "description": (
+                        "'included_in_unit_price' goes through a Canvas credential not invoiced "
+                        "per token; 'organization_tokens' through the organization's own "
+                        "inference keys; 'none' calls no model."
+                    ),
+                    "type": "object",
+                    "properties": {
+                        "billed_as": {
+                            "enum": ["included_in_unit_price", "organization_tokens", "none"]
+                        }
+                    },
+                    "required": ["billed_as"],
+                    "additionalProperties": False,
+                },
+            },
+            "required": ["canvas_fee", "vendor_fee", "model_use"],
+            "additionalProperties": False,
+            "allOf": [
+                {
+                    "description": "Model calls inside the price need a price to put them inside.",
+                    "if": {
+                        "properties": {
+                            "model_use": {
+                                "properties": {"billed_as": {"const": "included_in_unit_price"}}
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "canvas_fee": {"properties": {"model": {"const": "per_unit"}}}
+                        }
+                    },
+                },
+                {
+                    "description": "A per-unit price includes the plugin's model calls, so they never also appear as tokens.",
+                    "if": {
+                        "properties": {
+                            "canvas_fee": {"properties": {"model": {"const": "per_unit"}}}
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "model_use": {
+                                "properties": {
+                                    "billed_as": {"enum": ["included_in_unit_price", "none"]}
+                                }
+                            }
+                        }
+                    },
+                },
+            ],
+        },
+        "catalog_canvas_fee": {
+            "oneOf": [
+                {
+                    "description": "Covered by the Canvas subscription. No line on any invoice.",
+                    "type": "object",
+                    "properties": {"model": {"const": "included"}},
+                    "required": ["model"],
+                    "additionalProperties": False,
+                },
+                {
+                    "description": "Billed by Canvas per unit of work on the Agentic plugins meter.",
+                    "type": "object",
+                    "properties": {
+                        "model": {"const": "per_unit"},
+                        "unit": {
+                            "description": "Both forms, for '$0.40 per visit' and '1,750 visits'.",
+                            "type": "object",
+                            "properties": {
+                                "singular": {"$ref": "#/$defs/catalog_text"},
+                                "plural": {"$ref": "#/$defs/catalog_text"},
+                            },
+                            "required": ["singular", "plural"],
+                            "additionalProperties": False,
+                        },
+                        "meter": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "description": "The meter name each usage record carries.",
+                                    "type": "string",
+                                    "pattern": r"^[a-z][a-z0-9_.]*$",
+                                },
+                                "billable_stages": {
+                                    "description": "Instance stages whose units are billed; units on other stages are rated at zero.",
+                                    "type": "array",
+                                    "items": {
+                                        "enum": ["sandbox", "development", "staging", "production"]
+                                    },
+                                    "minItems": 1,
+                                    "uniqueItems": True,
+                                },
+                                "aggregation": {"const": "organization_month"},
+                            },
+                            "required": ["key", "billable_stages", "aggregation"],
+                            "additionalProperties": False,
+                        },
+                        "schedule": {
+                            "description": "List price over time, oldest first. Platform checks ordering and contiguity.",
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/catalog_price_version"},
+                            "minItems": 1,
+                        },
+                    },
+                    "required": ["model", "unit", "meter", "schedule"],
+                    "additionalProperties": False,
+                },
+            ]
+        },
+        "catalog_price_version": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Pinned on every invoice line rated under this version.",
+                    "type": "string",
+                    "minLength": 1,
+                },
+                "effective_from": {"$ref": "#/$defs/catalog_month_start"},
+                "effective_to": {
+                    "description": "Exclusive. Null while open-ended.",
+                    "oneOf": [{"$ref": "#/$defs/catalog_month_start"}, {"type": "null"}],
+                },
+                "bands": {
+                    "description": "Graduated volume bands, ascending. A flat price is one band with up_to null.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "up_to": {"type": ["integer", "null"], "minimum": 1},
+                            "unit_price": {
+                                "description": "Integer USD nanocents: $0.40 is 40000000000.",
+                                "type": "integer",
+                                "minimum": 0,
+                            },
+                        },
+                        "required": ["up_to", "unit_price"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                },
+            },
+            "required": ["id", "effective_from", "effective_to", "bands"],
+            "additionalProperties": False,
+        },
+        "catalog_vendor_fee": {
+            "description": "A partner's own charge for its service. Null when the vendor charges nothing beyond Canvas.",
+            "oneOf": [
+                {"type": "null"},
+                {
+                    "type": "object",
+                    "properties": {
+                        "basis": {
+                            "enum": [
+                                "included",
+                                "usage",
+                                "subscription",
+                                "per_claim",
+                                "per_transaction",
+                                "per_page",
+                                "per_seat",
+                                "per_query",
+                            ]
+                        },
+                        "billed_by": {"enum": ["vendor", "canvas_pass_through"]},
+                        "pass_through_service": {"type": ["string", "null"]},
+                    },
+                    "required": ["basis", "billed_by"],
+                    "additionalProperties": False,
+                    "if": {"properties": {"billed_by": {"const": "canvas_pass_through"}}},
+                    "then": {
+                        "required": ["pass_through_service"],
+                        "properties": {"pass_through_service": {"type": "string"}},
+                    },
+                },
+            ],
+        },
+        "catalog_month_start": {
+            "description": "The first day of a month, so one billing period is never rated under two prices.",
+            "type": "string",
+            "pattern": r"^[0-9]{4}-(0[1-9]|1[0-2])-01$",
         },
     },
 }

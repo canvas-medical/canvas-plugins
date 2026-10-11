@@ -241,3 +241,98 @@ def test_manifest_rejects_malformed_catalog_listing(
     handler_manifest_example["catalog"] = catalog
     with pytest.raises(ValidationError):
         validate_manifest_file(handler_manifest_example)
+
+
+PER_UNIT_FEE: dict[str, Any] = {
+    "model": "per_unit",
+    "unit": {"singular": "visit", "plural": "visits"},
+    "meter": {
+        "key": "scribe.visit",
+        "billable_stages": ["production"],
+        "aggregation": "organization_month",
+    },
+    "schedule": [
+        {
+            "id": "scribe-list-2026-10",
+            "effective_from": "2026-10-01",
+            "effective_to": None,
+            "bands": [{"up_to": None, "unit_price": 40000000000}],
+        }
+    ],
+}
+PER_UNIT_PRICING: dict[str, Any] = {
+    "canvas_fee": PER_UNIT_FEE,
+    "vendor_fee": None,
+    "model_use": {"billed_as": "included_in_unit_price"},
+}
+
+
+def _with_schedule(**version: Any) -> dict[str, Any]:
+    """Return per-unit pricing whose only price version has the given fields replaced."""
+    schedule = [{**PER_UNIT_FEE["schedule"][0], **version}]
+    return {**PER_UNIT_PRICING, "canvas_fee": {**PER_UNIT_FEE, "schedule": schedule}}
+
+
+PRICING_ACCEPTED = {
+    "per-unit": PER_UNIT_PRICING,
+    "per-unit-no-model": {**PER_UNIT_PRICING, "model_use": {"billed_as": "none"}},
+    "included-with-org-tokens": {
+        "canvas_fee": {"model": "included"},
+        "vendor_fee": {"basis": "usage", "billed_by": "vendor"},
+        "model_use": {"billed_as": "organization_tokens"},
+    },
+    "graduated-bands": _with_schedule(
+        bands=[{"up_to": 1000, "unit_price": 40000000000}, {"up_to": None, "unit_price": 0}]
+    ),
+}
+
+PRICING_REFUSED = {
+    "included-fee-with-model-in-unit-price": {
+        **PER_UNIT_PRICING,
+        "canvas_fee": {"model": "included"},
+    },
+    "per-unit-with-org-tokens": {
+        **PER_UNIT_PRICING,
+        "model_use": {"billed_as": "organization_tokens"},
+    },
+    "bad-meter-key": {
+        **PER_UNIT_PRICING,
+        "canvas_fee": {**PER_UNIT_FEE, "meter": {**PER_UNIT_FEE["meter"], "key": "Scribe-Visit"}},
+    },
+    "unknown-stage": {
+        **PER_UNIT_PRICING,
+        "canvas_fee": {
+            **PER_UNIT_FEE,
+            "meter": {**PER_UNIT_FEE["meter"], "billable_stages": ["prod"]},
+        },
+    },
+    "mid-month-start": _with_schedule(effective_from="2026-10-15"),
+    "mid-month-end": _with_schedule(effective_to="2026-11-02"),
+    "negative-price": _with_schedule(bands=[{"up_to": None, "unit_price": -1}]),
+    "fractional-price": _with_schedule(bands=[{"up_to": None, "unit_price": 0.5}]),
+    "empty-schedule": {**PER_UNIT_PRICING, "canvas_fee": {**PER_UNIT_FEE, "schedule": []}},
+    "unknown-pricing-key": {**PER_UNIT_PRICING, "discount": 10},
+    "missing-vendor-fee": {k: v for k, v in PER_UNIT_PRICING.items() if k != "vendor_fee"},
+    "pass-through-without-service": {
+        **PER_UNIT_PRICING,
+        "vendor_fee": {"basis": "per_page", "billed_by": "canvas_pass_through"},
+    },
+    "null-pricing": None,
+}
+
+
+@pytest.mark.parametrize("pricing", PRICING_ACCEPTED.values(), ids=PRICING_ACCEPTED.keys())
+def test_manifest_accepts_catalog_pricing(handler_manifest_example: dict, pricing: dict) -> None:
+    """Test that a well-formed catalog price validates."""
+    handler_manifest_example["catalog"] = {**MINIMAL, "pricing": pricing}
+    validate_manifest_file(handler_manifest_example)
+
+
+@pytest.mark.parametrize("pricing", PRICING_REFUSED.values(), ids=PRICING_REFUSED.keys())
+def test_manifest_rejects_malformed_catalog_pricing(
+    handler_manifest_example: dict, pricing: dict | None
+) -> None:
+    """Test that a malformed catalog price fails manifest validation."""
+    handler_manifest_example["catalog"] = {**MINIMAL, "pricing": pricing}
+    with pytest.raises(ValidationError):
+        validate_manifest_file(handler_manifest_example)
