@@ -17,7 +17,11 @@ def _installed_template_libraries() -> dict[str, str]:
 @lru_cache(maxsize=5)
 def _engine_for_plugin(plugin_dir: str) -> Engine:
     """Create a Django template engine for the given plugin directory."""
-    return Engine(dirs=[plugin_dir], libraries=_installed_template_libraries())
+    return Engine(
+        dirs=[plugin_dir],
+        libraries=_installed_template_libraries(),
+        builtins=["canvas_sdk.templates.filters"],
+    )
 
 
 @plugin_context
