@@ -12,6 +12,7 @@ from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from django.db import models as django_models
 
 import plugin_runner.sandbox as sandbox_module
@@ -427,6 +428,35 @@ def test_type_tests_whether_a_value_is_a_class() -> None:
     )
 
     assert sandbox.execute()["result"] == (True, False, False, False)
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        'type("Made", (), {})',
+        "type(Thing)",
+        "Thing.__class__",
+        "__metaclass__",
+        "type._class_of",
+        "type.__call__",
+    ],
+)
+def test_plugin_code_cannot_reach_the_type_constructor(code: str) -> None:
+    """Neither the three-argument form, the class of a class, nor the metaclass the sandbox
+    gives class statements lets plugin code build new types.
+    """
+    sandbox = _sandbox_from_code(
+        f"""
+        class Thing:
+            pass
+
+        made = {code}
+        made("Made", (Thing,), {{}})
+        """
+    )
+
+    with pytest.raises((AttributeError, RuntimeError, TypeError)):
+        sandbox.execute()
 
 
 @pytest.mark.parametrize(
@@ -909,6 +939,22 @@ def test_effect_not_importable_from_effects_base() -> None:
         sandbox.execute()
 
 
+def test_vars_safety() -> None:
+    """
+    Assert that vars() output is wrapped safely.
+    """
+    sandbox = _sandbox_from_code("""
+        import re
+
+        dunder_builtins = vars(re).get('__builtins__', {})
+        exec_method = dunder_builtins.get('exec')
+
+        assert exec_method is None
+    """)
+
+    sandbox.execute()
+
+
 def test_vars_safety_dict_get_unbound() -> None:
     """
     Assert that dict.get(d, key) finds no underscore-prefixed key in vars() output.
@@ -1117,6 +1163,49 @@ def test_mro_method_blocked() -> None:
     """)
 
     with pytest.raises(AttributeError, match="is a restricted method name"):
+        sandbox.execute()
+
+
+def test_load_module_blocked() -> None:
+    """`load_module` is a restricted method name, whatever object defines it."""
+    sandbox = _sandbox_from_code("""
+        class Target:
+            pass
+
+        class FakeLoader:
+            def load_module(self, name):
+                return None
+
+        loader = FakeLoader()
+        loader.load_module('os')
+    """)
+
+    with pytest.raises(AttributeError, match="is a restricted method name"):
+        sandbox.execute()
+
+
+def test_vars_on_non_allowed_module_blocked() -> None:
+    """vars() on an allowed module lists the names the allowlist grants."""
+    sandbox = _sandbox_from_code("""
+        import re
+
+        d = vars(re)
+        assert 'compile' in d
+    """)
+
+    sandbox.execute()
+
+
+def test_subclasses_via_type_dict_blocked() -> None:
+    """The class of a class is a name-only proxy, so its `__dict__` is not readable."""
+    sandbox = _sandbox_from_code("""
+        class Target:
+            pass
+
+        type_dict = Target.__class__.__dict__
+    """)
+
+    with pytest.raises(AttributeError, match="restricted"):
         sandbox.execute()
 
 
@@ -2675,6 +2764,141 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
         sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "unbound_http_get": """
+                from canvas_sdk.utils.http import Http, ontologies_http
+
+                Http.get(ontologies_http, "/")
+            """,
+            "ontologies_delete": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http.delete
+            """,
+            "science_batch_requests": """
+                from canvas_sdk.utils.http import science_http
+
+                science_http.batch_requests
+            """,
+            "pdf_delete": """
+                from canvas_sdk.utils.pdf import pdf_generator
+
+                pdf_generator.delete
+            """,
+            "pharmacy_http_client_by_value": """
+                from canvas_sdk.utils.http import pharmacy_http
+
+                clients = [v for v in vars(pharmacy_http).values()]
+                clients[0]
+            """,
+            "portal_http_client_by_value": """
+                from canvas_sdk.utils.patient_portal import patient_portal_http
+
+                clients = list(patient_portal_http.__dict__.values())
+                clients[0]
+            """,
+        }
+    ),
+)
+@patch("requests.Session.get")
+@patch("requests.Session.delete")
+def test_sandbox_keeps_service_client_internals_out_of_reach(
+    mock_delete: MagicMock, mock_get: MagicMock, code: str
+) -> None:
+    """Plugin code reaches only a service client's exported methods."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with pytest.raises((AttributeError, IndexError)):
+        sandbox.execute()
+
+    mock_get.assert_not_called()
+    mock_delete.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "logger_attribute": """
+                from logger import log
+
+                log.logger
+            """,
+            "logger_handlers": """
+                from logger import log
+
+                log.logger.handlers
+            """,
+            "logger_by_getattr": """
+                from logger import log
+
+                getattr(log, "logger")
+            """,
+            "logger_dict": """
+                from logger import log
+
+                log.__dict__
+            """,
+            "logger_by_value": """
+                from logger import log
+
+                list(vars(log).values())[0]
+            """,
+        }
+    ),
+)
+def test_sandbox_plugin_logger_exposes_only_its_logging_methods(code: str) -> None:
+    """Plugin code reaches only the logging methods on the exported `log`."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with pytest.raises((AttributeError, IndexError)):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "vars_module_to_settings": """
+                import canvas_sdk.v1.data as d
+
+                vars(vars(d)["utils"])["settings"]
+            """,
+            "vars_json_to_codecs": """
+                import json
+
+                vars(json)["codecs"]
+            """,
+            "dict_json_to_codecs": """
+                import json
+
+                json.__dict__["codecs"]
+            """,
+            "dict_get_json_to_codecs": """
+                import json
+
+                assert json.__dict__.get("codecs") is None
+                raise KeyError("codecs")
+            """,
+            "vars_values_reach_unlisted_module": """
+                import json
+
+                [v for v in vars(json).values() if getattr(v, "__name__", "") == "codecs"][0]
+            """,
+        }
+    ),
+)
+def test_sandbox_vars_and_dict_on_modules_stop_at_the_allowlist(code: str) -> None:
+    """vars() and __dict__ on an outside module reach only the names an import could."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with pytest.raises((KeyError, IndexError)):
+        sandbox.execute()
+
+
 def test_sandbox_vars_on_modules_keeps_the_allowed_names() -> None:
     """Listing an allowed module still works: it yields what the allowlist grants."""
     sandbox = _sandbox_from_code(
@@ -2948,6 +3172,30 @@ def test_sandbox_timeout_override_inside_a_function_applies_to_get_json(
     assert mock_get.call_args.kwargs["timeout"] == 7
 
 
+@patch("requests.Session.get")
+def test_sandbox_service_client_errors_are_plain_request_exceptions(mock_get: MagicMock) -> None:
+    """A failed service request surfaces in plugin code as a plain RequestException."""
+    request = requests.Request("GET", "https://ontologies.canvasmedical.com/x").prepare()
+    request.headers["Authorization"] = "service-credential"
+    mock_get.side_effect = requests.Timeout("timed out", request=request)
+
+    sandbox = _sandbox_from_code(
+        source_code="""
+            from canvas_sdk.utils.http import ontologies_http
+
+            ontologies_http._MAX_REQUEST_TIMEOUT_SECONDS = 0.0001
+            try:
+                ontologies_http.get_json("/x")
+            except Exception as e:
+                attached_request = e.request
+        """
+    )
+
+    scope = sandbox.execute()
+
+    assert scope["attached_request"] is None
+
+
 @pytest.mark.parametrize(
     "code",
     params_from_dict(
@@ -3080,6 +3328,77 @@ def test_sandbox_allows_configdict_import_and_usage(configdict_code: str) -> Non
     assert "Success:" in scope["result"] or "Name:" in scope["result"], (
         f"ConfigDict usage failed: {scope.get('result')}"
     )
+
+
+def test_importlib_reload_does_not_strip_sandbox_protections() -> None:
+    """An updated helper module keeps the sandbox's import rules after a reload.
+
+    The helper is first loaded into sys.modules, then changed on disk to import a
+    module from inside a function. Re-evaluating the plugin must still refuse that
+    import when the function runs.
+    """
+    import sys as _sys
+
+    temp_directory = Path(mkdtemp())
+
+    # Create plugin_name/protocols/ with __init__.py
+    protocols_dir = temp_directory / "plugin_name" / "protocols"
+    protocols_dir.mkdir(parents=True)
+    (protocols_dir / "__init__.py").touch()
+
+    # Create plugin_name/__init__.py
+    (temp_directory / "plugin_name" / "__init__.py").touch()
+
+    # Create an initial (safe) version of the helper module
+    helpers_file = temp_directory / "plugin_name" / "helpers.py"
+    helpers_file.write_text(
+        dedent("""
+        def do_something():
+            return "safe"
+    """)
+    )
+
+    # Simulate a prior load: add the temp directory to sys.path and import the module
+    _sys.path.insert(0, str(temp_directory))
+    try:
+        # Import the safe version so it lands in sys.modules
+        if "plugin_name" in _sys.modules:
+            del _sys.modules["plugin_name"]
+        if "plugin_name.helpers" in _sys.modules:
+            del _sys.modules["plugin_name.helpers"]
+
+        import plugin_name.helpers  # noqa: F811
+
+        assert plugin_name.helpers.do_something() == "safe"
+
+        # Update the helper on disk
+        helpers_file.write_text(
+            dedent("""
+            def do_something():
+                import os
+                return os.getcwd()
+        """)
+        )
+
+        # Create the main protocol that imports and calls the updated helper
+        protocol_file = protocols_dir / "protocol.py"
+        protocol_file.write_text(
+            dedent("""
+            from plugin_name.helpers import do_something
+            result = do_something()
+        """)
+        )
+
+        sandbox = sandbox_from_module(temp_directory, "plugin_name.protocols.protocol")
+
+        with pytest.raises(ImportError, match="is not an allowed import"):
+            sandbox.execute()
+    finally:
+        _sys.path.remove(str(temp_directory))
+        # Clean up sys.modules
+        for mod_name in list(_sys.modules):
+            if mod_name.startswith("plugin_name"):
+                del _sys.modules[mod_name]
 
 
 def test_updated_module_code_is_loaded() -> None:

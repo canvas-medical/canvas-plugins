@@ -372,6 +372,21 @@ def test_service_clients_have_no_raw_request_methods(client: Any, method: str) -
     assert not hasattr(client, method)
 
 
+@pytest.mark.parametrize(
+    "client",
+    [
+        pytest.param(ontologies_http, id="ontologies_http"),
+        pytest.param(science_http, id="science_http"),
+    ],
+)
+def test_unbound_http_methods_cannot_use_a_service_client(client: Any) -> None:
+    """`Http.get(ontologies_http, ...)` finds no credentialed session to send with."""
+    with patch("requests.Session.get") as mock_get, pytest.raises(AttributeError):
+        Http.get(client, "/")
+
+    mock_get.assert_not_called()
+
+
 def _failing_request(*args: Any, **kwargs: Any) -> None:
     request = requests.Request("GET", "https://ontologies.canvasmedical.com/x").prepare()
     request.headers["Authorization"] = "test-credential"

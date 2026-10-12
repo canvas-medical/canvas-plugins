@@ -131,3 +131,41 @@ def test_validate_nested_models_with_deferred_annotations() -> None:
         assert InvalidReport.validate_nested_models() is False
     finally:
         sys.modules.pop("__test_deferred_annotations__", None)
+
+
+def test_validate_nested_models_does_not_evaluate_annotation_text() -> None:
+    """Validation reads the field types pydantic resolved; it runs no annotation text itself."""
+    module_name = "__test_annotation_evaluation__"
+    synthetic_module = types.ModuleType(module_name)
+    sys.modules[module_name] = synthetic_module
+
+    source = (
+        "from __future__ import annotations\n"
+        "\n"
+        "from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson\n"
+        "\n"
+        "evaluations = []\n"
+        "\n"
+        "\n"
+        "def record():\n"
+        "    evaluations.append(1)\n"
+        "\n"
+        "\n"
+        "class Section(BaseModelLlmJson):\n"
+        "    title: str\n"
+        "\n"
+        "\n"
+        "class Report(BaseModelLlmJson):\n"
+        "    sections: record() or list[Section]\n"
+    )
+
+    try:
+        # Safe: static test fixture code, not user input.
+        builtins.exec(compile(source, module_name, "exec"), synthetic_module.__dict__)  # noqa: S102
+        evaluations = synthetic_module.__dict__["evaluations"]
+        evaluated_while_building = len(evaluations)
+
+        assert synthetic_module.__dict__["Report"].validate_nested_models() is True
+        assert len(evaluations) == evaluated_while_building
+    finally:
+        sys.modules.pop(module_name, None)
