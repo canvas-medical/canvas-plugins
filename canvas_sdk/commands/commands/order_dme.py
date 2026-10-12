@@ -23,7 +23,7 @@ class OrderDmeCommand(_SignCommandMixin, BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "indications"}
     )
     quantity: int | None = Field(default=None, ge=1)
-    length_of_need: int | None = Field(default=None, ge=1, le=99)
+    length_of_need: str | None = Field(default=None, max_length=255)
     service_provider: ServiceProvider | None = Field(
         default=None, json_schema_extra={"commands_api_name": "send_to"}
     )

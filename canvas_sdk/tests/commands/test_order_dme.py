@@ -27,7 +27,7 @@ def test_originate_carries_every_field() -> None:
             dme_product_id="0f2c1c1e-3d1a-4a5b-9a51-5c3c2d1b0a99",
             diagnosis_codes=["N186"],
             quantity=1,
-            length_of_need=99,
+            length_of_need="Lifetime",
             ordering_provider_key="abc123",
         )
     ).originate()
@@ -37,7 +37,7 @@ def test_originate_carries_every_field() -> None:
         "dme_product_id": "0f2c1c1e-3d1a-4a5b-9a51-5c3c2d1b0a99",
         "diagnosis_codes": ["N186"],
         "quantity": 1,
-        "length_of_need": 99,
+        "length_of_need": "Lifetime",
         "ordering_provider_key": "abc123",
     }
 
@@ -76,11 +76,10 @@ def test_quantity_must_be_positive(quantity: int) -> None:
         OrderDmeCommand(quantity=quantity)
 
 
-@pytest.mark.parametrize("months", [0, 100])
-def test_length_of_need_bounds(months: int) -> None:
-    """Length of need is 1-99 months, 99 meaning lifetime."""
+def test_length_of_need_is_capped_at_the_column_length() -> None:
+    """Length of need is free text stored in a 255 character column."""
     with pytest.raises(ValidationError, match="length_of_need"):
-        OrderDmeCommand(length_of_need=months)
+        OrderDmeCommand(length_of_need="x" * 256)
 
 
 def test_sign_returns_the_sign_effect() -> None:
