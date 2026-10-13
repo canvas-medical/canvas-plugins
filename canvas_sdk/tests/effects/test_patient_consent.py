@@ -3,6 +3,7 @@
 import base64
 import datetime
 import json
+import re
 from collections.abc import Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -153,16 +154,52 @@ def test_document_content_is_required() -> None:
         ConsentDocument(filename="x.pdf", content="")
 
 
-@pytest.mark.parametrize(("key", "message"), [("coding", "consent"), ("rejection", "rejection")])
+@pytest.mark.parametrize(
+    ("key", "field", "reference", "message"),
+    [
+        (
+            "coding",
+            "consent",
+            ConsentCodingReference(system="INTERNAL", code="C1"),
+            "More than one consent coding has system INTERNAL and code C1. "
+            "Delete the duplicate coding.",
+        ),
+        (
+            "coding",
+            "consent",
+            ConsentCodingReference(system="INTERNAL", display="Financial policy"),
+            "More than one consent coding has system INTERNAL and display 'Financial policy'. "
+            "Reference the coding by its code.",
+        ),
+        (
+            "rejection",
+            "rejection_reason",
+            ConsentCodingReference(system="INTERNAL", code="R1"),
+            "More than one rejection coding has system INTERNAL and code R1. "
+            "Delete the duplicate coding.",
+        ),
+        (
+            "rejection",
+            "rejection_reason",
+            ConsentCodingReference(system="INTERNAL", display="Declined"),
+            "More than one rejection coding has system INTERNAL and display 'Declined'. "
+            "Reference the coding by its code.",
+        ),
+    ],
+)
 def test_ambiguous_coding_reference_is_rejected(
-    db: dict[str, MagicMock], key: str, message: str
+    db: dict[str, MagicMock],
+    key: str,
+    field: str,
+    reference: ConsentCodingReference,
+    message: str,
 ) -> None:
-    """A reference that matches more than one coding fails, so Canvas never picks one at random."""
+    """A reference that matches more than one coding fails with advice that fits its lookup."""
     db[key].filter.return_value.count.return_value = 2
-    reason = ConsentCodingReference(system="INTERNAL", display="Declined")
+    fields: dict[str, Any] = {"state": PatientConsentStatus.REJECTED, field: reference}
 
-    with pytest.raises(ValidationError, match=f"{message} .*more than one coding"):
-        _effect(state=PatientConsentStatus.REJECTED, rejection_reason=reason).apply()
+    with pytest.raises(ValidationError, match=re.escape(message)):
+        _effect(**fields).apply()
 
 
 def test_document_content_may_contain_newlines(db: dict[str, MagicMock]) -> None:

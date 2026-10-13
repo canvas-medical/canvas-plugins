@@ -57,9 +57,12 @@ class ConsentDocument(BaseModel):
 class RecordPatientConsent(_BaseEffect):
     """Record a patient's decision on one consent.
 
-    Each patient has one consent record per consent coding. The first decision creates it, and
-    a later decision updates it. A document is added to the consent's document stack with
-    effective_date as its date. The document with the latest date is the active document, and
+    Each patient has one consent record per consent coding. The first decision creates it. The
+    decision with the latest effective_date sets the consent's state and dates: a decision dated
+    on or after the recorded one updates the consent, and an earlier decision leaves it as it is.
+
+    A document is added to the consent's document stack with effective_date as its date, also
+    for an earlier decision. The document with the latest date is the active document, and
     earlier signed copies stay on the chart.
 
     Canvas computes the expiration date from the coding's expiration rule. An accepted state
@@ -140,11 +143,18 @@ class RecordPatientConsent(_BaseEffect):
         matches = model.objects.filter(**reference.lookup()).count()
         if matches == 1:
             return []
-        message = (
-            f"The {label} coding does not exist."
-            if matches == 0
-            else f"The {label} coding reference matches more than one coding. Add a code."
-        )
+        if matches == 0:
+            message = f"The {label} coding does not exist."
+        elif reference.code:
+            message = (
+                f"More than one {label} coding has system {reference.system} and code "
+                f"{reference.code}. Delete the duplicate coding."
+            )
+        else:
+            message = (
+                f"More than one {label} coding has system {reference.system} and display "
+                f"'{reference.display}'. Reference the coding by its code."
+            )
         return [self._create_error_detail("value", message, reference.lookup())]
 
     @property
