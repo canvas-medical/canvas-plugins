@@ -4,11 +4,11 @@ from uuid import UUID
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.fax.base import _BaseFaxEffect
+from canvas_sdk.effects.fax.base import BaseFaxEffectOptionalRecipient
 from canvas_sdk.v1.data import ImagingOrder
 
 
-class FaxImagingOrderEffect(_BaseFaxEffect):
+class FaxImagingOrderEffect(BaseFaxEffectOptionalRecipient):
     """Fax an imaging order, by default to its imaging center."""
 
     class Meta:

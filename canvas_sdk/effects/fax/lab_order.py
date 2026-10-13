@@ -4,11 +4,11 @@ from uuid import UUID
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.fax.base import BaseFaxEffect
+from canvas_sdk.effects.fax.base import BaseFaxEffectRequiredRecipient
 from canvas_sdk.v1.data import LabOrder
 
 
-class FaxLabOrderEffect(BaseFaxEffect):
+class FaxLabOrderEffect(BaseFaxEffectRequiredRecipient):
     """Fax a lab order's requisition form."""
 
     class Meta:

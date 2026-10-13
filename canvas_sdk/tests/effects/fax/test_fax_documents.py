@@ -14,7 +14,10 @@ from canvas_sdk.effects.fax import (
     FaxNoteEffect,
     FaxReferralEffect,
 )
-from canvas_sdk.effects.fax.base import _BaseFaxEffect
+from canvas_sdk.effects.fax.base import (
+    BaseFaxEffectOptionalRecipient,
+    BaseFaxEffectRequiredRecipient,
+)
 
 DOCUMENT_EFFECTS = [
     pytest.param(
@@ -59,7 +62,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock], None, None]:
 @pytest.mark.parametrize(("effect_class", "id_field", "label", "effect_type"), DOCUMENT_EFFECTS)
 def test_apply_sends_document_id_and_recipient(
     mock_db_queries: dict[str, MagicMock],
-    effect_class: Callable[..., _BaseFaxEffect],
+    effect_class: Callable[..., BaseFaxEffectOptionalRecipient],
     id_field: str,
     label: str,
     effect_type: int,
@@ -88,7 +91,7 @@ def test_apply_sends_document_id_and_recipient(
 @pytest.mark.parametrize(("effect_class", "id_field", "label", "effect_type"), DOCUMENT_EFFECTS)
 def test_nonexistent_document_raises(
     mock_db_queries: dict[str, MagicMock],
-    effect_class: Callable[..., _BaseFaxEffect],
+    effect_class: Callable[..., BaseFaxEffectOptionalRecipient],
     id_field: str,
     label: str,
     effect_type: int,
@@ -113,7 +116,7 @@ def test_nonexistent_document_raises(
 @pytest.mark.parametrize(("effect_class", "id_field", "label", "effect_type"), DOCUMENT_EFFECTS)
 def test_coversheet_fields_required(
     mock_db_queries: dict[str, MagicMock],
-    effect_class: Callable[..., _BaseFaxEffect],
+    effect_class: Callable[..., BaseFaxEffectOptionalRecipient],
     id_field: str,
     label: str,
     effect_type: int,
@@ -141,7 +144,7 @@ def test_coversheet_fields_required(
 )
 def test_recipient_is_optional_for_orders_sent_to_a_service_provider(
     mock_db_queries: dict[str, MagicMock],
-    effect_class: Callable[..., _BaseFaxEffect],
+    effect_class: Callable[..., BaseFaxEffectOptionalRecipient],
     id_field: str,
 ) -> None:
     """A referral or imaging order can leave the recipient for home-app to default."""
@@ -161,7 +164,7 @@ def test_recipient_is_optional_for_orders_sent_to_a_service_provider(
     ],
 )
 def test_recipient_is_required_without_a_service_provider(
-    effect_class: Callable[..., _BaseFaxEffect], id_field: str
+    effect_class: Callable[..., BaseFaxEffectRequiredRecipient], id_field: str
 ) -> None:
     """Lab orders, letters and notes have no service provider, so they need a recipient."""
     with pytest.raises(ValidationError) as exc_info:

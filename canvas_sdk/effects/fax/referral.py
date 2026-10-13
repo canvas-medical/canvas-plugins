@@ -4,11 +4,11 @@ from uuid import UUID
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.fax.base import _BaseFaxEffect
+from canvas_sdk.effects.fax.base import BaseFaxEffectOptionalRecipient
 from canvas_sdk.v1.data import Referral
 
 
-class FaxReferralEffect(_BaseFaxEffect):
+class FaxReferralEffect(BaseFaxEffectOptionalRecipient):
     """Fax a referral and its attachments, by default to its service provider."""
 
     class Meta:

@@ -8,7 +8,7 @@ from canvas_sdk.effects import EffectType, _BaseEffect
 from canvas_sdk.v1.data import PracticeLocation
 
 
-class _BaseFaxEffect(_BaseEffect, ABC):
+class BaseFaxEffectOptionalRecipient(_BaseEffect, ABC):
     """Base class for fax effects whose recipient can default from the faxed document."""
 
     class Meta:
@@ -74,8 +74,8 @@ class _BaseFaxEffect(_BaseEffect, ABC):
         }
 
 
-class BaseFaxEffect(_BaseFaxEffect, ABC):
-    """Base class for fax effects."""
+class BaseFaxEffectRequiredRecipient(BaseFaxEffectOptionalRecipient, ABC):
+    """Base class for fax effects whose recipient must be given explicitly."""
 
     recipient_name: str
     recipient_fax_number: str
