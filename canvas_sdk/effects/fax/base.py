@@ -8,14 +8,14 @@ from canvas_sdk.effects import EffectType, _BaseEffect
 from canvas_sdk.v1.data import PracticeLocation
 
 
-class BaseFaxEffect(_BaseEffect, ABC):
-    """Base class for fax effects."""
+class _BaseFaxEffect(_BaseEffect, ABC):
+    """Base class for fax effects whose recipient can default from the faxed document."""
 
     class Meta:
         effect_type = EffectType.UNKNOWN_EFFECT
 
-    recipient_name: str
-    recipient_fax_number: str
+    recipient_name: str | None = None
+    recipient_fax_number: str | None = None
     include_coversheet: bool = False
     subject: str | None = None
     comment: str | None = None
@@ -72,6 +72,13 @@ class BaseFaxEffect(_BaseEffect, ABC):
             "comment": self.comment,
             "location_id": str(self.location_id) if self.location_id else None,
         }
+
+
+class BaseFaxEffect(_BaseFaxEffect, ABC):
+    """Base class for fax effects."""
+
+    recipient_name: str
+    recipient_fax_number: str
 
 
 __exports__ = ()

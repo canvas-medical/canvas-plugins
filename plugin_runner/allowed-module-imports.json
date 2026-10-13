@@ -631,7 +631,11 @@
     "ExternalEvent"
   ],
   "canvas_sdk.effects.fax": [
-    "FaxNoteEffect"
+    "FaxImagingOrderEffect",
+    "FaxLabOrderEffect",
+    "FaxLetterEffect",
+    "FaxNoteEffect",
+    "FaxReferralEffect"
   ],
   "canvas_sdk.effects.generate_full_chart_pdf": [
     "GenerateFullChartPDFEffect"
