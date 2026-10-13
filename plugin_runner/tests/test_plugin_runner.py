@@ -76,6 +76,24 @@ def test_import_plugin_rejects_foreign_package_handler(
     assert any("foreign package" in record.message for record in caplog.records)
 
 
+def test_import_plugin_logs_missing_manifest_without_exception_info(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A plugin directory without a manifest logs an error carrying no
+    exception info, since no exception is active at that point.
+    """
+    plugin_path = tmp_path / "no_manifest_plugin"
+    plugin_path.mkdir()
+
+    with caplog.at_level(logging.ERROR):
+        result = import_plugin(plugin_path)
+
+    assert result is False
+    [record] = [r for r in caplog.records if "missing CANVAS_MANIFEST.json" in r.message]
+    assert record.levelno == logging.ERROR
+    assert record.exc_info is None
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_reconcile_plugins_with_valid_plugin(
     install_test_plugin: Path, load_test_plugins: None
