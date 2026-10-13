@@ -326,6 +326,15 @@ manifest_schema = {
                     "description": "Path inside the package folder to the file Studio's agent reads when an organization installs the plugin.",
                     "$ref": "#/$defs/catalog_path",
                 },
+                "icon": {
+                    "description": "Path inside the package folder to the image shown beside the title on the plugin's card. Ends in .png, .jpg, .jpeg or .webp, in lowercase.",
+                    "type": "string",
+                    "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
+                },
+                "setup_guide": {
+                    "description": "Path inside the package folder to a markdown file describing setup for the person deciding whether to install the plugin. 'setup_instructions' is the Studio agent's file; this is the reader's.",
+                    "$ref": "#/$defs/catalog_path",
+                },
                 "release_notes": {
                     "description": "What changed in this plugin_version.",
                     "type": "object",
