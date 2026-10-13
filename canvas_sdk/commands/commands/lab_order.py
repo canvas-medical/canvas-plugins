@@ -5,14 +5,14 @@ from django.db.models.query_utils import Q
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.base import _SendableCommandMixin
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.v1.data.lab import LabPartner, LabPartnerTest
 
 _COMMENT_MAX_LENGTH = 128
 
 
-class LabOrderCommand(_SendableCommandMixin, BaseCommand):
+class LabOrderCommand(_SendableCommandMixin, _AssessmentLinkedCommand):
     """A class for managing a Lab Order command within a specific note."""
 
     class Meta:

@@ -1,6 +1,45 @@
 # CHANGELOG
 
 
+## v0.247.0 (2026-10-13)
+
+### Features
+
+- Link order and medication commands to a same-note Assessment
+  ([#1924](https://github.com/canvas-medical/canvas-plugins/pull/1924),
+  [`ba2d245`](https://github.com/canvas-medical/canvas-plugins/commit/ba2d245397e287b5614f250e92a742ae7d13176f))
+
+Co-authored-by: Sisyphus <sisyphus@canvasmedical.com>
+
+
+## v0.246.0 (2026-10-13)
+
+### Features
+
+- Accept setup_guide and icon in a manifest's catalog block
+  ([#1922](https://github.com/canvas-medical/canvas-plugins/pull/1922),
+  [`985c551`](https://github.com/canvas-medical/canvas-plugins/commit/985c55155ba060ecde19617395f74529fcf0fefe))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+- Add example handler that blocks refill command commits
+  ([#1740](https://github.com/canvas-medical/canvas-plugins/pull/1740),
+  [`c1e63ab`](https://github.com/canvas-medical/canvas-plugins/commit/c1e63ab55bbe2d4161a1c21a90928261f58a1b1a))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Let Assess diagnose new conditions
+  ([#1910](https://github.com/canvas-medical/canvas-plugins/pull/1910),
+  [`d727d79`](https://github.com/canvas-medical/canvas-plugins/commit/d727d7934489dfdda72be7aaca216f9e98b94c83))
+
+- **sdk**: Add sanitize_html for rendering untrusted HTML in plugins
+  ([#1898](https://github.com/canvas-medical/canvas-plugins/pull/1898),
+  [`b8f5732`](https://github.com/canvas-medical/canvas-plugins/commit/b8f5732794aff0cb66767a9c98619aa690e0ede8))
+
+
 ## v0.245.0 (2026-10-08)
 
 ### Features

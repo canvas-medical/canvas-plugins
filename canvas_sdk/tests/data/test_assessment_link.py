@@ -5,29 +5,41 @@ import pytest
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import (
     Assessment,
+    ChangeMedication,
     Condition,
+    EducationalMaterial,
     FollowUp,
     Goal,
+    ImagingOrder,
     Immunization,
     Instruction,
+    LabOrder,
     Note,
     NoteTask,
     Patient,
     Plan,
+    Prescription,
     Procedure,
+    Referral,
     StopMedicationEvent,
     UpdateGoal,
 )
 from canvas_sdk.v1.data.base import Model
 
 ASSESSMENT_LINKED_MODELS = (
+    ChangeMedication,
+    EducationalMaterial,
     FollowUp,
     Goal,
+    ImagingOrder,
     Immunization,
     Instruction,
+    LabOrder,
     NoteTask,
     Plan,
+    Prescription,
     Procedure,
+    Referral,
     StopMedicationEvent,
     UpdateGoal,
 )

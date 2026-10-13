@@ -46,6 +46,12 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
+    assessment = models.ForeignKey(
+        "v1.Assessment",
+        on_delete=models.DO_NOTHING,
+        related_name="linked_imaging_orders",
+        null=True,
+    )
     imaging = models.CharField(max_length=1024)
     imaging_center = models.ForeignKey(
         "v1.ServiceProvider", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
