@@ -315,12 +315,34 @@ manifest_schema = {
                     "required": ["does", "does_not", "runs_when", "models"],
                     "additionalProperties": False,
                 },
-                "integration": {
-                    "description": "Present when the plugin is an integration; 'unit' names what its volume counts.",
-                    "type": "object",
-                    "properties": {"unit": {"$ref": "#/$defs/catalog_text"}},
-                    "required": ["unit"],
-                    "additionalProperties": False,
+                "pricing": {
+                    "description": "What Canvas charges, in the order the catalog lists it. Leave it out for a plugin with no charge.",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "items": {"$ref": "#/$defs/catalog_pricing_component"},
+                },
+                "vendors": {
+                    "description": "The third parties the plugin depends on, and who holds the account with each.",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"$ref": "#/$defs/catalog_text", "maxLength": 64},
+                            "relationship": {
+                                "description": "'canvas_managed': Canvas sets up the account. 'self_managed': the customer does.",
+                                "enum": ["canvas_managed", "self_managed"],
+                            },
+                            "additional_fees": {
+                                "description": "Whether the vendor bills the customer directly for its own fees, apart from what Canvas charges.",
+                                "type": "boolean",
+                            },
+                        },
+                        "required": ["name", "relationship", "additional_fees"],
+                        "additionalProperties": False,
+                    },
                 },
                 "setup_instructions": {
                     "description": "Path inside the package folder to the file Studio's agent reads when an organization installs the plugin.",
@@ -357,6 +379,26 @@ manifest_schema = {
                     "else": {"not": {"required": ["agent"]}},
                 }
             ],
+        },
+        "catalog_pricing_component": {
+            "description": (
+                "One unit Canvas charges for, in the singular, and its price as a string of US "
+                "dollars with at most four decimal places. The 'token' unit has no price, "
+                "since the inference gateway prices tokens by model. A unit appears once, "
+                "matched without regard to case, which Platform checks at push."
+            ),
+            "type": "object",
+            "properties": {
+                "unit": {"$ref": "#/$defs/catalog_text", "maxLength": 40},
+                "price_per_unit": {"type": "string", "pattern": r"^\d{1,8}(\.\d{1,4})?$"},
+            },
+            "required": ["unit"],
+            "additionalProperties": False,
+            "if": {
+                "properties": {"unit": {"pattern": r"^\s*[Tt][Oo][Kk][Ee][Nn]\s*$"}},
+            },
+            "then": {"not": {"required": ["price_per_unit"]}},
+            "else": {"required": ["price_per_unit"]},
         },
         "catalog_text": {
             "description": "Text with at least one character that is not whitespace.",
