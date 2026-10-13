@@ -40,6 +40,24 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+                "class": "test_render_template.handlers.my_handler:SanitizeHtmlImport",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_render_template.handlers.my_handler:SanitizeHtmlFilter",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],
