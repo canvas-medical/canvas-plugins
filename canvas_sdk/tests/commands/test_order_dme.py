@@ -4,6 +4,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_generated.messages.events_pb2 import EventType
 from canvas_sdk.commands import OrderDmeCommand
 from canvas_sdk.commands.constants import ServiceProvider
 
@@ -18,6 +19,13 @@ def _anchored(command: OrderDmeCommand) -> OrderDmeCommand:
 def test_constantized_key_matches_the_effect_names() -> None:
     """Effect enum names derive from the key, so the two have to agree."""
     assert OrderDmeCommand().constantized_key() == "ORDER_DME"
+
+
+@pytest.mark.parametrize("field", ["ITEM", "SEND_TO", "INDICATIONS", "ORDERING_PROVIDER"])
+def test_every_search_field_has_pre_and_post_search_events(field: str) -> None:
+    """home-app emits a field's search events only when both enum names exist."""
+    for stage in ("PRE_SEARCH", "POST_SEARCH"):
+        assert f"ORDER_DME__{field}__{stage}" in EventType.DESCRIPTOR.values_by_name
 
 
 def test_originate_carries_every_field() -> None:
