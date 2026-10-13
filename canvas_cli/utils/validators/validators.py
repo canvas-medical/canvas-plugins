@@ -1,4 +1,4 @@
-from jsonschema import validators
+from jsonschema import ValidationError, validators
 
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
@@ -8,6 +8,29 @@ from canvas_cli.utils.validators.manifest_schema import manifest_schema
 def get_default_host(host: str | None) -> str | None:
     """Return context's default host if the host param is null."""
     return host or context.default_host
+
+
+def _lookup(name: str) -> str:
+    """How Canvas Platform matches a pricing unit or vendor: case and spacing ignored."""
+    return " ".join(name.split()).lower()
+
+
+def _refuse_repeated_names(catalog: object) -> None:
+    """Refuse a catalog block naming a pricing unit or vendor twice.
+
+    JSON Schema compares whole items, so it cannot see `Visit` and `visit` as one unit;
+    Canvas Platform refuses the push, so validation refuses it first.
+    """
+    if not isinstance(catalog, dict):
+        return
+    for key, field, what in (("pricing", "unit", "unit"), ("vendors", "name", "vendor")):
+        names = [
+            _lookup(item[field])
+            for item in catalog.get(key) or []
+            if isinstance(item, dict) and isinstance(item.get(field), str)
+        ]
+        if len(set(names)) != len(names):
+            raise ValidationError(f"catalog {key} names a {what} twice.")
 
 
 def validate_manifest_file(manifest_json: dict) -> None:
@@ -32,6 +55,8 @@ def validate_manifest_file(manifest_json: dict) -> None:
                 other_warnings.append(error)
         else:
             raise error
+
+    _refuse_repeated_names(manifest_json.get("catalog"))
 
     if tag_warnings:
         print("Warning: there are unrecognized tags in the manifest file:")
