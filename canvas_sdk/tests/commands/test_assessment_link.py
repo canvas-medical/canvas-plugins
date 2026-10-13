@@ -4,18 +4,25 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_sdk.commands import (
+    AdjustPrescriptionCommand,
     CloseGoalCommand,
     FollowUpCommand,
     GoalCommand,
+    ImagingOrderCommand,
     ImmunizeCommand,
     InstructCommand,
+    LabOrderCommand,
     PerformCommand,
     PlanCommand,
+    PrescribeCommand,
+    ReferCommand,
+    RefillCommand,
     StopMedicationCommand,
     TaskCommand,
     UpdateGoalCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.change_medication import ChangeMedicationCommand
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import Assessment, Command, Note, Patient
 
@@ -23,13 +30,20 @@ from canvas_sdk.v1.data import Assessment, Command, Note, Patient
 UNKNOWN_ASSESSMENT_ID = UUID("1e2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8")
 
 ASSESSMENT_LINKED_COMMANDS = (
+    AdjustPrescriptionCommand,
+    ChangeMedicationCommand,
     CloseGoalCommand,
     FollowUpCommand,
     GoalCommand,
+    ImagingOrderCommand,
     ImmunizeCommand,
     InstructCommand,
+    LabOrderCommand,
     PerformCommand,
     PlanCommand,
+    PrescribeCommand,
+    ReferCommand,
+    RefillCommand,
     StopMedicationCommand,
     TaskCommand,
     UpdateGoalCommand,
@@ -87,7 +101,7 @@ def _assessment(patient: Patient, note: Note) -> Assessment:
     ids=[command.__name__ for command in ASSESSMENT_LINKED_COMMANDS],
 )
 def test_every_in_scope_command_takes_an_assessment(command_class: type[_BaseCommand]) -> None:
-    """The field is on each Plan- and Procedures-section command, under the same name."""
+    """The field is on each linkable command, under the same name."""
     assert "assessment_id" in command_class.model_fields
     assert command_class.command_schema()["assessment"]["required"] is False
 

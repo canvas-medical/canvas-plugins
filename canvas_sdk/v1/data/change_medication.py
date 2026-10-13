@@ -22,6 +22,12 @@ class ChangeMedication(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.CASCADE, related_name="change_medications"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="change_medications")
+    assessment = models.ForeignKey(
+        "v1.Assessment",
+        on_delete=models.DO_NOTHING,
+        related_name="linked_change_medications",
+        null=True,
+    )
     medication = models.ForeignKey(
         "v1.Medication",
         on_delete=models.CASCADE,

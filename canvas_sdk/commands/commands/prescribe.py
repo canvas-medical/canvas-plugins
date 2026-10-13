@@ -8,7 +8,8 @@ from uuid import UUID
 from pydantic import Field, conlist
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand, _ReviewableCommandMixin, _SendableCommandMixin
+from canvas_sdk.commands.base import _ReviewableCommandMixin, _SendableCommandMixin
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.commands.constants import ClinicalQuantity
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.compound_medications.compound_medication import (
@@ -44,7 +45,7 @@ class CompoundMedicationData:
         }
 
 
-class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseCommand):
+class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _AssessmentLinkedCommand):
     """A class for managing a Prescribe command within a specific note."""
 
     class Meta:
