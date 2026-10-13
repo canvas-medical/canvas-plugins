@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.247.0 (2026-10-13)
+
+### Features
+
+- Link order and medication commands to a same-note Assessment
+  ([#1924](https://github.com/canvas-medical/canvas-plugins/pull/1924),
+  [`ba2d245`](https://github.com/canvas-medical/canvas-plugins/commit/ba2d245397e287b5614f250e92a742ae7d13176f))
+
+Co-authored-by: Sisyphus <sisyphus@canvasmedical.com>
+
+
 ## v0.246.0 (2026-10-13)
 
 ### Features
