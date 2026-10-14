@@ -1420,7 +1420,7 @@ def test_init_reports_a_failed_git_init(
 
     result = runner.invoke(app, ["init"], input="Intake\n")
 
-    assert result.exit_code == 2
+    assert result.exit_code == 1
     assert "git init failed: permission denied" in result.output
 
 
@@ -1483,3 +1483,192 @@ def test_init_application_registers_without_creating_a_repository(
     assert "Initialized a git repository" not in result.output
     assert not (package_dir / ".git").exists()
     assert f"canvas deploy {package_dir}" in result.output
+
+
+# -- init: signed out says so ------------------------------------------------
+
+
+def test_init_signed_out_says_the_plugin_cannot_be_deployed_yet(
+    requests_mock: requests_mock_module.Mocker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Signed out, init names the platform it checked and says how to get a deployable plugin."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["init"], input="Intake Forms\n")
+
+    assert result.exit_code == 0, result.output
+    assert f"not signed in to Canvas Platform at {auth.DEFAULT_PLATFORM_URL}" in result.output
+    assert "run `canvas login`, then `canvas init` again" in result.output
+    assert not requests_mock.called
+
+
+# -- deploy: the package folder matches the name -----------------------------
+
+
+@patch("subprocess.run")
+def test_deploy_refuses_a_folder_not_named_after_the_plugin_before_any_git_or_network(
+    mock_run: Mock,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A package folder that differs from the manifest name is refused before git or platform,
+    since platform refuses the push anyway.
+    """
+    directory = tmp_path / "project" / "intake"
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+
+    result = runner.invoke(app, ["deploy", str(directory), "--push-only"])
+
+    assert result.exit_code == 2
+    assert f"The package folder is 'intake', but the manifest name is '{NAME}'" in result.output
+    assert f"Rename the folder to '{NAME}'" in result.output
+    mock_run.assert_not_called()
+    assert not requests_mock.called
+
+
+def test_deploy_accepts_the_package_folder_given_as_dot(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`canvas deploy .` from inside the package checks the folder's real name."""
+    monkeypatch.chdir(package)
+
+    result = runner.invoke(app, ["deploy", ".", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "main") == _git(package, "rev-parse", "HEAD")
+
+
+def test_deploy_ref_skips_the_folder_check(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """Deploying a ref that is already pushed reads only the manifest name, not the folder."""
+    directory = tmp_path / "checkout"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--ref", "v1.0.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+
+
+# -- deploy: a refused push is not a usage mistake ---------------------------
+
+
+def test_deploy_reports_a_refused_push_without_the_usage_line(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """When platform's git server refuses the push, its reason is shown with no usage text."""
+    hook = bare / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\necho 'Refused refs/heads/main: listing is invalid' >&2\nexit 1\n")
+    hook.chmod(0o755)
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 1
+    assert "git push to Canvas Platform failed" in result.output
+    assert "listing is invalid" in result.output
+    assert "Usage:" not in result.output
+
+
+# -- whoami ------------------------------------------------------------------
+
+
+def test_whoami_signed_out_names_the_platform_and_says_to_log_in(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """Signed out, whoami says which platform it checked, why, and exits non-zero."""
+    result = runner.invoke(app, ["whoami"])
+
+    assert result.exit_code == 1
+    assert f"Platform: {auth.DEFAULT_PLATFORM_URL} (from the default)" in result.output
+    assert "Not signed in. Run `canvas login`." in result.output
+    assert not requests_mock.called
+
+
+def test_whoami_shows_the_session_and_what_each_organization_allows(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Signed in, whoami names the account, the credential's source and each organization's
+    prefix and capabilities, and never prints the token.
+    """
+    requests_mock.get(f"{API}/me", json=ME)
+
+    result = runner.invoke(app, ["whoami"])
+
+    assert result.exit_code == 0, result.output
+    assert f"Platform: {PLATFORM} (from your last `canvas login`)" in result.output
+    assert "Signed in as dana@acme.example (browser session from `canvas login`)" in result.output
+    assert (
+        "Acme Health (acme): plugin prefix acme__, can push, deploy, configure, uninstall"
+        in result.output
+    )
+    assert "cnvs_" not in result.output
+
+
+def test_whoami_names_the_environment_variable_that_chose_the_platform(
+    requests_mock: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A platform chosen by CANVAS_PLATFORM_URL says so."""
+    monkeypatch.setenv(auth.PLATFORM_URL_ENV, PLATFORM)
+    requests_mock.get(f"{API}/me", json=ME)
+
+    result = runner.invoke(app, ["whoami"])
+
+    assert result.exit_code == 0, result.output
+    assert f"Platform: {PLATFORM} (from {auth.PLATFORM_URL_ENV})" in result.output
+
+
+def test_whoami_says_a_service_account_token_outranks_a_stored_session(
+    requests_mock: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With CANVAS_PLATFORM_TOKEN set, whoami calls platform with it, says it wins over the
+    stored session, and does not print it.
+    """
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_secret")
+    requests_mock.get(f"{API}/me", json={**ME, "email": "ci@acme.example", "organizations": [ACME]})
+
+    result = runner.invoke(app, ["whoami"])
+
+    assert result.exit_code == 0, result.output
+    me_request = _requests_to(requests_mock, "GET", "/me")[0]
+    assert me_request.headers["Authorization"] == "Bearer cnvs_sa_secret"
+    assert (
+        f"Signed in as ci@acme.example (service account token from {auth.SERVICE_TOKEN_ENV})"
+        in result.output
+    )
+    assert f"{auth.SERVICE_TOKEN_ENV} takes precedence while it is set" in result.output
+    assert "cnvs_sa_secret" not in result.output
+
+
+def test_whoami_reports_a_revoked_service_account_token(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A token platform no longer accepts is reported, not shown as signed in."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_revoked")
+    requests_mock.get(f"{API}/me", status_code=401)
+    monkeypatch.setenv(auth.PLATFORM_URL_ENV, PLATFORM)
+
+    result = runner.invoke(app, ["whoami"])
+
+    assert result.exit_code == 1
+    assert "did not accept CANVAS_PLATFORM_TOKEN" in result.output
+    assert "Signed in as" not in result.output
+
+
+def test_whoami_platform_option_suggests_logging_in_there(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """With --platform, the login hint names that platform."""
+    result = runner.invoke(app, ["whoami", "--platform", PLATFORM])
+
+    assert result.exit_code == 1
+    assert f"Platform: {PLATFORM} (from --platform)" in result.output
+    assert f"Run `canvas login --platform {PLATFORM}`." in result.output

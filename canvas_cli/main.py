@@ -20,6 +20,9 @@ app = typer.Typer(no_args_is_help=True, rich_markup_mode=None, add_completion=Fa
 # Commands
 app.command(short_help="Sign in to Canvas Platform through your browser")(platform.login)
 app.command(short_help="Sign out of Canvas Platform")(platform.logout)
+app.command(short_help="Show which Canvas Platform you are signed in to, and as whom")(
+    platform.whoami
+)
 app.command(short_help="Create a new plugin")(platform.init)
 app.command(short_help="Publish a plugin to Canvas Platform and deploy it")(platform.deploy)
 app.command(short_help="Clone a plugin's repository from Canvas Platform")(platform.clone)

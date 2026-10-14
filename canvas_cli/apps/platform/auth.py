@@ -79,14 +79,24 @@ def normalize_platform_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-def resolve_platform_url(explicit: str | None = None) -> str:
-    """The platform to talk to.
+def platform_url_source(explicit: str | None = None) -> tuple[str, str]:
+    """The platform to talk to, and a phrase naming where that choice came from.
 
     In order: an explicit ``--platform``, ``CANVAS_PLATFORM_URL``, the platform
     the last ``canvas login`` signed in to, and https://platform.canvasmedical.com.
     """
-    chosen = explicit or os.environ.get(PLATFORM_URL_ENV) or _load().get("default")
-    return normalize_platform_url(chosen or DEFAULT_PLATFORM_URL)
+    if explicit:
+        return normalize_platform_url(explicit), "--platform"
+    if from_env := os.environ.get(PLATFORM_URL_ENV):
+        return normalize_platform_url(from_env), PLATFORM_URL_ENV
+    if last := _load().get("default"):
+        return normalize_platform_url(last), "your last `canvas login`"
+    return DEFAULT_PLATFORM_URL, "the default"
+
+
+def resolve_platform_url(explicit: str | None = None) -> str:
+    """The platform to talk to, chosen as ``platform_url_source`` describes."""
+    return platform_url_source(explicit)[0]
 
 
 # -- token storage -----------------------------------------------------------
@@ -119,6 +129,11 @@ def service_token() -> str | None:
     return os.environ.get(SERVICE_TOKEN_ENV, "").strip() or None
 
 
+def stored_session(platform: str) -> dict[str, Any] | None:
+    """The ``canvas login`` session stored for a platform origin, whatever the environment says."""
+    return _load().get("platforms", {}).get(platform)
+
+
 def stored_tokens(platform: str) -> dict[str, Any] | None:
     """The token set for a platform origin, or None when signed out.
 
@@ -127,7 +142,7 @@ def stored_tokens(platform: str) -> dict[str, Any] | None:
     """
     if token := service_token():
         return {"access_token": token, "service": True}
-    return _load().get("platforms", {}).get(platform)
+    return stored_session(platform)
 
 
 def save_tokens(platform: str, token_response: dict[str, Any], *, make_default: bool) -> None:
@@ -397,7 +412,7 @@ def logout(platform: str) -> str | None:
     A service account token in ``CANVAS_PLATFORM_TOKEN`` is not a session: it is
     rotated or revoked on Platform's Credentials page, so logout leaves it alone.
     """
-    tokens = _load().get("platforms", {}).get(platform)
+    tokens = stored_session(platform)
     if tokens is None:
         return None
     try:

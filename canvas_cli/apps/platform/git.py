@@ -16,9 +16,18 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+import click
 import typer
 
 REMOTE = "origin"
+
+
+class GitError(click.ClickException):
+    """A git command that failed or could not run.
+
+    It is a failure of the operation, not of what the person typed, so it is
+    reported without the command's usage line.
+    """
 
 
 def run(
@@ -59,7 +68,7 @@ def interactive() -> bool:
 def require_installed() -> None:
     """Fail with an actionable message when git is not on PATH."""
     if shutil.which("git") is None:
-        raise typer.BadParameter(
+        raise GitError(
             "git was not found on your PATH. Publishing a plugin to Canvas Platform uses "
             "git. Install it from https://git-scm.com/downloads and try again."
         )
@@ -103,7 +112,7 @@ def ensure_repo(plugin_dir: Path) -> None:
         raise typer.Abort()
     result = run(root, "init")
     if result.returncode != 0:
-        raise typer.BadParameter(f"git init failed: {result.stderr.strip()}")
+        raise GitError(f"git init failed: {result.stderr.strip()}")
     print(f"Initialized a git repository at {root}.")
 
 
@@ -154,17 +163,17 @@ def connect_remote(repo: Path, git_url: str, platform: str) -> None:
     else:
         result = run(repo, "remote", "add", REMOTE, git_url)
     if result.returncode != 0:
-        raise typer.BadParameter(f"Could not set the '{REMOTE}' remote: {result.stderr.strip()}")
+        raise GitError(f"Could not set the '{REMOTE}' remote: {result.stderr.strip()}")
     entries = credential_config(git_url, platform)
     for key in dict.fromkeys(key for key, _ in entries):
         # Exit status 5 is "nothing to unset", which a first run always is.
         result = run(repo, "config", "--unset-all", key)
         if result.returncode not in (0, 5):
-            raise typer.BadParameter(f"Could not clear {key}: {result.stderr.strip()}")
+            raise GitError(f"Could not clear {key}: {result.stderr.strip()}")
     for key, value in entries:
         result = run(repo, "config", "--add", key, value)
         if result.returncode != 0:
-            raise typer.BadParameter(f"Could not set {key}: {result.stderr.strip()}")
+            raise GitError(f"Could not set {key}: {result.stderr.strip()}")
 
 
 DEFAULT_COMMIT_MESSAGE = "Deploy via canvas"
@@ -181,7 +190,7 @@ def commit_working_tree(plugin_dir: Path, *, assume_yes: bool) -> None:
     """
     status = run(plugin_dir, "status", "--porcelain")
     if status.returncode != 0:
-        raise typer.BadParameter(f"git status failed: {status.stderr.strip()}")
+        raise GitError(f"git status failed: {status.stderr.strip()}")
     if not status.stdout.strip():
         return
 
@@ -203,17 +212,17 @@ def commit_working_tree(plugin_dir: Path, *, assume_yes: bool) -> None:
 
     add = run(plugin_dir, "add", "-A")
     if add.returncode != 0:
-        raise typer.BadParameter(f"git add failed: {add.stderr.strip()}")
+        raise GitError(f"git add failed: {add.stderr.strip()}")
     commit = run(plugin_dir, "commit", "-m", message)
     if commit.returncode != 0:
-        raise typer.BadParameter(f"git commit failed: {commit.stderr.strip()}")
+        raise GitError(f"git commit failed: {commit.stderr.strip()}")
 
 
 def head_sha(plugin_dir: Path) -> str:
     """The commit HEAD points at."""
     result = run(plugin_dir, "rev-parse", "HEAD")
     if result.returncode != 0:
-        raise typer.BadParameter(
+        raise GitError(
             "This repository has no commits yet. Commit the plugin and run deploy again."
         )
     return result.stdout.strip()
@@ -223,7 +232,7 @@ def push_head(plugin_dir: Path, branch: str) -> None:
     """Push HEAD to ``branch`` on ``origin``, with global and system config ignored."""
     result = run(plugin_dir, "push", REMOTE, f"HEAD:refs/heads/{branch}", isolate_config=True)
     if result.returncode != 0:
-        raise typer.BadParameter(
+        raise GitError(
             "git push to Canvas Platform failed:\n" + (result.stderr.strip() or "unknown error")
         )
 
@@ -248,4 +257,4 @@ def clone(git_url: str, destination: Path, platform: str) -> None:
         env=env,
     )
     if result.returncode != 0:
-        raise typer.BadParameter(f"git clone failed:\n{result.stderr.strip() or 'unknown error'}")
+        raise GitError(f"git clone failed:\n{result.stderr.strip() or 'unknown error'}")

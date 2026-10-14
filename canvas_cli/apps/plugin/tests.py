@@ -114,6 +114,11 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     assert readme.exists()
     assert readme.is_file()
 
+    # the catalog overview starts from a scaffold naming the plugin
+    overview = plugin / "OVERVIEW.md"
+    assert overview.is_file()
+    assert overview.read_text().startswith(init_plugin_name)
+
     # handlers dir exists
     handlers = plugin / "handlers"
     assert handlers.exists()

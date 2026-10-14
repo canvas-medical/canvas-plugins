@@ -170,7 +170,13 @@ LISTING: dict[str, Any] = {
         "runs_when": "Note",
         "models": ["claude-sonnet-5"],
     },
-    "integration": {"unit": "visits"},
+    "pricing": [
+        {"unit": "visit", "price_per_unit": "5.75"},
+        {"unit": "token"},
+    ],
+    "vendors": [
+        {"name": "Twilio", "relationship": "self_managed", "additional_fees": True},
+    ],
     "setup_instructions": "setup_instructions.md",
     "setup_guide": "setup_guide.md",
     "icon": "assets/icon.png",
@@ -192,7 +198,16 @@ ACCEPTED = {
     "full": LISTING,
     "minimal": MINIMAL,
     "no-keywords": {**MINIMAL, "keywords": []},
+    "sub-cent-price": {**MINIMAL, "pricing": [{"unit": "page", "price_per_unit": "0.0025"}]},
+    "free-unit": {**MINIMAL, "pricing": [{"unit": "visit", "price_per_unit": "0"}]},
+    "canvas-managed-vendor": {
+        **MINIMAL,
+        "vendors": [{"name": "Nabla", "relationship": "canvas_managed", "additional_fees": False}],
+    },
 }
+
+VISIT = {"unit": "visit", "price_per_unit": "5.75"}
+VENDOR = {"name": "Twilio", "relationship": "self_managed", "additional_fees": True}
 
 REFUSED = {
     "unknown-field": {**MINIMAL, "tagline": "x"},
@@ -232,6 +247,41 @@ REFUSED = {
     "icon-not-an-image": {**MINIMAL, "icon": "icon.svg"},
     "icon-uppercase": {**MINIMAL, "icon": "icon.PNG"},
     "null-icon": {**MINIMAL, "icon": None},
+    "integration-block": {**MINIMAL, "integration": {"unit": "visits"}},
+    "empty-pricing": {**MINIMAL, "pricing": []},
+    "null-pricing": {**MINIMAL, "pricing": None},
+    "pricing-number": {**MINIMAL, "pricing": [{"unit": "visit", "price_per_unit": 5.75}]},
+    "pricing-five-places": {**MINIMAL, "pricing": [{"unit": "visit", "price_per_unit": "0.00001"}]},
+    "pricing-negative": {**MINIMAL, "pricing": [{"unit": "visit", "price_per_unit": "-1"}]},
+    "pricing-no-price": {**MINIMAL, "pricing": [{"unit": "visit"}]},
+    "pricing-no-unit": {**MINIMAL, "pricing": [{"price_per_unit": "1"}]},
+    "pricing-long-unit": {**MINIMAL, "pricing": [{"unit": "x" * 41, "price_per_unit": "1"}]},
+    "pricing-extra-field": {**MINIMAL, "pricing": [{**VISIT, "currency": "USD"}]},
+    "pricing-repeated-unit": {**MINIMAL, "pricing": [VISIT, {**VISIT, "unit": "Visit"}]},
+    "pricing-too-many": {
+        **MINIMAL,
+        "pricing": [{"unit": f"unit {n}", "price_per_unit": "1"} for n in range(11)],
+    },
+    "token-with-price": {**MINIMAL, "pricing": [{"unit": "token", "price_per_unit": "0.01"}]},
+    "empty-vendors": {**MINIMAL, "vendors": []},
+    "null-vendors": {**MINIMAL, "vendors": None},
+    "vendor-unknown-relationship": {**MINIMAL, "vendors": [{**VENDOR, "relationship": "partner"}]},
+    "vendor-fees-not-boolean": {**MINIMAL, "vendors": [{**VENDOR, "additional_fees": "yes"}]},
+    "vendor-no-fees": {
+        **MINIMAL,
+        "vendors": [{"name": "Twilio", "relationship": "self_managed"}],
+    },
+    "vendor-no-name": {
+        **MINIMAL,
+        "vendors": [{"relationship": "self_managed", "additional_fees": False}],
+    },
+    "vendor-long-name": {**MINIMAL, "vendors": [{**VENDOR, "name": "x" * 65}]},
+    "vendor-extra-field": {**MINIMAL, "vendors": [{**VENDOR, "url": "https://twilio.com"}]},
+    "vendor-repeated": {**MINIMAL, "vendors": [VENDOR, {**VENDOR, "name": "twilio"}]},
+    "vendors-too-many": {
+        **MINIMAL,
+        "vendors": [{**VENDOR, "name": f"Vendor {n}"} for n in range(11)],
+    },
 }
 
 

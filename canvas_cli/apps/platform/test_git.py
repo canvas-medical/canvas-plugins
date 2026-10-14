@@ -51,7 +51,7 @@ def test_require_installed_names_where_to_get_git() -> None:
     """A missing git binary is an actionable error."""
     with (
         patch(f"{GIT}.shutil.which", return_value=None),
-        pytest.raises(typer.BadParameter, match="git was not found"),
+        pytest.raises(git.GitError, match="git was not found"),
     ):
         git.require_installed()
 
@@ -97,7 +97,7 @@ def test_ensure_repo_surfaces_a_failed_git_init(plugin_dir: Path) -> None:
         patch(f"{GIT}.interactive", return_value=True),
         patch(f"{GIT}.typer.confirm", return_value=True),
         patch(f"{GIT}.run", return_value=_completed(1, stderr="boom")),
-        pytest.raises(typer.BadParameter, match="git init failed: boom"),
+        pytest.raises(git.GitError, match="git init failed: boom"),
     ):
         git.ensure_repo(plugin_dir)
 
@@ -117,7 +117,7 @@ def test_connect_remote_surfaces_a_remote_failure(repo: Path) -> None:
     """A failure to add the remote reports git's stderr."""
     with (
         patch(f"{GIT}.run", return_value=_completed(2, stderr="nope")),
-        pytest.raises(typer.BadParameter, match="Could not set the 'origin' remote: nope"),
+        pytest.raises(git.GitError, match="Could not set the 'origin' remote: nope"),
     ):
         git.connect_remote(repo, "https://git.example.com/x.git", "https://p.example.com")
 
@@ -126,7 +126,7 @@ def test_connect_remote_surfaces_a_failure_to_clear_config(repo: Path) -> None:
     """An --unset-all failure other than exit 5 is an error."""
     with (
         _runs(_completed(0), _completed(0), _completed(3, stderr="locked")),
-        pytest.raises(typer.BadParameter, match="Could not clear credential.*locked"),
+        pytest.raises(git.GitError, match="Could not clear credential.*locked"),
     ):
         git.connect_remote(repo, "https://git.example.com/x.git", "https://p.example.com")
 
@@ -136,14 +136,14 @@ def test_connect_remote_surfaces_a_failure_to_set_config(repo: Path) -> None:
     # get-url, set-url, two --unset-all (helper, useHttpPath), then the first --add fails.
     with (
         _runs(*[_completed(0)] * 4, _completed(1, stderr="readonly")),
-        pytest.raises(typer.BadParameter, match="Could not set credential.*readonly"),
+        pytest.raises(git.GitError, match="Could not set credential.*readonly"),
     ):
         git.connect_remote(repo, "https://git.example.com/x.git", "https://p.example.com")
 
 
 def test_commit_working_tree_surfaces_a_failed_status(tmp_path: Path) -> None:
     """A failing git status (here, no such directory) is an error."""
-    with pytest.raises(typer.BadParameter, match="git status failed"):
+    with pytest.raises(git.GitError, match="git status failed"):
         git.commit_working_tree(tmp_path / "missing", assume_yes=True)
 
 
@@ -163,7 +163,7 @@ def test_commit_working_tree_surfaces_a_failed_add(repo: Path) -> None:
     """A failing git add reports git's stderr."""
     with (
         _runs(_completed(0, stdout="?? a.txt\n"), _completed(1, stderr="index locked")),
-        pytest.raises(typer.BadParameter, match="git add failed: index locked"),
+        pytest.raises(git.GitError, match="git add failed: index locked"),
     ):
         git.commit_working_tree(repo, assume_yes=True)
 
@@ -176,14 +176,14 @@ def test_commit_working_tree_surfaces_a_failed_commit(repo: Path) -> None:
             _completed(0),
             _completed(1, stderr="no identity"),
         ),
-        pytest.raises(typer.BadParameter, match="git commit failed: no identity"),
+        pytest.raises(git.GitError, match="git commit failed: no identity"),
     ):
         git.commit_working_tree(repo, assume_yes=True)
 
 
 def test_head_sha_of_a_repository_without_commits(repo: Path) -> None:
     """An unborn HEAD asks the person to commit first."""
-    with pytest.raises(typer.BadParameter, match="no commits yet"):
+    with pytest.raises(git.GitError, match="no commits yet"):
         git.head_sha(repo)
 
 
@@ -192,11 +192,11 @@ def test_push_head_surfaces_the_push_error(repo: Path) -> None:
     (repo / "a.txt").write_text("a")
     git.commit_working_tree(repo, assume_yes=True)
     git.run(repo, "remote", "add", "origin", str(repo.parent / "does-not-exist.git"))
-    with pytest.raises(typer.BadParameter, match="git push to Canvas Platform failed"):
+    with pytest.raises(git.GitError, match="git push to Canvas Platform failed"):
         git.push_head(repo, "main")
 
 
 def test_clone_surfaces_the_clone_error(tmp_path: Path) -> None:
     """A failed clone reports the failure."""
-    with pytest.raises(typer.BadParameter, match="git clone failed"):
+    with pytest.raises(git.GitError, match="git clone failed"):
         git.clone(str(tmp_path / "does-not-exist.git"), tmp_path / "dest", "https://p.example.com")
