@@ -17,6 +17,7 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.document_review_delegation import DelegatedDocumentMixin
 from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
@@ -52,7 +53,7 @@ class TransmissionType(models.TextChoices):
     MANUAL = "M", "manual"
 
 
-class LabReport(AuditedModel, IdentifiableModel, Report):
+class LabReport(AuditedModel, IdentifiableModel, DelegatedDocumentMixin, Report):
     """A class representing a lab report."""
 
     class Meta:
