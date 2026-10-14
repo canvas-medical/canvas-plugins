@@ -23,6 +23,7 @@ TEST_PLUGINS_DIR = Path(__file__).parent
 COMMANDS_TO_SKIP = [
     "AddConditionCommand",
     "OrderDmeCommand",
+    "VisualExamFindingCommand",
     "RemovePastMedicalHistoryCommand",
     "ImmunizeCommand",
     "LabReviewCommand",

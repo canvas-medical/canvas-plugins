@@ -245,6 +245,7 @@
     "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
+    "VisualExamFindingCommand",
     "VitalsCommand"
   ],
   "canvas_sdk.commands.api": [
@@ -414,6 +415,9 @@
   ],
   "canvas_sdk.commands.commands.update_goal": [
     "UpdateGoalCommand"
+  ],
+  "canvas_sdk.commands.commands.visual_exam_finding": [
+    "VisualExamFindingCommand"
   ],
   "canvas_sdk.commands.commands.vitals": [
     "VitalsCommand"
@@ -747,6 +751,7 @@
     "PatientContactCategory",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientIdentificationCard",
     "PatientMetadata",
     "PatientPreferredPharmacy",
     "generate_patient_id"
@@ -767,6 +772,9 @@
   ],
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
+  ],
+  "canvas_sdk.effects.patient.identification_card": [
+    "PatientIdentificationCard"
   ],
   "canvas_sdk.effects.patient.timeline": [
     "PatientTimelineEffect"
