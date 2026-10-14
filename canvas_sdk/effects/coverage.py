@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects._upload_key import is_plugin_upload_key, upload_key_error
 from canvas_sdk.v1.data.coverage import Coverage as CoverageModel
 from canvas_sdk.v1.data.coverage import (
     CoverageRank,
@@ -65,11 +66,6 @@ UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = (
 )
 
 UPLOAD_KEY_FIELDS: tuple[str, ...] = ("card_image_front_upload_key", "card_image_back_upload_key")
-
-
-def _is_plugin_upload_key(key: str) -> bool:
-    """Return whether the key looks like one returned by a ``file_uploads="stored"`` route."""
-    return key.startswith("plugin-uploads/") or "/plugin-uploads/" in key
 
 
 class PhotoSide(StrEnum):
@@ -194,15 +190,8 @@ class Coverage(TrackableFieldsModel):
 
         for field in UPLOAD_KEY_FIELDS:
             key = getattr(self, field)
-            if key is not None and not _is_plugin_upload_key(key):
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Field '{field}' must be the key of a file uploaded through a "
-                        "SimpleAPI route declared with file_uploads='stored'.",
-                        key,
-                    )
-                )
+            if key is not None and not is_plugin_upload_key(key):
+                errors.append(self._create_error_detail("value", upload_key_error(field), key))
 
         return errors
 

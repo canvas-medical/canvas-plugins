@@ -410,3 +410,34 @@ def test_create_message_malformed_team_id(
         Message(**valid_message_data, team_id="not-a-uuid").create()  # type: ignore[arg-type]
 
     mock_db_queries["team"].filter.assert_not_called()
+
+
+def test_create_message_sends_attachment_upload_keys(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Attachment keys from file_uploads='stored' routes are sent with the message."""
+    keys = [
+        "acme/plugin-uploads/my_plugin/20261014T120000Z-a-results.pdf",
+        "acme/plugin-uploads/my_plugin/20261014T120000Z-b-photo.jpg",
+    ]
+
+    effect = Message(**valid_message_data, attachment_upload_keys=keys).create_and_send()
+
+    assert json.loads(effect.payload)["data"]["attachment_upload_keys"] == keys
+
+
+def test_create_message_rejects_keys_outside_plugin_uploads(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Attachment keys must come from a file_uploads='stored' route."""
+    with pytest.raises(ValidationError, match="attachment_upload_keys"):
+        Message(**valid_message_data, attachment_upload_keys=["snapshots/front.jpg"]).create()
+
+
+def test_message_without_attachments_omits_the_field(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """A message without attachments sends no attachment field."""
+    effect = Message(**valid_message_data).create()
+
+    assert "attachment_upload_keys" not in json.loads(effect.payload)["data"]
