@@ -158,11 +158,7 @@ def test_patient_portal_raises_when_the_body_is_not_json(mock_post: MagicMock) -
 
 @patch("requests.Session.post")
 def test_patient_portal_wraps_a_transport_failure(mock_post: MagicMock) -> None:
-    """A timeout or DNS failure is uncatchable from a plugin unless it is re-raised.
-
-    `requests` is not in the sandbox's allowed imports, so a plugin author cannot name
-    `requests.exceptions.Timeout`.
-    """
+    """A timeout or DNS failure surfaces as the one error type this module documents."""
     mock_post.side_effect = requests.exceptions.ConnectTimeout("no route")
 
     with pytest.raises(PatientPortalLinkError) as excinfo:
@@ -170,6 +166,25 @@ def test_patient_portal_wraps_a_transport_failure(mock_post: MagicMock) -> None:
 
     assert excinfo.value.status_code == 0
     assert "Could not reach Canvas" in excinfo.value.message
+
+
+@patch("requests.Session.post")
+def test_patient_portal_transport_failure_chains_nothing(mock_post: MagicMock) -> None:
+    """The documented error is raised on its own, with no underlying error chained to it."""
+    request = requests.Request("POST", "https://example.canvasmedical.com/x").prepare()
+    request.headers["Authorization"] = "test-credential"
+    mock_post.side_effect = requests.exceptions.ConnectTimeout("no route", request=request)
+
+    with pytest.raises(PatientPortalLinkError) as excinfo:
+        patient_portal_http.get_login_url("a" * 32)
+
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__context__ is None
+
+
+def test_patient_portal_exports_only_get_login_url() -> None:
+    """Plugin code can reach `get_login_url` and nothing else."""
+    assert PatientPortalHttp.__exports__ == ("get_login_url",)
 
 
 @patch("requests.Session.post")

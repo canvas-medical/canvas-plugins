@@ -11,8 +11,64 @@ from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+from psycopg import sql
 
 from plugin_runner.exceptions import PluginInstallationError
+from plugin_runner.namespace import check_namespace_auth_key, mark_namespace_ready, namespace_ready
+
+
+def _statement_text(statement: object) -> str:
+    """Render an executed statement, whether a plain string or a composed one."""
+    return statement.as_string() if isinstance(statement, sql.Composable) else str(statement)
+
+
+def _cursor_connection(cursor: MagicMock) -> MagicMock:
+    """Build a mock connection wrapping the given cursor."""
+    cursor.__enter__ = MagicMock(return_value=cursor)
+    cursor.__exit__ = MagicMock(return_value=False)
+
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+    conn.__enter__ = MagicMock(return_value=conn)
+    conn.__exit__ = MagicMock(return_value=False)
+    return conn
+
+
+@pytest.mark.parametrize(
+    ("call", "expected_fragment"),
+    [
+        pytest.param(
+            lambda: namespace_ready("Not A Namespace", "p", "h"),
+            '"Not A Namespace".schema_version',
+            id="namespace_ready",
+        ),
+        pytest.param(
+            lambda: mark_namespace_ready("Not A Namespace", "p", "h"),
+            '"Not A Namespace".schema_version',
+            id="mark_namespace_ready",
+        ),
+        pytest.param(
+            lambda: check_namespace_auth_key("Not A Namespace", "secret"),
+            '"Not A Namespace".namespace_auth',
+            id="check_namespace_auth_key",
+        ),
+    ],
+)
+@patch("plugin_runner.namespace.open_database_connection")
+def test_namespace_goes_into_sql_as_a_quoted_identifier(
+    mock_open_conn: MagicMock, call: object, expected_fragment: str
+) -> None:
+    """A namespace is interpolated only as one quoted identifier, never as SQL text."""
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = {"count": 1, "models_hash": "h", "access_level": "read"}
+    mock_open_conn.return_value = _cursor_connection(mock_cursor)
+
+    call()  # type: ignore[operator]
+
+    statements = [c.args[0] for c in mock_cursor.execute.call_args_list]
+    namespaced = [s for s in statements if expected_fragment in _statement_text(s)]
+    assert namespaced, [_statement_text(s) for s in statements]
+    assert all(not isinstance(s, str) for s in namespaced)
 
 
 class TestCreateNamespaceSchemaValidation:
@@ -1126,12 +1182,12 @@ class TestMarkNamespaceReady:
 
         mark_namespace_ready("org__data", "my_plugin", "abc123")
 
-        calls = [str(c) for c in mock_cursor.execute.call_args_list]
-        assert any("INSERT INTO org__data.schema_version" in c for c in calls)
+        calls = [_statement_text(c.args[0]) for c in mock_cursor.execute.call_args_list]
+        assert any('INSERT INTO "org__data".schema_version' in c for c in calls)
         assert any("ON CONFLICT" in c for c in calls)
         assert any("pg_notify" in c for c in calls)
         # No DELETE — upsert replaces the old row
-        assert not any("DELETE FROM org__data.schema_version" in c for c in calls)
+        assert not any("DELETE FROM" in c for c in calls)
 
         # Verify plugin_name and hash are in INSERT params
         insert_call = next(c for c in mock_cursor.execute.call_args_list if "INSERT" in str(c))

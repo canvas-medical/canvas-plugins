@@ -239,6 +239,49 @@ def test_install_plugin_writes_secrets_on_namespace_wait_timeout(
         uninstall_plugin(plugin_name)
 
 
+@pytest.mark.parametrize("schema_manager", [True, False])
+def test_install_plugin_rejects_an_invalid_namespace_before_any_namespace_work(
+    mocker: MockerFixture, schema_manager: bool
+) -> None:
+    """A manifest namespace that is not a valid org__name stops the install before any SQL."""
+    plugin_name = "bad_namespace_plugin"
+    attributes = PluginAttributes(
+        version="1.0", package=f"plugins/{plugin_name}.tar.gz", secrets={}
+    )
+
+    def fake_extract(plugin_file_path: Path, plugin_installation_path: Path) -> None:
+        plugin_installation_path.mkdir(parents=True, exist_ok=True)
+        (plugin_installation_path / "CANVAS_MANIFEST.json").write_text(
+            json.dumps(
+                {
+                    "name": plugin_name,
+                    "custom_data": {"namespace": "Not A Namespace", "access": "read_write"},
+                }
+            )
+        )
+
+    mock_download = MagicMock()
+    mock_download.__enter__ = MagicMock(return_value=Path("unused.tar.gz"))
+    mock_download.__exit__ = MagicMock(return_value=None)
+    mocker.patch("plugin_runner.installation.download_plugin", return_value=mock_download)
+    mocker.patch("plugin_runner.installation.extract_plugin", side_effect=fake_extract)
+    mocker.patch("plugin_runner.installation.clear_registered_models")
+    mocker.patch("plugin_runner.installation.compute_models_hash", return_value="abc123")
+    mocker.patch("plugin_runner.installation.is_schema_manager", return_value=schema_manager)
+    mock_wait = mocker.patch("plugin_runner.installation.wait_for_namespace")
+    mock_setup = mocker.patch("plugin_runner.installation.setup_read_write_namespace")
+    mocker.patch("plugin_runner.installation.log")
+
+    try:
+        with pytest.raises(PluginInstallationError, match="not a valid namespace"):
+            install_plugin(plugin_name, attributes)
+
+        mock_wait.assert_not_called()
+        mock_setup.assert_not_called()
+    finally:
+        uninstall_plugin(plugin_name)
+
+
 def test_install_plugins_does_not_disable_on_namespace_wait_timeout(
     mocker: MockerFixture,
 ) -> None:

@@ -8,13 +8,19 @@ formatter's ``labels.plugin`` / ``labels.handler`` emission.
 import json
 import logging
 
+import pytest
+
+from logger import log
 from logger.logger import (
+    PluginLogger,
     PluginNameFilter,
     _current_handler_name,
     _current_plugin_name,
     plugin_context,
 )
 from logger.logstash import LogstashFormatterECS
+from logger.pubsub import PubSubLogHandler
+from pubsub.pubsub import Publisher
 
 
 def test_plugin_context_binds_handler_and_derived_plugin_name() -> None:
@@ -132,3 +138,37 @@ def test_logstash_formatter_omits_plugin_labels_when_no_plugin_context() -> None
 
     assert "plugin" not in output.get("labels", {})
     assert "handler" not in output.get("labels", {})
+
+
+def test_plugin_logger_exports_only_its_logging_methods() -> None:
+    """Plugin code reaches the six logging methods and nothing behind them."""
+    assert PluginLogger.__exports__ == (
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "exception",
+        "critical",
+    )
+    assert not hasattr(log, "logger")
+
+
+def test_plugin_logger_critical_formats_its_arguments(caplog: pytest.LogCaptureFixture) -> None:
+    """`critical` passes its arguments through like the other levels."""
+    with caplog.at_level(logging.CRITICAL, logger="plugin_runner_logger"):
+        log.critical("value %s", 42)
+
+    assert "value 42" in caplog.text
+
+
+def test_publisher_keeps_its_endpoint_and_client_private() -> None:
+    """The endpoint URL and the client built from it have no public name."""
+    publisher = Publisher()
+
+    assert not hasattr(publisher, "redis_endpoint")
+    assert not hasattr(publisher, "client")
+
+
+def test_pubsub_log_handler_keeps_its_publisher_private() -> None:
+    """The handler attached to the plugin logger has no public route to the publisher."""
+    assert not hasattr(PubSubLogHandler(), "publisher")

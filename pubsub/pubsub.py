@@ -15,9 +15,10 @@ class PubSubBase:
     """Base class for pub/sub."""
 
     def __init__(self) -> None:
-        self.redis_endpoint = REDIS_ENDPOINT
         self.channel = self._get_channel_name()
-        self.client = self._create_client()
+        # The endpoint URL is passed straight to the client rather than kept, and the
+        # client itself has no public name.
+        self._client = self._create_client(REDIS_ENDPOINT)
 
     def _get_channel_name(self) -> str | None:
         if CUSTOMER_IDENTIFIER:
@@ -25,10 +26,10 @@ class PubSubBase:
 
         return None
 
-    def _create_client(self) -> redis.Redis | None:
-        if self.redis_endpoint and self.channel:
+    def _create_client(self, redis_endpoint: str | None) -> redis.Redis | None:
+        if redis_endpoint and self.channel:
             return redis.Redis.from_url(
-                self.redis_endpoint,
+                redis_endpoint,
                 decode_responses=True,
                 retry=Retry(backoff=ExponentialBackoff(), retries=10),
                 retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
@@ -44,5 +45,5 @@ class Publisher(PubSubBase):
 
     def publish(self, message: Any) -> None:
         """Publishes a message to the channel."""
-        if self.client and self.channel:
-            self.client.publish(self.channel, message)
+        if self._client and self.channel:
+            self._client.publish(self.channel, message)

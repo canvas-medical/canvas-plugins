@@ -26,6 +26,7 @@ from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
 from canvas_cli.utils.validators import validate_manifest_file
 from plugin_runner.plugin_runner import sandbox_plugin_handlers
+from plugin_runner.sandbox import collect_missing_attribute_reads
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
@@ -793,16 +794,26 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
     print(f"Loading {len(handlers)} handler(s) in the sandbox:")
 
-    results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
+    with collect_missing_attribute_reads() as missing:
+        results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
 
     failures = [r for r in results if r.error is not None]
+
     for r in results:
         label = r.handler.get("class", "<unknown>")
-        if r.error is None:
-            print(f"  ✓ {label}")
-        else:
+        if r.error is not None:
             print(f"  ✗ {label}")
             print(f"      {type(r.error).__name__}: {r.error}")
+        else:
+            print(f"  ✓ {label}")
+
+    if missing:
+        print(
+            "\nWarning: these names do not exist. Each reads as None today and will raise an "
+            "AttributeError in a future release:"
+        )
+        for name in missing:
+            print(f"  - {name}")
 
     if failures:
         print(f"\n{len(failures)} of {len(results)} handler(s) failed to load in the sandbox.")

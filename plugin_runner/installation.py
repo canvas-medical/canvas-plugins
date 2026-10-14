@@ -27,6 +27,7 @@ from plugin_runner.exceptions import (
 from plugin_runner.namespace import (
     compute_models_hash,  # noqa: F401 — re-export
     is_schema_manager,  # noqa: F401 — re-export
+    is_valid_namespace_name,
     mark_namespace_ready,  # noqa: F401 — re-export
     namespace_exists,
     open_database_connection,  # noqa: F401 — re-export
@@ -253,6 +254,16 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             with open(manifest_path) as f:
                 manifest = json.load(f)
                 custom_data = manifest.get("custom_data")
+
+        # Every namespace query below interpolates the name as a quoted identifier, and
+        # the schema manager refuses an invalid one too; checking here, once, stops a bad
+        # manifest before any container does namespace work for it.
+        if custom_data and not is_valid_namespace_name(custom_data.get("namespace")):
+            raise PluginInstallationError(
+                f"Plugin '{plugin_name}' declares {custom_data.get('namespace')!r}, which is "
+                f"not a valid namespace name (expected org__name in lowercase letters, "
+                f"digits and underscores)."
+            )
 
         defer_secrets_write = bool(
             custom_data

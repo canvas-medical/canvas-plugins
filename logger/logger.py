@@ -62,12 +62,18 @@ class PluginNameFilter(logging.Filter):
 
 
 class PluginLogger:
-    """A custom logger for plugins."""
+    """A custom logger for plugins.
+
+    Plugin code reaches only the logging methods in `__exports__`; the stdlib logger behind
+    them is private.
+    """
+
+    __exports__ = ("debug", "info", "warning", "error", "exception", "critical")
 
     def __init__(self) -> None:
-        self.logger = logging.getLogger("plugin_runner_logger")
-        self.logger.setLevel(logging.INFO)
-        self.logger.addFilter(PluginNameFilter())
+        self._logger = logging.getLogger("plugin_runner_logger")
+        self._logger.setLevel(logging.INFO)
+        self._logger.addFilter(PluginNameFilter())
 
         log_prefix = f"{os.getenv('HOSTNAME', '?')}: {os.getenv('APTIBLE_PROCESS_INDEX', '?')}"
 
@@ -81,13 +87,13 @@ class PluginLogger:
         streaming_handler = logging.StreamHandler()
         streaming_handler.setFormatter(formatter)
 
-        self.logger.addHandler(streaming_handler)
+        self._logger.addHandler(streaming_handler)
 
         if settings.REDIS_ENDPOINT:
             pubsub_handler = PubSubLogHandler()
             pubsub_handler.setFormatter(formatter)
 
-            self.logger.addHandler(pubsub_handler)
+            self._logger.addHandler(pubsub_handler)
 
         if settings.LOGSTASH_HOST:
             logstash_handler = AsynchronousLogstashHandler(
@@ -97,31 +103,31 @@ class PluginLogger:
                 transport=settings.LOGSTASH_PROTOCOL,
             )
             logstash_handler.setFormatter(LogstashFormatterECS())
-            self.logger.addHandler(logstash_handler)
+            self._logger.addHandler(logstash_handler)
 
     def debug(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a debug message."""
-        self.logger.debug(message, *args, **kwargs)
+        self._logger.debug(message, *args, **kwargs)
 
     def info(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs an info message."""
-        self.logger.info(message, *args, **kwargs)
+        self._logger.info(message, *args, **kwargs)
 
     def warning(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a warning message."""
-        self.logger.warning(message, *args, **kwargs)
+        self._logger.warning(message, *args, **kwargs)
 
     def error(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs an error message."""
-        self.logger.error(message, *args, **kwargs)
+        self._logger.error(message, *args, **kwargs)
 
     def exception(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Convenience method for logging an ERROR with exception information."""
-        self.logger.exception(message, *args, **kwargs)
+        self._logger.exception(message, *args, **kwargs)
 
     def critical(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a critical message."""
-        self.logger.critical(message)
+        self._logger.critical(message, *args, **kwargs)
 
 
 __exports__ = ()

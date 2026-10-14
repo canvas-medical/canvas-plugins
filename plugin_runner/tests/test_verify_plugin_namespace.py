@@ -84,6 +84,24 @@ def test_returns_config_on_success(mock_verify: MagicMock) -> None:
     mock_verify.assert_called_once_with("org__data", "valid-key")
 
 
+@pytest.mark.parametrize(
+    "namespace",
+    ["Not A Namespace", "public", "Org__Data", "org_data", ""],
+)
+@patch("plugin_runner.namespace.check_namespace_auth_key")
+def test_rejects_an_invalid_namespace_before_touching_the_database(
+    mock_verify: MagicMock, namespace: str
+) -> None:
+    """A manifest namespace that is not a valid org__name is refused at once."""
+    custom_data: CustomData = {"namespace": namespace, "access": "read"}
+    secrets = {"namespace_read_access_key": "valid-key"}
+
+    with pytest.raises(NamespaceAccessError, match="not a valid namespace"):
+        verify_plugin_namespace_access("my_plugin", custom_data, secrets)
+
+    mock_verify.assert_not_called()
+
+
 def test_raises_for_missing_secret() -> None:
     """Should propagate NamespaceAccessError from resolve_namespace_secret."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}

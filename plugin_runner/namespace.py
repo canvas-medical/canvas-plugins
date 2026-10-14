@@ -8,7 +8,7 @@ from typing import cast
 from urllib import parse
 
 import psycopg
-from psycopg import Connection
+from psycopg import Connection, sql
 from psycopg.rows import dict_row
 
 from logger import log
@@ -146,7 +146,7 @@ def wait_for_namespace(
 
     with open_database_connection() as conn:
         conn.autocommit = True
-        conn.execute(f"LISTEN {channel}")
+        conn.execute(sql.SQL("LISTEN {}").format(sql.Identifier(channel)))
 
         # Check AFTER subscribing so any NOTIFY sent between this check and
         # the wait below is queued on the connection and not lost.
@@ -217,7 +217,9 @@ def namespace_ready(namespace: str, plugin_name: str, models_hash: str) -> bool:
             return False
 
         cursor.execute(
-            f"SELECT models_hash FROM {namespace}.schema_version WHERE plugin_name = %s",
+            sql.SQL("SELECT models_hash FROM {}.schema_version WHERE plugin_name = %s").format(
+                sql.Identifier(namespace)
+            ),
             (plugin_name,),
         )
         row = cursor.fetchone()
@@ -248,16 +250,18 @@ def mark_namespace_ready(namespace: str, plugin_name: str, models_hash: str) -> 
     payload = f"{plugin_name}:{models_hash}"
     with open_database_connection() as conn, conn.cursor() as cursor:
         cursor.execute(
-            f"INSERT INTO {namespace}.schema_version (plugin_name, models_hash) "
-            f"VALUES (%s, %s) "
-            f"ON CONFLICT (plugin_name) DO UPDATE SET models_hash = %s, completed_at = NOW()",
+            sql.SQL(
+                "INSERT INTO {}.schema_version (plugin_name, models_hash) "
+                "VALUES (%s, %s) "
+                "ON CONFLICT (plugin_name) DO UPDATE SET models_hash = %s, completed_at = NOW()"
+            ).format(sql.Identifier(namespace)),
             (plugin_name, models_hash, models_hash),
         )
         cursor.execute("SELECT pg_notify(%s, %s)", (channel, payload))
         conn.commit()
 
 
-def is_valid_namespace_name(namespace: str) -> bool:
+def is_valid_namespace_name(namespace: object) -> bool:
     """Validate namespace name format.
 
     Valid namespaces must follow the pattern org__name (double underscore
@@ -267,7 +271,11 @@ def is_valid_namespace_name(namespace: str) -> bool:
     This implicitly excludes reserved PostgreSQL schemas (pg_catalog,
     information_schema, etc.) since none match the org__name pattern.
     """
-    return NAMESPACE_PATTERN.match(namespace) is not None and len(namespace) <= PG_NAMEDATALEN
+    return (
+        isinstance(namespace, str)
+        and NAMESPACE_PATTERN.fullmatch(namespace) is not None
+        and len(namespace) <= PG_NAMEDATALEN
+    )
 
 
 def create_namespace_schema(
@@ -385,7 +393,9 @@ def check_namespace_auth_key(namespace: str, secret: str) -> str | None:
 
     with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
-            f"SELECT access_level FROM {namespace}.namespace_auth WHERE key_hash = %s",
+            sql.SQL("SELECT access_level FROM {}.namespace_auth WHERE key_hash = %s").format(
+                sql.Identifier(namespace)
+            ),
             (key_hash,),
         )
         row = cursor.fetchone()

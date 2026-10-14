@@ -1,0 +1,23 @@
+# Plugins that always run under the deprecated sandbox rules, even when they load
+# cleanly under the current ones.
+#
+# One HMAC-SHA256 digest per plugin, keyed with LEGACY_SANDBOX_ALLOWLIST_KEY.
+#
+# This list is a ratchet: it may shrink as plugins are brought up to the current
+# rules, and must not grow.
+#
+# entries: 13
+# generated: 2026-10-13
+0a9bda5c662c0bfbff0eefa80708cbc3b8657787906206b12aa5f2c81b0f6a34
+1279029cfc6626c39548cf4776f0f7fed492163fc580034a9dfb02529fa48b46
+1940f707a5aaff5b5d8cd75f7aba8fafd83090473cac339be691001dff86266b
+24a0a0f2dda7d4473d27e5642e2178b818a5c574a62071c0120c1330b481f5da
+310c1b4de2e9ea3c08cb6a3b5e41158b6689391ed4154c2dfeb2675a65a800b6
+37bd2bf04d7b74a90c7b6d46cd41ab4ae4e36eeabd461f871697dbf26858f42d
+5ea5eb6b5ee75239cdcfc583063175ac4d7e0a2191732b2d131b598dd57f364d
+79803686b9e2dd7f404fa146a7fde674fae2433c4f79ee864b6ee232336b72dc
+89dac781a8c814c5470f0c1e50138ed84c06ffb4287b177f2ac048d749d2cc00
+9386de8d0a39c98cda7b50650067488b9b52dd9595051f48d25460efd92776f6
+a5c1f6d921815b19022c51485f32689ffa35dafb4c44b2c16d07dc283e2920a9
+c1a9dc9f29730aa8fd1b3a69e79d9e65950590bcf9dea79152d1ef17e856169f
+e158bc9a98e4bc8b7ba92e9e27afae964d5b3c7f074866d13de2063482eab92a

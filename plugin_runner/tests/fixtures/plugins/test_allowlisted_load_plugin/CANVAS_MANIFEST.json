@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_allowlisted_load_plugin",
+    "description": "A helper reading a name its allowed module does not grant.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_allowlisted_load_plugin.handlers.handlers:MatchCheck",
+                "description": "MatchCheck",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

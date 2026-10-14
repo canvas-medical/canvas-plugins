@@ -154,10 +154,10 @@ class TestVerifyNamespaceAccessFunction:
 
         check_namespace_auth_key("org__shared_data", "some_key")
 
-        # Check that the SQL includes the correct namespace schema
+        # Check that the SQL names the namespace schema as a quoted identifier
         call_args = mock_cursor.execute.call_args
-        sql = call_args[0][0]
-        assert "org__shared_data.namespace_auth" in sql
+        statement = call_args[0][0]
+        assert '"org__shared_data".namespace_auth' in statement.as_string()
 
     def test_key_hash_is_consistent(self) -> None:
         """Same secret should always produce the same hash."""

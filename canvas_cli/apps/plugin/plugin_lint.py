@@ -138,50 +138,20 @@ def _construct_findings(plugin_dir: Path) -> list[LintFinding]:
                 )
             elif isinstance(node, ast.Call):
                 name = _call_name(node)
-                if name == "setattr" and isinstance(node.func, ast.Name):
-                    findings.append(
-                        LintFinding(
-                            "error",
-                            f"{rel}:{node.lineno}",
-                            "setattr-blocked",
-                            "`setattr()` is blocked by the sandbox. Use direct "
-                            "attribute assignment (`obj.attr = value`) instead.",
-                        )
-                    )
-                elif name == "delattr" and isinstance(node.func, ast.Name):
-                    findings.append(
-                        LintFinding(
-                            "error",
-                            f"{rel}:{node.lineno}",
-                            "delattr-blocked",
-                            "`delattr()` is blocked by the sandbox. Use `del obj.attr`.",
-                        )
-                    )
-                elif name == "bytearray" and isinstance(node.func, ast.Name):
-                    findings.append(
-                        LintFinding(
-                            "error",
-                            f"{rel}:{node.lineno}",
-                            "bytearray-blocked",
-                            "`bytearray` is not available in the sandbox. Use `bytes` "
-                            "for binary data.",
-                        )
-                    )
-                elif name == "type" and isinstance(node.func, ast.Name):
-                    # `type` is absent from the sandbox builtins entirely, so every
-                    # call fails with NameError -- not just the 3-argument dynamic
-                    # class creation form. See test_type_is_inaccessible in
-                    # plugin_runner/tests/test_sandbox.py.
+                if (
+                    name == "type"
+                    and isinstance(node.func, ast.Name)
+                    and (len(node.args) != 1 or node.keywords)
+                ):
+                    # The sandbox's `type` takes one argument; the three-argument
+                    # form that builds a class raises TypeError.
                     findings.append(
                         LintFinding(
                             "error",
                             f"{rel}:{node.lineno}",
                             "type-blocked",
-                            "`type()` is not available in the sandbox and raises "
-                            "`NameError` on any call. Use `isinstance(x, SomeClass)` to "
-                            "test a type or `x.__class__.__name__` to read its name, and "
-                            "declare classes normally with `class … :` rather than "
-                            "`type(name, bases, dict)`.",
+                            "`type()` takes one argument in the sandbox. Declare classes "
+                            "with `class … :` rather than `type(name, bases, dict)`.",
                         )
                     )
     return findings

@@ -14,6 +14,8 @@ import typer
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
+from plugin_runner.plugin_runner import HandlerLoadResult
+from plugin_runner.sandbox import SandboxMode
 
 from .plugin import (
     _build_package,
@@ -455,7 +457,7 @@ def test_install_blocks_on_sandbox_violation(
     plugin = tmp_path / "bad_plugin"
     (plugin / "handlers").mkdir(parents=True)
     (plugin / "CANVAS_MANIFEST.json").write_text('{"name": "bad_plugin"}')
-    (plugin / "handlers" / "h.py").write_text("setattr(object(), 'x', 1)\n")
+    (plugin / "handlers" / "h.py").write_text("C = type('C', (object,), {})\n")
 
     with pytest.raises(typer.Exit):
         install(
@@ -1771,6 +1773,61 @@ def test_validate_plugin_loads_success(tmp_path: Path, capsys: pytest.CaptureFix
     captured = capsys.readouterr()
     assert "✓ clean_loads_plugin.handlers.my_handler:Handler" in captured.out
     assert "load cleanly" in captured.out
+
+
+_MISSING_MEMBER_HANDLER = """
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
+
+CANCELED = AppointmentProgressStatus.NOT_A_MEMBER
+
+
+class Handler(BaseHandler):
+    def compute(self):
+        return []
+"""
+
+
+def test_validate_plugin_loads_warns_about_names_that_do_not_exist(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A name nothing defines still loads, as None, and validation names it as something
+    that will stop working.
+    """
+    plugin = _scaffold_plugin(tmp_path / "missing_member_plugin", _MISSING_MEMBER_HANDLER)
+
+    _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "✓ missing_member_plugin.handlers.my_handler:Handler" in captured.out
+    assert "AppointmentProgressStatus.NOT_A_MEMBER" in captured.out
+    assert "will raise" in captured.out
+
+
+def test_validate_plugin_loads_reports_only_pass_or_fail(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """Whatever rule set the instance would apply, validation reports a handler as loading
+    or not, and says nothing about which rules it loaded under.
+    """
+    plugin = _scaffold_plugin(tmp_path / "older_loads_plugin", _CLEAN_HANDLER)
+    loaded = HandlerLoadResult(
+        handler={"class": "older_loads_plugin.handlers.my_handler:Handler"},
+        name_and_class="older_loads_plugin.handlers.my_handler:Handler",
+        handler_class="Handler",
+        scope={},
+        error=None,
+        report=False,
+        sandbox_mode=SandboxMode.LEGACY_PERMISSIVE,
+    )
+
+    with patch("canvas_cli.apps.plugin.plugin.sandbox_plugin_handlers", return_value=[loaded]):
+        _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "✓ older_loads_plugin.handlers.my_handler:Handler" in captured.out
+    assert "⚠" not in captured.out
+    assert "deprecated" not in captured.out.lower()
 
 
 def test_validate_plugin_loads_surfaces_sandbox_violation(

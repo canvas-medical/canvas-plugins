@@ -3,15 +3,19 @@ from __future__ import annotations
 import ast
 import builtins
 import importlib
+import inspect
 import json
 import logging
 import operator
+import string
 import sys
 import traceback
 import types
 from _ast import AnnAssign
-from collections.abc import Generator, Iterable, Sequence
-from contextlib import contextmanager
+from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
+from contextlib import AbstractContextManager, contextmanager, nullcontext
+from contextvars import ContextVar
+from enum import StrEnum
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
@@ -36,7 +40,29 @@ from RestrictedPython.transformer import (
     copy_locations,
 )
 
+from plugin_runner.sandbox_allowlists import is_blessed_import
+
 logger = logging.getLogger("plugin_runner_logger")
+
+
+class SandboxMode(StrEnum):
+    """Which set of sandbox rules a `Sandbox` enforces.
+
+    `STRICT` is the current rule set and the default. `LEGACY_PERMISSIVE` is the previous
+    one, deprecated and kept only so that a plugin written against it keeps loading; the
+    plugin runner uses it when a strict load fails and reports each use to Sentry. It
+    will be removed, at which point a plugin that depends on it stops loading.
+    """
+
+    STRICT = "strict"
+    LEGACY_PERMISSIVE = "legacy-permissive"
+
+
+# The plugin modules one load has evaluated, shared by every sandbox in that load. Under
+# `STRICT` each value is the module object the load built, which is what the load's
+# imports resolve to; under `LEGACY_PERMISSIVE` it is `True`.
+EvaluatedModules = dict[str, "bool | types.ModuleType"]
+
 
 if TYPE_CHECKING:
 
@@ -84,17 +110,44 @@ def suppress_model_registration() -> Generator[None, None, None]:
         apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
 
 
+# The rounding methods numbers define; `math.floor` and friends call the same ones.
+_NUMERIC_ROUNDING_METHODS = {"__ceil__", "__floor__", "__round__", "__trunc__"}
+
+# Private names plugin code reads on SDK objects, by the class that defines them.
+_READABLE_SDK_PRIVATE_NAMES = {
+    "canvas_sdk.clients.canvas_fhir.client.CanvasFhir": frozenset({"_base_url", "_get_headers"}),
+}
+
+
+def _is_readable_sdk_private(ob: Any, name: str) -> bool:
+    """Whether `name` is a private name plugin code may read on `ob`."""
+    return any(
+        name in _READABLE_SDK_PRIVATE_NAMES.get(f"{cls.__module__}.{cls.__qualname__}", ())
+        for cls in type(ob).__mro__
+    )
+
+
+# Every builtin exception and warning class, so an except clause naming one works.
+_BUILTIN_EXCEPTIONS = {
+    name: value
+    for name, value in vars(builtins).items()
+    if not name.startswith("_") and isinstance(value, type) and issubclass(value, BaseException)
+}
+
+
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__annotations__",
     "__args__",
     "__class__",
     "__dict__",
+    "__doc__",
     "__eq__",
     "__init__",
     "__members__",
     "__name__",
     "__origin__",
     "__traceback__",
+    *_NUMERIC_ROUNDING_METHODS,
 }
 
 
@@ -103,22 +156,128 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__args__",
     "__class__",
     "__dict__",
+    "__doc__",
     "__eq__",
     "__init__",
     "__members__",
     "__name__",
     "__origin__",
     "__traceback__",
+    *_NUMERIC_ROUNDING_METHODS,
 }
 
 
+_NO_DEFAULT: Any = object()
+
+
+#: Names read as None because nothing defines them, collected while `canvas validate` loads a
+#: plugin.
+_missing_attribute_reads: ContextVar[list[str] | None] = ContextVar(
+    "missing_attribute_reads", default=None
+)
+
+#: Names the sandbox binds in each plugin module's scope to guard what plugin code does,
+#: which plugin code cannot bind itself.
+GUARD_NAMES = frozenset(
+    {
+        "_apply_",
+        "_getattr_",
+        "_getitem_",
+        "_getiter_",
+        "_inplacevar_",
+        "_iter_unpack_sequence_",
+        "_print_",
+        "_print",
+        "_unpack_sequence_",
+        "_write_",
+    }
+)
+
+#: Names already logged, by plugin, so each is logged once per process.
+_logged_missing_attributes: dict[str, set[str]] = {}
+
+#: How many missing names are logged per plugin, and how much of each name.
+_MAX_LOGGED_MISSING_ATTRIBUTES = 200
+_MAX_MISSING_ATTRIBUTE_LABEL_LENGTH = 100
+
+
+@contextmanager
+def collect_missing_attribute_reads() -> Generator[list[str], None, None]:
+    """Collect each name read as None because nothing defines it, in the order first read."""
+    reads: list[str] = []
+    token = _missing_attribute_reads.set(reads)
+
+    try:
+        yield reads
+    finally:
+        _missing_attribute_reads.reset(token)
+
+
+def _note_missing_attribute(plugin: str, ob: Any, name: str) -> None:
+    """Record that `plugin` read `name`, which nothing on `ob` defines."""
+    owner = ob.__name__ if isinstance(ob, type | types.ModuleType) else type(ob).__name__
+    label = f"{owner}.{name}"
+
+    if len(label) > _MAX_MISSING_ATTRIBUTE_LABEL_LENGTH:
+        label = f"{label[:_MAX_MISSING_ATTRIBUTE_LABEL_LENGTH]}..."
+
+    if (reads := _missing_attribute_reads.get()) is not None and label not in reads:
+        reads.append(label)
+
+    logged = _logged_missing_attributes.setdefault(plugin, set())
+
+    if label not in logged and len(logged) < _MAX_LOGGED_MISSING_ATTRIBUTES:
+        logged.add(label)
+        logger.warning(
+            'Plugin "%s" read %r, which does not exist; it reads as None today and will '
+            "raise an AttributeError in a future release.",
+            plugin,
+            label,
+        )
+
+
+def _getattr_or_default(_ob: Any, name: str, default: Any, plugin: str) -> Any:
+    """`getattr`, falling back to `default` when the caller supplied one.
+
+    Without a default, an AttributeError from an attribute the object defines, such as a
+    property raising Django's RelatedObjectDoesNotExist, propagates as plain attribute
+    access does. A name nothing defines reads as None, as it always has in the sandbox,
+    and is reported so plugins can stop relying on it.
+    """
+    if default is not _NO_DEFAULT:
+        return getattr(_ob, name, default)
+
+    try:
+        return getattr(_ob, name)
+    except AttributeError:
+        if inspect.getattr_static(_ob, name, _NO_DEFAULT) is not _NO_DEFAULT:
+            raise
+
+        _note_missing_attribute(plugin, _ob, name)
+
+        return None
+
+
 class _SafeClass:
-    """A read-only proxy for __class__ that only exposes __name__."""
+    """A read-only proxy for a class that only exposes its name and its ancestors' names."""
 
-    __slots__ = ("__name__",)
+    __slots__ = ("__name__", "_ancestor_names")
 
-    def __init__(self, name: str) -> None:
+    _ancestor_names: tuple[str, ...]
+
+    def __init__(self, name: str, ancestor_names: tuple[str, ...] = ()) -> None:
         object.__setattr__(self, "__name__", name)
+        object.__setattr__(self, "_ancestor_names", ancestor_names)
+
+    @classmethod
+    def of(cls, klass: type) -> _SafeClass:
+        """The proxy for `klass`."""
+        return cls(klass.__name__, tuple(ancestor.__name__ for ancestor in klass.__mro__))
+
+    @property
+    def __mro__(self) -> tuple[_SafeClass, ...]:
+        """The class and its ancestors, each as a name-only proxy."""
+        return tuple(_SafeClass(name) for name in self._ancestor_names)
 
     def __getattr__(self, name: str) -> NoReturn:
         raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
@@ -128,6 +287,34 @@ class _SafeClass:
 
     def __repr__(self) -> str:
         return f"<SafeClass '{self.__name__}'>"
+
+
+class _SafeType:
+    """The `type` plugin code sees.
+
+    Called with one argument it answers exactly what reading `__class__` does; the
+    three-argument form that builds a class is refused. `isinstance(x, type)` and
+    `issubclass(x, type)` answer as they do in Python.
+    """
+
+    __slots__ = ("_class_of",)
+
+    _class_of: Callable[[Any, str], Any]
+
+    def __init__(self, safe_getattr: Callable[[Any, str], Any]) -> None:
+        self._class_of = safe_getattr
+
+    def __call__(self, *args: Any) -> Any:
+        if len(args) != 1:
+            raise TypeError("type() takes exactly one argument in plugin code")
+
+        return self._class_of(args[0], "__class__")
+
+    def __instancecheck__(self, instance: Any) -> bool:
+        return isinstance(instance, type)
+
+    def __subclasscheck__(self, subclass: Any) -> bool:
+        return issubclass(subclass, type)
 
 
 class _SafeCode:
@@ -164,18 +351,134 @@ class _SafeFrame:
     Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
     """
 
-    __exports__ = ("f_code",)
-    __slots__ = ("f_code",)
+    __exports__ = ("f_code", "f_lineno")
+    __slots__ = ("f_code", "f_lineno")
     f_code: _SafeCode
+    f_lineno: int
 
     def __init__(self, frame: types.FrameType) -> None:
         object.__setattr__(self, "f_code", _SafeCode(frame.f_code))
+        object.__setattr__(self, "f_lineno", frame.f_lineno)
 
     def __setattr__(self, attr: str, value: Any) -> NoReturn:
         raise AttributeError("Cannot set attributes on frame object")
 
     def __repr__(self) -> str:
         return f"<SafeFrame {self.f_code!r}>"
+
+
+class _SafeField:
+    """A read-only view of a model field for introspection.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = (
+        "attname",
+        "blank",
+        "choices",
+        "column",
+        "concrete",
+        "default",
+        "get_internal_type",
+        "is_relation",
+        "many_to_many",
+        "many_to_one",
+        "max_length",
+        "name",
+        "null",
+        "one_to_many",
+        "one_to_one",
+        "related_model",
+    )
+    __slots__ = ("_field",)
+
+    def __init__(self, field: Any) -> None:
+        object.__setattr__(self, "_field", field)
+
+    def __getattr__(self, name: str) -> Any:
+        if name not in _SafeField.__exports__:
+            raise AttributeError(name)
+
+        field = object.__getattribute__(self, "_field")
+
+        if name == "get_internal_type":
+            internal_type = field.get_internal_type()
+            return lambda: internal_type
+
+        if name == "default":
+            default = getattr(field, "default", None)
+            return None if callable(default) else default
+
+        return getattr(field, name, None)
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on a model field")
+
+    def __repr__(self) -> str:
+        return f"<SafeField {object.__getattribute__(self, '_field').name}>"
+
+
+class _SafeModelMeta:
+    """A read-only view of an SDK model's ``_meta`` for field introspection.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = (
+        "app_label",
+        "concrete_fields",
+        "db_table",
+        "fields",
+        "get_field",
+        "get_fields",
+        "local_fields",
+        "model_name",
+        "pk",
+        "verbose_name",
+        "verbose_name_plural",
+    )
+    __slots__ = ("_options",)
+
+    def __init__(self, options: Any) -> None:
+        object.__setattr__(self, "_options", options)
+
+    def __getattr__(self, name: str) -> Any:
+        if name not in _SafeModelMeta.__exports__:
+            raise AttributeError(name)
+
+        options = object.__getattribute__(self, "_options")
+
+        if name == "get_field":
+            return lambda field_name: _SafeField(options.get_field(field_name))
+
+        if name == "get_fields":
+            return lambda include_parents=True, include_hidden=False: tuple(
+                _SafeField(field)
+                for field in options.get_fields(
+                    include_parents=include_parents, include_hidden=include_hidden
+                )
+            )
+
+        if name in ("concrete_fields", "fields", "local_fields"):
+            return tuple(_SafeField(field) for field in getattr(options, name))
+
+        if name == "pk":
+            return _SafeField(options.pk) if options.pk is not None else None
+
+        return str(getattr(options, name))
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on model metadata")
+
+    def __repr__(self) -> str:
+        return f"<SafeModelMeta {object.__getattribute__(self, '_options').label}>"
+
+
+def _is_model_options(value: Any) -> bool:
+    """Whether `value` is a Django model's `_meta`, recognized without importing Django."""
+    cls = type(value)
+    return cls.__name__ == "Options" and cls.__module__ == "django.db.models.options"
 
 
 class _SafeTraceback:
@@ -249,6 +552,22 @@ def _extract_exc_frames() -> list[_SafeFrameSummary]:
     return [_SafeFrameSummary(frame) for frame in frames]
 
 
+# Method names the sandbox does not expose, despite not starting with an underscore.
+RESTRICTED_METHOD_NAMES = {
+    # Loader methods, which resolve modules outside _safe_import
+    "load_module",
+    "exec_module",
+    "create_module",
+    "find_module",
+    "find_spec",
+    "find_loader",
+    # Code execution
+    "exec",
+    "eval",
+    # Type hierarchy traversal
+    "mro",
+}
+
 STANDARD_LIBRARY_MODULES = {
     "__future__": {
         "annotations",
@@ -272,6 +591,7 @@ STANDARD_LIBRARY_MODULES = {
     "collections": {
         "Counter",
         "defaultdict",
+        "OrderedDict",
     },
     "dataclasses": {
         "asdict",
@@ -284,6 +604,10 @@ STANDARD_LIBRARY_MODULES = {
         "is_dataclass",
         "make_dataclass",
         "replace",
+    },
+    "copy": {
+        "copy",
+        "deepcopy",
     },
     "datetime": {
         "date",
@@ -302,6 +626,12 @@ STANDARD_LIBRARY_MODULES = {
     "decimal": {
         "Decimal",
     },
+    "email.mime.multipart": {
+        "MIMEMultipart",
+    },
+    "email.mime.text": {
+        "MIMEText",
+    },
     "enum": {
         "Enum",
         "StrEnum",
@@ -311,6 +641,7 @@ STANDARD_LIBRARY_MODULES = {
         "wraps",
     },
     "hashlib": {
+        "sha1",
         "sha256",
     },
     "hmac": {
@@ -325,27 +656,43 @@ STANDARD_LIBRARY_MODULES = {
         "HTML",
         "unescape",
     },
+    "io": {
+        "BytesIO",
+        "StringIO",
+    },
     "json": {
+        "dump",
         "dumps",
+        "load",
         "loads",
         "JSONDecodeError",
     },
     "operator": {
         "and_",
+        "or_",
     },
     "random": {
+        "choice",
         "choices",
+        "Random",
+        "random",
+        "sample",
         "uniform",
         "randint",
     },
     "re": {
         "compile",
         "DOTALL",
+        "escape",
         "I",
         "IGNORECASE",
         "findall",
+        "finditer",
         "fullmatch",
+        "M",
         "match",
+        "MULTILINE",
+        "S",
         "search",
         "split",
         "sub",
@@ -359,11 +706,16 @@ STANDARD_LIBRARY_MODULES = {
         "token_hex",
         "token_urlsafe",
     },
+    "statistics": {
+        "median",
+    },
     "string": {
         "ascii_lowercase",
         "digits",
     },
     "time": {
+        "monotonic",
+        "perf_counter",
         "sleep",
         "time",
         "time_ns",
@@ -398,16 +750,49 @@ STANDARD_LIBRARY_MODULES = {
         "parse",
     },
     "urllib.parse": {
+        "parse_qs",
         "urlencode",
+        "urlparse",
         "quote",
         "unquote",
     },
     "uuid": {
+        "NAMESPACE_URL",
         "uuid4",
+        "uuid5",
         "UUID",
     },
     "defusedxml.ElementTree": {
         "fromstring",
+    },
+    "xml.etree": {
+        "ElementTree",
+    },
+    # Parses untrusted input, but only expands internal entities: external entities are
+    # not resolved, so it reads no files and makes no requests. Entity expansion can be
+    # made costly, which a plugin can already do with a loop.
+    "xml.etree.ElementTree": {
+        "Element",
+        "ElementTree",
+        "QName",
+        "SubElement",
+        "fromstring",
+        "indent",
+        "iterparse",
+        "parse",
+        "register_namespace",
+        "tostring",
+    },
+    # Compression is pure computation: no file, socket or process behind it.
+    "zlib": {
+        "MAX_WBITS",
+        "adler32",
+        "compress",
+        "compressobj",
+        "crc32",
+        "decompress",
+        "decompressobj",
+        "error",
     },
     "zoneinfo": {
         "ZoneInfo",
@@ -417,12 +802,26 @@ STANDARD_LIBRARY_MODULES = {
 
 THIRD_PARTY_MODULES = {
     "arrow": {
+        "Arrow",
         "get",
         "now",
+        "parser",
         "utcnow",
+    },
+    "arrow.parser": {
+        "ParserError",
+        "ParserMatchError",
+    },
+    "certifi": {
+        "where",
     },
     "django.contrib.postgres.indexes": {
         "GinIndex",
+    },
+    "django.core.exceptions": {
+        "ObjectDoesNotExist",
+        "PermissionDenied",
+        "ValidationError",
     },
     "django.db": {
         "DatabaseError",
@@ -500,6 +899,17 @@ THIRD_PARTY_MODULES = {
         "Prefetch",
         "QuerySet",
     },
+    "django.utils": {
+        "timezone",
+    },
+    "django.utils.timezone": {
+        "get_current_timezone",
+        "localdate",
+        "localtime",
+        "make_aware",
+        "now",
+        "utc",
+    },
     "django.utils.functional": {
         "cached_property",
     },
@@ -524,17 +934,51 @@ THIRD_PARTY_MODULES = {
         "process",
         "utils",
     },
+    "rapidfuzz.fuzz": {
+        "partial_ratio",
+        "partial_ratio_alignment",
+        "partial_token_ratio",
+        "partial_token_set_ratio",
+        "partial_token_sort_ratio",
+        "QRatio",
+        "ratio",
+        "token_ratio",
+        "token_set_ratio",
+        "token_sort_ratio",
+        "WRatio",
+    },
+    "rapidfuzz.process": {
+        "cdist",
+        "cpdist",
+        "extract",
+        "extract_iter",
+        "extractOne",
+    },
+    "rapidfuzz.utils": {
+        "default_process",
+    },
     "requests": {
         "codes",
         "delete",
+        "exceptions",
         "get",
+        "HTTPError",
         "patch",
         "post",
         "put",
         "request",
+        "Request",
         "RequestException",
         "Response",
         "Session",
+        "Timeout",
+    },
+    "requests.exceptions": {
+        "ConnectionError",
+        "HTTPError",
+        "JSONDecodeError",
+        "RequestException",
+        "Timeout",
     },
     "snowflake.connector": {
         "apilevel",
@@ -568,6 +1012,93 @@ ALLOWED_MODULES = frozendict(
 
 def _is_known_module(name: str) -> bool:
     return name in ALLOWED_MODULES
+
+
+def _safe_getitem(ob: Any, index: Any) -> Any:
+    """
+    Prevent access to underscore-prefixed item keys on external objects.
+
+    Built-in containers and every dict, whatever its class, may hold underscore keys:
+    they are the plugin's data, not an object's namespace.
+    """
+    if isinstance(index, str) and index.startswith("_") and not isinstance(ob, dict):
+        if isinstance(ob, types.ModuleType):
+            module = ob.__name__
+        elif isinstance(ob, type):
+            module = ob.__module__
+        else:
+            module = ob.__class__.__module__
+
+        if module != "builtins" and module not in ALLOWED_MODULES:
+            raise AttributeError(f'"{index}" is an invalid item name because it starts with "_"')
+
+    return ob[index]
+
+
+def _legacy_safe_getitem(ob: Any, index: Any) -> Any:
+    """Reject every underscore-prefixed item key, including on plugin-owned containers.
+
+    The `LEGACY_PERMISSIVE` counterpart to `_safe_getitem`.
+    """
+    if isinstance(index, str) and index.startswith("_"):
+        raise AttributeError(f'"{index}" is an invalid item name because it starts with "_"')
+
+    return ob[index]
+
+
+def _public_attributes(namespace: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of an object's namespace without its underscore-prefixed names.
+
+    A copy rather than a view, so nothing done to the result reaches the object, and
+    the private names are never in it to be reached by any route.
+    """
+    return {
+        key: value
+        for key, value in namespace.items()
+        if not (isinstance(key, str) and key.startswith("_"))
+    }
+
+
+class _SafeFormatter(string.Formatter):
+    """A `str.format` that cannot traverse into the values it formats.
+
+    The format mini-language performs its own attribute and item lookups inside
+    CPython, so `"{0.__class__.__init__.__globals__}".format(x)` reaches the real
+    builtins without ever passing through `_safe_getattr` or `_safe_getitem`.
+    Substitution itself is harmless; only the traversal has to go, which leaves
+    `"{} {name}".format(value, name=other)` working as written.
+    """
+
+    def get_field(self, field_name: str, args: Any, kwargs: Any) -> Any:
+        """Resolve a replacement field, refusing to walk into the value."""
+        if "." in field_name or "[" in field_name:
+            raise NotImplementedError(
+                f"Attribute and item access inside a format string is not allowed: "
+                f'"{{{field_name}}}". Read the value out first, then format it.'
+            )
+
+        return super().get_field(field_name, args, kwargs)
+
+
+_SAFE_FORMATTER = _SafeFormatter()
+
+
+def _safe_format(template: str) -> Callable[..., str]:
+    """Return a `format` bound to `template` that cannot traverse its arguments."""
+
+    def format(*args: Any, **kwargs: Any) -> str:
+        return _SAFE_FORMATTER.vformat(template, args, kwargs)
+
+    return format
+
+
+def _safe_format_map(template: str) -> Callable[[Any], str]:
+    """Return a `format_map` bound to `template` that cannot traverse its mapping."""
+
+    def format_map(mapping: Any) -> str:
+        return _SAFE_FORMATTER.vformat(template, (), mapping)
+
+    return format_map
 
 
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
@@ -652,6 +1183,9 @@ class Sandbox:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             super().__init__(*args, **kwargs)
 
+            # ids of the `def` statements directly in a class body
+            self.method_ids: set[int] = set()
+
             # we can't just add a self attribute here so we abuse used_names
             # which gets returned as part of the CompileResult
             self.used_names["__imported_names__"] = {
@@ -707,6 +1241,8 @@ class Sandbox:
 
         def visit_MatchAs(self, node: ast.MatchAs) -> ast.MatchAs:
             """Allow `match`."""
+            self.check_binding(node, node.name)
+
             return self.node_contents_visit(node)
 
         def visit_MatchClass(self, node: ast.MatchClass) -> ast.MatchClass:
@@ -715,6 +1251,8 @@ class Sandbox:
 
         def visit_MatchMapping(self, node: ast.MatchMapping) -> ast.MatchMapping:
             """Allow `match`."""
+            self.check_binding(node, node.rest)
+
             return self.node_contents_visit(node)
 
         def visit_MatchOr(self, node: ast.MatchOr) -> ast.MatchOr:
@@ -731,6 +1269,8 @@ class Sandbox:
 
         def visit_MatchStar(self, node: ast.MatchStar) -> ast.MatchStar:
             """Allow `match`."""
+            self.check_binding(node, node.name)
+
             return self.node_contents_visit(node)
 
         def visit_MatchValue(self, node: ast.MatchValue) -> ast.MatchValue:
@@ -758,7 +1298,72 @@ class Sandbox:
                 if name.asname:
                     self.check_name(node, name.asname)
 
+                self.check_binding(node, name.asname or name.name.split(".")[0])
+
             return self.node_contents_visit(node)
+
+        def check_binding(
+            self,
+            node: ast.AST,
+            name: str | None,
+            allow_double_underscore: bool = False,
+        ) -> None:
+            """Refuse binding a name the sandbox provides, or a double-underscore name.
+
+            `__all__` binds freely; other double-underscore names bind only where
+            `allow_double_underscore` says so.
+            """
+            if name is None:
+                return
+
+            if name in GUARD_NAMES:
+                self.error(node, f'"{name}" is a reserved name.')
+            elif name.startswith("__") and name != "__all__" and not allow_double_underscore:
+                self.error(node, f"Assignments to '{name}' are not allowed.")
+
+        def check_function_argument_names(self, node: ast.FunctionDef | ast.Lambda) -> None:
+            """Check argument names; a double-underscore argument is a local, so it binds."""
+            super().check_function_argument_names(node)
+
+            arguments = node.args
+
+            for arg in (
+                *arguments.posonlyargs,
+                *arguments.args,
+                *arguments.kwonlyargs,
+                arguments.vararg,
+                arguments.kwarg,
+            ):
+                if arg is not None:
+                    self.check_binding(node, arg.arg, allow_double_underscore=True)
+
+        def visit_Name(self, node: ast.Name) -> ast.AST:
+            """Check names bound or deleted."""
+            if isinstance(node.ctx, ast.Store | ast.Del):
+                self.check_binding(node, node.id)
+
+            return super().visit_Name(node)
+
+        def visit_ExceptHandler(self, node: ast.ExceptHandler) -> ast.AST:
+            """Check the name an exception binds."""
+            self.check_binding(node, node.name)
+
+            return super().visit_ExceptHandler(node)
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+            """Check the function's name; a method may have a double-underscore name."""
+            self.check_binding(node, node.name, allow_double_underscore=id(node) in self.method_ids)
+
+            return super().visit_FunctionDef(node)
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
+            """Check the class's name, and note its methods."""
+            self.check_binding(node, node.name)
+            self.method_ids.update(
+                id(child) for child in node.body if isinstance(child, ast.FunctionDef)
+            )
+
+            return super().visit_ClassDef(node)
 
         def check_name(
             self,
@@ -776,7 +1381,11 @@ class Sandbox:
             if name is None:
                 return
 
-            if (
+            if name == "__metaclass__":
+                # The sandbox binds the real `type` under this name for the class statements
+                # it rewrites, which never pass through here.
+                self.error(node, f'"{name}" is a reserved name.')
+            elif (
                 name.startswith("_")
                 and name != "_"
                 and not (
@@ -794,28 +1403,6 @@ class Sandbox:
                 )
             elif name in FORBIDDEN_FUNC_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
-
-        def visit_Assign(self, node: ast.Assign) -> ast.AST:
-            """Check for forbidden assignments."""
-            for target in node.targets:
-                if (
-                    isinstance(target, ast.Name)
-                    and target.id.startswith("__")
-                    and target.id != "__all__"
-                ):
-                    self.error(node, f"Assignments to '{target.id}' are not allowed.")
-                elif isinstance(target, ast.Tuple | ast.List):
-                    self.check_for_name_in_iterable(target)
-
-            return super().visit_Assign(node)
-
-        def check_for_name_in_iterable(self, iterable_node: ast.Tuple | ast.List) -> None:
-            """Check if any element of an iterable is a forbidden assignment."""
-            for elt in iterable_node.elts:
-                if isinstance(elt, ast.Name) and elt.id.startswith("__") and elt.id != "__all__":
-                    self.error(iterable_node, f"Assignments to '{elt.id}' are not allowed.")
-                elif isinstance(elt, ast.Tuple | ast.List):
-                    self.check_for_name_in_iterable(elt)
 
         def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
             """Checks and mutates attribute access/assignment.
@@ -913,6 +1500,7 @@ class Sandbox:
                         node.value,
                         ast.Constant(node_name(node.value)),
                         ast.Constant(node_name(node.slice)),
+                        ast.Constant(True),
                     ],
                     keywords=[],
                 )
@@ -929,10 +1517,12 @@ class Sandbox:
         self,
         source_code: Path,
         namespace: str,
-        evaluated_modules: dict[str, bool] | None = None,
+        evaluated_modules: EvaluatedModules | None = None,
+        mode: SandboxMode = SandboxMode.STRICT,
     ) -> None:
         self.namespace = namespace or "handlers"
         self.package_name = self.namespace.split(".")[0]
+        self.mode = mode
 
         if not source_code.exists():
             raise FileNotFoundError(f"File not found: {source_code}")
@@ -941,7 +1531,7 @@ class Sandbox:
         self.source_code = source_code.read_text()
         package_path = _find_folder_in_path(source_code, self.package_name)
         self.base_path = package_path.parent if package_path else None
-        self._evaluated_modules: dict[str, bool] = (
+        self._evaluated_modules: EvaluatedModules = (
             evaluated_modules if evaluated_modules is not None else {}
         )
 
@@ -952,27 +1542,37 @@ class Sandbox:
             "__builtins__": {
                 **safe_builtins.copy(),
                 **utility_builtins.copy(),
+                **_BUILTIN_EXCEPTIONS,
                 "__import__": self._safe_import,
                 "all": builtins.all,
                 "any": builtins.any,
+                "ascii": builtins.ascii,
+                "bytearray": builtins.bytearray,
                 "classmethod": builtins.classmethod,
                 "dict": builtins.dict,
+                "dir": self._safe_dir,
                 "enumerate": builtins.enumerate,
                 "filter": builtins.filter,
+                "format": builtins.format,
                 "getattr": self._safe_getattr,
+                "setattr": self._safe_setattr,
+                "delattr": self._safe_delattr,
                 "hasattr": builtins.hasattr,
                 "iter": builtins.iter,
                 "list": builtins.list,
                 "map": builtins.map,
                 "max": builtins.max,
+                "memoryview": builtins.memoryview,
                 "min": builtins.min,
                 "next": builtins.next,
+                "NotImplemented": builtins.NotImplemented,
+                "type": _SafeType(self._safe_getattr),
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
                 "sum": builtins.sum,
                 "super": builtins.super,
-                "vars": builtins.vars,
+                "vars": self._safe_vars if self._strict else builtins.vars,
                 "extract_exc_frames": _extract_exc_frames,
             },
             "__is_plugin__": True,
@@ -980,7 +1580,7 @@ class Sandbox:
             "__name__": self.namespace,
             "_apply_": _apply,
             "_getattr_": self._safe_getattr,
-            "_getitem_": self._safe_getitem,
+            "_getitem_": _safe_getitem if self._strict else _legacy_safe_getitem,
             "_getiter_": _unrestricted,
             "_inplacevar_": _inplacevar,
             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
@@ -1013,6 +1613,22 @@ class Sandbox:
         """Return warnings encountered when compiling the source code."""
         return cast(tuple[str, ...], self.compile_result.warnings)
 
+    @property
+    def _strict(self) -> bool:
+        """Whether this sandbox enforces the current rule set."""
+        return self.mode is SandboxMode.STRICT
+
+    def _model_registration(self) -> AbstractContextManager[None]:
+        """Suppress Django model registration when a later real import will do it instead.
+
+        Under `LEGACY_PERMISSIVE`, `__import__` re-executes a plugin's model module and
+        that execution registers the canonical model classes; registering the sandbox's
+        copies as well would leave two class objects per model. Under `STRICT` the module
+        is only ever executed in the sandbox, so those classes are the canonical ones and
+        have to register themselves.
+        """
+        return nullcontext() if self._strict else suppress_model_registration()
+
     def _is_known_module(self, name: str) -> bool:
         return _is_known_module(name) or self._same_module(name)
 
@@ -1041,17 +1657,106 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
-            with suppress_model_registration():
-                Sandbox(
-                    module,
-                    namespace=module_name,
-                    evaluated_modules=self._evaluated_modules,
-                ).execute()
-
             self._evaluated_modules[module_name] = True
 
-        if sys.modules.get(module_name):
+            if self._execute_plugin_module(module_name, module):
+                return
+
+        if not self._strict and sys.modules.get(module_name):
             importlib.reload(sys.modules[module_name])
+
+    def _execute_plugin_module(self, module_name: str, path: Path) -> bool:
+        """Evaluate a plugin module in its own sandbox, publishing it when strict.
+
+        Returns whether the module was published to `sys.modules`.
+        """
+        # Publish before executing, the way the real import system does, so that a
+        # module importing its own package (`from pkg import sub` inside pkg/__init__.py)
+        # resolves to the partially-initialized module instead of not being found.
+        published = self._register_sandboxed_module(module_name, path, {}) if self._strict else None
+
+        try:
+            with self._model_registration():
+                sandbox = Sandbox(
+                    path,
+                    namespace=module_name,
+                    evaluated_modules=self._evaluated_modules,
+                    mode=self.mode,
+                )
+
+                if published is None:
+                    sandbox.execute()
+                else:
+                    # Run the body in the module's own namespace so each name is
+                    # visible to a circular importer as soon as it is defined.
+                    published.__dict__.update(sandbox.scope)
+                    sandbox.execute(published.__dict__)
+        except BaseException:
+            # A module that failed to execute must not stay visible half-built, and must
+            # not stay marked as evaluated: the next handler to import it would skip
+            # evaluation and report that the module is missing rather than why it failed.
+            self._evaluated_modules.pop(module_name, None)
+
+            if published is not None:
+                sys.modules.pop(module_name, None)
+
+            raise
+
+        return published is not None
+
+    def _register_sandboxed_module(
+        self,
+        module_name: str,
+        path: Path | None,
+        scope: dict[str, Any],
+    ) -> types.ModuleType:
+        """Record a sandbox-evaluated plugin module in this load and publish it.
+
+        Functions defined in the module keep the sandbox's `__builtins__` (and so its
+        `_safe_import`) in their `__globals__`, so a deferred import inside a method
+        resolves through the sandbox like a module-level one. Letting `importlib.reload`
+        or `__import__` populate the entry instead replaces it with a copy executed
+        outside the sandbox.
+
+        The load's own registry is what its imports resolve against. `sys.modules` gets
+        a copy for code that looks a module up by name, but a handler kept serving
+        after a refused reload has lost those entries and still has to find its modules.
+        """
+        module = types.ModuleType(module_name)
+
+        if path is not None:
+            module.__file__ = str(path)
+
+        module.__dict__.update(scope)
+        module.__is_plugin__ = True  # type: ignore[attr-defined]
+        self._evaluated_modules[module_name] = module
+        sys.modules[module_name] = module
+
+        # Mirror what the real import system does for a submodule: bind it as an
+        # attribute of its parent package so that `a.b.c` resolves by attribute
+        # walk, not by a fresh import from disk. Packages are evaluated leaf-first,
+        # so link in both directions rather than assuming the parent exists yet.
+        parent_name, _, leaf = module_name.rpartition(".")
+
+        if parent_name and (parent := self._published(parent_name)) is not None:
+            setattr(parent, leaf, module)
+
+        prefix = f"{module_name}."
+
+        for evaluated in self._evaluated_modules:
+            if not evaluated.startswith(prefix) or "." in evaluated[len(prefix) :]:
+                continue
+
+            if (child := self._published(evaluated)) is not None:
+                setattr(module, evaluated[len(prefix) :], child)
+
+        return module
+
+    def _published(self, module_name: str) -> types.ModuleType | None:
+        """Return the module this load built for `module_name`, if it built one."""
+        entry = self._evaluated_modules.get(module_name)
+
+        return entry if isinstance(entry, types.ModuleType) else None
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
         """Evaluate implicit imports in the sandbox."""
@@ -1068,14 +1773,15 @@ class Sandbox:
             if init_file.exists():
                 self._evaluated_modules[module_name] = True
 
-                with suppress_model_registration():
-                    Sandbox(
-                        init_file,
-                        namespace=module_name,
-                        evaluated_modules=self._evaluated_modules,
-                    ).execute()
+                self._execute_plugin_module(module_name, init_file)
             else:
                 self._evaluated_modules[module_name] = True
+
+                # A package directory with no __init__.py still has to exist as a
+                # module for the strict path, which resolves plugin imports by
+                # attribute walk instead of deferring to the import system.
+                if self._strict and self._published(module_name) is None:
+                    self._register_sandboxed_module(module_name, None, {})
 
         self._evaluate_implicit_imports(parent)
 
@@ -1090,8 +1796,13 @@ class Sandbox:
         _ob: Any,
         name: str | None = None,
         attribute: str | int | None = None,
+        item: bool = False,
     ) -> Any:
-        """Check if the given obj belongs to a protected resource."""
+        """Check if the given obj belongs to a protected resource.
+
+        `item` marks a subscript write (`obj[key] = value`), where `attribute` is the name of
+        the key expression rather than an attribute of `obj`.
+        """
         is_module = isinstance(_ob, types.ModuleType)
 
         if is_module:
@@ -1109,6 +1820,9 @@ class Sandbox:
                 value = dict.get(_ob, attribute)
             elif isinstance(_ob, list | tuple) and isinstance(attribute, int):
                 value = _ob.__getitem__(attribute)
+            elif item and isinstance(_ob, list | tuple):
+                # The key expression's name says nothing about the list's attributes.
+                value = None
             elif isinstance(attribute, str):
                 value = getattr(_ob, attribute, None)
             else:
@@ -1121,8 +1835,15 @@ class Sandbox:
             (name and name.split(".")[0] in self.imported_names["names"])
             # deny if it's anything callable
             or callable(value)
-            # deny writes to dictionary underscore keys
-            or (isinstance(_ob, dict) and isinstance(attribute, str) and attribute.startswith("_"))
+            # deny writes to dictionary underscore keys; the strict path exempts
+            # every dict, whose keys are the plugin's data rather than a foreign
+            # object's namespace
+            or (
+                isinstance(_ob, dict)
+                and isinstance(attribute, str)
+                and attribute.startswith("_")
+                and not self._strict
+            )
         ):
             # Deprecated: allow plugins to override _MAX_REQUEST_TIMEOUT_SECONDS on
             # Http instances. This will be removed in a future release.
@@ -1145,21 +1866,57 @@ class Sandbox:
 
     @staticmethod
     def _is_http_instance(_ob: Any) -> bool:
-        """Check if _ob is an instance of canvas_sdk.utils.http.Http."""
-        from canvas_sdk.utils.http import Http
+        """Check if _ob is an SDK HTTP client: an `Http` or a `ServiceClient`."""
+        from canvas_sdk.utils.http import Http, ServiceClient
 
-        return isinstance(_ob, Http)
+        return isinstance(_ob, Http | ServiceClient)
 
-    def _safe_getitem(self, ob: Any, index: Any) -> Any:
+    def _safe_vars(self, obj: Any = None) -> Any:
+        """Restricted vars() that filters private attributes on external objects."""
+        if obj is None:
+            raise TypeError("vars() requires an argument in sandboxed code")
+
+        if isinstance(obj, types.ModuleType):
+            module = obj.__name__
+        elif isinstance(obj, type):
+            module = obj.__module__
+        else:
+            module = obj.__class__.__module__
+
+        raw = builtins.vars(obj)
+
+        # A class's namespace is a mappingproxy rather than a dict, so check for any
+        # mapping, not only dicts.
+        if not self._same_module(module) and isinstance(raw, Mapping):
+            return self._external_namespace(obj, raw)
+
+        return raw
+
+    def _external_namespace(self, obj: Any, raw: Mapping[str, Any]) -> dict[str, Any]:
+        """Return the part of an outside object's namespace plugin code may see.
+
+        The same names `getattr` would allow, as a copy: for a module, the names its
+        allowlist entry grants (all public names if this plugin is blessed for it); for an
+        object declaring `__exports__`, those names; otherwise the public names.
         """
-        Prevent access to several classes of items.
-        """
-        if isinstance(index, str) and index.startswith("_"):
-            raise AttributeError(f'"{index}" is an invalid item name because it starts with "_"')
+        namespace = _public_attributes(dict(raw))
 
-        return ob[index]
+        if isinstance(obj, types.ModuleType):
+            if self._is_blessed_import(obj.__name__):
+                return namespace
 
-    def _safe_getattr(self, _ob: Any, name: Any, default: Any = None) -> Any:
+            allowed = ALLOWED_MODULES.get(obj.__name__, frozenset())
+
+            return {key: value for key, value in namespace.items() if key in allowed}
+
+        exports = getattr(obj, "__exports__", None)
+
+        if exports:
+            return {key: value for key, value in namespace.items() if key in exports}
+
+        return namespace
+
+    def _safe_getattr(self, _ob: Any, name: Any, default: Any = _NO_DEFAULT) -> Any:
         """
         Prevent access to several classes of attributes.
 
@@ -1177,18 +1934,33 @@ class Sandbox:
             module = _ob.__name__
         elif isinstance(_ob, type):
             module = _ob.__module__.split(".")[0]
+        elif (bound_class := getattr(_ob, "__self_class__", None)) is not None and isinstance(
+            _ob, super
+        ):
+            # super() resolves attributes on the instance it is bound to, so it is held to
+            # the same rules as that instance's class.
+            module = bound_class.__module__.split(".")[0]
         else:
             module = _ob.__class__.__module__.split(".")[0]
 
         if type(name) is not str:
             raise TypeError("type(name) must be str")
 
-        if name in ("format", "format_map") and (
-            isinstance(_ob, str) or (isinstance(_ob, type) and issubclass(_ob, str))
-        ):
-            raise NotImplementedError(
-                "Using the format and format_map methods of `str` is not safe"
-            )
+        if name in ("format", "format_map"):
+            if isinstance(_ob, type) and issubclass(_ob, str):
+                # `str.format(template, ...)` reaches the real method through the type,
+                # so there is no instance to bind a safe formatter to.
+                raise NotImplementedError(
+                    "Calling format through the `str` type is not allowed; "
+                    "call it on the string itself."
+                )
+
+            if isinstance(_ob, str):
+                return _safe_format(_ob) if name == "format" else _safe_format_map(_ob)
+
+        # A class's ancestry is readable by name only.
+        if name == "__mro__" and isinstance(_ob, type | _SafeClass):
+            return (_SafeClass.of(_ob) if isinstance(_ob, type) else _ob).__mro__
 
         # Objects with __exports__ define their own allowlist — check it first
         # so that safe wrapper types (e.g. _SafeTraceback, _SafeFrame) can
@@ -1198,10 +1970,14 @@ class Sandbox:
         if exports:
             if name not in exports:
                 raise AttributeError(f'"{name}" is an invalid attribute name (not in __exports__)')
-            return getattr(_ob, name, default)
+            return _getattr_or_default(_ob, name, default, self.package_name)
 
         if name in INSPECT_ATTRIBUTES:
             raise AttributeError(f'"{name}" is a restricted name.')
+
+        # Method names the sandbox does not expose
+        if self._strict and name in RESTRICTED_METHOD_NAMES:
+            raise AttributeError(f'"{name}" is a restricted method name.')
 
         # Code defined in the Sandbox namespace can access its own underscore variables
         if name.startswith("_"):
@@ -1211,12 +1987,24 @@ class Sandbox:
                         f'"{name}" is an invalid attribute name because it starts with "_"'
                     )
             else:
+                # An SDK model's metadata is readable as a field-introspection view.
+                if name == "_meta" and _is_model_options(raw_meta := getattr(_ob, "_meta", None)):
+                    return _SafeModelMeta(raw_meta)
+
                 # Nothing can read dunder attributes except those on our safe list
-                if name not in SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES:
+                if (
+                    name not in SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES
+                    and not _is_readable_sdk_private(_ob, name)
+                ):
                     raise AttributeError(
                         f'"{name}" is an invalid attribute name because it starts with "__"'
                     )
-        elif is_module and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module]):
+        elif (
+            is_module
+            and not self._same_module(module)
+            and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module])
+            and not self._is_blessed_import(module)
+        ):
             raise AttributeError(
                 f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
             )
@@ -1225,14 +2013,120 @@ class Sandbox:
         if isinstance(_ob, _SafeClass) and name != "__name__":
             raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
 
-        if name == "__class__" and not self._same_module(module):
-            return _SafeClass(_ob.__class__.__name__)
+        # The class of a class is a metaclass, which builds new classes when called.
+        if name == "__class__" and (isinstance(_ob, type) or not self._same_module(module)):
+            return _SafeClass.of(_ob.__class__)
 
         if name == "__traceback__":
             tb = getattr(_ob, "__traceback__", None)
             return _SafeTraceback(tb) if tb is not None else None
 
-        return getattr(_ob, name, default)
+        if self._strict and name == "__dict__" and not self._same_module(module):
+            raw = _getattr_or_default(_ob, name, default, self.package_name)
+            if isinstance(raw, Mapping):
+                return self._external_namespace(_ob, raw)
+            return raw
+
+        return _getattr_or_default(_ob, name, default, self.package_name)
+
+    def _is_blessed_import(self, module: str) -> bool:
+        """Whether this plugin is named as permitted to use this module.
+
+        Consulted only once a module has been rejected, so a plugin that imports nothing
+        unusual never reaches it.
+        """
+        return is_blessed_import(self.package_name, module)
+
+    def _resolve_relative_import(self, name: str, level: int) -> str:
+        """Return the absolute module name a relative import refers to.
+
+        `from .sibling import x` arrives here as the bare name `sibling`, which matches
+        neither the plugin's own package nor `ALLOWED_MODULES`. Resolving it against the
+        importing module's package first is what lets the checks below see it for what it
+        is: a module inside the plugin.
+        """
+        package = self.namespace
+
+        if not self.source_code_path.endswith("__init__.py"):
+            package = package.rpartition(".")[0]
+
+        parts = package.split(".") if package else []
+
+        if level > 1:
+            parts = parts[: -(level - 1)]
+
+        if not parts:
+            raise ImportError(f"attempted relative import beyond top-level package: {name!r}")
+
+        base = ".".join(parts)
+
+        return f"{base}.{name}" if name else base
+
+    def _safe_setattr(self, ob: Any, name: Any, value: Any) -> None:
+        """`setattr`, allowed exactly where `ob.name = value` is."""
+        builtins.setattr(self._writable(ob, name), name, value)
+
+    def _safe_delattr(self, ob: Any, name: Any) -> None:
+        """`delattr`, allowed exactly where `del ob.name` is."""
+        builtins.delattr(self._writable(ob, name), name)
+
+    def _writable(self, ob: Any, name: Any) -> Any:
+        """`ob`, once the attribute write guard accepts writing `name` on it.
+
+        Attribute syntax also refuses a write through a name the plugin imported, such as
+        `Patient.x = 1`. setattr has no name to check, so a class from outside the plugin
+        is refused outright, and so is a private name on any object the plugin did not
+        define.
+        """
+        if not isinstance(name, str):
+            raise TypeError("attribute name must be a string")
+
+        if name.startswith("__"):
+            raise AttributeError(
+                f'"{name}" is an invalid attribute name because it starts with "__"'
+            )
+
+        owner = ob.__module__ if isinstance(ob, type) else type(ob).__module__
+        own = self._same_module(owner)
+
+        if isinstance(ob, type) and not own:
+            raise AttributeError(f"Forbidden assignment to an attribute of {ob.__name__}.")
+
+        if name.startswith("_") and not own:
+            raise AttributeError(
+                f'"{name}" is an invalid attribute name because it starts with "_"'
+            )
+
+        return self._safe_write(ob, None, name)
+
+    def _safe_dir(self, *args: Any) -> list[str]:
+        """The names `dir()` lists, narrowed to the ones plugin code can read.
+
+        Names only, and none of them are read while building the list.
+        """
+        if len(args) != 1:
+            raise TypeError("dir() takes exactly one argument in plugin code")
+
+        (ob,) = args
+
+        if exports := getattr(ob, "__exports__", None):
+            return sorted(exports)
+
+        names = [
+            name
+            for name in builtins.dir(ob)
+            if not name.startswith("_")
+            and name not in INSPECT_ATTRIBUTES
+            and not (self._strict and name in RESTRICTED_METHOD_NAMES)
+        ]
+
+        if isinstance(ob, types.ModuleType) and not (
+            self._same_module(ob.__name__) or self._is_blessed_import(ob.__name__)
+        ):
+            allowed = ALLOWED_MODULES.get(ob.__name__, set())
+            names = [name for name in names if name in allowed]
+
+        return names
 
     def _safe_import(
         self,
@@ -1242,7 +2136,11 @@ class Sandbox:
         fromlist: Sequence[str] = (),
         level: int = 0,
     ) -> Any:
-        if not self._same_module(name):
+        if level:
+            name = self._resolve_relative_import(name, level)
+            level = 0
+
+        if not self._same_module(name) and not self._is_blessed_import(name):
             # Disallow importing anything not explicitly allowed by ALLOWED_MODULES
             if name not in ALLOWED_MODULES:
                 raise ImportError(f"{name!r} is not an allowed import.")
@@ -1255,6 +2153,13 @@ class Sandbox:
         # evaluate the module in the sandbox if needed
         self._evaluate_module(name)
 
+        # Resolve plugin-owned imports from the sandbox's own module registry.
+        # `__import__` would execute the file from disk outside the sandbox and cache
+        # that copy in sys.modules — for the parent packages of a dotted name as well
+        # as the leaf — leaving the sandboxed evaluation unused.
+        if self._strict and self._same_module(name):
+            return self._import_sandboxed_module(name, fromlist)
+
         imported_module = __import__(name, globals, locals, fromlist, level)
 
         # If the module is part of the plugin, mark it as a plugin module
@@ -1263,20 +2168,72 @@ class Sandbox:
 
         return imported_module
 
-    def execute(self) -> dict:
-        """Execute the given code in a restricted sandbox."""
+    def _import_sandboxed_module(self, name: str, fromlist: Sequence[str]) -> types.ModuleType:
+        """Resolve a plugin-owned import from sandbox-evaluated modules only.
+
+        Reproduces the binding `__import__` would return — the named module when there
+        is a `fromlist`, otherwise the root package — without handing any plugin file to
+        the real import system.
+        """
+        module = self._published(name)
+
+        if module is None:
+            raise ImportError(f"{name!r} could not be resolved inside the sandbox.")
+
+        if not fromlist:
+            # `import a.b.c` binds the root package; the attribute walk to `c` works
+            # because each package was linked to its children at registration.
+            root_name = name.split(".")[0]
+            root = self._published(root_name)
+
+            if root is None:
+                raise ImportError(f"{root_name!r} could not be resolved inside the sandbox.")
+
+            return root
+
+        # `from a.b import c` where `c` is a submodule rather than an attribute:
+        # evaluate it too, so the caller finds it bound on the parent. A name that is
+        # not a module on disk is an attribute — a class or constant — and is left to
+        # the caller's `from` binding, which reports a missing one as an ImportError.
+        # It reaches here with `hasattr` false whenever `a.b` is still initializing.
+        for item in fromlist:
+            if hasattr(module, item):
+                continue
+
+            submodule_name = f"{name}.{item}"
+
+            if not self._get_module(submodule_name).exists():
+                continue
+
+            self._evaluate_module(submodule_name)
+
+            if (submodule := self._published(submodule_name)) is not None:
+                setattr(module, item, submodule)
+
+        return module
+
+    def execute(self, globals: dict[str, Any] | None = None) -> dict:
+        """Execute the given code in a restricted sandbox.
+
+        `globals` runs the module body in an existing namespace instead of this
+        sandbox's own scope, so that a module's names become visible as they are
+        defined rather than only once the body finishes.
+        """
         if self.errors:
             raise RuntimeError(f"Code is invalid: {self.errors}")
 
-        exec(self.compile_result.code, self.scope)
+        namespace = self.scope if globals is None else globals
 
-        return self.scope
+        exec(self.compile_result.code, namespace)
+
+        return namespace
 
 
 def sandbox_from_module(
     base_path: Path,
     module_name: str,
-    evaluated_modules: dict[str, bool] | None = None,
+    evaluated_modules: EvaluatedModules | None = None,
+    mode: SandboxMode = SandboxMode.STRICT,
 ) -> Sandbox:
     """Sandbox the code execution."""
     module_path = base_path / str(module_name.replace(".", "/") + ".py")
@@ -1284,6 +2241,11 @@ def sandbox_from_module(
     if not module_path.exists():
         raise ModuleNotFoundError(f'Could not load module "{module_name}"')
 
-    sandbox = Sandbox(module_path, namespace=module_name, evaluated_modules=evaluated_modules)
+    sandbox = Sandbox(
+        module_path,
+        namespace=module_name,
+        evaluated_modules=evaluated_modules,
+        mode=mode,
+    )
 
     return sandbox

@@ -75,6 +75,15 @@ class CanvasFhir:
 
         return response.json()
 
+    @property
+    def base_url(self) -> str:
+        """The FHIR API base URL, for building requests the client has no method for."""
+        return self._base_url
+
+    def get_headers(self) -> dict:
+        """The headers a FHIR API request needs, including authorization."""
+        return self._get_headers()
+
     def _get_headers(self) -> dict:
         """Returns the headers for the FHIR API request."""
         return {

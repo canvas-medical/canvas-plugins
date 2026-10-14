@@ -19,6 +19,7 @@ from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
 import pytest
+from psycopg import sql
 
 from plugin_runner.ddl import (
     SQL_STATEMENT_DELIMITER,
@@ -610,9 +611,29 @@ def test_wait_for_namespace_returns_immediately_when_ready(
 
     wait_for_namespace("org__data", plugin_name="my_plugin", models_hash="abc123", timeout=10)
 
-    mock_conn.execute.assert_called_once_with("LISTEN ns_ready_org__data")
+    mock_conn.execute.assert_called_once_with(
+        sql.SQL("LISTEN {}").format(sql.Identifier("ns_ready_org__data"))
+    )
     mock_ready.assert_called_once_with("org__data", "my_plugin", "abc123")
     mock_conn.notifies.assert_not_called()
+
+
+@patch("plugin_runner.namespace.namespace_ready", return_value=True)
+@patch("plugin_runner.namespace.open_database_connection")
+def test_wait_for_namespace_quotes_the_channel(
+    mock_open_conn: MagicMock, mock_ready: MagicMock
+) -> None:
+    """The channel goes into LISTEN as one quoted identifier, never as SQL text."""
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_open_conn.return_value = mock_conn
+
+    wait_for_namespace("Not A Namespace", plugin_name="p", models_hash="h", timeout=10)
+
+    (statement,) = mock_conn.execute.call_args.args
+    assert not isinstance(statement, str)
+    assert statement.as_string() == 'LISTEN "ns_ready_Not A Namespace"'
 
 
 @patch("plugin_runner.namespace.namespace_ready", return_value=False)
