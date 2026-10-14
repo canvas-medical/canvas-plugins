@@ -269,3 +269,23 @@ def test_originate_sends_approximate_date_of_onset(note: Note) -> None:
     ).originate()
 
     assert json.loads(effect.payload)["data"]["approximate_date_of_onset"] == "2020-05-01"
+
+
+# --- show in problem list --------------------------------------------------
+
+
+@pytest.mark.parametrize("show", [True, False])
+def test_originate_sends_show_in_problem_list(note: Note, show: bool) -> None:
+    """The problem list choice is sent when set."""
+    effect = AssessCommand(
+        note_uuid=str(note.id), icd10_code="J029", show_in_problem_list=show
+    ).originate()
+
+    assert json.loads(effect.payload)["data"]["show_in_problem_list"] is show
+
+
+def test_originate_omits_show_in_problem_list_when_unset(note: Note) -> None:
+    """Leaving the problem list choice out doesn't send it, so the condition keeps its status."""
+    effect = AssessCommand(note_uuid=str(note.id), icd10_code="J029").originate()
+
+    assert "show_in_problem_list" not in json.loads(effect.payload)["data"]
