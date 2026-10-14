@@ -574,6 +574,12 @@
   "canvas_sdk.effects.configure_command_buttons": [
     "ConfigureCommandButtons"
   ],
+  "canvas_sdk.effects.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageReorderEntry",
+    "PhotoSide"
+  ],
   "canvas_sdk.effects.data_integration": [
     "AnnotationItem",
     "AssignDocumentReviewer",
@@ -1578,6 +1584,7 @@
   ],
   "canvas_sdk.v1.data.coverage": [
     "Coverage",
+    "CoverageRank",
     "CoverageRelationshipCode",
     "CoverageStack",
     "CoverageState",
