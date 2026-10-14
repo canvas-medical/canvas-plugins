@@ -18,6 +18,10 @@ class AssessCommand(_BaseCommand):
     Name the condition either by `condition_id`, for a condition already on the patient's chart,
     or by `icd10_code`, which reuses the patient's charted condition with that code or records a
     new one on the problem list.
+
+    `show_in_problem_list` records the condition as a problem list item (True) or an encounter
+    diagnosis (False) when the command is committed. Leaving it out keeps the condition's current
+    status, and a new condition defaults to the problem list.
     """
 
     class Meta:
@@ -33,6 +37,7 @@ class AssessCommand(_BaseCommand):
     )
     icd10_code: str | None = None
     approximate_date_of_onset: date | None = None
+    show_in_problem_list: bool | None = None
     background: str | None = None
     status: Status | None = None
     narrative: str | None = Field(default=None, max_length=2048)
