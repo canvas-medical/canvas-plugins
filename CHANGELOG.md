@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.250.0 (2026-10-14)
+
+### Features
+
+- Plugin runner improvements
+  ([`a4f5f08`](https://github.com/canvas-medical/canvas-plugins/commit/a4f5f08884c33bbe94136023bd3b769f6be9cd65))
+
+Improves how the plugin runner loads plugins, and updates SDK client internals.
+
+### Testing
+
+- Build the expected FHIR URL from the customer identifier
+  ([`aa048fb`](https://github.com/canvas-medical/canvas-plugins/commit/aa048fb7485b52539e0c78e126713a8e1ec5b6b9))
+
+
 ## v0.249.0 (2026-10-14)
 
 ### Features
