@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v0.249.0 (2026-10-14)
+
+### Features
+
+- Add an Order DME SDK command ([#1925](https://github.com/canvas-medical/canvas-plugins/pull/1925),
+  [`0e2af9b`](https://github.com/canvas-medical/canvas-plugins/commit/0e2af9b9e6c1d38ccf88d38637b7bd304a5c4e9c))
+
+Co-authored-by: filipesousa <filipe.sousa@canvasmedical.com>
+
+
 ## v0.248.0 (2026-10-14)
 
 ### Features
