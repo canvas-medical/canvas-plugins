@@ -8,7 +8,9 @@ class DocumentHistoryEventType(models.TextChoices):
 
     REASSIGNED = "reassigned", "Reassigned"
     COMMENTED = "commented", "Commented"
-    RELEASED = "released", "Released signature"
+    SENT_FOR_SIGNATURE = "sent_for_signature", "Sent for signature"
+    SIGNED = "signed", "Signed"
+    SIGNATURE_REMOVED = "signature_removed", "Signature removed"
     RECORDED = "recorded", "Recorded"
     ENTERED_IN_ERROR = "entered_in_error", "Entered in error"
 
@@ -42,12 +44,6 @@ class DocumentHistoryEvent(TimestampedModel, IdentifiableModel):
         "v1.Team", on_delete=models.DO_NOTHING, related_name="+", null=True
     )
     comment = models.TextField()
-    delegation = models.ForeignKey(
-        "v1.DocumentReviewDelegation",
-        on_delete=models.DO_NOTHING,
-        related_name="history_events",
-        null=True,
-    )
     review_content_type = models.ForeignKey(
         "v1.ContentType", on_delete=models.DO_NOTHING, related_name="+", null=True
     )

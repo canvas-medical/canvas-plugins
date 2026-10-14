@@ -1,19 +1,21 @@
 from django.db import models
+from django.db.models.options import Options
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class DocumentReviewDelegation(TimestampedModel, IdentifiableModel):
-    """A signature release written when a reviewable document is reassigned.
+    """A hop of a reviewable document sent for signature, or routed back once signed.
 
-    Append-only log with a single active row per document (``is_active``). ``on_behalf_of``
-    is the staff member who released their signature; with ``signature_consent`` set, the
-    recipients (a staff member, a team, or both) may apply that signature while annotating.
-    A later plain reassign deactivates the row, so a release reaches only its direct
-    recipients.
+    Append-only log with a single active row per document (``is_active``). Sending a document
+    for signature writes a row to the provider, with ``on_behalf_of`` naming the sender; signing
+    and returning it writes a route-back to the sender (``is_route_back``). Any other hand-off,
+    or the document no longer needing review, deactivates the active row.
+    ``signature_consent`` grants nothing: each user places only their own signature. Rows to a
+    team are hand-offs recorded before sending for signature existed.
 
-    ``content_type`` + ``object_id`` form a generic link to the delegated document (e.g. an
-    UncategorizedClinicalDocument).
+    ``content_type`` + ``object_id`` form a generic link to the delegated document: a lab,
+    imaging or referral report, or an uncategorized clinical document.
     """
 
     class Meta:
@@ -39,10 +41,31 @@ class DocumentReviewDelegation(TimestampedModel, IdentifiableModel):
 
     @property
     def is_route_back(self) -> bool:
-        """True when this hop returned the document to its original owner."""
+        """True when this hop returned the signed document to whoever sent it."""
         return self.delegated_to_staff_id is not None and (
             self.delegated_to_staff_id == self.on_behalf_of_id
         )
+
+
+class DelegatedDocumentMixin:
+    """Review delegation accessors for the reviewable document models."""
+
+    dbid: int
+    _meta: Options
+
+    @property
+    def delegations(self) -> models.QuerySet[DocumentReviewDelegation]:
+        """All review delegations for this document, oldest first."""
+        return DocumentReviewDelegation.objects.filter(
+            content_type__app_label="api",
+            content_type__model=self._meta.model_name,
+            object_id=self.dbid,
+        ).order_by("created")
+
+    @property
+    def active_delegation(self) -> DocumentReviewDelegation | None:
+        """The active delegation, or None when no delegation is in effect."""
+        return self.delegations.filter(is_active=True).first()
 
 
 __exports__ = ("DocumentReviewDelegation",)
