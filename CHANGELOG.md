@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.248.0 (2026-10-14)
+
+### Features
+
+- Add record patient consent effect
+  ([#1923](https://github.com/canvas-medical/canvas-plugins/pull/1923),
+  [`e523695`](https://github.com/canvas-medical/canvas-plugins/commit/e523695dd2c8295c677af21d984904ca1bffec7c))
+
+- **cli**: Canvas whoami, and clearer canvas init and deploy failures
+  ([#1921](https://github.com/canvas-medical/canvas-plugins/pull/1921),
+  [`2f1b9a7`](https://github.com/canvas-medical/canvas-plugins/commit/2f1b9a7e4cc021ccd14b4a98cebc60c6ed58a0ba))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+
 ## v0.247.0 (2026-10-13)
 
 ### Features
