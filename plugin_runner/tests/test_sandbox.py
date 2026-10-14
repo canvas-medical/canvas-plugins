@@ -34,6 +34,7 @@ from plugin_runner.sandbox import (
     collect_missing_attribute_reads,
     sandbox_from_module,
 )
+from settings import CUSTOMER_IDENTIFIER
 
 CANVAS_SUBMODULE_NAMES = [
     found_module
@@ -431,9 +432,9 @@ def test_type_tests_whether_a_value_is_a_class() -> None:
 @pytest.mark.parametrize(
     ("expression", "expected"),
     [
-        ("client._base_url", "https://fumage-local.canvasmedical.com"),
+        ("client._base_url", f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"),
         ('client._get_headers()["Authorization"]', "Bearer test_token"),
-        ("client.base_url", "https://fumage-local.canvasmedical.com"),
+        ("client.base_url", f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"),
         ('client.get_headers()["Authorization"]', "Bearer test_token"),
     ],
 )
