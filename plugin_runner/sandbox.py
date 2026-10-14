@@ -1354,7 +1354,9 @@ class Sandbox:
             elif name.startswith("__") and name != "__all__" and not allow_double_underscore:
                 self.error(node, f"Assignments to '{name}' are not allowed.")
 
-        def check_function_argument_names(self, node: ast.FunctionDef | ast.Lambda) -> None:
+        def check_function_argument_names(
+            self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda
+        ) -> None:
             """Check argument names; a double-underscore argument is a local, so it binds."""
             super().check_function_argument_names(node)
 
@@ -1370,26 +1372,28 @@ class Sandbox:
                 if arg is not None:
                     self.check_binding(node, arg.arg, allow_double_underscore=True)
 
-        def visit_Name(self, node: ast.Name) -> ast.AST:
+        def visit_Name(self, node: ast.Name) -> ast.AST | Iterable[ast.AST] | None:
             """Check names bound or deleted."""
             if isinstance(node.ctx, ast.Store | ast.Del):
                 self.check_binding(node, node.id)
 
             return super().visit_Name(node)
 
-        def visit_ExceptHandler(self, node: ast.ExceptHandler) -> ast.AST:
+        def visit_ExceptHandler(
+            self, node: ast.ExceptHandler
+        ) -> ast.AST | Iterable[ast.AST] | None:
             """Check the name an exception binds."""
             self.check_binding(node, node.name)
 
             return super().visit_ExceptHandler(node)
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST | Iterable[ast.AST] | None:
             """Check the function's name; a method may have a double-underscore name."""
             self.check_binding(node, node.name, allow_double_underscore=id(node) in self.method_ids)
 
             return super().visit_FunctionDef(node)
 
-        def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
+        def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST | Iterable[ast.AST] | None:
             """Check the class's name, and note its methods."""
             self.check_binding(node, node.name)
             self.method_ids.update(
