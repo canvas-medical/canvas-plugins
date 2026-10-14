@@ -4,11 +4,7 @@ import datetime
 
 import pytest
 
-from canvas_sdk.test_utils.factories import (
-    DocumentHistoryEventFactory,
-    DocumentReviewDelegationFactory,
-    StaffFactory,
-)
+from canvas_sdk.test_utils.factories import DocumentHistoryEventFactory, StaffFactory
 from canvas_sdk.v1.data import DocumentHistoryEvent, DocumentHistoryEventType
 
 
@@ -32,14 +28,32 @@ def test_history_for_a_document_reads_its_entries_in_order() -> None:
 
 
 @pytest.mark.django_db
-def test_released_entry_links_its_delegation() -> None:
-    """A "released" entry points at the delegation row that granted the signature."""
-    delegation = DocumentReviewDelegationFactory.create(signature_consent=True)
-    released = DocumentHistoryEventFactory.create(
-        event_type=DocumentHistoryEventType.RELEASED, delegation=delegation
+def test_signing_flow_entries_carry_their_recipient_and_signer() -> None:
+    """A plugin can follow a form from "sent for signature" to "signed" in its timeline."""
+    sender = StaffFactory.create()
+    provider = StaffFactory.create()
+    sent = DocumentHistoryEventFactory.create(
+        object_id=9,
+        event_type=DocumentHistoryEventType.SENT_FOR_SIGNATURE,
+        actor=sender,
+        recipient_staff=provider,
+        comment="Please sign.",
     )
+    signed = DocumentHistoryEventFactory.create(
+        content_type=sent.content_type,
+        object_id=9,
+        event_type=DocumentHistoryEventType.SIGNED,
+        actor=provider,
+    )
+    signed.signers.add(provider)
 
-    assert list(delegation.history_events.all()) == [released]
+    history = DocumentHistoryEvent.objects.filter(
+        content_type=sent.content_type, object_id=9
+    ).order_by("created", "dbid")
+
+    assert [event.event_type for event in history] == ["sent_for_signature", "signed"]
+    assert history[0].recipient_staff == provider
+    assert list(history[1].signers.all()) == [provider]
 
 
 @pytest.mark.django_db
