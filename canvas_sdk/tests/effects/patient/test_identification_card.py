@@ -85,13 +85,20 @@ def test_update_sends_only_set_fields(card: PatientIdentificationCardModel) -> N
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("field", ["image_upload_key", "active"])
-def test_update_rejects_null_for_required_fields(
-    card: PatientIdentificationCardModel, field: str
+def test_update_rejects_null_active(card: PatientIdentificationCardModel) -> None:
+    """The active flag cannot be cleared."""
+    with pytest.raises(ValidationError, match="Field 'active'"):
+        PatientIdentificationCard(card_id=card.dbid, active=None).update()
+
+
+@pytest.mark.django_db
+def test_update_takes_a_none_image_key_as_no_new_image(
+    card: PatientIdentificationCardModel,
 ) -> None:
-    """The image and active flag cannot be cleared."""
-    with pytest.raises(ValidationError, match=f"Field '{field}'"):
-        PatientIdentificationCard(card_id=card.dbid, **{field: None}).update()
+    """An image key of None, as when no file was picked, leaves the card's image as it is."""
+    effect = PatientIdentificationCard(card_id=card.dbid, image_upload_key=None).update()
+
+    assert _payload(effect) == {"card_id": card.dbid, "image_upload_key": None}
 
 
 @pytest.mark.django_db

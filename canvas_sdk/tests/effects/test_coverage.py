@@ -311,11 +311,11 @@ def test_create_rejects_another_payers_address(patient: Patient, payer: Transact
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("key", ["", "some/other/prefix/front.jpg", "front.jpg", None])
+@pytest.mark.parametrize("key", ["", "some/other/prefix/front.jpg", "front.jpg"])
 def test_create_rejects_keys_outside_plugin_uploads(
     patient: Patient,
     payer: Transactor,
-    key: str | None,
+    key: str,
 ) -> None:
     """Card upload keys must come from a file_uploads='stored' route."""
     with pytest.raises(ValidationError, match="card_image_back_upload_key"):
@@ -398,8 +398,6 @@ def test_update_never_sends_a_rejected_assignment(coverage: CoverageModel) -> No
         ("subscriber_id", None),
         ("subscriber_id", ""),
         ("coverage_start_date", None),
-        ("card_image_front_upload_key", None),
-        ("card_image_back_upload_key", None),
     ],
 )
 def test_update_rejects_blank_values_for_required_fields(
@@ -697,3 +695,15 @@ def test_create_counts_today_in_the_installation_time_zone(
 
     with pytest.raises(ValidationError, match="already has an active"):
         Coverage(**_create_kwargs(patient, payer)).create()
+
+
+@pytest.mark.django_db
+def test_create_takes_none_as_no_card_file(patient: Patient, payer: Transactor) -> None:
+    """A side passed as None, as when no file was picked, has no file and is not an error."""
+    effect = Coverage(
+        **_create_kwargs(patient, payer),
+        card_image_front_upload_key=f"{patient.id}/plugin-uploads/p/front.png",
+        card_image_back_upload_key=None,
+    ).create()
+
+    assert _payload(effect)["card_image_back_upload_key"] is None

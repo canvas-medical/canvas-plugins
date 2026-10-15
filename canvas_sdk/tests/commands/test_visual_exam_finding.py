@@ -57,12 +57,11 @@ def test_rejects_keys_outside_plugin_uploads(method: str) -> None:
         getattr(command, method)()
 
 
-def test_rejects_an_explicit_none_key() -> None:
-    """A key from a failed upload (None) fails instead of silently attaching nothing."""
+def test_takes_none_as_no_image() -> None:
+    """A key of None, as when no file was picked, means the finding has no image."""
     command = _anchored(VisualExamFindingCommand(title="Rash", image_upload_key=None))
 
-    with pytest.raises(ValidationError, match="image_upload_key"):
-        command.originate()
+    command.originate()
 
 
 def test_recommendation_cannot_carry_an_upload_key() -> None:

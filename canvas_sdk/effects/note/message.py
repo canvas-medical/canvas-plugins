@@ -35,17 +35,15 @@ class Message(TrackableFieldsModel):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.attachment_upload_keys is not None:
-            errors.extend(upload_key_errors(self, "attachment_upload_keys"))
-            if method == "send" and self.attachment_upload_keys:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Attachments are added with create(), create_and_send() or edit(), "
-                        "not send().",
-                        self.attachment_upload_keys,
-                    )
+        errors.extend(upload_key_errors(self, "attachment_upload_keys"))
+        if method == "send" and self.attachment_upload_keys:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Attachments are added with create(), create_and_send() or edit(), not send().",
+                    self.attachment_upload_keys,
                 )
+            )
 
         if (
             not Patient.objects.filter(id=self.sender_id).exists()
