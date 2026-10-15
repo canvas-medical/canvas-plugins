@@ -3,13 +3,27 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.base import Model, TrackableFieldsModel
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff, Team
+
+
+def _team_errors(effect: Model, team_id: UUID | None) -> list[InitErrorDetails]:
+    """Return an error detail when `team_id` names a team that does not exist."""
+    if team_id is None or Team.objects.filter(id=team_id).exists():
+        return []
+    return [
+        effect._create_error_detail(
+            "value",
+            f"Team with id {team_id} does not exist.",
+            team_id,
+        )
+    ]
 
 
 class Message(TrackableFieldsModel):
@@ -25,7 +39,7 @@ class Message(TrackableFieldsModel):
     sender_id: str | UUID
     recipient_id: str | UUID
     read: datetime | None = None
-    team_id: str | UUID | None = None
+    team_id: UUID | None = Field(default=None, strict=False)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -94,14 +108,7 @@ class Message(TrackableFieldsModel):
                     )
                 )
 
-            if self.team_id is not None and not Team.objects.filter(id=self.team_id).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Team with id {self.team_id} does not exist.",
-                        self.team_id,
-                    )
-                )
+            errors.extend(_team_errors(self, self.team_id))
 
         if method in ("edit", "send") and self.is_dirty("team_id"):
             errors.append(
@@ -154,8 +161,8 @@ class AssignMessageTeam(_BaseEffect):
     class Meta:
         effect_type = EffectType.ASSIGN_MESSAGE_TEAM
 
-    message_id: str | UUID
-    team_id: str | UUID | None = None
+    message_id: UUID = Field(strict=False)
+    team_id: UUID | None = Field(strict=False)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -169,14 +176,7 @@ class AssignMessageTeam(_BaseEffect):
                 )
             )
 
-        if self.team_id is not None and not Team.objects.filter(id=self.team_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Team with id {self.team_id} does not exist.",
-                    self.team_id,
-                )
-            )
+        errors.extend(_team_errors(self, self.team_id))
 
         return errors
 

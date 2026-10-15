@@ -240,3 +240,21 @@ def test_event_init_for_calendar_lifecycle_events(
     assert event.name == expected_name
     assert event.target.type == mock_model
     mock_get_model.assert_called_once_with(app_label="v1", model_name=target_type)
+
+
+@patch("canvas_sdk.events.base.apps.get_model")
+def test_event_init_for_message_team_assigned(mock_get_model: Mock) -> None:
+    """MESSAGE_TEAM_ASSIGNED resolves to its name and the v1 Message target."""
+    mock_model = Mock(spec=models.Model)
+    mock_get_model.return_value = mock_model
+
+    event_request = EventRequest()
+    event_request.type = EventType.MESSAGE_TEAM_ASSIGNED
+    event_request.target_type = "Message"
+    event_request.target = "1"
+
+    event = Event(event_request)
+
+    assert event.name == "MESSAGE_TEAM_ASSIGNED"
+    assert event.target.type == mock_model
+    mock_get_model.assert_called_once_with(app_label="v1", model_name="Message")
