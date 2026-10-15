@@ -8,13 +8,15 @@ Tests verify that:
 5. Each model gets its own field instances
 6. The columns reach the generated DDL
 7. save(), bulk_create(), update() and bulk_update() all populate them
+8. A mixin listed ahead of CustomModel keeps its fields and the stamping manager
+9. A row written before the columns existed reads NULL and gains modified on its next write
 """
 
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from django.db import models
+from django.db import connection, models
 from freezegun import freeze_time
 
 from canvas_sdk.v1.data.base import (
@@ -22,7 +24,11 @@ from canvas_sdk.v1.data.base import (
     CustomModelManager,
     auto_now_field_names,
 )
-from plugin_runner.ddl import execute_create_table_sql, generate_create_table_sql
+from plugin_runner.ddl import (
+    execute_create_table_sql,
+    generate_create_table_sql,
+    generate_field_sql,
+)
 
 # ---------------------------------------------------------------------------
 # Models
@@ -109,6 +115,26 @@ class InheritsCreatedFromMixin(LegacyTimestampMixin, CustomModel):
         app_label = "test_plugin"
 
 
+class AuditedFieldsMixin(models.Model):
+    """Strive's AuditedFields shape: both timestamps, non-null, on a plain abstract Model."""
+
+    class Meta:
+        abstract = True
+        app_label = "test_plugin"
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+
+class InheritsBothFromMixin(AuditedFieldsMixin, CustomModel):  # type: ignore[misc]
+    """A concrete model listing the mixin ahead of CustomModel, as Strive's plugins do."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    name = models.TextField(null=True)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -118,6 +144,30 @@ class InheritsCreatedFromMixin(LegacyTimestampMixin, CustomModel):
 def plain_table(db: None) -> None:
     """Create PlainCustomModel's table using the production DDL path."""
     execute_create_table_sql(generate_create_table_sql("test_plugin", PlainCustomModel))
+
+
+@pytest.fixture
+def mixin_table(db: None) -> None:
+    """Create InheritsBothFromMixin's table using the production DDL path."""
+    execute_create_table_sql(generate_create_table_sql("test_plugin", InheritsBothFromMixin))
+
+
+@pytest.fixture
+def legacy_plain_table(db: None) -> None:
+    """Build PlainCustomModel's table as it stood before the timestamps, holding one row.
+
+    Then add the two columns the way a deploy does: a bare ADD COLUMN with the
+    installer's column type and no default.
+    """
+    table = PlainCustomModel._meta.db_table
+    with connection.cursor() as cursor:
+        cursor.execute(f"CREATE TABLE {table} (dbid integer PRIMARY KEY AUTOINCREMENT, name text)")
+        cursor.execute(f"INSERT INTO {table} (name) VALUES ('written before the deploy')")
+        for field in PlainCustomModel._meta.local_fields:
+            if field.name not in ("created", "modified"):
+                continue
+            column_type = generate_field_sql(field, connection)
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {field.column} {column_type}")
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +382,76 @@ def test_update_returns_the_row_count(plain_table: None) -> None:
     PlainCustomModel.objects.create(name="second")
 
     assert PlainCustomModel.objects.all().update(name="same") == 2
+
+
+def test_mixin_fields_win_when_listed_first() -> None:
+    """A mixin supplying both timestamps keeps its own fields, non-null as declared."""
+    created = InheritsBothFromMixin._meta.get_field("created")
+    modified = InheritsBothFromMixin._meta.get_field("modified")
+
+    assert isinstance(created, models.DateTimeField)
+    assert isinstance(modified, models.DateTimeField)
+    assert created.model is InheritsBothFromMixin
+    assert created.null is False
+    assert modified.null is False
+    assert auto_now_field_names(InheritsBothFromMixin) == ["modified"]
+
+
+def test_mixin_first_model_uses_the_stamping_manager() -> None:
+    """Listing a plain abstract mixin first must not displace CustomModel's manager."""
+    assert isinstance(InheritsBothFromMixin.objects, CustomModelManager)
+
+
+@pytest.mark.django_db
+def test_queryset_update_advances_a_mixin_supplied_modified(mixin_table: None) -> None:
+    """update() should stamp a modified that comes from the plugin's own mixin."""
+    with freeze_time("2026-09-10 12:00:00"):
+        InheritsBothFromMixin.objects.create(name="first")
+
+    with freeze_time("2026-09-10 13:00:00"):
+        InheritsBothFromMixin.objects.filter(name="first").update(name="second")
+
+    row = InheritsBothFromMixin.objects.get()
+
+    assert row.created == datetime(2026, 9, 10, 12, 0, tzinfo=UTC)
+    assert row.modified == datetime(2026, 9, 10, 13, 0, tzinfo=UTC)
+
+
+@pytest.mark.django_db
+def test_row_written_before_the_columns_existed_reads_null(legacy_plain_table: None) -> None:
+    """A row older than the columns loads, with both timestamps unknown."""
+    row = PlainCustomModel.objects.get()
+
+    assert row.name == "written before the deploy"
+    assert row.created is None
+    assert row.modified is None
+
+
+@pytest.mark.django_db
+def test_resaving_a_pre_deploy_row_stamps_modified_only(legacy_plain_table: None) -> None:
+    """Saving an old row records the write, and created stays unknown rather than invented."""
+    row = PlainCustomModel.objects.get()
+
+    with freeze_time("2026-09-10 13:00:00"):
+        row.name = "edited"
+        row.save()
+
+    row.refresh_from_db()
+
+    assert row.created is None
+    assert row.modified == datetime(2026, 9, 10, 13, 0, tzinfo=UTC)
+
+
+@pytest.mark.django_db
+def test_update_stamps_a_pre_deploy_row(legacy_plain_table: None) -> None:
+    """A set-based update on an old row stamps modified and leaves created unknown."""
+    with freeze_time("2026-09-10 13:00:00"):
+        PlainCustomModel.objects.all().update(name="edited")
+
+    row = PlainCustomModel.objects.get()
+
+    assert row.created is None
+    assert row.modified == datetime(2026, 9, 10, 13, 0, tzinfo=UTC)
 
 
 def test_custom_model_uses_the_stamping_manager() -> None:
