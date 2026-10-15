@@ -42,6 +42,7 @@ class PatientIdentificationCard(TrackableFieldsModel):
 
     class Meta:
         effect_type = "PATIENT_IDENTIFICATION_CARD"
+        create_required_fields = ("patient_id", "image_upload_key")
 
     card_id: int | None = None
     patient_id: str | None = None
@@ -62,23 +63,7 @@ class PatientIdentificationCard(TrackableFieldsModel):
                         self.card_id,
                     )
                 )
-            errors.extend(
-                existing_record_errors(
-                    self,
-                    "patient_id",
-                    Patient.objects,
-                    "patient",
-                    "create",
-                )
-            )
-            if self.image_upload_key is None:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'image_upload_key' is required to create an identification card.",
-                        None,
-                    )
-                )
+            errors.extend(existing_record_errors(self, "patient_id", Patient.objects, "patient"))
 
         elif method == "update":
             errors.extend(

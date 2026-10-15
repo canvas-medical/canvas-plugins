@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -79,7 +80,11 @@ def coverage(patient: Patient) -> CoverageModel:
     )
 
 
-def _create_kwargs(patient: Patient, payer: Transactor, **overrides: Any) -> dict[str, Any]:
+def _create_kwargs(
+    patient: Patient,
+    payer: Transactor,
+    **overrides: Any,
+) -> dict[str, Any]:
     return {
         "patient_id": patient.id,
         "issuer_id": payer.id,
@@ -206,8 +211,8 @@ def test_create_rejects_unknown_patient_and_payer(patient: Patient, payer: Trans
         Coverage(**kwargs).create()
 
     message = str(exc_info.value)
-    assert "Patient with id" in message
-    assert "Payer with id" in message
+    assert f"No patient has id {'0' * 32}." in message
+    assert f"No payer has id {MISSING_ID}." in message
 
 
 @pytest.mark.django_db
@@ -221,7 +226,7 @@ def test_create_rejects_a_taken_rank(patient: Patient, payer: Transactor) -> Non
 
 @pytest.mark.django_db
 def test_create_allows_the_rank_of_an_ended_coverage(patient: Patient, payer: Transactor) -> None:
-    """A coverage that ended before today no longer holds its rank."""
+    """A coverage that ended before today does not hold its rank."""
     CoverageFactory.create(
         patient=patient, coverage_rank=2, coverage_end_date=date.today() - timedelta(days=1)
     )
@@ -504,7 +509,7 @@ def test_remove(coverage: CoverageModel) -> None:
 @pytest.mark.parametrize("side", [PhotoSide.FRONT, "BACK"])
 def test_remove_photo(coverage: CoverageModel, side: PhotoSide | str) -> None:
     """remove_photo() sends the coverage id and card side."""
-    effect = Coverage(coverage_id=coverage.id).remove_photo(side=PhotoSide(side))
+    effect = Coverage(coverage_id=coverage.id).remove_photo(side=side)  # type: ignore[arg-type]
 
     assert effect.type == EffectType.REMOVE_COVERAGE_PHOTO
     assert _payload(effect) == {"coverage_id": str(coverage.id), "side": str(side)}
@@ -648,3 +653,47 @@ def test_reorder_entries_validate_reassignment() -> None:
     assert entry.coverage_rank == CoverageRank.SECONDARY
     with pytest.raises(ValidationError):
         entry.coverage_rank = 9  # type: ignore[assignment]
+
+
+@pytest.mark.django_db
+def test_remove_photo_rejects_an_unknown_side(coverage: CoverageModel) -> None:
+    """An unknown side is a validation error, like every other invalid input."""
+    with pytest.raises(ValidationError, match="Field 'side' must be FRONT or BACK"):
+        Coverage(coverage_id=coverage.id).remove_photo(side="front")  # type: ignore[arg-type]
+
+
+@pytest.mark.django_db
+def test_reorder_rejects_an_ordering_that_leaves_out_an_active_coverage(patient: Patient) -> None:
+    """Every active coverage of a stack the ordering places a coverage in must be listed."""
+    first = CoverageFactory.create(patient=patient, coverage_rank=1)
+    second = CoverageFactory.create(patient=patient, coverage_rank=2)
+    CoverageFactory.create(patient=patient, coverage_rank=3)
+
+    with pytest.raises(ValidationError, match="must list every active coverage"):
+        CoverageReorder(
+            patient_id=patient.id,
+            ordering=[
+                _entry(second, 1, CoverageStack.IN_USE),
+                _entry(first, 2, CoverageStack.IN_USE),
+            ],
+        ).apply()
+
+
+@pytest.mark.django_db
+@freeze_time("2026-10-15 03:00:00")
+def test_create_counts_today_in_the_installation_time_zone(
+    patient: Patient,
+    payer: Transactor,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A coverage ending on the practice's today keeps its rank, whatever the UTC date."""
+    monkeypatch.setattr("canvas_sdk.effects.coverage.INSTALLATION_TIME_ZONE", "America/Los_Angeles")
+    CoverageFactory.create(
+        patient=patient,
+        coverage_rank=CoverageRank.SECONDARY,
+        coverage_start_date=date(2026, 1, 1),
+        coverage_end_date=date(2026, 10, 14),
+    )
+
+    with pytest.raises(ValidationError, match="already has an active"):
+        Coverage(**_create_kwargs(patient, payer)).create()
