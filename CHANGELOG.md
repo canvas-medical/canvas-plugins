@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.252.0 (2026-10-15)
+
+### Features
+
+- Add fax action event types for notes, referrals, imaging orders, lab orders and integration tasks
+  ([#1920](https://github.com/canvas-medical/canvas-plugins/pull/1920),
+  [`665a6dc`](https://github.com/canvas-medical/canvas-plugins/commit/665a6dc15c2a55159f795dafda1c3d14014a5092))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.251.0 (2026-10-15)
 
 ### Features
