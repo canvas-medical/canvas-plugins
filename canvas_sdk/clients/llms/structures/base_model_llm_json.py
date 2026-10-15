@@ -1,4 +1,4 @@
-from typing import get_args, get_origin, get_type_hints
+from typing import get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -16,16 +16,14 @@ class BaseModelLlmJson(BaseModel):
 
     @classmethod
     def validate_nested_models(cls) -> bool:
-        """Validate that all nested BaseModel fields are BaseModelLlmJson subclasses."""
-        # Resolve forward references (strings/ForwardRef from `from __future__ import
-        # annotations` or synthetic modules) into actual types via get_type_hints().
-        try:
-            hints = get_type_hints(cls)
-        except Exception:
-            hints = {}
+        """Validate that all nested BaseModel fields are BaseModelLlmJson subclasses.
 
-        for field_name, field_info in cls.model_fields.items():
-            field_type = hints.get(field_name, field_info.annotation)
+        Reads the field types pydantic resolved when it built the model, including those
+        written as strings under `from __future__ import annotations`. It evaluates no
+        annotation text itself: the model may be plugin code.
+        """
+        for field_info in cls.model_fields.values():
+            field_type = field_info.annotation
 
             types_to_check: list = []
             if get_origin(field_type) is not None:

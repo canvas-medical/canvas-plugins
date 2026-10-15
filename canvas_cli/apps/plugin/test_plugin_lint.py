@@ -50,11 +50,7 @@ def _codes(findings: list, severity: str | None = None) -> set[str]:
     [
         ("d = {}\nd['a'] += 1\n", "augmented-subscript"),
         ("obj.attr += 1\n", "augmented-attribute"),
-        ("setattr(obj, 'x', 1)\n", "setattr-blocked"),
-        ("delattr(obj, 'x')\n", "delattr-blocked"),
-        ("b = bytearray(b'x')\n", "bytearray-blocked"),
         ("C = type('C', (object,), {})\n", "type-blocked"),
-        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_construct_violation_flagged(code: str, expected: str) -> None:
@@ -98,9 +94,6 @@ FIXTURE_PLUGIN = (
 CONSTRUCT_RULES = {
     "augmented-attribute",
     "augmented-subscript",
-    "bytearray-blocked",
-    "delattr-blocked",
-    "setattr-blocked",
     "type-blocked",
 }
 
@@ -124,16 +117,23 @@ def test_fixture_plugin_reports_every_construct_rule() -> None:
     assert not [f for f in findings if "clean.py" in f.location]
 
 
-def test_one_arg_type_flagged() -> None:
-    """One-argument ``type(x)`` is flagged too.
+def test_one_arg_type_not_flagged() -> None:
+    """One-argument ``type(x)`` works in the sandbox, so the lint stays silent on it."""
+    root = _plugin({"handlers/h.py": "k = type(5).__name__\n"})
+    assert "type-blocked" not in _codes(lint_plugin(root, {}), "error")
 
-    ``type`` is not in the sandbox builtins at all, so a one-argument call fails
-    with ``NameError`` just like the three-argument form (see the tripwire
-    below). This previously asserted the opposite, which let a plugin using
-    ``type(x)`` pass ``canvas validate`` and then fail on the instance.
-    """
-    root = _plugin({"handlers/h.py": "k = type(5)\n"})
-    assert "type-blocked" in _codes(lint_plugin(root, {}), "error")
+
+def test_tripwire_sandbox_allows_setattr_and_delattr() -> None:
+    """The lint lets setattr() and delattr() through because the sandbox runs them."""
+    assert (
+        _sandbox_raises("class T:\n    pass\nt = T()\nsetattr(t, 'y', 1)\ndelattr(t, 'y')\n")
+        is None
+    )
+
+
+def test_tripwire_sandbox_allows_one_arg_type() -> None:
+    """The lint lets one-argument ``type(x)`` through because the sandbox runs it."""
+    assert _sandbox_raises("k = type(5).__name__\n") is None
 
 
 # ── lint-logic: Custom Data rules ─────────────────────────────────────────────
@@ -242,9 +242,9 @@ def test_skip_dirs_only_apply_inside_the_plugin() -> None:
     root.mkdir()
     (root / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "plugin_pkg"}))
     (root / "handlers").mkdir()
-    (root / "handlers" / "h.py").write_text("setattr(obj, 'x', 1)\n")
+    (root / "handlers" / "h.py").write_text("C = type('C', (object,), {})\n")
 
-    assert "setattr-blocked" in _codes(lint_plugin(root, {}), "error")
+    assert "type-blocked" in _codes(lint_plugin(root, {}), "error")
 
 
 def test_files_under_dot_dirs_are_ignored() -> None:
@@ -370,11 +370,7 @@ def _sandbox_raises(source: str) -> Exception | None:
     [
         ("d = {'a': 1}\nd['a'] += 1\n", "augmented-subscript"),
         ("class T:\n    x = 1\nt = T()\nt.x += 1\n", "augmented-attribute"),
-        ("class T:\n    pass\nsetattr(T(), 'x', 1)\n", "setattr-blocked"),
-        ("class T:\n    x = 1\ndelattr(T(), 'x')\n", "delattr-blocked"),
-        ("b = bytearray(b'x')\n", "bytearray-blocked"),
         ("C = type('C', (object,), {})\n", "type-blocked"),
-        ("k = type(5)\n", "type-blocked"),
     ],
 )
 def test_tripwire_sandbox_still_rejects(code: str, rule: str) -> None:

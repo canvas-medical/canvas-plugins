@@ -1,0 +1,110 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_runtime_compat_plugin",
+    "description": "Helper-module patterns installed plugins rely on at request time.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:SuperCall",
+                "description": "SuperCall",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:BuiltinsInUse",
+                "description": "BuiltinsInUse",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:NumbersAndFrames",
+                "description": "NumbersAndFrames",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:FuzzyMatch",
+                "description": "FuzzyMatch",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:ListItemAssignment",
+                "description": "ListItemAssignment",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:MissingRelation",
+                "description": "MissingRelation",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:ModelMeta",
+                "description": "ModelMeta",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:ExceptionAncestry",
+                "description": "ExceptionAncestry",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:ErrorReporting",
+                "description": "ErrorReporting",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_runtime_compat_plugin.handlers.handlers:Introspection",
+                "description": "Introspection",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

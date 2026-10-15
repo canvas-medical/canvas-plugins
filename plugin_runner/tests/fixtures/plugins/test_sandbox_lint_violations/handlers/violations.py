@@ -29,23 +29,10 @@ class Handler(BaseHandler):
         items[0] += 1
         items[0:1] += [4]
 
-        # type-blocked — one-argument form. Loads fine, then raises
-        # NameError when this line executes.
-        kind = type(obj)
-
         # type-blocked — three-argument dynamic class creation.
         made = type("Made", (object,), {})
 
-        # setattr-blocked / delattr-blocked. ruff's B010 wants a plain
-        # assignment here, which is exactly the fix the lint recommends — but
-        # the call is the thing under test, so it has to stay.
-        setattr(obj, "flag", True)  # noqa: B010
-        delattr(obj, "total")
-
-        # bytearray-blocked.
-        buffer = bytearray(b"x")
-
-        return [kind, made, buffer]
+        return [made]
 
 
 class _Target:

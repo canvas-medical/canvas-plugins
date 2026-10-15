@@ -55,6 +55,19 @@ def test__api_base_url(client: CanvasFhir) -> None:
     assert client._base_url == f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
 
 
+def test_base_url(client: CanvasFhir) -> None:
+    """The public base URL is the one the client sends its own requests to."""
+    assert client.base_url == f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
+
+
+def test_get_headers(client: CanvasFhir) -> None:
+    """The public headers carry the client's bearer token."""
+    assert client.get_headers() == {
+        "Authorization": "Bearer test_token",
+        "Content-Type": "application/json",
+    }
+
+
 def test__get_credentials_without_cached_credentials(
     mock_get_cache: MagicMock, mock_post: MagicMock
 ) -> None:

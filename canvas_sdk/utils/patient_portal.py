@@ -1,9 +1,10 @@
+import functools
 import os
 from typing import Any, Literal
 
 import requests
 
-from canvas_sdk.utils.http import Http, JsonOnlyResponse
+from canvas_sdk.utils.http import JsonOnlyResponse, ServiceClient
 from logger.logger import current_plugin_name
 
 
@@ -27,26 +28,23 @@ class PatientPortalLinkError(RuntimeError):
         self.message = message
 
 
-class PatientPortalHttp:
+class PatientPortalHttp(ServiceClient):
     """
     A client for minting patient portal links.
 
-    The HTTP client is held privately rather than inherited, because its base URL is Canvas
-    itself and a public request method here would be a way to reach other Canvas endpoints
-    with the pre-shared key attached. `get_login_url` hands back a string, so plugin code
-    holds the link and nothing else. That is a smaller target rather than a containment
-    boundary: the sandbox is what confines plugin code.
+    Its base URL is Canvas itself, so a public request method here would be a way to reach
+    other Canvas endpoints with its credentials. `get_login_url` hands back a
+    string, so plugin code holds the link and nothing else. That is a smaller target rather
+    than a containment boundary: the sandbox is what confines plugin code.
     """
+
+    __exports__ = ("get_login_url",)
 
     def __init__(self) -> None:
         # CANVAS_PUBLIC_HOST is the instance's own URL and is required by its settings. The
         # runner does not share a listening port with the web process, so an address that
         # resolves only inside the web container reaches nothing.
-        self._http_client = Http(base_url=os.getenv("CANVAS_PUBLIC_HOST", ""))
-
-        self._http_client._session.headers.update(
-            {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
-        )
+        super().__init__(base_url=os.getenv("CANVAS_PUBLIC_HOST", ""))
 
     def get_login_url(
         self,
@@ -92,14 +90,20 @@ class PatientPortalHttp:
 
         try:
             response = JsonOnlyResponse(
-                self._http_client.post("/patient-portal/login-url/", json=payload, headers=headers)
+                self._send(
+                    "/patient-portal/login-url/",
+                    functools.partial(self._http_client.post, json=payload, headers=headers),
+                )
             )
-        except requests.RequestException as error:
-            # `requests` is not importable from a plugin, so its exceptions are uncatchable
-            # there. Re-raise as the one type this module documents.
+        except requests.RequestException:
+            response = None
+
+        if response is None:
+            # Re-raise as the one type this module documents, outside the except block so
+            # no error holding the request is chained to it.
             raise PatientPortalLinkError(
                 0, f"Could not reach Canvas to mint a portal link for patient {patient_id}."
-            ) from error
+            )
 
         if response.status_code != 200:
             raise PatientPortalLinkError(

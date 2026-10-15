@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v0.251.0 (2026-10-15)
+
+### Features
+
+- Expose assigned reviewers on report and document data models
+  ([#1909](https://github.com/canvas-medical/canvas-plugins/pull/1909),
+  [`a518677`](https://github.com/canvas-medical/canvas-plugins/commit/a51867787b4e6a43139aabd24e56f650ad48ffaa))
+
+### Testing
+
+- Add detailed regression cases for plugin sandbox and SDK clients
+  ([`4ebde5b`](https://github.com/canvas-medical/canvas-plugins/commit/4ebde5b796c4af2a46171a8cc9a160c238ecd081))
+
+
+## v0.250.0 (2026-10-14)
+
+### Features
+
+- Plugin runner improvements
+  ([`a4f5f08`](https://github.com/canvas-medical/canvas-plugins/commit/a4f5f08884c33bbe94136023bd3b769f6be9cd65))
+
+Improves how the plugin runner loads plugins, and updates SDK client internals.
+
+### Testing
+
+- Build the expected FHIR URL from the customer identifier
+  ([`aa048fb`](https://github.com/canvas-medical/canvas-plugins/commit/aa048fb7485b52539e0c78e126713a8e1ec5b6b9))
+
+
 ## v0.249.0 (2026-10-14)
 
 ### Features

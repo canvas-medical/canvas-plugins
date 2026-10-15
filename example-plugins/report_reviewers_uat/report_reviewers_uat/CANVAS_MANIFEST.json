@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "report_reviewers_uat",
+    "description": "UAT plugin for the reviewers relation on report and document data models",
+    "components": {
+        "handlers": [
+            {
+                "class": "report_reviewers_uat.handlers.uat_api:ReportReviewersUatAPI",
+                "description": "Endpoints that read and check assigned reviewers on reports and documents"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

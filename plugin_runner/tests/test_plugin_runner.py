@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+import plugin_runner.plugin_runner as plugin_runner_module
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     GetRegisteredEventTypesRequest,
@@ -40,8 +41,10 @@ from plugin_runner.plugin_runner import (
     STARTUP_RETRY_LIMIT,
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
+    _load_plugin_handlers,
     import_plugin,
     main,
+    publish_message,
     rebuild_event_routes,
     reconcile_plugins,
     reload_plugin,
@@ -50,8 +53,8 @@ from plugin_runner.plugin_runner import (
     synchronize_plugins,
     synchronize_plugins_and_report_errors,
 )
-from plugin_runner.sandbox import Sandbox, sandbox_from_module
-from settings import PLUGIN_DIRECTORY
+from plugin_runner.sandbox import EvaluatedModules, Sandbox, SandboxMode, sandbox_from_module
+from settings import CHANNEL_NAME, PLUGIN_DIRECTORY
 
 
 @pytest.fixture
@@ -423,10 +426,13 @@ def test_sandbox_plugin_handlers_executes_each_module_once(install_test_plugin: 
     executed: list[str] = []
 
     def _counting_sandbox_from_module(
-        base_path: Path, module_name: str, evaluated_modules: dict[str, bool] | None = None
+        base_path: Path,
+        module_name: str,
+        evaluated_modules: EvaluatedModules | None = None,
+        mode: SandboxMode = SandboxMode.STRICT,
     ) -> Sandbox:
         executed.append(module_name)
-        return sandbox_from_module(base_path, module_name, evaluated_modules)
+        return sandbox_from_module(base_path, module_name, evaluated_modules, mode)
 
     with patch("plugin_runner.plugin_runner.sandbox_from_module", _counting_sandbox_from_module):
         results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
@@ -804,9 +810,9 @@ def test_shared_modules_evaluated_once_per_load(
     original_execute = Sandbox.execute
     execute_calls: list[str] = []
 
-    def tracking_execute(self: Sandbox) -> dict:
+    def tracking_execute(self: Sandbox, globals: dict[str, Any] | None = None) -> dict:
         execute_calls.append(self.namespace)
-        return original_execute(self)
+        return original_execute(self, globals)
 
     with mock_patch.object(Sandbox, "execute", tracking_execute):
         reconcile_plugins()
@@ -951,7 +957,7 @@ def test_synchronize_plugins_calls_install_and_reconcile_plugins() -> None:
         mock_get_client.return_value = (mock_client, mock_pubsub)
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
-            "data": pickle.dumps({"action": "reload"}),
+            "data": json.dumps({"action": "reload"}).encode(),
         }
 
         synchronize_plugins(run_once=True)
@@ -988,7 +994,7 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
 
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
-            "data": pickle.dumps({"action": "reload", "plugin": plugin_name}),
+            "data": json.dumps({"action": "reload", "plugin": plugin_name}).encode(),
         }
 
         synchronize_plugins(run_once=True)
@@ -1026,7 +1032,7 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
-            "data": pickle.dumps({"action": "unload", "plugin": plugin_name}),
+            "data": json.dumps({"action": "unload", "plugin": plugin_name}).encode(),
         }
 
         synchronize_plugins(run_once=True)
@@ -1036,6 +1042,68 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 
         mock_install_plugins.assert_not_called()
         mock_reconcile_plugins.assert_not_called()
+
+
+class _RecordsUnpickling:
+    """Sets a flag if it is ever unpickled."""
+
+    unpickled = False
+
+    def __reduce__(self) -> tuple[Callable[[], None], tuple[()]]:
+        return (_mark_unpickled, ())
+
+
+def _mark_unpickled() -> None:
+    _RecordsUnpickling.unpickled = True
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param(pickle.dumps({"action": "reload", "x": _RecordsUnpickling()}), id="pickle"),
+        pytest.param(b"not json", id="not_json"),
+        pytest.param(b'["reload"]', id="not_an_object"),
+        pytest.param(b'{"action": "reformat"}', id="unknown_action"),
+        pytest.param(b'{"action": "reload", "plugin": 7}', id="plugin_not_a_string"),
+    ],
+)
+def test_synchronize_plugins_ignores_messages_that_are_not_a_known_json_action(
+    data: bytes,
+) -> None:
+    """Only a JSON object naming a known action does anything; nothing is ever unpickled."""
+    _RecordsUnpickling.unpickled = False
+
+    with (
+        patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
+        patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
+        patch("plugin_runner.plugin_runner.reconcile_plugins") as mock_reconcile_plugins,
+        patch("plugin_runner.plugin_runner.install_plugin") as mock_install_plugin,
+        patch("plugin_runner.plugin_runner.uninstall_plugin") as mock_uninstall_plugin,
+    ):
+        mock_pubsub = Mock()
+        mock_get_client.return_value = (Mock(), mock_pubsub)
+        mock_pubsub.get_message.return_value = {"type": "pmessage", "data": data}
+
+        synchronize_plugins(run_once=True)
+
+    assert _RecordsUnpickling.unpickled is False
+    mock_install_plugins.assert_not_called()
+    mock_reconcile_plugins.assert_not_called()
+    mock_install_plugin.assert_not_called()
+    mock_uninstall_plugin.assert_not_called()
+
+
+def test_publish_message_publishes_json() -> None:
+    """Sync messages go out as JSON, the only format the listener reads."""
+    with patch("plugin_runner.plugin_runner.get_client") as mock_get_client:
+        mock_client = Mock()
+        mock_get_client.return_value = (mock_client, Mock())
+
+        publish_message({"action": "reload", "plugin": "my_plugin"})
+
+    channel, payload = mock_client.publish.call_args.args
+    assert channel == CHANNEL_NAME
+    assert json.loads(payload) == {"action": "reload", "plugin": "my_plugin"}
 
 
 # HOME-APP-11Y5 / KOALA-5359 — on container cold start in CI, redis DNS is
@@ -1771,3 +1839,311 @@ def test_main_marks_registry_not_ready_before_loading_and_on_shutdown(
     assert observed["stamp_during_load"] == NOT_READY
     assert stamp_path.read_text() == NOT_READY
     assert event_registry.snapshot().ready is False
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
+)
+def test_load_plugin_handlers_falls_back_to_permissive_sandbox(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A listed plugin the strict sandbox rejects still loads, via the permissive fallback."""
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is None for r in results)
+    assert all(r.scope is not None for r in results)
+
+    capture_message.assert_called_once()
+    assert capture_message.call_args.kwargs["level"] == "fatal"
+    assert install_test_plugin.name in capture_message.call_args.args[0]
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
+)
+def test_strict_sandbox_alone_rejects_the_fallback_plugin(install_test_plugin: Path) -> None:
+    """The fallback plugin is genuinely refused by the strict sandbox.
+
+    Without this, the fallback test above would pass even if strict mode had quietly
+    stopped enforcing anything.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = _load_plugin_handlers(
+        install_test_plugin.name, install_test_plugin, handlers, None, SandboxMode.STRICT
+    )
+
+    assert [type(r.error) for r in results] == [AttributeError]
+    assert "restricted method name" in str(results[0].error)
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_module_forbidden_imports_plugin"], indirect=True
+)
+def test_load_plugin_handlers_keeps_strict_results_when_fallback_does_not_help(
+    install_test_plugin: Path,
+) -> None:
+    """A plugin that fails under both modes is left loaded strictly, with no Sentry report.
+
+    The legacy rules are only worth applying where they actually recover a handler.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    failures = [r for r in results if r.error is not None]
+    assert failures
+    assert all(isinstance(r.error, ImportError) for r in failures)
+    capture_message.assert_not_called()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_handlers_does_not_retry_a_healthy_plugin(
+    install_test_plugin: Path,
+) -> None:
+    """A plugin that loads strictly is never run through the permissive sandbox."""
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(
+        plugin_runner_module,
+        "_load_plugin_handlers",
+        wraps=plugin_runner_module._load_plugin_handlers,
+    ) as load:
+        sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert [call.args[-1] for call in load.call_args_list] == [SandboxMode.STRICT]
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
+)
+def test_load_plugin_handlers_records_the_mode_each_handler_loaded_under(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Results say which rule set loaded the handler, so callers can flag deprecated ones."""
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert [r.sandbox_mode for r in results] == [SandboxMode.LEGACY_PERMISSIVE]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_handlers_records_strict_mode_for_a_healthy_plugin(
+    install_test_plugin: Path,
+) -> None:
+    """A plugin that needs no fallback is recorded as having loaded strictly."""
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.sandbox_mode is SandboxMode.STRICT for r in results)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_runtime_legacy_plugin"], indirect=True)
+def test_strict_sandbox_loads_the_runtime_legacy_plugin_without_error(
+    install_test_plugin: Path,
+) -> None:
+    """The pre-check is doing the work: strict mode loads this plugin perfectly happily.
+
+    Without this, the test above would pass even if the plugin were being caught by the
+    load-failure retry rather than by the static pre-check.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = _load_plugin_handlers(
+        install_test_plugin.name, install_test_plugin, handlers, None, SandboxMode.STRICT
+    )
+
+    assert all(r.error is None for r in results)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_handlers_keeps_a_clean_plugin_strict(install_test_plugin: Path) -> None:
+    """A plugin with no dependency on the previous rules is not pushed onto them."""
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.sandbox_mode is SandboxMode.STRICT for r in results)
+    capture_message.assert_not_called()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_runtime_legacy_plugin"], indirect=True)
+def test_load_plugin_handlers_refuses_an_unlisted_legacy_plugin(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A plugin that needs the deprecated rules but is not allowlisted is refused.
+
+    Nothing is executed, and the error names the constructs so the author can fix them.
+    """
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is not None for r in results)
+    assert all(r.scope is None for r in results)
+    assert "not permitted under the current sandbox rules" in str(results[0].error)
+    assert "import os" in str(results[0].error)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_runtime_legacy_plugin"], indirect=True)
+def test_load_plugin_handlers_reports_a_legacy_plugins_constructs_without_the_key(
+    install_test_plugin: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Without the allowlist key, as for a developer running `canvas validate`, the plugin is
+    reported against the current rules, naming its constructs, and nothing more.
+    """
+    monkeypatch.delenv("LEGACY_SANDBOX_ALLOWLIST_KEY", raising=False)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with caplog.at_level(logging.DEBUG):
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is not None for r in results)
+    assert "not permitted under the current sandbox rules" in str(results[0].error)
+    assert "import os" in str(results[0].error)
+
+    reported = caplog.text + "".join(str(r.error) for r in results)
+
+    for term in ("allowlist", "LEGACY_SANDBOX", "legacy-sandbox"):
+        assert term.lower() not in reported.lower()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_runtime_legacy_plugin"], indirect=True)
+def test_load_plugin_handlers_allows_a_listed_legacy_plugin(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An allowlisted plugin keeps loading under the deprecated rules."""
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is None for r in results)
+    assert [r.sandbox_mode for r in results] == [SandboxMode.LEGACY_PERMISSIVE]
+    capture_message.assert_called_once()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_the_allowlist_is_not_consulted_for_a_clean_plugin(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A plugin with no dependency on the deprecated rules never reaches the allowlist.
+
+    That keeps the key from being required on instances whose plugins are all current.
+    """
+
+    def _fail(*_: object) -> bool:
+        raise AssertionError("the allowlist was consulted for a clean plugin")
+
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", _fail)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.sandbox_mode is SandboxMode.STRICT for r in results)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_a_plugin_listed_to_always_use_the_deprecated_rules_loads_under_them(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A listed plugin runs under the deprecated rules even though it loads cleanly.
+
+    Its incompatibilities only surface when its code runs, so the load-time fallback
+    would never reach them.
+    """
+    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: True)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
+        results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is None for r in results)
+    assert all(r.sandbox_mode is SandboxMode.LEGACY_PERMISSIVE for r in results)
+    capture_message.assert_called_once()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_an_unlisted_clean_plugin_stays_on_the_current_rules(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without an entry on the always list a clean plugin keeps the current rules."""
+    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.sandbox_mode is SandboxMode.STRICT for r in results)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_runtime_legacy_plugin"], indirect=True)
+def test_reloading_a_plugin_under_a_different_rule_set_starts_clean(
+    install_test_plugin: Path,
+) -> None:
+    """A reload does not reuse modules published by the previous load.
+
+    Modules are built for whichever rule set was in force when they were published, so
+    carrying them across a reload resolves the plugin's imports against the wrong ones.
+    """
+    handlers = _manifest_handlers(install_test_plugin)
+
+    _load_plugin_handlers(
+        install_test_plugin.name, install_test_plugin, handlers, None, SandboxMode.STRICT
+    )
+    results = _load_plugin_handlers(
+        install_test_plugin.name,
+        install_test_plugin,
+        handlers,
+        None,
+        SandboxMode.LEGACY_PERMISSIVE,
+    )
+
+    assert all(r.error is None for r in results)
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
+)
+def test_an_unlisted_plugin_that_fails_to_load_is_not_retried(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only a listed plugin gets the deprecated rules, whichever way it depends on them.
+
+    A plugin that fails under the current rules at load time keeps its own errors rather
+    than being loaded under the deprecated rules.
+    """
+    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert all(r.error is not None for r in results)
+    assert all(r.sandbox_mode is SandboxMode.STRICT for r in results)
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
+)
+def test_a_failing_plugin_keeps_its_errors_when_the_allowlist_is_unreadable(
+    install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without a key the plugin's own errors come back, not a configuration error."""
+    monkeypatch.delenv("LEGACY_SANDBOX_ALLOWLIST_KEY", raising=False)
+    handlers = _manifest_handlers(install_test_plugin)
+
+    results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
+
+    assert [type(r.error) for r in results] == [AttributeError]

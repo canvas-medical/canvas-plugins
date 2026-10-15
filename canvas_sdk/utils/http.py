@@ -2,12 +2,15 @@ import concurrent
 import functools
 import logging
 import os
+import ssl
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Literal, Protocol, TypeVar
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.utils import DEFAULT_CA_BUNDLE_PATH
 
 from canvas_sdk.utils.metrics import measured
 
@@ -99,6 +102,75 @@ def batch_patch(
     return _BatchableRequest("PATCH", url, json=json, data=data, headers=headers)
 
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+# The Surescripts root and subordinate CAs, the same bundle the pharmacy service loads from
+# its SURESCRIPTS_CERTIFICATE_CA setting.
+SURESCRIPTS_CA_BUNDLE = os.path.join(os.path.dirname(__file__), "surescripts-ca.pem")
+
+
+class _SurescriptsTrustAdapter(HTTPAdapter):
+    """Verifies TLS against the public roots `requests` uses plus the Surescripts CAs.
+
+    The production pharmacy service presents a certificate issued by Surescripts' own CA,
+    which no public trust store carries; the staging service presents a public one.
+    """
+
+    def __init__(self) -> None:
+        self.ssl_context = ssl.create_default_context(cafile=DEFAULT_CA_BUNDLE_PATH)
+        self.ssl_context.load_verify_locations(cafile=SURESCRIPTS_CA_BUNDLE)
+        super().__init__()
+
+    def init_poolmanager(
+        self,
+        connections: int,
+        maxsize: int,
+        block: bool = False,
+        **pool_kwargs: Any,
+    ) -> None:
+        pool_kwargs["ssl_context"] = self.ssl_context
+        super().init_poolmanager(connections, maxsize, block, **pool_kwargs)  # type: ignore[no-untyped-call]
+
+
+def _origin(parts: urllib.parse.SplitResult) -> tuple[str, str | None, int | None]:
+    return (
+        parts.scheme,
+        parts.hostname,
+        parts.port or _DEFAULT_PORTS.get(parts.scheme),
+    )
+
+
+def _is_under(url: str, base_url: str) -> bool:
+    """Whether `url` is on the same origin as `base_url` and at or under its path."""
+    url_parts = urllib.parse.urlsplit(url)
+    base_parts = urllib.parse.urlsplit(base_url)
+
+    if url_parts.username is not None or url_parts.password is not None:
+        return False
+
+    if _origin(url_parts) != _origin(base_parts):
+        return False
+
+    base_path = base_parts.path.rstrip("/")
+
+    return url_parts.path == base_path or url_parts.path.startswith(f"{base_path}/")
+
+
+def _require_service_path(path: str) -> None:
+    """Refuse anything but a plain path on the client's own service.
+
+    Applies to the service clients: no scheme or host of its own, no backslashes, and no
+    dot segments, encoded or not, that a server could resolve to a different endpoint.
+    """
+    parts = urllib.parse.urlsplit(path)
+
+    if parts.scheme or parts.netloc or path.startswith("//") or "\\" in path:
+        raise ValueError("Only a path on this service may be requested with this client.")
+
+    if any(urllib.parse.unquote(segment) in (".", "..") for segment in parts.path.split("/")):
+        raise ValueError("Only a path on this service may be requested with this client.")
+
+
 class Http:
     """A helper class for completing HTTP calls with metrics tracking."""
 
@@ -110,10 +182,13 @@ class Http:
     def join_url(self, url: str) -> str:
         """
         Join a URL to the base_url.
+
+        With a base URL, the result must share its scheme, host and port, carry no
+        userinfo, and sit at or under its path.
         """
         joined = urllib.parse.urljoin(self._base_url, url)
 
-        if not joined.startswith(self._base_url):
+        if self._base_url and not _is_under(joined, self._base_url):
             raise ValueError("You may not access other URLs using this client.")
 
         return joined
@@ -266,80 +341,100 @@ class JsonOnlyResponse:
         return self._json
 
 
-class JsonOnlyHttp(Http):
-    def get(
-        self,
-        url: str,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
+class ServiceClient:
+    """
+    Base for the SDK clients that call Canvas services with service credentials.
 
-    def get_json(
+    The `Http` client is held privately rather than inherited, so plugin code reaches only
+    the purpose-built methods each subclass lists in `__exports__`. Requests go only to plain
+    paths on the service, and a failed request is re-raised as a plain `RequestException`.
+    """
+
+    __exports__: tuple[str, ...] = ()
+
+    _http_client: Http
+
+    def __init__(self, base_url: str) -> None:
+        http_client = Http(base_url=base_url)
+        http_client._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+        object.__setattr__(self, "_http_client", http_client)
+
+    @property
+    def _MAX_REQUEST_TIMEOUT_SECONDS(self) -> float:
+        return self._http_client._MAX_REQUEST_TIMEOUT_SECONDS
+
+    @_MAX_REQUEST_TIMEOUT_SECONDS.setter
+    def _MAX_REQUEST_TIMEOUT_SECONDS(self, value: float) -> None:
+        logger.warning(
+            "Overriding %s._MAX_REQUEST_TIMEOUT_SECONDS is deprecated and will be "
+            "forbidden in a future release. Use the timeout parameter on individual "
+            "requests instead.",
+            type(self).__name__,
+        )
+        object.__setattr__(self._http_client, "_MAX_REQUEST_TIMEOUT_SECONDS", value)
+
+    @_MAX_REQUEST_TIMEOUT_SECONDS.deleter
+    def _MAX_REQUEST_TIMEOUT_SECONDS(self) -> None:
+        object.__delattr__(self._http_client, "_MAX_REQUEST_TIMEOUT_SECONDS")
+
+    def _send(self, path: str, send: Callable[[str], requests.Response]) -> requests.Response:
+        """Send a request for `path` with `send`, re-raising failures without the request."""
+        _require_service_path(path)
+
+        try:
+            return send(path)
+        except requests.RequestException as error:
+            message = str(error)
+
+        # Raised outside the except block, so the original error is not chained to this one.
+        raise requests.RequestException(message)
+
+    def _get_json(
         self,
-        url: str,
+        path: str,
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> JsonOnlyResponse:
-        return JsonOnlyResponse(super().get(url, headers))
-
-    def post(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
-
-    def put(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
-
-    def patch(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
+        return JsonOnlyResponse(
+            self._send(path, functools.partial(self._http_client.get, headers=headers))
+        )
 
 
-class OntologiesHttp(JsonOnlyHttp):
+class OntologiesHttp(ServiceClient):
     """
     An HTTP client for the ontologies service.
     """
+
+    __exports__ = ("get_json",)
 
     def __init__(self) -> None:
         super().__init__(
             base_url=os.getenv("ONTOLOGIES_ENDPOINT", "https://ontologies.canvasmedical.com")
         )
 
-        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+    def get_json(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> JsonOnlyResponse:
+        """Send a GET request for a path on the ontologies service."""
+        return self._get_json(url, headers)
 
 
-class PharmacyHttp:
+class PharmacyHttp(ServiceClient):
     """
     An HTTP client for the pharmacy service.
     """
 
+    __exports__ = ("search_pharmacies", "get_pharmacy_by_ncpdp_id")
+
     def __init__(self) -> None:
-        self._http_client = JsonOnlyHttp(
+        super().__init__(
             base_url=os.getenv(
                 "PHARMACY_SERVICE_ENDPOINT", "https://pharmacy-2017071.canvasmedical.com"
             )
         )
 
-        self._http_client._session.headers.update(
-            {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
-        )
-
-        # Disable SSL verification for this session
-        self._http_client._session.verify = False
+        self._http_client._session.mount("https://", _SurescriptsTrustAdapter())
 
     def search_pharmacies(
         self,
@@ -390,27 +485,43 @@ class PharmacyHttp:
 
         query_string = urllib.parse.urlencode(params)
         url = f"/surescripts/pharmacy/?{query_string}" if query_string else "/surescripts/pharmacy/"
-        response = self._http_client.get_json(url)
+        response = self._get_json(url)
         response_json = response.json()
         return response_json.get("results", []) if response_json else []
 
     def get_pharmacy_by_ncpdp_id(self, ncpdp_id: str) -> dict[str, Any] | None:
-        """Lookup a pharmacy by its NCPDP ID."""
-        response = self._http_client.get_json(f"/surescripts/pharmacy/ncpdp_id/{ncpdp_id}/")
+        """Lookup a pharmacy by its NCPDP ID.
+
+        An NCPDP ID is all digits; any other value matches no pharmacy and sends nothing.
+        """
+        identifier = str(ncpdp_id)
+
+        if not (identifier.isascii() and identifier.isdigit()):
+            return None
+
+        response = self._get_json(f"/surescripts/pharmacy/ncpdp_id/{identifier}/")
         return response.json()
 
 
-class ScienceHttp(JsonOnlyHttp):
+class ScienceHttp(ServiceClient):
     """
-    An HTTP client for the ontologies service.
+    An HTTP client for the science service.
     """
+
+    __exports__ = ("get_json",)
 
     def __init__(self) -> None:
         super().__init__(
             base_url=os.getenv("SCIENCE_ENDPOINT", "https://science.canvasmedical.com")
         )
 
-        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+    def get_json(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> JsonOnlyResponse:
+        """Send a GET request for a path on the science service."""
+        return self._get_json(url, headers)
 
 
 ontologies_http = OntologiesHttp()

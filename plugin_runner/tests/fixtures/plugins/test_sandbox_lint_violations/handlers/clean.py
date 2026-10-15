@@ -45,18 +45,17 @@ class Handler(BaseHandler):
         counts["a"] = counts["a"] + 1
         items[0] = items[0] + 1
 
-        # Reading a type: isinstance() and __class__.__name__ instead of type().
+        # Reading a type: isinstance() and the one-argument type().
         is_target = isinstance(obj, _Target)
-        kind_name = obj.__class__.__name__
+        kind_name = type(obj).__name__
 
-        # Direct assignment and del instead of setattr()/delattr().
+        # Attribute assignment and del, directly and through setattr()/delattr().
         obj.flag = True
         del obj.flag
+        setattr(obj, "flag", True)  # noqa: B010
+        delattr(obj, "flag")
 
-        # bytes instead of bytearray.
-        buffer = b"x"
-
-        return [tally, is_target, kind_name, buffer, Frozen(1), Slotted(2)]
+        return [tally, is_target, kind_name, Frozen(1), Slotted(2)]
 
 
 class _Target:

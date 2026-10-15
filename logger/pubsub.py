@@ -10,7 +10,7 @@ class PubSubLogHandler(logging.Handler):
     """Custom logging handler that publishes logs to a pub/sub channel."""
 
     def __init__(self) -> None:
-        self.publisher = Publisher()
+        self._publisher = Publisher()
         logging.Handler.__init__(self=self)
 
     def emit(self, record: Any) -> None:
@@ -18,7 +18,7 @@ class PubSubLogHandler(logging.Handler):
         message = self.format(record)
 
         try:
-            self.publisher.publish(message)
+            self._publisher.publish(message)
         except redis.ConnectionError as e:
             print(f"PubSubLogHandler: failed to log message due to redis error: {e}")
 

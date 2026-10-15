@@ -14,8 +14,7 @@ on:
         default: ''
         type: string
 
-permissions:
-  id-token: write
+permissions: {}
 
 jobs:
   build-and-test:
@@ -28,7 +27,13 @@ jobs:
     concurrency: release
     needs:
       - build-and-test
-    if: ${{ always() && (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped') }}
+    # Releases run only from main or a release branch, and only through the `pypi`
+    # environment, whose deployment-branch rules and required reviewers gate the job
+    # and which PyPI's trusted publisher is bound to.
+    if: ${{ always() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped') }}
+    environment: pypi
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v5
         with:

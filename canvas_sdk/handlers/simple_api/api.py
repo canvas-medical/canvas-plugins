@@ -512,13 +512,29 @@ class SimpleAPIBase(BaseHandler, ABC):
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
+    def _credentials_class(self) -> Any:
+        """Return the class annotated on `authenticate`'s `credentials` parameter.
+
+        A string annotation, which `from __future__ import annotations` produces, is looked
+        up as a bare name in the method's module globals. It is never evaluated: the method
+        may be plugin code, and evaluating its annotation text would run that text outside
+        the sandbox.
+        """
+        annotation = inspect.get_annotations(self.authenticate).get("credentials")
+
+        if isinstance(annotation, str):
+            if not annotation.isidentifier():
+                return None
+
+            return self.authenticate.__globals__.get(annotation)
+
+        return annotation
+
     def _authenticate(self) -> list[Effect]:
         """Authenticate the request."""
         try:
             # Create the credentials object
-            credentials_cls = inspect.get_annotations(self.authenticate, eval_str=True).get(
-                "credentials"
-            )
+            credentials_cls = self._credentials_class()
 
             if not credentials_cls or not issubclass(credentials_cls, Credentials):
                 raise PluginError(

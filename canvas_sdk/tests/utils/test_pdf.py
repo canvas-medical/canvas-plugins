@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from canvas_sdk.utils.pdf import PdfAuthRequest, pdf_generator
 
@@ -167,25 +168,43 @@ def test_pdf_from_html_non_redirect_returns_none(mock_post: MagicMock) -> None:
     assert response is None
 
 
-def test_pdf_get_raises() -> None:
-    """Test that PdfGenerator.get raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        pdf_generator.get("some-endpoint/")
+@pytest.mark.parametrize(
+    "method",
+    ["get", "post", "put", "patch", "delete", "batch_requests", "join_url"],
+)
+def test_pdf_generator_has_no_raw_request_methods(method: str) -> None:
+    """The PDF client exposes only its purpose-built methods."""
+    assert not hasattr(pdf_generator, method)
 
 
-def test_pdf_post_raises() -> None:
-    """Test that PdfGenerator.post raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        pdf_generator.post("some-endpoint/")
+def test_pdf_generator_exports_only_its_generators() -> None:
+    """Plugin code can reach `from_url` and `from_html` and nothing else."""
+    assert type(pdf_generator).__exports__ == ("from_url", "from_html")
 
 
-def test_pdf_put_raises() -> None:
-    """Test that PdfGenerator.put raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        pdf_generator.put("some-endpoint/")
+def _failing_request(*args: Any, **kwargs: Any) -> None:
+    request = requests.Request("POST", "https://web-to-pdf.canvasmedical.com/x").prepare()
+    request.headers["Authorization"] = "test-credential"
+    raise requests.Timeout("timed out", request=request)
 
 
-def test_pdf_patch_raises() -> None:
-    """Test that PdfGenerator.patch raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        pdf_generator.patch("some-endpoint/")
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(lambda: pdf_generator.from_html("<p>x</p>"), id="from_html"),
+        pytest.param(lambda: pdf_generator.from_url("/print/x"), id="from_url"),
+    ],
+)
+@patch("requests.Session.post", side_effect=_failing_request)
+@patch("requests.Session.get", side_effect=_failing_request)
+def test_pdf_generator_errors_are_plain_request_exceptions(
+    _mock_get: MagicMock, _mock_post: MagicMock, call: Any
+) -> None:
+    """A failed request is re-raised as a plain RequestException, with nothing chained."""
+    with pytest.raises(requests.RequestException) as excinfo:
+        call()
+
+    error = excinfo.value
+    assert error.request is None
+    assert error.__cause__ is None
+    assert error.__context__ is None

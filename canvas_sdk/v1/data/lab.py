@@ -17,6 +17,7 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
     BaseReportTemplateField,
@@ -51,7 +52,7 @@ class TransmissionType(models.TextChoices):
     MANUAL = "M", "manual"
 
 
-class LabReport(AuditedModel, IdentifiableModel):
+class LabReport(AuditedModel, IdentifiableModel, Report):
     """A class representing a lab report."""
 
     class Meta:
@@ -59,10 +60,13 @@ class LabReport(AuditedModel, IdentifiableModel):
 
     objects = cast(LabReportQuerySet, LabReportManager())
 
-    review_mode = models.CharField(max_length=2)
-    junked = models.BooleanField()
     requires_signature = models.BooleanField()
-    assigned_date = models.DateTimeField()
+    reviewers = models.ManyToManyField(
+        "v1.Staff",
+        related_name="+",
+        db_table="canvas_sdk_data_api_labreport_reviewers_001",
+        blank=True,
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_reports", null=True
     )

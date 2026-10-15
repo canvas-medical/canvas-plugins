@@ -978,6 +978,59 @@ def test_authentication_exception(
     assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
 
+ANNOTATION_EVALUATIONS: list[str] = []
+
+
+def _record_annotation_evaluation() -> None:
+    ANNOTATION_EVALUATIONS.append("evaluated")
+
+
+def test_authentication_resolves_a_string_annotation_naming_a_class() -> None:
+    """`from __future__ import annotations` leaves a bare class name, which resolves."""
+
+    class Route(SimpleAPIRoute):
+        PATH = "/route"
+
+        def authenticate(self, credentials: "BearerCredentials") -> bool:  # type: ignore[override]
+            return credentials.token == TOKEN
+
+        def get(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    effects = handle_request(Route, method="GET", path="/route", headers=bearer_headers(TOKEN))
+
+    assert effects == [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        pytest.param("_record_annotation_evaluation() or BearerCredentials", id="expression"),
+        pytest.param("NoSuchCredentials", id="unknown_name"),
+        pytest.param("simple_api.BearerCredentials", id="dotted"),
+    ],
+)
+def test_authentication_never_evaluates_a_string_annotation(annotation: str) -> None:
+    """A string annotation is looked up as a name, never run; anything else fails closed."""
+    ANNOTATION_EVALUATIONS.clear()
+
+    class Route(SimpleAPIRoute):
+        PATH = "/route"
+
+        def authenticate(self, credentials: Credentials) -> bool:
+            return True
+
+        def get(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    Route.authenticate.__annotations__["credentials"] = annotation
+
+    effects = handle_request(Route, method="GET", path="/route", headers=bearer_headers(TOKEN))
+
+    assert ANNOTATION_EVALUATIONS == []
+    assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+
+
 @pytest.mark.parametrize(
     argnames="mixin_cls,secrets,headers,expected_effects",
     argvalues=[

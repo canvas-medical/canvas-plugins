@@ -1,11 +1,10 @@
 import dataclasses
 import os
 import urllib.parse
-from collections.abc import Mapping
 
 import requests
 
-from canvas_sdk.utils.http import Http
+from canvas_sdk.utils.http import ServiceClient
 from settings import CUSTOMER_IDENTIFIER
 
 
@@ -26,20 +25,15 @@ class PdfAuthRequest:
     password: str
 
 
-class PdfGenerator(Http):
+class PdfGenerator(ServiceClient):
+    """A client for the web-to-pdf service."""
+
+    __exports__ = ("from_url", "from_html")
+
     def __init__(self) -> None:
         super().__init__(
             base_url=os.getenv("WEB_TO_PDF_ENDPOINT", "https://web-to-pdf.canvasmedical.com")
         )
-
-        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
-
-    def get(
-        self,
-        url: str,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
 
     def _parse_redirect(self, response: requests.Response) -> PdfUrlResponse | None:
         if response.status_code != 302 or not response.headers.get("Location"):
@@ -66,11 +60,14 @@ class PdfGenerator(Http):
             headers["X-PDF-Auth-User"] = auth.username
             headers["X-PDF-Auth-Password"] = auth.password
 
-        response = self._session.get(
-            self.join_url(f"/generate/?{params}"),
-            headers=headers,
-            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
-            allow_redirects=False,
+        response = self._send(
+            f"/generate/?{params}",
+            lambda path: self._http_client._session.get(
+                self._http_client.join_url(path),
+                headers=headers,
+                timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+                allow_redirects=False,
+            ),
         )
 
         return self._parse_redirect(response)
@@ -82,42 +79,18 @@ class PdfGenerator(Http):
                 "customerId": CUSTOMER_IDENTIFIER,
             }
         )
-        response = self._session.post(
-            self.join_url(f"/generate/?{params}"),
-            data=content,
-            headers={"Content-Type": "text/html"},
-            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
-            allow_redirects=False,
+        response = self._send(
+            f"/generate/?{params}",
+            lambda path: self._http_client._session.post(
+                self._http_client.join_url(path),
+                data=content,
+                headers={"Content-Type": "text/html"},
+                timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+                allow_redirects=False,
+            ),
         )
 
         return self._parse_redirect(response)
-
-    def post(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
-
-    def put(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
-
-    def patch(
-        self,
-        url: str,
-        json: dict | None = None,
-        data: dict | str | list | bytes | None = None,
-        headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> requests.Response:
-        raise NotImplementedError
 
 
 pdf_generator = PdfGenerator()

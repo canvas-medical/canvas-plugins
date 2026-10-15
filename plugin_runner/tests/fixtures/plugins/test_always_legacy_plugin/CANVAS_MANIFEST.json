@@ -1,0 +1,47 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_always_legacy_plugin",
+    "description": "Helper-module patterns that only work under the deprecated sandbox rules.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_always_legacy_plugin.handlers.handlers:PrivateSdkAttribute",
+                "description": "PrivateSdkAttribute",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_always_legacy_plugin.handlers.handlers:LazilyImportedNonlocal",
+                "description": "LazilyImportedNonlocal",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_always_legacy_plugin.handlers.handlers:OwnModuleName",
+                "description": "OwnModuleName",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
