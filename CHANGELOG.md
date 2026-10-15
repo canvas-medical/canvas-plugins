@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.251.0 (2026-10-15)
+
+### Features
+
+- Expose assigned reviewers on report and document data models
+  ([#1909](https://github.com/canvas-medical/canvas-plugins/pull/1909),
+  [`a518677`](https://github.com/canvas-medical/canvas-plugins/commit/a51867787b4e6a43139aabd24e56f650ad48ffaa))
+
+### Testing
+
+- Add detailed regression cases for plugin sandbox and SDK clients
+  ([`4ebde5b`](https://github.com/canvas-medical/canvas-plugins/commit/4ebde5b796c4af2a46171a8cc9a160c238ecd081))
+
+
 ## v0.250.0 (2026-10-14)
 
 ### Features
