@@ -354,6 +354,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEND_MESSAGE: _ClassVar[EffectType]
     CREATE_AND_SEND_MESSAGE: _ClassVar[EffectType]
     EDIT_MESSAGE: _ClassVar[EffectType]
+    ASSIGN_MESSAGE_TEAM: _ClassVar[EffectType]
     PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
     UPSERT_PATIENT_METADATA: _ClassVar[EffectType]
     CREATE_PATIENT_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
@@ -774,6 +775,7 @@ CREATE_MESSAGE: EffectType
 SEND_MESSAGE: EffectType
 CREATE_AND_SEND_MESSAGE: EffectType
 EDIT_MESSAGE: EffectType
+ASSIGN_MESSAGE_TEAM: EffectType
 PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_PATIENT_METADATA: EffectType
 CREATE_PATIENT_EXTERNAL_IDENTIFIER: EffectType

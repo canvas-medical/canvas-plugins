@@ -30,6 +30,9 @@ class Message(TimestampedModel, IdentifiableModel):
         "v1.Note", on_delete=models.DO_NOTHING, related_name="message", null=True
     )
     read = models.DateTimeField(null=True, blank=True)
+    team = models.ForeignKey(
+        "v1.Team", on_delete=models.DO_NOTHING, related_name="assigned_messages", null=True
+    )
 
 
 class MessageAttachment(TimestampedModel, IdentifiableModel):
