@@ -210,3 +210,11 @@ def test_document_content_may_contain_newlines(db: dict[str, MagicMock]) -> None
     effect = _effect(document=ConsentDocument(filename="signed.pdf", content=content)).apply()
 
     assert json.loads(effect.payload)["data"]["document"]["content"] == content
+
+
+def test_document_must_be_a_pdf(db: dict[str, MagicMock]) -> None:
+    """Content that is valid base64 but not a PDF fails, because Canvas files consents as PDFs."""
+    png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16).decode()
+
+    with pytest.raises(ValidationError, match="must be a PDF"):
+        _effect(document=ConsentDocument(filename="signed.png", content=png)).apply()

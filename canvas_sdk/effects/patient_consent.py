@@ -40,7 +40,7 @@ class ConsentCodingReference(BaseModel):
 
 
 class ConsentDocument(BaseModel):
-    """A signed consent document. The content is the file bytes, base64 encoded."""
+    """A signed consent document. The content is the bytes of a PDF file, base64 encoded."""
 
     # Canvas stores the document under this name in a 255-character file field.
     filename: str = Field(min_length=1, max_length=255)
@@ -123,13 +123,21 @@ class RecordPatientConsent(_BaseEffect):
         if self.document:
             try:
                 # Line breaks are allowed, as base64.encodebytes() writes them.
-                base64.b64decode("".join(self.document.content.split()), validate=True)
+                content = base64.b64decode("".join(self.document.content.split()), validate=True)
             except binascii.Error:
                 errors.append(
                     self._create_error_detail(
                         "value", "The document content must be base64 encoded.", None
                     )
                 )
+            else:
+                # Canvas files consent documents as PDFs, and their DocumentReference says so.
+                if not content.startswith(b"%PDF-"):
+                    errors.append(
+                        self._create_error_detail(
+                            "value", "The document content must be a PDF.", None
+                        )
+                    )
 
         return errors
 
