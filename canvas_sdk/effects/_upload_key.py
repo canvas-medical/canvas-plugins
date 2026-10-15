@@ -12,3 +12,6 @@ def upload_key_error(field: str) -> str:
         f"Field '{field}' must be the key of a file uploaded through a SimpleAPI route "
         "declared with file_uploads='stored'."
     )
+
+
+__exports__ = ()
