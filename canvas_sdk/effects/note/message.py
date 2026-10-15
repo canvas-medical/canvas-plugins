@@ -25,6 +25,7 @@ class Message(TrackableFieldsModel):
     sender_id: str | UUID
     recipient_id: str | UUID
     read: datetime | None = None
+    team_id: str | UUID | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -92,6 +93,24 @@ class Message(TrackableFieldsModel):
                         self.message_id,
                     )
                 )
+
+            if self.team_id is not None and not Team.objects.filter(id=self.team_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Team with id {self.team_id} does not exist.",
+                        self.team_id,
+                    )
+                )
+
+        if method in ("edit", "send") and self.is_dirty("team_id"):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Use AssignMessageTeam to change a message's team.",
+                    self.team_id,
+                )
+            )
 
         return errors
 

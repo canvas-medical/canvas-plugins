@@ -19,16 +19,19 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.v1.data.Patient.objects") as mock_patient,
         patch("canvas_sdk.v1.data.Staff.objects") as mock_staff,
         patch("canvas_sdk.v1.data.Message.objects") as mock_message,
+        patch("canvas_sdk.v1.data.Team.objects") as mock_team,
     ):
         # Setup default behaviors
         mock_patient.filter.return_value.exists.return_value = True
         mock_staff.filter.return_value.exists.return_value = True
         mock_message.filter.return_value.exists.return_value = True
+        mock_team.filter.return_value.exists.return_value = True
 
         yield {
             "patient": mock_patient,
             "staff": mock_staff,
             "message": mock_message,
+            "team": mock_team,
         }
 
 
@@ -343,3 +346,57 @@ def test_message_both_staff(
     effect = message.create()
 
     assert effect.type == EffectType.CREATE_MESSAGE
+
+
+def test_create_message_with_team(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """A team id on create is sent in the payload."""
+    team_id = str(uuid4())
+    effect = Message(**valid_message_data, team_id=team_id).create()
+
+    assert json.loads(effect.payload)["data"]["team_id"] == team_id
+
+
+def test_create_and_send_message_with_team(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """A team id on create_and_send is sent in the payload."""
+    team_id = str(uuid4())
+    effect = Message(**valid_message_data, team_id=team_id).create_and_send()
+
+    assert json.loads(effect.payload)["data"]["team_id"] == team_id
+
+
+def test_create_message_without_team_omits_key(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Without a team id the payload carries no team_id key."""
+    effect = Message(**valid_message_data).create()
+
+    assert "team_id" not in json.loads(effect.payload)["data"]
+
+
+def test_create_message_unknown_team(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """An unknown team id is rejected on create."""
+    mock_db_queries["team"].filter.return_value.exists.return_value = False
+    team_id = str(uuid4())
+
+    with pytest.raises(ValidationError) as exc_info:
+        Message(**valid_message_data, team_id=team_id).create()
+
+    assert f"Team with id {team_id} does not exist" in str(exc_info.value)
+
+
+def test_edit_message_rejects_team(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Editing cannot change the team; AssignMessageTeam does that."""
+    message = Message(**valid_message_data, message_id=str(uuid4()), team_id=str(uuid4()))
+
+    with pytest.raises(ValidationError) as exc_info:
+        message.edit()
+
+    assert "Use AssignMessageTeam to change a message's team" in str(exc_info.value)
