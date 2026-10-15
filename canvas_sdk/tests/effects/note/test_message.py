@@ -400,3 +400,13 @@ def test_edit_message_rejects_team(
         message.edit()
 
     assert "Use AssignMessageTeam to change a message's team" in str(exc_info.value)
+
+
+def test_create_message_malformed_team_id(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """A malformed team id fails pydantic validation before any lookup."""
+    with pytest.raises(ValidationError):
+        Message(**valid_message_data, team_id="not-a-uuid").create()
+
+    mock_db_queries["team"].filter.assert_not_called()

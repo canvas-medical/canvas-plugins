@@ -62,3 +62,31 @@ def test_unknown_team(mock_db: dict[str, MagicMock]) -> None:
         AssignMessageTeam(message_id=uuid4(), team_id=team_id).apply()
 
     assert f"Team with id {team_id} does not exist" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("team_id", ["", "not-a-uuid"])
+def test_malformed_team_id_is_a_validation_error(
+    mock_db: dict[str, MagicMock], team_id: str
+) -> None:
+    """A malformed team id fails pydantic validation before any lookup."""
+    with pytest.raises(ValidationError):
+        AssignMessageTeam(message_id=uuid4(), team_id=team_id).apply()
+
+    mock_db["team"].filter.assert_not_called()
+
+
+@pytest.mark.parametrize("message_id", ["", "not-a-uuid"])
+def test_malformed_message_id_is_a_validation_error(
+    mock_db: dict[str, MagicMock], message_id: str
+) -> None:
+    """A malformed message id fails pydantic validation before any lookup."""
+    with pytest.raises(ValidationError):
+        AssignMessageTeam(message_id=message_id, team_id=uuid4()).apply()
+
+    mock_db["message"].filter.assert_not_called()
+
+
+def test_team_id_is_required(mock_db: dict[str, MagicMock]) -> None:
+    """Leaving team_id out is an error; unassigning takes an explicit None."""
+    with pytest.raises(ValidationError):
+        AssignMessageTeam(message_id=uuid4()).apply()  # type: ignore[call-arg]
