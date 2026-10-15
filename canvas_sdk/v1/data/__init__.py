@@ -65,6 +65,7 @@ from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .django_content_type import ContentType
+from .dme import DmeOrder, DmeProduct, DmeProductCodeSystem
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -344,6 +345,9 @@ __all__ = __exports__ = (
     "DiagnosticView",
     "Discount",
     "ContentType",
+    "DmeOrder",
+    "DmeProduct",
+    "DmeProductCodeSystem",
     "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
