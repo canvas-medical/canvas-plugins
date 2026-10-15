@@ -160,6 +160,41 @@ def test_sandbox_loaded_model_carries_the_metadata_columns(tmp_path: Path) -> No
     assert "modified" in sql
 
 
+@patch("plugin_runner.ddl.execute_create_table_sql")
+def test_abstract_custom_model_gets_no_table(mock_exec: MagicMock, tmp_path: Path) -> None:
+    """An abstract CustomModel base in a model file should emit no DDL of its own.
+
+    Deployed plugins keep a shared abstract base beside their tables (Strive's
+    task_panel AuditedRow). Its fields belong to the concrete subclasses; a table
+    for the base itself is never read or written.
+    """
+    _make_plugin_tree(
+        tmp_path,
+        "test_plugin",
+        """\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import DateTimeField, TextField
+
+        class AuditedRow(CustomModel):
+            class Meta:
+                abstract = True
+
+            created_date = DateTimeField(auto_now_add=True)
+
+        class SavedView(AuditedRow):
+            name = TextField()
+        """,
+    )
+
+    generate_plugin_migrations("test_plugin", tmp_path / "test_plugin", schema_name="test_plugin")
+
+    executed = [call.args[0] for call in mock_exec.call_args_list]
+    assert len(executed) == 1
+    assert "savedview" in executed[0]
+    assert "created_date" in executed[0]
+    assert "auditedrow" not in executed[0]
+
+
 def test_extract_excludes_constants(tmp_path: Path) -> None:
     """Constants (int, str) lack __module__ and should not be returned."""
     model_file = _make_plugin_tree(
@@ -217,6 +252,7 @@ def test_extract_finds_multiple_models_in_one_file(tmp_path: Path) -> None:
 def test_returns_true_for_standard_model() -> None:
     """A normal model with matching schema should be eligible."""
     mock_model = MagicMock()
+    mock_model._meta.abstract = False
     mock_model._meta.proxy = False
     mock_model._meta.original_attrs = {"db_table": "my_table"}
 
@@ -231,9 +267,20 @@ def test_returns_false_for_proxy_model() -> None:
     assert should_create_table(mock_model, "my_schema") is False
 
 
+def test_returns_false_for_abstract_model() -> None:
+    """Abstract models should not get their own tables."""
+    mock_model = MagicMock()
+    mock_model._meta.abstract = True
+    mock_model._meta.proxy = False
+    mock_model._meta.original_attrs = {"db_table": "my_table"}
+
+    assert should_create_table(mock_model, "my_schema") is False
+
+
 def test_returns_false_for_cross_schema() -> None:
     """Models referencing a different schema should be skipped."""
     mock_model = MagicMock()
+    mock_model._meta.abstract = False
     mock_model._meta.proxy = False
     mock_model._meta.original_attrs = {"db_table": "other_schema.table"}
 
@@ -243,6 +290,7 @@ def test_returns_false_for_cross_schema() -> None:
 def test_returns_true_for_same_schema_dotted() -> None:
     """Models whose db_table starts with the target schema should be eligible."""
     mock_model = MagicMock()
+    mock_model._meta.abstract = False
     mock_model._meta.proxy = False
     mock_model._meta.original_attrs = {"db_table": "my_schema.table"}
 
@@ -252,6 +300,7 @@ def test_returns_true_for_same_schema_dotted() -> None:
 def test_returns_false_for_overlapping_schema_prefix() -> None:
     """A table in schema 'acme__data_extra' must not match schema 'acme__data'."""
     mock_model = MagicMock()
+    mock_model._meta.abstract = False
     mock_model._meta.proxy = False
     mock_model._meta.original_attrs = {"db_table": "acme__data_extra.table"}
 
@@ -462,6 +511,7 @@ def test_raises_on_cross_schema_model(
     mock_discover.return_value = [sentinel_file]
 
     model = MagicMock(__name__="CrossSchemaModel")
+    model._meta.abstract = False
     model._meta.proxy = False
     model._meta.original_attrs = {"db_table": "other_schema.forbidden_table"}
     mock_extract.return_value = [model]
