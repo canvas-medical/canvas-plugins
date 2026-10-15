@@ -370,6 +370,36 @@ class CustomModelMetaclass(ModelMetaclass):
 
         new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
 
+        # A base listed after CustomModel loses any created or modified it defines
+        # to CustomModel's own field, which would silently change what the column
+        # holds. Refuse the class instead.
+        custom_model = globals().get("CustomModel")
+        if custom_model is not None and custom_model in new_class.__mro__:
+            mro = new_class.__mro__
+            later_bases = [
+                base
+                for base in mro[mro.index(custom_model) + 1 :]
+                if base not in custom_model.__mro__
+            ]
+            # Django copies an abstract base's field with its creation_counter
+            # intact, so a matching counter marks a field as CustomModel's own.
+            generated = {
+                field.name: field.creation_counter
+                for field in custom_model._meta.local_fields
+                if field.name in ("created", "modified")
+            }
+            for field in new_class._meta.local_fields:
+                if generated.get(field.name) != field.creation_counter:
+                    continue
+                for base in later_bases:
+                    if field.name in vars(base):
+                        raise ValueError(
+                            f"CustomModel '{name}' lists CustomModel ahead of "
+                            f"{base.__name__}, which defines '{field.name}'. "
+                            f"CustomModel's own '{field.name}' would replace it; "
+                            f"list {base.__name__} before CustomModel in the bases."
+                        )
+
         return new_class
 
 

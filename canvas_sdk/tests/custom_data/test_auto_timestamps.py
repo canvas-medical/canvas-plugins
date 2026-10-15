@@ -8,7 +8,8 @@ Tests verify that:
 5. Each model gets its own field instances
 6. The columns reach the generated DDL
 7. save(), bulk_create(), update() and bulk_update() all populate them
-8. A mixin listed ahead of CustomModel keeps its fields and the stamping manager
+8. A mixin listed ahead of CustomModel keeps its fields and the stamping manager;
+   one listed after it, which would lose them, is refused
 9. A row written before the columns existed reads NULL and gains modified on its next write
 """
 
@@ -395,6 +396,58 @@ def test_mixin_fields_win_when_listed_first() -> None:
     assert created.null is False
     assert modified.null is False
     assert auto_now_field_names(InheritsBothFromMixin) == ["modified"]
+
+
+def test_field_mixin_listed_after_custom_model_is_rejected() -> None:
+    """CustomModel's field would silently replace the mixin's, so the class must not load."""
+
+    class TextTimestampMixin(models.Model):
+        class Meta:
+            abstract = True
+            app_label = "test_plugin"
+
+        created = models.TextField(null=True)
+
+    with pytest.raises(ValueError, match="list TextTimestampMixin before CustomModel"):
+
+        class ListsFieldMixinLast(CustomModel, TextTimestampMixin):  # type: ignore[misc]
+            class Meta:
+                app_label = "test_plugin"
+
+
+def test_property_mixin_listed_after_custom_model_is_rejected() -> None:
+    """A plain class supplying modified as a property loses it the same way."""
+
+    class ComputedModified:
+        @property
+        def modified(self) -> str:
+            return "computed"
+
+    with pytest.raises(ValueError, match="list ComputedModified before CustomModel"):
+
+        class ListsPropertyMixinLast(CustomModel, ComputedModified):  # type: ignore[misc]
+            class Meta:
+                app_label = "test_plugin"
+
+
+def test_mixin_after_an_intermediate_that_declares_its_own_is_allowed() -> None:
+    """When an earlier base already supplies created, CustomModel's field is not in play."""
+
+    class DeclaresCreatedBase(CustomModel):
+        class Meta:
+            abstract = True
+            app_label = "test_plugin"
+
+        created = models.TextField(null=True)  # type: ignore[assignment]
+
+    class OtherCreated:
+        created = "unused"
+
+    class Allowed(DeclaresCreatedBase, OtherCreated):  # type: ignore[misc]
+        class Meta:
+            app_label = "test_plugin"
+
+    assert isinstance(Allowed._meta.get_field("created"), models.TextField)
 
 
 def test_mixin_first_model_uses_the_stamping_manager() -> None:
