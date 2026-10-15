@@ -7,8 +7,9 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Message as MessageModel
-from canvas_sdk.v1.data import Patient, Staff
+from canvas_sdk.v1.data import Patient, Staff, Team
 
 
 class Message(TrackableFieldsModel):
@@ -128,4 +129,45 @@ class Message(TrackableFieldsModel):
         )
 
 
-__exports__ = ("Message",)
+class AssignMessageTeam(_BaseEffect):
+    """Assign a message to a team, or unassign it when `team_id` is None."""
+
+    class Meta:
+        effect_type = EffectType.ASSIGN_MESSAGE_TEAM
+
+    message_id: str | UUID
+    team_id: str | UUID | None = None
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+
+        if not MessageModel.objects.filter(id=self.message_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Message with id {self.message_id} does not exist.",
+                    self.message_id,
+                )
+            )
+
+        if self.team_id is not None and not Team.objects.filter(id=self.team_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Team with id {self.team_id} does not exist.",
+                    self.team_id,
+                )
+            )
+
+        return errors
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The effect's values to be sent in the payload."""
+        return {
+            "message_id": str(self.message_id),
+            "team_id": str(self.team_id) if self.team_id is not None else None,
+        }
+
+
+__exports__ = ("AssignMessageTeam", "Message")
