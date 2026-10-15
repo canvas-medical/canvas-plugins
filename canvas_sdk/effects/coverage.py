@@ -1,10 +1,11 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
@@ -26,6 +27,7 @@ from canvas_sdk.v1.data.coverage import (
     TransactorPhone,
 )
 from canvas_sdk.v1.data.patient import Patient
+from settings import INSTALLATION_TIME_ZONE
 
 # Fields a plugin can set on create and update.
 WRITABLE_FIELDS: tuple[str, ...] = (
@@ -51,14 +53,6 @@ WRITABLE_FIELDS: tuple[str, ...] = (
     "card_image_back_upload_key",
 )
 
-CREATE_REQUIRED_FIELDS: tuple[str, ...] = (
-    "patient_id",
-    "issuer_id",
-    "coverage_rank",
-    "id_number",
-    "patient_relationship_to_subscriber",
-)
-
 # Fields that may be omitted but, when set, never hold None or an empty string.
 NON_BLANK_FIELDS: tuple[str, ...] = (
     "issuer_id",
@@ -69,6 +63,11 @@ NON_BLANK_FIELDS: tuple[str, ...] = (
     "subscriber_id",
     "coverage_start_date",
 )
+
+
+def _today() -> date:
+    """Today's date where the practice is, as Canvas counts it."""
+    return datetime.now(ZoneInfo(INSTALLATION_TIME_ZONE)).date()
 
 
 class PhotoSide(StrEnum):
@@ -118,6 +117,14 @@ class Coverage(TrackableFieldsModel):
 
     class Meta:
         effect_type = "COVERAGE"
+        create_required_fields = (
+            "patient_id",
+            "issuer_id",
+            "coverage_rank",
+            "id_number",
+            "patient_relationship_to_subscriber",
+        )
+        expire_required_fields = ("coverage_end_date",)
 
     coverage_id: UUID | None = Field(default=None, strict=False)
     patient_id: str | None = None
@@ -174,8 +181,11 @@ class Coverage(TrackableFieldsModel):
     def _write_errors(self, existing: CoverageModel | None) -> list[InitErrorDetails]:
         """Errors shared by create and update; ``existing`` is the coverage being updated."""
         errors = blank_field_errors(self, NON_BLANK_FIELDS)
-        errors += upload_key_errors(self, "card_image_front_upload_key")
-        errors += upload_key_errors(self, "card_image_back_upload_key")
+        errors += upload_key_errors(
+            self,
+            "card_image_front_upload_key",
+            "card_image_back_upload_key",
+        )
 
         if self.stack == CoverageStack.REMOVED:
             errors.append(
@@ -187,12 +197,7 @@ class Coverage(TrackableFieldsModel):
         issuer_id = self._pick(
             "issuer_id", existing.issuer.id if existing and existing.issuer else None
         )
-        if self.issuer_id and not Transactor.objects.filter(id=self.issuer_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value", f"Payer with id: {self.issuer_id} does not exist.", self.issuer_id
-                )
-            )
+        errors += existing_record_errors(self, "issuer_id", Transactor.objects, "payer")
         for field, contacts in (
             ("issuer_address_id", TransactorAddress.objects),
             ("issuer_phone_id", TransactorPhone.objects),
@@ -213,14 +218,7 @@ class Coverage(TrackableFieldsModel):
         subscriber_id = self._pick(
             "subscriber_id", existing.subscriber.id if existing and existing.subscriber else None
         )
-        if self.subscriber_id and not Patient.objects.filter(id=self.subscriber_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Subscriber with id: {self.subscriber_id} does not exist.",
-                    self.subscriber_id,
-                )
-            )
+        errors += existing_record_errors(self, "subscriber_id", Patient.objects, "patient")
         if relationship == CoverageRelationshipCode.SELF:
             if self.subscriber_id and self.subscriber_id != patient_id:
                 errors.append(
@@ -243,7 +241,7 @@ class Coverage(TrackableFieldsModel):
 
         # A new coverage without a start date starts today.
         start = self._pick(
-            "coverage_start_date", existing.coverage_start_date if existing else date.today()
+            "coverage_start_date", existing.coverage_start_date if existing else _today()
         )
         end = self._pick("coverage_end_date", existing.coverage_end_date if existing else None)
         if start and end and start > end:
@@ -266,28 +264,14 @@ class Coverage(TrackableFieldsModel):
                         self.coverage_id,
                     )
                 )
-            for field in CREATE_REQUIRED_FIELDS:
-                if getattr(self, field) in (None, ""):
-                    errors.append(
-                        self._create_error_detail(
-                            "missing", f"Field '{field}' is required to create a coverage.", None
-                        )
-                    )
-            if self.patient_id and not Patient.objects.filter(id=self.patient_id).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Patient with id: {self.patient_id} does not exist.",
-                        self.patient_id,
-                    )
-                )
+            errors += existing_record_errors(self, "patient_id", Patient.objects, "patient")
             stack = self.stack or CoverageStack.IN_USE
             if (
                 self.coverage_rank
                 and CoverageModel.objects.filter(
                     patient__id=self.patient_id, coverage_rank=self.coverage_rank, stack=stack
                 )
-                .exclude(coverage_end_date__lt=date.today())
+                .exclude(coverage_end_date__lt=_today())
                 .exists()
             ):
                 errors.append(
@@ -331,14 +315,6 @@ class Coverage(TrackableFieldsModel):
                     action,
                 )
             )
-            if method == "expire" and self.coverage_end_date is None:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'coverage_end_date' is required to expire a coverage.",
-                        None,
-                    )
-                )
 
         return errors
 
@@ -374,7 +350,13 @@ class Coverage(TrackableFieldsModel):
 
     def remove_photo(self, side: PhotoSide) -> Effect:
         """Remove the front or back card file from an existing coverage."""
-        side = PhotoSide(side)
+        try:
+            side = PhotoSide(side)
+        except ValueError:
+            raise ValidationError.from_exception_data(
+                self.__class__.__name__,
+                [self._create_error_detail("value", "Field 'side' must be FRONT or BACK.", side)],
+            ) from None
         self._validate_before_effect("remove_photo")
         data = {"coverage_id": str(self.coverage_id), "side": side}
         return Effect(
@@ -396,7 +378,8 @@ class CoverageReorder(_BaseEffect):
     """
     Effect to set the rank and stack of several of a patient's coverages at once.
 
-    Within each stack, ranks must be unique and consecutive starting at 1. Use
+    Within each stack, ranks must be unique and consecutive starting at 1, and the ordering
+    must list every active coverage of each stack it places a coverage in. Use
     ``Coverage.remove()`` to move a coverage to the removed stack.
 
     Example:
@@ -428,12 +411,7 @@ class CoverageReorder(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if not Patient.objects.filter(id=self.patient_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value", f"Patient with id: {self.patient_id} does not exist.", self.patient_id
-                )
-            )
+        errors += existing_record_errors(self, "patient_id", Patient.objects, "patient")
 
         coverage_ids = [entry.coverage_id for entry in self.ordering]
         if len(set(coverage_ids)) != len(coverage_ids):
@@ -460,6 +438,27 @@ class CoverageReorder(_BaseEffect):
             errors.append(
                 self._create_error_detail(
                     "value", "Use Coverage.remove() to move a coverage to the removed stack.", None
+                )
+            )
+        today = _today()
+        unlisted = (
+            CoverageModel.objects.filter(
+                patient__id=self.patient_id,
+                stack__in=ranks_by_stack,
+                coverage_start_date__lte=today,
+            )
+            .exclude(coverage_end_date__lt=today)
+            .exclude(id__in=coverage_ids)
+        )
+        if unlisted.exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Field 'ordering' must list every active coverage of each stack it places "
+                    "a coverage in.",
+                    sorted(
+                        str(coverage_id) for coverage_id in unlisted.values_list("id", flat=True)
+                    ),
                 )
             )
         for stack, ranks in ranks_by_stack.items():

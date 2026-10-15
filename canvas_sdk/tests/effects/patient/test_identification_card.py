@@ -63,7 +63,9 @@ def test_create(patient: Patient) -> None:
     ],
 )
 def test_create_rejects_invalid_input(
-    patient: Patient, kwargs: dict[str, Any], message: str
+    patient: Patient,
+    kwargs: dict[str, Any],
+    message: str,
 ) -> None:
     """create() needs an existing patient and an upload key, and no card id."""
     if kwargs.get("patient_id") == "PATIENT":
