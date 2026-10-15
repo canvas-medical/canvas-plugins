@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v0.252.0 (2026-10-15)
+
+### Features
+
+- Add fax action event types for notes, referrals, imaging orders, lab orders and integration tasks
+  ([#1920](https://github.com/canvas-medical/canvas-plugins/pull/1920),
+  [`665a6dc`](https://github.com/canvas-medical/canvas-plugins/commit/665a6dc15c2a55159f795dafda1c3d14014a5092))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.251.0 (2026-10-15)
+
+### Features
+
+- Expose assigned reviewers on report and document data models
+  ([#1909](https://github.com/canvas-medical/canvas-plugins/pull/1909),
+  [`a518677`](https://github.com/canvas-medical/canvas-plugins/commit/a51867787b4e6a43139aabd24e56f650ad48ffaa))
+
+### Testing
+
+- Add detailed regression cases for plugin sandbox and SDK clients
+  ([`4ebde5b`](https://github.com/canvas-medical/canvas-plugins/commit/4ebde5b796c4af2a46171a8cc9a160c238ecd081))
+
+
 ## v0.250.0 (2026-10-14)
 
 ### Features

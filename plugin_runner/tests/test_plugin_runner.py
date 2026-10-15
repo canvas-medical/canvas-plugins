@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import pickle
 import shutil
 import signal
 import sys
@@ -1043,9 +1044,23 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
         mock_reconcile_plugins.assert_not_called()
 
 
+class _RecordsUnpickling:
+    """Sets a flag if it is ever unpickled."""
+
+    unpickled = False
+
+    def __reduce__(self) -> tuple[Callable[[], None], tuple[()]]:
+        return (_mark_unpickled, ())
+
+
+def _mark_unpickled() -> None:
+    _RecordsUnpickling.unpickled = True
+
+
 @pytest.mark.parametrize(
     "data",
     [
+        pytest.param(pickle.dumps({"action": "reload", "x": _RecordsUnpickling()}), id="pickle"),
         pytest.param(b"not json", id="not_json"),
         pytest.param(b'["reload"]', id="not_an_object"),
         pytest.param(b'{"action": "reformat"}', id="unknown_action"),
@@ -1055,7 +1070,9 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 def test_synchronize_plugins_ignores_messages_that_are_not_a_known_json_action(
     data: bytes,
 ) -> None:
-    """Only a JSON object naming a known action does anything."""
+    """Only a JSON object naming a known action does anything; nothing is ever unpickled."""
+    _RecordsUnpickling.unpickled = False
+
     with (
         patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
         patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
@@ -1069,6 +1086,7 @@ def test_synchronize_plugins_ignores_messages_that_are_not_a_known_json_action(
 
         synchronize_plugins(run_once=True)
 
+    assert _RecordsUnpickling.unpickled is False
     mock_install_plugins.assert_not_called()
     mock_reconcile_plugins.assert_not_called()
     mock_install_plugin.assert_not_called()
