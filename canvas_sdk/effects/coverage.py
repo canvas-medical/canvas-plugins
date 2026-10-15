@@ -1,22 +1,29 @@
 import json
 from datetime import date
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects._upload_key import is_plugin_upload_key, upload_key_error
+from canvas_sdk.effects._field_errors import (
+    blank_field_errors,
+    existing_record_errors,
+    upload_key_errors,
+)
+from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data.coverage import Coverage as CoverageModel
 from canvas_sdk.v1.data.coverage import (
     CoverageRank,
     CoverageRelationshipCode,
     CoverageStack,
     Transactor,
+    TransactorAddress,
     TransactorCoverageType,
+    TransactorPhone,
 )
 from canvas_sdk.v1.data.patient import Patient
 
@@ -52,8 +59,8 @@ CREATE_REQUIRED_FIELDS: tuple[str, ...] = (
     "patient_relationship_to_subscriber",
 )
 
-# Fields that may be omitted on update but never set to None.
-UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = (
+# Fields that may be omitted but, when set, never hold None or an empty string.
+NON_BLANK_FIELDS: tuple[str, ...] = (
     "issuer_id",
     "coverage_rank",
     "id_number",
@@ -61,11 +68,7 @@ UPDATE_NON_NULLABLE_FIELDS: tuple[str, ...] = (
     "stack",
     "subscriber_id",
     "coverage_start_date",
-    "card_image_front_upload_key",
-    "card_image_back_upload_key",
 )
-
-UPLOAD_KEY_FIELDS: tuple[str, ...] = ("card_image_front_upload_key", "card_image_back_upload_key")
 
 
 class PhotoSide(StrEnum):
@@ -85,14 +88,18 @@ class Coverage(TrackableFieldsModel):
     the upload, so a key can be attached once.
 
     The plan type is taken from the payer (``issuer_id``) and cannot be set directly.
+    Changing the payer clears the payer address, phone and coverage type unless new ones
+    are set in the same update.
 
-    On update, only the fields you set are changed, and setting a field to ``None``
-    clears it.
+    On update, only the fields you set are changed, and setting an optional field to
+    ``None`` clears it. Use ``remove()`` to move a coverage to the removed stack.
 
     Example (create):
+        from canvas_sdk.v1.data.coverage import CoverageRank, CoverageRelationshipCode
+
         Coverage(
             patient_id="patient-id",
-            issuer_id="transactor-id",
+            issuer_id=payer.id,
             coverage_rank=CoverageRank.PRIMARY,
             id_number="ABC123",
             patient_relationship_to_subscriber=CoverageRelationshipCode.SELF,
@@ -101,38 +108,40 @@ class Coverage(TrackableFieldsModel):
         ).create()
 
     Example (update the back of the card only):
-        Coverage(coverage_id="coverage-id", card_image_back_upload_key=part.key).update()
+        Coverage(coverage_id=coverage.id, card_image_back_upload_key=part.key).update()
 
     Example (expire):
-        Coverage(coverage_id="coverage-id").expire(coverage_end_date=date(2026, 12, 31))
+        Coverage(coverage_id=coverage.id).expire(coverage_end_date=date(2026, 12, 31))
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     class Meta:
         effect_type = "COVERAGE"
 
-    coverage_id: str | UUID | None = None
+    coverage_id: UUID | None = Field(default=None, strict=False)
     patient_id: str | None = None
 
-    issuer_id: str | UUID | None = None
-    issuer_address_id: str | UUID | None = None
-    issuer_phone_id: str | UUID | None = None
+    issuer_id: UUID | None = Field(default=None, strict=False)
+    issuer_address_id: UUID | None = Field(default=None, strict=False)
+    issuer_phone_id: UUID | None = Field(default=None, strict=False)
 
     subscriber_id: str | None = None
     patient_relationship_to_subscriber: CoverageRelationshipCode | None = Field(
         default=None, strict=False
     )
-    subscriber_identifier: str | None = None
+    subscriber_identifier: str | None = Field(default=None, max_length=100)
 
     coverage_rank: CoverageRank | None = Field(default=None, strict=False)
     coverage_type: TransactorCoverageType | None = Field(default=None, strict=False)
     stack: CoverageStack | None = Field(default=None, strict=False)
 
-    id_number: str | None = None
-    plan: str | None = None
-    sub_plan: str | None = None
-    group: str | None = None
-    sub_group: str | None = None
-    employer: str | None = None
+    id_number: str | None = Field(default=None, max_length=100)
+    plan: str | None = Field(default=None, max_length=255)
+    sub_plan: str | None = Field(default=None, max_length=255)
+    group: str | None = Field(default=None, max_length=255)
+    sub_group: str | None = Field(default=None, max_length=255)
+    employer: str | None = Field(default=None, max_length=255)
     coverage_start_date: date | None = None
     coverage_end_date: date | None = None
     comments: str | None = None
@@ -140,59 +149,109 @@ class Coverage(TrackableFieldsModel):
     card_image_front_upload_key: str | None = None
     card_image_back_upload_key: str | None = None
 
-    def _data(self, fields: tuple[str, ...]) -> dict[str, Any]:
-        """Return the serialized values of the given fields that were explicitly set."""
-        data: dict[str, Any] = {}
-        for field in fields:
-            if not self.is_dirty(field):
-                continue
-            value = getattr(self, field)
-            if isinstance(value, Enum):
-                value = value.value
-            elif isinstance(value, date):
-                value = value.isoformat()
-            elif isinstance(value, UUID):
-                value = str(value)
-            data[field] = value
-        return data
+    def _existing(self) -> CoverageModel | None:
+        """Return the coverage being updated, if it exists."""
+        if self.coverage_id is None:
+            return None
+        return (
+            CoverageModel.objects.select_related(
+                "patient",
+                "subscriber",
+                "issuer",
+            )
+            .filter(id=self.coverage_id)
+            .first()
+        )
 
-    def _coverage_id_errors(self, method: str) -> list[InitErrorDetails]:
-        if not self.coverage_id:
-            return [
-                self._create_error_detail(
-                    "missing",
-                    f"Field 'coverage_id' is required to {method} a coverage.",
-                    self.coverage_id,
-                )
-            ]
-        if not CoverageModel.objects.filter(id=self.coverage_id).exists():
-            return [
-                self._create_error_detail(
-                    "value",
-                    f"Coverage with id: {self.coverage_id} does not exist.",
-                    self.coverage_id,
-                )
-            ]
-        return []
+    def _pick(
+        self,
+        field: str,
+        existing: Any,
+    ) -> Any:
+        """Return the value set for ``field``, or the stored value when it was not set."""
+        return getattr(self, field) if self.is_dirty(field) else existing
 
-    def _write_errors(self) -> list[InitErrorDetails]:
-        """Errors shared by create and update."""
-        errors: list[InitErrorDetails] = []
+    def _write_errors(self, existing: CoverageModel | None) -> list[InitErrorDetails]:
+        """Errors shared by create and update; ``existing`` is the coverage being updated."""
+        errors = blank_field_errors(self, NON_BLANK_FIELDS)
+        errors += upload_key_errors(self, "card_image_front_upload_key")
+        errors += upload_key_errors(self, "card_image_back_upload_key")
 
-        if self.issuer_id and not Transactor.objects.filter(id=self.issuer_id).exists():
+        if self.stack == CoverageStack.REMOVED:
             errors.append(
                 self._create_error_detail(
-                    "value",
-                    f"Payer with id: {self.issuer_id} does not exist.",
-                    self.issuer_id,
+                    "value", "Use remove() to move a coverage to the removed stack.", self.stack
                 )
             )
 
-        for field in UPLOAD_KEY_FIELDS:
-            key = getattr(self, field)
-            if key is not None and not is_plugin_upload_key(key):
-                errors.append(self._create_error_detail("value", upload_key_error(field), key))
+        issuer_id = self._pick(
+            "issuer_id", existing.issuer.id if existing and existing.issuer else None
+        )
+        if self.issuer_id and not Transactor.objects.filter(id=self.issuer_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value", f"Payer with id: {self.issuer_id} does not exist.", self.issuer_id
+                )
+            )
+        for field, contacts in (
+            ("issuer_address_id", TransactorAddress.objects),
+            ("issuer_phone_id", TransactorPhone.objects),
+        ):
+            value = getattr(self, field)
+            if value and not contacts.filter(id=value, transactor__id=issuer_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value", f"Field '{field}' must belong to the coverage's payer.", value
+                    )
+                )
 
+        patient_id = existing.patient.id if existing and existing.patient else self.patient_id
+        relationship = self._pick(
+            "patient_relationship_to_subscriber",
+            existing.patient_relationship_to_subscriber if existing else None,
+        )
+        subscriber_id = self._pick(
+            "subscriber_id", existing.subscriber.id if existing and existing.subscriber else None
+        )
+        if self.subscriber_id and not Patient.objects.filter(id=self.subscriber_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Subscriber with id: {self.subscriber_id} does not exist.",
+                    self.subscriber_id,
+                )
+            )
+        if relationship == CoverageRelationshipCode.SELF:
+            if self.subscriber_id and self.subscriber_id != patient_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Field 'subscriber_id' must be omitted or equal the patient when the "
+                        "patient is the subscriber.",
+                        self.subscriber_id,
+                    )
+                )
+        elif relationship is not None and (not subscriber_id or subscriber_id == patient_id):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Field 'subscriber_id' must name someone other than the patient when the "
+                    "patient is not the subscriber.",
+                    subscriber_id,
+                )
+            )
+
+        # A new coverage without a start date starts today.
+        start = self._pick(
+            "coverage_start_date", existing.coverage_start_date if existing else date.today()
+        )
+        end = self._pick("coverage_end_date", existing.coverage_end_date if existing else None)
+        if start and end and start > end:
+            errors.append(
+                self._create_error_detail(
+                    "value", "The coverage start date must be on or before its end date.", end
+                )
+            )
         return errors
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
@@ -211,9 +270,7 @@ class Coverage(TrackableFieldsModel):
                 if getattr(self, field) in (None, ""):
                     errors.append(
                         self._create_error_detail(
-                            "missing",
-                            f"Field '{field}' is required to create a coverage.",
-                            getattr(self, field),
+                            "missing", f"Field '{field}' is required to create a coverage.", None
                         )
                     )
             if self.patient_id and not Patient.objects.filter(id=self.patient_id).exists():
@@ -224,32 +281,35 @@ class Coverage(TrackableFieldsModel):
                         self.patient_id,
                     )
                 )
-            is_self = self.patient_relationship_to_subscriber == CoverageRelationshipCode.SELF
-            if is_self and self.subscriber_id is not None and self.subscriber_id != self.patient_id:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Field 'subscriber_id' must be omitted or equal 'patient_id' when the "
-                        "patient is the subscriber.",
-                        self.subscriber_id,
-                    )
-                )
+            stack = self.stack or CoverageStack.IN_USE
             if (
-                self.patient_relationship_to_subscriber is not None
-                and not is_self
-                and not self.subscriber_id
+                self.coverage_rank
+                and CoverageModel.objects.filter(
+                    patient__id=self.patient_id, coverage_rank=self.coverage_rank, stack=stack
+                )
+                .exclude(coverage_end_date__lt=date.today())
+                .exists()
             ):
                 errors.append(
                     self._create_error_detail(
-                        "missing",
-                        "Field 'subscriber_id' is required when the patient is not the subscriber.",
-                        None,
+                        "value",
+                        f"The patient already has an active {stack} coverage with rank "
+                        f"{self.coverage_rank}.",
+                        self.coverage_rank,
                     )
                 )
-            errors.extend(self._write_errors())
+            errors.extend(self._write_errors(None))
 
         elif method == "update":
-            errors.extend(self._coverage_id_errors("update"))
+            errors.extend(
+                existing_record_errors(
+                    self,
+                    "coverage_id",
+                    CoverageModel.objects,
+                    "coverage",
+                    method,
+                )
+            )
             if self.is_dirty("patient_id"):
                 errors.append(
                     self._create_error_detail(
@@ -258,20 +318,20 @@ class Coverage(TrackableFieldsModel):
                         self.patient_id,
                     )
                 )
-            for field in UPDATE_NON_NULLABLE_FIELDS:
-                if self.is_dirty(field) and getattr(self, field) is None:
-                    errors.append(
-                        self._create_error_detail(
-                            "value",
-                            f"Field '{field}' cannot be set to null when updating a coverage.",
-                            None,
-                        )
-                    )
-            errors.extend(self._write_errors())
+            errors.extend(self._write_errors(self._existing()))
 
-        elif method == "expire":
-            errors.extend(self._coverage_id_errors("expire"))
-            if self.coverage_end_date is None:
+        elif method in ("expire", "remove", "remove_photo"):
+            action = "remove a card image from" if method == "remove_photo" else method
+            errors.extend(
+                existing_record_errors(
+                    self,
+                    "coverage_id",
+                    CoverageModel.objects,
+                    "coverage",
+                    action,
+                )
+            )
+            if method == "expire" and self.coverage_end_date is None:
                 errors.append(
                     self._create_error_detail(
                         "missing",
@@ -280,98 +340,90 @@ class Coverage(TrackableFieldsModel):
                     )
                 )
 
-        elif method == "remove":
-            errors.extend(self._coverage_id_errors("remove"))
-
-        elif method == "remove_photo":
-            errors.extend(self._coverage_id_errors("remove a card image from"))
-
         return errors
 
     def create(self) -> Effect:
         """Create a new coverage."""
         self._validate_before_effect("create")
-        data = {"patient_id": self.patient_id, **self._data(WRITABLE_FIELDS)}
-        return Effect(
-            type=f"CREATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": data}),
-        )
+        data = {"patient_id": self.patient_id, **self.values_for(WRITABLE_FIELDS)}
+        return Effect(type=f"CREATE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def update(self) -> Effect:
         """Update an existing coverage, changing only the fields that were set."""
         self._validate_before_effect("update")
-        data = {"coverage_id": str(self.coverage_id), **self._data(WRITABLE_FIELDS)}
-        return Effect(
-            type=f"UPDATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": data}),
-        )
+        data = {"coverage_id": str(self.coverage_id), **self.values_for(WRITABLE_FIELDS)}
+        return Effect(type=f"UPDATE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def expire(self, coverage_end_date: date | None = None) -> Effect:
         """Expire an existing coverage by setting its end date."""
         if coverage_end_date is not None:
             self.coverage_end_date = coverage_end_date
         self._validate_before_effect("expire")
-        return Effect(
-            type=f"EXPIRE_{self.Meta.effect_type}",
-            payload=json.dumps(
-                {
-                    "data": {
-                        "coverage_id": str(self.coverage_id),
-                        "coverage_end_date": self.coverage_end_date.isoformat()
-                        if self.coverage_end_date
-                        else None,
-                    }
-                }
-            ),
-        )
+        assert self.coverage_end_date is not None
+        data = {
+            "coverage_id": str(self.coverage_id),
+            "coverage_end_date": self.coverage_end_date.isoformat(),
+        }
+        return Effect(type=f"EXPIRE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def remove(self) -> Effect:
         """Move an existing coverage to the removed stack."""
         self._validate_before_effect("remove")
-        return Effect(
-            type=f"REMOVE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": {"coverage_id": str(self.coverage_id)}}),
-        )
+        data = {"coverage_id": str(self.coverage_id)}
+        return Effect(type=f"REMOVE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def remove_photo(self, side: PhotoSide) -> Effect:
         """Remove the front or back card file from an existing coverage."""
         side = PhotoSide(side)
         self._validate_before_effect("remove_photo")
+        data = {"coverage_id": str(self.coverage_id), "side": side}
         return Effect(
-            type=f"REMOVE_{self.Meta.effect_type}_PHOTO",
-            payload=json.dumps({"data": {"coverage_id": str(self.coverage_id), "side": side}}),
+            type=f"REMOVE_{self.Meta.effect_type}_PHOTO", payload=json.dumps({"data": data})
         )
 
 
 class CoverageReorderEntry(BaseModel):
     """The new position of one coverage in a ``CoverageReorder``."""
 
-    coverage_id: str | UUID
+    model_config = ConfigDict(validate_assignment=True)
+
+    coverage_id: UUID
     coverage_rank: CoverageRank
     stack: CoverageStack
 
 
-class CoverageReorder(TrackableFieldsModel):
+class CoverageReorder(_BaseEffect):
     """
     Effect to set the rank and stack of several of a patient's coverages at once.
 
-    Within each stack, ranks must be unique and consecutive starting at 1.
+    Within each stack, ranks must be unique and consecutive starting at 1. Use
+    ``Coverage.remove()`` to move a coverage to the removed stack.
 
     Example:
+        from canvas_sdk.v1.data.coverage import CoverageStack
+
         CoverageReorder(
             patient_id="patient-id",
             ordering=[
-                CoverageReorderEntry(coverage_id="a", coverage_rank=1, stack=CoverageStack.IN_USE),
-                CoverageReorderEntry(coverage_id="b", coverage_rank=2, stack=CoverageStack.IN_USE),
+                CoverageReorderEntry(coverage_id=a.id, coverage_rank=1, stack=CoverageStack.IN_USE),
+                CoverageReorderEntry(coverage_id=b.id, coverage_rank=2, stack=CoverageStack.IN_USE),
             ],
         ).apply()
     """
 
     class Meta:
-        effect_type = "REORDER_COVERAGE"
+        effect_type = EffectType.REORDER_COVERAGE
 
     patient_id: str
-    ordering: list[CoverageReorderEntry]
+    ordering: list[CoverageReorderEntry] = Field(min_length=1)
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The patient and each coverage's new rank and stack."""
+        return {
+            "patient_id": self.patient_id,
+            "ordering": [entry.model_dump(mode="json") for entry in self.ordering],
+        }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -379,20 +431,11 @@ class CoverageReorder(TrackableFieldsModel):
         if not Patient.objects.filter(id=self.patient_id).exists():
             errors.append(
                 self._create_error_detail(
-                    "value",
-                    f"Patient with id: {self.patient_id} does not exist.",
-                    self.patient_id,
+                    "value", f"Patient with id: {self.patient_id} does not exist.", self.patient_id
                 )
             )
 
-        if not self.ordering:
-            errors.append(
-                self._create_error_detail(
-                    "missing", "Field 'ordering' must contain at least one coverage.", []
-                )
-            )
-
-        coverage_ids = [str(entry.coverage_id) for entry in self.ordering]
+        coverage_ids = [entry.coverage_id for entry in self.ordering]
         if len(set(coverage_ids)) != len(coverage_ids):
             errors.append(
                 self._create_error_detail(
@@ -406,13 +449,19 @@ class CoverageReorder(TrackableFieldsModel):
                 self._create_error_detail(
                     "value",
                     "Every coverage in 'ordering' must exist and belong to the patient.",
-                    coverage_ids,
+                    [str(coverage_id) for coverage_id in coverage_ids],
                 )
             )
 
         ranks_by_stack: dict[str, list[int]] = {}
         for entry in self.ordering:
             ranks_by_stack.setdefault(entry.stack.value, []).append(entry.coverage_rank.value)
+        if CoverageStack.REMOVED.value in ranks_by_stack:
+            errors.append(
+                self._create_error_detail(
+                    "value", "Use Coverage.remove() to move a coverage to the removed stack.", None
+                )
+            )
         for stack, ranks in ranks_by_stack.items():
             if sorted(ranks) != list(range(1, len(ranks) + 1)):
                 errors.append(
@@ -424,22 +473,6 @@ class CoverageReorder(TrackableFieldsModel):
                 )
 
         return errors
-
-    def apply(self) -> Effect:
-        """Apply the new ordering."""
-        self._validate_before_effect("apply")
-        ordering = [
-            {
-                "coverage_id": str(entry.coverage_id),
-                "coverage_rank": entry.coverage_rank.value,
-                "stack": entry.stack.value,
-            }
-            for entry in self.ordering
-        ]
-        return Effect(
-            type=self.Meta.effect_type,
-            payload=json.dumps({"data": {"patient_id": self.patient_id, "ordering": ordering}}),
-        )
 
 
 __exports__ = ("Coverage", "CoverageReorder", "CoverageReorderEntry", "PhotoSide")

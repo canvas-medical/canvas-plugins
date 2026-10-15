@@ -7,6 +7,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import PatientIdentificationCard
 from canvas_sdk.test_utils.factories import PatientFactory
 from canvas_sdk.v1.data import Patient
@@ -31,7 +32,7 @@ def card(patient: Patient) -> PatientIdentificationCardModel:
     )
 
 
-def _payload(effect: Any) -> dict[str, Any]:
+def _payload(effect: Effect) -> dict[str, Any]:
     return json.loads(effect.payload)["data"]
 
 
@@ -55,7 +56,7 @@ def test_create(patient: Patient) -> None:
     "kwargs, message",
     [
         ({"image_upload_key": UPLOAD_KEY}, "'patient_id' is required"),
-        ({"patient_id": "0" * 32, "image_upload_key": UPLOAD_KEY}, "does not exist"),
+        ({"patient_id": "0" * 32, "image_upload_key": UPLOAD_KEY}, "No patient has id"),
         ({"patient_id": "PATIENT"}, "'image_upload_key' is required"),
         ({"patient_id": "PATIENT", "image_upload_key": "license.jpg"}, "image_upload_key"),
         ({"patient_id": "PATIENT", "image_upload_key": UPLOAD_KEY, "card_id": 1}, "card_id"),
@@ -87,7 +88,7 @@ def test_update_rejects_null_for_required_fields(
     card: PatientIdentificationCardModel, field: str
 ) -> None:
     """The image and active flag cannot be cleared."""
-    with pytest.raises(ValidationError, match=f"Field '{field}' cannot be set to null"):
+    with pytest.raises(ValidationError, match=f"Field '{field}'"):
         PatientIdentificationCard(card_id=card.dbid, **{field: None}).update()
 
 
@@ -104,7 +105,7 @@ def test_requires_existing_card(method: str) -> None:
     """update() and delete() need a card id that exists."""
     with pytest.raises(ValidationError, match="'card_id' is required"):
         getattr(PatientIdentificationCard(), method)()
-    with pytest.raises(ValidationError, match="does not exist"):
+    with pytest.raises(ValidationError, match="No identification card has id"):
         getattr(PatientIdentificationCard(card_id=999999), method)()
 
 
@@ -115,3 +116,24 @@ def test_delete(card: PatientIdentificationCardModel) -> None:
 
     assert effect.type == EffectType.DELETE_PATIENT_IDENTIFICATION_CARD
     assert _payload(effect) == {"card_id": card.dbid}
+
+
+@pytest.mark.django_db
+def test_create_rejects_active_none(patient: Patient) -> None:
+    """Active cannot be None on create either."""
+    with pytest.raises(ValidationError, match="Field 'active'"):
+        PatientIdentificationCard(
+            patient_id=patient.id, image_upload_key=UPLOAD_KEY, active=None
+        ).create()
+
+
+def test_title_fits_its_column() -> None:
+    """A title longer than the database column is rejected."""
+    with pytest.raises(ValidationError, match="title"):
+        PatientIdentificationCard(title="x" * 256)
+
+
+def test_unknown_fields_are_rejected() -> None:
+    """A misspelled field fails instead of being dropped."""
+    with pytest.raises(ValidationError, match="titel"):
+        PatientIdentificationCard(card_id=1, titel="Passport")  # type: ignore[call-arg]

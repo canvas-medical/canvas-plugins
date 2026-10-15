@@ -374,3 +374,26 @@ def test_message_without_attachments_omits_the_field(
     effect = Message(**valid_message_data).create()
 
     assert "attachment_upload_keys" not in json.loads(effect.payload)["data"]
+
+
+def test_send_rejects_attachment_upload_keys(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Sending an existing message cannot add files."""
+    message = Message(
+        **valid_message_data,
+        message_id=str(uuid4()),
+        attachment_upload_keys=["acme/plugin-uploads/my_plugin/20261014T1-a-results.pdf"],
+    )
+
+    with pytest.raises(ValidationError, match="not send"):
+        message.send()
+
+
+def test_attachment_upload_keys_none_means_no_attachments(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Passing None for the attachment keys is the same as passing none."""
+    effect = Message(**valid_message_data, attachment_upload_keys=None).create()
+
+    assert json.loads(effect.payload)["data"]["attachment_upload_keys"] is None
