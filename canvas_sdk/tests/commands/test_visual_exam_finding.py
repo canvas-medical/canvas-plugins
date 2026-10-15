@@ -55,3 +55,22 @@ def test_rejects_keys_outside_plugin_uploads(method: str) -> None:
 
     with pytest.raises(ValidationError, match="image_upload_key"):
         getattr(command, method)()
+
+
+def test_rejects_an_explicit_none_key() -> None:
+    """A key from a failed upload (None) fails instead of silently attaching nothing."""
+    command = _anchored(VisualExamFindingCommand(title="Rash", image_upload_key=None))
+
+    with pytest.raises(ValidationError, match="image_upload_key"):
+        command.originate()
+
+
+def test_recommendation_cannot_carry_an_upload_key() -> None:
+    """An upload is single-use, so a recommendation can't carry one."""
+    with pytest.raises(ValidationError, match="recommended Visual Exam Finding"):
+        VisualExamFindingCommand(title="Rash", image_upload_key=UPLOAD_KEY).recommendation_context()
+
+    assert (
+        VisualExamFindingCommand(title="Rash").recommendation_context()["context"]["title"]
+        == "Rash"
+    )

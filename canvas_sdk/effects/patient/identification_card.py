@@ -1,15 +1,22 @@
 import json
 from typing import Any
 
+from pydantic import ConfigDict, Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects._upload_key import is_plugin_upload_key, upload_key_error
+from canvas_sdk.effects._field_errors import (
+    blank_field_errors,
+    existing_record_errors,
+    upload_key_errors,
+)
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.patient import (
     PatientIdentificationCard as PatientIdentificationCardModel,
 )
+
+WRITABLE_FIELDS: tuple[str, ...] = ("image_upload_key", "title", "active")
 
 
 class PatientIdentificationCard(TrackableFieldsModel):
@@ -31,36 +38,20 @@ class PatientIdentificationCard(TrackableFieldsModel):
         PatientIdentificationCard(card_id=card.dbid, active=False).update()
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     class Meta:
         effect_type = "PATIENT_IDENTIFICATION_CARD"
 
     card_id: int | None = None
     patient_id: str | None = None
     image_upload_key: str | None = None
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=255)
     active: bool | None = None
-
-    def _card_id_errors(self, method: str) -> list[InitErrorDetails]:
-        if self.card_id is None:
-            return [
-                self._create_error_detail(
-                    "missing",
-                    f"Field 'card_id' is required to {method} an identification card.",
-                    None,
-                )
-            ]
-        if not PatientIdentificationCardModel.objects.filter(dbid=self.card_id).exists():
-            return [
-                self._create_error_detail(
-                    "value",
-                    f"Identification card with id: {self.card_id} does not exist.",
-                    self.card_id,
-                )
-            ]
-        return []
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+        records = PatientIdentificationCardModel.objects
 
         if method == "create":
             if self.card_id is not None:
@@ -71,23 +62,16 @@ class PatientIdentificationCard(TrackableFieldsModel):
                         self.card_id,
                     )
                 )
-            if not self.patient_id:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'patient_id' is required to create an identification card.",
-                        None,
-                    )
+            errors.extend(
+                existing_record_errors(
+                    self,
+                    "patient_id",
+                    Patient.objects,
+                    "patient",
+                    "create",
                 )
-            elif not Patient.objects.filter(id=self.patient_id).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Patient with id: {self.patient_id} does not exist.",
-                        self.patient_id,
-                    )
-                )
-            if not self.image_upload_key:
+            )
+            if self.image_upload_key is None:
                 errors.append(
                     self._create_error_detail(
                         "missing",
@@ -97,7 +81,15 @@ class PatientIdentificationCard(TrackableFieldsModel):
                 )
 
         elif method == "update":
-            errors.extend(self._card_id_errors("update"))
+            errors.extend(
+                existing_record_errors(
+                    self,
+                    "card_id",
+                    records,
+                    "identification card",
+                    method,
+                )
+            )
             if self.is_dirty("patient_id"):
                 errors.append(
                     self._create_error_detail(
@@ -106,61 +98,41 @@ class PatientIdentificationCard(TrackableFieldsModel):
                         self.patient_id,
                     )
                 )
-            for field in ("image_upload_key", "active"):
-                if self.is_dirty(field) and getattr(self, field) is None:
-                    errors.append(
-                        self._create_error_detail(
-                            "value",
-                            f"Field '{field}' cannot be set to null when updating an "
-                            "identification card.",
-                            None,
-                        )
-                    )
 
         elif method == "delete":
-            errors.extend(self._card_id_errors("delete"))
-
-        if (
-            method in ("create", "update")
-            and self.image_upload_key is not None
-            and not is_plugin_upload_key(self.image_upload_key)
-        ):
-            errors.append(
-                self._create_error_detail(
-                    "value", upload_key_error("image_upload_key"), self.image_upload_key
+            errors.extend(
+                existing_record_errors(
+                    self,
+                    "card_id",
+                    records,
+                    "identification card",
+                    method,
                 )
             )
 
-        return errors
+        if method in ("create", "update"):
+            errors.extend(blank_field_errors(self, ("active",)))
+            errors.extend(upload_key_errors(self, "image_upload_key"))
 
-    def _data(self, fields: tuple[str, ...]) -> dict[str, Any]:
-        return {field: getattr(self, field) for field in fields if self.is_dirty(field)}
+        return errors
 
     def create(self) -> Effect:
         """Create a new identification card."""
         self._validate_before_effect("create")
-        data = self._data(("patient_id", "image_upload_key", "title", "active"))
-        return Effect(
-            type=f"CREATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": data}),
-        )
+        data = {"patient_id": self.patient_id, **self.values_for(WRITABLE_FIELDS)}
+        return Effect(type=f"CREATE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def update(self) -> Effect:
         """Update an existing identification card, changing only the fields that were set."""
         self._validate_before_effect("update")
-        data = {"card_id": self.card_id, **self._data(("image_upload_key", "title", "active"))}
-        return Effect(
-            type=f"UPDATE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": data}),
-        )
+        data = {"card_id": self.card_id, **self.values_for(WRITABLE_FIELDS)}
+        return Effect(type=f"UPDATE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
     def delete(self) -> Effect:
         """Delete an existing identification card."""
         self._validate_before_effect("delete")
-        return Effect(
-            type=f"DELETE_{self.Meta.effect_type}",
-            payload=json.dumps({"data": {"card_id": self.card_id}}),
-        )
+        data = {"card_id": self.card_id}
+        return Effect(type=f"DELETE_{self.Meta.effect_type}", payload=json.dumps({"data": data}))
 
 
 __exports__ = ("PatientIdentificationCard",)

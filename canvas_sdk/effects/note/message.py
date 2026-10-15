@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model, TrackableFieldsModel
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects._upload_key import is_plugin_upload_key, upload_key_error
+from canvas_sdk.effects._field_errors import upload_key_errors
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff, Team
@@ -51,11 +51,15 @@ class Message(TrackableFieldsModel):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        for key in self.attachment_upload_keys or []:
-            if not is_plugin_upload_key(key):
+        if self.attachment_upload_keys is not None:
+            errors.extend(upload_key_errors(self, "attachment_upload_keys"))
+            if method == "send" and self.attachment_upload_keys:
                 errors.append(
                     self._create_error_detail(
-                        "value", upload_key_error("attachment_upload_keys"), key
+                        "value",
+                        "Attachments are added with create(), create_and_send() or edit(), "
+                        "not send().",
+                        self.attachment_upload_keys,
                     )
                 )
 

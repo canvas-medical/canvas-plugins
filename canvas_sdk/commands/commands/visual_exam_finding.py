@@ -4,7 +4,7 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.effects._upload_key import is_plugin_upload_key, upload_key_error
+from canvas_sdk.effects._field_errors import upload_key_errors
 
 
 class VisualExamFindingCommand(BaseCommand):
@@ -13,7 +13,8 @@ class VisualExamFindingCommand(BaseCommand):
 
     The image (PNG or JPEG) is attached by passing the ``key`` of a ``StoredFilePart``
     received on a SimpleAPI route declared with ``file_uploads="stored"``. Canvas copies the
-    file into the finding, then deletes the upload, so a key can be attached once.
+    file into the finding, then deletes the upload, so a key can be attached once. A
+    recommendation can't carry an upload key, because the upload is gone after its first use.
     """
 
     class Meta:
@@ -25,13 +26,21 @@ class VisualExamFindingCommand(BaseCommand):
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
-        if self.image_upload_key is not None and not is_plugin_upload_key(self.image_upload_key):
+        errors.extend(upload_key_errors(self, "image_upload_key"))
+        if method == "recommend" and self.is_dirty("image_upload_key"):
             errors.append(
                 self._create_error_detail(
-                    "value", upload_key_error("image_upload_key"), self.image_upload_key
+                    "value",
+                    "A recommended Visual Exam Finding can't carry an image_upload_key.",
+                    self.image_upload_key,
                 )
             )
         return errors
+
+    def recommendation_context(self) -> dict:
+        """Return the context of a recommendation, which can't carry an upload key."""
+        self._validate_before_effect("recommend")
+        return super().recommendation_context()
 
 
 __exports__ = ("VisualExamFindingCommand",)
