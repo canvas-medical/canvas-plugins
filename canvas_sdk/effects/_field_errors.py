@@ -10,15 +10,17 @@ from canvas_sdk.base import Model, TrackableFieldsModel
 
 
 def _as_list(value: Any) -> list[Any]:
+    if value is None:
+        return []
     return value if isinstance(value, list) else [value]
 
 
 def upload_key_errors(model: TrackableFieldsModel, *fields: str) -> list[InitErrorDetails]:
     """Return an error for each value of ``fields`` that is not a plugin upload key.
 
-    A field that was set must hold the ``key`` of a file uploaded through a SimpleAPI route
-    declared with ``file_uploads="stored"``, or a list of them. Canvas checks that each key
-    belongs to the calling plugin when the effect is applied.
+    A field that was set holds the ``key`` of a file uploaded through a SimpleAPI route
+    declared with ``file_uploads="stored"``, or a list of them, or None for no file. Canvas
+    checks that each key belongs to the calling plugin when the effect is applied.
     """
     return [
         model._create_error_detail(
