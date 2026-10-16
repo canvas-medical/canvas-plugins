@@ -66,6 +66,7 @@ from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .django_content_type import ContentType
 from .dme import DmeOrder, DmeProduct, DmeProductCodeSystem
+from .document_history_event import DocumentHistoryEvent, DocumentHistoryEventType
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -353,6 +354,8 @@ __all__ = __exports__ = (
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType",
     "DocumentReviewDelegation",
     "EducationalMaterial",
     "EligibilityRequest",
