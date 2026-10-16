@@ -4,7 +4,12 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.patient_portal.theme import PatientPortalTheme, contrast_ratio
+from canvas_sdk.effects.patient_portal.theme import (
+    PatientPortalTheme,
+    band_color,
+    contrast_ratio,
+    derived_surface,
+)
 
 EMPTY_DATA = {
     "brand_color": None,
@@ -155,3 +160,29 @@ def test_business_line_is_not_a_field() -> None:
     """The event context carries the business line, so the effect rejects it."""
     with pytest.raises(ValidationError):
         PatientPortalTheme(business_line_id="x").apply()  # type: ignore[call-arg]
+
+
+def test_brand_is_checked_against_its_own_band_tint() -> None:
+    """Section and accordion headers are an 8% brand tint, so that is the band to check.
+
+    #5C90C2 is 3.11:1 on its band but only 2.68:1 on the old fixed gray. The
+    custom rail keeps the default rail's brand-on-gray selected row out of it.
+    """
+    applied = PatientPortalTheme(brand_color="#5C90C2", menu_background_color="#1F2937").apply()
+
+    assert json.loads(applied.payload)["data"]["brand_color"] == "#5C90C2"
+
+
+def test_brand_that_fails_its_band_is_rejected() -> None:
+    """#6494C2 passes white (3.20:1) but fails its own band tint (2.95:1)."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(brand_color="#6494C2").apply()
+
+    assert "header band" in str(exc.value)
+
+
+def test_band_sits_on_the_surface_derived_from_the_page() -> None:
+    """With a page background, the band is a brand tint over the lighter surface."""
+    assert derived_surface("#F0FDFA") == "#F8FEFD"
+    assert band_color("#0F766E", "#F0FDFA") == "#E5F3F2"
+    assert band_color("#0F766E", None) == "#ECF4F3"
