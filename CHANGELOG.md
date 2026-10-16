@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.253.0 (2026-10-16)
+
+### Bug Fixes
+
+- Block refills in the example_commands refill handler on post-validation
+  ([#1932](https://github.com/canvas-medical/canvas-plugins/pull/1932),
+  [`b8f86f8`](https://github.com/canvas-medical/canvas-plugins/commit/b8f86f8e5e720614e77286461e5ab857d739ef25))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- **sdk**: Expose DmeProduct and DmeOrder in the data module
+  ([#1933](https://github.com/canvas-medical/canvas-plugins/pull/1933),
+  [`5a02295`](https://github.com/canvas-medical/canvas-plugins/commit/5a022951107d8bc1d91a247aac0051b6aa7fe8c1))
+
+
 ## v0.252.0 (2026-10-15)
 
 ### Features
