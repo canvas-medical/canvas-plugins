@@ -7,15 +7,21 @@ from pydantic_core import InitErrorDetails
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
-FONT_FAMILY = r"^[A-Za-z0-9 ,'\"-]+$"
+# Quotes are not allowed: the family is written raw into the portal's CSS, where
+# an unbalanced quote breaks the declarations after it. Multi-word names work
+# unquoted.
+FONT_FAMILY = r"^[A-Za-z0-9 ,-]+$"
+# Only Google Fonts stylesheets, which contain only @font-face rules. Any other
+# stylesheet could carry the CSS that custom_css rejects.
+GOOGLE_FONTS_STYLESHEET = r"^https://fonts\.googleapis\.com/css2?\?\S+$"
 
 # Anything that makes the browser fetch. Without a fetch, custom CSS cannot send a
 # typed value anywhere. Backslashes are rejected because CSS escapes such as
 # "\\75 rl(" spell url( in disguise.
 CSS_LOADERS = re.compile(r"url\s*\(|@import|image-set\s*\(|@font-face|\\", re.IGNORECASE)
 
-# The portal's current colors. A pair that uses one of these is checked
-# against what the patient sees today when the effect leaves that side unset.
+# The portal's default colors. When the effect leaves one side of a pair unset,
+# the pair is checked against the default for that side.
 DEFAULT_BRAND = "#2185D0"
 DEFAULT_MENU_BACKGROUND = "#F2F2F2"
 DEFAULT_SELECTED_BACKGROUND = "#E5E5E5"
@@ -24,8 +30,9 @@ BODY_TEXT = "#212121"
 DARK_TEXT = "#262626"
 LIGHT_TEXT = "#FFFFFF"
 
+# WCAG AA for normal-size text. Every checked pair draws text: rail labels,
+# body text, brand links and headers, and white labels on the brand.
 TEXT_FLOOR = 4.5
-BRAND_FLOOR = 3.0
 
 
 def _channels(hex_color: str) -> tuple[int, ...]:
@@ -93,11 +100,11 @@ class _Pair(NamedTuple):
 
 
 class PatientPortalTheme(_BaseEffect):
-    """The patient portal theme, returned from PATIENT_PORTAL__THEME_CONFIGURATION.
+    """The patient portal theme, the answer to PATIENT_PORTAL__GET_THEME_CONFIGURATION.
 
-    The event context carries the business line the portal page is for. An
-    unset token uses the portal default, and an effect without tokens is the
-    default theme.
+    A handler responds to that event and returns this effect. The event context
+    carries the business line the portal page is for. An unset token uses the
+    portal default, and an effect without tokens is the default theme.
     """
 
     class Meta:
@@ -113,7 +120,7 @@ class PatientPortalTheme(_BaseEffect):
     page_background_color: str | None = Field(default=None, pattern=HEX_COLOR)
     corner_radius: int | None = Field(default=None, ge=0, le=24)
     font_family: str | None = Field(default=None, max_length=200, pattern=FONT_FAMILY)
-    font_source: str | None = Field(default=None, max_length=2000, pattern=r"^https://\S+$")
+    font_source: str | None = Field(default=None, max_length=2000, pattern=GOOGLE_FONTS_STYLESHEET)
     person_word: Literal["patient", "member", "client"] | None = None
     custom_css: str | None = Field(default=None, max_length=50_000)
 
@@ -124,13 +131,13 @@ class PatientPortalTheme(_BaseEffect):
         tokens = type(self).model_fields.keys() - _BaseEffect.model_fields.keys()
         return self.model_dump(include=tokens)
 
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
-
     def _contrast_pairs(self) -> list[_Pair]:
-        """Return the pairs this theme must pass: those where it sets at least one side."""
+        """Return the pairs this theme must pass, each pair of colors once.
+
+        A pair is checked when the theme sets at least one side of it. Brand
+        pairs are checked when the theme sets the brand: the default brand is the
+        portal's own choice.
+        """
         brand = self.brand_color or DEFAULT_BRAND
         page = self.page_background_color or DEFAULT_PAGE_BACKGROUND
         menu = self.menu_background_color or DEFAULT_MENU_BACKGROUND
@@ -147,13 +154,13 @@ class PatientPortalTheme(_BaseEffect):
             )
         if self.page_background_color:
             pairs.append(_Pair("body text", BODY_TEXT, "page_background_color", page, TEXT_FLOOR))
-        if self.brand_color or self.page_background_color:
-            pairs.append(_Pair("brand_color", brand, "page_background_color", page, BRAND_FLOOR))
         if self.brand_color:
             band = band_color(brand, self.page_background_color)
-            pairs.append(_Pair("brand_color", brand, "header band", band, BRAND_FLOOR))
-            # Primary buttons and sent messages draw white text on the brand.
-            pairs.append(_Pair("white text", LIGHT_TEXT, "brand_color", brand, BRAND_FLOOR))
+            # Primary buttons and sent messages draw white text on the brand. First,
+            # so on a white page it is the name the shared pair is reported under.
+            pairs.append(_Pair("white text", LIGHT_TEXT, "brand_color", brand, TEXT_FLOOR))
+            pairs.append(_Pair("brand_color", brand, "page_background_color", page, TEXT_FLOOR))
+            pairs.append(_Pair("brand_color", brand, "header band", band, TEXT_FLOOR))
 
         # A custom rail draws the selected row in the menu text color. The
         # default rail draws it in the brand color.
@@ -171,9 +178,15 @@ class PatientPortalTheme(_BaseEffect):
         elif self.brand_color or self.menu_selected_background_color:
             selected = self.menu_selected_background_color or DEFAULT_SELECTED_BACKGROUND
             pairs.append(
-                _Pair("brand_color", brand, "menu_selected_background_color", selected, BRAND_FLOOR)
+                _Pair("brand_color", brand, "menu_selected_background_color", selected, TEXT_FLOOR)
             )
-        return pairs
+
+        # The same two colors can meet twice, for example brand on a white page and
+        # white text on the brand. Report each pair of colors once.
+        unique: dict[frozenset[str], _Pair] = {}
+        for pair in pairs:
+            unique.setdefault(frozenset((pair.foreground, pair.background)), pair)
+        return list(unique.values())
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
