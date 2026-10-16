@@ -70,6 +70,23 @@ def _today() -> date:
     return datetime.now(ZoneInfo(INSTALLATION_TIME_ZONE)).date()
 
 
+def _date_order_errors(
+    model: TrackableFieldsModel,
+    start: date | None,
+    end: date | None,
+) -> list[InitErrorDetails]:
+    """Return an error when the coverage would end before it starts."""
+    if start and end and start > end:
+        return [
+            model._create_error_detail(
+                "value",
+                "The coverage start date must be on or before its end date.",
+                end,
+            )
+        ]
+    return []
+
+
 class PhotoSide(StrEnum):
     """Side of an insurance card."""
 
@@ -244,13 +261,7 @@ class Coverage(TrackableFieldsModel):
             "coverage_start_date", existing.coverage_start_date if existing else _today()
         )
         end = self._pick("coverage_end_date", existing.coverage_end_date if existing else None)
-        if start and end and start > end:
-            errors.append(
-                self._create_error_detail(
-                    "value", "The coverage start date must be on or before its end date.", end
-                )
-            )
-        return errors
+        return errors + _date_order_errors(self, start, end)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -315,6 +326,12 @@ class Coverage(TrackableFieldsModel):
                     action,
                 )
             )
+            if method == "expire" and (existing := self._existing()):
+                errors += _date_order_errors(
+                    self,
+                    existing.coverage_start_date,
+                    self.coverage_end_date,
+                )
 
         return errors
 

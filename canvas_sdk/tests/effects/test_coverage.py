@@ -707,3 +707,22 @@ def test_create_takes_none_as_no_card_file(patient: Patient, payer: Transactor) 
     ).create()
 
     assert _payload(effect)["card_image_back_upload_key"] is None
+
+
+@pytest.mark.django_db
+def test_expire_rejects_an_end_date_before_the_start(coverage: CoverageModel) -> None:
+    """expire() holds the end date to the same order rule as update()."""
+    before_start = coverage.coverage_start_date - timedelta(days=1)
+
+    with pytest.raises(ValidationError, match="start date must be on or before its end date"):
+        Coverage(coverage_id=coverage.id).expire(coverage_end_date=before_start)
+
+
+@pytest.mark.django_db
+def test_expire_accepts_an_end_date_on_the_start(coverage: CoverageModel) -> None:
+    """A coverage can end on the day it starts."""
+    effect = Coverage(coverage_id=coverage.id).expire(
+        coverage_end_date=coverage.coverage_start_date
+    )
+
+    assert _payload(effect)["coverage_end_date"] == coverage.coverage_start_date.isoformat()
