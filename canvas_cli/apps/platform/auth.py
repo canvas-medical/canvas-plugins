@@ -291,15 +291,20 @@ class _Callback:
     received: bool = False
 
 
-_CLOSE_PAGE = (
-    b"<!doctype html><html><head><meta charset='utf-8'><title>Canvas CLI</title></head>"
-    b"<body style='font-family: sans-serif; margin: 3rem'>"
-    b"<p>%s</p><p>You can close this tab and return to your terminal.</p></body></html>"
-)
+# Where the browser goes once the sign-in is settled: a page on the platform, so it
+# ends in the place and theme the confirmation was in rather than on one served
+# from 127.0.0.1. `outcome` picks its sentence.
+DONE_PATH = "/oauth/done"
+_Finish = Callable[[_Callback], str]
 
 
-def _listener(callback: _Callback) -> HTTPServer:
-    """A loopback HTTP server on a random port that records one ``/callback`` hit."""
+def _listener(callback: _Callback, finish: _Finish, platform: str) -> HTTPServer:
+    """A loopback HTTP server on a random port that records one ``/callback`` hit.
+
+    ``finish`` settles the sign-in while the browser waits and answers how it ended
+    (``signed_in``, ``declined`` or ``failed``), so the page the browser is sent on to
+    says what actually happened.
+    """
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
@@ -313,13 +318,11 @@ def _listener(callback: _Callback) -> HTTPServer:
             callback.state = query.get("state", [None])[0]
             callback.error = query.get("error", [None])[0]
             callback.received = True
-            message = (
-                b"Signed in to Canvas Platform." if callback.code else b"Sign-in did not complete."
-            )
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
+            outcome = finish(callback)
+            self.send_response(303)
+            self.send_header("Location", f"{platform}{DONE_PATH}?{urlencode({'outcome': outcome})}")
+            self.send_header("Content-Length", "0")
             self.end_headers()
-            self.wfile.write(_CLOSE_PAGE % message)
 
         def log_message(self, format: str, *args: Any) -> None:
             """Keep the request log out of the terminal."""
@@ -353,7 +356,18 @@ def login(
     verifier = make_code_verifier()
     state = secrets.token_urlsafe(32)
     callback = _Callback()
-    server = _listener(callback)
+    failure: list[PlatformAuthError] = []
+    redirect_uri = ""
+
+    def finish(answer: _Callback) -> str:
+        try:
+            _complete(platform, answer, state, verifier, redirect_uri)
+        except PlatformAuthError as error:
+            failure.append(error)
+            return "declined" if answer.error == "access_denied" else "failed"
+        return "signed_in"
+
+    server = _listener(callback, finish, platform)
     try:
         redirect_uri = f"http://127.0.0.1:{server.server_address[1]}/callback"
         url = authorization_url(platform, redirect_uri, code_challenge(verifier), state)
@@ -372,6 +386,14 @@ def login(
         raise PlatformAuthError(
             f"Sign-in did not finish within {int(timeout_seconds)} seconds. Run `canvas login` again."
         )
+    if failure:
+        raise failure[0]
+
+
+def _complete(
+    platform: str, callback: _Callback, state: str, verifier: str, redirect_uri: str
+) -> None:
+    """Check the browser's redirect, trade its code for tokens and store them."""
     if callback.state != state:
         raise PlatformAuthError(
             "The sign-in response did not match this login attempt, so it was refused. "
