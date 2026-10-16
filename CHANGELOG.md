@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.254.0 (2026-10-16)
+
+### Features
+
+- Add effects to fax a referral, imaging order, lab order or letter
+  ([#1929](https://github.com/canvas-medical/canvas-plugins/pull/1929),
+  [`8532eb6`](https://github.com/canvas-medical/canvas-plugins/commit/8532eb62da3eeb02c838d531d7668afc37bb0297))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.253.0 (2026-10-16)
 
 ### Bug Fixes
