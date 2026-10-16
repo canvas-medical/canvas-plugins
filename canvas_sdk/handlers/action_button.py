@@ -41,6 +41,8 @@ class ActionButton(BaseHandler):
         EventType.Name(EventType.SHOW_CHART_SUMMARY_SURGICAL_HISTORY_SECTION_BUTTON),
         EventType.Name(EventType.SHOW_CHART_SUMMARY_FAMILY_HISTORY_SECTION_BUTTON),
         EventType.Name(EventType.SHOW_CHART_SUMMARY_CODING_GAPS_SECTION_BUTTON),
+        EventType.Name(EventType.SHOW_CLAIM_QUEUE_HEADER_BUTTON),
+        EventType.Name(EventType.SHOW_CLAIM_DETAILS_BUTTON),
         EventType.Name(EventType.ACTION_BUTTON_CLICKED),
     ]
 
@@ -62,6 +64,8 @@ class ActionButton(BaseHandler):
         CHART_SUMMARY_SURGICAL_HISTORY_SECTION = "chart_summary_surgical_history_section"
         CHART_SUMMARY_FAMILY_HISTORY_SECTION = "chart_summary_family_history_section"
         CHART_SUMMARY_CODING_GAPS_SECTION = "chart_summary_coding_gaps_section"
+        CLAIM_QUEUE_HEADER = "claim_queue_header"
+        CLAIM_DETAILS = "claim_details"
 
     BUTTON_TITLE: str = ""
     BUTTON_KEY: str = ""
