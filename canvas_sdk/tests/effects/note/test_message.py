@@ -352,20 +352,20 @@ def test_create_message_with_team(
     mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
 ) -> None:
     """A team id on create is sent in the payload."""
-    team_id = str(uuid4())
+    team_id = uuid4()
     effect = Message(**valid_message_data, team_id=team_id).create()
 
-    assert json.loads(effect.payload)["data"]["team_id"] == team_id
+    assert json.loads(effect.payload)["data"]["team_id"] == str(team_id)
 
 
 def test_create_and_send_message_with_team(
     mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
 ) -> None:
     """A team id on create_and_send is sent in the payload."""
-    team_id = str(uuid4())
+    team_id = uuid4()
     effect = Message(**valid_message_data, team_id=team_id).create_and_send()
 
-    assert json.loads(effect.payload)["data"]["team_id"] == team_id
+    assert json.loads(effect.payload)["data"]["team_id"] == str(team_id)
 
 
 def test_create_message_without_team_omits_key(
@@ -382,7 +382,7 @@ def test_create_message_unknown_team(
 ) -> None:
     """An unknown team id is rejected on create."""
     mock_db_queries["team"].filter.return_value.exists.return_value = False
-    team_id = str(uuid4())
+    team_id = uuid4()
 
     with pytest.raises(ValidationError) as exc_info:
         Message(**valid_message_data, team_id=team_id).create()
@@ -394,7 +394,7 @@ def test_edit_message_rejects_team(
     mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
 ) -> None:
     """Editing cannot change the team; AssignMessageTeam does that."""
-    message = Message(**valid_message_data, message_id=str(uuid4()), team_id=str(uuid4()))
+    message = Message(**valid_message_data, message_id=str(uuid4()), team_id=uuid4())
 
     with pytest.raises(ValidationError) as exc_info:
         message.edit()
@@ -407,6 +407,6 @@ def test_create_message_malformed_team_id(
 ) -> None:
     """A malformed team id fails pydantic validation before any lookup."""
     with pytest.raises(ValidationError):
-        Message(**valid_message_data, team_id="not-a-uuid").create()
+        Message(**valid_message_data, team_id="not-a-uuid").create()  # type: ignore[arg-type]
 
     mock_db_queries["team"].filter.assert_not_called()

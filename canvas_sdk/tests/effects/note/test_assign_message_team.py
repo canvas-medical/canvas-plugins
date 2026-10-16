@@ -70,7 +70,7 @@ def test_malformed_team_id_is_a_validation_error(
 ) -> None:
     """A malformed team id fails pydantic validation before any lookup."""
     with pytest.raises(ValidationError):
-        AssignMessageTeam(message_id=uuid4(), team_id=team_id).apply()
+        AssignMessageTeam(message_id=uuid4(), team_id=team_id).apply()  # type: ignore[arg-type]
 
     mock_db["team"].filter.assert_not_called()
 
@@ -81,7 +81,7 @@ def test_malformed_message_id_is_a_validation_error(
 ) -> None:
     """A malformed message id fails pydantic validation before any lookup."""
     with pytest.raises(ValidationError):
-        AssignMessageTeam(message_id=message_id, team_id=uuid4()).apply()
+        AssignMessageTeam(message_id=message_id, team_id=uuid4()).apply()  # type: ignore[arg-type]
 
     mock_db["message"].filter.assert_not_called()
 
