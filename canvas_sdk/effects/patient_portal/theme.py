@@ -1,3 +1,4 @@
+import re
 from typing import Any, Literal, NamedTuple
 
 from pydantic import ConfigDict, Field
@@ -7,6 +8,11 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
 FONT_FAMILY = r"^[A-Za-z0-9 ,'\"-]+$"
+
+# Anything that makes the browser fetch. Without a fetch, custom CSS cannot send a
+# typed value anywhere. Backslashes are rejected because CSS escapes such as
+# "\\75 rl(" spell url( in disguise.
+CSS_LOADERS = re.compile(r"url\s*\(|@import|image-set\s*\(|@font-face|\\", re.IGNORECASE)
 
 # The portal's current colors. A pair that uses one of these is checked
 # against what the patient sees today when the effect leaves that side unset.
@@ -146,6 +152,8 @@ class PatientPortalTheme(_BaseEffect):
         if self.brand_color:
             band = band_color(brand, self.page_background_color)
             pairs.append(_Pair("brand_color", brand, "header band", band, BRAND_FLOOR))
+            # Primary buttons and sent messages draw white text on the brand.
+            pairs.append(_Pair("white text", LIGHT_TEXT, "brand_color", brand, BRAND_FLOOR))
 
         # A custom rail draws the selected row in the menu text color. The
         # default rail draws it in the brand color.
@@ -173,6 +181,21 @@ class PatientPortalTheme(_BaseEffect):
         if self.custom_css and "<" in self.custom_css:
             errors.append(
                 self._create_error_detail("value", "custom_css must not contain '<'", "custom_css")
+            )
+        if self.custom_css and CSS_LOADERS.search(self.custom_css):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "custom_css must not load anything: no url(), @import, image-set(), "
+                    "@font-face or backslash escapes",
+                    "custom_css",
+                )
+            )
+        if self.font_source and not self.font_family:
+            errors.append(
+                self._create_error_detail(
+                    "value", "font_source needs a font_family to apply", "font_source"
+                )
             )
 
         for pair in self._contrast_pairs():

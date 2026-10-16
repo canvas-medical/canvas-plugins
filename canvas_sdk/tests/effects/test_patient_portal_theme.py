@@ -186,3 +186,38 @@ def test_band_sits_on_the_surface_derived_from_the_page() -> None:
     assert derived_surface("#F0FDFA") == "#F8FEFD"
     assert band_color("#0F766E", "#F0FDFA") == "#E5F3F2"
     assert band_color("#0F766E", None) == "#ECF4F3"
+
+
+def test_light_brand_names_white_text_on_brand() -> None:
+    """Buttons and sent messages draw white text on the brand, so a light brand names that pair."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(brand_color="#FFD54F").apply()
+
+    assert "white text" in str(exc.value)
+
+
+def test_font_source_requires_font_family() -> None:
+    """A stylesheet without a family would drop the default font and set nothing."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(font_source="https://fonts.googleapis.com/css2?family=Inter").apply()
+
+    assert "font_family" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "css",
+    [
+        "body { background: url(https://x.example/a) }",
+        "body { background: URL( 'https://x.example/a' ) }",
+        "@import 'https://x.example/a.css';",
+        "a { background-image: image-set('https://x.example/a.png' 1x) }",
+        "@font-face { font-family: x; src: local(x) }",
+        "body { background: \\75 rl(https://x.example/a) }",
+    ],
+)
+def test_custom_css_cannot_load_anything(css: str) -> None:
+    """Custom CSS cannot fetch, so it cannot send typed values anywhere."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(custom_css=css).apply()
+
+    assert "custom_css" in str(exc.value)
