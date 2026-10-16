@@ -1888,6 +1888,7 @@ def test_forbidden_assignment(code: str) -> None:
 
 
 GUARD_NAMES = (
+    "__metaclass__",
     "_apply_",
     "_getattr_",
     "_getitem_",
