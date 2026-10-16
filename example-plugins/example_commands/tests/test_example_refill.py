@@ -1,9 +1,8 @@
 """Tests for BlockRefillCommit.
 
-The handler reacts to REFILL_COMMAND__PRE_COMMIT — the event both "Commit" and
-"Sign and send" route through on a refill — and returns a
-CommandValidationErrorEffect that aborts the commit and surfaces a message on the
-command. The effect is pure (no data-layer access), so these tests exercise the
+The handler reacts to REFILL_COMMAND__POST_VALIDATION and returns a
+CommandValidationErrorEffect, which disables the refill's REVIEW button in the
+note and surfaces a message on the command. The effect is pure (no data-layer access), so these tests exercise the
 real effect and assert on its serialized payload; only the logger is patched.
 """
 
@@ -26,9 +25,11 @@ def _compute(target_id: str = "refill-uuid") -> list[Any]:
         return handler.compute()
 
 
-def test_responds_to_refill_pre_commit() -> None:
-    """Handler subscribes to REFILL_COMMAND__PRE_COMMIT."""
-    assert EventType.Name(EventType.REFILL_COMMAND__PRE_COMMIT) in BlockRefillCommit.RESPONDS_TO
+def test_responds_to_refill_post_validation_only() -> None:
+    """Handler subscribes to REFILL_COMMAND__POST_VALIDATION and not to PRE_COMMIT."""
+    assert [
+        EventType.Name(EventType.REFILL_COMMAND__POST_VALIDATION)
+    ] == BlockRefillCommit.RESPONDS_TO
 
 
 def test_has_required_attributes() -> None:

@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "example_commands",
-    "description": "Examples of reacting to command lifecycle events: auto-populating commands on originate, and blocking a command commit on pre-commit",
+    "description": "Examples of reacting to command lifecycle events: auto-populating commands on originate, and blocking a command commit with a validation error",
     "components": {
         "handlers": [
             {
@@ -15,7 +15,7 @@
             },
             {
                 "class": "example_commands.handlers.example_refill:BlockRefillCommit",
-                "description": "Blocks a refill command from being signed/sent by aborting its pre-commit with a validation error."
+                "description": "Blocks a refill command from being signed/sent by returning a validation error on post-validation."
             }
         ],
         "commands": [],

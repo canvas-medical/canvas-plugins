@@ -1,6 +1,51 @@
 # CHANGELOG
 
 
+## v0.253.0 (2026-10-16)
+
+### Bug Fixes
+
+- Block refills in the example_commands refill handler on post-validation
+  ([#1932](https://github.com/canvas-medical/canvas-plugins/pull/1932),
+  [`b8f86f8`](https://github.com/canvas-medical/canvas-plugins/commit/b8f86f8e5e720614e77286461e5ab857d739ef25))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- **sdk**: Expose DmeProduct and DmeOrder in the data module
+  ([#1933](https://github.com/canvas-medical/canvas-plugins/pull/1933),
+  [`5a02295`](https://github.com/canvas-medical/canvas-plugins/commit/5a022951107d8bc1d91a247aac0051b6aa7fe8c1))
+
+
+## v0.252.0 (2026-10-15)
+
+### Features
+
+- Add fax action event types for notes, referrals, imaging orders, lab orders and integration tasks
+  ([#1920](https://github.com/canvas-medical/canvas-plugins/pull/1920),
+  [`665a6dc`](https://github.com/canvas-medical/canvas-plugins/commit/665a6dc15c2a55159f795dafda1c3d14014a5092))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.251.0 (2026-10-15)
+
+### Features
+
+- Expose assigned reviewers on report and document data models
+  ([#1909](https://github.com/canvas-medical/canvas-plugins/pull/1909),
+  [`a518677`](https://github.com/canvas-medical/canvas-plugins/commit/a51867787b4e6a43139aabd24e56f650ad48ffaa))
+
+### Testing
+
+- Add detailed regression cases for plugin sandbox and SDK clients
+  ([`4ebde5b`](https://github.com/canvas-medical/canvas-plugins/commit/4ebde5b796c4af2a46171a8cc9a160c238ecd081))
+
+
 ## v0.250.0 (2026-10-14)
 
 ### Features
