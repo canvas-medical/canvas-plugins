@@ -327,6 +327,10 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTE_RESTRICTIONS_UPDATED: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
+    FAX_REFERRAL: _ClassVar[EffectType]
+    FAX_IMAGING_ORDER: _ClassVar[EffectType]
+    FAX_LAB_ORDER: _ClassVar[EffectType]
+    FAX_LETTER: _ClassVar[EffectType]
     LOCK_NOTE: _ClassVar[EffectType]
     UNLOCK_NOTE: _ClassVar[EffectType]
     SIGN_NOTE: _ClassVar[EffectType]
@@ -743,6 +747,10 @@ NOTE_RESTRICTIONS: EffectType
 NOTE_RESTRICTIONS_UPDATED: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
+FAX_REFERRAL: EffectType
+FAX_IMAGING_ORDER: EffectType
+FAX_LAB_ORDER: EffectType
+FAX_LETTER: EffectType
 LOCK_NOTE: EffectType
 UNLOCK_NOTE: EffectType
 SIGN_NOTE: EffectType
