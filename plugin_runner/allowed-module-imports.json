@@ -1216,6 +1216,9 @@
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
+    "DmeOrder",
+    "DmeProduct",
+    "DmeProductCodeSystem",
     "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
@@ -1605,6 +1608,11 @@
   ],
   "canvas_sdk.v1.data.django_content_type": [
     "ContentType"
+  ],
+  "canvas_sdk.v1.data.dme": [
+    "DmeOrder",
+    "DmeProduct",
+    "DmeProductCodeSystem"
   ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",

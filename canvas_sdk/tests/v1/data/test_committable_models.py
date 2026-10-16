@@ -7,6 +7,7 @@ from canvas_sdk.v1.data.base import CommittableQuerySetMixin
 from canvas_sdk.v1.data.chart_section_review import ChartSectionReview
 from canvas_sdk.v1.data.detected_issue import DetectedIssue
 from canvas_sdk.v1.data.device import Device
+from canvas_sdk.v1.data.dme import DmeOrder
 from canvas_sdk.v1.data.goal import Goal
 from canvas_sdk.v1.data.imaging import ImagingOrder, ImagingReview
 from canvas_sdk.v1.data.immunization import Immunization, ImmunizationStatement
@@ -22,6 +23,7 @@ COMMITTABLE_COMMAND_MODELS = [
     ChartSectionReview,
     DetectedIssue,
     Device,
+    DmeOrder,
     Goal,
     ImagingOrder,
     ImagingReview,
