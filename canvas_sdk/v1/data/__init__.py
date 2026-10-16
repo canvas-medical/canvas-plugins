@@ -86,6 +86,7 @@ from .family_history import FamilyHistory, FamilyHistoryCoding
 from .fax import Fax, FaxDirection, FaxStatus, FaxStatusModel
 from .follow_up import FollowUp
 from .goal import Goal, UpdateGoal
+from .google_calendar import GoogleCalendar, GoogleCalendarBusyBlock, GoogleCalendarConnection
 from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
@@ -374,6 +375,9 @@ __all__ = __exports__ = (
     "FieldType",
     "FollowUp",
     "Goal",
+    "GoogleCalendar",
+    "GoogleCalendarBusyBlock",
+    "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
