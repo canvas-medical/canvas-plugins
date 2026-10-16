@@ -813,6 +813,9 @@
   "canvas_sdk.effects.patient_portal.form_result": [
     "FormResult"
   ],
+  "canvas_sdk.effects.patient_portal.theme": [
+    "PatientPortalTheme"
+  ],
   "canvas_sdk.effects.patient_portal_menu_configuration": [
     "PatientPortalMenuConfiguration"
   ],
