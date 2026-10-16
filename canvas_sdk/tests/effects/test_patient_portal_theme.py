@@ -162,15 +162,70 @@ def test_business_line_is_not_a_field() -> None:
         PatientPortalTheme(business_line_id="x").apply()  # type: ignore[call-arg]
 
 
-def test_brand_is_checked_against_its_own_band_tint() -> None:
-    """Section and accordion headers are an 8% brand tint, so that is the band to check.
+def test_dark_brand_passes_every_brand_text_pair() -> None:
+    """#1D4ED8 passes the page, its header band, white labels and the gray selected row at 4.5:1."""
+    applied = PatientPortalTheme(brand_color="#1D4ED8").apply()
 
-    #5C90C2 is 3.11:1 on its band but only 2.68:1 on the old fixed gray. The
-    custom rail keeps the default rail's brand-on-gray selected row out of it.
+    assert json.loads(applied.payload)["data"]["brand_color"] == "#1D4ED8"
+
+
+def test_brand_text_needs_wcag_aa_normal_text_contrast() -> None:
+    """Brand links and white labels are normal-size text, so they need 4.5:1, not 3.0:1.
+
+    #5C90C2 is 3.37:1 with white text and 3.11:1 on its header band.
     """
-    applied = PatientPortalTheme(brand_color="#5C90C2", menu_background_color="#1F2937").apply()
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(brand_color="#5C90C2", menu_background_color="#1F2937").apply()
 
-    assert json.loads(applied.payload)["data"]["brand_color"] == "#5C90C2"
+    assert "WCAG AA needs 4.5:1" in str(exc.value)
+    assert "3.0:1" not in str(exc.value)
+
+
+def test_a_failing_pair_is_reported_once() -> None:
+    """Without a page background, brand on page and white text on brand are the same colors."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme(brand_color="#FFD54F").apply()
+
+    messages = [error["msg"] for error in exc.value.errors()]
+    pairs = [message.split(" has contrast")[0].split(" on ") for message in messages]
+    color_pairs = [frozenset(part.split()[-1] for part in pair) for pair in pairs if len(pair) == 2]
+    assert len(color_pairs) == len(set(color_pairs))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "https://fonts.example.com/inter.css",
+        "https://cdn.example.com/fonts.googleapis.com/css2?family=Inter",
+        "https://fonts.googleapis.com.evil.example/css2?family=Inter",
+        "https://fonts.gstatic.com/s/inter/v1/inter.woff2",
+    ],
+)
+def test_font_source_must_be_google_fonts(source: str) -> None:
+    """Only a Google Fonts stylesheet loads, so font_source cannot carry arbitrary CSS."""
+    with pytest.raises(ValidationError):
+        PatientPortalTheme(font_family="Inter", font_source=source).apply()
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap",
+        "https://fonts.googleapis.com/css?family=Lato",
+    ],
+)
+def test_google_fonts_source_is_accepted(source: str) -> None:
+    """Google Fonts css and css2 stylesheets load the font."""
+    applied = PatientPortalTheme(font_family="Inter", font_source=source).apply()
+
+    assert json.loads(applied.payload)["data"]["font_source"] == source
+
+
+@pytest.mark.parametrize("family", ["Inter'", '"Open Sans"', "Inter, 'Helvetica Neue'"])
+def test_font_family_rejects_quotes(family: str) -> None:
+    """Quotes are written raw into the portal's CSS, where an unbalanced one breaks the styles after it."""
+    with pytest.raises(ValidationError):
+        PatientPortalTheme(font_family=family).apply()
 
 
 def test_brand_that_fails_its_band_is_rejected() -> None:
