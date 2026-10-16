@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from pydantic import ConfigDict, Field
 from pydantic_core import InitErrorDetails
@@ -22,25 +22,23 @@ TEXT_FLOOR = 4.5
 BRAND_FLOOR = 3.0
 
 
-def _channels(hex_color: str) -> tuple[int, int, int]:
-    value = hex_color.lstrip("#")
-    return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+def _channels(hex_color: str) -> tuple[int, ...]:
+    """Return the red, green and blue channels of a #RRGGBB color."""
+    return tuple(bytes.fromhex(hex_color[1:]))
 
 
 def _relative_luminance(hex_color: str) -> float:
-    linear = []
-    for channel in _channels(hex_color):
-        c = channel / 255
-        linear.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+    r, g, b = (
+        c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        for c in (channel / 255 for channel in _channels(hex_color))
+    )
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
 def contrast_ratio(first: str, second: str) -> float:
     """Return the WCAG 2 contrast ratio between two #RRGGBB colors."""
-    lighter, darker = sorted(
-        (_relative_luminance(first), _relative_luminance(second)), reverse=True
-    )
-    return (lighter + 0.05) / (darker + 0.05)
+    a, b = _relative_luminance(first), _relative_luminance(second)
+    return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 
 def derived_text_color(background: str) -> str:
@@ -78,6 +76,16 @@ def band_color(brand: str, page_background: str | None) -> str:
     return mix_colors(brand, derived_surface(page_background), 0.08)
 
 
+class _Pair(NamedTuple):
+    """A foreground and background the portal draws together, and the contrast they need."""
+
+    foreground_label: str
+    foreground: str
+    background_label: str
+    background: str
+    floor: float
+
+
 class PatientPortalTheme(_BaseEffect):
     """The patient portal theme, returned from PATIENT_PORTAL__THEME_CONFIGURATION.
 
@@ -105,98 +113,57 @@ class PatientPortalTheme(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """Theme values."""
-        return {
-            "brand_color": self.brand_color,
-            "menu_background_color": self.menu_background_color,
-            "menu_selected_background_color": self.menu_selected_background_color,
-            "menu_text_color": self.menu_text_color,
-            "page_background_color": self.page_background_color,
-            "corner_radius": self.corner_radius,
-            "font_family": self.font_family,
-            "font_source": self.font_source,
-            "person_word": self.person_word,
-            "custom_css": self.custom_css,
-        }
+        """Theme values: every token this effect declares, in declaration order."""
+        # Every effect inherits patient_filter from _BaseEffect; it is not a theme token.
+        tokens = type(self).model_fields.keys() - _BaseEffect.model_fields.keys()
+        return self.model_dump(include=tokens)
 
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"data": self.values}
 
-    def _contrast_pairs(self) -> list[tuple[str, str, str, str, float, bool]]:
-        """Return (fg_label, fg, bg_label, bg, floor, is_checked) for every pair."""
+    def _contrast_pairs(self) -> list[_Pair]:
+        """Return the pairs this theme must pass: those where it sets at least one side."""
         brand = self.brand_color or DEFAULT_BRAND
         page = self.page_background_color or DEFAULT_PAGE_BACKGROUND
         menu = self.menu_background_color or DEFAULT_MENU_BACKGROUND
         if self.menu_text_color:
             menu_text, menu_text_label = self.menu_text_color, "menu_text_color"
-        elif self.menu_background_color:
-            menu_text = derived_text_color(menu)
-            menu_text_label = "menu_text_color (derived)"
         else:
-            menu_text, menu_text_label = DARK_TEXT, "menu_text_color (default)"
+            menu_text = derived_text_color(menu) if self.menu_background_color else DARK_TEXT
+            menu_text_label = "menu_text_color (derived)"
 
-        pairs = [
-            (
-                menu_text_label,
-                menu_text,
-                "menu_background_color",
-                menu,
-                TEXT_FLOOR,
-                bool(self.menu_text_color or self.menu_background_color),
-            ),
-            (
-                "body text",
-                BODY_TEXT,
-                "page_background_color",
-                page,
-                TEXT_FLOOR,
-                bool(self.page_background_color),
-            ),
-            (
-                "brand_color",
-                brand,
-                "page_background_color",
-                page,
-                BRAND_FLOOR,
-                bool(self.brand_color or self.page_background_color),
-            ),
-            (
-                "brand_color",
-                brand,
-                "header band",
-                band_color(brand, self.page_background_color),
-                BRAND_FLOOR,
-                bool(self.brand_color),
-            ),
-        ]
+        pairs = []
+        if self.menu_text_color or self.menu_background_color:
+            pairs.append(
+                _Pair(menu_text_label, menu_text, "menu_background_color", menu, TEXT_FLOOR)
+            )
+        if self.page_background_color:
+            pairs.append(_Pair("body text", BODY_TEXT, "page_background_color", page, TEXT_FLOOR))
+        if self.brand_color or self.page_background_color:
+            pairs.append(_Pair("brand_color", brand, "page_background_color", page, BRAND_FLOOR))
+        if self.brand_color:
+            band = band_color(brand, self.page_background_color)
+            pairs.append(_Pair("brand_color", brand, "header band", band, BRAND_FLOOR))
 
         # A custom rail draws the selected row in the menu text color. The
         # default rail draws it in the brand color.
         if self.menu_background_color:
             selected = self.menu_selected_background_color or mix_colors(menu_text, menu)
             pairs.append(
-                (
+                _Pair(
                     menu_text_label,
                     menu_text,
                     "menu_selected_background_color",
                     selected,
                     TEXT_FLOOR,
-                    True,
                 )
             )
-        else:
+        elif self.brand_color or self.menu_selected_background_color:
             selected = self.menu_selected_background_color or DEFAULT_SELECTED_BACKGROUND
             pairs.append(
-                (
-                    "brand_color",
-                    brand,
-                    "menu_selected_background_color",
-                    selected,
-                    BRAND_FLOOR,
-                    bool(self.brand_color or self.menu_selected_background_color),
-                )
+                _Pair("brand_color", brand, "menu_selected_background_color", selected, BRAND_FLOOR)
             )
         return pairs
 
@@ -208,17 +175,16 @@ class PatientPortalTheme(_BaseEffect):
                 self._create_error_detail("value", "custom_css must not contain '<'", "custom_css")
             )
 
-        for fg_label, fg, bg_label, bg, floor, is_checked in self._contrast_pairs():
-            if not is_checked:
-                continue
-            ratio = contrast_ratio(fg, bg)
-            if ratio < floor:
+        for pair in self._contrast_pairs():
+            ratio = contrast_ratio(pair.foreground, pair.background)
+            if ratio < pair.floor:
                 errors.append(
                     self._create_error_detail(
                         "value",
-                        f"{fg_label} {fg} on {bg_label} {bg} has contrast {ratio:.2f}:1; "
-                        f"WCAG AA needs {floor}:1",
-                        fg,
+                        f"{pair.foreground_label} {pair.foreground} on {pair.background_label} "
+                        f"{pair.background} has contrast {ratio:.2f}:1; "
+                        f"WCAG AA needs {pair.floor}:1",
+                        pair.foreground,
                     )
                 )
 
