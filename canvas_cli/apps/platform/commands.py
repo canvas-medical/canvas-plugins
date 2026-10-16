@@ -520,7 +520,7 @@ def _push(
     branch = registered.get("default_branch") or "main"
     git.push_head(plugin_dir, branch)
     sha = git.head_sha(plugin_dir)
-    print(f"Pushed {sha[:12]} to {branch}.")
+    print(f"Pushed {name} {sha[:12]} to {branch} on Canvas Platform.")
     return sha
 
 
@@ -607,7 +607,7 @@ def deploy(
         sha = _push(
             client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
         )
-        print(f"Not deployed. Deploy it with: canvas deploy {plugin_dir} --ref {sha[:12]}")
+        print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
         return
 
     # Resolved before pushing, so a deploy with no clear target moves nothing.
