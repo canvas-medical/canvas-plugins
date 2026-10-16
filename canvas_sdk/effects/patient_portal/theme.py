@@ -14,7 +14,6 @@ DEFAULT_BRAND = "#2185D0"
 DEFAULT_MENU_BACKGROUND = "#F2F2F2"
 DEFAULT_SELECTED_BACKGROUND = "#E5E5E5"
 DEFAULT_PAGE_BACKGROUND = "#FFFFFF"
-SECTION_HEADER_BACKGROUND = "#E5E5E5"
 BODY_TEXT = "#212121"
 DARK_TEXT = "#262626"
 LIGHT_TEXT = "#FFFFFF"
@@ -56,11 +55,27 @@ def derived_text_color(background: str) -> str:
 
 def mix_colors(foreground: str, background: str, foreground_share: float = 0.1) -> str:
     """Return the background with a share of the foreground mixed in."""
+    # Halves round up, as JavaScript's Math.round does in the portal, so the
+    # colors checked here are the colors the browser paints.
     mixed = (
-        round(f * foreground_share + b * (1 - foreground_share))
+        int(f * foreground_share + b * (1 - foreground_share) + 0.5)
         for f, b in zip(_channels(foreground), _channels(background), strict=True)
     )
     return "#" + "".join(f"{channel:02X}" for channel in mixed)
+
+
+def derived_surface(page_background: str | None) -> str:
+    """Return the card and panel color: halfway from the page background to white.
+
+    Lighter than the page, so cards still read as raised surfaces, and text and
+    brand keep at least their contrast against the page.
+    """
+    return mix_colors(LIGHT_TEXT, page_background, 0.5) if page_background else LIGHT_TEXT
+
+
+def band_color(brand: str, page_background: str | None) -> str:
+    """Return the section and accordion header band: an 8% brand tint over the surface."""
+    return mix_colors(brand, derived_surface(page_background), 0.08)
 
 
 class PatientPortalTheme(_BaseEffect):
@@ -150,8 +165,8 @@ class PatientPortalTheme(_BaseEffect):
             (
                 "brand_color",
                 brand,
-                "section header background",
-                SECTION_HEADER_BACKGROUND,
+                "header band",
+                band_color(brand, self.page_background_color),
                 BRAND_FLOOR,
                 bool(self.brand_color),
             ),
