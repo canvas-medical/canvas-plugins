@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import click
@@ -178,10 +179,34 @@ def test_refresh_takes_over_a_stale_lock(
 # -- the browser flow --------------------------------------------------------
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Stop at the listener's answer rather than following it to the platform."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+def _visit(url: str) -> tuple[int, str]:
+    """GET ``url`` as a browser would, without following a redirect: status and Location."""
+    opener = urllib.request.build_opener(_NoRedirect)
+    try:
+        with opener.open(url, timeout=5) as page:
+            return page.status, page.headers.get("Location", "")
+    except urllib.error.HTTPError as error:
+        return error.code, error.headers.get("Location", "")
+
+
 def _browser(
-    params: dict[str, str] | None = None, *, state: str | None = None
+    params: dict[str, str] | None = None,
+    *,
+    state: str | None = None,
+    landed: list[tuple[int, str]] | None = None,
+    threads: list[threading.Thread] | None = None,
 ) -> tuple[Callable[[str], bool], list[str]]:
-    """A stand-in browser that follows the authorize URL straight to the redirect."""
+    """A stand-in browser that follows the authorize URL straight to the redirect, and
+    records where the listener sends it on to in ``landed``, on a thread kept in
+    ``threads`` so a test can wait for it.
+    """
     opened: list[str] = []
 
     def open_browser(url: str) -> bool:
@@ -191,10 +216,14 @@ def _browser(
         answer = {"state": state or query["state"][0], **(params or {"code": "the-code"})}
 
         def follow() -> None:
-            with urllib.request.urlopen(f"{redirect}?{urlencode(answer)}", timeout=5) as page:
-                page.read()
+            visited = _visit(f"{redirect}?{urlencode(answer)}")
+            if landed is not None:
+                landed.append(visited)
 
-        threading.Thread(target=follow, daemon=True).start()
+        thread = threading.Thread(target=follow, daemon=True)
+        if threads is not None:
+            threads.append(thread)
+        thread.start()
         return True
 
     return open_browser, opened
@@ -402,12 +431,8 @@ def test_login_ignores_requests_for_other_paths(
         answer = {"state": query["state"][0], "code": "the-code"}
 
         def follow() -> None:
-            try:
-                urllib.request.urlopen(redirect.replace("/callback", "/favicon.ico"), timeout=5)
-            except urllib.error.HTTPError as error:
-                statuses.append(error.code)
-            with urllib.request.urlopen(f"{redirect}?{urlencode(answer)}", timeout=5) as page:
-                page.read()
+            statuses.append(_visit(redirect.replace("/callback", "/favicon.ico"))[0])
+            _visit(f"{redirect}?{urlencode(answer)}")
 
         threading.Thread(target=follow, daemon=True).start()
         return True
@@ -427,3 +452,60 @@ def test_login_refuses_a_redirect_without_a_code(
     with pytest.raises(auth.PlatformAuthError, match="carried no authorization code"):
         auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
     assert not requests_mock.called
+
+
+def test_a_signed_in_browser_is_sent_on_to_the_platform(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """The listener answers once the tokens are stored, sending the browser to the
+    platform's own page, which shows the sign-in in the platform's theme.
+    """
+    requests_mock.post(f"{PLATFORM}/oauth/token", json=_token_response(1))
+    landed: list[tuple[int, str]] = []
+    threads: list[threading.Thread] = []
+    open_browser, _ = _browser(landed=landed, threads=threads)
+
+    auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
+
+    _landed(threads)
+    assert landed == [(303, f"{PLATFORM}/oauth/done?outcome=signed_in")]
+    assert auth.stored_tokens(PLATFORM) is not None
+
+
+def test_a_declined_sign_in_ends_on_the_platform_saying_so() -> None:
+    """Cancel in the browser ends on the platform's page saying the sign-in was cancelled."""
+    landed: list[tuple[int, str]] = []
+    threads: list[threading.Thread] = []
+    open_browser, _ = _browser({"error": "access_denied"}, landed=landed, threads=threads)
+
+    with pytest.raises(auth.PlatformAuthError, match="was declined"):
+        auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
+
+    _landed(threads)
+    assert landed == [(303, f"{PLATFORM}/oauth/done?outcome=declined")]
+
+
+def test_a_refused_code_ends_on_the_platform_as_failed(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """The page reflects the exchange, not just the redirect: a code the platform
+    refuses ends as failed, though the browser carried one.
+    """
+    requests_mock.post(f"{PLATFORM}/oauth/token", status_code=400, json={"error": "invalid_grant"})
+    landed: list[tuple[int, str]] = []
+    threads: list[threading.Thread] = []
+    open_browser, _ = _browser(landed=landed, threads=threads)
+
+    with pytest.raises(auth.PlatformAuthError, match="refused the sign-in code"):
+        auth.login(PLATFORM, open_browser=open_browser, echo=lambda _: None, timeout_seconds=10)
+
+    _landed(threads)
+    assert landed == [(303, f"{PLATFORM}/oauth/done?outcome=failed")]
+
+
+def _landed(threads: list[threading.Thread]) -> None:
+    """The stand-in browser records its answer on its own thread, which can still be
+    reading the response when login returns.
+    """
+    for thread in threads:
+        thread.join(timeout=5)
