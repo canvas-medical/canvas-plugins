@@ -138,9 +138,10 @@ _BUILTIN_EXCEPTIONS = {
 
 # Names the sandbox injects into the execution scope to enforce its policy.
 # RestrictedPython rewrites attribute access, item access, writes, unpacking and
-# printing into calls to these, and compiles class bodies against
-# `__metaclass__`, so they belong to the sandbox rather than to plugin code and
-# are reserved: binding one is an error in any syntax.
+# printing into calls to these, binds `_print` in each function that prints, and
+# compiles class bodies against `__metaclass__`, so they belong to the sandbox
+# rather than to plugin code and are reserved: binding one is an error in any
+# syntax.
 PROTECTED_SCOPE_NAMES = frozenset(
     {
         "__metaclass__",
@@ -151,6 +152,7 @@ PROTECTED_SCOPE_NAMES = frozenset(
         "_inplacevar_",
         "_iter_unpack_sequence_",
         "_print_",
+        "_print",
         "_unpack_sequence_",
         "_write_",
     }
@@ -196,23 +198,6 @@ _NO_DEFAULT: Any = object()
 #: plugin.
 _missing_attribute_reads: ContextVar[list[str] | None] = ContextVar(
     "missing_attribute_reads", default=None
-)
-
-#: Names the sandbox binds in each plugin module's scope to guard what plugin code does,
-#: which plugin code cannot bind itself.
-GUARD_NAMES = frozenset(
-    {
-        "_apply_",
-        "_getattr_",
-        "_getitem_",
-        "_getiter_",
-        "_inplacevar_",
-        "_iter_unpack_sequence_",
-        "_print_",
-        "_print",
-        "_unpack_sequence_",
-        "_write_",
-    }
 )
 
 #: Names already logged, by plugin, so each is logged once per process.
@@ -1349,7 +1334,7 @@ class Sandbox:
             if name is None:
                 return
 
-            if name in GUARD_NAMES or name in PROTECTED_SCOPE_NAMES:
+            if name in PROTECTED_SCOPE_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
             elif name.startswith("__") and name != "__all__" and not allow_double_underscore:
                 self.error(node, f"Assignments to '{name}' are not allowed.")
