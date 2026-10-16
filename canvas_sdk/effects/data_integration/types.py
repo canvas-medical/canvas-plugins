@@ -1,44 +1,40 @@
-from enum import StrEnum
-from typing import Annotated
+import sys
 
-from pydantic import StringConstraints
-from typing_extensions import TypedDict
-
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
-
-
-class ReportType(StrEnum):
-    """The category of report for a document type."""
-
-    CLINICAL = "CLINICAL"
-    ADMINISTRATIVE = "ADMINISTRATIVE"
-
-
-class TemplateType(StrEnum):
-    """The template applied to a clinical report document."""
-
-    LAB_REPORT = "LabReportTemplate"
-    IMAGING_REPORT = "ImagingReportTemplate"
-    SPECIALTY_REPORT = "SpecialtyReportTemplate"
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 
 class AnnotationItem(TypedDict):
-    """UI annotation: `text` is the label (e.g., "AI 97%"); `color` is a hex code (e.g., "#FF0000")."""
+    """
+    Annotation item with text and color for UI display.
+
+    Attributes:
+        text: The annotation label (e.g., "AI 97%", "Auto-detected")
+        color: Hex color code (e.g., "#FF0000" for red)
+    """
 
     text: str
     color: str
 
 
 class DocumentType(TypedDict):
-    """Document type information for categorizing a document.
+    """
+    Document type information for categorizing a document.
 
-    `template_type` is None for administrative documents.
+    Attributes:
+        key: The unique key identifying the document type (required, non-empty string)
+        name: The human-readable name of the document type (required, non-empty string)
+        report_type: The type of report, must be "CLINICAL" or "ADMINISTRATIVE" (required)
+        template_type: The template type, can be "LabReportTemplate", "ImagingReportTemplate",
+            "SpecialtyReportTemplate", or null for administrative docs (optional)
     """
 
-    key: NonEmptyStr
-    name: NonEmptyStr
-    report_type: ReportType
-    template_type: TemplateType | None
+    key: str
+    name: str
+    report_type: str
+    template_type: str | None
 
 
-__exports__ = ("AnnotationItem", "DocumentType", "ReportType", "TemplateType")
+__exports__ = ("AnnotationItem", "DocumentType")
