@@ -7,6 +7,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects._field_errors import upload_key_errors
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
@@ -14,6 +15,11 @@ from canvas_sdk.v1.data import Patient, Staff
 class Message(TrackableFieldsModel):
     """
     Effect to create and/or send a message.
+
+    Files (PNG, JPEG or PDF) are attached by passing the ``key`` of each ``StoredFilePart``
+    received on a SimpleAPI route declared with ``file_uploads="stored"`` in
+    ``attachment_upload_keys``. Canvas copies each file into the message, then deletes the
+    upload, so a key can be attached once.
     """
 
     class Meta:
@@ -24,9 +30,20 @@ class Message(TrackableFieldsModel):
     sender_id: str | UUID
     recipient_id: str | UUID
     read: datetime | None = None
+    attachment_upload_keys: list[str] | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+
+        errors.extend(upload_key_errors(self, "attachment_upload_keys"))
+        if method == "send" and self.attachment_upload_keys:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Attachments are added with create(), create_and_send() or edit(), not send().",
+                    self.attachment_upload_keys,
+                )
+            )
 
         if (
             not Patient.objects.filter(id=self.sender_id).exists()

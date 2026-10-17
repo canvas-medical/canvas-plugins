@@ -250,7 +250,7 @@ class Coverage(TimestampedModel, IdentifiableModel):
         return f"id={self.id}"
 
 
-class Transactor(TimestampedModel):
+class Transactor(TimestampedModel, IdentifiableModel):
     """Transactor."""
 
     class Meta:
@@ -361,6 +361,7 @@ class EligibilitySummary(TimestampedModel, IdentifiableModel):
 
 
 __exports__ = (
+    "CoverageRank",
     "CoverageStack",
     "CoverageState",
     "CoverageType",

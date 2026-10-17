@@ -343,3 +343,57 @@ def test_message_both_staff(
     effect = message.create()
 
     assert effect.type == EffectType.CREATE_MESSAGE
+
+
+def test_create_message_sends_attachment_upload_keys(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Attachment keys from file_uploads='stored' routes are sent with the message."""
+    keys = [
+        "acme/plugin-uploads/my_plugin/20261014T120000Z-a-results.pdf",
+        "acme/plugin-uploads/my_plugin/20261014T120000Z-b-photo.jpg",
+    ]
+
+    effect = Message(**valid_message_data, attachment_upload_keys=keys).create_and_send()
+
+    assert json.loads(effect.payload)["data"]["attachment_upload_keys"] == keys
+
+
+def test_create_message_rejects_keys_outside_plugin_uploads(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Attachment keys must come from a file_uploads='stored' route."""
+    with pytest.raises(ValidationError, match="attachment_upload_keys"):
+        Message(**valid_message_data, attachment_upload_keys=["snapshots/front.jpg"]).create()
+
+
+def test_message_without_attachments_omits_the_field(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """A message without attachments sends no attachment field."""
+    effect = Message(**valid_message_data).create()
+
+    assert "attachment_upload_keys" not in json.loads(effect.payload)["data"]
+
+
+def test_send_rejects_attachment_upload_keys(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Sending an existing message cannot add files."""
+    message = Message(
+        **valid_message_data,
+        message_id=str(uuid4()),
+        attachment_upload_keys=["acme/plugin-uploads/my_plugin/20261014T1-a-results.pdf"],
+    )
+
+    with pytest.raises(ValidationError, match="not send"):
+        message.send()
+
+
+def test_attachment_upload_keys_none_means_no_attachments(
+    mock_db_queries: dict[str, MagicMock], valid_message_data: dict[str, Any]
+) -> None:
+    """Passing None for the attachment keys is the same as passing none."""
+    effect = Message(**valid_message_data, attachment_upload_keys=None).create()
+
+    assert json.loads(effect.payload)["data"]["attachment_upload_keys"] is None
