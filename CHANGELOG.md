@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.255.0 (2026-10-19)
+
+### Features
+
+- **sdk**: Expose google calendar busy blocks and connection status in the data module
+  ([#1939](https://github.com/canvas-medical/canvas-plugins/pull/1939),
+  [`5e7bf29`](https://github.com/canvas-medical/canvas-plugins/commit/5e7bf2911e856bb50c681ac4a96a5d82eca76417))
+
+
 ## v0.254.0 (2026-10-16)
 
 ### Features
