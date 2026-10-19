@@ -1,7 +1,9 @@
 import json
 import logging
+import socket
 import tarfile
 import tempfile
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -572,3 +574,43 @@ def test_download() -> None:
             assert plugin_path.exists()
             assert plugin_path.read_bytes() == b"some content in a file"
         mock_request.assert_called_once()
+
+
+def test_download_times_out_on_stalled_connection() -> None:
+    """A connection that never answers must raise Timeout, not block forever.
+
+    The listener accepts the TCP connection and sends nothing, which is how a
+    stalled S3 download looks to the client. The request is redirected to it,
+    with any timeout the caller passed shortened so the test runs fast; a call
+    made without a timeout blocks, and the thread guard reports the hang.
+    """
+    real_request = requests.request
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        port = listener.getsockname()[1]
+
+        def stalled_request(**kwargs: object) -> requests.Response:
+            kwargs["url"] = f"http://127.0.0.1:{port}/"
+            if kwargs.get("timeout") is not None:
+                kwargs["timeout"] = 0.5
+            return real_request(**kwargs)  # type: ignore[arg-type]
+
+        outcome: list[BaseException | None] = []
+
+        def run_download() -> None:
+            try:
+                with download_plugin("plugins/plugin1.tar.gz"):
+                    pass
+                outcome.append(None)
+            except BaseException as e:
+                outcome.append(e)
+
+        with patch("plugin_runner.installation.requests.request", side_effect=stalled_request):
+            worker = threading.Thread(target=run_download, daemon=True)
+            worker.start()
+            worker.join(timeout=5)
+
+        assert not worker.is_alive(), "download_plugin blocked on a stalled connection"
+        assert isinstance(outcome[0], requests.exceptions.Timeout)

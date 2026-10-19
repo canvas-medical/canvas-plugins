@@ -55,6 +55,12 @@ UPLOAD_TO_PREFIX = "plugins"
 MAX_TRANSIENT_INSTALL_ATTEMPTS = 3
 TRANSIENT_INSTALL_BACKOFF_SECONDS = 1.0
 
+# (connect, read) timeouts for the S3 package download. The read timeout is the
+# longest wait for the next bytes, not a cap on the whole transfer. Without it a
+# stalled connection blocks startup forever: the runner never serves gRPC, and
+# the retry above never fires because nothing is raised.
+DOWNLOAD_TIMEOUT_SECONDS = (10, 60)
+
 # Exception classes treated as transient infra failures: network blips during
 # S3 download (including streams interrupted mid-pull) and database connection
 # resets. The plugin's code is fine — a retry should clear the failure.
@@ -219,7 +225,12 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         download_path = Path(temp_dir) / plugin_package
 
         with open(download_path, "wb") as download_file:
-            response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
+            response = requests.request(
+                method=method,
+                url=f"https://{host}{path}",
+                headers=headers,
+                timeout=DOWNLOAD_TIMEOUT_SECONDS,
+            )
             response.raise_for_status()
 
             download_file.write(response.content)
