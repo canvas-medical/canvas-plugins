@@ -4,12 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.patient_portal.theme import (
-    PatientPortalTheme,
-    band_color,
-    contrast_ratio,
-    derived_surface,
-)
+from canvas_sdk.effects.patient_portal.theme import PatientPortalTheme
 
 EMPTY_DATA = {
     "brand_color": None,
@@ -25,88 +20,12 @@ EMPTY_DATA = {
 }
 
 
-def test_contrast_ratio_matches_wcag_reference_values() -> None:
-    """The ratio uses WCAG relative luminance."""
-    assert contrast_ratio("#000000", "#FFFFFF") == pytest.approx(21.0, abs=0.01)
-    assert contrast_ratio("#2185D0", "#FFFFFF") == pytest.approx(3.94, abs=0.01)
-    assert contrast_ratio("#2185D0", "#E5E5E5") == pytest.approx(3.13, abs=0.01)
-
-
 def test_empty_effect_resets_the_theme() -> None:
     """An effect with no tokens is valid and carries every key as null."""
     applied = PatientPortalTheme().apply()
 
     assert applied.type == EffectType.PATIENT_PORTAL__THEME_CONFIGURATION
     assert json.loads(applied.payload) == {"data": EMPTY_DATA}
-
-
-def test_radius_only_passes_even_though_default_brand_is_below_4_5() -> None:
-    """Pairs are checked only when the effect sets one side of them."""
-    applied = PatientPortalTheme(corner_radius=8).apply()
-
-    assert json.loads(applied.payload)["data"]["corner_radius"] == 8
-
-
-def test_white_page_background_passes_with_default_brand() -> None:
-    """A theme without brand_color does not check the default brand #2185D0, which is 3.94:1 on white."""
-    applied = PatientPortalTheme(page_background_color="#FFFFFF").apply()
-
-    assert json.loads(applied.payload)["data"]["page_background_color"] == "#FFFFFF"
-
-
-@pytest.mark.parametrize("menu_background", ["#1F2937", "#FEF3C7"])
-def test_ticket_example_rail_colors_pass(menu_background: str) -> None:
-    """AC3's dark and light rail colors pass with derived text and selection."""
-    applied = PatientPortalTheme(menu_background_color=menu_background).apply()
-
-    assert json.loads(applied.payload)["data"]["menu_background_color"] == menu_background
-
-
-def test_mid_gray_rail_with_derived_text_fails_and_names_the_pair() -> None:
-    """#777777 derives white text at 4.48:1, below 4.5."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(menu_background_color="#777777").apply()
-
-    message = str(exc.value)
-    assert "menu_text_color (derived)" in message
-    assert "menu_background_color" in message
-    assert "4.48:1" in message
-
-
-def test_dark_page_background_fails_body_text() -> None:
-    """Body text #212121 on a dark page is unreadable."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(page_background_color="#1F2937").apply()
-
-    assert "page_background_color" in str(exc.value)
-
-
-def test_brand_on_page_below_3_fails() -> None:
-    """A yellow brand on white is 1.22:1."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#FFEB3B").apply()
-
-    assert "brand_color" in str(exc.value)
-
-
-def test_brand_on_selected_row_checked_only_on_default_rail() -> None:
-    """With the default rail, brand text sits on the selected background."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#2185D0", menu_selected_background_color="#2185D0").apply()
-
-    assert "menu_selected_background_color" in str(exc.value)
-
-
-def test_custom_rail_checks_menu_text_on_selected_background() -> None:
-    """With a custom rail, the selected row uses the menu text color."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(
-            menu_background_color="#1F2937",
-            menu_text_color="#FFFFFF",
-            menu_selected_background_color="#F2F2F2",
-        ).apply()
-
-    assert "menu_selected_background_color" in str(exc.value)
 
 
 @pytest.mark.parametrize("value", ["#FFF", "red", "#GGGGGG", "#1F293780"])
@@ -162,36 +81,6 @@ def test_business_line_is_not_a_field() -> None:
         PatientPortalTheme(business_line_id="x").apply()  # type: ignore[call-arg]
 
 
-def test_dark_brand_passes_every_brand_text_pair() -> None:
-    """#1D4ED8 passes the page, its header band, white labels and the gray selected row at 4.5:1."""
-    applied = PatientPortalTheme(brand_color="#1D4ED8").apply()
-
-    assert json.loads(applied.payload)["data"]["brand_color"] == "#1D4ED8"
-
-
-def test_brand_text_needs_wcag_aa_normal_text_contrast() -> None:
-    """Brand links and white labels are normal-size text, so they need 4.5:1, not 3.0:1.
-
-    #5C90C2 is 3.37:1 with white text and 3.11:1 on its header band.
-    """
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#5C90C2", menu_background_color="#1F2937").apply()
-
-    assert "WCAG AA needs 4.5:1" in str(exc.value)
-    assert "3.0:1" not in str(exc.value)
-
-
-def test_a_failing_pair_is_reported_once() -> None:
-    """Without a page background, brand on page and white text on brand are the same colors."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#FFD54F").apply()
-
-    messages = [error["msg"] for error in exc.value.errors()]
-    pairs = [message.split(" has contrast")[0].split(" on ") for message in messages]
-    color_pairs = [frozenset(part.split()[-1] for part in pair) for pair in pairs if len(pair) == 2]
-    assert len(color_pairs) == len(set(color_pairs))
-
-
 @pytest.mark.parametrize(
     "source",
     [
@@ -226,29 +115,6 @@ def test_font_family_rejects_quotes(family: str) -> None:
     """Quotes are written raw into the portal's CSS, where an unbalanced one breaks the styles after it."""
     with pytest.raises(ValidationError):
         PatientPortalTheme(font_family=family).apply()
-
-
-def test_brand_that_fails_its_band_is_rejected() -> None:
-    """#6494C2 passes white (3.20:1) but fails its own band tint (2.95:1)."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#6494C2").apply()
-
-    assert "header band" in str(exc.value)
-
-
-def test_band_sits_on_the_surface_derived_from_the_page() -> None:
-    """With a page background, the band is a brand tint over the lighter surface."""
-    assert derived_surface("#F0FDFA") == "#F8FEFD"
-    assert band_color("#0F766E", "#F0FDFA") == "#E5F3F2"
-    assert band_color("#0F766E", None) == "#ECF4F3"
-
-
-def test_light_brand_names_white_text_on_brand() -> None:
-    """Buttons and sent messages draw white text on the brand, so a light brand names that pair."""
-    with pytest.raises(ValidationError) as exc:
-        PatientPortalTheme(brand_color="#FFD54F").apply()
-
-    assert "white text" in str(exc.value)
 
 
 def test_font_source_requires_font_family() -> None:
@@ -303,3 +169,14 @@ def test_validation_errors_report_the_rejected_value(
 
     inputs = [error["input"] for error in exc.value.errors() if message in error["msg"]]
     assert inputs == [tokens[rejected]]
+
+
+def test_colors_are_not_checked_for_contrast() -> None:
+    """Any valid hex colors pass, whatever their contrast."""
+    applied = PatientPortalTheme(
+        menu_background_color="#777777",
+        page_background_color="#000000",
+        brand_color="#FFFF00",
+    ).apply()
+
+    assert json.loads(applied.payload)["data"]["menu_background_color"] == "#777777"
