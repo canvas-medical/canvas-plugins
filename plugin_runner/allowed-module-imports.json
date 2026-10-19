@@ -1249,6 +1249,9 @@
     "FieldValueTooLarge",
     "FollowUp",
     "Goal",
+    "GoogleCalendar",
+    "GoogleCalendarBusyBlock",
+    "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
     "ImagingOrder",
@@ -1666,6 +1669,11 @@
     "GoalLifecycleStatus",
     "GoalPriority",
     "UpdateGoal"
+  ],
+  "canvas_sdk.v1.data.google_calendar": [
+    "GoogleCalendar",
+    "GoogleCalendarBusyBlock",
+    "GoogleCalendarConnection"
   ],
   "canvas_sdk.v1.data.group": [
     "Group"

@@ -42,6 +42,11 @@ from .family_history import FamilyHistoryCodingFactory, FamilyHistoryFactory
 from .fax import FaxFactory, FaxStatusModelFactory
 from .follow_up import FollowUpFactory
 from .goal import GoalFactory, UpdateGoalFactory
+from .google_calendar import (
+    GoogleCalendarBusyBlockFactory,
+    GoogleCalendarConnectionFactory,
+    GoogleCalendarFactory,
+)
 from .group import GroupFactory
 from .history_present_illness import HistoryOfPresentIllnessFactory
 from .imaging import (
@@ -219,6 +224,9 @@ __all__ = (
     "FamilyHistoryCodingFactory",
     "FollowUpFactory",
     "GoalFactory",
+    "GoogleCalendarBusyBlockFactory",
+    "GoogleCalendarConnectionFactory",
+    "GoogleCalendarFactory",
     "GroupFactory",
     "ImagingOrderActionEventFactory",
     "ImagingOrderFactory",
