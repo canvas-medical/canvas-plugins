@@ -282,7 +282,7 @@ class Coverage(TrackableFieldsModel):
                 and CoverageModel.objects.filter(
                     patient__id=self.patient_id, coverage_rank=self.coverage_rank, stack=stack
                 )
-                .exclude(coverage_end_date__lt=_today())
+                .exclude(coverage_end_date__lte=_today())
                 .exists()
             ):
                 errors.append(

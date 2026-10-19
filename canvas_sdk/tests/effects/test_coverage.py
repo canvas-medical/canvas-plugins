@@ -11,7 +11,13 @@ from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.coverage import Coverage, CoverageReorder, CoverageReorderEntry, PhotoSide
+from canvas_sdk.effects.coverage import (
+    Coverage,
+    CoverageReorder,
+    CoverageReorderEntry,
+    PhotoSide,
+    _today,
+)
 from canvas_sdk.test_utils.factories import CoverageFactory, PatientFactory
 from canvas_sdk.v1.data import Coverage as CoverageModel
 from canvas_sdk.v1.data import Patient, Transactor
@@ -226,10 +232,8 @@ def test_create_rejects_a_taken_rank(patient: Patient, payer: Transactor) -> Non
 
 @pytest.mark.django_db
 def test_create_allows_the_rank_of_an_ended_coverage(patient: Patient, payer: Transactor) -> None:
-    """A coverage that ended before today does not hold its rank."""
-    CoverageFactory.create(
-        patient=patient, coverage_rank=2, coverage_end_date=date.today() - timedelta(days=1)
-    )
+    """A coverage that ends today or earlier does not hold its rank, so it can be replaced today."""
+    CoverageFactory.create(patient=patient, coverage_rank=2, coverage_end_date=_today())
 
     Coverage(**_create_kwargs(patient, payer)).create()
 
@@ -684,13 +688,13 @@ def test_create_counts_today_in_the_installation_time_zone(
     payer: Transactor,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A coverage ending on the practice's today keeps its rank, whatever the UTC date."""
+    """A coverage ending on the practice's tomorrow keeps its rank, though that is UTC today."""
     monkeypatch.setattr("canvas_sdk.effects.coverage.INSTALLATION_TIME_ZONE", "America/Los_Angeles")
     CoverageFactory.create(
         patient=patient,
         coverage_rank=CoverageRank.SECONDARY,
         coverage_start_date=date(2026, 1, 1),
-        coverage_end_date=date(2026, 10, 14),
+        coverage_end_date=date(2026, 10, 15),
     )
 
     with pytest.raises(ValidationError, match="already has an active"):
