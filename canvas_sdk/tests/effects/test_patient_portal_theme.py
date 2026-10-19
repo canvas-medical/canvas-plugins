@@ -41,14 +41,14 @@ def test_empty_effect_resets_the_theme() -> None:
 
 
 def test_radius_only_passes_even_though_default_brand_is_below_4_5() -> None:
-    """Pairs are checked only when the effect sets one side, and brand pairs use 3.0."""
+    """Pairs are checked only when the effect sets one side of them."""
     applied = PatientPortalTheme(corner_radius=8).apply()
 
     assert json.loads(applied.payload)["data"]["corner_radius"] == 8
 
 
 def test_white_page_background_passes_with_default_brand() -> None:
-    """Default brand #2185D0 is 3.94:1 on white, above the 3.0 brand floor."""
+    """A theme without brand_color does not check the default brand #2185D0, which is 3.94:1 on white."""
     applied = PatientPortalTheme(page_background_color="#FFFFFF").apply()
 
     assert json.loads(applied.payload)["data"]["page_background_color"] == "#FFFFFF"
@@ -276,3 +276,30 @@ def test_custom_css_cannot_load_anything(css: str) -> None:
         PatientPortalTheme(custom_css=css).apply()
 
     assert "custom_css" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    ("tokens", "message", "rejected"),
+    [
+        (
+            {"custom_css": "a::before { content: '<b>' }"},
+            "custom_css must not contain",
+            "custom_css",
+        ),
+        ({"custom_css": "a { background: url(x.png) }"}, "custom_css must not load", "custom_css"),
+        (
+            {"font_source": "https://fonts.googleapis.com/css2?family=Nunito"},
+            "font_source needs a font_family",
+            "font_source",
+        ),
+    ],
+)
+def test_validation_errors_report_the_rejected_value(
+    tokens: dict[str, str], message: str, rejected: str
+) -> None:
+    """Each error carries the value it rejects as its input, like the other SDK effects."""
+    with pytest.raises(ValidationError) as exc:
+        PatientPortalTheme.model_validate(tokens).apply()
+
+    inputs = [error["input"] for error in exc.value.errors() if message in error["msg"]]
+    assert inputs == [tokens[rejected]]

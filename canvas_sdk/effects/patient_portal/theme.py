@@ -90,13 +90,12 @@ def band_color(brand: str, page_background: str | None) -> str:
 
 
 class _Pair(NamedTuple):
-    """A foreground and background the portal draws together, and the contrast they need."""
+    """A foreground and background the portal draws together."""
 
     foreground_label: str
     foreground: str
     background_label: str
     background: str
-    floor: float
 
 
 class PatientPortalTheme(_BaseEffect):
@@ -149,18 +148,16 @@ class PatientPortalTheme(_BaseEffect):
 
         pairs = []
         if self.menu_text_color or self.menu_background_color:
-            pairs.append(
-                _Pair(menu_text_label, menu_text, "menu_background_color", menu, TEXT_FLOOR)
-            )
+            pairs.append(_Pair(menu_text_label, menu_text, "menu_background_color", menu))
         if self.page_background_color:
-            pairs.append(_Pair("body text", BODY_TEXT, "page_background_color", page, TEXT_FLOOR))
+            pairs.append(_Pair("body text", BODY_TEXT, "page_background_color", page))
         if self.brand_color:
             band = band_color(brand, self.page_background_color)
             # Primary buttons and sent messages draw white text on the brand. First,
             # so on a white page it is the name the shared pair is reported under.
-            pairs.append(_Pair("white text", LIGHT_TEXT, "brand_color", brand, TEXT_FLOOR))
-            pairs.append(_Pair("brand_color", brand, "page_background_color", page, TEXT_FLOOR))
-            pairs.append(_Pair("brand_color", brand, "header band", band, TEXT_FLOOR))
+            pairs.append(_Pair("white text", LIGHT_TEXT, "brand_color", brand))
+            pairs.append(_Pair("brand_color", brand, "page_background_color", page))
+            pairs.append(_Pair("brand_color", brand, "header band", band))
 
         # A custom rail draws the selected row in the menu text color. The
         # default rail draws it in the brand color.
@@ -172,14 +169,11 @@ class PatientPortalTheme(_BaseEffect):
                     menu_text,
                     "menu_selected_background_color",
                     selected,
-                    TEXT_FLOOR,
                 )
             )
         elif self.brand_color or self.menu_selected_background_color:
             selected = self.menu_selected_background_color or DEFAULT_SELECTED_BACKGROUND
-            pairs.append(
-                _Pair("brand_color", brand, "menu_selected_background_color", selected, TEXT_FLOOR)
-            )
+            pairs.append(_Pair("brand_color", brand, "menu_selected_background_color", selected))
 
         # The same two colors can meet twice, for example brand on a white page and
         # white text on the brand. Report each pair of colors once.
@@ -193,7 +187,9 @@ class PatientPortalTheme(_BaseEffect):
 
         if self.custom_css and "<" in self.custom_css:
             errors.append(
-                self._create_error_detail("value", "custom_css must not contain '<'", "custom_css")
+                self._create_error_detail(
+                    "value", "custom_css must not contain '<'", self.custom_css
+                )
             )
         if self.custom_css and CSS_LOADERS.search(self.custom_css):
             errors.append(
@@ -201,25 +197,25 @@ class PatientPortalTheme(_BaseEffect):
                     "value",
                     "custom_css must not load anything: no url(), @import, image-set(), "
                     "@font-face or backslash escapes",
-                    "custom_css",
+                    self.custom_css,
                 )
             )
         if self.font_source and not self.font_family:
             errors.append(
                 self._create_error_detail(
-                    "value", "font_source needs a font_family to apply", "font_source"
+                    "value", "font_source needs a font_family to apply", self.font_source
                 )
             )
 
         for pair in self._contrast_pairs():
             ratio = contrast_ratio(pair.foreground, pair.background)
-            if ratio < pair.floor:
+            if ratio < TEXT_FLOOR:
                 errors.append(
                     self._create_error_detail(
                         "value",
                         f"{pair.foreground_label} {pair.foreground} on {pair.background_label} "
                         f"{pair.background} has contrast {ratio:.2f}:1; "
-                        f"WCAG AA needs {pair.floor}:1",
+                        f"WCAG AA needs {TEXT_FLOOR}:1",
                         pair.foreground,
                     )
                 )
