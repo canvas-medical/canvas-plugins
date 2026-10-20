@@ -1200,6 +1200,7 @@
     "Clipboard",
     "Command",
     "CommandMetadata",
+    "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
@@ -1547,6 +1548,9 @@
   "canvas_sdk.v1.data.command": [
     "Command",
     "CommandMetadata"
+  ],
+  "canvas_sdk.v1.data.command_type_setting": [
+    "CommandTypeSetting"
   ],
   "canvas_sdk.v1.data.common": [
     "AddressState",
