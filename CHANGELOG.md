@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.258.0 (2026-10-20)
+
+### Features
+
+- Link Order DME to a same-note Assessment
+  ([#1941](https://github.com/canvas-medical/canvas-plugins/pull/1941),
+  [`2884245`](https://github.com/canvas-medical/canvas-plugins/commit/28842459bd4ca01629413ae8820a3630ddf9c315))
+
+
 ## v0.257.0 (2026-10-20)
 
 ### Features
