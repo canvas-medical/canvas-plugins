@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.256.0 (2026-10-20)
+
+### Bug Fixes
+
+- **plugin-runner**: Time out stalled S3 plugin downloads (KOALA-7687)
+  ([#1940](https://github.com/canvas-medical/canvas-plugins/pull/1940),
+  [`902589c`](https://github.com/canvas-medical/canvas-plugins/commit/902589c6309855d1b8f85139d0acfc68444112db))
+
+### Features
+
+- Assign patient messages to a team
+  ([#1935](https://github.com/canvas-medical/canvas-plugins/pull/1935),
+  [`b63d7aa`](https://github.com/canvas-medical/canvas-plugins/commit/b63d7aa179543d0cfd9d601339db67f1d79b8676))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.255.0 (2026-10-19)
 
 ### Features
