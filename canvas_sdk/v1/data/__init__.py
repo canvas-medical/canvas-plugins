@@ -50,6 +50,7 @@ from .coding_gap_event import (
     ValidateCodingGapEvent,
 )
 from .command import Command, CommandMetadata
+from .command_type_setting import CommandTypeSetting
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
@@ -325,6 +326,7 @@ __all__ = __exports__ = (
     "Clipboard",
     "Command",
     "CommandMetadata",
+    "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",

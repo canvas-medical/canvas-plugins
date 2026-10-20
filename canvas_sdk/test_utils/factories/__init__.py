@@ -28,6 +28,7 @@ from .coding_gap_event import (
     DeferCodingGapEventFactory,
     ValidateCodingGapEventFactory,
 )
+from .command_type_setting import CommandTypeSettingFactory
 from .coverage import CoverageFactory
 from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
@@ -198,6 +199,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "ClipboardFactory",
+    "CommandTypeSettingFactory",
     "AssessCodingGapEventFactory",
     "CreateCodingGapEventFactory",
     "DeferCodingGapEventFactory",
