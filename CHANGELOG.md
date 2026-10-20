@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.257.0 (2026-10-20)
+
+### Features
+
+- Let AssessCommand set whether the condition shows in the problem list
+  ([#1930](https://github.com/canvas-medical/canvas-plugins/pull/1930),
+  [`fcfacf4`](https://github.com/canvas-medical/canvas-plugins/commit/fcfacf4b5f75ade07c546aaa6e4286941bbe629c))
+
+- **data**: Add command type settings to the data module
+  ([#1942](https://github.com/canvas-medical/canvas-plugins/pull/1942),
+  [`14507ca`](https://github.com/canvas-medical/canvas-plugins/commit/14507cad3e461303c582df52ba6067f1a3c5de2f))
+
+
 ## v0.256.0 (2026-10-20)
 
 ### Bug Fixes
