@@ -704,6 +704,7 @@
     "NoteOrAppointmentABC"
   ],
   "canvas_sdk.effects.note.message": [
+    "AssignMessageTeam",
     "Message"
   ],
   "canvas_sdk.effects.note.note": [
