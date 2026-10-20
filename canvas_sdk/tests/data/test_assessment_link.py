@@ -7,6 +7,7 @@ from canvas_sdk.v1.data import (
     Assessment,
     ChangeMedication,
     Condition,
+    DmeOrder,
     EducationalMaterial,
     FollowUp,
     Goal,
@@ -28,6 +29,7 @@ from canvas_sdk.v1.data.base import Model
 
 ASSESSMENT_LINKED_MODELS = (
     ChangeMedication,
+    DmeOrder,
     EducationalMaterial,
     FollowUp,
     Goal,

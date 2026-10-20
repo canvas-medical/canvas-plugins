@@ -2,12 +2,12 @@ from typing import Self
 
 from pydantic import Field, model_validator
 
-from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.base import _SignCommandMixin
+from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
 from canvas_sdk.commands.constants import ServiceProvider
 
 
-class OrderDmeCommand(_SignCommandMixin, BaseCommand):
+class OrderDmeCommand(_SignCommandMixin, _AssessmentLinkedCommand):
     """A class for managing an Order DME command within a specific note."""
 
     class Meta:

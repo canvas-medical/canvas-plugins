@@ -41,6 +41,12 @@ class DmeOrder(AuditedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="dme_orders"
     )
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="dme_orders")
+    assessment = models.ForeignKey(
+        "v1.Assessment",
+        on_delete=models.DO_NOTHING,
+        related_name="linked_dme_orders",
+        null=True,
+    )
     product = models.ForeignKey(
         "v1.DmeProduct", on_delete=models.DO_NOTHING, related_name="orders", null=True
     )
