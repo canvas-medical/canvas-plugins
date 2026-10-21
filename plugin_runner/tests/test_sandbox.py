@@ -1594,6 +1594,46 @@ def test_anthropic_types_disallowed_symbol_import() -> None:
         sandbox.execute()
 
 
+GATEWAY_SOURCE = """
+from canvas_sdk.agents import LLMGateway
+gateway = LLMGateway(base_url="https://gateway.test", key="cnvs_sk_secret")
+"""
+
+
+@pytest.mark.parametrize(
+    "reach",
+    [
+        "gateway._key",
+        "gateway._base_url",
+        "gateway._inner",
+        "gateway.client()._client",
+        "gateway.client().messages._client",
+        "getattr(gateway, '_key')",
+    ],
+)
+def test_plugin_code_cannot_reach_the_gateway_key(reach: str) -> None:
+    """The key lives in private attributes the sandbox refuses to read."""
+    sandbox = _sandbox_from_code(f"{GATEWAY_SOURCE}\nresult = {reach}")
+
+    with pytest.raises(AttributeError):
+        sandbox.execute()
+
+
+def test_plugin_code_sees_the_placeholder_key_on_the_client() -> None:
+    """Plugin code reading the client key gets the placeholder."""
+    sandbox = _sandbox_from_code(f"{GATEWAY_SOURCE}\nresult = gateway.client().api_key")
+
+    assert sandbox.execute()["result"] == "canvas-inference-gateway"
+
+
+def test_plugin_code_cannot_import_the_environment_factory() -> None:
+    """Only the runner builds a gateway from its environment; plugins cannot."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.gateway import gateway_from_environment")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
 def test_canvas_sdk_agents_importable_in_sandbox() -> None:
     """All four agent SDK exports are reachable from plugin code in the sandbox."""
     sandbox = _sandbox_from_code(
