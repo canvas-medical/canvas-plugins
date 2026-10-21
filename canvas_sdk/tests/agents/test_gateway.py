@@ -220,6 +220,28 @@ def test_a_gateway_under_a_path_prefix_still_serves_messages() -> None:
     assert sent[0].url.path == "/inference/v1/messages"
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://gateway.test/v1/messages",
+        "https://gateway.test/other/v1/messages",
+        "https://gateway.test/inference/v1/%6Dessages",
+    ],
+    ids=["outside-prefix", "wrong-prefix", "percent-encoded"],
+)
+def test_a_prefixed_gateway_refuses_paths_outside_its_prefix(url: str) -> None:
+    """Under a path prefix, the key goes only to prefix + a proxied route, spelled plainly."""
+    sent: list[httpx2.Request] = []
+    client = LLMGateway(
+        base_url=f"{GATEWAY_URL}/inference", key=KEY, transport=recording(sent)
+    ).client(max_retries=0)
+
+    with pytest.raises(anthropic.APIConnectionError):
+        client.request(cast_to=object, options=FinalRequestOptions(method="POST", url=url))
+
+    assert sent == []
+
+
 def test_repr_names_the_model_and_nothing_else() -> None:
     """Logging or printing a gateway cannot leak the key."""
     assert repr(gateway([])) == "LLMGateway(model='claude-sonnet-4-6')"
