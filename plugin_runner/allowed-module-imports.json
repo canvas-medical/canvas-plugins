@@ -245,6 +245,7 @@
     "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
+    "VisualExamFindingCommand",
     "VitalsCommand"
   ],
   "canvas_sdk.commands.api": [
@@ -415,6 +416,9 @@
   "canvas_sdk.commands.commands.update_goal": [
     "UpdateGoalCommand"
   ],
+  "canvas_sdk.commands.commands.visual_exam_finding": [
+    "VisualExamFindingCommand"
+  ],
   "canvas_sdk.commands.commands.vitals": [
     "VitalsCommand"
   ],
@@ -573,6 +577,12 @@
   ],
   "canvas_sdk.effects.configure_command_buttons": [
     "ConfigureCommandButtons"
+  ],
+  "canvas_sdk.effects.coverage": [
+    "Coverage",
+    "CoverageReorder",
+    "CoverageReorderEntry",
+    "PhotoSide"
   ],
   "canvas_sdk.effects.data_integration": [
     "AnnotationItem",
@@ -742,6 +752,7 @@
     "PatientContactCategory",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientIdentificationCard",
     "PatientMetadata",
     "PatientPreferredPharmacy",
     "generate_patient_id"
@@ -762,6 +773,9 @@
   ],
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
+  ],
+  "canvas_sdk.effects.patient.identification_card": [
+    "PatientIdentificationCard"
   ],
   "canvas_sdk.effects.patient.timeline": [
     "PatientTimelineEffect"
@@ -1578,6 +1592,7 @@
   ],
   "canvas_sdk.v1.data.coverage": [
     "Coverage",
+    "CoverageRank",
     "CoverageRelationshipCode",
     "CoverageStack",
     "CoverageState",

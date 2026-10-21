@@ -15,6 +15,7 @@ from canvas_sdk.effects.patient.create_patient_external_identifier import (
 from canvas_sdk.effects.patient.create_patient_preferred_pharmacies import (
     CreatePatientPreferredPharmacies,
 )
+from canvas_sdk.effects.patient.identification_card import PatientIdentificationCard
 
 __all__ = __exports__ = (
     "Patient",
@@ -27,5 +28,6 @@ __all__ = __exports__ = (
     "PatientMetadata",
     "CreatePatientExternalIdentifier",
     "CreatePatientPreferredPharmacies",
+    "PatientIdentificationCard",
     "generate_patient_id",
 )

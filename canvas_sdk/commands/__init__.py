@@ -50,6 +50,7 @@ from canvas_sdk.commands.commands.structured_assessment import StructuredAssessm
 from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.commands.update_diagnosis import UpdateDiagnosisCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
+from canvas_sdk.commands.commands.visual_exam_finding import VisualExamFindingCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
 
 __all__ = __exports__ = (
@@ -97,5 +98,6 @@ __all__ = __exports__ = (
     "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
+    "VisualExamFindingCommand",
     "VitalsCommand",
 )

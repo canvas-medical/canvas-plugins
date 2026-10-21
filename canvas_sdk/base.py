@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -25,9 +26,18 @@ class Model(BaseModel):
     )
 
     def _get_effect_method_required_fields(self, method: Any) -> tuple:
-        return getattr(self.Meta, f"{method}_required_fields", ())
+        return getattr(
+            self.Meta,
+            f"{method}_required_fields",
+            (),
+        )
 
-    def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
+    def _create_error_detail(
+        self,
+        type: str,
+        message: str,
+        value: Any,
+    ) -> InitErrorDetails:
         return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
@@ -43,7 +53,11 @@ class Model(BaseModel):
                 continue
             field_description = " or ".join([f"'{f}'" for f in fields])
             message = f"Field {field_description} is required to {method.replace('_', ' ')} {class_name_article} {class_name}"
-            error = self._create_error_detail("missing", message, None)
+            error = self._create_error_detail(
+                "missing",
+                message,
+                None,
+            )
             error_details.append(error)
 
         return error_details
@@ -78,11 +92,19 @@ class TrackableFieldsModel(Model):
         # Explicitly mark all keys provided in the constructor as dirty.
         self._dirty_keys.update(data.keys())
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Set an attribute and mark it as dirty unless excluded."""
+    def __setattr__(
+        self,
+        name: str,
+        value: Any,
+    ) -> None:
+        """Set an attribute and mark it as dirty unless excluded.
+
+        The key is marked only once the assignment has validated, so a rejected value is
+        never sent.
+        """
+        super().__setattr__(name, value)
         if not name.startswith("_") and name not in self._dirty_excluded_keys:
             self._dirty_keys.add(name)
-        super().__setattr__(name, value)
 
     def is_dirty(self, key: str) -> bool:
         """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
@@ -91,8 +113,14 @@ class TrackableFieldsModel(Model):
     @property
     def values(self) -> dict:
         """Return a dictionary of modified attributes with type-specific transformations."""
+        return self.values_for(self._dirty_keys)
+
+    def values_for(self, fields: Iterable[str]) -> dict:
+        """Return the modified attributes among ``fields``, serialized as in ``values``."""
         result = {}
-        for key in self._dirty_keys:
+        for key in fields:
+            if key not in self._dirty_keys:
+                continue
             value = getattr(self, key)
             if isinstance(value, Enum):
                 # If it's an enum, use its .value.
