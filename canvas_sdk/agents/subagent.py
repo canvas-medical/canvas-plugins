@@ -42,7 +42,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from anthropic import Anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.gateway import LLMGateway
@@ -120,7 +119,7 @@ def run_subagent(
         the final turn produced no text block.
     """
     sub_tools = parent_tools.scope(spec.allowed_tool_names)
-    client = Anthropic(api_key=gateway.api_key)
+    client = gateway.client()
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
 
     for turn in range(spec.max_turns):

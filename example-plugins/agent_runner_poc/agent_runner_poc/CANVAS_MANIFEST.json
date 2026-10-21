@@ -57,10 +57,7 @@
         "namespace": "custom_data__agent_runner_poc",
         "access": "read_write"
     },
-    "variables": [
-        {"name": "ANTHROPIC_API_KEY", "sensitive": true},
-        {"name": "ANTHROPIC_MODEL", "sensitive": false}
-    ],
+    "variables": [],
     "tags": {},
     "references": [],
     "license": "",
