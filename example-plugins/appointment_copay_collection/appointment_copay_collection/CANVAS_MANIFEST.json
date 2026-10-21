@@ -1,0 +1,46 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "appointment_copay_collection",
+    "description": "Patient portal page that collects an upcoming appointment's copay on a stored card and posts it to the appointment claim's COPAY line item.",
+    "components": {
+        "applications": [
+            {
+                "class": "appointment_copay_collection.applications.copay_application:CopayApplication",
+                "name": "Appointment Copays",
+                "description": "Opens the page where a patient pays the copay for an upcoming appointment.",
+                "scope": "portal_menu_item",
+                "icon": "assets/icon.png"
+            }
+        ],
+        "handlers": [
+            {
+                "class": "appointment_copay_collection.handlers.copay_api:CopayAPI",
+                "description": "Serves the copay page, lists upcoming appointments, and emits ChargeStoredCard effects."
+            },
+            {
+                "class": "appointment_copay_collection.handlers.charge_response:ChargeResponseHandler",
+                "description": "Pushes the stored-card charge result to the patient's open copay page."
+            },
+            {
+                "class": "appointment_copay_collection.handlers.copay_websocket:CopayWebSocket",
+                "description": "Lets a logged-in patient subscribe to their own charge-result channel."
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [
+        {
+            "name": "COPAY_AMOUNTS",
+            "default": "{}"
+        }
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
