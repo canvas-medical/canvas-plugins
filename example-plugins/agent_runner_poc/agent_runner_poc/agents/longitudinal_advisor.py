@@ -1,7 +1,6 @@
 import json
 from typing import Any, cast
 
-from anthropic import Anthropic
 from anthropic.types import ToolUseBlock
 
 from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
@@ -125,7 +124,7 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
             "effects": effects,
         }
 
-        client = Anthropic(api_key=gateway.api_key)
+        client = gateway.client()
         messages: list[dict] = [
             {
                 "role": "user",

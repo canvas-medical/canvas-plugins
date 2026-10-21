@@ -33,7 +33,6 @@ via :func:`find_open_note_uuid_from_ctx` and stores the UUID on
 import json
 from typing import Any, cast
 
-from anthropic import Anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
@@ -292,7 +291,7 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         }
         tool_ctx["note_id"] = find_open_note_uuid_from_ctx(tool_ctx)
 
-        client = Anthropic(api_key=gateway.api_key)
+        client = gateway.client()
         final_text = ""
 
         for turn in range(MAX_TURNS):
