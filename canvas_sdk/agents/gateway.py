@@ -58,8 +58,9 @@ class _GatewayTransport(httpx2.BaseTransport):
         inner: httpx2.BaseTransport | None = None,
     ) -> None:
         self._origin = _origin(gateway_url)
-        # A gateway mounted under a path prefix still serves /v1/... beneath it.
-        self._prefix = gateway_url.path.rstrip("/")
+        # A gateway mounted under a path prefix serves /v1/... beneath it, and only there.
+        prefix = gateway_url.path.rstrip("/")
+        self._routes = frozenset((method, prefix + path) for method, path in GATEWAY_ROUTES)
         self._key = key
         self._attribution = dict(attribution)
         self._inner = inner or httpx2.HTTPTransport()
@@ -70,8 +71,12 @@ class _GatewayTransport(httpx2.BaseTransport):
                 f"Refusing to send gateway credentials to {request.url.host!r}; "
                 "agent clients only reach the Canvas inference gateway."
             )
-        route = (request.method, request.url.path.removeprefix(self._prefix))
-        if route not in GATEWAY_ROUTES:
+        # Compared exactly, on the path as sent: a decoded path that matches while
+        # the raw bytes differ (percent-encoding) is refused too.
+        raw_path = request.url.raw_path.split(b"?", 1)[0]
+        if (request.method, request.url.path) not in self._routes or raw_path != (
+            request.url.path.encode("ascii", "replace")
+        ):
             raise LLMGatewayConfigurationError(
                 f"Refusing {request.method} {request.url.path}; the gateway serves "
                 "only the Messages API and token counting."
