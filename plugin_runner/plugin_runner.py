@@ -16,6 +16,7 @@ from http import HTTPStatus
 from time import sleep
 from typing import Any, NotRequired, TypedDict, cast
 
+import anthropic
 import grpc
 import redis
 import sentry_sdk
@@ -231,6 +232,28 @@ def _ensure_sqlite_schema() -> None:
 
     call_command("migrate", run_syncdb=True, verbosity=0)
     _sqlite_schema_initialized = True
+
+
+def llm_error_kind(exc: anthropic.APIError) -> str:
+    """Whether a failed gateway call is worth retrying.
+
+    ``LLM_UNAVAILABLE`` is an outage: the gateway or Anthropic answered 5xx or 429,
+    or the connection failed. ``LLM_REFUSED`` is everything the same request would
+    hit again: a budget or ceiling (402), a model not enabled (404), a bad key
+    (401), a refused feature (400), or a request the client itself refused to
+    send off the gateway's host.
+    """
+    from canvas_sdk.agents import LLMGatewayConfigurationError
+
+    if isinstance(exc.__cause__, LLMGatewayConfigurationError):
+        return "LLM_REFUSED"
+    if isinstance(exc, anthropic.APIConnectionError):
+        return "LLM_UNAVAILABLE"
+    if isinstance(exc, anthropic.APIStatusError) and (
+        exc.status_code >= 500 or exc.status_code == 429
+    ):
+        return "LLM_UNAVAILABLE"
+    return "LLM_REFUSED"
 
 
 def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
@@ -458,14 +481,12 @@ class PluginRunner(PluginRunnerServicer):
 
         PoC scope (KOALA-5544): single-process execution; per-``scope_key``
         single-flight serialization via :func:`canvas_sdk.agents.agent_lock`
-        (contention surfaces as ``EventResponse(success=False, effects=[])``);
-        Anthropic credentials sourced from the plugin's own ``secrets`` via
-        :meth:`LLMGateway.from_plugin_secrets` (``ANTHROPIC_API_KEY`` /
-        ``ANTHROPIC_MODEL``), declared as ``variables`` on the manifest and
-        configured per-customer in admin. The streaming response shape
-        matches ``HandleEvent`` so future V1 work (per-turn effect streaming,
-        gateway-service session tokens, etc.) doesn't change the wire
-        contract.
+        (contention surfaces as ``error_kind="AGENT_LOCKED"``). LLM access goes
+        through Canvas's inference gateway: the gateway is built from
+        ``INFERENCE_GATEWAY_URL`` and ``INFERENCE_GATEWAY_KEY`` in this process's
+        environment, attributed to the plugin, agent, and run, and the key never
+        reaches plugin code. Gateway refusals and outages come back as
+        ``LLM_REFUSED`` and ``LLM_UNAVAILABLE`` so home-app retries only the latter.
         """
         with metrics.measure(
             metrics.get_qualified_name(self.RunAgent),
@@ -491,17 +512,22 @@ class PluginRunner(PluginRunnerServicer):
             plugin = LOADED_PLUGINS[registry_key]
             agent_class = plugin["class"]
             namespace_config = plugin.get("namespace_config")
-            plugin_secrets = plugin.get("secrets") or {}
 
             # Late import: canvas_sdk.agents and the SDK Effect wrapper are
             # only meaningful once plugin modules have loaded.
-            from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
+            from canvas_sdk.agents import LLMGatewayConfigurationError
+            from canvas_sdk.agents.gateway import gateway_from_environment
 
             try:
-                gateway = LLMGateway.from_plugin_secrets(plugin_secrets)
+                gateway = gateway_from_environment(
+                    instance=CUSTOMER_IDENTIFIER,
+                    plugin=base_plugin_name,
+                    agent=request.agent_id,
+                    run_id=request.run_id,
+                )
             except LLMGatewayConfigurationError as exc:
                 log.error(f"RunAgent: cannot dispatch agent — {exc}")
-                yield EventResponse(success=False, effects=[])
+                yield EventResponse(success=False, effects=[], error_kind="LLM_NOT_CONFIGURED")
                 return
 
             try:
@@ -588,6 +614,16 @@ class PluginRunner(PluginRunnerServicer):
                     except Exception as run_exc:
                         _invoke_agent_hook(agent, "on_run_error", run_exc)
                         raise
+            except anthropic.APIError as exc:
+                # The gateway refused the call or could not complete it. Only an
+                # outage is worth retrying: a refusal (budget, model, auth,
+                # request shape) would be refused again.
+                error_kind = llm_error_kind(exc)
+                log.warning(
+                    f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
+                )
+                yield EventResponse(success=False, effects=[], error_kind=error_kind)
+                return
             except AgentLocked as exc:
                 # Contention is an expected outcome (another invocation holds
                 # the lock for this scope_key). Tag the response with

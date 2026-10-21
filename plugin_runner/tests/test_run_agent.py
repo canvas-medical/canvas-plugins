@@ -26,18 +26,15 @@ def plugin_runner() -> PluginRunner:
 
 
 @pytest.fixture
-def anthropic_plugin_secrets(load_test_plugins: None) -> None:
-    """Populate the loaded test agent's secrets dict with the Anthropic key.
+def inference_gateway_env(load_test_plugins: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Configure the inference gateway the way an instance's environment does.
 
-    The RunAgent RPC builds the LLMGateway from ``plugin["secrets"]``; in
-    production those values come from the plugin's manifest variables and
-    the customer's admin config. Tests inject them directly into
-    LOADED_PLUGINS after the plugin loads.
+    The RunAgent RPC builds the LLMGateway from INFERENCE_GATEWAY_URL and
+    INFERENCE_GATEWAY_KEY in the runner's own environment, never from plugin
+    secrets.
     """
-    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {
-        "ANTHROPIC_API_KEY": "sk-test-runner",
-        "ANTHROPIC_MODEL": "claude-sonnet-4-6",
-    }
+    monkeypatch.setenv("INFERENCE_GATEWAY_URL", "https://gateway.test")
+    monkeypatch.setenv("INFERENCE_GATEWAY_KEY", "cnvs_sk_test_runner")
 
 
 def _make_request(
@@ -93,7 +90,7 @@ def test_run_agent_happy_path_returns_emitted_effect(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
 ) -> None:
     """A valid RunAgent invocation produces success=True and the agent's emitted effect."""
     responses = list(plugin_runner.RunAgent(_make_request(), None))
@@ -119,7 +116,7 @@ def test_run_agent_stamps_provenance_on_emitted_effects(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
 ) -> None:
     """Emitted effects carry plugin_name, handler_name, actor, source.
 
@@ -149,7 +146,7 @@ def test_run_agent_defaults_source_to_agent_when_request_omits_it(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
 ) -> None:
     """Effects emitted by the agent default source to "agent" when the caller didn't set it."""
     response = next(iter(plugin_runner.RunAgent(_make_request(source=""), None)))
@@ -171,7 +168,7 @@ def test_run_agent_unknown_agent_id(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
 ) -> None:
     """A well-formed agent_id that isn't in LOADED_PLUGINS yields success=False."""
     request = _make_request(agent_id="test_agent_plugin.agents.echo_agent:NoSuchClass")
@@ -181,18 +178,129 @@ def test_run_agent_unknown_agent_id(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_missing_api_key_short_circuits(
+def test_run_agent_without_gateway_configuration_short_circuits(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without the ANTHROPIC_API_KEY plugin secret, the RPC refuses to dispatch."""
-    # Leave secrets empty — the plugin install path would normally populate
-    # them from the customer's admin config; here we just don't set them.
-    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {}
+    """Without the gateway variables, the RPC refuses to dispatch and says why."""
+    monkeypatch.delenv("INFERENCE_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("INFERENCE_GATEWAY_KEY", raising=False)
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
     assert list(response.effects) == []
+    assert response.error_kind == "LLM_NOT_CONFIGURED"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_ignores_anthropic_plugin_secrets(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A plugin secret named ANTHROPIC_API_KEY does not configure LLM access."""
+    monkeypatch.delenv("INFERENCE_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("INFERENCE_GATEWAY_KEY", raising=False)
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"ANTHROPIC_API_KEY": "sk-ant-plugin"}
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    assert response.error_kind == "LLM_NOT_CONFIGURED"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The runner, not the plugin, decides what the gateway attributes a call to."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    seen: list[Any] = []
+    original_run = agent_cls.run
+
+    def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        seen.append(gateway)
+        return original_run(self, state, gateway, trigger_payload)
+
+    monkeypatch.setattr(agent_cls, "run", _capture)
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is True
+    attribution = seen[0]._attribution
+    assert attribution["x-canvas-plugin"] == "test_agent_plugin"
+    assert attribution["x-canvas-agent"] == AGENT_ID
+    assert attribution["x-canvas-run-id"] == "run-1"
+    assert attribution["x-canvas-instance"]
+
+
+def _status_error(status: int) -> Exception:
+    import anthropic
+    import httpx2
+
+    request = httpx2.Request("POST", "https://gateway.test/v1/messages")
+    response = httpx2.Response(status, request=request, json={"error": {"message": "no"}})
+    return anthropic.APIStatusError("no", response=response, body=None)
+
+
+def _connection_error() -> Exception:
+    import anthropic
+    import httpx2
+
+    return anthropic.APIConnectionError(
+        request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+    )
+
+
+def _refused_host_error() -> Exception:
+    import anthropic
+    import httpx2
+
+    from canvas_sdk.agents import LLMGatewayConfigurationError
+
+    error = anthropic.APIConnectionError(
+        request=httpx2.Request("POST", "https://exfiltrate.example/collect")
+    )
+    error.__cause__ = LLMGatewayConfigurationError("refused")
+    return error
+
+
+@pytest.mark.parametrize(
+    "make_error, error_kind",
+    [
+        (lambda: _status_error(402), "LLM_REFUSED"),
+        (lambda: _status_error(404), "LLM_REFUSED"),
+        (lambda: _status_error(400), "LLM_REFUSED"),
+        (lambda: _status_error(401), "LLM_REFUSED"),
+        (lambda: _status_error(429), "LLM_UNAVAILABLE"),
+        (lambda: _status_error(502), "LLM_UNAVAILABLE"),
+        (_connection_error, "LLM_UNAVAILABLE"),
+        (_refused_host_error, "LLM_REFUSED"),
+    ],
+    ids=["402", "404", "400", "401", "429", "502", "connection", "refused-host"],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_tags_gateway_failures_by_whether_a_retry_could_help(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    make_error: Any,
+    error_kind: str,
+) -> None:
+    """Outages are LLM_UNAVAILABLE; anything a retry would hit again is LLM_REFUSED."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+
+    def _fail(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        raise make_error()
+
+    monkeypatch.setattr(agent_cls, "run", _fail)
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    assert response.success is False
+    assert response.error_kind == error_kind
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -200,7 +308,7 @@ def test_run_agent_invalid_trigger_payload_json(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
 ) -> None:
     """Malformed trigger_payload JSON is reported instead of crashing the worker."""
     request = _make_request(trigger_payload="not-json{{{")
@@ -214,7 +322,7 @@ def test_run_agent_handles_agent_exceptions(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Exceptions raised by the agent's run() surface as success=False."""
@@ -234,7 +342,7 @@ def test_run_agent_serializes_via_scope_key_lock(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Two RPC invocations sharing a scope_key serialize; the loser tags the response.
@@ -267,7 +375,7 @@ def test_run_agent_does_not_set_error_kind_on_generic_failure(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A generic exception inside the agent leaves error_kind empty.
@@ -298,7 +406,7 @@ def test_run_agent_fires_on_run_start_and_on_run_end_in_order(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Successful runs invoke on_run_start then on_run_end (no on_run_error)."""
@@ -336,7 +444,7 @@ def test_run_agent_fires_on_run_error_when_run_raises(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An exception in ``run`` triggers on_run_error and skips on_run_end."""
@@ -379,7 +487,7 @@ def test_run_agent_does_not_fire_hooks_on_lock_contention(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Lock contention shouldn't fire lifecycle hooks — the agent never started."""
@@ -419,7 +527,7 @@ def test_run_agent_sets_tools_allowed_from_manifest(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``components.agents[].tools.allowed`` lands on the agent as a frozenset."""
@@ -448,7 +556,7 @@ def test_run_agent_scopes_agent_tools_to_manifest_allowlist(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Platform substitutes a scoped registry on the agent before run() fires.
@@ -494,7 +602,7 @@ def test_run_agent_skips_scoping_when_tools_allowed_is_none(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """No manifest declaration → agent.tools stays as the class-level registry."""
@@ -528,7 +636,7 @@ def test_run_agent_leaves_tools_allowed_none_when_manifest_omits_it(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """No manifest declaration → tools_allowed is None (= no filtering)."""
@@ -556,7 +664,7 @@ def test_run_agent_hook_failures_do_not_crash_the_run(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
-    anthropic_plugin_secrets: None,
+    inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A hook that raises is logged and ignored — the agent's run still completes."""
