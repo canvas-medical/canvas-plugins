@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.259.0 (2026-10-21)
+
+### Features
+
+- Let plugins attach uploaded files to coverages, ID cards, messages and visual exam findings
+  ([#1931](https://github.com/canvas-medical/canvas-plugins/pull/1931),
+  [`52444cb`](https://github.com/canvas-medical/canvas-plugins/commit/52444cbbaaabc09e3f57539d6bebf7a389341578))
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v0.258.0 (2026-10-20)
 
 ### Features
