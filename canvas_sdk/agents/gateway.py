@@ -12,8 +12,9 @@ The key stays out of plugin reach three ways:
   plugin did not define.
 - The transport sends a copy of each request. httpx sets ``response.request`` back
   to the request the client built, so responses and errors carry the placeholder.
-- The transport refuses any host but the gateway's, because a plugin can reassign a
-  client's ``base_url`` or pass an absolute URL to ``client.get``.
+- The transport refuses any host but the gateway's, and any call but the two the
+  gateway proxies, because a plugin can reassign a client's ``base_url`` or pass an
+  absolute URL to ``client.get``.
 """
 
 import os
@@ -30,6 +31,9 @@ GATEWAY_KEY_VARIABLE = "INFERENCE_GATEWAY_KEY"
 # What the Anthropic client sends as its own key. The transport swaps the real key
 # in on the way out, so this is what any plugin-visible request object carries.
 PLACEHOLDER_KEY = "canvas-inference-gateway"
+
+# The only calls the key is sent with: the two endpoints the gateway proxies.
+GATEWAY_ROUTES = frozenset({("POST", "/v1/messages"), ("POST", "/v1/messages/count_tokens")})
 
 ATTRIBUTION_PREFIX = "x-canvas-"
 _CREDENTIAL_HEADERS = frozenset({"x-api-key", "authorization"})
@@ -54,6 +58,8 @@ class _GatewayTransport(httpx2.BaseTransport):
         inner: httpx2.BaseTransport | None = None,
     ) -> None:
         self._origin = _origin(gateway_url)
+        # A gateway mounted under a path prefix still serves /v1/... beneath it.
+        self._prefix = gateway_url.path.rstrip("/")
         self._key = key
         self._attribution = dict(attribution)
         self._inner = inner or httpx2.HTTPTransport()
@@ -63,6 +69,12 @@ class _GatewayTransport(httpx2.BaseTransport):
             raise LLMGatewayConfigurationError(
                 f"Refusing to send gateway credentials to {request.url.host!r}; "
                 "agent clients only reach the Canvas inference gateway."
+            )
+        route = (request.method, request.url.path.removeprefix(self._prefix))
+        if route not in GATEWAY_ROUTES:
+            raise LLMGatewayConfigurationError(
+                f"Refusing {request.method} {request.url.path}; the gateway serves "
+                "only the Messages API and token counting."
             )
         headers = [
             (name, value)

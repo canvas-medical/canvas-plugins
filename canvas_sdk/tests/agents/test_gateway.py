@@ -4,6 +4,7 @@ from typing import Any
 import anthropic
 import httpx2
 import pytest
+from anthropic._models import FinalRequestOptions
 
 from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
 from canvas_sdk.agents.gateway import PLACEHOLDER_KEY, gateway_from_environment
@@ -170,6 +171,53 @@ def test_a_different_port_on_the_gateway_host_is_refused() -> None:
         client.get("https://gateway.test:8443/v1/messages", cast_to=object)
 
     assert sent == []
+
+
+@pytest.mark.parametrize(
+    "method, path",
+    [("GET", "/v1/models"), ("POST", "/v1/files"), ("GET", "/v1/messages"), ("POST", "/admin")],
+)
+def test_calls_the_gateway_does_not_proxy_are_refused_before_they_leave(
+    method: str, path: str
+) -> None:
+    """Only POST /v1/messages and /v1/messages/count_tokens carry the key."""
+    sent: list[httpx2.Request] = []
+    client = gateway(sent).client(max_retries=0)
+
+    with pytest.raises(anthropic.APIConnectionError):
+        client.request(cast_to=object, options=FinalRequestOptions(method=method, url=path))
+
+    assert sent == []
+
+
+def test_token_counting_reaches_the_gateway() -> None:
+    """count_tokens is the second proxied endpoint and carries the key."""
+    sent: list[httpx2.Request] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        sent.append(request)
+        return httpx2.Response(200, json={"input_tokens": 3})
+
+    client = LLMGateway(
+        base_url=GATEWAY_URL, key=KEY, transport=httpx2.MockTransport(handler)
+    ).client()
+    client.messages.count_tokens(
+        model="claude-sonnet-4-6", messages=[{"role": "user", "content": "hi"}]
+    )
+
+    assert sent[0].url.path == "/v1/messages/count_tokens"
+    assert sent[0].headers["x-api-key"] == KEY
+
+
+def test_a_gateway_under_a_path_prefix_still_serves_messages() -> None:
+    """The route check is relative to the gateway URL's own path."""
+    sent: list[httpx2.Request] = []
+    client = LLMGateway(
+        base_url=f"{GATEWAY_URL}/inference", key=KEY, transport=recording(sent)
+    ).client()
+    create(client)
+
+    assert sent[0].url.path == "/inference/v1/messages"
 
 
 def test_repr_names_the_model_and_nothing_else() -> None:
