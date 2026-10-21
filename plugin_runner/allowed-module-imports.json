@@ -1013,6 +1013,7 @@
     "MenuPosition",
     "NoteApplication",
     "PanelApplication",
+    "PortalDockedApplication",
     "ProviderMenuApplication",
     "SchedulingApplication"
   ],
