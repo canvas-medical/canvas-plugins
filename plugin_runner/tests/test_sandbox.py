@@ -17,7 +17,7 @@ from django.db import models as django_models
 
 import plugin_runner.sandbox as sandbox_module
 from canvas_sdk.tests.shared import params_from_dict
-from canvas_sdk.utils.http import ontologies_http
+from canvas_sdk.utils.http import ontologies_http, science_http
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
     BulkOperationTooLarge,
@@ -43,6 +43,15 @@ CANVAS_SUBMODULE_NAMES = [
     # tests are excluded from the built and distributed module in pyproject.toml
     if "tests" not in found_module and "test_" not in found_module
 ]
+
+
+@pytest.fixture(autouse=True)
+def _reset_service_client_timeouts() -> Iterator[None]:
+    """Drop timeout overrides plugin code leaves on the module-level service clients."""
+    yield
+
+    for client in (ontologies_http, science_http):
+        client._http_client.__dict__.pop("_MAX_REQUEST_TIMEOUT_SECONDS", None)
 
 
 def _sandbox_from_code(
@@ -2194,6 +2203,25 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
 
                 matched = re.search("abc", "ABC", re.I)
             """,
+            "re_match_and_pattern_types": """
+                import re
+
+                pattern = re.compile("a")
+                assert isinstance(pattern, re.Pattern)
+                assert isinstance(pattern.search("a"), re.Match)
+            """,
+            "decimal_rounding_and_errors": """
+                from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+                assert str(Decimal("2.5").quantize(Decimal("1"), rounding=ROUND_HALF_UP)) == "3"
+
+                try:
+                    Decimal("not a number")
+                except InvalidOperation:
+                    pass
+                else:
+                    raise AssertionError("expected InvalidOperation")
+            """,
             "base64_urlsafe": """
                 import base64
 
@@ -2218,6 +2246,14 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
 def test_sandbox_allows_safe_standard_library_and_django_names(code: str) -> None:
     """Names plugins reach for that read no files and open no connections."""
     sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
+def test_sandbox_allows_referral_review_from_its_own_module() -> None:
+    """A data model imports from its defining module as well as from `canvas_sdk.v1.data`."""
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.v1.data.referral import ReferralReview
+    """)
     sandbox.execute()
 
 
