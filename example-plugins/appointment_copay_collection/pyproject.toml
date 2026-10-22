@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Patient portal page that collects an upcoming appointment's copay on a stored card and posts it to the appointment claim's COPAY line item."
+license = "MIT"
+name = "appointment_copay_collection"
+readme = "appointment_copay_collection/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
