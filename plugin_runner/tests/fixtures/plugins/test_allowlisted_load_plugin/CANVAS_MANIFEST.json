@@ -6,8 +6,8 @@
     "components": {
         "handlers": [
             {
-                "class": "test_allowlisted_load_plugin.handlers.handlers:MatchCheck",
-                "description": "MatchCheck",
+                "class": "test_allowlisted_load_plugin.handlers.handlers:PrecisionCheck",
+                "description": "PrecisionCheck",
                 "data_access": {
                     "event": "",
                     "read": [],
