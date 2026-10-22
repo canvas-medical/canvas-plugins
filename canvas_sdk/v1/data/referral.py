@@ -176,5 +176,6 @@ __exports__ = (
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReportQuerySet",
+    "ReferralReview",
     "ReferralActionEvent",
 )
