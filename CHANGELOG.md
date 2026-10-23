@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.260.0 (2026-10-23)
+
+### Chores
+
+- Add example plugin that collects an appointment copay in the patient portal
+  ([#1944](https://github.com/canvas-medical/canvas-plugins/pull/1944),
+  [`d17db17`](https://github.com/canvas-medical/canvas-plugins/commit/d17db17e09c1dfff7174998f8875b3b9c520ca07))
+
+### Features
+
+- Add portal theme ([#1936](https://github.com/canvas-medical/canvas-plugins/pull/1936),
+  [`65ec753`](https://github.com/canvas-medical/canvas-plugins/commit/65ec7537aee343a70757932069272b3f1d34d555))
+
+
 ## v0.259.0 (2026-10-21)
 
 ### Features
