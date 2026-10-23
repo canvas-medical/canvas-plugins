@@ -138,6 +138,7 @@ from .lab import (
     LabValueCoding,
 )
 from .letter import Language, Letter, LetterActionEvent
+from .letter_template import LetterTemplate
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -203,6 +204,7 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
+from .posting_rule import PostingRule
 from .practicelocation import (
     PracticeLocation,
     PracticeLocationAddress,
@@ -248,6 +250,8 @@ from .remove_allergy_event import RemoveAllergyEvent
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .report import Report
 from .resolve_condition_event import ResolveConditionEvent
+from .role import Role
+from .schedule_duration import ScheduleDuration
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -560,5 +564,10 @@ __all__ = __exports__ = (
     "VisualExamFinding",
     "VitalSign",
     "VitalSignReading",
+    # Instance Configuration data models
+    "LetterTemplate",
+    "PostingRule",
+    "Role",
+    "ScheduleDuration",
     "proxy_field",
 )
