@@ -1,0 +1,35 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_record_usage",
+    "description": "Test fixture: a handler that records usage in priced and unpriced units.",
+    "components": {
+        "handlers": [
+            {
+                "class": "test_record_usage.handlers.my_handler:Handler",
+                "description": "A handler that returns RecordUsage effects.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "catalog": {
+        "pricing": [
+            {"unit": "Visit", "price_per_unit": "1.50"},
+            {"unit": "token"}
+        ]
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
