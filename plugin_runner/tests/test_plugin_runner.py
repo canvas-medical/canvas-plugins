@@ -901,6 +901,22 @@ def test_handle_event_does_not_capture_exception_when_plugin_returns_none(
     assert len(result[0].effects) == 0
 
 
+@pytest.mark.parametrize("install_test_plugin", ["test_record_usage"], indirect=True)
+def test_handle_event_sends_only_usage_in_units_the_plugin_is_priced_in(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """Of a priced, an unpriced and a token record, home-app receives the priced one, attributed."""
+    responses = list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+    effects = [effect for response in responses for effect in response.effects]
+
+    assert [(e.plugin_name, json.loads(e.payload)["data"]) for e in effects] == [
+        ("test_record_usage", {"unit": "visit", "key": "visit:1", "quantity": 1})
+    ]
+
+
 @pytest.mark.parametrize(
     "method_name, plugin_request, expected_message",
     [
