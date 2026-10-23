@@ -828,6 +828,9 @@
   "canvas_sdk.effects.patient_portal.form_result": [
     "FormResult"
   ],
+  "canvas_sdk.effects.patient_portal.login_email": [
+    "LoginEmailContent"
+  ],
   "canvas_sdk.effects.patient_portal.theme": [
     "PatientPortalTheme"
   ],
