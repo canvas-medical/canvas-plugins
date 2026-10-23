@@ -103,12 +103,21 @@ def test_create_rejects_id() -> None:
     assert "id should not be set" in str(exc_info.value).lower()
 
 
-def test_create_requires_first_name() -> None:
-    """create() raises when first_name is missing."""
-    with pytest.raises(ValidationError) as exc_info:
-        ServiceProvider(specialty="Cardiology", business_address="123 Main St").create()
+def test_create_allows_practice_without_a_name() -> None:
+    """create() succeeds for a practice/organization provider that has no personal name."""
+    effect = ServiceProvider(
+        practice_name="Acme Imaging Center",
+        specialty="Radiology",
+        business_address="1 Hospital Way",
+    ).create()
 
-    assert "first_name" in str(exc_info.value)
+    assert effect.type == EffectType.CREATE_SERVICE_PROVIDER
+    data = json.loads(effect.payload)["data"]
+    # first_name was never set, so it is absent from the payload (coerced to "" server-side).
+    assert "first_name" not in data
+    assert data["practice_name"] == "Acme Imaging Center"
+    assert data["specialty"] == "Radiology"
+    assert data["business_address"] == "1 Hospital Way"
 
 
 def test_create_requires_specialty() -> None:
@@ -176,12 +185,12 @@ def test_update_validates_provider_exists() -> None:
     assert "does not exist" in str(exc_info.value)
 
 
-def test_update_rejects_explicit_null_first_name(mock_provider_exists: MagicMock) -> None:
-    """update(first_name=None) raises a clean ValidationError (required identifier)."""
-    with pytest.raises(ValidationError) as exc_info:
-        ServiceProvider(id="00000000-0000-0000-0000-000000000001", first_name=None).update()
+def test_update_allows_explicit_null_first_name(mock_provider_exists: MagicMock) -> None:
+    """update(first_name=None) is allowed — first_name is legitimately blank-able for an org."""
+    effect = ServiceProvider(id="00000000-0000-0000-0000-000000000001", first_name=None).update()
 
-    assert "first_name" in str(exc_info.value)
+    data = json.loads(effect.payload)["data"]
+    assert "first_name" in data
 
 
 def test_update_rejects_explicit_null_specialty(mock_provider_exists: MagicMock) -> None:
