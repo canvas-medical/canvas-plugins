@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from django.db import models
 
@@ -11,11 +11,9 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.document_review_delegation import DelegatedDocumentMixin
 from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.utils import presigned_url
-
-if TYPE_CHECKING:
-    from canvas_sdk.v1.data.document_review_delegation import DocumentReviewDelegation
 
 
 class UncategorizedClinicalDocumentReviewQuerySet(
@@ -53,7 +51,9 @@ class UncategorizedClinicalDocumentReview(AuditedModel, IdentifiableModel):
     patient_communication_method = models.CharField(max_length=30)
 
 
-class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel, Report):
+class UncategorizedClinicalDocument(
+    TimestampedModel, IdentifiableModel, DelegatedDocumentMixin, Report
+):
     """UncategorizedClinicalDocument."""
 
     class Meta:
@@ -93,22 +93,6 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel, Report)
         if self.document:
             return presigned_url(self.document.name)
         return None
-
-    @property
-    def delegations(self) -> "models.QuerySet[DocumentReviewDelegation]":
-        """All review delegations for this document, oldest first."""
-        from canvas_sdk.v1.data.document_review_delegation import DocumentReviewDelegation
-
-        return DocumentReviewDelegation.objects.filter(
-            content_type__app_label="api",
-            content_type__model="uncategorizedclinicaldocument",
-            object_id=self.dbid,
-        ).order_by("created")
-
-    @property
-    def active_delegation(self) -> "DocumentReviewDelegation | None":
-        """The current active delegation, or None when the document is with its owner."""
-        return self.delegations.filter(is_active=True).first()
 
 
 __exports__ = ("UncategorizedClinicalDocumentReview", "UncategorizedClinicalDocument")
