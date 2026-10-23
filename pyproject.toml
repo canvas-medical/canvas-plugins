@@ -24,6 +24,7 @@ dev = [
 [project]
 authors = [{email = "engineering@canvasmedical.com", name = "Canvas Team"}]
 dependencies = [
+  "certifi>=2026.10.19",
   "cookiecutter",
   "cron-converter>=1.2.1,<2",
   "cryptography>=45.0.5",
@@ -217,6 +218,11 @@ exclude-newer = "7 days"
 required-version = ">=0.11.8"
 
 [tool.uv.exclude-newer-package]
+# certifi is the TLS trust store, so it resolves on a 3-day window rather than 7:
+# a CA distrust (2026.10.19 dropped the root over the compromised eMudhra
+# intermediates) reaches the plugin runner sooner while a bad release still has
+# time to be caught.
+certifi = "3 days"
 # Lint and type-check tooling tracks latest: the cutoff above is for the
 # dependencies we ship.
 ruff = "2035-01-01T00:00:00Z"
