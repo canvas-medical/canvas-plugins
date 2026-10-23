@@ -75,6 +75,7 @@ from plugin_runner.sandbox_allowlists import (
     is_always_legacy,
 )
 from plugin_runner.sandbox_compatibility import find_legacy_constructs
+from plugin_runner.usage import permitted_usage, usage_units
 from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
@@ -128,6 +129,7 @@ Plugin = TypedDict(
         "handler": Any,
         "secrets": dict[str, str],
         "namespace_config": NotRequired[dict[str, str] | None],
+        "usage_units": NotRequired[frozenset[str]],
     },
 )
 
@@ -379,6 +381,9 @@ class PluginRunner(PluginRunnerServicer):
                                 )
                                 for effect in _effects
                             ]
+                            effects = permitted_usage(
+                                effects, plugin.get("usage_units", frozenset())
+                            )
                             effects = validate_effects(effects)
 
                             apply_effects_to_context(effects, event=event)
@@ -1264,6 +1269,7 @@ def import_plugin(path: pathlib.Path) -> bool:
 
         # TODO when we encounter an exception here, disable the plugin in response
         results = sandbox_plugin_handlers(name, path, handlers)
+        units = usage_units(manifest_json)
 
         any_failed = False
         loaded_handler_count = 0
@@ -1297,6 +1303,7 @@ def import_plugin(path: pathlib.Path) -> bool:
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
                 LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
+                LOADED_PLUGINS[name_and_class]["usage_units"] = units
             else:
                 log.info(f'Loading handler "{name_and_class}"')
 
@@ -1307,6 +1314,7 @@ def import_plugin(path: pathlib.Path) -> bool:
                     "handler": r.handler,
                     "secrets": secrets_json,
                     "namespace_config": namespace_config,
+                    "usage_units": units,
                 }
 
             loaded_handler_count += 1

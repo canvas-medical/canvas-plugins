@@ -954,6 +954,9 @@
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
   ],
+  "canvas_sdk.effects.usage": [
+    "RecordUsage"
+  ],
   "canvas_sdk.effects.validation": [
     "EventValidationError",
     "ValidationError"
