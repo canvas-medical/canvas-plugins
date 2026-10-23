@@ -483,6 +483,21 @@ class SimpleAPIBase(BaseHandler, ABC):
     def _path_prefix(cls) -> str:
         return ""
 
+    @property
+    def matched_route(self) -> tuple[str, str] | None:
+        """Return the HTTP method and path template of the route the request matched.
+
+        The template is the route as declared, prefix included and path parameters left as
+        ``<name>``, so it names the code handling the request rather than the request's own
+        path. None when no route matched.
+        """
+        if self._handler is None:
+            return None
+
+        method, path = self._handler.route  # type: ignore[attr-defined]
+
+        return method, f"{self._path_prefix()}{path}"
+
     @cached_property
     def request(self) -> Request:
         """Return the request object from the event."""
