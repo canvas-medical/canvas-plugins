@@ -343,8 +343,12 @@ def test_deploy_push_only_pushes_head_and_deploys_nothing(
     assert _requests_to(api, "POST", "/orgs/acme/plugins")
     assert not _requests_to(api, "GET", "/instances")
     assert not _requests_to(api, "POST", "/deployments")
-    assert f"Pushed {head[:12]} to main." in result.output
-    assert "Not deployed" in result.output
+    assert f"Pushed {NAME} {head[:12]} to main on Canvas Platform." in result.output
+    assert (
+        f"To install this commit on an instance: canvas deploy {package} --ref {head[:12]}"
+        in result.output
+    )
+    assert "Not deployed" not in result.output
 
 
 def test_deploy_push_only_needs_no_instance(
