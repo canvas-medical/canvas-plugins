@@ -7,6 +7,8 @@ formatter's ``labels.plugin`` / ``labels.handler`` emission.
 
 import json
 import logging
+import sys
+from typing import Any
 
 import pytest
 
@@ -18,7 +20,7 @@ from logger.logger import (
     _current_plugin_name,
     plugin_context,
 )
-from logger.logstash import LogstashFormatterECS
+from logger.logstash import LogstashFormatterECS, LogstashFormatterV1
 from logger.pubsub import PubSubLogHandler
 from pubsub.pubsub import Publisher
 
@@ -172,3 +174,56 @@ def test_publisher_keeps_its_endpoint_and_client_private() -> None:
 def test_pubsub_log_handler_keeps_its_publisher_private() -> None:
     """The handler attached to the plugin logger has no public route to the publisher."""
     assert not hasattr(PubSubLogHandler(), "publisher")
+
+
+def _exception_fields(output: dict[str, Any]) -> dict[str, Any]:
+    """Exception fields from either output shape: top-level ``exception_*``
+    keys (V1) or the ``error`` object (ECS).
+    """
+    if "error" in output:
+        return output["error"]
+    return {
+        key.removeprefix("exception_"): output[key]
+        for key in ("exception_type", "exception_message", "stack_trace")
+        if key in output
+    }
+
+
+@pytest.mark.parametrize("formatter_class", [LogstashFormatterV1, LogstashFormatterECS])
+def test_logstash_formatter_handles_exception_call_without_active_exception(
+    formatter_class: type[logging.Formatter],
+) -> None:
+    """``logger.exception()`` outside an ``except`` block records
+    ``exc_info=(None, None, None)``; the formatter emits the message without
+    exception fields instead of raising.
+    """
+    record = _make_record()
+    record.exc_info = (None, None, None)
+    PluginNameFilter().filter(record)
+
+    output = json.loads(formatter_class().format(record))
+
+    assert output["message"] == "hello"
+    assert _exception_fields(output) == {}
+
+
+@pytest.mark.parametrize("formatter_class", [LogstashFormatterV1, LogstashFormatterECS])
+def test_logstash_formatter_includes_active_exception(
+    formatter_class: type[logging.Formatter],
+) -> None:
+    """``logger.exception()`` inside an ``except`` block emits the exception
+    type, message, and stack trace.
+    """
+    record = _make_record()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record.exc_info = sys.exc_info()
+    PluginNameFilter().filter(record)
+
+    output = json.loads(formatter_class().format(record))
+    fields = _exception_fields(output)
+
+    assert fields["type"] == "builtins.ValueError"
+    assert fields["message"] == "boom"
+    assert "ValueError: boom" in "".join(fields["stack_trace"])
