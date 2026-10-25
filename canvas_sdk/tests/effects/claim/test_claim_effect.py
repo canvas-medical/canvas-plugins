@@ -27,7 +27,7 @@ from canvas_sdk.effects.claim.claim_provider import (
     ClaimReferringProvider,
 )
 from canvas_sdk.effects.claim.claim_supervising_provider import ClaimSupervisingProvider
-from canvas_sdk.test_utils.factories import ClaimFactory
+from canvas_sdk.test_utils.factories import ClaimFactory, StaffFactory, TeamFactory
 
 
 @pytest.fixture
@@ -1037,6 +1037,29 @@ def test_claim_effect_assign_requires_existing_team(
         claim.assign(team_id=team_id)
 
     assert f"Team with id {team_id} does not exist." in repr(e.value)
+
+
+@pytest.mark.django_db
+def test_claim_effect_assign_with_existing_claim_staff_and_team() -> None:
+    """Test that assign accepts a claim, staff member and team that exist in the database."""
+    claim = ClaimFactory.create()
+    staff = StaffFactory.create()
+    team = TeamFactory.create()
+    claim_effect = ClaimEffect(claim_id=claim.id)
+
+    staff_effect = claim_effect.assign(assignee_id=staff.id)
+    team_effect = claim_effect.assign(team_id=str(team.id))
+
+    assert json.loads(staff_effect.payload)["data"] == {
+        "claim_id": str(claim.id),
+        "assignee_id": staff.id,
+        "team_id": None,
+    }
+    assert json.loads(team_effect.payload)["data"] == {
+        "claim_id": str(claim.id),
+        "assignee_id": None,
+        "team_id": str(team.id),
+    }
 
 
 @pytest.mark.django_db
