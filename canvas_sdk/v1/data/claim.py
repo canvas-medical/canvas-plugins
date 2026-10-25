@@ -322,7 +322,7 @@ class Claim(TimestampedModel, IdentifiableModel):
     """Claim."""
 
     class Meta:
-        db_table = "canvas_sdk_data_quality_and_revenue_claim_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_claim_002"
 
     objects = ClaimQueryset.as_manager()
 
@@ -335,6 +335,10 @@ class Claim(TimestampedModel, IdentifiableModel):
     current_coverage = models.ForeignKey(
         ClaimCoverage, related_name="claims", on_delete=models.SET_NULL, null=True
     )
+    assignee = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="assigned_claims", null=True
+    )
+    team = models.ForeignKey("v1.Team", on_delete=models.SET_NULL, related_name="claims", null=True)
 
     accept_assign = models.BooleanField(default=True)
     auto_accident = models.BooleanField(default=False)

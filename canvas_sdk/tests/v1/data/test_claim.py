@@ -1,9 +1,32 @@
 import pytest
 
+from canvas_sdk.test_utils.factories import StaffFactory, TeamFactory
 from canvas_sdk.test_utils.factories.claim import (
     ClaimCoverageFactory,
     ClaimFactory,
 )
+from canvas_sdk.v1.data import Claim
+
+
+@pytest.mark.django_db
+def test_claim_assignee_and_team_are_read_from_the_database() -> None:
+    """
+    Checks that a claim's staff assignee and team, and their reverse relations, are read back.
+    """
+    staff = StaffFactory.create()
+    team = TeamFactory.create()
+    staff_claim_id = ClaimFactory.create(assignee=staff).id
+    team_claim_id = ClaimFactory.create(team=team).id
+
+    staff_claim = Claim.objects.get(id=staff_claim_id)
+    team_claim = Claim.objects.get(id=team_claim_id)
+
+    assert staff_claim.assignee == staff
+    assert staff_claim.team is None
+    assert team_claim.assignee is None
+    assert team_claim.team == team
+    assert list(staff.assigned_claims.all()) == [staff_claim]
+    assert list(team.claims.all()) == [team_claim]
 
 
 @pytest.mark.django_db
