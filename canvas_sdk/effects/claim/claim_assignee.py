@@ -7,6 +7,15 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim, Staff, Team
 
 
+def _is_uuid(value: UUID | str) -> bool:
+    """Return True if value parses as a UUID, so a UUID column lookup won't raise on it."""
+    try:
+        UUID(str(value))
+    except ValueError:
+        return False
+    return True
+
+
 class _UpdateClaimAssignee(_BaseEffect):
     """Effect to assign a claim to a staff member or a team, or clear the assignment.
 
@@ -42,7 +51,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.assignee_id,
                 )
             )
-        if not Claim.objects.filter(id=self.claim_id).exists():
+        if not _is_uuid(self.claim_id) or not Claim.objects.filter(id=self.claim_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -58,7 +67,9 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.assignee_id,
                 )
             )
-        if self.team_id and not Team.objects.filter(id=self.team_id).exists():
+        if self.team_id and (
+            not _is_uuid(self.team_id) or not Team.objects.filter(id=self.team_id).exists()
+        ):
             errors.append(
                 self._create_error_detail(
                     "value",

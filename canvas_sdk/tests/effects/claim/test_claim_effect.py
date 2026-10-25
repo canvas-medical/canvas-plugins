@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from django.db.models import QuerySet
@@ -26,6 +27,7 @@ from canvas_sdk.effects.claim.claim_provider import (
     ClaimReferringProvider,
 )
 from canvas_sdk.effects.claim.claim_supervising_provider import ClaimSupervisingProvider
+from canvas_sdk.test_utils.factories import ClaimFactory
 
 
 @pytest.fixture
@@ -944,12 +946,13 @@ def test_set_incident_to_requires_existing_claim(mock_db_queries: dict[str, Magi
 
 def test_claim_effect_assign_to_staff(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that assign with an assignee_id emits the staff assignment payload."""
-    claim = ClaimEffect(claim_id="claim-id")
+    claim_id = str(uuid4())
+    claim = ClaimEffect(claim_id=claim_id)
     effect = claim.assign(assignee_id="staff-key")
 
     assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
     assert json.loads(effect.payload)["data"] == {
-        "claim_id": "claim-id",
+        "claim_id": claim_id,
         "assignee_id": "staff-key",
         "team_id": None,
     }
@@ -957,25 +960,27 @@ def test_claim_effect_assign_to_staff(mock_db_queries: dict[str, MagicMock]) -> 
 
 def test_claim_effect_assign_to_team(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that assign with a team_id emits the team assignment payload."""
-    claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.assign(team_id="team-key")
+    claim_id, team_id = str(uuid4()), str(uuid4())
+    claim = ClaimEffect(claim_id=claim_id)
+    effect = claim.assign(team_id=team_id)
 
     assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
     assert json.loads(effect.payload)["data"] == {
-        "claim_id": "claim-id",
+        "claim_id": claim_id,
         "assignee_id": None,
-        "team_id": "team-key",
+        "team_id": team_id,
     }
 
 
 def test_claim_effect_unassign(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that unassign clears both assignee and team."""
-    claim = ClaimEffect(claim_id="claim-id")
+    claim_id = str(uuid4())
+    claim = ClaimEffect(claim_id=claim_id)
     effect = claim.unassign()
 
     assert effect.type == EffectType.UPDATE_CLAIM_ASSIGNEE
     assert json.loads(effect.payload)["data"] == {
-        "claim_id": "claim-id",
+        "claim_id": claim_id,
         "assignee_id": None,
         "team_id": None,
     }
@@ -985,10 +990,10 @@ def test_claim_effect_assign_rejects_both_staff_and_team(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
     """Test that assigning to both a staff member and a team raises a validation error."""
-    claim = ClaimEffect(claim_id="claim-id")
+    claim = ClaimEffect(claim_id=str(uuid4()))
 
     with pytest.raises(ValidationError) as e:
-        claim.assign(assignee_id="staff-key", team_id="team-key")
+        claim.assign(assignee_id="staff-key", team_id=str(uuid4()))
 
     assert "assigned to a staff member or a team, but not both" in repr(e.value)
 
@@ -998,12 +1003,13 @@ def test_claim_effect_assign_requires_existing_claim(
 ) -> None:
     """Test that assign validates the claim exists."""
     mock_db_queries["claim_assignee"].objects.filter.return_value.exists.return_value = False
-    claim = ClaimEffect(claim_id="invalid-claim-id")
+    claim_id = str(uuid4())
+    claim = ClaimEffect(claim_id=claim_id)
 
     with pytest.raises(ValidationError) as e:
         claim.assign(assignee_id="staff-key")
 
-    assert "Claim with id invalid-claim-id does not exist." in repr(e.value)
+    assert f"Claim with id {claim_id} does not exist." in repr(e.value)
 
 
 def test_claim_effect_assign_requires_existing_staff(
@@ -1011,7 +1017,7 @@ def test_claim_effect_assign_requires_existing_staff(
 ) -> None:
     """Test that assign validates the Staff exists when assignee_id is given."""
     mock_db_queries["assignee_staff"].objects.filter.return_value.exists.return_value = False
-    claim = ClaimEffect(claim_id="claim-id")
+    claim = ClaimEffect(claim_id=str(uuid4()))
 
     with pytest.raises(ValidationError) as e:
         claim.assign(assignee_id="missing-staff")
@@ -1024,9 +1030,32 @@ def test_claim_effect_assign_requires_existing_team(
 ) -> None:
     """Test that assign validates the Team exists when team_id is given."""
     mock_db_queries["assignee_team"].objects.filter.return_value.exists.return_value = False
-    claim = ClaimEffect(claim_id="claim-id")
+    team_id = str(uuid4())
+    claim = ClaimEffect(claim_id=str(uuid4()))
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(team_id=team_id)
+
+    assert f"Team with id {team_id} does not exist." in repr(e.value)
+
+
+@pytest.mark.django_db
+def test_claim_effect_assign_rejects_non_uuid_team_id() -> None:
+    """Test that a team_id that isn't a UUID is reported as a missing team."""
+    claim = ClaimEffect(claim_id=ClaimFactory.create().id)
 
     with pytest.raises(ValidationError) as e:
         claim.assign(team_id="missing-team")
 
     assert "Team with id missing-team does not exist." in repr(e.value)
+
+
+@pytest.mark.django_db
+def test_claim_effect_assign_rejects_non_uuid_claim_id() -> None:
+    """Test that a claim_id that isn't a UUID is reported as a missing claim."""
+    claim = ClaimEffect(claim_id="missing-claim")
+
+    with pytest.raises(ValidationError) as e:
+        claim.unassign()
+
+    assert "Claim with id missing-claim does not exist." in repr(e.value)
