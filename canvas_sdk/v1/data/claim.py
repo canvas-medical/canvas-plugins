@@ -322,7 +322,7 @@ class Claim(TimestampedModel, IdentifiableModel):
     """Claim."""
 
     class Meta:
-        db_table = "canvas_sdk_data_quality_and_revenue_claim_002"
+        db_table = "canvas_sdk_data_quality_and_revenue_claim_001"
 
     objects = ClaimQueryset.as_manager()
 
