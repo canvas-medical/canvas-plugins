@@ -138,13 +138,12 @@ manifest_schema = {
             },
         },
         "agent": {
-            # Same shape as `component` plus an optional `tools.allowed`
-            # filter. PoC: the platform accepts the field but doesn't enforce
-            # it — the agent's `run()` applies the filter itself via
-            # `ToolRegistry.definitions(allowed=...)` and
-            # `ToolRegistry.execute(..., allowed=...)`. V1 will plumb the
-            # value through the `RunAgent` RPC and enforce platform-side
-            # before the agent sees its tool catalog (doc §6.7).
+            # Same shape as `component` plus an optional `tools` block:
+            # `allowed` lists tool names and `@category` groups, and `denied`
+            # subtracts from them. The plugin runner's `RunAgent` RPC resolves
+            # both against the agent's registry (`ToolRegistry.resolve_allowed`)
+            # and swaps in a scoped registry before any lifecycle hook runs
+            # (doc §6.7). An entry without `tools.allowed` is unfiltered.
             "type": "array",
             "items": {
                 "type": "object",
