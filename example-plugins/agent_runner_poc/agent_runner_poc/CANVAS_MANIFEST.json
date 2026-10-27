@@ -57,7 +57,9 @@
         "namespace": "custom_data__agent_runner_poc",
         "access": "read_write"
     },
-    "variables": [],
+    "variables": [
+        {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true}
+    ],
     "tags": {},
     "references": [],
     "license": "",

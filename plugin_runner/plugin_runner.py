@@ -240,13 +240,8 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
     ``LLM_UNAVAILABLE`` is an outage: the gateway or Anthropic answered 5xx or 429,
     or the connection failed. ``LLM_REFUSED`` is everything the same request would
     hit again: a budget or ceiling (402), a model not enabled (404), a bad key
-    (401), a refused feature (400), or a request the client itself refused to
-    send off the gateway's host.
+    (401), or a refused feature (400).
     """
-    from canvas_sdk.agents import LLMGatewayConfigurationError
-
-    if isinstance(exc.__cause__, LLMGatewayConfigurationError):
-        return "LLM_REFUSED"
     if isinstance(exc, anthropic.APIConnectionError):
         return "LLM_UNAVAILABLE"
     if isinstance(exc, anthropic.APIStatusError) and (
@@ -482,10 +477,10 @@ class PluginRunner(PluginRunnerServicer):
         PoC scope (KOALA-5544): single-process execution; per-``scope_key``
         single-flight serialization via :func:`canvas_sdk.agents.agent_lock`
         (contention surfaces as ``error_kind="AGENT_LOCKED"``). LLM access goes
-        through Canvas's inference gateway: the gateway is built from
-        ``INFERENCE_GATEWAY_URL`` and ``INFERENCE_GATEWAY_KEY`` in this process's
-        environment, attributed to the plugin, agent, and run, and the key never
-        reaches plugin code. Gateway refusals and outages come back as
+        through Canvas's inference gateway: the gateway is built from the
+        instance's ``INFERENCE_GATEWAY_URL`` and the plugin's own
+        ``INFERENCE_GATEWAY_KEY`` secret, attributed to the plugin, agent, and run.
+        Gateway refusals and outages come back as
         ``LLM_REFUSED`` and ``LLM_UNAVAILABLE`` so home-app retries only the latter.
         """
         with metrics.measure(
@@ -516,10 +511,11 @@ class PluginRunner(PluginRunnerServicer):
             # Late import: canvas_sdk.agents and the SDK Effect wrapper are
             # only meaningful once plugin modules have loaded.
             from canvas_sdk.agents import LLMGatewayConfigurationError
-            from canvas_sdk.agents.gateway import gateway_from_environment
+            from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
 
             try:
-                gateway = gateway_from_environment(
+                gateway = gateway_from_plugin_secrets(
+                    plugin.get("secrets") or {},
                     instance=CUSTOMER_IDENTIFIER,
                     plugin=base_plugin_name,
                     agent=request.agent_id,

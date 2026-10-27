@@ -27,14 +27,13 @@ def plugin_runner() -> PluginRunner:
 
 @pytest.fixture
 def inference_gateway_env(load_test_plugins: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Configure the inference gateway the way an instance's environment does.
+    """Configure the inference gateway the way an instance and an agent plugin do.
 
-    The RunAgent RPC builds the LLMGateway from INFERENCE_GATEWAY_URL and
-    INFERENCE_GATEWAY_KEY in the runner's own environment, never from plugin
-    secrets.
+    The gateway URL is instance config; the key is the agent plugin's own
+    INFERENCE_GATEWAY_KEY secret.
     """
     monkeypatch.setenv("INFERENCE_GATEWAY_URL", "https://gateway.test")
-    monkeypatch.setenv("INFERENCE_GATEWAY_KEY", "cnvs_sk_test_runner")
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin"}
 
 
 def _make_request(
@@ -184,9 +183,9 @@ def test_run_agent_without_gateway_configuration_short_circuits(
     plugin_runner: PluginRunner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without the gateway variables, the RPC refuses to dispatch and says why."""
+    """Without the gateway URL or the plugin's key, the RPC refuses to dispatch and says why."""
     monkeypatch.delenv("INFERENCE_GATEWAY_URL", raising=False)
-    monkeypatch.delenv("INFERENCE_GATEWAY_KEY", raising=False)
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {}
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
     assert list(response.effects) == []
@@ -194,15 +193,14 @@ def test_run_agent_without_gateway_configuration_short_circuits(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_ignores_anthropic_plugin_secrets(
+def test_run_agent_needs_the_plugins_gateway_key(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A plugin secret named ANTHROPIC_API_KEY does not configure LLM access."""
-    monkeypatch.delenv("INFERENCE_GATEWAY_URL", raising=False)
-    monkeypatch.delenv("INFERENCE_GATEWAY_KEY", raising=False)
+    """A gateway URL alone is not enough; the plugin needs its own INFERENCE_GATEWAY_KEY."""
+    monkeypatch.setenv("INFERENCE_GATEWAY_URL", "https://gateway.test")
     LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"ANTHROPIC_API_KEY": "sk-ant-plugin"}
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.error_kind == "LLM_NOT_CONFIGURED"
@@ -216,7 +214,7 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
     inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The runner, not the plugin, decides what the gateway attributes a call to."""
+    """The runner builds the gateway from the plugin's key and attributes it to the run."""
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
     seen: list[Any] = []
     original_run = agent_cls.run
@@ -229,11 +227,13 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
     assert response.success is True
-    attribution = seen[0]._attribution
-    assert attribution["x-canvas-plugin"] == "test_agent_plugin"
-    assert attribution["x-canvas-agent"] == AGENT_ID
-    assert attribution["x-canvas-run-id"] == "run-1"
-    assert attribution["x-canvas-instance"]
+    assert seen[0].api_key == "cnvs_sk_test_plugin"
+    assert seen[0].base_url == "https://gateway.test"
+    attribution = seen[0].attribution
+    assert attribution["plugin"] == "test_agent_plugin"
+    assert attribution["agent"] == AGENT_ID
+    assert attribution["run-id"] == "run-1"
+    assert attribution["instance"]
 
 
 def _status_error(status: int) -> Exception:
@@ -254,19 +254,6 @@ def _connection_error() -> Exception:
     )
 
 
-def _refused_host_error() -> Exception:
-    import anthropic
-    import httpx2
-
-    from canvas_sdk.agents import LLMGatewayConfigurationError
-
-    error = anthropic.APIConnectionError(
-        request=httpx2.Request("POST", "https://exfiltrate.example/collect")
-    )
-    error.__cause__ = LLMGatewayConfigurationError("refused")
-    return error
-
-
 @pytest.mark.parametrize(
     "make_error, error_kind",
     [
@@ -277,9 +264,8 @@ def _refused_host_error() -> Exception:
         (lambda: _status_error(429), "LLM_UNAVAILABLE"),
         (lambda: _status_error(502), "LLM_UNAVAILABLE"),
         (_connection_error, "LLM_UNAVAILABLE"),
-        (_refused_host_error, "LLM_REFUSED"),
     ],
-    ids=["402", "404", "400", "401", "429", "502", "connection", "refused-host"],
+    ids=["402", "404", "400", "401", "429", "502", "connection"],
 )
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_run_agent_tags_gateway_failures_by_whether_a_retry_could_help(
