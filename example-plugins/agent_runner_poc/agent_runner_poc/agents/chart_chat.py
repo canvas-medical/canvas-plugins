@@ -47,7 +47,6 @@ from canvas_sdk.agents import (
     find_open_note_uuid_from_ctx,
 )
 from canvas_sdk.effects import Effect
-from canvas_sdk.v1.data import Patient
 from logger import log
 
 SYSTEM_PROMPT = (
@@ -378,10 +377,9 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         state.data["messages"] = messages
         state.data["last_response"] = final_text or "(no response)"
 
-        # Resolve the patient's display name once for the log line.
-        patient = Patient.objects.get(id=patient_id)
+        # Opaque identifiers only: logs leave the instance, so no names or chart content.
         log.info(
-            f"ChartChatAgent: turn complete for {patient.first_name} {patient.last_name} "
+            f"ChartChatAgent: turn complete for patient_id={patient_id} "
             f"({len(messages)} total messages)"
         )
 

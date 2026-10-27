@@ -180,6 +180,32 @@
       // escaping needed by the agent).
       const CHART_FENCE_RE = /```vega-lite\s*\n([\s\S]*?)\n```/g;
 
+      // Specs come from the model, and a model can be steered by chart content,
+      // so a spec may not fetch anything: a data or image URL could carry chart
+      // data to an outside host. Every url/href is dropped and the loader
+      // refuses all requests, so charts render from inline data.values only.
+      // usermeta goes too: vega-embed merges usermeta.embedOptions over the
+      // options passed here, which would let a spec swap in its own loader.
+      function stripRemoteReferences(value) {
+        if (Array.isArray(value)) return value.map(stripRemoteReferences);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [key, inner] of Object.entries(value)) {
+            if (key === 'url' || key === 'href' || key === 'usermeta') continue;
+            out[key] = stripRemoteReferences(inner);
+          }
+          return out;
+        }
+        return value;
+      }
+      const refuseRemote = () => Promise.reject(new Error('Charts cannot load remote data.'));
+      const OFFLINE_LOADER = {
+        load: refuseRemote,
+        sanitize: refuseRemote,
+        http: refuseRemote,
+        file: refuseRemote,
+      };
+
       function parseAssistantContent(text) {
         // Strip nav markers first so noteIds aren't lost when we split on chart fences.
         const { cleanText, noteIds } = parseNavMarkers(text);
@@ -193,7 +219,7 @@
             if (before) segments.push({ type: 'text', value: before });
           }
           try {
-            segments.push({ type: 'chart', spec: JSON.parse(match[1]) });
+            segments.push({ type: 'chart', spec: stripRemoteReferences(JSON.parse(match[1])) });
           } catch (err) {
             segments.push({
               type: 'text',
@@ -226,7 +252,7 @@
             chartDiv.className = 'chart-embed';
             div.appendChild(chartDiv);
             if (window.vegaEmbed) {
-              window.vegaEmbed(chartDiv, seg.spec, { actions: false }).catch(err => {
+              window.vegaEmbed(chartDiv, seg.spec, { actions: false, loader: OFFLINE_LOADER }).catch(err => {
                 chartDiv.classList.add('error');
                 chartDiv.textContent = 'Failed to render chart: ' + err.message;
               });
