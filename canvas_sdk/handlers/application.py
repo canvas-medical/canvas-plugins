@@ -83,6 +83,7 @@ class ApplicationScope(StrEnum):
     NOTE = "note"
     SCHEDULING = "scheduling"
     DOCKED = "docked"
+    PORTAL_DOCKED = "portal_docked"
     PROVIDER_MENU = "provider_menu"
     PANEL = "panel"
 
@@ -217,6 +218,30 @@ class DockedApplication(EmbeddedApplication):
         }
 
 
+class PortalDockedApplication(DockedApplication):
+    """A docked application that mounts in a band across the patient portal.
+
+    The band spans the full window width on every signed-in portal page, so only the
+    ``TOP`` and ``BOTTOM`` edges exist here. ``DOCK_SIZE`` is the band's fixed height.
+    The portal renders ``url`` or ``content`` from the ``LaunchModalEffect`` that
+    ``on_open`` returns, and mounts at most one band per edge: the lowest ``PRIORITY``.
+    """
+
+    SCOPE = ApplicationScope.PORTAL_DOCKED
+
+    def _show_application_values(self) -> dict[str, Any]:
+        """Refuse an edge the portal has no band for."""
+        values = super()._show_application_values()
+
+        if values["dock_edge"] not in (DockEdge.TOP, DockEdge.BOTTOM):
+            raise ValueError(
+                f"{type(self).__name__} must dock to the top or bottom edge: the portal "
+                f"has no {values['dock_edge']} band."
+            )
+
+        return values
+
+
 class NoteApplication(EmbeddedApplication):
     """An Application that can be shown in a note."""
 
@@ -329,6 +354,7 @@ __exports__ = (
     "MenuPosition",
     "NoteApplication",
     "PanelApplication",
+    "PortalDockedApplication",
     "ProviderMenuApplication",
     "SchedulingApplication",
 )
