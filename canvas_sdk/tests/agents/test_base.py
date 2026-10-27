@@ -73,7 +73,7 @@ def test_concrete_subclass_instantiates_and_drives_lifecycle() -> None:
     """A subclass implementing all three methods runs end-to-end."""
     agent = _MinimalAgent()
     state = agent.load_state("scope:1")
-    gateway = LLMGateway(base_url="https://gateway.test", key="cnvs_sk_test")
+    gateway = LLMGateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
     result = agent.run(state, gateway, {"hello": "world"})
     agent.save_state("scope:1", result.state)
 
