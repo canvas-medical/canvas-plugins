@@ -1,5 +1,4 @@
 import dataclasses
-import functools
 import os
 from collections.abc import Sequence
 from datetime import datetime
@@ -7,7 +6,7 @@ from typing import Any
 
 import requests
 
-from canvas_sdk.utils.http import JsonOnlyResponse, ServiceClient
+from canvas_sdk.utils.http import ServiceClient
 
 
 class SlotSearchError(RuntimeError):
@@ -144,12 +143,7 @@ class AppointmentSlotsHttp(ServiceClient):
             payload["exclude_appointment_id"] = exclude_appointment_id
 
         try:
-            response = JsonOnlyResponse(
-                self._send(
-                    "/appointment-slots/search/",
-                    functools.partial(self._http_client.post, json=payload),
-                )
-            )
+            response = self._post_json("/appointment-slots/search/", payload)
         except requests.RequestException:
             response = None
 

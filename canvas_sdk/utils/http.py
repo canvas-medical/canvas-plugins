@@ -398,6 +398,16 @@ class ServiceClient:
             self._send(path, functools.partial(self._http_client.get, headers=headers))
         )
 
+    def _post_json(
+        self,
+        path: str,
+        json: dict[str, Any],
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> JsonOnlyResponse:
+        return JsonOnlyResponse(
+            self._send(path, functools.partial(self._http_client.post, json=json, headers=headers))
+        )
+
 
 class OntologiesHttp(ServiceClient):
     """

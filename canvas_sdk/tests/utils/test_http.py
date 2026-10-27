@@ -12,6 +12,8 @@ from cryptography.x509.oid import NameOID
 from canvas_sdk.utils import Http
 from canvas_sdk.utils.http import (
     SURESCRIPTS_CA_BUNDLE,
+    JsonOnlyResponse,
+    ServiceClient,
     _SurescriptsTrustAdapter,
     ontologies_http,
     pharmacy_http,
@@ -416,6 +418,54 @@ def test_service_client_errors_are_plain_request_exceptions(
     assert error.__cause__ is None
     assert error.__context__ is None
     assert "test-credential" not in str(error)
+
+
+class _PostingClient(ServiceClient):
+    """A bare service client, to test the POST helper the purpose-built clients share."""
+
+    def __init__(self) -> None:
+        super().__init__(base_url="https://service.example")
+
+
+@patch("requests.Session.post")
+def test_service_client_post_json_sends_the_body_and_headers(mock_post: MagicMock) -> None:
+    """`_post_json` posts JSON to a path on the service and wraps the response."""
+    mock_post.return_value = MagicMock(status_code=201, json=lambda: {"ok": True})
+
+    response = _PostingClient()._post_json("/things/", {"a": 1}, headers={"X-Test": "1"})
+
+    assert isinstance(response, JsonOnlyResponse)
+    assert (response.status_code, response.json()) == (201, {"ok": True})
+    assert mock_post.call_args.args[0] == "https://service.example/things/"
+    assert mock_post.call_args.kwargs["json"] == {"a": 1}
+    assert mock_post.call_args.kwargs["headers"] == {"X-Test": "1"}
+
+
+@patch("requests.Session.post")
+def test_service_client_post_json_sends_to_paths_only(mock_post: MagicMock) -> None:
+    """`_post_json` refuses anything but a plain path, before sending."""
+    with pytest.raises(ValueError):
+        _PostingClient()._post_json("https://other.example/things/", {})
+
+    mock_post.assert_not_called()
+
+
+@patch("requests.Session.post")
+def test_service_client_post_json_errors_are_plain_request_exceptions(
+    mock_post: MagicMock,
+) -> None:
+    """A failed POST is re-raised as a plain RequestException, with nothing chained."""
+    request = requests.Request("POST", "https://service.example/things/").prepare()
+    request.headers["Authorization"] = "test-credential"
+    mock_post.side_effect = requests.Timeout("timed out", request=request)
+
+    with pytest.raises(requests.RequestException) as excinfo:
+        _PostingClient()._post_json("/things/", {})
+
+    error = excinfo.value
+    assert error.request is None
+    assert error.__cause__ is None
+    assert error.__context__ is None
 
 
 @pytest.mark.parametrize(
