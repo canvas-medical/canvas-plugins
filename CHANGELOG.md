@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.261.0 (2026-10-27)
+
+### Bug Fixes
+
+- Distrust the roots over the compromised eMudhra intermediates
+  ([#1948](https://github.com/canvas-medical/canvas-plugins/pull/1948),
+  [`24a4b00`](https://github.com/canvas-medical/canvas-plugins/commit/24a4b00c8576a64a78a19cbe6b55a909ae7e9d4b))
+
+### Features
+
+- Add portal docked panes ([#1945](https://github.com/canvas-medical/canvas-plugins/pull/1945),
+  [`44c35e1`](https://github.com/canvas-medical/canvas-plugins/commit/44c35e1f896febeaa43d1b0fdf95dc739b01e4a0))
+
+
 ## v0.260.0 (2026-10-23)
 
 ### Chores
