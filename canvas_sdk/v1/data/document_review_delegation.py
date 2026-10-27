@@ -11,8 +11,8 @@ class DocumentReviewDelegation(TimestampedModel, IdentifiableModel):
     for signature writes a row to the provider, with ``on_behalf_of`` naming the sender; signing
     and returning it writes a route-back to the sender (``is_route_back``). Any other hand-off,
     or the document no longer needing review, deactivates the active row.
-    ``signature_consent`` grants nothing: each user places only their own signature. Rows to a
-    team are hand-offs recorded before sending for signature existed.
+    ``signature_consent`` grants nothing: each user places only their own signature. Sending
+    for signature always names a staff member, so a row to a team is a team hand-off.
 
     ``content_type`` + ``object_id`` form a generic link to the delegated document: a lab,
     imaging or referral report, or an uncategorized clinical document.

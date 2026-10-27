@@ -1,11 +1,25 @@
 """Tests for the DocumentHistoryEvent model."""
 
 import datetime
+from collections.abc import Callable
 
 import pytest
 
-from canvas_sdk.test_utils.factories import DocumentHistoryEventFactory, StaffFactory
+from canvas_sdk.test_utils.factories import (
+    ContentTypeFactory,
+    DocumentHistoryEventFactory,
+    ImagingReportFactory,
+    ImagingReviewFactory,
+    LabReportFactory,
+    LabReviewFactory,
+    ReferralReportFactory,
+    ReferralReviewFactory,
+    StaffFactory,
+    UncategorizedClinicalDocumentFactory,
+    UncategorizedClinicalDocumentReviewFactory,
+)
 from canvas_sdk.v1.data import DocumentHistoryEvent, DocumentHistoryEventType
+from canvas_sdk.v1.data.base import Model
 
 
 @pytest.mark.django_db
@@ -64,6 +78,61 @@ def test_recorded_entry_lists_signers() -> None:
     recorded.signers.add(provider)
 
     assert list(recorded.signers.all()) == [provider]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("factory", "model_name"),
+    [
+        (LabReportFactory, "labreport"),
+        (ImagingReportFactory, "imagingreport"),
+        (ReferralReportFactory, "referralreport"),
+        (UncategorizedClinicalDocumentFactory, "uncategorizedclinicaldocument"),
+    ],
+)
+def test_document_resolves_the_reviewable_document(
+    factory: Callable[[], Model], model_name: str
+) -> None:
+    """``document`` returns the report the entry belongs to, of any reviewable type."""
+    report = factory()
+    event = DocumentHistoryEventFactory.create(
+        content_type=ContentTypeFactory.create(model=model_name), object_id=report.dbid
+    )
+
+    assert event.document == report
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("factory", "model_name"),
+    [
+        (LabReviewFactory, "labreview"),
+        (ImagingReviewFactory, "imagingreview"),
+        (ReferralReviewFactory, "referralreview"),
+        (UncategorizedClinicalDocumentReviewFactory, "uncategorizeddocumentreview"),
+    ],
+)
+def test_review_resolves_the_review_command(factory: Callable[[], Model], model_name: str) -> None:
+    """``review`` returns the review command a "recorded" entry belongs to."""
+    review = factory()
+    event = DocumentHistoryEventFactory.create(
+        event_type=DocumentHistoryEventType.RECORDED,
+        review_content_type=ContentTypeFactory.create(model=model_name),
+        review_object_id=review.dbid,
+    )
+
+    assert event.review == review
+
+
+@pytest.mark.django_db
+def test_document_and_review_are_none_without_a_supported_link() -> None:
+    """An entry with no review link, or a link to an unknown type, resolves to None."""
+    event = DocumentHistoryEventFactory.create(
+        content_type=ContentTypeFactory.create(model="patient"), object_id=1
+    )
+
+    assert event.document is None
+    assert event.review is None
 
 
 def test_comment_hidden_follows_deleted_at() -> None:
