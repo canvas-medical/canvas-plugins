@@ -100,10 +100,12 @@ $ canvas deploy plugins/acme__intake --snapshot --instance acme-staging
 
 - The package folder as committed at HEAD becomes one new commit on the plugin's `main` in Canvas Platform. Files on `main` beside the package folder are kept, and an unchanged package pushes nothing.
 - The commit is authored as the signed-in person or service account, and carries `Monorepo-Commit` and `Monorepo-Path` trailers naming its source.
-- Uncommitted changes in the package are refused, even with `--yes`. So are submodules, symbolic links and Git LFS files in the package, which would not reach an instance as their content.
-- Deploy refuses when HEAD does not contain the commit `main` was last deployed from, and when `main` has changes to the package since the last snapshot, such as a catalog listing edited in Canvas Platform, that the snapshot would replace. At a terminal it asks before replacing them.
+- Uncommitted changes in the package are refused, even with `--yes`. So are submodules, symbolic links and files stored through a filter such as Git LFS or git-crypt, which would not reach an instance as their content.
+- Deploy refuses when HEAD lacks changes to the package that the commit `main` was last deployed from made, which would roll the plugin back, and names the files. A branch that was deployed and then squash- or rebase-merged passes, since HEAD carries its changes.
+- Deploy refuses when `main` has changes to the package since the last snapshot, such as a catalog listing edited in Canvas Platform, that the snapshot would replace. At a terminal it asks before replacing them.
 - Deploy warns when HEAD is on no remote branch, since that code has not been through the repository's review.
-- The manifest `name` decides which Platform repository a snapshot goes to, so deploys from any checkout or CI job land on the same `main`. The CI job needs no git identity and can use a shallow checkout.
+- The manifest `name` decides which Platform repository a snapshot goes to, so deploys from any checkout or CI job land on the same `main`. The CI job needs no git identity.
+- The rollback check needs the commit `main` was last deployed from, which a shallow checkout usually lacks, so deploy skips the check there and says so on stderr. Check out full history without file contents to keep it, for example `fetch-depth: 0` with `filter: blob:none` in `actions/checkout`.
 
 **Usage**:
 

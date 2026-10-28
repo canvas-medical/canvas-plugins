@@ -632,7 +632,49 @@ def test_deploy_snapshot_refuses_to_roll_back_a_later_snapshot(
 
     assert result.exit_code == 1
     assert "would roll the plugin back" in result.output
+    assert f"  plugins/{NAME}/handler.py" in result.output
     assert _git(bare, "rev-parse", "main") == deployed
+
+
+def test_deploy_snapshot_refuses_a_branch_missing_changes_main_was_deployed_with(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A branch that forked before the last deploy and lacks its changes is refused, though
+    HEAD is beside the deployed commit rather than behind it.
+    """
+    root = monorepo.parent.parent
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    deployed = _git(bare, "rev-parse", "main")
+    _git(root, "checkout", "-q", "-b", "stale", "HEAD~1")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert f"  plugins/{NAME}/handler.py" in result.output
+    assert _git(bare, "rev-parse", "main") == deployed
+
+
+def test_deploy_snapshot_after_a_deployed_branch_is_squash_merged(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A branch deployed before it was squash-merged leaves its commit out of main's history,
+    but main carries its changes, so a deploy from main goes through.
+    """
+    root = monorepo.parent.parent
+    _git(root, "checkout", "-q", "-b", "feature")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _git(root, "checkout", "-q", "main")
+    _git(root, "merge", "-q", "--squash", "feature")
+    _git(root, "commit", "-q", "-m", "Feature, squashed")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(monorepo, "rev-parse", "HEAD:./")
 
 
 def test_deploy_snapshot_refuses_uncommitted_changes_even_with_yes(
@@ -652,12 +694,17 @@ def test_deploy_snapshot_refuses_uncommitted_changes_even_with_yes(
 def test_deploy_snapshot_refuses_what_would_not_reach_an_instance_intact(
     api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
 ) -> None:
-    """Submodules, symbolic links and Git LFS files are refused by path before anything is
-    registered or pushed.
+    """Submodules, symbolic links and files stored through a filter, such as Git LFS or
+    git-crypt, are refused by path before anything is registered or pushed. A `filter`
+    attribute naming no driver changes nothing and is allowed.
     """
     root = monorepo.parent.parent
-    (root / ".gitattributes").write_text("*.png filter=lfs\n")
+    (root / ".gitattributes").write_text(
+        "*.png filter=lfs\nsecrets.json filter=git-crypt\nnotes.txt filter\n"
+    )
     (monorepo / "logo.png").write_text("version https://git-lfs.github.com/spec/v1\n")
+    (monorepo / "secrets.json").write_text("{}\n")
+    (monorepo / "notes.txt").write_text("notes\n")
     (monorepo / "shared").symlink_to("../../services")
     (monorepo / "vendor").mkdir()  # where an uninitialized submodule sits
     _git(root, "add", ".")
@@ -668,7 +715,9 @@ def test_deploy_snapshot_refuses_what_would_not_reach_an_instance_intact(
     result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
 
     assert result.exit_code == 2
-    assert "logo.png is stored in Git LFS" in result.output
+    assert "logo.png is stored through the 'lfs' filter" in result.output
+    assert "secrets.json is stored through the 'git-crypt' filter" in result.output
+    assert "notes.txt" not in result.output
     assert "shared is a symbolic link" in result.output
     assert "vendor is a submodule" in result.output
     assert not _requests_to(api, "POST", "/orgs/acme/plugins")
@@ -783,7 +832,8 @@ def test_deploy_snapshot_from_a_shallow_checkout(
     )
 
     assert result.exit_code == 0, result.output
-    assert "so it is not checked that HEAD contains it" in result.stderr
+    assert "so it is not checked whether this deploy rolls the plugin back" in result.stderr
+    assert "git fetch --unshallow" in result.stderr
     assert "is not on any remote branch" not in result.stderr
     assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
         root, "rev-parse", f"HEAD:plugins/{NAME}"

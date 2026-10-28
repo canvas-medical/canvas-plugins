@@ -302,10 +302,10 @@ def snapshot_source(plugin_dir: Path) -> Snapshot:
 
     A snapshot is built from commits, so uncommitted changes under the package are
     refused rather than committed: committing in a shared repository is not this
-    command's call. Submodules, symbolic links and Git LFS files are refused by
-    path, because each would reach an instance as something other than its
-    content: a commit Canvas Platform does not have, a file holding the link's
-    target, or an LFS pointer.
+    command's call. Submodules, symbolic links and files stored through a filter
+    (Git LFS, git-crypt) are refused by path, because each would reach an instance
+    as something other than its content: a commit Canvas Platform does not have, a
+    file holding the link's target, or the filter's stored form.
     """
     require_installed()
     package = plugin_dir.resolve()
@@ -356,10 +356,14 @@ def snapshot_source(plugin_dir: Path) -> Snapshot:
         input="".join(f"{path}\0" for path in files),
         what="git check-attr",
     ).split("\0")
+    # A filter attribute that names a driver means git stores the driver's output,
+    # such as an LFS pointer or git-crypt ciphertext; set, unset or unspecified
+    # names none and changes nothing.
     problems += [
-        f"{path} is stored in Git LFS, so only its pointer file would be deployed"
+        f"{path} is stored through the '{value}' filter, so what git stores for it, such as an "
+        "LFS pointer or ciphertext, would be deployed instead of the file"
         for path, value in zip(answers[0::3], answers[2::3], strict=False)
-        if value == "lfs"
+        if value not in ("set", "unset", "unspecified")
     ]
     if problems:
         raise typer.BadParameter(
@@ -492,8 +496,11 @@ def _guard_platform_history(
     """Refuse a snapshot that would undo work on ``branch`` that it does not hold.
 
     The last snapshot on ``branch`` names the commit it came from. When this
-    checkout has that commit and HEAD does not contain it, HEAD is behind or beside
-    the last deploy, and pushing would roll the plugin back.
+    checkout has that commit, every package file it changed since its common
+    ancestor with HEAD must be changed on HEAD's side too; a file HEAD left alone
+    would go back to its older content, rolling the plugin back. A branch deployed
+    and then squash- or rebase-merged passes, because HEAD carries its changes
+    under another commit.
 
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
@@ -515,22 +522,27 @@ def _guard_platform_history(
         if run(snapshot.toplevel, "cat-file", "-e", f"{source}^{{commit}}").returncode != 0:
             print(
                 f"This checkout does not have {source[:12]}, the commit {branch} was last "
-                "deployed from, so it is not checked that HEAD contains it.",
+                "deployed from, so it is not checked whether this deploy rolls the plugin back. "
+                "A checkout with full history, such as after `git fetch --unshallow`, is checked.",
                 file=sys.stderr,
                 flush=True,
             )
-        elif (
-            run(
-                snapshot.toplevel, "merge-base", "--is-ancestor", source, snapshot.commit
-            ).returncode
-            != 0
-        ):
-            raise GitError(
-                f"{branch} on Canvas Platform was last deployed from {source[:12]}, which HEAD "
-                f"({snapshot.commit[:12]}) does not contain, so this deploy would roll the plugin "
-                "back. Update this checkout to include it, such as with `git pull`, and run "
-                "deploy again."
+        else:
+            top, package = snapshot.toplevel, snapshot.path or "."
+            base = _output(top, "merge-base", source, snapshot.commit, what="git merge-base")
+            deployed = _paths(top, "diff", "--name-only", "-z", base.strip(), source, "--", package)
+            kept = _paths(
+                top, "diff", "--name-only", "-z", base.strip(), snapshot.commit, "--", package
             )
+            if missing := sorted(deployed - kept):
+                raise GitError(
+                    f"{branch} on Canvas Platform was last deployed from {source[:12]}, and HEAD "
+                    f"({snapshot.commit[:12]}) lacks its changes to these files, so this deploy "
+                    "would roll the plugin back:\n"
+                    + "\n".join(f"  {path}" for path in missing)
+                    + "\nUpdate this checkout to include them, such as with `git pull`, and run "
+                    "deploy again."
+                )
 
     if last:
         on_platform = _paths(work, "diff", "--name-only", "-z", last, tip, "--", name)
