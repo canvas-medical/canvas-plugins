@@ -5,6 +5,7 @@ import pytest
 
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection
 from canvas_sdk.events import Event, EventRequest, EventType
+from canvas_sdk.handlers.simple_api.security import PortalAccessLevel
 from canvas_sdk.handlers.simple_api.tools import CaseInsensitiveMultiDict, separate_headers
 from canvas_sdk.handlers.simple_api.websocket import WebSocketAPI
 from canvas_sdk.tests.shared import params_from_dict
@@ -126,3 +127,22 @@ def test_unauthorized_request() -> None:
     handler = InvalidAuthentication(event=event)
 
     assert handler.compute() == [DenyConnection(message="Unauthorized").apply()]
+
+
+def test_portal_access() -> None:
+    """A login acting on a patient's chart is named, with the access it was given."""
+    event = make_auth_event(
+        channel="test_channel",
+        headers={
+            "canvas-logged-in-user-id": "patient-key",
+            "canvas-logged-in-user-type": "Patient",
+            "canvas-logged-in-acting-user-id": "42",
+            "canvas-logged-in-access-messaging": "view",
+        },
+    )
+
+    portal_access = WebSocketAPI(event=event).websocket.portal_access
+
+    assert portal_access.acting_user_id == "42"
+    assert portal_access.level("messaging") == PortalAccessLevel.VIEW
+    assert portal_access.level("billing") == PortalAccessLevel.NONE

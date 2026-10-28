@@ -40,6 +40,8 @@ from canvas_sdk.handlers.simple_api.security import (
     BearerCredentials,
     Credentials,
     PatientSessionAuthMixin,
+    PortalAccess,
+    PortalAccessLevel,
     SessionCredentials,
     StaffSessionAuthMixin,
 )
@@ -1160,6 +1162,115 @@ def test_authentication_mixins(
 
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
     assert effects == expected_effects
+
+
+def acting_headers(acting_user_id: str, **levels: str) -> dict[str, str]:
+    """Session headers for another login acting on a patient's chart, with its access by area."""
+    return {
+        **session_headers("abc123", "Patient"),
+        "canvas-logged-in-acting-user-id": acting_user_id,
+        **{f"canvas-logged-in-access-{area}": level for area, level in levels.items()},
+    }
+
+
+@pytest.mark.parametrize(
+    argnames="headers,expected_effects",
+    argvalues=[
+        (
+            session_headers("abc123", "Patient"),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            acting_headers("42", billing="act"),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            acting_headers("42", billing="view"),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            acting_headers("42"),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            acting_headers("42", billing="unknown"),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+    ],
+    ids=[
+        "patient's own chart",
+        "acting with act",
+        "acting with view",
+        "acting without a level",
+        "acting with an unknown level",
+    ],
+)
+def test_portal_access_can_be_enforced(
+    headers: Mapping[str, str], expected_effects: Sequence[Effect]
+) -> None:
+    """A route can hold a login acting on a patient's chart to the access it was given."""
+
+    class Route(PatientSessionAuthMixin, SimpleAPIRoute):
+        PATH = "/route"
+
+        def authenticate(self, credentials: SessionCredentials) -> bool:  # type: ignore[override]
+            return super().authenticate(credentials) and credentials.portal_access.allows(
+                "billing", PortalAccessLevel.ACT
+            )
+
+        def post(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    effects = handle_request(Route, method="POST", path="/route", headers=headers)
+
+    assert effects == expected_effects
+
+
+def test_portal_access_levels() -> None:
+    """Each area has the level Canvas sent, and an area that doesn't exist is an error."""
+    access = PortalAccess(
+        CaseInsensitiveMultiDict(
+            acting_headers(
+                "42", appointments="act", messaging="view", clinical="none", billing="view"
+            ).items()
+        )
+    )
+
+    assert access.acting_user_id == "42"
+    assert [access.level(area) for area in PortalAccess.AREAS] == [
+        PortalAccessLevel.ACT,
+        PortalAccessLevel.VIEW,
+        PortalAccessLevel.NONE,
+        PortalAccessLevel.VIEW,
+    ]
+    assert access.allows("messaging", PortalAccessLevel.VIEW)
+    assert not access.allows("messaging", PortalAccessLevel.ACT)
+    assert not access.allows("clinical", PortalAccessLevel.VIEW)
+    with pytest.raises(ValueError):
+        access.level("pharmacy")
+
+
+def test_portal_access_on_a_patients_own_chart() -> None:
+    """With no other login acting, the patient may do everything on their own chart."""
+    access = PortalAccess(CaseInsensitiveMultiDict(session_headers("abc123", "Patient").items()))
+
+    assert access.acting_user_id is None
+    assert all(access.allows(area, PortalAccessLevel.ACT) for area in PortalAccess.AREAS)
 
 
 # ---------------------------------------------------------------------------

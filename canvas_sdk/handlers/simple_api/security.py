@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from base64 import b64decode
+from enum import StrEnum
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -15,6 +16,7 @@ from .exceptions import (
 
 if TYPE_CHECKING:
     from .api import Request
+    from .tools import CaseInsensitiveMultiDict
 
 
 class Credentials:
@@ -116,6 +118,56 @@ class APIKeyCredentials(Credentials):
         self.key = key
 
 
+class PortalAccessLevel(StrEnum):
+    """How much a patient session may do in one area of the patient's chart."""
+
+    NONE = "none"
+    VIEW = "view"
+    ACT = "act"
+
+
+_PORTAL_ACCESS_RANKS = {
+    PortalAccessLevel.NONE: 0,
+    PortalAccessLevel.VIEW: 1,
+    PortalAccessLevel.ACT: 2,
+}
+
+
+class PortalAccess:
+    """
+    What a patient session may do on the patient's chart, from the headers Canvas sets.
+
+    When another login, such as a parent's, acts on the chart, acting_user_id names it and each
+    area is limited to the access it was given. Otherwise the patient may do everything.
+    """
+
+    AREAS = ("appointments", "messaging", "clinical", "billing")
+
+    def __init__(self, headers: CaseInsensitiveMultiDict) -> None:
+        # The CanvasUser dbid of the login acting on the chart, when it isn't the patient's own.
+        self.acting_user_id: str | None = headers.get("canvas-logged-in-acting-user-id") or None
+
+        # A login acting on someone else's chart gets no access in an area Canvas didn't name.
+        default = PortalAccessLevel.NONE if self.acting_user_id else PortalAccessLevel.ACT
+        self._levels: dict[str, PortalAccessLevel] = {}
+        for area in self.AREAS:
+            try:
+                level = PortalAccessLevel(headers.get(f"canvas-logged-in-access-{area}", default))
+            except ValueError:
+                level = PortalAccessLevel.NONE
+            self._levels[area] = level
+
+    def level(self, area: str) -> PortalAccessLevel:
+        """How much the session may do in one area of the chart."""
+        if area not in self._levels:
+            raise ValueError(f"Unknown portal area: {area}")
+        return self._levels[area]
+
+    def allows(self, area: str, level: PortalAccessLevel) -> bool:
+        """Whether the session may do at least `level` in one area of the chart."""
+        return _PORTAL_ACCESS_RANKS[self.level(area)] >= _PORTAL_ACCESS_RANKS[level]
+
+
 class SessionCredentials(Credentials):
     """
     Session credentials class.
@@ -125,7 +177,8 @@ class SessionCredentials(Credentials):
     the client and intentionally set by Canvas only if there is a valid session from an active user.
 
     One must look at the type of user in order to understand what the id refers to – a patient or a
-    staff member.
+    staff member. For a patient, portal_access says whether another login, such as a parent's, is
+    acting on the patient's chart, and how much it may do there.
 
     If a SimpleAPI handler is protected by SessionCredentials, the non-presence of these headers
     results in an unauthorized response. Users of SessionCredentials will likely wish to further
@@ -147,6 +200,7 @@ class SessionCredentials(Credentials):
             "id": request.headers.get("canvas-logged-in-user-id"),
             "type": request.headers.get("canvas-logged-in-user-type"),
         }
+        self.portal_access = PortalAccess(request.headers)
 
 
 class AuthSchemeMixin(Protocol):
@@ -241,7 +295,8 @@ class PatientSessionAuthMixin(AuthSchemeMixin):
 
     Provides an implementation of the authenticate method that ensures only logged in patients can
     access the urls provided by this handler. It only cares that they are a patient, with no regard
-    any other information.
+    any other information. That includes another login acting on a patient's chart; check
+    credentials.portal_access to hold it to the access it was given.
     """
 
     def authenticate(self, credentials: SessionCredentials) -> bool:  # type: ignore[override]
@@ -262,4 +317,6 @@ __exports__ = (
     "SessionCredentials",
     "StaffSessionAuthMixin",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
 )

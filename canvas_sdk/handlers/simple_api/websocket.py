@@ -11,6 +11,7 @@ from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 
 from .exceptions import AuthenticationError, InvalidCredentialsError
+from .security import PortalAccess
 from .tools import CaseInsensitiveMultiDict, separate_headers
 
 
@@ -29,6 +30,7 @@ class WebSocket:
             if "canvas-logged-in-user-id" in self.headers
             else None
         )
+        self.portal_access = PortalAccess(self.headers)
 
 
 class WebSocketAPI(BaseHandler, ABC):
