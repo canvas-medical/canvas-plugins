@@ -565,7 +565,8 @@ class PluginRunner(PluginRunnerServicer):
             sentry_sdk.set_tag("agent-id", request.agent_id)
             log.info(
                 f"RunAgent: invoking agent_id={request.agent_id} "
-                f"scope_key={request.scope_key} run_id={request.run_id}"
+                f"scope_key={request.scope_key} run_id={request.run_id} "
+                f"trigger={request.handler_name}"
             )
 
             from canvas_sdk.agents import ToolRegistry
@@ -674,7 +675,9 @@ class PluginRunner(PluginRunnerServicer):
                     type=effect.type,
                     payload=effect.payload,
                     plugin_name=base_plugin_name,
-                    handler_name=request.handler_name or class_name,
+                    # The agent, not the trigger handler that started it, so the
+                    # security audit names the agent behind each write.
+                    handler_name=class_name,
                     actor=request.actor,
                     source=request.source or "agent",
                 )

@@ -123,7 +123,9 @@ def test_run_agent_stamps_provenance_on_emitted_effects(
 ) -> None:
     """Emitted effects carry plugin_name, handler_name, actor, source.
 
-    ``classname`` is intentionally left empty on agent-emitted effects
+    ``handler_name`` is the agent class rather than the trigger handler that
+    emitted the RunAgentEffect, so the security audit names the agent behind
+    each write. ``classname`` is intentionally left empty on agent-emitted effects
     (see plugin_runner.py:RunAgent for the rationale): the home-app
     interpreters treat a populated classname as a CQM Protocol identifier
     and would route agent effects through the wrong code path.
@@ -139,7 +141,7 @@ def test_run_agent_stamps_provenance_on_emitted_effects(
     effect = response.effects[0]
     assert effect.plugin_name == "test_agent_plugin"
     assert effect.classname == ""
-    assert effect.handler_name == "EchoTrigger"
+    assert effect.handler_name == "EchoAgent"
     assert effect.actor == "42"
     assert effect.source == "handler"
 
