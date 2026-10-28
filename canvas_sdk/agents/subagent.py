@@ -20,8 +20,8 @@ Use cases worth fanning out for:
 Sub-agents share the parent's ``ctx`` dict (patient_id, staff_id,
 effects accumulator, note_id) so any write effects they originate flow
 into the same dispatch queue. They have NO separate persistent state,
-no ``scope_key``, and no ``agent_lock`` — the parent's lock covers
-them. A sub-agent's tool subset is intersected with the parent's
+and no ``scope_key``; they run inside the parent's run, which is
+serialized on its scope. A sub-agent's tool subset is intersected with the parent's
 manifest-granted catalog (via :meth:`ToolRegistry.scope`), so a
 sub-agent can never access tools the parent itself isn't allowed to
 use. The manifest stays the security boundary.
