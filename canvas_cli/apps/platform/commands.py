@@ -480,7 +480,9 @@ def _push_snapshot(
     if not git.on_a_remote(plugin_dir):
         print(
             f"Warning: {snapshot.commit[:12]} is not on any remote branch of the repository "
-            "it is in, so it has not been pushed for review there."
+            "it is in, so it has not been pushed for review there.",
+            file=sys.stderr,
+            flush=True,
         )
     registered = client.register_plugin(publisher, name)
     me = client.me()

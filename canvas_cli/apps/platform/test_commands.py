@@ -26,6 +26,8 @@ from canvas_cli.apps.platform import auth, commands, git
 from canvas_cli.main import app
 
 runner = CliRunner()
+# For asserting what goes to stderr, where diagnostics belong so a piped log keeps their order.
+split_runner = CliRunner(mix_stderr=False)
 PLATFORM = "https://platform.example"
 API = f"{PLATFORM}/api/v1"
 NAME = "acme__intake"
@@ -494,7 +496,7 @@ def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
     root = monorepo.parent.parent
     config = (root / ".git" / "config").read_text()
 
-    result = runner.invoke(
+    result = split_runner.invoke(
         app, ["deploy", str(monorepo), "--snapshot", "--instance", "acme-staging"]
     )
 
@@ -514,7 +516,7 @@ def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
     ]
     assert (root / ".git" / "config").read_text() == config
     assert _git(root, "status", "--porcelain") == ""
-    assert "is not on any remote branch" in result.output
+    assert "is not on any remote branch" in result.stderr
 
 
 def test_deploy_snapshot_keeps_platform_files_beside_the_package_and_skips_an_unchanged_push(
@@ -776,13 +778,13 @@ def test_deploy_snapshot_from_a_shallow_checkout(
     shallow = tmp_path / "ci"
     _git(tmp_path, "clone", "-q", "--depth", "1", root.as_uri(), str(shallow))
 
-    result = runner.invoke(
+    result = split_runner.invoke(
         app, ["deploy", str(shallow / "plugins" / NAME), "--snapshot", "--push-only"]
     )
 
     assert result.exit_code == 0, result.output
-    assert "so it is not checked that HEAD contains it" in result.output
-    assert "is not on any remote branch" not in result.output
+    assert "so it is not checked that HEAD contains it" in result.stderr
+    assert "is not on any remote branch" not in result.stderr
     assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
         root, "rev-parse", f"HEAD:plugins/{NAME}"
     )

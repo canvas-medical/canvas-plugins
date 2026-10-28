@@ -515,7 +515,9 @@ def _guard_platform_history(
         if run(snapshot.toplevel, "cat-file", "-e", f"{source}^{{commit}}").returncode != 0:
             print(
                 f"This checkout does not have {source[:12]}, the commit {branch} was last "
-                "deployed from, so it is not checked that HEAD contains it."
+                "deployed from, so it is not checked that HEAD contains it.",
+                file=sys.stderr,
+                flush=True,
             )
         elif (
             run(
