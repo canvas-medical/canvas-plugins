@@ -223,7 +223,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic" },
+    { name = "anthropic", specifier = ">=1.0.0,<2" },
     { name = "certifi", specifier = ">=2026.10.19" },
     { name = "cookiecutter" },
     { name = "cron-converter", specifier = ">=1.2.1,<2" },
