@@ -1604,8 +1604,12 @@ message EventResponse {
   // Optional. When set, indicates the kind of expected failure that
   // produced ``success = false`` so the caller can decide whether to
   // retry, surface a user-facing error, etc. Empty string means either
-  // success or a generic/unstructured failure. Currently defined:
-  //   - "AGENT_LOCKED": the per-scope_key lock was held by another run;
-  //     the caller should re-enqueue with backoff (doc §6.2).
+  // success or a generic/unstructured failure. Currently defined, for
+  // RunAgent:
+  //   - "LLM_UNAVAILABLE": the inference gateway or Anthropic had an
+  //     outage (5xx, 429, no connection); worth retrying.
+  //   - "LLM_REFUSED": the gateway refused the call (budget, model, key,
+  //     request shape); a retry would be refused again.
+  //   - "LLM_NOT_CONFIGURED": the gateway URL or the plugin's key is unset.
   string error_kind = 3;
 }

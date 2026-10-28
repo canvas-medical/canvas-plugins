@@ -375,39 +375,6 @@ def test_run_agent_handles_agent_exceptions(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_serializes_via_scope_key_lock(
-    install_test_plugin: Path,
-    load_test_plugins: None,
-    plugin_runner: PluginRunner,
-    inference_gateway_env: None,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Two RPC invocations sharing a scope_key serialize; the loser tags the response.
-
-    Sets up a re-entrant scenario: the agent's run() itself tries to
-    acquire the same scope_key lock that the outer RunAgent RPC already
-    holds. The inner attempt raises AgentLocked, which the RunAgent
-    handler catches and reports as success=False with
-    error_kind='AGENT_LOCKED' so the home-app side can recognize it as
-    retryable-with-backoff (doc §6.2).
-    """
-    from canvas_sdk.agents import agent_lock as agent_lock_helper
-
-    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
-    scope_key = "test_agent_plugin:patient:p1"
-
-    def _re_enter(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
-        with agent_lock_helper(scope_key):
-            pytest.fail("Inner lock acquisition should have raised AgentLocked")
-
-    monkeypatch.setattr(agent_cls, "run", _re_enter)
-    response = next(iter(plugin_runner.RunAgent(_make_request(scope_key=scope_key), None)))
-    assert response.success is False
-    assert list(response.effects) == []
-    assert response.error_kind == "AGENT_LOCKED"
-
-
-@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_run_agent_does_not_set_error_kind_on_generic_failure(
     install_test_plugin: Path,
     load_test_plugins: None,
@@ -418,9 +385,9 @@ def test_run_agent_does_not_set_error_kind_on_generic_failure(
     """A generic exception inside the agent leaves error_kind empty.
 
     error_kind is reserved for *expected* failure modes the caller should
-    react to specifically (currently just AGENT_LOCKED). Unstructured
-    exceptions still surface as success=False, but error_kind must stay
-    empty so the caller doesn't mistake them for retryable contention.
+    react to specifically (the LLM_* kinds). Unstructured exceptions still
+    surface as success=False, but error_kind must stay empty so the caller
+    doesn't mistake them for a retryable gateway outage.
     """
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
 
@@ -517,41 +484,6 @@ def test_run_agent_fires_on_run_error_when_run_raises(
         f"on_run_end must NOT fire on failure; got {names}"
     )
     assert call_log[1][1] == "RuntimeError"
-
-
-@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_does_not_fire_hooks_on_lock_contention(
-    install_test_plugin: Path,
-    load_test_plugins: None,
-    plugin_runner: PluginRunner,
-    inference_gateway_env: None,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Lock contention shouldn't fire lifecycle hooks — the agent never started."""
-    from canvas_sdk.agents import agent_lock as agent_lock_helper
-
-    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
-    scope_key = "test_agent_plugin:patient:p1"
-    call_log: list[str] = []
-
-    monkeypatch.setattr(agent_cls, "on_run_start", lambda self, sk: call_log.append("on_run_start"))
-    monkeypatch.setattr(agent_cls, "on_run_end", lambda self, r: call_log.append("on_run_end"))
-    monkeypatch.setattr(agent_cls, "on_run_error", lambda self, e: call_log.append("on_run_error"))
-
-    def _re_enter(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
-        # Inner lock acquisition raises AgentLocked because the outer
-        # RunAgent already holds it. The contention path returns before
-        # any of the hooks fire on the inner attempt.
-        with agent_lock_helper(scope_key):
-            pass
-
-    monkeypatch.setattr(agent_cls, "run", _re_enter)
-    response = next(iter(plugin_runner.RunAgent(_make_request(scope_key=scope_key), None)))
-    assert response.success is False
-    assert response.error_kind == "AGENT_LOCKED"
-    # on_run_start fired for the outer run; on_run_error fired when its
-    # run() (the re-entry attempt) raised. on_run_end must NOT have fired.
-    assert "on_run_end" not in call_log
 
 
 # ---------------------------------------------------------------------------
@@ -724,3 +656,27 @@ def test_run_agent_hook_failures_do_not_crash_the_run(
     # Run completed successfully despite both hooks raising.
     assert response.success is True
     assert response.error_kind == ""
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_past_its_deadline_saves_nothing_and_emits_nothing(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Once home-app's deadline passes, its lease can go to the next run, so this one stops."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    saved: list[str] = []
+    monkeypatch.setattr(
+        agent_cls, "save_state", lambda self, scope_key, state: saved.append(scope_key)
+    )
+    context = MagicMock()
+    context.is_active.return_value = False
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), context)))
+
+    assert response.success is False
+    assert list(response.effects) == []
+    assert saved == []

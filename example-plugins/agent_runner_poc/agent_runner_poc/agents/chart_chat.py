@@ -12,7 +12,7 @@ Dispatched via the standard ``RunAgent`` path: the chat UI's POST
 handler emits a :class:`RunAgentEffect` with ``{patient_id, user_message}``
 in ``trigger_payload``, the home-app ``RunAgentEffectInterpreter`` enqueues
 a Celery task, and the plugin-runner's ``RunAgent`` RPC drives the
-lifecycle inside the per-``scope_key`` ``agent_lock``. The UI polls
+lifecycle, one run at a time per ``scope_key``. The UI polls
 ``/chart-chat-history`` to surface the assistant turn when it lands.
 
 The full tool surface — clinical reads, task/banner/protocol writes,

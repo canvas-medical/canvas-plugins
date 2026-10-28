@@ -1,6 +1,5 @@
 {
   "canvas_sdk.agents": [
-    "AgentLocked",
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
@@ -11,7 +10,6 @@
     "SubAgentSpec",
     "ToolNotAllowed",
     "ToolRegistry",
-    "agent_lock",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
     "run_subagent",
@@ -24,10 +22,6 @@
   "canvas_sdk.agents.gateway": [
     "LLMGateway",
     "LLMGatewayConfigurationError"
-  ],
-  "canvas_sdk.agents.lock": [
-    "AgentLocked",
-    "agent_lock"
   ],
   "canvas_sdk.agents.note_helpers": [
     "OPEN_NOTE_STATES",

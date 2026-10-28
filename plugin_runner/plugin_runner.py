@@ -251,6 +251,10 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
     return "LLM_REFUSED"
 
 
+class RunAgentDeadlineExceeded(Exception):
+    """The caller's RunAgent deadline passed while the agent was still running."""
+
+
 def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
     """Invoke an :class:`AgentPlugin` lifecycle hook, swallowing any exception.
 
@@ -474,9 +478,11 @@ class PluginRunner(PluginRunnerServicer):
         database context, and yields the emitted effects in a single
         ``EventResponse``.
 
-        PoC scope (KOALA-5544): single-process execution; per-``scope_key``
-        single-flight serialization via :func:`canvas_sdk.agents.agent_lock`
-        (contention surfaces as ``error_kind="AGENT_LOCKED"``). LLM access goes
+        home-app serializes runs on one scope with a lease it holds until the
+        run's effects are dispatched, and bounds the call with a deadline the
+        lease outlives. A run whose call is no longer active once ``run()``
+        returns has passed that deadline, so it neither saves state nor
+        returns effects. LLM access goes
         through Canvas's inference gateway: the gateway is built from the
         instance's ``INFERENCE_GATEWAY_URL`` and the plugin's own
         ``INFERENCE_GATEWAY_KEY`` secret, attributed to the plugin, agent, and run.
@@ -558,9 +564,7 @@ class PluginRunner(PluginRunnerServicer):
                 f"scope_key={request.scope_key} run_id={request.run_id}"
             )
 
-            # Late imports: agent_lock pulls in the plugin's Caching API which
-            # is only reachable inside plugin_context.
-            from canvas_sdk.agents import AgentLocked, ToolRegistry, agent_lock
+            from canvas_sdk.agents import ToolRegistry
 
             try:
                 with (
@@ -570,7 +574,6 @@ class PluginRunner(PluginRunnerServicer):
                         namespace=db_namespace,
                         access_level=db_access_level,
                     ),
-                    agent_lock(request.scope_key, holder_id=request.run_id),
                 ):
                     agent = agent_class()
                     # The manifest's components.agents[].tools grant is what the
@@ -597,6 +600,11 @@ class PluginRunner(PluginRunnerServicer):
                     try:
                         state = agent.load_state(request.scope_key)
                         result = agent.run(state, gateway, trigger_payload)
+                        if context is not None and not context.is_active():
+                            raise RunAgentDeadlineExceeded(
+                                f"RunAgent call for {request.agent_id} run {request.run_id} "
+                                "ended before run() returned; discarding its state and effects"
+                            )
                         agent.save_state(request.scope_key, result.state)
                         _invoke_agent_hook(agent, "on_run_end", result)
                     except Exception as run_exc:
@@ -612,13 +620,9 @@ class PluginRunner(PluginRunnerServicer):
                 )
                 yield EventResponse(success=False, effects=[], error_kind=error_kind)
                 return
-            except AgentLocked as exc:
-                # Contention is an expected outcome (another invocation holds
-                # the lock for this scope_key). Tag the response with
-                # error_kind so the home-app side can recognize this as a
-                # retryable-with-backoff failure rather than a generic crash.
-                log.warning(f"RunAgent: lock contention — {exc}")
-                yield EventResponse(success=False, effects=[], error_kind="AGENT_LOCKED")
+            except RunAgentDeadlineExceeded as exc:
+                log.warning(f"RunAgent: {exc}")
+                yield EventResponse(success=False, effects=[])
                 return
             except Exception as exc:
                 log.exception(f"RunAgent: agent {request.agent_id} raised")

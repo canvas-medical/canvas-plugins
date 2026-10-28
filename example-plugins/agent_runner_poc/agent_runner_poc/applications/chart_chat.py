@@ -14,9 +14,9 @@ Opens a right-pane modal backed by three SimpleAPI endpoints:
   assistant turn lands.
 
 Going through the standard ``RunAgentEffect`` path means the agent's
-``load_state`` → ``run`` → ``save_state`` lifecycle runs inside the
-plugin-runner's ``agent_lock`` for the patient's scope_key — concurrent
-messages on the same patient serialize naturally, the read-modify-write
+``load_state`` → ``run`` → ``save_state`` lifecycle runs one at a time
+for the patient's scope_key — concurrent messages on the same patient
+serialize naturally, the read-modify-write
 of the conversation snapshot stays atomic, and the SimpleAPI request
 thread is freed immediately (no long-lived plugin-runner worker held
 for the LLM round-trip).
@@ -90,8 +90,8 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         ``RunAgentEffectInterpreter`` → Celery → plugin-runner ``RunAgent``
         path as triggered agents. ``user_message`` rides on
         ``trigger_payload``; the agent appends it to the conversation
-        snapshot inside the ``agent_lock`` so the read-modify-write stays
-        atomic with any concurrent run.
+        snapshot while runs on the patient's scope are serialized, so the
+        read-modify-write stays atomic with any concurrent run.
 
         ``staff_id`` is pulled from the session-auth header (the
         StaffSessionAuthMixin guarantees it's present and is a staff
