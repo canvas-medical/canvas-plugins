@@ -3118,6 +3118,7 @@ standard_tools.register(
     },
     _originate_review_note,
     categories=("clinical_writes",),
+    effect_types=("CREATE_NOTE", "ORIGINATE_PLAN_COMMAND"),
     metadata={
         "command_class": PlanCommand,
         "effect_class": NoteEffect,

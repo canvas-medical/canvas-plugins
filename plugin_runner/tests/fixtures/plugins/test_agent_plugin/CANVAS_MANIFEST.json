@@ -8,7 +8,10 @@
         "agents": [
             {
                 "class": "test_agent_plugin.agents.echo_agent:EchoAgent",
-                "description": "Test agent that echoes its trigger payload as a LOG effect"
+                "description": "Test agent that echoes its trigger payload as a LOG effect",
+                "tools": {
+                    "allowed": ["echo"]
+                }
             }
         ],
         "commands": [],

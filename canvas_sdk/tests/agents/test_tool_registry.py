@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry
 
 
@@ -678,6 +679,11 @@ class _FakeCommand:
     class Meta:
         key = "fake_command"
 
+    @classmethod
+    def constantized_key(cls) -> str:
+        # Any real command key; the helper declares ORIGINATE_<this>_COMMAND.
+        return "PLAN"
+
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
@@ -929,6 +935,9 @@ class _FakeEffect:
     Records constructor kwargs; ``apply()`` returns a payload object the
     test can inspect to confirm the helper passed the right values.
     """
+
+    class Meta:
+        effect_type = EffectType.CREATE_TASK
 
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = dict(kwargs)
@@ -1402,3 +1411,64 @@ def test_categories_for_unknown_tool_returns_empty_tuple() -> None:
     """categories_for on an unregistered name returns ()."""
     registry = ToolRegistry()
     assert registry.categories_for("nonexistent") == ()
+
+
+def _noop(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+    return None
+
+
+def test_effect_types_follow_tools_through_scope_and_extend() -> None:
+    """A scoped or extended registry can stage exactly what its own tools declare."""
+    source = ToolRegistry()
+    source.register(
+        {"name": "write_task", "description": "x", "input_schema": {"type": "object"}},
+        _noop,
+        effect_types=("CREATE_TASK",),
+    )
+    source.register(
+        {"name": "flag_chart", "description": "x", "input_schema": {"type": "object"}},
+        _noop,
+        effect_types=("ADD_BANNER_ALERT",),
+    )
+    source.register(
+        {"name": "read_chart", "description": "x", "input_schema": {"type": "object"}}, _noop
+    )
+
+    assert source.effect_types() == frozenset({"CREATE_TASK", "ADD_BANNER_ALERT"})
+    assert source.scope({"write_task", "read_chart"}).effect_types() == frozenset({"CREATE_TASK"})
+    assert source.scope({"read_chart"}).effect_types() == frozenset()
+
+    adopted = ToolRegistry()
+    adopted.extend(source)
+    assert adopted.effect_types_for("flag_chart") == frozenset({"ADD_BANNER_ALERT"})
+
+
+def test_register_rejects_an_unknown_effect_type() -> None:
+    """A typo in a declaration fails at import rather than silently dropping effects."""
+    registry = ToolRegistry()
+    with pytest.raises(ValueError, match="unknown effect types"):
+        registry.register(
+            {"name": "write_task", "description": "x", "input_schema": {"type": "object"}},
+            _noop,
+            effect_types=("CREATE_TSK",),
+        )
+
+
+def test_helpers_declare_the_effect_types_they_stage() -> None:
+    """originate_command_tool and add_effect_tool derive their declaration from the class."""
+    from canvas_sdk.commands import PlanCommand
+    from canvas_sdk.effects.note.message import Message
+    from canvas_sdk.effects.task.task import AddTask
+
+    registry = ToolRegistry()
+    registry.originate_command_tool(
+        name="plan", description="x", command_class=PlanCommand, fields={}
+    )
+    registry.add_effect_tool(name="task", description="x", effect_class=AddTask, fields={})
+    registry.add_effect_tool(
+        name="message", description="x", effect_class=Message, fields={}, effect_method="create"
+    )
+
+    assert registry.effect_types_for("plan") == frozenset({"ORIGINATE_PLAN_COMMAND"})
+    assert registry.effect_types_for("task") == frozenset({"CREATE_TASK"})
+    assert registry.effect_types_for("message") == frozenset({"CREATE_MESSAGE"})

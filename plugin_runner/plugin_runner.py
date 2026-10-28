@@ -560,7 +560,7 @@ class PluginRunner(PluginRunnerServicer):
 
             # Late imports: agent_lock pulls in the plugin's Caching API which
             # is only reachable inside plugin_context.
-            from canvas_sdk.agents import AgentLocked, agent_lock
+            from canvas_sdk.agents import AgentLocked, ToolRegistry, agent_lock
 
             try:
                 with (
@@ -573,41 +573,21 @@ class PluginRunner(PluginRunnerServicer):
                     agent_lock(request.scope_key, holder_id=request.run_id),
                 ):
                     agent = agent_class()
-                    # Read the per-agent tool allowlist from the manifest
-                    # (components.agents[].tools.allowed / .denied) and
-                    # apply it to the agent's tool registry. The manifest is
-                    # the single source of truth; the agent's own code
-                    # cannot widen this surface (per doc §6.7).
-                    #
-                    # `allowed` entries can be either literal tool names or
-                    # `@category` references (e.g., `@clinical_reads`).
-                    # `denied` is applied after expansion; subtractions win
-                    # over additions. ToolRegistry.resolve_allowed does the
-                    # expansion against the agent's class-level registry.
-                    manifest_entry = plugin.get("handler") or {}
-                    tools_manifest = manifest_entry.get("tools") or {}
-                    allowed_list = tools_manifest.get("allowed")
-                    denied_list = tools_manifest.get("denied")
-
-                    if allowed_list is not None and agent.tools is not None:
-                        agent.tools_allowed = agent.tools.resolve_allowed(
-                            allowed_list, denied=denied_list
-                        )
-                        # Substitute the agent's `tools` with the
-                        # manifest-scoped view. After this,
-                        # `self.tools.definitions()` returns only allowlisted
-                        # tools and `self.tools.execute(...)` raises
-                        # `ValueError("Unknown tool: ...")` for anything
-                        # outside the scope — the entries don't exist in
-                        # the scoped registry.
-                        agent.tools = agent.tools.scope(agent.tools_allowed)
-                    elif allowed_list is not None:
-                        # No registry on the agent — keep the raw allowlist
-                        # as a hint without resolution (categories can't be
-                        # expanded without a registry).
-                        agent.tools_allowed = frozenset(allowed_list)
-                    else:
-                        agent.tools_allowed = None
+                    # The manifest's components.agents[].tools grant is what the
+                    # agent may do (doc §6.7). `allowed` holds tool names and
+                    # `@category` references, `denied` is subtracted after
+                    # expansion, and an agent whose manifest grants nothing gets
+                    # no tools. The agent's registry is swapped for the scoped
+                    # view, and the effect types the granted tools declare bound
+                    # what the agent may return below.
+                    tools_manifest = (plugin.get("handler") or {}).get("tools") or {}
+                    registry = agent.tools or ToolRegistry()
+                    agent.tools_allowed = registry.resolve_allowed(
+                        tools_manifest.get("allowed") or (),
+                        denied=tools_manifest.get("denied"),
+                    )
+                    agent.tools = registry.scope(agent.tools_allowed)
+                    granted_effect_types = agent.tools.effect_types()
                     # Lifecycle hooks (doc §6.3): on_run_start before
                     # load_state, on_run_end after a successful save_state,
                     # on_run_error if anything in between raises. Hook
@@ -657,6 +637,16 @@ class PluginRunner(PluginRunnerServicer):
             # populating classname=<AgentSubclass> collapsed every protocol
             # card from a given agent into a single row per patient
             # (regardless of the agent's per-call UUID key). KOALA-5544.
+            granted_effects = []
+            for effect in result.effects:
+                effect_type = EffectType.Name(effect.type)
+                if effect_type in granted_effect_types:
+                    granted_effects.append(effect)
+                else:
+                    log.warning(
+                        f"RunAgent: dropping {effect_type} from agent {request.agent_id}; "
+                        "no tool its manifest grants stages that effect"
+                    )
             emitted_effects = [
                 Effect(
                     type=effect.type,
@@ -666,7 +656,7 @@ class PluginRunner(PluginRunnerServicer):
                     actor=request.actor,
                     source=request.source or "agent",
                 )
-                for effect in result.effects
+                for effect in granted_effects
             ]
             emitted_effects = permitted_usage(
                 emitted_effects, plugin.get("usage_units", frozenset())
