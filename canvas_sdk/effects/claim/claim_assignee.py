@@ -1,19 +1,11 @@
 from typing import Any
 from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim, Staff, Team
-
-
-def _is_uuid(value: UUID | str) -> bool:
-    """Return True if value parses as a UUID, so a UUID column lookup won't raise on it."""
-    try:
-        UUID(str(value))
-    except ValueError:
-        return False
-    return True
 
 
 class _UpdateClaimAssignee(_BaseEffect):
@@ -27,9 +19,9 @@ class _UpdateClaimAssignee(_BaseEffect):
     class Meta:
         effect_type = EffectType.UPDATE_CLAIM_ASSIGNEE
 
-    claim_id: UUID | str
+    claim_id: UUID = Field(strict=False)
     assignee_id: str | None = None
-    team_id: str | None = None
+    team_id: UUID | None = Field(default=None, strict=False)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -37,13 +29,13 @@ class _UpdateClaimAssignee(_BaseEffect):
         return {
             "claim_id": str(self.claim_id),
             "assignee_id": self.assignee_id,
-            "team_id": self.team_id,
+            "team_id": str(self.team_id) if self.team_id is not None else None,
         }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.assignee_id is not None and self.team_id is not None:
+        if self.assignee_id and self.team_id:
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -51,7 +43,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.assignee_id,
                 )
             )
-        if not _is_uuid(self.claim_id) or not Claim.objects.filter(id=self.claim_id).exists():
+        if not Claim.objects.filter(id=self.claim_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -59,7 +51,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.claim_id,
                 )
             )
-        if self.assignee_id is not None and not Staff.objects.filter(id=self.assignee_id).exists():
+        if self.assignee_id and not Staff.objects.filter(id=self.assignee_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -67,9 +59,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.assignee_id,
                 )
             )
-        if self.team_id is not None and (
-            not _is_uuid(self.team_id) or not Team.objects.filter(id=self.team_id).exists()
-        ):
+        if self.team_id and not Team.objects.filter(id=self.team_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",

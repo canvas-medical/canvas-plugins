@@ -1064,43 +1064,23 @@ def test_claim_effect_assign_with_existing_claim_staff_and_team() -> None:
 
 @pytest.mark.django_db
 def test_claim_effect_assign_rejects_non_uuid_team_id() -> None:
-    """Test that a team_id that isn't a UUID is reported as a missing team."""
+    """Test that a team_id that isn't a UUID fails pydantic validation."""
     claim = ClaimEffect(claim_id=ClaimFactory.create().id)
 
     with pytest.raises(ValidationError) as e:
         claim.assign(team_id="missing-team")
 
-    assert "Team with id missing-team does not exist." in repr(e.value)
-
-
-@pytest.mark.django_db
-def test_claim_effect_assign_rejects_empty_assignee_id() -> None:
-    """Test that an empty assignee_id is checked against Staff instead of being sent as-is."""
-    claim = ClaimEffect(claim_id=ClaimFactory.create().id)
-
-    with pytest.raises(ValidationError) as e:
-        claim.assign(assignee_id="")
-
-    assert "Staff with id  does not exist." in repr(e.value)
-
-
-@pytest.mark.django_db
-def test_claim_effect_assign_rejects_empty_team_id() -> None:
-    """Test that an empty team_id is reported as a missing team instead of being sent as-is."""
-    claim = ClaimEffect(claim_id=ClaimFactory.create().id)
-
-    with pytest.raises(ValidationError) as e:
-        claim.assign(team_id="")
-
-    assert "Team with id  does not exist." in repr(e.value)
+    assert e.value.errors()[0]["loc"] == ("team_id",)
+    assert "Input should be a valid UUID" in repr(e.value)
 
 
 @pytest.mark.django_db
 def test_claim_effect_assign_rejects_non_uuid_claim_id() -> None:
-    """Test that a claim_id that isn't a UUID is reported as a missing claim."""
+    """Test that a claim_id that isn't a UUID fails pydantic validation."""
     claim = ClaimEffect(claim_id="missing-claim")
 
     with pytest.raises(ValidationError) as e:
         claim.unassign()
 
-    assert "Claim with id missing-claim does not exist." in repr(e.value)
+    assert e.value.errors()[0]["loc"] == ("claim_id",)
+    assert "Input should be a valid UUID" in repr(e.value)

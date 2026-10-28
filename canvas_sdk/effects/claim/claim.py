@@ -223,7 +223,9 @@ class ClaimEffect(Model):
             Effect: An effect that updates the claim's assignee.
         """
         return _UpdateClaimAssignee(
-            claim_id=self.claim_id, assignee_id=assignee_id, team_id=team_id
+            claim_id=self.claim_id,  # type: ignore[arg-type]
+            assignee_id=assignee_id,
+            team_id=team_id,  # type: ignore[arg-type]
         ).apply()
 
     def unassign(self) -> Effect:
@@ -233,7 +235,7 @@ class ClaimEffect(Model):
         Returns:
             Effect: An effect that clears the claim's assignee.
         """
-        return _UpdateClaimAssignee(claim_id=self.claim_id).apply()
+        return _UpdateClaimAssignee(claim_id=self.claim_id).apply()  # type: ignore[arg-type]
 
     def post_payment(
         self,
