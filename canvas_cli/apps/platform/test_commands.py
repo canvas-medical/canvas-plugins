@@ -479,10 +479,7 @@ def _commit_in(directory: Path, path: str, content: str) -> None:
 def _commit_on_platform(bare: Path, tmp_path: Path, path: str, content: str) -> None:
     """A commit made on platform's side, the way its catalog listing editor commits to main."""
     checkout = tmp_path / "platform-side"
-    if checkout.exists():
-        _git(checkout, "pull", "-q")
-    else:
-        _git(tmp_path, "clone", "-q", bare.as_uri(), str(checkout))
+    _git(tmp_path, "clone", "-q", bare.as_uri(), str(checkout))
     (checkout / path).parent.mkdir(parents=True, exist_ok=True)
     _commit_in(checkout, path, content)
     _git(checkout, "push", "-q", "origin", "HEAD:main")
@@ -697,6 +694,127 @@ def test_deploy_snapshot_needs_a_repository(
     assert result.exit_code == 2
     assert "is not in one" in result.output
     assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+def test_deploy_snapshot_needs_the_package_committed(
+    api: requests_mock_module.Mocker, monorepo: Path, signed_in: None
+) -> None:
+    """A package the repository ignores has nothing committed to snapshot."""
+    root = monorepo.parent.parent
+    _git(root, "rm", "-q", "-r", "--cached", f"plugins/{NAME}")
+    (root / ".gitignore").write_text(f"plugins/{NAME}/\n")
+    _git(root, "add", ".gitignore")
+    _git(root, "commit", "-m", "ignore it")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 2
+    assert "has no committed files" in result.output
+
+
+def test_deploy_snapshot_over_history_that_was_not_snapshotted(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+) -> None:
+    """The first snapshot onto a main built by ordinary pushes treats every file in the
+    package on main as platform's, so one the snapshot would change is refused.
+    """
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    pushed = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "by pushes that were not snapshots" in result.output
+    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert f"  {NAME}/handler.py" not in result.output  # new in the snapshot, not replaced
+    assert _git(bare, "rev-parse", "main") == pushed
+
+
+def test_deploy_snapshot_aborts_when_the_person_declines_to_replace(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Declining at the terminal leaves main as platform left it."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    edited = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    monkeypatch.setattr(git, "interactive", lambda: True)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"], input="n\n")
+
+    assert result.exit_code == 1
+    assert _git(bare, "rev-parse", "main") == edited
+
+
+def test_deploy_snapshot_from_a_shallow_checkout(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A shallow CI checkout lacks the commit main was last deployed from, so the rollback
+    check is skipped and said to be, and a pushed HEAD draws no warning.
+    """
+    root = monorepo.parent.parent
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    shallow = tmp_path / "ci"
+    _git(tmp_path, "clone", "-q", "--depth", "1", root.as_uri(), str(shallow))
+
+    result = runner.invoke(
+        app, ["deploy", str(shallow / "plugins" / NAME), "--snapshot", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "so it is not checked that HEAD contains it" in result.output
+    assert "is not on any remote branch" not in result.output
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
+        root, "rev-parse", f"HEAD:plugins/{NAME}"
+    )
+
+
+def test_deploy_snapshot_reports_a_failed_fetch(
+    api: requests_mock_module.Mocker, monorepo: Path, signed_in: None, tmp_path: Path
+) -> None:
+    """A git server that cannot be fetched from is reported without the usage line."""
+    api.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={"name": NAME, "git_url": (tmp_path / "missing.git").as_uri()},
+    )
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "git fetch from Canvas Platform failed" in result.output
+    assert "Usage:" not in result.output
+
+
+def test_deploy_snapshot_reports_a_refused_push(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """When platform's git server refuses the snapshot, its reason is shown."""
+    hook = bare / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\necho 'Refused refs/heads/main: listing is invalid' >&2\nexit 1\n")
+    hook.chmod(0o755)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "git push to Canvas Platform failed" in result.output
+    assert "listing is invalid" in result.output
 
 
 def test_deploy_reports_a_failed_target_and_exits_nonzero(
