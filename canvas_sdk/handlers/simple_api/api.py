@@ -18,8 +18,15 @@ from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
 
-from .exceptions import AuthenticationError, InvalidCredentialsError
-from .security import Credentials
+from .exceptions import AuthenticationError, InvalidCredentialsError, PortalAccessError
+from .security import (
+    Credentials,
+    PortalAccess,
+    PortalAccessLevel,
+    PortalAccessRequirement,
+    admits_portal_access,
+    validate_portal_access,
+)
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
 # Whether file parts are passed through to the plugin as bytes (``"passthrough"``) or
@@ -255,6 +262,11 @@ class Request:
         """Decode and return the response body."""
         return b64decode(self._body)
 
+    @cached_property
+    def portal_access(self) -> PortalAccess:
+        """What the logged in user may do on the patient's chart in the portal."""
+        return PortalAccess(self.headers)
+
     def json(self) -> JSON:
         """Return the response body as a JSON dict."""
         return json.loads(self.body)
@@ -368,13 +380,18 @@ SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
 RouteHandler = Callable[[SimpleAPIType], list[Response | Effect]]
 
 
-def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API GET routes."""
-    return _handler_decorator("GET", path)
+def get(
+    path: str, *, portal_access: PortalAccessRequirement | None = None
+) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API GET routes. See :func:`post` for ``portal_access`` semantics."""
+    return _handler_decorator("GET", path, portal_access=portal_access)
 
 
 def post(
-    path: str, *, file_uploads: FileUploadsMode = "passthrough"
+    path: str,
+    *,
+    file_uploads: FileUploadsMode = "passthrough",
+    portal_access: PortalAccessRequirement | None = None,
 ) -> Callable[[RouteHandler], RouteHandler]:
     """Decorator for adding API POST routes.
 
@@ -390,29 +407,44 @@ def post(
     ``isinstance(part, FormPart)`` when you want to match every variant). The two file
     types do not share a concrete base class — files would otherwise be silently
     skipped after the upgrade.
+
+    ``portal_access`` is what a login acting on a patient's chart, such as a parent's, needs on
+    that chart to use this route, e.g. ``{"billing": PortalAccessLevel.ACT}``. It replaces the
+    handler's ``PORTAL_ACCESS`` for this route; see :class:`SimpleAPIBase`.
     """
-    return _handler_decorator("POST", path, file_uploads=file_uploads)
+    return _handler_decorator("POST", path, file_uploads=file_uploads, portal_access=portal_access)
 
 
 def put(
-    path: str, *, file_uploads: FileUploadsMode = "passthrough"
+    path: str,
+    *,
+    file_uploads: FileUploadsMode = "passthrough",
+    portal_access: PortalAccessRequirement | None = None,
 ) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PUT routes. See :func:`post` for ``file_uploads`` semantics."""
-    return _handler_decorator("PUT", path, file_uploads=file_uploads)
+    """Decorator for adding API PUT routes. See :func:`post` for the keyword arguments."""
+    return _handler_decorator("PUT", path, file_uploads=file_uploads, portal_access=portal_access)
 
 
-def delete(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API DELETE routes."""
-    return _handler_decorator("DELETE", path)
+def delete(
+    path: str, *, portal_access: PortalAccessRequirement | None = None
+) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API DELETE routes. See :func:`post` for ``portal_access`` semantics."""
+    return _handler_decorator("DELETE", path, portal_access=portal_access)
 
 
-def patch(path: str) -> Callable[[RouteHandler], RouteHandler]:
-    """Decorator for adding API PATCH routes."""
-    return _handler_decorator("PATCH", path)
+def patch(
+    path: str, *, portal_access: PortalAccessRequirement | None = None
+) -> Callable[[RouteHandler], RouteHandler]:
+    """Decorator for adding API PATCH routes. See :func:`post` for ``portal_access`` semantics."""
+    return _handler_decorator("PATCH", path, portal_access=portal_access)
 
 
 def _handler_decorator(
-    method: str, path: str, *, file_uploads: FileUploadsMode = "passthrough"
+    method: str,
+    path: str,
+    *,
+    file_uploads: FileUploadsMode = "passthrough",
+    portal_access: PortalAccessRequirement | None = None,
 ) -> Callable[[RouteHandler], RouteHandler]:
     if not path.startswith("/"):
         raise PluginError(f"Route path '{path}' must start with a forward slash")
@@ -422,10 +454,13 @@ def _handler_decorator(
             f'Invalid file_uploads value {file_uploads!r}; expected "passthrough" or "stored"'
         )
 
+    required_portal_access = validate_portal_access(portal_access, f"{method} {path}")
+
     def decorator(handler: RouteHandler) -> RouteHandler:
-        """Mark the handler with the HTTP method, path, and file-uploads mode."""
+        """Mark the handler with the HTTP method, path, file-uploads mode, and portal access."""
         handler.route = (method, path)  # type: ignore[attr-defined]
         handler.file_uploads = file_uploads  # type: ignore[attr-defined]
+        handler.portal_access = required_portal_access  # type: ignore[attr-defined]
 
         return handler
 
@@ -433,18 +468,32 @@ def _handler_decorator(
 
 
 class SimpleAPIBase(BaseHandler, ABC):
-    """Abstract base class for HTTP APIs."""
+    """
+    Abstract base class for HTTP APIs.
+
+    A login acting on someone else's chart in the portal, such as a parent on their child's, is
+    refused unless the handler declares in PORTAL_ACCESS the least level it needs in each area,
+    e.g. ``{"billing": PortalAccessLevel.VIEW}``. A route's own ``portal_access`` replaces it for
+    that route. An empty mapping admits such a login and leaves the checks to the handler, which
+    can read ``request.portal_access``. Patients on their own chart, staff, and requests without a
+    session are left to the authenticate method.
+    """
 
     RESPONDS_TO = [
         EventType.Name(EventType.SIMPLE_API_AUTHENTICATE),
         EventType.Name(EventType.SIMPLE_API_REQUEST),
     ]
 
+    PORTAL_ACCESS: ClassVar[PortalAccessRequirement | None] = None
+
     _ROUTES: ClassVar[dict[str, list[tuple[re.Pattern, RouteHandler]]]]
     _PATH_PARAM_REGEX = re.compile("<([a-zA-Z_][a-zA-Z0-9_]*)>")
+    _portal_access: ClassVar[dict[str, PortalAccessLevel] | None] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
+
+        cls._portal_access = validate_portal_access(cls.PORTAL_ACCESS, cls.__name__)
 
         # Build the registry of routes so that requests can be routed to the correct handler. This
         # is done by iterating over the methods on the class and looking for methods that have been
@@ -553,6 +602,11 @@ class SimpleAPIBase(BaseHandler, ABC):
             # The dict is intentionally nested so it's clearly separate from the HTTP response
             # fields (headers/body/status_code) and leaves room for future preflight options.
             if self.authenticate(credentials):
+                if not admits_portal_access(
+                    self.request.portal_access, self._required_portal_access()
+                ):
+                    raise PortalAccessError
+
                 file_uploads = getattr(self._handler, "file_uploads", "passthrough")
                 payload: dict[str, Any] = {
                     "headers": {},
@@ -569,6 +623,11 @@ class SimpleAPIBase(BaseHandler, ABC):
                     content={"error": str(error)}, status_code=HTTPStatus.UNAUTHORIZED
                 ).apply()
             ]
+
+    def _required_portal_access(self) -> dict[str, PortalAccessLevel] | None:
+        """What the matched route requires of a login acting on a patient's chart."""
+        route_portal_access = getattr(self._handler, "portal_access", None)
+        return route_portal_access if route_portal_access is not None else self._portal_access
 
     def _handle_request(self) -> list[Effect]:
         """Route the incoming request to the handler method based on the HTTP method and path."""
@@ -668,6 +727,8 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
     multipart upload interception. See :func:`post` for the semantics. The setting
     only applies to ``post`` and ``put`` methods on the class; other verbs register
     as normal.
+
+    ``PORTAL_ACCESS`` applies to every method on the route; see :class:`SimpleAPIBase`.
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:

@@ -195,6 +195,93 @@ def test_websocket_accepts_only_a_patient_on_their_own_channel(
     assert effect.type == expected
 
 
+def _family_member(**levels: str) -> dict[str, str]:
+    """Headers for a family member acting on patient abc's chart, with its access by area."""
+    return {
+        "canvas-logged-in-user-type": "Patient",
+        "canvas-logged-in-user-id": "abc",
+        "canvas-logged-in-acting-user-id": "42",
+        **{f"canvas-logged-in-access-{area}": level for area, level in levels.items()},
+    }
+
+
+def _authenticate(method: str, path: str, headers: dict[str, str]) -> HTTPStatus:
+    """Run CopayAPI's authentication for a request with these headers."""
+    event = Event(
+        EventRequest(
+            type=EventType.SIMPLE_API_AUTHENTICATE,
+            context=json.dumps(
+                {"method": method, "path": path, "query_string": "", "body": "", "headers": headers}
+            ),
+        )
+    )
+    [effect] = CopayAPI(event).compute()
+    return HTTPStatus(json.loads(effect.payload)["status_code"])
+
+
+LIST = ("GET", "/portal/appointments")
+PAY = ("POST", "/portal/appointments/1/pay")
+OWN_CHART = {"canvas-logged-in-user-type": "Patient", "canvas-logged-in-user-id": "abc"}
+CAN_VIEW = _family_member(appointments="view", billing="view")
+CAN_PAY = _family_member(appointments="view", billing="act")
+
+
+@pytest.mark.parametrize(
+    ("route", "headers", "expected"),
+    [
+        (LIST, OWN_CHART, HTTPStatus.OK),
+        (PAY, OWN_CHART, HTTPStatus.OK),
+        (LIST, CAN_VIEW, HTTPStatus.OK),
+        (PAY, CAN_VIEW, HTTPStatus.UNAUTHORIZED),
+        (PAY, CAN_PAY, HTTPStatus.OK),
+        (LIST, _family_member(billing="act"), HTTPStatus.UNAUTHORIZED),
+        (LIST, _family_member(), HTTPStatus.UNAUTHORIZED),
+    ],
+    ids=[
+        "patient lists",
+        "patient pays",
+        "view lists",
+        "view can't pay",
+        "act pays",
+        "no appointments access",
+        "no access",
+    ],
+)
+def test_a_family_member_needs_view_access_to_list_and_act_access_to_pay(
+    route: tuple[str, str], headers: dict[str, str], expected: HTTPStatus
+) -> None:
+    """A family member acting on the chart sees its copays with view access to appointments and
+    billing, and pays with act access to billing.
+    """
+    method, path = route
+
+    assert _authenticate(method, path, headers) == expected
+
+
+@pytest.mark.parametrize(
+    ("headers", "accepted"),
+    [(CAN_VIEW, True), (_family_member(appointments="view"), False)],
+    ids=["view", "no billing access"],
+)
+def test_websocket_holds_a_family_member_to_the_pages_access(
+    headers: dict[str, str], accepted: bool
+) -> None:
+    """A family member listens on the chart's channel only with the access the page needs."""
+    event = Event(
+        EventRequest(
+            type=EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE,
+            context=json.dumps({"channel_name": "copay-abc", "headers": headers}),
+        )
+    )
+
+    [effect] = CopayWebSocket(event).compute()
+
+    expected = (
+        EffectType.SIMPLE_API_WEBSOCKET_ACCEPT if accepted else EffectType.SIMPLE_API_WEBSOCKET_DENY
+    )
+    assert effect.type == expected
+
+
 def test_charge_response_is_broadcast_to_the_patients_channel() -> None:
     """The charge result is pushed to the patient's channel, keyed by idempotency key."""
     event = MagicMock()

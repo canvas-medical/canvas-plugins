@@ -14,7 +14,12 @@ from appointment_copay_collection.services.copay import (
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.payment import ChargeStoredCard
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
-from canvas_sdk.handlers.simple_api import PatientSessionAuthMixin, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import (
+    PatientSessionAuthMixin,
+    PortalAccessLevel,
+    SimpleAPI,
+    api,
+)
 from canvas_sdk.templates import render_to_string
 
 
@@ -37,15 +42,18 @@ def _appointment_json(row: dict[str, Any]) -> dict[str, Any]:
 class CopayAPI(PatientSessionAuthMixin, SimpleAPI):
     """Serve the copay page and charge a stored card for an appointment's copay.
 
-    Every request is made by a logged-in patient, and every lookup is scoped to that patient,
-    so a patient can only see and pay for their own appointments.
+    Every request acts on one patient's chart, and every lookup is scoped to that patient, so a
+    patient can only see and pay for their own appointments. A family member acting on the chart
+    needs view access to its appointments and billing to use the page, and act access to its
+    billing to pay.
     """
 
     PREFIX = "/portal"
+    PORTAL_ACCESS = {"appointments": PortalAccessLevel.VIEW, "billing": PortalAccessLevel.VIEW}
 
     @property
     def patient_id(self) -> str:
-        """The id of the logged-in patient."""
+        """The id of the patient whose chart the request acts on."""
         return self.request.headers["canvas-logged-in-user-id"]
 
     def _configured_amounts(self) -> dict[str, Decimal]:
@@ -97,7 +105,10 @@ class CopayAPI(PatientSessionAuthMixin, SimpleAPI):
             )
         ]
 
-    @api.post("/appointments/<appointment_id>/pay")
+    @api.post(
+        "/appointments/<appointment_id>/pay",
+        portal_access={"appointments": PortalAccessLevel.VIEW, "billing": PortalAccessLevel.ACT},
+    )
     def pay(self) -> list[Response | Effect]:
         """Charge the chosen stored card for the appointment's copay.
 

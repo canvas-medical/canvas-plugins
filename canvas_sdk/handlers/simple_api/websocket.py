@@ -1,6 +1,6 @@
 from abc import ABC
 from functools import cached_property
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import sentry_sdk
 
@@ -10,13 +10,25 @@ from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 
-from .exceptions import AuthenticationError, InvalidCredentialsError
-from .security import PortalAccess
+from .exceptions import AuthenticationError, InvalidCredentialsError, PortalAccessError
+from .security import (
+    PortalAccess,
+    PortalAccessLevel,
+    PortalAccessRequirement,
+    admits_portal_access,
+    validate_portal_access,
+)
 from .tools import CaseInsensitiveMultiDict, separate_headers
 
 
 class WebSocket:
-    """WebSocket class for incoming requests to the WebSocketAPI."""
+    """
+    WebSocket class for incoming requests to the WebSocketAPI.
+
+    logged_in_user describes the session's user as SessionCredentials does: for a patient, the id
+    is the patient whose chart the connection acts on, even when another login, such as a
+    parent's, is acting on it. portal_access.acting_user_id then names the login that is acting.
+    """
 
     def __init__(self, event: Event) -> None:
         self.channel = event.context["channel_name"]
@@ -34,11 +46,25 @@ class WebSocket:
 
 
 class WebSocketAPI(BaseHandler, ABC):
-    """Abstract base class for WebSocket APIs."""
+    """
+    Abstract base class for WebSocket APIs.
+
+    A login acting on someone else's chart is refused unless PORTAL_ACCESS declares the access it
+    needs, as on a SimpleAPI.
+    """
 
     RESPONDS_TO: ClassVar[list[str]] = [
         EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE),
     ]
+
+    PORTAL_ACCESS: ClassVar[PortalAccessRequirement | None] = None
+
+    _portal_access: ClassVar[dict[str, PortalAccessLevel] | None] = None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+
+        cls._portal_access = validate_portal_access(cls.PORTAL_ACCESS, cls.__name__)
 
     @cached_property
     def websocket(self) -> WebSocket:
@@ -63,6 +89,9 @@ class WebSocketAPI(BaseHandler, ABC):
         """Authenticate the WebSocket request."""
         try:
             if self.authenticate():
+                if not admits_portal_access(self.websocket.portal_access, self._portal_access):
+                    raise PortalAccessError
+
                 return [AcceptConnection().apply()]
             else:
                 raise InvalidCredentialsError

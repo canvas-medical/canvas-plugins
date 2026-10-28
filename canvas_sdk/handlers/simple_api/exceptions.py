@@ -39,6 +39,13 @@ class InvalidCredentialsError(AuthenticationError):
         super().__init__("Provided credentials are invalid")
 
 
+class PortalAccessError(AuthenticationError):
+    """Exception class for a login acting on a patient's chart without the access it needs."""
+
+    def __init__(self) -> None:
+        super().__init__("The login acting on this patient's chart does not have access to this")
+
+
 __exports__ = (
     "SimpleAPIException",
     "AuthenticationError",

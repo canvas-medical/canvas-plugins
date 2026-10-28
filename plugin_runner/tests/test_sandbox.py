@@ -395,6 +395,49 @@ def test_setattr_and_delattr_refuse_what_attribute_syntax_refuses(code: str) -> 
 
 
 @pytest.mark.parametrize(
+    "code",
+    [
+        "access = PortalAccess; access.AREAS = None",
+        "access = PortalAccess; del access.AREAS",
+        "levels = PortalAccessLevel; levels._value2member_map_ = {}",
+        "command = LabOrderCommand; command.Meta.key = 'planCommand'",
+    ],
+    ids=["class attribute", "delete", "enum internals", "nested class"],
+)
+def test_attribute_syntax_refuses_an_outside_class_whatever_name_reaches_it(code: str) -> None:
+    """An alias doesn't open a class from outside the plugin to writes, which would change it
+    for every plugin in the process.
+    """
+    sandbox = _sandbox_from_code(
+        f"""
+        from canvas_sdk.commands import LabOrderCommand
+        from canvas_sdk.handlers.simple_api import PortalAccess, PortalAccessLevel
+
+        {code}
+        """
+    )
+
+    with pytest.raises(AttributeError, match="Forbidden assignment"):
+        sandbox.execute()
+
+
+def test_attribute_syntax_writes_to_a_plugin_class_through_an_alias() -> None:
+    """A class the plugin defines stays writable whatever name reaches it."""
+    sandbox = _sandbox_from_code(
+        """
+        class Thing:
+            pass
+
+        alias = Thing
+        alias.count = 1
+        result = Thing.count
+        """
+    )
+
+    assert sandbox.execute()["result"] == 1
+
+
+@pytest.mark.parametrize(
     "setup",
     [
         "from collections import defaultdict\nd = defaultdict(int)\n",
