@@ -1074,6 +1074,28 @@ def test_claim_effect_assign_rejects_non_uuid_team_id() -> None:
 
 
 @pytest.mark.django_db
+def test_claim_effect_assign_rejects_empty_assignee_id() -> None:
+    """Test that an empty assignee_id is checked against Staff instead of being sent as-is."""
+    claim = ClaimEffect(claim_id=ClaimFactory.create().id)
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(assignee_id="")
+
+    assert "Staff with id  does not exist." in repr(e.value)
+
+
+@pytest.mark.django_db
+def test_claim_effect_assign_rejects_empty_team_id() -> None:
+    """Test that an empty team_id is reported as a missing team instead of being sent as-is."""
+    claim = ClaimEffect(claim_id=ClaimFactory.create().id)
+
+    with pytest.raises(ValidationError) as e:
+        claim.assign(team_id="")
+
+    assert "Team with id  does not exist." in repr(e.value)
+
+
+@pytest.mark.django_db
 def test_claim_effect_assign_rejects_non_uuid_claim_id() -> None:
     """Test that a claim_id that isn't a UUID is reported as a missing claim."""
     claim = ClaimEffect(claim_id="missing-claim")
