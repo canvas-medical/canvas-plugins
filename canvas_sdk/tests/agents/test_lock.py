@@ -95,3 +95,18 @@ def test_context_manager_yields_sentinel() -> None:
     with agent_lock("plugin:agent:patient:7") as sentinel:
         # UUID-shaped — just enough to confirm something was generated.
         assert len(sentinel) >= 32
+
+
+def test_expired_holder_does_not_release_its_successors_lock() -> None:
+    """A holder whose TTL lapsed mid-run leaves the next holder's lock in place."""
+    with agent_lock("plugin:agent:patient:1", holder_id="run-a"):
+        # run-a outlives its TTL; run-b takes the lock while run-a is still working.
+        caches["plugins"].clear()
+        successor = agent_lock("plugin:agent:patient:1", holder_id="run-b")
+        successor.__enter__()
+
+    # run-a has exited. run-b still holds the lock, so run-c must wait.
+    with pytest.raises(AgentLocked, match="run-b"):
+        with agent_lock("plugin:agent:patient:1", holder_id="run-c"):
+            pass
+    successor.__exit__(None, None, None)
