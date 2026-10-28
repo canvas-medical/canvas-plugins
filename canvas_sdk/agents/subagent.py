@@ -28,8 +28,11 @@ use. The manifest stays the security boundary.
 
 Parallelism is via ``canvas_sdk.utils.http.ThreadPoolExecutor`` (the
 sandbox-allowlisted re-export of :class:`concurrent.futures.ThreadPoolExecutor`).
-Anthropic's Python client is thread-safe; list appends on the shared
-``effects`` accumulator are atomic in CPython.
+Each worker thread runs in the parent's plugin database context (plugin,
+custom-data namespace, access level), which is thread-local, and closes its
+database connection when its sub-agent finishes. Anthropic's Python client is
+thread-safe; list appends on the shared ``effects`` accumulator are atomic in
+CPython.
 
 If a sub-agent ever needs durable state, event-driven invocation, or
 cross-plugin reuse, that's the signal to promote it to a full
@@ -38,15 +41,22 @@ cross-plugin reuse, that's the signal to promote it to a full
 
 import json
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any, cast
 
 from anthropic.types import TextBlock, ToolUseBlock
+from django.db import connections
 
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.utils.http import ThreadPoolExecutor
+from canvas_sdk.v1.plugin_database_context import (
+    get_access_level,
+    get_current_plugin,
+    get_current_schema,
+    plugin_database_context,
+)
 
 log = logging.getLogger("plugin_runner_logger")
 
@@ -181,6 +191,30 @@ def run_subagent(
     return ""
 
 
+def _in_database_context_of_this_thread(fn: Callable[..., str]) -> Callable[..., str]:
+    """Wrap ``fn`` to run on a worker thread in the calling thread's plugin database context.
+
+    The plugin, custom-data namespace, and access level are thread-local, so a worker
+    thread would otherwise read and write without them. The worker's database
+    connection is closed when ``fn`` returns, since the pool's threads are not reused
+    by anything that would close it.
+    """
+    plugin = get_current_plugin()
+    namespace = get_current_schema()
+    access_level = get_access_level()
+
+    def run_in_context(*args: Any, **kwargs: Any) -> str:
+        try:
+            if plugin is None:
+                return fn(*args, **kwargs)
+            with plugin_database_context(plugin, namespace=namespace, access_level=access_level):
+                return fn(*args, **kwargs)
+        finally:
+            connections.close_all()
+
+    return run_in_context
+
+
 def run_subagents(
     specs: Iterable[SubAgentSpec],
     user_message: str,
@@ -224,10 +258,11 @@ def run_subagents(
 
     workers = min(len(spec_list), max(1, max_parallel))
     results: dict[str, str] = {spec.name: "" for spec in spec_list}
+    in_parent_context = _in_database_context_of_this_thread(run_subagent)
     with ThreadPoolExecutor(max_workers=workers) as pool:
         future_to_name = {
             pool.submit(
-                run_subagent,
+                in_parent_context,
                 spec,
                 user_message,
                 parent_tools=parent_tools,
