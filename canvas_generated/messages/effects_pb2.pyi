@@ -443,6 +443,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_SERVICE_PROVIDER: _ClassVar[EffectType]
     UPDATE_SERVICE_PROVIDER: _ClassVar[EffectType]
     DEACTIVATE_SERVICE_PROVIDER: _ClassVar[EffectType]
+    RECORD_USAGE: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -879,6 +880,7 @@ REMOVE_DOCUMENT_FROM_PATIENT: EffectType
 CREATE_SERVICE_PROVIDER: EffectType
 UPDATE_SERVICE_PROVIDER: EffectType
 DEACTIVATE_SERVICE_PROVIDER: EffectType
+RECORD_USAGE: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
