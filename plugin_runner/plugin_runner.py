@@ -90,6 +90,19 @@ from settings import (
     SENTRY_DSN,
 )
 
+
+def sentry_release() -> str:
+    """
+    The runner version to report to Sentry: home-app's CANVAS_PLUGINS_RUNNER_REF, which
+    names the canvas-plugins-private ref the runner was built from, else the public pin.
+    """
+    return (
+        os.getenv("CANVAS_PLUGINS_RUNNER_REF")
+        or os.getenv("CANVAS_PLUGINS_REPO_VERSION")
+        or "unknown"
+    )
+
+
 if SENTRY_DSN:
     # Lazy import for faster reload time in dev
     from sentry_sdk.integrations.executing import ExecutingIntegration
@@ -102,7 +115,7 @@ if SENTRY_DSN:
             ExecutingIntegration(),
             PureEvalIntegration(),
         ],
-        release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
+        release=sentry_release(),
         send_default_pii=True,
         spotlight=False,
         traces_sample_rate=0.0,
