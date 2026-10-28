@@ -7,7 +7,7 @@ from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registe
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.effects import Effect
-from canvas_sdk.v1.data import Patient, ProtocolCurrent
+from canvas_sdk.v1.data import ProtocolCurrent
 from logger import log
 
 # Used both in find_protocol_cards filters and in the user-message preamble
@@ -114,7 +114,6 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
         patient_id = trigger_payload["patient_id"]
         note_id = trigger_payload["note_id"]
 
-        patient = Patient.objects.get(id=patient_id)
         context_block = _format_protocol_card_context(patient_id)
 
         effects: list[Effect] = []
@@ -128,10 +127,11 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
         messages: list[dict] = [
             {
                 "role": "user",
+                # No name or other identifiers: the tools are already scoped to
+                # the patient, so the model needs only the task and the cards.
                 "content": (
-                    f"Patient {patient.first_name} {patient.last_name} just had "
-                    f"a visit complete (note locked). Review the chart for "
-                    f"follow-up needs.\n\n{context_block}"
+                    "The patient just had a visit complete (note locked). Review "
+                    f"the chart for follow-up needs.\n\n{context_block}"
                 ),
             }
         ]
