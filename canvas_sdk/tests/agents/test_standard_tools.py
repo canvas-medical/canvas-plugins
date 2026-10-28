@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 
 from canvas_sdk.agents import standard_tools
-from canvas_sdk.test_utils.factories import PatientFactory
+from canvas_sdk.test_utils.factories import MedicationFactory, PatientFactory, TaskFactory
 
 EXPECTED_TOOLS = (
     "find_medications",
@@ -544,30 +544,111 @@ def test_update_task_schema_requires_task_id_only() -> None:
     assert properties["status"]["enum"] == ["COMPLETED", "CLOSED", "OPEN"]
 
 
+@pytest.mark.django_db
 def test_update_task_executor_renames_and_coerces_status_and_due() -> None:
     """update_task converts due_on→datetime and status→TaskStatus before staging."""
+    patient = PatientFactory.create()
+    task = TaskFactory.create(patient=patient)
     effects: list[Any] = []
     result = standard_tools.execute(
         "update_task",
-        {"task_id": "task-1", "status": "COMPLETED", "due_on": "2026-07-15"},
-        ctx={"patient_id": "pat-abc", "effects": effects},
+        {"task_id": str(task.id), "status": "COMPLETED", "due_on": "2026-07-15"},
+        ctx={"patient_id": patient.id, "effects": effects},
     )
 
     assert result == {"ok": True}
     assert len(effects) == 1
 
 
+@pytest.mark.django_db
 def test_update_task_omits_optional_fields_when_not_supplied() -> None:
     """Updating only the status leaves title/due alone (not present in kwargs)."""
+    patient = PatientFactory.create()
+    task = TaskFactory.create(patient=patient)
     effects: list[Any] = []
     result = standard_tools.execute(
         "update_task",
-        {"task_id": "task-1", "status": "CLOSED"},
-        ctx={"patient_id": "pat-abc", "effects": effects},
+        {"task_id": str(task.id), "status": "CLOSED"},
+        ctx={"patient_id": patient.id, "effects": effects},
     )
 
     assert result == {"ok": True}
     assert len(effects) == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "tool_name, arguments",
+    [
+        ("update_task", {"status": "CLOSED"}),
+        ("add_task_comment", {"body": "Closing this out."}),
+    ],
+)
+def test_task_writes_refuse_another_patients_task(tool_name: str, arguments: dict) -> None:
+    """A task_id from outside the run's patient is refused and stages nothing."""
+    other_patients_task = TaskFactory.create()
+    patient = PatientFactory.create()
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="not found for this patient"):
+        standard_tools.execute(
+            tool_name,
+            {"task_id": str(other_patients_task.id), **arguments},
+            ctx={"patient_id": patient.id, "effects": effects},
+        )
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_originate_stop_medication_refuses_another_patients_medication() -> None:
+    """A medication_id from outside the run's patient is refused and stages nothing."""
+    other_patients_medication = MedicationFactory.create()
+    patient = PatientFactory.create()
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="not found for this patient"):
+        standard_tools.execute(
+            "originate_stop_medication",
+            {"medication_id": str(other_patients_medication.id)},
+            ctx={"patient_id": patient.id, "note_id": "note-1", "effects": effects},
+        )
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_originate_stop_medication_stages_the_patients_own_medication() -> None:
+    """The patient's own medication_id passes the check and stages the command."""
+    patient = PatientFactory.create()
+    medication = MedicationFactory.create(patient=patient)
+    effects: list[Any] = []
+
+    result = standard_tools.execute(
+        "originate_stop_medication",
+        {"medication_id": str(medication.id)},
+        ctx={
+            "patient_id": patient.id,
+            "note_id": "00000000-0000-0000-0000-000000000001",
+            "effects": effects,
+        },
+    )
+
+    assert result["ok"] is True
+    assert len(effects) == 1
+
+
+@pytest.mark.django_db
+def test_originate_assessment_refuses_a_condition_outside_the_patient() -> None:
+    """A condition_id the run's patient doesn't have is refused and stages nothing."""
+    patient = PatientFactory.create()
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="not found for this patient"):
+        standard_tools.execute(
+            "originate_assessment",
+            {"condition_id": "00000000-0000-0000-0000-000000000000"},
+            ctx={"patient_id": patient.id, "note_id": "note-1", "effects": effects},
+        )
+    assert effects == []
 
 
 def test_add_task_comment_schema_requires_task_id_and_body() -> None:
@@ -578,13 +659,16 @@ def test_add_task_comment_schema_requires_task_id_and_body() -> None:
     assert set(definition["input_schema"].get("required", [])) == {"task_id", "body"}
 
 
+@pytest.mark.django_db
 def test_add_task_comment_executor_stages_an_add_task_comment_effect() -> None:
     """add_task_comment stages the Effect with the supplied task_id + body."""
+    patient = PatientFactory.create()
+    task = TaskFactory.create(patient=patient)
     effects: list[Any] = []
     result = standard_tools.execute(
         "add_task_comment",
-        {"task_id": "task-1", "body": "Patient called back, awaiting labs."},
-        ctx={"patient_id": "pat-abc", "effects": effects},
+        {"task_id": str(task.id), "body": "Patient called back, awaiting labs."},
+        ctx={"patient_id": patient.id, "effects": effects},
     )
 
     assert result == {"ok": True}
