@@ -50,24 +50,18 @@ _SENTINEL_RE = re.compile(
 )
 
 
-def _is_write_kind(kind: str | None) -> bool:
-    """Tools tagged 'add_effect' or 'originate_command' are write tools."""
-    return kind in {"add_effect", "originate_command"}
+def _is_write(name: str) -> bool:
+    """A write tool is one that declares the effect types it stages."""
+    return bool(standard_tools.effect_types_for(name))
 
 
 def _classify_tools() -> tuple[list[str], list[str]]:
-    """Split tool names into (reads, writes) preserving registration order.
-
-    Tools without a metadata 'kind' (e.g., the demographics scalar
-    registered via the raw ``tool()`` decorator) default to reads —
-    they don't produce Effects.
-    """
+    """Split tool names into (reads, writes) preserving registration order."""
     reads: list[str] = []
     writes: list[str] = []
     for definition in standard_tools.definitions():
         name = definition["name"]
-        kind = standard_tools.metadata_for(name).get("kind")
-        if _is_write_kind(kind):
+        if _is_write(name):
             writes.append(name)
         else:
             reads.append(name)

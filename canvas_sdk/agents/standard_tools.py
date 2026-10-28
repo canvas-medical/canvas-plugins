@@ -457,7 +457,10 @@ def _serialize_allergy(allergy: Any) -> dict[str, Any]:
     limit_description="Maximum results to return. Defaults to 25.",
     categories=("clinical_reads",),
     model=Immunization,
-    returns_description=("Array of objects with `id`, `display`, `code`, `given_on`, `status`."),
+    returns_description=(
+        "Array of objects with `id`, `display`, `code`, `date_administered`, "
+        "`status`, `manufacturer`, `lot_number`."
+    ),
 )
 def _serialize_immunization(immunization: Any) -> dict[str, Any]:
     """Per-row serializer for find_immunizations."""
@@ -514,7 +517,9 @@ def _serialize_immunization(immunization: Any) -> dict[str, Any]:
     limit_description="Maximum results to return. Defaults to 10.",
     categories=("clinical_reads",),
     model=Observation,
-    returns_description=("Array of objects with `id`, `name`, `value`, `units`, `observed_at`."),
+    returns_description=(
+        "Array of objects with `id`, `name`, `value`, `units`, `code`, `date` (ISO 8601)."
+    ),
 )
 def _serialize_vital(observation: Any) -> dict[str, Any]:
     """Per-row serializer for find_vitals."""
@@ -582,8 +587,7 @@ def _tasks_queryset(args: dict[str, Any], pid: str) -> Any:
     categories=("task_reads",),
     model=Task,
     returns_description=(
-        "Array of objects with `id`, `title`, `status`, `due` (ISO 8601), "
-        "`assignee_name`, `team_name`, `labels`, `created`."
+        "Array of objects with `id`, `title`, `status`, `due` (ISO 8601), `task_type`."
     ),
 )
 def _serialize_task(task: Any) -> dict[str, Any]:
@@ -733,8 +737,8 @@ def _serialize_message(message: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=Appointment,
     returns_description=(
-        "Array of objects with `id`, `start_time` (ISO 8601), `status`, "
-        "`appointment_type`, `provider_name`, `note_type`."
+        "Array of objects with `id`, `status`, `start_time` (ISO 8601), "
+        "`duration_minutes`, `provider_name`, `description`."
     ),
 )
 def _serialize_appointment(appointment: Any) -> dict[str, Any]:
@@ -791,7 +795,7 @@ def _serialize_appointment(appointment: Any) -> dict[str, Any]:
     model=Encounter,
     returns_description=(
         "Array of objects with `id`, `state` (new|locked|unlocked|...), "
-        "`note_type`, `started_at`, `provider_name`."
+        "`medium`, `start_time`, `end_time`."
     ),
 )
 def _serialize_encounter(encounter: Any) -> dict[str, Any]:
@@ -1175,7 +1179,7 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
     model=Goal,
     returns_description=(
         "Array of objects with `id`, `goal_statement`, `lifecycle_status`, "
-        "`achievement_status`, `priority`, `start_date`, `due_date`."
+        "`achievement_status`, `priority`, `start_date`, `due_date`, `progress`."
     ),
 )
 def _serialize_goal(goal: Any) -> dict[str, Any]:
@@ -1226,7 +1230,7 @@ def _serialize_goal(goal: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=ImagingReport,
     returns_description=(
-        "Array of objects with `id`, `name`, `result_status`, `assigned_at`, `narrative`."
+        "Array of objects with `id`, `name`, `assigned_date`, `source`, `requires_signature`."
     ),
 )
 def _serialize_imaging_report(report: Any) -> dict[str, Any]:
@@ -1278,8 +1282,8 @@ def _serialize_imaging_report(report: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=Referral,
     returns_description=(
-        "Array of objects with `id`, `service_provider_name`, "
-        "`clinical_question`, `priority`, `status`, `originated_at`."
+        "Array of objects with `id`, `clinical_question`, `priority`, `notes`, "
+        "`date_referred`, `service_provider_name`, `forwarded`."
     ),
 )
 def _serialize_referral(referral: Any) -> dict[str, Any]:
@@ -1337,7 +1341,10 @@ def _serialize_referral(referral: Any) -> dict[str, Any]:
     limit_description="Maximum results to return. Defaults to 25.",
     categories=("clinical_reads",),
     model=CareTeamMembership,
-    returns_description=("Array of objects with `id`, `staff_name`, `role`, `lead`, `status`."),
+    returns_description=(
+        "Array of objects with `id`, `staff_name`, `role_display`, `role_code`, "
+        "`status`, `is_lead`."
+    ),
 )
 def _serialize_care_team_member(membership: Any) -> dict[str, Any]:
     """Per-row serializer for find_care_team_members."""
@@ -1646,7 +1653,8 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=MedicationStatement,
     returns_description=(
-        "Array of objects with `id`, `medication_name`, `narrative`, `recorded_at`."
+        "Array of objects with `id`, `medication_name`, `start_date`, `end_date`, "
+        "`dose_form`, `dose_route`, `dose_frequency_interval`, `sig_original_input`."
     ),
 )
 def _serialize_medication_statement(statement: Any) -> dict[str, Any]:
@@ -1767,8 +1775,8 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
     model=Prescription,
     returns_description=(
         "Array of objects with `id`, `medication_name`, `status`, "
-        "`written_date`, `dispensed_date`, `quantity_to_dispense`, "
-        "`days_supply`, `is_refill`, `sig_original_input`."
+        "`written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
+        "`dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`."
     ),
 )
 def _serialize_prescription(prescription: Any) -> dict[str, Any]:
@@ -1847,7 +1855,7 @@ def _serialize_prescription(prescription: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=Interview,
     returns_description=(
-        "Array of objects with `id`, `name`, `progress_status`, "
+        "Array of objects with `id`, `name`, `status`, `progress_status`, "
         "`questionnaire_names`, `answered_at`, and `responses` "
         "(per-question array of `question`, `response_text`, "
         "`response_value`)."

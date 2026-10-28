@@ -478,7 +478,7 @@ class ToolRegistry:
 
                 return [serializer(row) for row in queryset]
 
-            metadata: dict[str, Any] = {"kind": "filter_search"}
+            metadata: dict[str, Any] = {"kind": "filter_search", "serializer": serializer}
             if model is not None:
                 metadata["model"] = model
             if returns_description is not None:

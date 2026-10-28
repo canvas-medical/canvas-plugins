@@ -288,8 +288,8 @@ def test_format_tool_block_handles_zero_args_tools(monkeypatch: pytest.MonkeyPat
     assert "**Arguments:** none." in block
 
 
-def test_classify_tools_splits_by_metadata_kind(monkeypatch: pytest.MonkeyPatch) -> None:
-    """add_effect / originate_command kinds land in writes; everything else in reads."""
+def test_classify_tools_splits_by_declared_effect_types(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tools that declare effect types land in writes; everything else in reads."""
     registry = ToolRegistry()
     registry.filter_search_tool(
         name="find_a",
@@ -335,19 +335,17 @@ def test_every_real_read_tool_appears_in_the_reads_block() -> None:
     reads_block = blocks["reads"]
     for definition in standard_tools.definitions():
         name = definition["name"]
-        metadata = standard_tools.metadata_for(name)
-        if not _docs_generator._is_write_kind(metadata.get("kind")):
+        if not _docs_generator._is_write(name):
             assert f"`{name}`" in reads_block, f"{name} missing from reads block"
 
 
 def test_every_real_write_tool_appears_in_the_writes_block() -> None:
-    """Every add_effect tool in standard_tools shows up by name in the writes block."""
+    """Every write tool in standard_tools shows up by name in the writes block."""
     blocks = _docs_generator._build_blocks()
     writes_block = blocks["writes"]
     for definition in standard_tools.definitions():
         name = definition["name"]
-        metadata = standard_tools.metadata_for(name)
-        if _docs_generator._is_write_kind(metadata.get("kind")):
+        if _docs_generator._is_write(name):
             assert f"`{name}`" in writes_block, f"{name} missing from writes block"
 
 
@@ -424,3 +422,16 @@ def test_main_returns_2_when_target_does_not_exist(
     exit_code = _docs_generator.main()
 
     assert exit_code == 2
+
+
+def test_tools_that_stage_effects_are_listed_as_writes() -> None:
+    """A write is a tool that declares effect types, however it was registered."""
+    reads, writes = _docs_generator._classify_tools()
+
+    assert "originate_review_note" in writes
+    assert set(writes) == {
+        d["name"]
+        for d in standard_tools.definitions()
+        if standard_tools.effect_types_for(d["name"])
+    }
+    assert not set(reads) & set(writes)
