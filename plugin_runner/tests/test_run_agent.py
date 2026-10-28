@@ -571,7 +571,7 @@ def test_run_agent_sets_tools_allowed_from_manifest(
     # Splice tools.allowed into the loaded manifest entry. Real plugins
     # declare this statically in CANVAS_MANIFEST.json; we mutate at runtime
     # so the test doesn't need its own fixture plugin.
-    LOADED_PLUGINS[AGENT_KEY]["handler"]["tools"] = {"allowed": ["find_medications", "create_task"]}
+    LOADED_PLUGINS[AGENT_KEY]["handler"]["tools"] = {"allowed": ["echo", "not_registered"]}
 
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
     captured: dict[str, Any] = {}
@@ -585,7 +585,7 @@ def test_run_agent_sets_tools_allowed_from_manifest(
     monkeypatch.setattr(agent_cls, "run", _capture)
     next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
-    assert captured["tools_allowed"] == frozenset({"find_medications", "create_task"})
+    assert captured["tools_allowed"] == frozenset({"echo"})
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -635,65 +635,72 @@ def test_run_agent_scopes_agent_tools_to_manifest_allowlist(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_skips_scoping_when_tools_allowed_is_none(
+def test_run_agent_grants_no_tools_when_manifest_omits_them(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
     inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No manifest declaration → agent.tools stays as the class-level registry."""
-    from canvas_sdk.agents import AgentRunResult, ToolRegistry
-
-    full_registry = ToolRegistry()
-    full_registry.register(
-        {"name": "read_chart", "description": "x", "input_schema": {"type": "object"}},
-        lambda arguments, *, ctx: None,
-    )
-
-    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
-    monkeypatch.setattr(agent_cls, "tools", full_registry, raising=False)
+    """No manifest declaration → the agent sees no tools and may return no effects."""
     LOADED_PLUGINS[AGENT_KEY]["handler"].pop("tools", None)
 
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
     captured: dict[str, Any] = {}
+    original_run = agent_cls.run
 
     def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
-        captured["is_same_object"] = self.tools is full_registry
-        return AgentRunResult(state=state, effects=[])
+        captured["tools_allowed"] = self.tools_allowed
+        captured["tool_names"] = [d["name"] for d in self.tools.definitions()]
+        return original_run(self, state, gateway, trigger_payload)
 
     monkeypatch.setattr(agent_cls, "run", _capture)
-    next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
-    # No scoping happened — the agent saw the unfiltered class-level registry.
-    assert captured["is_same_object"] is True
+    assert captured["tools_allowed"] == frozenset()
+    assert captured["tool_names"] == []
+    assert response.success is True
+    assert list(response.effects) == []
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
-def test_run_agent_leaves_tools_allowed_none_when_manifest_omits_it(
+def test_run_agent_drops_effects_no_granted_tool_declares(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
     inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No manifest declaration → tools_allowed is None (= no filtering)."""
-    # Test fixture's manifest declares no ``tools`` key. Make sure we don't
-    # invent a filter when the author didn't ask for one.
-    LOADED_PLUGINS[AGENT_KEY]["handler"].pop("tools", None)
+    """An agent returns only effect types its granted tools can stage.
+
+    The fixture grants `echo` (LOG). A task, a banner, and a nested RunAgentEffect
+    built directly in agent code are dropped.
+    """
+    from canvas_sdk.effects.agent import RunAgentEffect
+    from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
+    from canvas_sdk.effects.task.task import AddTask
 
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
-    captured: dict[str, Any] = {}
+    returned = [
+        Effect(type=EffectType.LOG, payload="{}"),
+        AddTask(title="Call patient", patient_id="p1").apply(),
+        AddBannerAlert(
+            patient_id="p1",
+            key="k",
+            narrative="n",
+            placement=[AddBannerAlert.Placement.CHART],
+            intent=AddBannerAlert.Intent.INFO,
+        ).apply(),
+        RunAgentEffect(agent_id=AGENT_ID, scope_key="s").apply(),
+    ]
+    monkeypatch.setattr(
+        agent_cls, "run", lambda self, state, gateway, payload: AgentRunResult(state, returned)
+    )
 
-    def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
-        from canvas_sdk.agents import AgentRunResult
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
-        captured["tools_allowed"] = self.tools_allowed
-        return AgentRunResult(state=state, effects=[])
-
-    monkeypatch.setattr(agent_cls, "run", _capture)
-    next(iter(plugin_runner.RunAgent(_make_request(), None)))
-
-    assert captured["tools_allowed"] is None
+    assert response.success is True
+    assert [effect.type for effect in response.effects] == [EffectType.LOG]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)

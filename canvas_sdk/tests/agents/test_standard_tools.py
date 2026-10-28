@@ -16,7 +16,12 @@ from typing import Any
 import pytest
 
 from canvas_sdk.agents import standard_tools
-from canvas_sdk.test_utils.factories import MedicationFactory, PatientFactory, TaskFactory
+from canvas_sdk.test_utils.factories import (
+    MedicationFactory,
+    PatientFactory,
+    StaffFactory,
+    TaskFactory,
+)
 
 EXPECTED_TOOLS = (
     "find_medications",
@@ -1137,3 +1142,95 @@ def test_filter_search_tool_respects_supplied_filters_against_empty_db(
     result = standard_tools.execute(tool_name, arguments, ctx={"patient_id": patient.id})
 
     assert result == [], f"{tool_name} with filters {arguments!r} returned non-empty: {result!r}"
+
+
+def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
+    """Valid arguments for every standard write tool, against ``patient``'s records."""
+    from datetime import date
+
+    from canvas_sdk.test_utils.factories import (
+        LabPartnerTestFactory,
+        NoteTypeFactory,
+        PracticeLocationFactory,
+    )
+    from canvas_sdk.v1.data import Condition
+
+    task = TaskFactory.create(patient=patient)
+    lab_test = LabPartnerTestFactory.create()
+    note_type = NoteTypeFactory.create(category="review")
+    practice_location = PracticeLocationFactory.create()
+    medication = MedicationFactory.create(patient=patient)
+    condition = Condition.objects.create(
+        patient=patient,
+        deleted=False,
+        onset_date=date(2020, 1, 1),
+        resolution_date=date(2020, 1, 1),
+        clinical_status="active",
+        notes="",
+        surgical=False,
+    )
+    return {
+        "add_banner_alert": {"narrative": "Overdue", "intent": "warning", "placement": ["chart"]},
+        "remove_banner_alert": {"banner_key": "banner-1"},
+        "create_task": {"title": "Call patient"},
+        "update_task": {"task_id": str(task.id), "status": "CLOSED"},
+        "add_task_comment": {"task_id": str(task.id), "body": "Called."},
+        "add_or_update_protocol_card": {"title": "Recheck A1c", "narrative": "Overdue."},
+        "originate_plan": {"narrative": "Recheck in 2 weeks."},
+        "originate_prescribe_medication": {"sig": "1 tab daily"},
+        "originate_lab_order": {
+            "lab_partner": str(lab_test.lab_partner.id),
+            "tests_order_codes": [lab_test.order_code],
+        },
+        "originate_diagnose_condition": {"icd10_code": "E11.9"},
+        "originate_goal": {"goal_statement": "A1c under 7"},
+        "originate_assessment": {"condition_id": str(condition.id)},
+        "originate_follow_up": {"comment": "Recheck BP"},
+        "originate_stop_medication": {"medication_id": str(medication.id)},
+        "originate_message": {"content": "Your labs look good."},
+        "originate_review_note": {
+            "narrative": "Labs reviewed.",
+            "note_type_id": str(note_type.id),
+            "practice_location_id": str(practice_location.id),
+        },
+    }
+
+
+@pytest.mark.django_db
+def test_every_write_tool_emits_only_the_effect_types_it_declares() -> None:
+    """The runner filters agent effects by declared types, so each declaration must be exact."""
+    from canvas_generated.messages.effects_pb2 import EffectType
+
+    patient = PatientFactory.create()
+    staff = StaffFactory.create()
+    arguments = _write_tool_arguments(patient)
+    write_tools = {
+        d["name"]
+        for d in standard_tools.definitions()
+        if standard_tools.effect_types_for(d["name"])
+    }
+    assert write_tools == set(arguments), "a write tool is missing arguments or a declaration"
+
+    for name, tool_arguments in arguments.items():
+        effects: list[Any] = []
+        result = standard_tools.execute(
+            name,
+            tool_arguments,
+            ctx={
+                "patient_id": patient.id,
+                "staff_id": staff.id,
+                "note_id": "00000000-0000-0000-0000-000000000001",
+                "effects": effects,
+            },
+        )
+        assert result["ok"] is True, (name, result)
+        emitted = {EffectType.Name(effect.type) for effect in effects}
+        assert emitted, name
+        assert emitted <= standard_tools.effect_types_for(name), (name, emitted)
+
+
+def test_read_tools_declare_no_effect_types() -> None:
+    """Granting only reads lets an agent return no effects at all."""
+    for definition in standard_tools.definitions():
+        if definition["name"].startswith(("find_", "get_")):
+            assert standard_tools.effect_types_for(definition["name"]) == frozenset()
