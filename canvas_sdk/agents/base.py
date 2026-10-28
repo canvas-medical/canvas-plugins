@@ -23,26 +23,21 @@ class AgentPlugin(ABC):
     # to the module-level registry the agent uses (e.g., ``tools =
     # chart_chat_tools_registry``). Before ``run()`` fires, the
     # platform replaces this with a *scoped* view containing only the
-    # tools allowed by the manifest's
-    # ``components.agents[].tools.allowed``; the agent uses
-    # ``self.tools.definitions()`` / ``self.tools.execute(...)``
-    # directly and the disallowed entries simply aren't reachable. PoC:
-    # the agent must use ``self.tools`` rather than importing the
-    # underlying module-level registry to get the filtered view. True
-    # sandbox-level isolation (preventing access to the unfiltered
-    # registry) is V1+.
+    # tools the manifest's ``components.agents[].tools`` grants; an agent
+    # whose manifest grants nothing gets an empty registry. The agent uses
+    # ``self.tools.definitions()`` / ``self.tools.execute(...)`` directly
+    # and the ungranted entries aren't reachable.
     #
-    # ``None`` is the default — agents that don't declare a class-level
-    # ``tools`` attribute (e.g., agents with no tool use) get no
-    # enforcement seam and no scoping happens.
+    # The grant also bounds the agent's output: the platform drops any
+    # effect in ``AgentRunResult.effects`` whose type no granted tool
+    # declares (``ToolRegistry.effect_types``), so building an effect
+    # directly, or through the module-level registry, can't widen it.
     tools: ToolRegistry | None = None
 
-    # Per-run tool allowlist (the source of ``tools`` scoping above).
-    # Sourced from ``components.agents[].tools.allowed`` at load time
-    # and set by the platform on the agent instance before lifecycle
-    # hooks fire. ``None`` (no manifest declaration) means no scoping
-    # — the agent sees every tool registered on its registry.
-    tools_allowed: frozenset[str] | None = None
+    # The tool names the manifest grants this run, set by the platform on
+    # the agent instance before lifecycle hooks fire. Empty when the
+    # manifest grants none.
+    tools_allowed: frozenset[str] = frozenset()
 
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:

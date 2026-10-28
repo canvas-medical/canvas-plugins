@@ -2,6 +2,21 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from canvas_generated.messages.effects_pb2 import EffectType
+
+
+def _effect_type_name(effect_class: type, effect_method: str) -> str:
+    """The ``EffectType`` name ``effect_class(...).<effect_method>()`` produces.
+
+    ``apply()`` stamps ``Meta.effect_type``, an ``EffectType`` value. The note-family
+    verbs (``create()``, ``edit()``, ...) stamp ``"<VERB>_<Meta.effect_type>"``,
+    where ``Meta.effect_type`` is a bare resource name such as ``"MESSAGE"``.
+    """
+    effect_type = effect_class.Meta.effect_type  # type: ignore[attr-defined]
+    if effect_method == "apply":
+        return EffectType.Name(effect_type)
+    return f"{effect_method.upper()}_{effect_type}"
+
 
 class ToolExecutor(Protocol):
     """Executor signature: ``fn(arguments, *, ctx)`` returning a JSON-serializable value.
@@ -168,6 +183,9 @@ class ToolRegistry:
         # generator. Tools registered via the raw ``tool()`` decorator can
         # opt in via ``returns_description=`` etc.
         self._metadata: dict[str, dict[str, Any]] = {}
+        # tool name → the EffectType names the tool can stage. The plugin runner
+        # drops any effect an agent returns whose type no granted tool declares.
+        self._effect_types: dict[str, frozenset[str]] = {}
 
     def register(
         self,
@@ -176,6 +194,7 @@ class ToolRegistry:
         *,
         categories: Iterable[str] = (),
         metadata: dict[str, Any] | None = None,
+        effect_types: Iterable[str] = (),
     ) -> None:
         """Register a tool by passing the definition and executor directly.
 
@@ -191,22 +210,33 @@ class ToolRegistry:
                 shape), ``model`` (Django data model backing a read tool),
                 ``command_class`` / ``effect_class`` (Effect class for write
                 tools). Not used at runtime; consumed by the docs generator.
+            effect_types: ``EffectType`` names the tool stages (e.g.
+                ``"CREATE_TASK"``). Granting the tool to an agent lets the agent
+                return effects of these types; the plugin runner drops any
+                other effect the agent returns. A read-only tool declares none.
 
         Raises:
-            ValueError: If ``definition`` is missing a ``"name"`` key or if a
-                tool with that name is already registered.
+            ValueError: If ``definition`` is missing a ``"name"`` key, if a
+                tool with that name is already registered, or if an effect
+                type is not an ``EffectType`` name.
         """
         name = definition.get("name")
         if not name:
             raise ValueError("Tool definition is missing a 'name' key")
         if name in self._executors:
             raise ValueError(f"Tool {name!r} is already registered")
+        declared = frozenset(effect_types)
+        unknown = sorted(declared - set(EffectType.keys()))
+        if unknown:
+            raise ValueError(f"Tool {name!r} declares unknown effect types: {unknown}")
         self._definitions.append(definition)
         self._executors[name] = executor
         for category in categories:
             self._categories.setdefault(category, set()).add(name)
         if metadata:
             self._metadata[name] = dict(metadata)
+        if declared:
+            self._effect_types[name] = declared
 
     def metadata_for(self, name: str) -> dict[str, Any]:
         """Return the docs-oriented metadata for a tool, or an empty dict.
@@ -220,6 +250,18 @@ class ToolRegistry:
         """Return the categories a tool is tagged with, in registration order."""
         return tuple(c for c, names in self._categories.items() if name in names)
 
+    def effect_types_for(self, name: str) -> frozenset[str]:
+        """Return the ``EffectType`` names a tool declares it stages."""
+        return self._effect_types.get(name, frozenset())
+
+    def effect_types(self) -> frozenset[str]:
+        """Every ``EffectType`` name a tool in this registry can stage.
+
+        On the manifest-scoped registry the runner hands an agent, this is the
+        set of effect types the agent may return.
+        """
+        return frozenset().union(*self._effect_types.values())
+
     def tool(
         self,
         *,
@@ -228,13 +270,15 @@ class ToolRegistry:
         input_schema: dict[str, Any],
         categories: Iterable[str] = (),
         returns_description: str | None = None,
+        effect_types: Iterable[str] = (),
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
         ``categories`` tags the tool for shorthand allowlist references — see
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
-        generator.
+        generator. ``effect_types`` names the effects the tool stages — see
+        :meth:`register`.
         """
 
         def decorator(fn: ToolExecutor) -> ToolExecutor:
@@ -246,6 +290,7 @@ class ToolRegistry:
                 fn,
                 categories=categories,
                 metadata=metadata or None,
+                effect_types=effect_types,
             )
             return fn
 
@@ -612,6 +657,8 @@ class ToolRegistry:
             executor,
             categories=categories,
             metadata=metadata,
+            # Matches the type `_BaseCommand.originate()` stamps on its Effect.
+            effect_types=(f"ORIGINATE_{command_class.constantized_key()}_COMMAND",),  # type: ignore[attr-defined]
         )
 
     def add_effect_tool(
@@ -789,6 +836,7 @@ class ToolRegistry:
             executor,
             categories=categories,
             metadata=metadata,
+            effect_types=(_effect_type_name(effect_class, effect_method),),
         )
 
     def extend(self, other: "ToolRegistry") -> None:
@@ -811,6 +859,7 @@ class ToolRegistry:
                 other._executors[name],
                 categories=categories,
                 metadata=metadata,
+                effect_types=other.effect_types_for(name),
             )
 
     def scope(self, allowed: Iterable[str]) -> "ToolRegistry":
@@ -846,6 +895,7 @@ class ToolRegistry:
                     self._executors[name],
                     categories=self.categories_for(name),
                     metadata=self.metadata_for(name),
+                    effect_types=self.effect_types_for(name),
                 )
         return scoped
 
