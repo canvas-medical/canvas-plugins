@@ -547,6 +547,7 @@ def test_deploy_snapshot_keeps_platform_files_beside_the_package_and_skips_an_un
 
     assert again.exit_code == 0, again.output
     assert "main on Canvas Platform already holds this snapshot." in again.output
+    assert "Pushed" not in again.output
     assert _git(bare, "rev-parse", "main") == pushed
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
         {"name": NAME, "ref": pushed}
@@ -571,7 +572,9 @@ def test_deploy_snapshot_refuses_to_replace_a_change_made_on_platform(
     result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
 
     assert result.exit_code == 1
-    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    # The paths are part of the error, so a CI log that interleaves stdout and stderr
+    # shows them together.
+    assert result.output.index("Error:") < result.output.index(f"  {NAME}/CANVAS_MANIFEST.json")
     assert f"`canvas clone {NAME}`" in result.output
     assert _git(bare, "rev-parse", "main") == edited
 

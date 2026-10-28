@@ -484,17 +484,14 @@ def _push_snapshot(
         )
     registered = client.register_plugin(publisher, name)
     me = client.me()
-    branch = registered.get("default_branch") or "main"
-    sha = git.push_snapshot(
+    return git.push_snapshot(
         snapshot,
         name,
         registered["git_url"],
-        branch,
+        registered.get("default_branch") or "main",
         platform,
         author=(me.get("name") or me["email"], me["email"]),
     )
-    print(f"Pushed {sha[:12]} to {branch}, a snapshot of {snapshot.commit[:12]}.")
-    return sha
 
 
 def _push(

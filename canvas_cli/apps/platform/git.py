@@ -478,6 +478,7 @@ def push_snapshot(
             raise GitError(
                 "git push to Canvas Platform failed:\n" + (push.stderr.strip() or "unknown error")
             )
+        print(f"Pushed {commit[:12]} to {branch}, a snapshot of {snapshot.commit[:12]}.")
         return commit
 
 
@@ -538,14 +539,16 @@ def _guard_platform_history(
     replaced = sorted(on_platform & _paths(work, "diff", "--name-only", "-z", tip, root))
     if not replaced:
         return
-    print(f"These files on {branch} were changed on Canvas Platform {since}:")
-    print("\n".join(f"  {path}" for path in replaced))
+    changes = f"These files on {branch} were changed on Canvas Platform {since}:\n" + "\n".join(
+        f"  {path}" for path in replaced
+    )
     if interactive():
+        print(changes)
         if not typer.confirm("Replace them with this snapshot's versions?", default=False):
             raise typer.Abort()
         return
     raise GitError(
-        f"This snapshot would replace those changes. Copy Canvas Platform's versions into "
+        f"{changes}\nThis snapshot would replace them. Copy Canvas Platform's versions into "
         f"{snapshot.path or 'the plugin'} (`canvas clone {name}` checks them out) and commit "
         "them, or run deploy at a terminal to confirm replacing them."
     )
