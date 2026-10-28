@@ -7,6 +7,8 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import RunAgentRequest
+from canvas_sdk.agents import AgentRunResult
+from canvas_sdk.effects import Effect
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
@@ -174,6 +176,55 @@ def test_run_agent_unknown_agent_id(
     response = next(iter(plugin_runner.RunAgent(request, None)))
     assert response.success is False
     assert list(response.effects) == []
+
+
+@pytest.mark.parametrize("plugin_name", ["another_plugin", ""], ids=["other", "blank"])
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_refuses_an_agent_the_requesting_plugin_does_not_own(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    plugin_name: str,
+) -> None:
+    """Only the plugin that ships an agent can run it, with its key, data, and tool grants."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    ran: list[bool] = []
+    monkeypatch.setattr(agent_cls, "load_state", lambda self, scope_key: ran.append(True))
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(plugin_name=plugin_name), None)))
+
+    assert response.success is False
+    assert list(response.effects) == []
+    assert ran == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_drops_usage_the_plugin_is_not_priced_in(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Agent effects pass the same RecordUsage gate handler effects do."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    usage = Effect(
+        type=EffectType.RECORD_USAGE,
+        payload=json.dumps({"data": {"unit": "unpriced unit", "key": "k", "quantity": 999}}),
+    )
+    log_effect = Effect(type=EffectType.LOG, payload="{}")
+    monkeypatch.setattr(
+        agent_cls,
+        "run",
+        lambda self, state, gateway, payload: AgentRunResult(state, [usage, log_effect]),
+    )
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is True
+    assert [effect.type for effect in response.effects] == [EffectType.LOG]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)

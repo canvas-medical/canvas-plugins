@@ -496,6 +496,18 @@ class PluginRunner(PluginRunnerServicer):
             base_plugin_name = module_path.split(".", 1)[0]
             registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
 
+            # `plugin_name` is the plugin whose handler emitted the RunAgentEffect,
+            # stamped by this runner when the handler ran. An agent runs with its own
+            # plugin's gateway key, data namespace, and tool grants, so only that
+            # plugin may run it.
+            if request.plugin_name != base_plugin_name:
+                log.error(
+                    f"RunAgent: plugin {request.plugin_name!r} cannot run agent "
+                    f"{request.agent_id!r}, which belongs to {base_plugin_name!r}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
             if registry_key not in LOADED_PLUGINS:
                 log.error(
                     f"RunAgent: agent class not loaded — "
@@ -649,13 +661,16 @@ class PluginRunner(PluginRunnerServicer):
                 Effect(
                     type=effect.type,
                     payload=effect.payload,
-                    plugin_name=request.plugin_name or base_plugin_name,
+                    plugin_name=base_plugin_name,
                     handler_name=request.handler_name or class_name,
                     actor=request.actor,
                     source=request.source or "agent",
                 )
                 for effect in result.effects
             ]
+            emitted_effects = permitted_usage(
+                emitted_effects, plugin.get("usage_units", frozenset())
+            )
             emitted_effects = validate_effects(emitted_effects)
 
             log.info(
