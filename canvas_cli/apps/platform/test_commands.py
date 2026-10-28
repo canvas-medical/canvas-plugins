@@ -26,6 +26,8 @@ from canvas_cli.apps.platform import auth, commands, git
 from canvas_cli.main import app
 
 runner = CliRunner()
+# For asserting what goes to stderr, where diagnostics belong so a piped log keeps their order.
+split_runner = CliRunner(mix_stderr=False)
 PLATFORM = "https://platform.example"
 API = f"{PLATFORM}/api/v1"
 NAME = "acme__intake"
@@ -439,7 +441,437 @@ def test_deploy_refuses_a_package_nested_deeper_in_a_repository(
 
     assert result.exit_code == 2
     assert "must be rooted at the directory containing the package" in result.output
+    assert "pass --snapshot" in result.output
     assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+# -- deploy --snapshot -------------------------------------------------------
+
+
+@pytest.fixture
+def monorepo(tmp_path: Path) -> Path:
+    """A committed package at ``<monorepo>/plugins/acme__intake``, beside another plugin and
+    other code, in a repository whose ``origin`` is the customer's own git host.
+    """
+    root = tmp_path / "monorepo"
+    directory = root / "plugins" / NAME
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (root / "plugins" / "acme__other").mkdir()
+    (root / "plugins" / "acme__other" / "CANVAS_MANIFEST.json").write_text("{}")
+    (root / "services").mkdir()
+    (root / "services" / "api.py").write_text("x = 1\n")
+    _git(root, "init", "--initial-branch=main")
+    _git(root, "remote", "add", "origin", "https://git.example.com/acme/monorepo.git")
+    _git(root, "add", ".")
+    _git(root, "commit", "-m", "first")
+    return directory
+
+
+# The manifest as platform's catalog listing editor leaves it.
+EDITED_MANIFEST = json.dumps({"name": NAME, "catalog": {"tagline": "Intake forms"}})
+
+
+def _commit_in(directory: Path, path: str, content: str) -> None:
+    (directory / path).write_text(content)
+    _git(directory, "add", path)
+    _git(directory, "commit", "-m", f"Change {path}")
+
+
+def _commit_on_platform(bare: Path, tmp_path: Path, path: str, content: str) -> None:
+    """A commit made on platform's side, the way its catalog listing editor commits to main."""
+    checkout = tmp_path / "platform-side"
+    _git(tmp_path, "clone", "-q", bare.as_uri(), str(checkout))
+    (checkout / path).parent.mkdir(parents=True, exist_ok=True)
+    _commit_in(checkout, path, content)
+    _git(checkout, "push", "-q", "origin", "HEAD:main")
+
+
+def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """--snapshot pushes the committed package folder as one commit traced to its source,
+    authored as the signed-in identity, and deploys it, without touching the monorepo.
+    """
+    root = monorepo.parent.parent
+    config = (root / ".git" / "config").read_text()
+
+    result = split_runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    head = _git(root, "rev-parse", "HEAD")
+    pushed = _git(bare, "rev-parse", "main")
+    assert _git(bare, "ls-tree", "-r", "--name-only", "main") == f"{NAME}/CANVAS_MANIFEST.json"
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
+        root, "rev-parse", f"HEAD:plugins/{NAME}"
+    )
+    assert _git(bare, "log", "-1", "--format=%an <%ae>", "main") == "Dana Reyes <dana@acme.example>"
+    trailers = _git(bare, "log", "-1", "--format=%(trailers:only)", "main")
+    assert trailers == f"Monorepo-Commit: {head}\nMonorepo-Path: plugins/{NAME}"
+    _git(bare, "fsck", "--strict")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": pushed}
+    ]
+    assert (root / ".git" / "config").read_text() == config
+    assert _git(root, "status", "--porcelain") == ""
+    assert "is not on any remote branch" in result.stderr
+
+
+def test_deploy_snapshot_keeps_platform_files_beside_the_package_and_skips_an_unchanged_push(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A snapshot replaces only the package folder on main, and an unchanged package pushes
+    nothing and deploys the commit main already has.
+    """
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, "README.md", "# Intake\n")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "ls-tree", "-r", "--name-only", "main").splitlines() == [
+        "README.md",
+        f"{NAME}/CANVAS_MANIFEST.json",
+        f"{NAME}/handler.py",
+    ]
+    pushed = _git(bare, "rev-parse", "main")
+
+    again = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--instance", "acme-staging"]
+    )
+
+    assert again.exit_code == 0, again.output
+    assert "main on Canvas Platform already holds this snapshot." in again.output
+    assert "Pushed" not in again.output
+    assert _git(bare, "rev-parse", "main") == pushed
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": pushed}
+    ]
+
+
+def test_deploy_snapshot_refuses_to_replace_a_change_made_on_platform(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A file in the package changed on main since the last snapshot, such as by the catalog
+    listing editor, is not replaced without a person confirming it.
+    """
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    edited = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    # The paths are part of the error, so a CI log that interleaves stdout and stderr
+    # shows them together.
+    assert result.output.index("Error:") < result.output.index(f"  {NAME}/CANVAS_MANIFEST.json")
+    assert f"`canvas clone {NAME}`" in result.output
+    assert _git(bare, "rev-parse", "main") == edited
+
+
+def test_deploy_snapshot_replaces_a_platform_change_once_confirmed_at_a_terminal(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """At a terminal the person may confirm replacing the change made on platform."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    monkeypatch.setattr(git, "interactive", lambda: True)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"], input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(monorepo, "rev-parse", "HEAD:./")
+
+
+def test_deploy_snapshot_accepts_a_platform_change_the_monorepo_carries(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """Once the monorepo holds platform's version of a file, a snapshot goes through."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+
+
+def test_deploy_snapshot_refuses_to_roll_back_a_later_snapshot(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A checkout whose HEAD lacks the commit main was last deployed from is refused."""
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    deployed = _git(bare, "rev-parse", "main")
+    _git(monorepo, "checkout", "-q", "HEAD~1")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "would roll the plugin back" in result.output
+    assert f"  plugins/{NAME}/handler.py" in result.output
+    assert _git(bare, "rev-parse", "main") == deployed
+
+
+def test_deploy_snapshot_refuses_a_branch_missing_changes_main_was_deployed_with(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A branch that forked before the last deploy and lacks its changes is refused, though
+    HEAD is beside the deployed commit rather than behind it.
+    """
+    root = monorepo.parent.parent
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    deployed = _git(bare, "rev-parse", "main")
+    _git(root, "checkout", "-q", "-b", "stale", "HEAD~1")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert f"  plugins/{NAME}/handler.py" in result.output
+    assert _git(bare, "rev-parse", "main") == deployed
+
+
+def test_deploy_snapshot_after_a_deployed_branch_is_squash_merged(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A branch deployed before it was squash-merged leaves its commit out of main's history,
+    but main carries its changes, so a deploy from main goes through.
+    """
+    root = monorepo.parent.parent
+    _git(root, "checkout", "-q", "-b", "feature")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _git(root, "checkout", "-q", "main")
+    _git(root, "merge", "-q", "--squash", "feature")
+    _git(root, "commit", "-q", "-m", "Feature, squashed")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(monorepo, "rev-parse", "HEAD:./")
+
+
+def test_deploy_snapshot_refuses_uncommitted_changes_even_with_yes(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """--snapshot never commits in the larger repository, so uncommitted work is refused."""
+    (monorepo / "handler.py").write_text("x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only", "--yes"])
+
+    assert result.exit_code == 2
+    assert f"plugins/{NAME}/handler.py" in result.output
+    assert _git(monorepo, "rev-list", "--count", "HEAD") == "1"
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+def test_deploy_snapshot_refuses_what_would_not_reach_an_instance_intact(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """Submodules, symbolic links and files stored through a filter, such as Git LFS or
+    git-crypt, are refused by path before anything is registered or pushed. A `filter`
+    attribute naming no driver changes nothing and is allowed.
+    """
+    root = monorepo.parent.parent
+    (root / ".gitattributes").write_text(
+        "*.png filter=lfs\nsecrets.json filter=git-crypt\nnotes.txt filter\n"
+    )
+    (monorepo / "logo.png").write_text("version https://git-lfs.github.com/spec/v1\n")
+    (monorepo / "secrets.json").write_text("{}\n")
+    (monorepo / "notes.txt").write_text("notes\n")
+    (monorepo / "shared").symlink_to("../../services")
+    (monorepo / "vendor").mkdir()  # where an uninitialized submodule sits
+    _git(root, "add", ".")
+    head = _git(root, "rev-parse", "HEAD")
+    _git(root, "update-index", "--add", "--cacheinfo", f"160000,{head},plugins/{NAME}/vendor")
+    _git(root, "commit", "-m", "assets")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 2
+    assert "logo.png is stored through the 'lfs' filter" in result.output
+    assert "secrets.json is stored through the 'git-crypt' filter" in result.output
+    assert "notes.txt" not in result.output
+    assert "shared is a symbolic link" in result.output
+    assert "vendor is a submodule" in result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+@pytest.mark.parametrize("extra", [["--ref", "v1.2.0"], ["--no-push"]])
+def test_deploy_snapshot_refuses_the_options_that_do_not_push(
+    extra: list[str], api: requests_mock_module.Mocker, monorepo: Path, signed_in: None
+) -> None:
+    """--snapshot with an option that deploys without pushing is refused before anything runs."""
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", *extra])
+
+    assert result.exit_code == 2
+    assert "--snapshot pushes a new commit" in result.output
+    assert not api.called
+
+
+def test_deploy_snapshot_needs_a_repository(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A package in no git repository has no commits to snapshot."""
+    directory = tmp_path / NAME
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+
+    result = runner.invoke(app, ["deploy", str(directory), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 2
+    assert "is not in one" in result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+def test_deploy_snapshot_needs_the_package_committed(
+    api: requests_mock_module.Mocker, monorepo: Path, signed_in: None
+) -> None:
+    """A package the repository ignores has nothing committed to snapshot."""
+    root = monorepo.parent.parent
+    _git(root, "rm", "-q", "-r", "--cached", f"plugins/{NAME}")
+    (root / ".gitignore").write_text(f"plugins/{NAME}/\n")
+    _git(root, "add", ".gitignore")
+    _git(root, "commit", "-m", "ignore it")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 2
+    assert "has no committed files" in result.output
+
+
+def test_deploy_snapshot_over_history_that_was_not_snapshotted(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+) -> None:
+    """The first snapshot onto a main built by ordinary pushes treats every file in the
+    package on main as platform's, so one the snapshot would change is refused.
+    """
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    pushed = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "by pushes that were not snapshots" in result.output
+    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert f"  {NAME}/handler.py" not in result.output  # new in the snapshot, not replaced
+    assert _git(bare, "rev-parse", "main") == pushed
+
+
+def test_deploy_snapshot_aborts_when_the_person_declines_to_replace(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Declining at the terminal leaves main as platform left it."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    edited = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    monkeypatch.setattr(git, "interactive", lambda: True)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"], input="n\n")
+
+    assert result.exit_code == 1
+    assert _git(bare, "rev-parse", "main") == edited
+
+
+def test_deploy_snapshot_from_a_shallow_checkout(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A shallow CI checkout lacks the commit main was last deployed from, so the rollback
+    check is skipped and said to be, and a pushed HEAD draws no warning.
+    """
+    root = monorepo.parent.parent
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    shallow = tmp_path / "ci"
+    _git(tmp_path, "clone", "-q", "--depth", "1", root.as_uri(), str(shallow))
+
+    result = split_runner.invoke(
+        app, ["deploy", str(shallow / "plugins" / NAME), "--snapshot", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "so it is not checked whether this deploy rolls the plugin back" in result.stderr
+    assert "git fetch --unshallow" in result.stderr
+    assert "is not on any remote branch" not in result.stderr
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
+        root, "rev-parse", f"HEAD:plugins/{NAME}"
+    )
+
+
+def test_deploy_snapshot_reports_a_failed_fetch(
+    api: requests_mock_module.Mocker, monorepo: Path, signed_in: None, tmp_path: Path
+) -> None:
+    """A git server that cannot be fetched from is reported without the usage line."""
+    api.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={"name": NAME, "git_url": (tmp_path / "missing.git").as_uri()},
+    )
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "git fetch from Canvas Platform failed" in result.output
+    assert "Usage:" not in result.output
+
+
+def test_deploy_snapshot_reports_a_refused_push(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """When platform's git server refuses the snapshot, its reason is shown."""
+    hook = bare / "hooks" / "pre-receive"
+    # An init.templateDir without hooks/ leaves the bare repository without one.
+    hook.parent.mkdir(exist_ok=True)
+    hook.write_text("#!/bin/sh\necho 'Refused refs/heads/main: listing is invalid' >&2\nexit 1\n")
+    hook.chmod(0o755)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "git push to Canvas Platform failed" in result.output
+    assert "listing is invalid" in result.output
 
 
 def test_deploy_reports_a_failed_target_and_exits_nonzero(
@@ -1567,6 +1999,8 @@ def test_deploy_reports_a_refused_push_without_the_usage_line(
 ) -> None:
     """When platform's git server refuses the push, its reason is shown with no usage text."""
     hook = bare / "hooks" / "pre-receive"
+    # An init.templateDir without hooks/ leaves the bare repository without one.
+    hook.parent.mkdir(exist_ok=True)
     hook.write_text("#!/bin/sh\necho 'Refused refs/heads/main: listing is invalid' >&2\nexit 1\n")
     hook.chmod(0o755)
 
