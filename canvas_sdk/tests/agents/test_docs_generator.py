@@ -17,12 +17,16 @@ from typing import Any
 
 import pytest
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import _docs_generator, standard_tools
 from canvas_sdk.agents.tool_registry import EffectField, ToolRegistry
 
 
 class _FakeAddTaskEffect:
     """Stub matching what the real AddTask Effect.apply() returns shape-wise."""
+
+    class Meta:
+        effect_type = EffectType.CREATE_TASK
 
     def __init__(self, **kwargs: Any) -> None:
         for key, value in kwargs.items():
