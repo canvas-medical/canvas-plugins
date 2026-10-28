@@ -762,7 +762,7 @@ def validate_manifest(
 
 
 def _validate_plugin_loads(plugin_name: Path) -> None:
-    """Sandbox-load every handler declared in the manifest and report failures.
+    """Sandbox-load every handler and agent declared in the manifest and report failures.
 
     Surfaces sandbox violations (disallowed imports, restricted syntax, import
     errors) at validation time instead of at runtime on the instance. Uses the
@@ -775,10 +775,12 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     plugin_path = plugin_name.resolve()
     manifest_json = json.loads((plugin_path / "CANVAS_MANIFEST.json").read_text())
     components = manifest_json.get("components", {})
+    # The same component lists the runner's import_plugin loads.
     handlers = (
         components.get("protocols", [])
         + components.get("applications", [])
         + components.get("handlers", [])
+        + components.get("agents", [])
     )
 
     if not handlers:
@@ -792,7 +794,7 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
 
-    print(f"Loading {len(handlers)} handler(s) in the sandbox:")
+    print(f"Loading {len(handlers)} handler(s) and agent(s) in the sandbox:")
 
     with collect_missing_attribute_reads() as missing:
         results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
@@ -816,10 +818,10 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
             print(f"  - {name}")
 
     if failures:
-        print(f"\n{len(failures)} of {len(results)} handler(s) failed to load in the sandbox.")
+        print(f"\n{len(failures)} of {len(results)} component(s) failed to load in the sandbox.")
         raise typer.Exit(1)
 
-    print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
+    print(f"All {len(results)} component(s) load cleanly in the sandbox.")
 
 
 def _lint_plugin_static(plugin_name: Path) -> None:
@@ -853,7 +855,7 @@ def _lint_plugin_static(plugin_name: Path) -> None:
 def validate(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
-    """Validate a plugin's manifest and that all its handlers load in the sandbox."""
+    """Validate a plugin's manifest and that all its handlers and agents load in the sandbox."""
     validate_manifest(plugin_name)
     _lint_plugin_static(plugin_name)
     _validate_plugin_loads(plugin_name)
