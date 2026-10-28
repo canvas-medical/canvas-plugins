@@ -38,7 +38,7 @@ from anthropic.types import TextBlock, ToolUseBlock
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.models.conversation import Conversation
-from agent_runner_poc.models.proxy import PatientProxy
+from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
@@ -180,21 +180,41 @@ SYSTEM_PROMPT = (
 
 MAX_TURNS = 8
 
+SCOPE_PREFIX = "agent_runner_poc:chart_chat"
 
-def _load_conversation_messages(patient_id: str) -> list[dict[str, Any]]:
-    """Read the patient's existing message history from Conversation Custom Data."""
-    conversation = Conversation.objects.filter(patient__id=patient_id).first()
+
+def chart_chat_scope_key(patient_id: str, staff_id: str) -> str:
+    """The scope of one clinician's conversation about one patient."""
+    return f"{SCOPE_PREFIX}:patient:{patient_id}:staff:{staff_id}"
+
+
+def _scope_ids(scope_key: str) -> tuple[str, str]:
+    """The patient and staff ids a :func:`chart_chat_scope_key` names."""
+    _, patient_id, _, staff_id = scope_key.removeprefix(f"{SCOPE_PREFIX}:").split(":")
+    return patient_id, staff_id
+
+
+def load_conversation_messages(patient_id: str, staff_id: str) -> list[dict[str, Any]]:
+    """Read a clinician's message history about a patient from Conversation Custom Data."""
+    conversation = Conversation.objects.filter(patient__id=patient_id, staff__id=staff_id).first()
     if conversation is None:
         return []
     return list(conversation.messages or [])
 
 
-def _save_conversation_messages(patient_id: str, messages: list[dict[str, Any]]) -> None:
+def _save_conversation_messages(
+    patient_id: str,
+    staff_id: str,
+    messages: list[dict[str, Any]],
+) -> None:
     """Persist the updated message history; create the Conversation row on first save."""
-    patient = PatientProxy.objects.get(id=patient_id)
-    conversation = Conversation.objects.filter(patient__id=patient_id).first()
+    conversation = Conversation.objects.filter(patient__id=patient_id, staff__id=staff_id).first()
     if conversation is None:
-        Conversation.objects.create(patient=patient, messages=messages)
+        Conversation.objects.create(
+            patient=PatientProxy.objects.get(id=patient_id),
+            staff=StaffProxy.objects.get(id=staff_id),
+            messages=messages,
+        )
     else:
         conversation.messages = messages
         conversation.save()
@@ -231,16 +251,16 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
     tools = _registered_tools
 
     def load_state(self, scope_key: str) -> AgentState:
-        """Read the conversation snapshot for this patient.
+        """Read the clinician's conversation snapshot for this patient.
 
-        ``scope_key`` is ``agent_runner_poc:chart_chat:patient:{patient_id}``;
-        we extract the patient_id from the trailing segment.
+        ``scope_key`` is a :func:`chart_chat_scope_key`, which names both.
         """
-        patient_id = scope_key.rsplit(":", 1)[-1]
+        patient_id, staff_id = _scope_ids(scope_key)
         return AgentState(
             data={
                 "patient_id": patient_id,
-                "messages": _load_conversation_messages(patient_id),
+                "staff_id": staff_id,
+                "messages": load_conversation_messages(patient_id, staff_id),
                 "last_response": "",
             }
         )
@@ -252,16 +272,14 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         trigger_payload: dict,
     ) -> AgentRunResult:
         """Append the new user message, run the tool-use loop, capture the response."""
-        # The patient comes from the scope (via load_state), the same place save_state
-        # writes to, so the chart the tools read and the conversation saved can't diverge.
+        # The patient and clinician come from the scope (via load_state), the same
+        # place save_state writes to, so the chart the tools read and the
+        # conversation saved can't diverge. The clinician is stamped onto tool_ctx
+        # so message-write tools (originate_message) attribute drafts to them and
+        # originate tools use their open note.
         patient_id = state.data["patient_id"]
+        staff_id = state.data["staff_id"]
         user_message = trigger_payload["user_message"]
-        # staff_id rides through the trigger_payload from ChartChatAPI's
-        # session-auth header. Stamped onto tool_ctx so message-write tools
-        # (originate_message) can attribute drafts to the requesting staff
-        # without the model having to know who's asking. Optional —
-        # background/triggered invocations may not have a staff in scope.
-        staff_id = trigger_payload.get("staff_id")
 
         # Working messages list — mutate in place, persist at end via save_state.
         messages: list[dict[str, Any]] = list(state.data.get("messages") or [])
@@ -391,6 +409,5 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
         """Persist the updated message snapshot back to the Conversation row."""
-        patient_id: str = state.data["patient_id"]
         messages: list[dict[str, Any]] = state.data["messages"]
-        _save_conversation_messages(patient_id, messages)
+        _save_conversation_messages(state.data["patient_id"], state.data["staff_id"], messages)

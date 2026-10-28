@@ -25,7 +25,7 @@ for the LLM round-trip).
 from http import HTTPStatus
 from typing import Any
 
-from agent_runner_poc.models.conversation import Conversation
+from agent_runner_poc.agents.chart_chat import chart_chat_scope_key, load_conversation_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -35,11 +35,6 @@ from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
 
 CHART_CHAT_AGENT_ID = "agent_runner_poc.agents.chart_chat:ChartChatAgent"
-
-
-def _scope_key(patient_id: str) -> str:
-    """Scope-key shape for the chat agent — patient-keyed, plugin-prefixed."""
-    return f"agent_runner_poc:chart_chat:patient:{patient_id}"
 
 
 class ChartChatApplication(Application):
@@ -71,10 +66,10 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
 
     @api.get("/chart-chat-history")
     def chart_chat_history(self) -> list[Response | Effect]:
-        """Return existing conversation messages so the UI can render and poll."""
+        """Return the logged-in clinician's conversation so the UI can render and poll."""
         patient_id = self.request.query_params["patient"]
-        conversation = Conversation.objects.filter(patient__id=patient_id).first()
-        messages = list(conversation.messages or []) if conversation else []
+        staff_id = self.request.headers["canvas-logged-in-user-id"]
+        messages = load_conversation_messages(patient_id, staff_id)
         return [
             JSONResponse(
                 {"messages": _ui_messages(messages)},
@@ -90,14 +85,13 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         ``RunAgentEffectInterpreter`` → Celery → plugin-runner ``RunAgent``
         path as triggered agents. ``user_message`` rides on
         ``trigger_payload``; the agent appends it to the conversation
-        snapshot while runs on the patient's scope are serialized, so the
-        read-modify-write stays atomic with any concurrent run.
+        snapshot while runs on the conversation's scope are serialized, so
+        the read-modify-write stays atomic with any concurrent run.
 
         ``staff_id`` is pulled from the session-auth header (the
         StaffSessionAuthMixin guarantees it's present and is a staff
-        member). The agent stamps it onto its tool ctx so write tools
-        like ``originate_message`` can attribute drafts to the
-        requesting staff without the model having to know who's asking.
+        member) and is part of the scope, so each clinician has their own
+        conversation and the agent attributes drafts to them.
         """
         body = self.request.json()
         patient_id: str = body["patient_id"]
@@ -111,12 +105,8 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
             ),
             RunAgentEffect(
                 agent_id=CHART_CHAT_AGENT_ID,
-                scope_key=_scope_key(patient_id),
-                trigger_payload={
-                    "patient_id": patient_id,
-                    "user_message": user_message,
-                    "staff_id": staff_id,
-                },
+                scope_key=chart_chat_scope_key(patient_id, staff_id),
+                trigger_payload={"user_message": user_message},
             ).apply(),
         ]
 

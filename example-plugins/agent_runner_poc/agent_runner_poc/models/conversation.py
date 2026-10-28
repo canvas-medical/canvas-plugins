@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from django.db.models import DO_NOTHING, DateTimeField, ForeignKey, Index, JSONField
 
-from agent_runner_poc.models.proxy import PatientProxy
+from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.v1.data.base import CustomModel
 
 
 class Conversation(CustomModel):
     """A single ongoing chat conversation between a clinician and the ChartChatAgent.
 
-    One row per patient — the conversation is scoped to the chart, not to
-    a specific visit. All clinicians viewing the chart see the same
-    conversation history (acceptable for the PoC; a real product would
-    probably scope per-clinician or per-thread).
+    One row per patient and clinician — the conversation is scoped to the
+    chart, not to a specific visit, and each clinician has their own, so one
+    clinician's questions and drafts never become another's context.
 
     Storage shape: the entire conversation history lives in a single
     JSONField as a list of Anthropic-shaped message dicts (``{"role":
@@ -32,6 +31,16 @@ class Conversation(CustomModel):
         related_name="chart_chat_conversations",
     )
 
+    # The clinician whose conversation this is. Nullable so the column can be
+    # added to an existing table; every row the agent writes sets it.
+    staff: ForeignKey[StaffProxy, StaffProxy] = ForeignKey(
+        StaffProxy,
+        to_field="dbid",
+        on_delete=DO_NOTHING,
+        related_name="chart_chat_conversations",
+        null=True,
+    )
+
     # When the conversation was first created. Useful for "this thread was
     # started on..." UI affordances.
     started_at: DateTimeField[str, str] = DateTimeField(auto_now_add=True)
@@ -47,5 +56,5 @@ class Conversation(CustomModel):
 
     class Meta:
         indexes = [
-            Index(fields=["patient", "-last_updated_at"]),
+            Index(fields=["patient", "staff", "-last_updated_at"]),
         ]
