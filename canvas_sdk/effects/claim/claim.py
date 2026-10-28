@@ -208,7 +208,9 @@ class ClaimEffect(Model):
         """
         return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
 
-    def assign(self, *, assignee_id: str | None = None, team_id: str | None = None) -> Effect:
+    def assign(
+        self, *, assignee_id: str | None = None, team_id: str | UUID | None = None
+    ) -> Effect:
         """
         Assigns the claim to a staff member or a team.
 
@@ -217,7 +219,7 @@ class ClaimEffect(Model):
 
         Args:
             assignee_id (str | None): The identifier of the Staff member to assign.
-            team_id (str | None): The identifier of the Team to assign.
+            team_id (str | UUID | None): The identifier of the Team to assign.
 
         Returns:
             Effect: An effect that updates the claim's assignee.

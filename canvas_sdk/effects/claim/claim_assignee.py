@@ -35,7 +35,7 @@ class _UpdateClaimAssignee(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.assignee_id and self.team_id:
+        if self.assignee_id is not None and self.team_id is not None:
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -51,7 +51,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.claim_id,
                 )
             )
-        if self.assignee_id and not Staff.objects.filter(id=self.assignee_id).exists():
+        if self.assignee_id is not None and not Staff.objects.filter(id=self.assignee_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -59,7 +59,7 @@ class _UpdateClaimAssignee(_BaseEffect):
                     self.assignee_id,
                 )
             )
-        if self.team_id and not Team.objects.filter(id=self.team_id).exists():
+        if self.team_id is not None and not Team.objects.filter(id=self.team_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
