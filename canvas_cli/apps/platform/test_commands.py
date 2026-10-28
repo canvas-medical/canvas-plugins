@@ -1567,6 +1567,8 @@ def test_deploy_reports_a_refused_push_without_the_usage_line(
 ) -> None:
     """When platform's git server refuses the push, its reason is shown with no usage text."""
     hook = bare / "hooks" / "pre-receive"
+    # An init.templateDir without hooks/ leaves the bare repository without one.
+    hook.parent.mkdir(exist_ok=True)
     hook.write_text("#!/bin/sh\necho 'Refused refs/heads/main: listing is invalid' >&2\nexit 1\n")
     hook.chmod(0o755)
 
