@@ -11,6 +11,8 @@ Two layers:
   registry-only tests would pass but the production call would explode.
 """
 
+import inspect
+import re
 from typing import Any
 
 import pytest
@@ -1234,3 +1236,25 @@ def test_read_tools_declare_no_effect_types() -> None:
     for definition in standard_tools.definitions():
         if definition["name"].startswith(("find_", "get_")):
             assert standard_tools.effect_types_for(definition["name"]) == frozenset()
+
+
+_FILTER_SEARCH_TOOLS = [
+    d["name"]
+    for d in standard_tools.definitions()
+    if standard_tools.metadata_for(d["name"]).get("kind") == "filter_search"
+]
+
+
+@pytest.mark.parametrize("name", _FILTER_SEARCH_TOOLS)
+def test_read_tool_returns_description_names_exactly_the_fields_it_returns(name: str) -> None:
+    """The model plans on the described fields, so the description must match the serializer."""
+    metadata = standard_tools.metadata_for(name)
+    source = inspect.getsource(metadata["serializer"])
+    body = source[source.index("\ndef ") :]
+    returned = set(re.findall(r'^\s+"([a-z_]+)":', body, re.MULTILINE))
+    described = set(re.findall(r"`([a-z_]+)`", metadata["returns_description"]))
+
+    assert described == returned, (
+        f"described but not returned: {sorted(described - returned)}; "
+        f"returned but not described: {sorted(returned - described)}"
+    )
