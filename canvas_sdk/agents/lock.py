@@ -97,7 +97,10 @@ def agent_lock(
     try:
         yield sentinel
     finally:
-        cache.delete(lock_key)
+        # A run that outlived its TTL no longer holds the lock; deleting the key
+        # then would release whichever run acquired it next.
+        if cache.get(lock_key) == sentinel:
+            cache.delete(lock_key)
 
 
 __exports__ = ("AgentLocked", "agent_lock")
