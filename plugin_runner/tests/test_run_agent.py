@@ -1,10 +1,12 @@
 import json
+import threading
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+import plugin_runner.plugin_runner as runner_module
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import RunAgentRequest
 from canvas_sdk.agents import AgentRunResult
@@ -680,3 +682,36 @@ def test_run_agent_past_its_deadline_saves_nothing_and_emits_nothing(
     assert response.success is False
     assert list(response.effects) == []
     assert saved == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_answers_busy_when_agent_runs_fill_their_share_of_workers(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Agent runs leave workers free for events; a run over the cap is turned away to retry."""
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    loaded: list[str] = []
+    original_load = agent_cls.load_state
+
+    def _record_load(self, scope_key):  # type: ignore[no-untyped-def]
+        loaded.append(scope_key)
+        return original_load(self, scope_key)
+
+    monkeypatch.setattr(agent_cls, "load_state", _record_load)
+
+    assert slots.acquire(blocking=False)
+    busy = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    slots.release()
+    served = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert busy.success is False
+    assert busy.error_kind == "RUNNER_BUSY"
+    assert served.success is True
+    assert len(loaded) == 1
+    assert slots.acquire(blocking=False), "a finished run must give its slot back"

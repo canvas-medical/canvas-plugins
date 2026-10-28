@@ -87,6 +87,7 @@ from settings import (
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     PLUGIN_RUNNER_EVENT_REGISTRY_PATH,
+    PLUGIN_RUNNER_MAX_AGENT_RUNS,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
@@ -249,6 +250,9 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
     ):
         return "LLM_UNAVAILABLE"
     return "LLM_REFUSED"
+
+
+AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
 
 
 class RunAgentDeadlineExceeded(Exception):
@@ -566,6 +570,16 @@ class PluginRunner(PluginRunnerServicer):
 
             from canvas_sdk.agents import ToolRegistry
 
+            if not AGENT_RUN_SLOTS.acquire(blocking=False):
+                log.warning(
+                    f"RunAgent: {PLUGIN_RUNNER_MAX_AGENT_RUNS} agent run(s) already in progress; "
+                    f"turning away agent_id={request.agent_id} run_id={request.run_id} to retry"
+                )
+                sentry_sdk.set_tag("agent-id", None)
+                yield EventResponse(success=False, effects=[], error_kind="RUNNER_BUSY")
+                return
+
+            failure: EventResponse | None = None
             try:
                 with (
                     plugin_context(f"{module_path}.{class_name}"),
@@ -618,19 +632,23 @@ class PluginRunner(PluginRunnerServicer):
                 log.warning(
                     f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
                 )
-                yield EventResponse(success=False, effects=[], error_kind=error_kind)
-                return
+                failure = EventResponse(success=False, effects=[], error_kind=error_kind)
             except RunAgentDeadlineExceeded as exc:
                 log.warning(f"RunAgent: {exc}")
-                yield EventResponse(success=False, effects=[])
-                return
+                failure = EventResponse(success=False, effects=[])
             except Exception as exc:
                 log.exception(f"RunAgent: agent {request.agent_id} raised")
                 sentry_sdk.capture_exception(exc)
-                yield EventResponse(success=False, effects=[])
-                return
+                failure = EventResponse(success=False, effects=[])
             finally:
+                # Released before anything is yielded, so the slot frees as soon as
+                # the agent finishes rather than when the caller drains the stream.
+                AGENT_RUN_SLOTS.release()
                 sentry_sdk.set_tag("agent-id", None)
+
+            if failure is not None:
+                yield failure
+                return
 
             # NOTE: classname is intentionally left empty for agent-emitted
             # effects. On the home-app side, classname is treated as a

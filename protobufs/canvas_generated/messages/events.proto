@@ -1611,5 +1611,7 @@ message EventResponse {
   //   - "LLM_REFUSED": the gateway refused the call (budget, model, key,
   //     request shape); a retry would be refused again.
   //   - "LLM_NOT_CONFIGURED": the gateway URL or the plugin's key is unset.
+  //   - "RUNNER_BUSY": the runner already has its share of workers running
+  //     agents; worth retrying shortly.
   string error_kind = 3;
 }
