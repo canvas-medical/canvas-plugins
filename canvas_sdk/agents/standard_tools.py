@@ -21,6 +21,7 @@ is hand-registered via :meth:`ToolRegistry.tool`.
 """
 
 import re
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any
 from uuid import uuid4
@@ -86,6 +87,32 @@ from canvas_sdk.v1.data.goal import GoalAchievementStatus, GoalLifecycleStatus, 
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 standard_tools = ToolRegistry()
+
+
+def _require_patients_record(model: Any, record_id: str, ctx: dict[str, Any], label: str) -> None:
+    """Refuse a model-supplied ID unless it names one of the run's patient's records.
+
+    Write tools take row IDs from the model, and the model's input can carry text
+    from the chart (a patient's message, a note), so an ID is checked against the
+    patient in ``ctx`` before anything is staged. The agent's loop returns the
+    error to the model as a failed tool result.
+    """
+    if not model.objects.filter(id=record_id, patient__id=ctx["patient_id"]).exists():
+        raise ValueError(f"{label} {record_id!r} not found for this patient")
+
+
+def _patients_record_check(
+    model: Any,
+    argument: str,
+    label: str,
+) -> Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]:
+    """A ``pre_build`` hook that only checks ``arguments[argument]`` belongs to the patient."""
+
+    def pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+        _require_patients_record(model, arguments[argument], ctx, label)
+        return {}
+
+    return pre_build
 
 
 @standard_tools.filter_search_tool(
@@ -2282,20 +2309,22 @@ standard_tools.add_effect_tool(
         ),
     },
     inject_ctx={},
-    pre_build=lambda arguments, ctx: _build_update_task_kwargs(arguments),
+    pre_build=lambda arguments, ctx: _build_update_task_kwargs(arguments, ctx),
     categories=("task_writes",),
     returns_description="`{ok: true}`.",
 )
 
 
-def _build_update_task_kwargs(arguments: dict[str, Any]) -> dict[str, Any]:
+def _build_update_task_kwargs(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     """Construct UpdateTask kwargs from model arguments.
 
-    Handles three special-cases the lambda form can't express cleanly:
+    Refuses a task outside the run's patient, then handles three special-cases
+    the lambda form can't express cleanly:
     - title truncation (only when supplied)
     - status string → TaskStatus enum coercion
     - due_on YYYY-MM-DD → datetime at midnight (UpdateTask.due is datetime)
     """
+    _require_patients_record(Task, arguments["task_id"], ctx, "task")
     out: dict[str, Any] = {}
     title = arguments.get("title")
     if title is not None:
@@ -2331,6 +2360,7 @@ standard_tools.add_effect_tool(
         ),
     },
     inject_ctx={},
+    pre_build=_patients_record_check(Task, "task_id", "task"),
     categories=("task_writes",),
     returns_description="`{ok: true}`.",
 )
@@ -2788,6 +2818,14 @@ standard_tools.originate_command_tool(
 _ASSESS_STATUSES = [s.value for s in AssessCommand.Status]
 
 
+def _build_assess_kwargs(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    """Refuse a condition outside the run's patient; coerce ``status`` to its enum."""
+    _require_patients_record(Condition, arguments["condition_id"], ctx, "condition")
+    if arguments.get("status"):
+        return {"status": AssessCommand.Status(arguments["status"])}
+    return {}
+
+
 standard_tools.originate_command_tool(
     name="originate_assessment",
     description=(
@@ -2820,9 +2858,7 @@ standard_tools.originate_command_tool(
             description="Optional background/context.",
         ),
     },
-    pre_build=lambda arguments, ctx: (
-        {"status": AssessCommand.Status(arguments["status"])} if arguments.get("status") else {}
-    ),
+    pre_build=lambda arguments, ctx: _build_assess_kwargs(arguments, ctx),
     categories=("clinical_writes",),
     returns_description=_ORIGINATE_RETURNS,
 )
@@ -2882,6 +2918,7 @@ standard_tools.originate_command_tool(
             ),
         ),
     },
+    pre_build=_patients_record_check(Medication, "medication_id", "medication"),
     categories=("clinical_writes",),
     returns_description=_ORIGINATE_RETURNS,
 )
