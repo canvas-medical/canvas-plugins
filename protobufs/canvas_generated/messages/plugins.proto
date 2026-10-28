@@ -53,9 +53,12 @@ message RunAgentRequest {
   // JSON-encoded dict carrying trigger-shaped data the agent needs in run().
   string trigger_payload = 4;
 
-  // Provenance fields, threaded through to each emitted Effect so audit
-  // and downstream interpreters see the originating plugin/handler/actor.
+  // The plugin whose handler emitted the RunAgentEffect. The plugin-runner
+  // refuses the run unless this plugin ships the agent.
   string plugin_name = 5;
+
+  // Provenance fields, threaded through to each emitted Effect so audit
+  // and downstream interpreters see the originating handler/actor.
   string handler_name = 6;
   string actor = 7;
   string source = 8;
