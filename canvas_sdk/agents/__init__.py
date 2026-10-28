@@ -1,5 +1,6 @@
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.gateway import LLMGateway, LLMGatewayConfigurationError
+from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.note_helpers import find_open_note, find_open_note_uuid_from_ctx
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.standard_tools import standard_tools
@@ -13,6 +14,7 @@ from canvas_sdk.agents.tool_registry import (
 )
 
 __all__ = __exports__ = (
+    "DEFAULT_HISTORY_CHARS",
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
@@ -28,4 +30,5 @@ __all__ = __exports__ = (
     "run_subagent",
     "run_subagents",
     "standard_tools",
+    "window_messages",
 )

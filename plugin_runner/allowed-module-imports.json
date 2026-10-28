@@ -3,6 +3,7 @@
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
+    "DEFAULT_HISTORY_CHARS",
     "EffectField",
     "FilterSpec",
     "LLMGateway",
@@ -14,7 +15,8 @@
     "find_open_note_uuid_from_ctx",
     "run_subagent",
     "run_subagents",
-    "standard_tools"
+    "standard_tools",
+    "window_messages"
   ],
   "canvas_sdk.agents.base": [
     "AgentPlugin"
@@ -22,6 +24,10 @@
   "canvas_sdk.agents.gateway": [
     "LLMGateway",
     "LLMGatewayConfigurationError"
+  ],
+  "canvas_sdk.agents.history": [
+    "DEFAULT_HISTORY_CHARS",
+    "window_messages"
   ],
   "canvas_sdk.agents.note_helpers": [
     "OPEN_NOTE_STATES",

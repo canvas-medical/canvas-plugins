@@ -45,6 +45,7 @@ from canvas_sdk.agents import (
     AgentState,
     LLMGateway,
     find_open_note_uuid_from_ctx,
+    window_messages,
 )
 from canvas_sdk.effects import Effect
 from logger import log
@@ -251,7 +252,9 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         trigger_payload: dict,
     ) -> AgentRunResult:
         """Append the new user message, run the tool-use loop, capture the response."""
-        patient_id = trigger_payload["patient_id"]
+        # The patient comes from the scope (via load_state), the same place save_state
+        # writes to, so the chart the tools read and the conversation saved can't diverge.
+        patient_id = state.data["patient_id"]
         user_message = trigger_payload["user_message"]
         # staff_id rides through the trigger_payload from ChartChatAPI's
         # session-auth header. Stamped onto tool_ctx so message-write tools
@@ -304,7 +307,8 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
                 # `self.tools` is the manifest-scoped registry — already
                 # filtered to the allowlist when run() fired.
                 tools=cast(Any, self.tools.definitions()),
-                messages=cast(Any, messages),
+                # The newest turns that fit one call; the full history is still saved.
+                messages=cast(Any, window_messages(messages)),
             )
             log.info(
                 f"ChartChatAgent turn={turn} stop_reason={response.stop_reason} "
