@@ -167,13 +167,16 @@
       }
 
       function fireNavigations(noteIds) {
-        // Cross-frame postMessage to the parent home-app window. The chat-
-        // chat Application is iframed; the parent listens for these events
-        // and drives the chart timeline. Using '*' as targetOrigin is fine
-        // for v1; the parent does its own origin check.
+        // Cross-frame postMessage to the parent home-app window. The chart-
+        // chat Application is iframed from /plugin-io on the Canvas origin;
+        // the parent listens for these events and drives the chart timeline.
+        // Both sides restrict the message to that origin.
         noteIds.forEach(noteId => {
           try {
-            window.parent.postMessage({ type: 'canvas.scrollToNote', noteId }, '*');
+            window.parent.postMessage(
+              { type: 'canvas.scrollToNote', noteId },
+              window.location.origin
+            );
           } catch (err) {
             console.warn('chart-chat: postMessage failed', err);
           }
