@@ -28,7 +28,7 @@ OPEN_NOTE_STATES = (
 )
 
 
-def find_open_note(patient_id: str) -> Note | None:
+def find_open_note(patient_id: str, provider_id: str | None = None) -> Note | None:
     """Return the patient's most-recent mutable note, or ``None``.
 
     "Open" here means the note is in a state that accepts new originated
@@ -39,19 +39,21 @@ def find_open_note(patient_id: str) -> Note | None:
     Args:
         patient_id: The patient's UUID (the canonical ``Patient.id``,
             not the integer ``dbid``).
+        provider_id: When set, only notes whose provider is this staff
+            member count, so a clinician's drafts never land on a
+            colleague's note.
 
     Returns:
         The :class:`Note` instance, or ``None`` if the patient has no
-        notes in an open state.
+        notes in an open state (for ``provider_id``, when given).
     """
-    return (
-        Note.objects.filter(
-            patient__id=patient_id,
-            current_state__state__in=OPEN_NOTE_STATES,
-        )
-        .order_by("-datetime_of_service")
-        .first()
+    notes = Note.objects.filter(
+        patient__id=patient_id,
+        current_state__state__in=OPEN_NOTE_STATES,
     )
+    if provider_id:
+        notes = notes.filter(provider__id=provider_id)
+    return notes.order_by("-datetime_of_service").first()
 
 
 def find_open_note_uuid_from_ctx(ctx: dict[str, Any]) -> str | None:
@@ -64,12 +66,14 @@ def find_open_note_uuid_from_ctx(ctx: dict[str, Any]) -> str | None:
     error returned to the model.
 
     Reads ``patient_id`` from ``ctx``; the agent is responsible for
-    populating it before invoking tools.
+    populating it before invoking tools. When ``ctx`` carries the
+    requesting ``staff_id`` (a chat or other user-initiated run), only that
+    staff member's open notes count.
     """
     patient_id = ctx.get("patient_id")
     if not patient_id:
         return None
-    note = find_open_note(patient_id)
+    note = find_open_note(patient_id, provider_id=ctx.get("staff_id"))
     return str(note.id) if note is not None else None
 
 
