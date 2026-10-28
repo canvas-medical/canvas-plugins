@@ -90,6 +90,21 @@ Store the token as a CI secret and expose it to the job as `CANVAS_PLATFORM_TOKE
 - `--yes` commits uncommitted changes without prompting. A deployment that needs consent for another plugin's custom data exits non-zero and lists the requests, since only a person at a terminal answers those.
 - `CANVAS_PLATFORM_URL` points the job at a platform other than https://platform.canvasmedical.com.
 
+#### Deploying from a monorepo
+
+A plugin inside a larger repository deploys with `--snapshot`, which works from any depth in that repository and leaves its `origin`, config and index alone:
+
+```console
+$ canvas deploy plugins/acme__intake --snapshot --instance acme-staging
+```
+
+- The package folder as committed at HEAD becomes one new commit on the plugin's `main` in Canvas Platform. Files on `main` beside the package folder are kept, and an unchanged package pushes nothing.
+- The commit is authored as the signed-in person or service account, and carries `Monorepo-Commit` and `Monorepo-Path` trailers naming its source.
+- Uncommitted changes in the package are refused, even with `--yes`. So are submodules, symbolic links and Git LFS files in the package, which would not reach an instance as their content.
+- Deploy refuses when HEAD does not contain the commit `main` was last deployed from, and when `main` has changes to the package since the last snapshot, such as a catalog listing edited in Canvas Platform, that the snapshot would replace. At a terminal it asks before replacing them.
+- Deploy warns when HEAD is on no remote branch, since that code has not been through the repository's review.
+- The manifest `name` decides which Platform repository a snapshot goes to, so deploys from any checkout or CI job land on the same `main`. The CI job needs no git identity and can use a shallow checkout.
+
 **Usage**:
 
 ```console
@@ -202,6 +217,7 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
 - `--push-only`: Push HEAD to `main` without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
+- `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
 - `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
 - `--help`: Show this message and exit.
 
