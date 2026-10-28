@@ -968,7 +968,8 @@ def _serialize_note(note: Any) -> dict[str, Any]:
     name="get_open_note",
     description=(
         "Return metadata for the patient's current open note (the most-"
-        "recent note in a mutable state — NEW, UNLOCKED, or CONVERTED). "
+        "recent note in a mutable state — NEW, UNLOCKED, or CONVERTED), "
+        "limited to the requesting clinician's notes when there is one. "
         "Use this when the user references 'this note' or 'the open note' "
         "and the agent needs the note_id to drill into it or stage a "
         "command on it. Returns the same row shape as one find_notes "
@@ -986,7 +987,7 @@ def _serialize_note(note: Any) -> dict[str, Any]:
 def _get_open_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any] | None:
     """Wrap find_open_note for direct LLM use."""
     patient_id: str = ctx["patient_id"]
-    note = find_open_note(patient_id)
+    note = find_open_note(patient_id, provider_id=ctx.get("staff_id"))
     if note is None:
         return None
     return _serialize_note(note)
