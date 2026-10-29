@@ -1393,6 +1393,9 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PortalInvitation",
+    "PortalInvitationRejectionReason",
+    "PortalInvitationStatus",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
@@ -1893,6 +1896,11 @@
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
+  ],
+  "canvas_sdk.v1.data.portal_invitation": [
+    "PortalInvitation",
+    "PortalInvitationRejectionReason",
+    "PortalInvitationStatus"
   ],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
