@@ -33,7 +33,8 @@ A patient portal page where a patient pays the copay for an upcoming appointment
 
 ## Safeguards
 
-- Every lookup is scoped to the logged-in patient, and the WebSocket only accepts a patient on their own channel.
+- Every lookup is scoped to the patient whose chart the request acts on, and the WebSocket only accepts a session on that chart's channel.
+- A family member acting on the patient's chart needs view access to its appointments and billing to open the page or listen for results, and act access to its billing to pay.
 - The amount and claim are recomputed on the server for every payment; the page only sends the appointment and the card.
 - The idempotency key is derived from the appointment, card and amount, so a repeated submission reaches Stripe as a retry of the same charge.
 

@@ -1047,6 +1047,8 @@
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
@@ -1091,6 +1093,8 @@
     "BearerCredentials",
     "Credentials",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
     "SessionCredentials",
     "StaffSessionAuthMixin"
   ],

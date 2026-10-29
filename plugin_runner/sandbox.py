@@ -1833,6 +1833,8 @@ class Sandbox:
         if not self._same_module(module_name) and (
             # deny if it was anything imported
             (name and name.split(".")[0] in self.imported_names["names"])
+            # deny writes to an outside class through any name, as setattr does
+            or isinstance(_ob, type)
             # deny if it's anything callable
             or callable(value)
             # deny writes to dictionary underscore keys; the strict path exempts
@@ -2074,9 +2076,9 @@ class Sandbox:
         """`ob`, once the attribute write guard accepts writing `name` on it.
 
         Attribute syntax also refuses a write through a name the plugin imported, such as
-        `Patient.x = 1`. setattr has no name to check, so a class from outside the plugin
-        is refused outright, and so is a private name on any object the plugin did not
-        define.
+        `Patient.x = 1`. setattr has no name to check, so a private name on any object the
+        plugin did not define is refused outright. Both refuse any class from outside the
+        plugin, whatever name reaches it.
         """
         if not isinstance(name, str):
             raise TypeError("attribute name must be a string")

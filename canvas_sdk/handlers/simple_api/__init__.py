@@ -15,6 +15,8 @@ from .security import (
     BearerCredentials,
     Credentials,
     PatientSessionAuthMixin,
+    PortalAccess,
+    PortalAccessLevel,
     SessionCredentials,
     StaffSessionAuthMixin,
 )
@@ -31,6 +33,8 @@ __all__ = __exports__ = (
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
