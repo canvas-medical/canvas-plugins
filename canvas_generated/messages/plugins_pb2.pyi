@@ -55,7 +55,7 @@ class GetRegisteredEventTypesResponse(_message.Message):
     def __init__(self, event_types: _Optional[_Iterable[str]] = ..., registry_version: _Optional[str] = ..., ready: bool = ...) -> None: ...
 
 class RunAgentRequest(_message.Message):
-    __slots__ = ("agent_id", "scope_key", "run_id", "trigger_payload", "plugin_name", "handler_name", "actor", "source")
+    __slots__ = ("agent_id", "scope_key", "run_id", "trigger_payload", "plugin_name", "handler_name", "actor", "source", "patient_id", "staff_id", "note_id")
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     SCOPE_KEY_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -64,6 +64,9 @@ class RunAgentRequest(_message.Message):
     HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
     ACTOR_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
+    PATIENT_ID_FIELD_NUMBER: _ClassVar[int]
+    STAFF_ID_FIELD_NUMBER: _ClassVar[int]
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     agent_id: str
     scope_key: str
     run_id: str
@@ -72,4 +75,7 @@ class RunAgentRequest(_message.Message):
     handler_name: str
     actor: str
     source: str
-    def __init__(self, agent_id: _Optional[str] = ..., scope_key: _Optional[str] = ..., run_id: _Optional[str] = ..., trigger_payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
+    patient_id: str
+    staff_id: str
+    note_id: str
+    def __init__(self, agent_id: _Optional[str] = ..., scope_key: _Optional[str] = ..., run_id: _Optional[str] = ..., trigger_payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ..., patient_id: _Optional[str] = ..., staff_id: _Optional[str] = ..., note_id: _Optional[str] = ...) -> None: ...

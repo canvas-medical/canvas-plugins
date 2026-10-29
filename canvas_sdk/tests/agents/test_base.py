@@ -1,6 +1,15 @@
 import pytest
 
-from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
+from canvas_sdk.agents import (
+    AgentPlugin,
+    AgentRunResult,
+    AgentState,
+    LLMGateway,
+    RunSubject,
+    ToolRegistry,
+)
+from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory, StaffFactory
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
 
 class _MinimalAgent(AgentPlugin):
@@ -94,3 +103,74 @@ def test_lifecycle_hooks_default_to_no_op() -> None:
     agent.on_turn(0)
     agent.on_run_end(AgentRunResult(state=AgentState()))
     agent.on_run_error(RuntimeError("boom"))
+
+
+_GATEWAY = LLMGateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
+
+
+def test_tool_context_carries_the_run_subject() -> None:
+    """Tools get the platform's patient, staff, and note, plus the run's plumbing."""
+    agent = _MinimalAgent()
+    agent.tools = ToolRegistry()
+    agent.subject = RunSubject(patient_id="p1", staff_id="s1", note_id="n1")
+
+    ctx = agent.tool_context(_GATEWAY, {"focus": "labs"})
+
+    assert ctx == {
+        "focus": "labs",
+        "patient_id": "p1",
+        "staff_id": "s1",
+        "note_id": "n1",
+        "effects": [],
+        "gateway": _GATEWAY,
+        "parent_tools": agent.tools,
+    }
+
+
+@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id", "effects", "gateway"])
+def test_tool_context_refuses_to_replace_what_the_run_sets(key: str) -> None:
+    """An agent cannot point its tools at a patient other than the run's."""
+    agent = _MinimalAgent()
+    agent.subject = RunSubject(patient_id="p1")
+
+    with pytest.raises(ValueError, match=key):
+        agent.tool_context(_GATEWAY, {key: "other"})
+
+
+def test_tool_context_without_a_subject_has_no_patient() -> None:
+    """A run with no subject, such as a scheduled one, gives tools no patient."""
+    ctx = _MinimalAgent().tool_context(_GATEWAY)
+
+    assert ctx["patient_id"] is None
+    assert ctx["staff_id"] is None
+    assert ctx["note_id"] is None
+
+
+def _open_note(**kwargs: object) -> Note:
+    note = NoteFactory.create(**kwargs)
+    CurrentNoteStateEvent.objects.create(note=note, state=NoteStates.NEW)
+    return note
+
+
+@pytest.mark.django_db
+def test_tool_context_uses_the_requesting_staffs_open_note() -> None:
+    """With no note on the subject, drafts go to the requester's open note on the patient."""
+    patient = PatientFactory.create()
+    clinician = StaffFactory.create()
+    own_note = _open_note(patient=patient, provider=clinician)
+    _open_note(patient=patient)
+    agent = _MinimalAgent()
+    agent.subject = RunSubject(patient_id=patient.id, staff_id=clinician.id)
+
+    assert agent.tool_context(_GATEWAY)["note_id"] == str(own_note.id)
+
+
+@pytest.mark.django_db
+def test_tool_context_without_a_requester_picks_no_open_note() -> None:
+    """A run nobody started has no clinician, so drafts never land on someone's note."""
+    patient = PatientFactory.create()
+    _open_note(patient=patient)
+    agent = _MinimalAgent()
+    agent.subject = RunSubject(patient_id=patient.id)
+
+    assert agent.tool_context(_GATEWAY)["note_id"] is None

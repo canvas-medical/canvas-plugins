@@ -6,9 +6,9 @@ get_patient_demographics) and the protocol-card lifecycle
 (add_or_update_protocol_card + find_protocol_cards) the agent uses
 for cross-visit recommendation tracking.
 
-The trigger handler in ``longitudinal_trigger.py`` sets ``ctx["note_id"]``
-from the trigger payload so any future originate-on-note tools also
-resolve cleanly. Today the agent is read+ProtocolCard only.
+The trigger handler in ``longitudinal_trigger.py`` names the locked note
+as the run's note, so originate-on-note tools would resolve to it. Today
+the agent is read+ProtocolCard only.
 """
 
 from canvas_sdk.agents import ToolRegistry, standard_tools
