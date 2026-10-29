@@ -1258,3 +1258,19 @@ def test_read_tool_returns_description_names_exactly_the_fields_it_returns(name:
         f"described but not returned: {sorted(described - returned)}; "
         f"returned but not described: {sorted(returned - described)}"
     )
+
+
+@pytest.mark.parametrize(
+    ("name", "arguments"),
+    [
+        ("find_conditions", {}),
+        ("get_patient_demographics", {}),
+        ("get_open_note", {}),
+        ("get_note_content", {"note_id": "n1"}),
+        ("update_task", {"task_id": "t1", "status": "CLOSED"}),
+    ],
+)
+def test_patient_tools_refuse_a_run_without_a_patient(name: str, arguments: dict) -> None:
+    """A patient-less run gets an error, never an empty chart read as no records."""
+    with pytest.raises(ValueError, match="not about a patient"):
+        standard_tools.execute(name, arguments, ctx={"patient_id": None, "effects": []})
