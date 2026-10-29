@@ -1584,6 +1584,12 @@ enum EventType {
 
   // Message events
   MESSAGE_TEAM_ASSIGNED = 190000;
+
+  // Portal invitation events
+  INVITATION_CREATED = 200000;
+  INVITATION_OPENED = 200001;
+  INVITATION_CLAIMED = 200002;
+  INVITATION_REJECTED = 200003;
 }
 
 message Event {
