@@ -528,6 +528,7 @@ def _guard_platform_history(
         work,
         "log",
         "--first-parent",
+        "--decorate=short",
         f"--decorate-refs=refs/tags/{BASELINE_TAG_PREFIX}",
         f"--format=%H%x00%D%x00%(trailers:key={SOURCE_TRAILER},valueonly,separator=%x2C)",
         tip,
