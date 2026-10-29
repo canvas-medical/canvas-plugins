@@ -1031,7 +1031,7 @@ def test_deploy_snapshot_onto_a_base_tagged_through_another_tag(
     [
         # A tag that names a tree marks no commit on main.
         ("snapshot-baseline/{base}", "^{tree}"),
-        # Only tags under snapshot-baseline/ count, though fetching follows every tag on main.
+        # Only tags under snapshot-baseline/ count, not a name that merely starts the same.
         ("snapshot-baselines/{base}", ""),
     ],
     ids=["tree", "near-miss-name"],

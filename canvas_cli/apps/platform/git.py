@@ -425,11 +425,12 @@ def push_snapshot(
             _output(work, "config", "--add", key, value, what=f"Setting {key}")
 
         # Every branch and baseline tag, so a repository with none yet fetches nothing
-        # rather than failing.
+        # rather than failing. --no-tags keeps other tags out.
         fetch = run(
             work,
             "fetch",
             "-q",
+            "--no-tags",
             git_url,
             "+refs/heads/*:refs/platform/*",
             f"+refs/tags/{BASELINE_TAG_PREFIX}*:refs/tags/{BASELINE_TAG_PREFIX}*",
@@ -507,14 +508,15 @@ def _guard_platform_history(
 
     The last snapshot on ``branch`` is the newest commit on its first-parent chain
     that carries a ``Monorepo-Commit`` trailer or is tagged under
-    ``snapshot-baseline/``, as the commit Canvas Studio starts ``main`` from is. A
-    snapshot names the commit it came from; a tagged commit names none, so nothing
-    is checked for rolling back. When this
-    checkout has that commit, every package file it changed since its common
-    ancestor with HEAD must be changed on HEAD's side too; a file HEAD left alone
-    would go back to its older content, rolling the plugin back. A branch deployed
-    and then squash- or rebase-merged passes, because HEAD carries its changes
-    under another commit.
+    ``snapshot-baseline/``, as the commit Canvas Studio starts ``main`` from is.
+    A commit carrying both counts as a snapshot.
+
+    A snapshot names the commit it came from. When this checkout has that commit,
+    every package file it changed since its common ancestor with HEAD must be
+    changed on HEAD's side too; a file HEAD left alone would go back to its older
+    content, rolling the plugin back. A branch deployed and then squash- or
+    rebase-merged passes, because HEAD carries its changes under another commit.
+    A tagged commit names no source commit, so nothing is checked for rolling back.
 
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
