@@ -114,6 +114,7 @@ def test_run_agent_happy_path_returns_emitted_effect(
         "loaded_with": "patient:p1",
         "trigger": {"message": "hi"},
         "subject": ["p1", "s1", "n1"],
+        "run_id": "run-1",
         "gateway_model": "claude-sonnet-4-6",
     }
 
@@ -657,6 +658,39 @@ def test_run_agent_drops_effects_no_granted_tool_declares(
 
     assert response.success is True
     assert [effect.type for effect in response.effects] == [EffectType.LOG]
+    assert (response.agent_run.effects_returned, response.agent_run.effects_dropped) == (4, 3)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_reports_the_tool_loop_in_its_summary(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Model and tool calls recorded during run() come back on the response, even on failure."""
+    from canvas_sdk.agents.run_record import ToolCallRecord, current_recorder
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        recorder = current_recorder.get()
+        assert recorder is not None
+        recorder.record_model_call()
+        recorder.record_tool_call(ToolCallRecord("echo", False, "ValueError", 12))
+        recorder.record_stop("max_turns")
+        raise RuntimeError("agent bug")
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _run)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is False
+    summary = response.agent_run
+    assert (summary.model_calls, summary.stop_reason) == (1, "max_turns")
+    assert [(c.name, c.ok, c.error_type, c.duration_ms) for c in summary.tool_calls] == [
+        ("echo", False, "ValueError", 12)
+    ]
+    assert current_recorder.get() is None
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)

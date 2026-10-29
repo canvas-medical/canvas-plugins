@@ -64,10 +64,9 @@ class _FakeGateway:
 
 @pytest.mark.django_db
 def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
-    """The agent stores the clinician's turn, the tool exchange, and the answer, and counts turns."""
+    """The agent stores the clinician's turn, the tool exchange, and the answer."""
     agent = _agent_for(PatientFactory.create().id, StaffFactory.create().id)
     agent.tools = ChartChatAgent.tools.scope({"get_patient_demographics"})
-    agent.on_run_start("patient_and_staff")
     gateway = _FakeGateway(
         _FakeClient(
             SimpleNamespace(
@@ -91,4 +90,3 @@ def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
     assert roles == ["user", "assistant", "user", "assistant"]
     assert result.state.data["messages"][0] == {"role": "user", "content": "How old is she?"}
     assert result.state.data["messages"][-1]["content"][0]["text"] == "She is 54."
-    assert agent._llm_turn_count == 2
