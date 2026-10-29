@@ -597,7 +597,8 @@ class PluginRunner(PluginRunnerServicer):
                 f"trigger={request.handler_name}"
             )
 
-            from canvas_sdk.agents import RunSubject, ToolRegistry
+            from canvas_sdk.agents import RunSubject
+            from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
             from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 
             if not AGENT_RUN_SLOTS.acquire(blocking=False):
@@ -630,14 +631,9 @@ class PluginRunner(PluginRunnerServicer):
                     # no tools. The agent's registry is swapped for the scoped
                     # view, and the effect types the granted tools declare bound
                     # what the agent may return below.
-                    tools_manifest = (plugin.get("handler") or {}).get("tools") or {}
-                    registry = agent.tools or ToolRegistry()
-                    agent.tools_allowed = registry.resolve_allowed(
-                        tools_manifest.get("allowed") or (),
-                        denied=tools_manifest.get("denied"),
+                    granted_effect_types = apply_tool_grant(
+                        agent, (plugin.get("handler") or {}).get("tools") or {}
                     )
-                    agent.tools = registry.scope(agent.tools_allowed)
-                    granted_effect_types = agent.tools.effect_types()
                     # home-app validated the subject before enqueuing the run.
                     agent.subject = RunSubject(
                         patient_id=request.patient_id or None,
@@ -709,16 +705,12 @@ class PluginRunner(PluginRunnerServicer):
             # populating classname=<AgentSubclass> collapsed every protocol
             # card from a given agent into a single row per patient
             # (regardless of the agent's per-call UUID key). KOALA-5544.
-            granted_effects = []
-            for effect in result.effects:
-                effect_type = EffectType.Name(effect.type)
-                if effect_type in granted_effect_types:
-                    granted_effects.append(effect)
-                else:
-                    log.warning(
-                        f"RunAgent: dropping {effect_type} from agent {request.agent_id}; "
-                        "no tool its manifest grants stages that effect"
-                    )
+            granted_effects, ungranted = split_granted_effects(result.effects, granted_effect_types)
+            for effect in ungranted:
+                log.warning(
+                    f"RunAgent: dropping {EffectType.Name(effect.type)} from agent "
+                    f"{request.agent_id}; no tool its manifest grants stages that effect"
+                )
             emitted_effects = [
                 Effect(
                     type=effect.type,
