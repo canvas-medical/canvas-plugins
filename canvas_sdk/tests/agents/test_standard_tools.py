@@ -13,17 +13,20 @@ Two layers:
 
 import inspect
 import re
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
 from canvas_sdk.agents import standard_tools
 from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
     MedicationFactory,
     PatientFactory,
     StaffFactory,
     TaskFactory,
 )
+from canvas_sdk.v1.data import Observation
 
 EXPECTED_TOOLS = (
     "find_medications",
@@ -1274,3 +1277,34 @@ def test_patient_tools_refuse_a_run_without_a_patient(name: str, arguments: dict
     """A patient-less run gets an error, never an empty chart read as no records."""
     with pytest.raises(ValueError, match="not about a patient"):
         standard_tools.execute(name, arguments, ctx={"patient_id": None, "effects": []})
+
+
+def _vital(patient: Any, name: str) -> None:
+    """A committed vital-signs Observation, named the way Canvas's vitals command names it."""
+    Observation.objects.create(
+        patient=patient,
+        category="vital-signs",
+        name=name,
+        value="120/80",
+        units="mmHg",
+        note_id=0,
+        effective_datetime=datetime(2026, 1, 1, tzinfo=UTC),
+        committer=CanvasUserFactory.create(),
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "query", ["blood pressure", "Blood-Pressure", "blood_pressure", "pressure"]
+)
+def test_find_vitals_name_matches_spaces_and_underscores(query: str) -> None:
+    """Vitals are stored as `blood_pressure`; the model naturally asks for 'blood pressure'."""
+    patient = PatientFactory.create()
+    _vital(patient, "blood_pressure")
+    _vital(patient, "pulse")
+
+    rows = standard_tools.execute(
+        "find_vitals", {"name_contains": query}, ctx={"patient_id": patient.id}
+    )
+
+    assert [row["name"] for row in rows] == ["blood_pressure"]
