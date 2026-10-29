@@ -179,7 +179,7 @@ class Appointment(AppointmentABC):
                     )
                 )
 
-        if method == "update" and self.patient_id:
+        if method in ("update", "reschedule") and self.patient_id:
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -230,7 +230,27 @@ class Appointment(AppointmentABC):
                     )
                 )
 
-        if method == "update" and self.labels and self.instance_id:
+        # Checking in converts the note to an encounter note type. Rescheduling
+        # recreates the appointment and books its note again, so it only applies
+        # while the note is still an appointment note.
+        if method == "reschedule" and self.instance_id:
+            note_category = (
+                AppointmentDataModel.objects.filter(id=self.instance_id)
+                .values_list("note__note_type_version__category", flat=True)
+                .first()
+            )
+            if note_category and note_category != NoteTypeCategories.APPOINTMENT:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Appointment with ID {self.instance_id} cannot be rescheduled because "
+                        "its note is no longer an appointment note (for example, the patient "
+                        "has been checked in).",
+                        self.instance_id,
+                    )
+                )
+
+        if method in ("update", "reschedule") and self.labels and self.instance_id:
             existing_count = AppointmentLabel.objects.filter(
                 appointment__id=self.instance_id
             ).count()
