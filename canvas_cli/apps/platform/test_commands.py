@@ -909,9 +909,9 @@ def test_deploy_snapshot_onto_a_baseline_tagged_after_an_earlier_snapshot(
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A baseline commit tagged on top of an earlier snapshot, as Canvas Studio adds one to an
-    existing gated project, is the last snapshot: nothing is checked for rolling back the
-    earlier snapshot, and the baseline's own changes are not counted as changed on platform.
+    """A tag-only baseline commit on top of an earlier snapshot is the last snapshot: nothing
+    is checked for rolling back the earlier snapshot, and the baseline's own changes are not
+    counted as changed on platform.
     """
     root = monorepo.parent.parent
     _commit_in(monorepo, "handler.py", "x = 1\n")

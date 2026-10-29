@@ -509,14 +509,15 @@ def _guard_platform_history(
     The last snapshot on ``branch`` is the newest commit on its first-parent chain
     that carries a ``Monorepo-Commit`` trailer or is tagged under
     ``snapshot-baseline/``, as the commit Canvas Studio starts ``main`` from is.
-    A commit carrying both counts as a snapshot.
+    A commit carrying both is read by its trailer.
 
     A snapshot names the commit it came from. When this checkout has that commit,
     every package file it changed since its common ancestor with HEAD must be
     changed on HEAD's side too; a file HEAD left alone would go back to its older
     content, rolling the plugin back. A branch deployed and then squash- or
     rebase-merged passes, because HEAD carries its changes under another commit.
-    A tagged commit names no source commit, so nothing is checked for rolling back.
+    A commit that is only tagged names no source commit, so nothing is checked for
+    rolling back.
 
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
