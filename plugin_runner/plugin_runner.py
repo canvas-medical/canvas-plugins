@@ -569,7 +569,7 @@ class PluginRunner(PluginRunnerServicer):
                 f"trigger={request.handler_name}"
             )
 
-            from canvas_sdk.agents import ToolRegistry
+            from canvas_sdk.agents import RunSubject, ToolRegistry
 
             if not AGENT_RUN_SLOTS.acquire(blocking=False):
                 log.warning(
@@ -606,6 +606,12 @@ class PluginRunner(PluginRunnerServicer):
                     )
                     agent.tools = registry.scope(agent.tools_allowed)
                     granted_effect_types = agent.tools.effect_types()
+                    # home-app validated the subject before enqueuing the run.
+                    agent.subject = RunSubject(
+                        patient_id=request.patient_id or None,
+                        staff_id=request.staff_id or None,
+                        note_id=request.note_id or None,
+                    )
                     # Lifecycle hooks (doc §6.3): on_run_start before
                     # load_state, on_run_end after a successful save_state,
                     # on_run_error if anything in between raises. Hook

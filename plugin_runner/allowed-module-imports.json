@@ -8,6 +8,7 @@
     "FilterSpec",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "RunSubject",
     "SubAgentSpec",
     "ToolLoopResult",
     "ToolNotAllowed",
@@ -49,6 +50,9 @@
     "SubAgentSpec",
     "run_subagent",
     "run_subagents"
+  ],
+  "canvas_sdk.agents.subject": [
+    "RunSubject"
   ],
   "canvas_sdk.agents.tool_loop": [
     "ToolLoopResult",

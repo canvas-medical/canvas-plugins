@@ -2,10 +2,17 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.note_helpers import find_open_note
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.state import AgentState
+from canvas_sdk.agents.subject import RunSubject
 from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
+
+# The tool context keys AgentPlugin.tool_context sets from the run.
+TOOL_CONTEXT_KEYS = frozenset(
+    {"patient_id", "staff_id", "note_id", "effects", "gateway", "parent_tools"}
+)
 
 
 class AgentPlugin(ABC):
@@ -41,6 +48,11 @@ class AgentPlugin(ABC):
     # manifest grants none.
     tools_allowed: frozenset[str] = frozenset()
 
+    # Who and what this run is about, validated by the platform and set on the
+    # agent instance before lifecycle hooks fire. ``run_tool_loop`` hands it to
+    # every tool, so tools act on the platform's patient, not one the agent chose.
+    subject: RunSubject = RunSubject()
+
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:
         """Load this run's starting state from per-EHR storage."""
@@ -73,27 +85,60 @@ class AgentPlugin(ABC):
         self,
         gateway: LLMGateway,
         *,
-        ctx: dict[str, Any],
         system: str,
         messages: list[dict[str, Any]],
+        ctx: dict[str, Any] | None = None,
         **options: Any,
     ) -> ToolLoopResult:
         """Run :func:`canvas_sdk.agents.run_tool_loop` with this agent's tools and hooks.
 
         Uses ``self.tools``, the registry scoped to the manifest's grant, and calls
-        :meth:`on_turn` before each LLM call. ``options`` are the remaining
-        ``run_tool_loop`` arguments (``max_turns``, ``max_tokens``, ``model``,
-        ``history_chars``, ``cache_system``).
+        :meth:`on_turn` before each LLM call. The tools get the context
+        :meth:`tool_context` builds, plus any extra keys in ``ctx``. The effects the
+        tools stage come back on :attr:`ToolLoopResult.effects`. ``options`` are the
+        remaining ``run_tool_loop`` arguments (``max_turns``, ``max_tokens``,
+        ``model``, ``history_chars``, ``cache_system``).
         """
         return run_tool_loop(
             gateway,
             tools=self.tools or ToolRegistry(),
-            ctx=ctx,
+            ctx=self.tool_context(gateway, ctx),
             system=system,
             messages=messages,
             on_turn=self.on_turn,
             **options,
         )
+
+    def tool_context(
+        self, gateway: LLMGateway, extra: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """The context every tool call of this run receives.
+
+        Holds the run's subject (``patient_id``, ``staff_id``, ``note_id``), a fresh
+        ``effects`` list, and the ``gateway`` and ``parent_tools`` that composition
+        tools hand to sub-agents. ``note_id`` is the subject's note, or for a run a
+        staff member started, that staff member's open note on the patient.
+        ``extra`` adds agent-specific keys and cannot replace any of these.
+        """
+        extra = extra or {}
+        if reserved := sorted(TOOL_CONTEXT_KEYS & extra.keys()):
+            raise ValueError(
+                f"{reserved} are set from the run; pass only agent-specific keys in ctx"
+            )
+        subject = self.subject
+        note_id = subject.note_id
+        if note_id is None and subject.patient_id and subject.staff_id:
+            note = find_open_note(subject.patient_id, provider_id=subject.staff_id)
+            note_id = str(note.id) if note is not None else None
+        return {
+            **extra,
+            "patient_id": subject.patient_id,
+            "staff_id": subject.staff_id,
+            "note_id": note_id,
+            "effects": [],
+            "gateway": gateway,
+            "parent_tools": self.tools,
+        }
 
     def on_run_end(self, result: AgentRunResult) -> None:
         """Optional hook fired after ``run`` returns successfully. Default: no-op."""

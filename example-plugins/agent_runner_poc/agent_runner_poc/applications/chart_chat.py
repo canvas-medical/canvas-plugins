@@ -15,7 +15,7 @@ Opens a right-pane modal backed by three SimpleAPI endpoints:
 
 Going through the standard ``RunAgentEffect`` path means the agent's
 ``load_state`` → ``run`` → ``save_state`` lifecycle runs one at a time
-for the patient's scope_key — concurrent messages on the same patient
+per patient and clinician — one clinician's concurrent messages
 serialize naturally, the read-modify-write
 of the conversation snapshot stays atomic, and the SimpleAPI request
 thread is freed immediately (no long-lived plugin-runner worker held
@@ -25,7 +25,7 @@ for the LLM round-trip).
 from http import HTTPStatus
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat import chart_chat_scope_key, load_conversation_messages
+from agent_runner_poc.agents.chart_chat import load_conversation_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -88,15 +88,11 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         snapshot while runs on the conversation's scope are serialized, so
         the read-modify-write stays atomic with any concurrent run.
 
-        ``staff_id`` is pulled from the session-auth header (the
-        StaffSessionAuthMixin guarantees it's present and is a staff
-        member) and is part of the scope, so each clinician has their own
-        conversation and the agent attributes drafts to them.
+        The platform takes the clinician from the session behind this request
+        and scopes the run to the patient and that clinician, so each clinician
+        has their own conversation and the agent attributes drafts to them.
         """
         body = self.request.json()
-        patient_id: str = body["patient_id"]
-        user_message: str = body["message"]
-        staff_id: str = self.request.headers["canvas-logged-in-user-id"]
 
         return [
             JSONResponse(
@@ -105,8 +101,9 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
             ),
             RunAgentEffect(
                 agent_id=CHART_CHAT_AGENT_ID,
-                scope_key=chart_chat_scope_key(patient_id, staff_id),
-                trigger_payload={"user_message": user_message},
+                scope=RunAgentEffect.Scope.PATIENT_AND_STAFF,
+                patient_id=body["patient_id"],
+                trigger_payload={"user_message": body["message"]},
             ).apply(),
         ]
 

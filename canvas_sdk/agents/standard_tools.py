@@ -2621,12 +2621,10 @@ standard_tools.add_effect_tool(
 # Originate-on-note command tools — stage drafts on the patient's current note
 # ---------------------------------------------------------------------------
 #
-# The helper's default ``note_resolver`` reads ``ctx["note_id"]``. Triggered
-# agents (ChartSummary, etc.) set this from their trigger payload; chat-style
-# agents resolve the patient's current open note via
-# :func:`canvas_sdk.agents.find_open_note_uuid_from_ctx` and store it on
-# ctx before tool dispatch. Either way, every tool here stages a draft —
-# the clinician reviews, edits, and commits in the chart UI.
+# The helper's default ``note_resolver`` reads ``ctx["note_id"]``, which
+# AgentPlugin.tool_context sets to the run's note, or for a run a staff member
+# started, that staff member's open note on the patient. Every tool here stages
+# a draft — the clinician reviews, edits, and commits in the chart UI.
 
 
 _ORIGINATE_RETURNS = (
@@ -2960,9 +2958,8 @@ standard_tools.add_effect_tool(
             required=True,
         ),
     },
-    # patient_id and staff_id come from the agent's tool ctx — patient
-    # from the scope_key, staff from the calling Application's session
-    # (StaffSessionAuthMixin → trigger_payload["staff_id"]).
+    # patient_id and staff_id come from the run's subject on the tool ctx:
+    # the effect's patient and the staff member whose action started the run.
     inject_ctx={"patient_id": "recipient_id", "staff_id": "sender_id"},
     categories=("message_writes",),
     returns_description=(
@@ -2981,7 +2978,7 @@ def _originate_review_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
     plugin-runner dispatches them in order — note row first, plan command
     second — so the originated command lands on the newly created note.
 
-    Patient and staff identity come from the agent's ``ctx``; the agent
+    Patient and staff identity come from the run's subject on ``ctx``; the agent
     supplies ``narrative`` plus the two customer-config UUIDs
     (``note_type_id`` from ``find_note_types(category='review')``,
     ``practice_location_id`` from ``find_practice_locations``). Optional
@@ -2996,8 +2993,8 @@ def _originate_review_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
         return {
             "ok": False,
             "error": (
-                "originate_review_note requires staff_id on ctx — the calling "
-                "Application must stamp the requesting staff into trigger_payload."
+                "originate_review_note requires staff_id on ctx; only a run a "
+                "staff member started has one."
             ),
         }
 

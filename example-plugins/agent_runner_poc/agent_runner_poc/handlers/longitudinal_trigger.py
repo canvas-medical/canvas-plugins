@@ -34,10 +34,11 @@ class LongitudinalCareAdvisorTrigger(BaseHandler):
         return [
             RunAgentEffect(
                 agent_id="agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
-                # Patient-scoped, not encounter-scoped — the advisor's whole
-                # value is continuity across visits.
-                scope_key=f"agent_runner_poc:longitudinal_advisor:patient:{patient_id}",
-                trigger_payload={"patient_id": patient_id, "note_id": note_id},
+                # Patient-scoped, not note-scoped — the advisor's whole value is
+                # continuity across visits.
+                scope=RunAgentEffect.Scope.PATIENT,
+                patient_id=patient_id,
+                note_id=note_id,
             ).apply()
         ]
 

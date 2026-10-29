@@ -36,11 +36,12 @@ class EchoAgent(AgentPlugin):
         gateway: LLMGateway,
         trigger_payload: dict,
     ) -> AgentRunResult:
-        """Emit a LOG effect echoing the trigger payload plus the loaded scope_key."""
+        """Emit a LOG effect echoing the trigger payload, subject, and loaded scope_key."""
         payload = json.dumps(
             {
                 "loaded_with": state.data.get("loaded_with"),
                 "trigger": trigger_payload,
+                "subject": [self.subject.patient_id, self.subject.staff_id, self.subject.note_id],
                 "gateway_model": gateway.model,
             }
         )

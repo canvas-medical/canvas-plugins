@@ -5,11 +5,9 @@ ready-made :func:`find_open_note_uuid_from_ctx` resolver compatible
 with :meth:`ToolRegistry.originate_command_tool`'s ``note_resolver``
 parameter.
 
-Use this from chat-style agents and other user-initiated tools that
-don't have an inbound ``note_id`` on ``trigger_payload`` but still
-need to land a draft command on whatever note the clinician has open.
-For agents triggered on a specific note, prefer the default resolver
-that just reads ``ctx["note_id"]``.
+An agent's :meth:`AgentPlugin.tool_context` already sets ``ctx["note_id"]``
+to the requesting staff member's open note when the run names no note, so
+tools rarely need these directly.
 """
 
 from typing import Any

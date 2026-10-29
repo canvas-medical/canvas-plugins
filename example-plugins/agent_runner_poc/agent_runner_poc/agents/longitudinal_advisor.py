@@ -3,7 +3,6 @@ from typing import Any
 from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
-from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data import ProtocolCurrent
 from logger import log
 
@@ -108,17 +107,7 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
         trigger_payload: dict,
     ) -> AgentRunResult:
         """Brief the model with existing cards + drive a tool-use loop."""
-        patient_id = trigger_payload["patient_id"]
-        note_id = trigger_payload["note_id"]
-
-        context_block = _format_protocol_card_context(patient_id)
-
-        effects: list[Effect] = []
-        tool_ctx: dict[str, Any] = {
-            "patient_id": patient_id,
-            "note_id": note_id,
-            "effects": effects,
-        }
+        context_block = _format_protocol_card_context(self.subject.patient_id)
 
         messages: list[dict[str, Any]] = [
             {
@@ -132,14 +121,14 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
             }
         ]
         result = self.run_tool_loop(
-            gateway, ctx=tool_ctx, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
+            gateway, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
         )
 
         log.info(
-            f"LongitudinalCareAdvisor loop complete for note {note_id}: {result.turns} LLM "
-            f"turn(s), {result.stopped}, {len(effects)} effect(s) staged"
+            f"LongitudinalCareAdvisor loop complete for note {self.subject.note_id}: "
+            f"{result.turns} LLM turn(s), {result.stopped}, {len(result.effects)} effect(s) staged"
         )
-        return AgentRunResult(state=state, effects=effects)
+        return AgentRunResult(state=state, effects=result.effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
         """No-op — durable state lives in ProtocolCurrent, not AgentState."""

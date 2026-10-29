@@ -12,6 +12,7 @@ from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
     AgentState,
+    RunSubject,
     ToolRegistry,
     run_tool_loop,
 )
@@ -295,6 +296,22 @@ def test_the_callers_message_list_is_not_modified() -> None:
     assert history == [{"role": "user", "content": "go"}]
 
 
+def test_the_result_effects_are_the_ctx_effects_list() -> None:
+    """Sub-agents share the parent's ctx, so their effects land in the parent's list."""
+    effects: list[Any] = ["staged earlier"]
+    ctx = {"patient_id": "p1", "effects": effects}
+
+    result = run_tool_loop(
+        _FakeGateway(_FakeClient(_response("end_turn", _text("ok")))),  # type: ignore[arg-type]
+        tools=_tools(),
+        ctx=ctx,
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects is effects
+
+
 class _LoopingAgent(AgentPlugin):
     tools = _tools()
 
@@ -318,6 +335,7 @@ def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
     """AgentPlugin.run_tool_loop passes self.tools and wires on_turn."""
     agent = _LoopingAgent()
     agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
     client = _FakeClient(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("done")),
@@ -325,7 +343,6 @@ def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
 
     result = agent.run_tool_loop(
         _FakeGateway(client),  # type: ignore[arg-type]
-        ctx={"patient_id": "p1"},
         system="s",
         messages=[{"role": "user", "content": "go"}],
     )
@@ -333,3 +350,48 @@ def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
     assert [tool["name"] for tool in client.requests[0]["tools"]] == ["read_chart"]
     assert agent.turns_seen == [0, 1]
     assert result.stopped == "end_turn"
+
+
+def test_the_agent_method_gives_tools_the_run_subject() -> None:
+    """Tools read the platform's patient; the agent never names one."""
+    agent = _LoopingAgent()
+    agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
+    client = _FakeClient(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    agent.run_tool_loop(
+        _FakeGateway(client),  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert json.loads(tool_result["content"])["patient"] == "p1"
+
+
+def test_the_agent_method_returns_the_effects_its_tools_staged() -> None:
+    """Staged effects come back on the result, so the agent returns them as-is."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="stage", description="x", input_schema={"type": "object"})
+    def _stage(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        ctx["effects"].append("an effect")
+        return {"ok": True}
+
+    agent = _LoopingAgent()
+    agent.tools = tools
+    client = _FakeClient(
+        _response("tool_use", _tool_use("stage", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = agent.run_tool_loop(
+        _FakeGateway(client),  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects == ["an effect"]

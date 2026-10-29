@@ -80,12 +80,10 @@ class EffectField:
 
 
 def _note_id_from_ctx(ctx: dict[str, Any]) -> str | None:
-    """Default note resolver: read ``ctx["note_id"]`` set by the trigger.
+    """Default note resolver: read ``ctx["note_id"]``.
 
-    For agents triggered on a specific note (the typical ``RunAgentEffect``
-    pattern), the trigger handler passes ``note_id`` in ``trigger_payload``
-    and the agent makes it available via ``tool_ctx["note_id"]``. This
-    resolver just reads that value.
+    :meth:`AgentPlugin.tool_context` sets it to the run subject's note, or for
+    a run a staff member started, that staff member's open note on the patient.
 
     Returns ``None`` if absent — the helper's executor reports a structured
     error to the model in that case.
@@ -537,10 +535,8 @@ class ToolRegistry:
                 name and Command field differ).
             note_resolver: Callable returning the target note's UUID
                 (a string) given ``ctx``. Defaults to
-                :func:`_note_id_from_ctx` which reads ``ctx["note_id"]``
-                — appropriate for agents triggered on a specific note.
-                Pass a different resolver for chat-style agents that
-                look up the patient's current open note.
+                :func:`_note_id_from_ctx` which reads ``ctx["note_id"]``,
+                the run's note or the requesting staff member's open note.
             no_note_error: Error message returned to the model when
                 ``note_resolver`` returns ``None``. The model surfaces
                 this to the clinician (e.g., "open a note before

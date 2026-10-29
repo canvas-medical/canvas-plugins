@@ -9,11 +9,11 @@ Demonstrates the snapshot state pattern from doc §6.12:
 - ``save_state`` writes the updated message list back to the same row.
 
 Dispatched via the standard ``RunAgent`` path: the chat UI's POST
-handler emits a :class:`RunAgentEffect` scoped to the patient and clinician,
-with ``user_message`` in ``trigger_payload``, the home-app ``RunAgentEffectInterpreter`` enqueues
-a Celery task, and the plugin-runner's ``RunAgent`` RPC drives the
-lifecycle, one run at a time per ``scope_key``. The UI polls
-``/chart-chat-history`` to surface the assistant turn when it lands.
+handler emits a :class:`RunAgentEffect` scoped to the patient and the
+clinician behind the request, with ``user_message`` in ``trigger_payload``.
+The platform sets both on ``self.subject``, and runs one at a time per
+patient and clinician. The UI polls ``/chart-chat-history`` to surface the
+assistant turn when it lands.
 
 The full tool surface — clinical reads, task/banner/protocol writes,
 and the originate-on-note commands (Plan/Prescribe/LabOrder/Diagnose/
@@ -21,12 +21,9 @@ Goal/Assessment/FollowUp/StopMedication) — comes from the SDK's
 ``standard_tools`` registry via ``tools.extend(standard_tools)`` in
 chart_chat_tools.py. The manifest grants @clinical_reads,
 @clinical_writes, @task_writes, and @clinical_alerts with no
-exclusions.
-
-For the SDK's originate-command tools to work in chat-style runs,
-``run()`` resolves the clinician's open note once per run via
-:func:`find_open_note_uuid_from_ctx` and stores its UUID on
-``tool_ctx["note_id"]``, the key the SDK's default ``note_resolver`` reads.
+exclusions. The originate-command tools stage onto the clinician's open
+note, which :meth:`AgentPlugin.run_tool_loop` finds for a run a staff
+member started.
 """
 
 from typing import Any
@@ -35,14 +32,7 @@ from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
-from canvas_sdk.agents import (
-    AgentPlugin,
-    AgentRunResult,
-    AgentState,
-    LLMGateway,
-    find_open_note_uuid_from_ctx,
-)
-from canvas_sdk.effects import Effect
+from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from logger import log
 
 SYSTEM_PROMPT = (
@@ -175,19 +165,6 @@ SYSTEM_PROMPT = (
 
 MAX_TURNS = 8
 
-SCOPE_PREFIX = "agent_runner_poc:chart_chat"
-
-
-def chart_chat_scope_key(patient_id: str, staff_id: str) -> str:
-    """The scope of one clinician's conversation about one patient."""
-    return f"{SCOPE_PREFIX}:patient:{patient_id}:staff:{staff_id}"
-
-
-def _scope_ids(scope_key: str) -> tuple[str, str]:
-    """The patient and staff ids a :func:`chart_chat_scope_key` names."""
-    _, patient_id, _, staff_id = scope_key.removeprefix(f"{SCOPE_PREFIX}:").split(":")
-    return patient_id, staff_id
-
 
 def load_conversation_messages(patient_id: str, staff_id: str) -> list[dict[str, Any]]:
     """Read a clinician's message history about a patient from Conversation Custom Data."""
@@ -231,16 +208,11 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
     def load_state(self, scope_key: str) -> AgentState:
         """Read the clinician's conversation snapshot for this patient.
 
-        ``scope_key`` is a :func:`chart_chat_scope_key`, which names both.
+        The run is scoped to the patient and the clinician who sent the message,
+        both of which the platform sets on ``self.subject``.
         """
-        patient_id, staff_id = _scope_ids(scope_key)
-        return AgentState(
-            data={
-                "patient_id": patient_id,
-                "staff_id": staff_id,
-                "messages": load_conversation_messages(patient_id, staff_id),
-            }
-        )
+        messages = load_conversation_messages(self.subject.patient_id, self.subject.staff_id)
+        return AgentState(data={"messages": messages})
 
     def run(
         self,
@@ -249,40 +221,23 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         trigger_payload: dict,
     ) -> AgentRunResult:
         """Answer the clinician's new message through the tool-use loop."""
-        # The patient and clinician come from the scope (via load_state), the same
-        # place save_state writes to, so the chart the tools read and the
-        # conversation saved can't diverge. The clinician goes on the tool context
-        # so message drafts are attributed to them and originate tools use their
-        # open note.
-        effects: list[Effect] = []
-        tool_ctx: dict[str, Any] = {
-            "patient_id": state.data["patient_id"],
-            "staff_id": state.data["staff_id"],
-            "effects": effects,
-            # Composition tools (generate_pre_visit_brief, ...) run sub-agents with
-            # the run's gateway and a subset of this agent's granted tools.
-            "gateway": gateway,
-            "parent_tools": self.tools,
-        }
-        tool_ctx["note_id"] = find_open_note_uuid_from_ctx(tool_ctx)
-
         messages = [
             *state.data["messages"],
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         result = self.run_tool_loop(
-            gateway, ctx=tool_ctx, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
+            gateway, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
         )
         state.data["messages"] = result.messages
 
         # Opaque identifiers only: logs leave the instance, so no names or chart content.
         log.info(
-            f"ChartChatAgent: turn complete for patient_id={state.data['patient_id']} "
-            f"({result.turns} LLM turn(s), {result.stopped}, {len(effects)} effect(s))"
+            f"ChartChatAgent: turn complete for patient_id={self.subject.patient_id} "
+            f"({result.turns} LLM turn(s), {result.stopped}, {len(result.effects)} effect(s))"
         )
-        return AgentRunResult(state=state, effects=effects)
+        return AgentRunResult(state=state, effects=result.effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
         """Persist the updated message snapshot back to the Conversation row."""
         messages: list[dict[str, Any]] = state.data["messages"]
-        _save_conversation_messages(state.data["patient_id"], state.data["staff_id"], messages)
+        _save_conversation_messages(self.subject.patient_id, self.subject.staff_id, messages)

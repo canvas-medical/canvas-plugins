@@ -44,7 +44,8 @@ message RunAgentRequest {
   // "module.path:Class" — same format as components.handlers[].class.
   string agent_id = 1;
 
-  // Namespace tuple used for state-store keying (and V1 lock keying).
+  // The run's scope, derived by home-app from the effect's scope and the run's
+  // subject. Runs on one agent and scope_key happen one at a time.
   string scope_key = 2;
 
   // Identifier for this run; included in audit and effect provenance.
@@ -65,4 +66,12 @@ message RunAgentRequest {
   // and downstream interpreters see the originating actor and source.
   string actor = 7;
   string source = 8;
+
+  // The run's subject, validated by home-app before the run is enqueued, so an
+  // agent's tools can rely on it. Each is empty when the run has none.
+  // patient_id and note_id come from the RunAgentEffect; staff_id is the staff
+  // member behind the event that emitted it.
+  string patient_id = 9;
+  string staff_id = 10;
+  string note_id = 11;
 }
