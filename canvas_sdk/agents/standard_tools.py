@@ -483,6 +483,19 @@ def _serialize_immunization(immunization: Any) -> dict[str, Any]:
     }
 
 
+def _filter_name_words(queryset: Any, value: str) -> Any:
+    """Match ``value`` against ``name`` with spaces, underscores, and hyphens alike.
+
+    Canvas stores vital names in snake_case (``blood_pressure``), while the model
+    asks in words ("blood pressure"), so each word must appear in order with any
+    run of those separators, or none, between them.
+    """
+    words = [re.escape(word) for word in re.split(r"[\s_-]+", value.strip()) if word]
+    if not words:
+        return queryset
+    return queryset.filter(name__iregex="[ _-]*".join(words))
+
+
 @standard_tools.filter_search_tool(
     name="find_vitals",
     description=(
@@ -501,10 +514,13 @@ def _serialize_immunization(immunization: Any) -> dict[str, Any]:
         "name_contains": FilterSpec(
             type="string",
             description=(
-                "Case-insensitive substring match on the observation's name "
-                "(e.g., 'blood pressure', 'weight', 'temperature', 'pulse')."
+                "Case-insensitive match on the observation's name, treating "
+                "spaces, underscores, and hyphens alike. Canvas records vitals "
+                "under names such as 'blood_pressure', 'pulse', "
+                "'body_temperature', 'respiration_rate', 'oxygen_saturation', "
+                "'weight', and 'height'; 'blood pressure' matches 'blood_pressure'."
             ),
-            apply=lambda qs, v: qs.filter(name__icontains=v),
+            apply=lambda qs, v: _filter_name_words(qs, v),
         ),
         "observed_on_or_after": FilterSpec(
             type="string",
