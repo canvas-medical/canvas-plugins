@@ -580,7 +580,8 @@ def deploy(
     refuses uncommitted changes in the package rather than committing them, builds
     a commit whose package folder is the package as committed at HEAD, and pushes
     it to `main` from a scratch repository, so the larger repository's `origin`
-    and config are untouched. It refuses when `main` has changes to the package,
+    and config are untouched. A commit on `main` tagged `snapshot-baseline/...`
+    counts as the last snapshot. It refuses when `main` has changes to the package,
     such as a catalog listing edited in Canvas Platform, that the snapshot would
     replace, and asks at a terminal instead.
     """

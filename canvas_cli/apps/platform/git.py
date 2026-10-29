@@ -282,6 +282,9 @@ def clone(git_url: str, destination: Path, platform: str) -> None:
 # -- snapshots ---------------------------------------------------------------
 
 SOURCE_TRAILER = "Monorepo-Commit"
+# A commit tagged under this prefix, as Canvas Studio tags the commit it starts main from,
+# counts as the last snapshot.
+BASELINE_TAG_PREFIX = "snapshot-baseline/"
 PATH_TRAILER = "Monorepo-Path"
 SUBMODULE_MODE = "160000"
 SYMLINK_MODE = "120000"
@@ -421,9 +424,17 @@ def push_snapshot(
         for key, value in credential_config(git_url, platform):
             _output(work, "config", "--add", key, value, what=f"Setting {key}")
 
-        # Every branch, so a repository with none yet fetches nothing rather than failing.
+        # Every branch and baseline tag, so a repository with none yet fetches nothing
+        # rather than failing. --no-tags keeps other tags out.
         fetch = run(
-            work, "fetch", "-q", git_url, "+refs/heads/*:refs/platform/*", isolate_config=True
+            work,
+            "fetch",
+            "-q",
+            "--no-tags",
+            git_url,
+            "+refs/heads/*:refs/platform/*",
+            f"+refs/tags/{BASELINE_TAG_PREFIX}*:refs/tags/{BASELINE_TAG_PREFIX}*",
+            isolate_config=True,
         )
         if fetch.returncode != 0:
             raise GitError(
@@ -495,12 +506,18 @@ def _guard_platform_history(
 ) -> None:
     """Refuse a snapshot that would undo work on ``branch`` that it does not hold.
 
-    The last snapshot on ``branch`` names the commit it came from. When this
-    checkout has that commit, every package file it changed since its common
-    ancestor with HEAD must be changed on HEAD's side too; a file HEAD left alone
-    would go back to its older content, rolling the plugin back. A branch deployed
-    and then squash- or rebase-merged passes, because HEAD carries its changes
-    under another commit.
+    The last snapshot on ``branch`` is the newest commit on its first-parent chain
+    that carries a ``Monorepo-Commit`` trailer or is tagged under
+    ``snapshot-baseline/``, as the commit Canvas Studio starts ``main`` from is.
+    A commit carrying both is read by its trailer.
+
+    A snapshot names the commit it came from. When this checkout has that commit,
+    every package file it changed since its common ancestor with HEAD must be
+    changed on HEAD's side too; a file HEAD left alone would go back to its older
+    content, rolling the plugin back. A branch deployed and then squash- or
+    rebase-merged passes, because HEAD carries its changes under another commit.
+    A commit that is only tagged names no source commit, so nothing is checked for
+    rolling back.
 
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
@@ -511,13 +528,21 @@ def _guard_platform_history(
         work,
         "log",
         "--first-parent",
-        "-1",
-        f"--grep=^{SOURCE_TRAILER}: ",
-        f"--format=%H%x00%(trailers:key={SOURCE_TRAILER},valueonly)",
+        "--decorate=short",
+        f"--decorate-refs=refs/tags/{BASELINE_TAG_PREFIX}",
+        f"--format=%H%x00%D%x00%(trailers:key={SOURCE_TRAILER},valueonly,separator=%x2C)",
         tip,
         what="git log",
     )
-    last, _, source = (part.strip() for part in found.partition("\0"))
+    last = source = tag = ""
+    for record in found.splitlines():
+        commit, _, rest = record.partition("\0")
+        refs, _, trailer = rest.partition("\0")
+        if refs.strip() or trailer.strip():
+            last, source = commit.strip(), trailer.strip()
+            if not source:
+                tag = refs.split(",")[0].strip().removeprefix("tag: ")
+            break
     if source:
         if run(snapshot.toplevel, "cat-file", "-e", f"{source}^{{commit}}").returncode != 0:
             print(
@@ -546,7 +571,11 @@ def _guard_platform_history(
 
     if last:
         on_platform = _paths(work, "diff", "--name-only", "-z", last, tip, "--", name)
-        since = "since the last snapshot, such as by editing its catalog listing"
+        since = (
+            f"since {tag}, such as by editing its catalog listing"
+            if tag
+            else "since the last snapshot, such as by editing its catalog listing"
+        )
     else:
         on_platform = _paths(work, "ls-tree", "-r", "--name-only", "-z", tip, name)
         since = "by pushes that were not snapshots"
