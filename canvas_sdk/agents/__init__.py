@@ -13,6 +13,7 @@ from canvas_sdk.agents.tool_registry import (
     FilterSpec,
     ToolNotAllowed,
     ToolRegistry,
+    require_patient_id,
 )
 
 __all__ = __exports__ = (
@@ -31,6 +32,7 @@ __all__ = __exports__ = (
     "ToolRegistry",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
+    "require_patient_id",
     "run_subagent",
     "run_subagents",
     "run_tool_loop",
