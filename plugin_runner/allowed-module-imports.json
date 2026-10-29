@@ -15,6 +15,7 @@
     "ToolRegistry",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
+    "require_patient_id",
     "run_subagent",
     "run_subagents",
     "run_tool_loop",

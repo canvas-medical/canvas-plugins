@@ -33,6 +33,7 @@ def test_run_agent_effect_payload_carries_the_subject_and_scope() -> None:
         "scope": "patient",
         "patient_id": "p1",
         "note_id": "n1",
+        "scope_id": None,
         "trigger_payload": {"reason": "locked"},
     }
 
@@ -74,6 +75,41 @@ def test_patient_scopes_require_a_patient(scope: RunAgentEffect.Scope) -> None:
     """A scope keyed on the patient cannot be derived without one."""
     with pytest.raises(ValidationError, match="requires 'patient_id'"):
         RunAgentEffect(agent_id="any", scope=scope, note_id="n1")
+
+
+def test_staff_scope_needs_no_patient() -> None:
+    """An agent about a clinician's own work has no patient; the platform adds the clinician."""
+    data = json.loads(
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.STAFF).apply().payload
+    )["data"]
+
+    assert data["scope"] == "staff"
+    assert data["patient_id"] is None
+
+
+def test_key_scope_carries_the_plugins_key() -> None:
+    """Something that is neither a patient nor a note serializes on the plugin's own key."""
+    data = json.loads(
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.KEY, scope_id="claim:c1")
+        .apply()
+        .payload
+    )["data"]
+
+    assert (data["scope"], data["scope_id"]) == ("key", "claim:c1")
+
+
+def test_key_scope_requires_a_scope_id() -> None:
+    """Without one, every run would share one key."""
+    with pytest.raises(ValidationError, match="scope_id"):
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.KEY)
+
+
+def test_scope_id_is_only_for_key_scope() -> None:
+    """Other scopes derive their key from the subject, so a scope_id would be ignored."""
+    with pytest.raises(ValidationError, match="scope_id"):
+        RunAgentEffect(
+            agent_id="any", scope=RunAgentEffect.Scope.PATIENT, patient_id="p1", scope_id="x"
+        )
 
 
 def test_note_scope_requires_a_note() -> None:

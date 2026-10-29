@@ -29,7 +29,12 @@ from uuid import uuid4
 from django.db.models import Q
 
 from canvas_sdk.agents.note_helpers import find_open_note
-from canvas_sdk.agents.tool_registry import EffectField, FilterSpec, ToolRegistry
+from canvas_sdk.agents.tool_registry import (
+    EffectField,
+    FilterSpec,
+    ToolRegistry,
+    require_patient_id,
+)
 from canvas_sdk.commands import (
     AssessCommand,
     DiagnoseCommand,
@@ -97,7 +102,7 @@ def _require_patients_record(model: Any, record_id: str, ctx: dict[str, Any], la
     patient in ``ctx`` before anything is staged. The agent's loop returns the
     error to the model as a failed tool result.
     """
-    if not model.objects.filter(id=record_id, patient__id=ctx["patient_id"]).exists():
+    if not model.objects.filter(id=record_id, patient__id=require_patient_id(ctx)).exists():
         raise ValueError(f"{label} {record_id!r} not found for this patient")
 
 
@@ -990,8 +995,7 @@ def _serialize_note(note: Any) -> dict[str, Any]:
 )
 def _get_open_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any] | None:
     """Wrap find_open_note for direct LLM use."""
-    patient_id: str = ctx["patient_id"]
-    note = find_open_note(patient_id, provider_id=ctx.get("staff_id"))
+    note = find_open_note(require_patient_id(ctx), provider_id=ctx.get("staff_id"))
     if note is None:
         return None
     return _serialize_note(note)
@@ -1082,7 +1086,7 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
     text + command items the way the clinician wrote them.
     """
     note_id = arguments["note_id"]
-    patient_id: str = ctx["patient_id"]
+    patient_id = require_patient_id(ctx)
 
     note = (
         Note.objects.filter(id=note_id, patient__id=patient_id)
@@ -2117,8 +2121,7 @@ def _serialize_protocol_card(card: Any) -> dict[str, Any]:
 )
 def _get_patient_demographics(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """Return one patient's identity + demographic basics from the Patient row."""
-    patient_id: str = ctx["patient_id"]
-    patient = Patient.objects.get(id=patient_id)
+    patient = Patient.objects.get(id=require_patient_id(ctx))
 
     age_years: int | None = None
     if patient.birth_date:
