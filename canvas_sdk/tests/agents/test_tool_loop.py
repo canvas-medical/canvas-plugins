@@ -14,6 +14,7 @@ from canvas_sdk.agents import (
     AgentState,
     RunSubject,
     ToolRegistry,
+    require_patient_id,
     run_tool_loop,
 )
 
@@ -395,3 +396,29 @@ def test_the_agent_method_returns_the_effects_its_tools_staged() -> None:
     )
 
     assert result.effects == ["an effect"]
+
+
+def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> None:
+    """The model hears the run has no patient instead of reading an empty chart."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"patient": require_patient_id(ctx)}
+
+    client = _FakeClient(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("ok")),
+    )
+
+    run_tool_loop(
+        _FakeGateway(client),  # type: ignore[arg-type]
+        tools=tools,
+        ctx={"patient_id": None},
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "not about a patient" in tool_result["content"]

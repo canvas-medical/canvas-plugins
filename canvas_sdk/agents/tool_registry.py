@@ -79,6 +79,19 @@ class EffectField:
     command_field: str | None = None
 
 
+def require_patient_id(ctx: dict[str, Any]) -> str:
+    """The run's patient, for a tool that only makes sense on one.
+
+    Raises when the run is not about a patient, which the agent's loop returns
+    to the model as a failed tool result, so a patient-less run never reads an
+    empty chart as a patient with no records.
+    """
+    patient_id: str | None = ctx.get("patient_id")
+    if not patient_id:
+        raise ValueError("This run is not about a patient, so patient tools are unavailable")
+    return patient_id
+
+
 def _note_id_from_ctx(ctx: dict[str, Any]) -> str | None:
     """Default note resolver: read ``ctx["note_id"]``.
 
@@ -448,9 +461,7 @@ class ToolRegistry:
             serializer: Callable[[Any], dict[str, Any]],
         ) -> Callable[[Any], dict[str, Any]]:
             def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
-                patient_id: str = ctx["patient_id"]
-
-                queryset = queryset_factory(arguments, patient_id)
+                queryset = queryset_factory(arguments, require_patient_id(ctx))
 
                 for filter_name, spec in filters_dict.items():
                     if spec.apply is None:

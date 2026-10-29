@@ -27,6 +27,9 @@ class RunAgentEffect(_BaseEffect):
             patient exists, and a patient requesting a run may only name themselves.
         note_id: The note the run acts on. Requires ``patient_id``; the platform
             checks the note belongs to that patient.
+        scope_id: For scope ``KEY``, the plugin's own key for what runs serialize
+            on, such as ``f"claim:{claim_id}"``. It decides only which runs wait
+            on each other and gives the agent's tools nothing.
         trigger_payload: Small dict of trigger-shaped data the agent needs in
             ``run``, such as a chat message. The subject's fields
             (``patient_id``, ``staff_id``, ``note_id``) are not allowed here.
@@ -60,6 +63,12 @@ class RunAgentEffect(_BaseEffect):
         PATIENT_AND_STAFF = "patient_and_staff"
         # Runs on the same note, one at a time.
         NOTE = "note"
+        # Runs started by the same staff member, one at a time; an agent about a
+        # clinician's own work rather than one patient.
+        STAFF = "staff"
+        # Runs naming the same ``scope_id``, one at a time; for something that is
+        # neither a patient nor a note, such as a claim or an appointment.
+        KEY = "key"
         # One run of this agent at a time on the instance.
         AGENT = "agent"
 
@@ -67,13 +76,17 @@ class RunAgentEffect(_BaseEffect):
     scope: Scope
     patient_id: Annotated[str, Field(min_length=1)] | None = None
     note_id: Annotated[str, Field(min_length=1)] | None = None
+    scope_id: Annotated[str, Field(min_length=1)] | None = None
     trigger_payload: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def check_subject(self) -> Self:
         """Require the subject fields the scope needs and keep them out of the payload."""
-        if self.scope != self.Scope.AGENT and self.patient_id is None:
+        patient_scopes = (self.Scope.PATIENT, self.Scope.PATIENT_AND_STAFF, self.Scope.NOTE)
+        if self.scope in patient_scopes and self.patient_id is None:
             raise ValueError(f"scope {self.scope.value!r} requires 'patient_id'")
+        if (self.scope == self.Scope.KEY) != (self.scope_id is not None):
+            raise ValueError("'scope_id' is required by, and only allowed with, scope 'key'")
         if self.scope == self.Scope.NOTE and self.note_id is None:
             raise ValueError("scope 'note' requires 'note_id'")
         if self.note_id is not None and self.patient_id is None:
@@ -93,6 +106,7 @@ class RunAgentEffect(_BaseEffect):
             "scope": self.scope.value,
             "patient_id": self.patient_id,
             "note_id": self.note_id,
+            "scope_id": self.scope_id,
             "trigger_payload": self.trigger_payload,
         }
 
