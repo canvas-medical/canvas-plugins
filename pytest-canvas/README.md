@@ -7,3 +7,4 @@
 - **Auto-loads the Canvas SDK** at the earliest point in the pytest lifecycle.
 - **Wraps each test in a Django database transaction** to ensure isolation and consistency.
 - **Removes boilerplate**—you no longer need to explicitly depend on `db` or `transactional_db`.
+- **Creates your plugin's Custom Data tables** in the test database, from the `CustomModel` classes in its `models/` directory.
