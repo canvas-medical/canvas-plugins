@@ -9,7 +9,8 @@ class DocumentReviewDelegation(TimestampedModel, IdentifiableModel):
 
     Append-only log with a single active row per document (``is_active``). Sending a document
     for signature writes a row to the provider, with ``on_behalf_of`` naming the sender; signing
-    and returning it writes a route-back to the sender (``is_route_back``). Any other hand-off,
+    and returning it writes a route-back (``is_route_back``) to whoever it returns to: the
+    sender, or else the staff member who created the document. Any other hand-off,
     or the document no longer needing review, deactivates the active row.
     ``signature_consent`` grants nothing: each user places only their own signature. Sending
     for signature always names a staff member, so a row to a team is a team hand-off.
