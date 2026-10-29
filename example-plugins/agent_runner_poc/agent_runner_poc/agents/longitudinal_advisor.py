@@ -1,7 +1,4 @@
-import json
-from typing import Any, cast
-
-from anthropic.types import ToolUseBlock
+from typing import Any
 
 from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
@@ -123,8 +120,7 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
             "effects": effects,
         }
 
-        client = gateway.client()
-        messages: list[dict] = [
+        messages: list[dict[str, Any]] = [
             {
                 "role": "user",
                 # No name or other identifiers: the tools are already scoped to
@@ -135,80 +131,13 @@ class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
                 ),
             }
         ]
-
-        for turn in range(MAX_TURNS):
-            self._llm_turn_count = self._llm_turn_count + 1
-            response = client.messages.create(
-                model=gateway.model,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                tools=cast(Any, self.tools.definitions()),
-                messages=cast(Any, messages),
-            )
-            log.info(
-                f"LongitudinalCareAdvisor turn={turn} stop_reason={response.stop_reason} "
-                f"blocks={[b.type for b in response.content]}"
-            )
-
-            messages.append({"role": "assistant", "content": response.content})
-
-            if response.stop_reason == "end_turn":
-                break
-
-            # 'tool_use' is the normal dispatch case. 'max_tokens' means the
-            # model was cut off mid-response — any complete tool_use blocks
-            # in response.content are still valid; dispatch them and let the
-            # next turn pick up. Without this branch, a max_tokens turn with
-            # pending tool_use blocks silently drops them (the original cause
-            # of "0 effects staged" despite the model intending to act).
-            tool_use_blocks = [b for b in response.content if isinstance(b, ToolUseBlock)]
-            if response.stop_reason in ("tool_use", "max_tokens") and tool_use_blocks:
-                if response.stop_reason == "max_tokens":
-                    log.warning(
-                        f"LongitudinalCareAdvisor turn={turn} hit max_tokens with "
-                        f"{len(tool_use_blocks)} pending tool_use block(s); dispatching anyway"
-                    )
-                tool_results: list[dict] = []
-                for block in tool_use_blocks:
-                    try:
-                        result = self.tools.execute(
-                            block.name,
-                            dict(block.input),
-                            ctx=tool_ctx,
-                        )
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps(result, default=str),
-                            }
-                        )
-                    except Exception as exc:
-                        log.exception(f"LongitudinalCareAdvisor: tool {block.name!r} raised")
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": f"Tool execution failed: {exc!s}",
-                                "is_error": True,
-                            }
-                        )
-                messages.append({"role": "user", "content": tool_results})
-                continue
-
-            log.warning(
-                f"LongitudinalCareAdvisor: unexpected stop_reason={response.stop_reason!r}; bailing"
-            )
-            break
-        else:
-            log.warning(
-                f"LongitudinalCareAdvisor: hit MAX_TURNS={MAX_TURNS} without end_turn; "
-                "returning whatever was staged"
-            )
+        result = self.run_tool_loop(
+            gateway, ctx=tool_ctx, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
+        )
 
         log.info(
-            f"LongitudinalCareAdvisor loop complete for note {note_id}; "
-            f"{len(effects)} effect(s) staged"
+            f"LongitudinalCareAdvisor loop complete for note {note_id}: {result.turns} LLM "
+            f"turn(s), {result.stopped}, {len(effects)} effect(s) staged"
         )
         return AgentRunResult(state=state, effects=effects)
 

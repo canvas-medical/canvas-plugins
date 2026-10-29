@@ -3,14 +3,14 @@
 Demonstrates the snapshot state pattern from doc §6.12:
 - ``load_state`` reads the patient's :class:`Conversation` row and pulls the
   full message history into ``state.data["messages"]``.
-- ``run()`` appends the user's new message, drives a tool-use loop over
-  the chart, appends the assistant's response, and stashes the text in
-  ``state.data["last_response"]``.
+- ``run()`` appends the clinician's new message and answers it with
+  :meth:`AgentPlugin.run_tool_loop`, which returns the history with the new
+  turns appended.
 - ``save_state`` writes the updated message list back to the same row.
 
 Dispatched via the standard ``RunAgent`` path: the chat UI's POST
-handler emits a :class:`RunAgentEffect` with ``{patient_id, user_message}``
-in ``trigger_payload``, the home-app ``RunAgentEffectInterpreter`` enqueues
+handler emits a :class:`RunAgentEffect` scoped to the patient and clinician,
+with ``user_message`` in ``trigger_payload``, the home-app ``RunAgentEffectInterpreter`` enqueues
 a Celery task, and the plugin-runner's ``RunAgent`` RPC drives the
 lifecycle, one run at a time per ``scope_key``. The UI polls
 ``/chart-chat-history`` to surface the assistant turn when it lands.
@@ -24,16 +24,12 @@ chart_chat_tools.py. The manifest grants @clinical_reads,
 exclusions.
 
 For the SDK's originate-command tools to work in chat-style runs,
-``respond()`` resolves the patient's current open note once per turn
-via :func:`find_open_note_uuid_from_ctx` and stores the UUID on
-``tool_ctx["note_id"]`` before tool dispatch. The SDK's default
-``note_resolver`` reads that key — same shape triggered agents use.
+``run()`` resolves the clinician's open note once per run via
+:func:`find_open_note_uuid_from_ctx` and stores its UUID on
+``tool_ctx["note_id"]``, the key the SDK's default ``note_resolver`` reads.
 """
 
-import json
-from typing import Any, cast
-
-from anthropic.types import TextBlock, ToolUseBlock
+from typing import Any
 
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
 from agent_runner_poc.agents.run_logging import RunLoggingMixin
@@ -45,7 +41,6 @@ from canvas_sdk.agents import (
     AgentState,
     LLMGateway,
     find_open_note_uuid_from_ctx,
-    window_messages,
 )
 from canvas_sdk.effects import Effect
 from logger import log
@@ -220,29 +215,12 @@ def _save_conversation_messages(
         conversation.save()
 
 
-def _serialize_assistant_blocks(content: Any) -> list[dict[str, Any]]:
-    """Convert Anthropic SDK block objects into JSON-serializable dicts.
-
-    ``response.content`` from the Anthropic SDK is a list of typed block
-    objects (TextBlock, ToolUseBlock, etc.). We round-trip them through the
-    SDK's ``.model_dump()`` representation so the persisted history is plain
-    JSON and re-loadable into the next turn's messages list.
-    """
-    serialized: list[dict[str, Any]] = []
-    for block in content:
-        # Anthropic blocks are pydantic models; model_dump produces JSON-safe dicts.
-        serialized.append(block.model_dump())
-    return serialized
-
-
 class ChartChatAgent(RunLoggingMixin, AgentPlugin):
     """Chat agent backing the in-chart conversation surface.
 
-    Snapshot state pattern: the full message history lives in a single
-    :class:`Conversation` row and is loaded/mutated/saved as a unit.
-    Different from the LongitudinalCareAdvisor (event-sourced rows) and
-    ChartSummary (no state at all) — same SDK base class, three storage
-    models depending on what the agent actually needs.
+    Snapshot state pattern: the clinician's full message history lives in a
+    single :class:`Conversation` row and is loaded/mutated/saved as a unit,
+    where the LongitudinalCareAdvisor keeps its state in the chart.
     """
 
     # The platform scopes this to the manifest's tools.allowed before
@@ -261,7 +239,6 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
                 "patient_id": patient_id,
                 "staff_id": staff_id,
                 "messages": load_conversation_messages(patient_id, staff_id),
-                "last_response": "",
             }
         )
 
@@ -271,140 +248,38 @@ class ChartChatAgent(RunLoggingMixin, AgentPlugin):
         gateway: LLMGateway,
         trigger_payload: dict,
     ) -> AgentRunResult:
-        """Append the new user message, run the tool-use loop, capture the response."""
+        """Answer the clinician's new message through the tool-use loop."""
         # The patient and clinician come from the scope (via load_state), the same
         # place save_state writes to, so the chart the tools read and the
-        # conversation saved can't diverge. The clinician is stamped onto tool_ctx
-        # so message-write tools (originate_message) attribute drafts to them and
-        # originate tools use their open note.
-        patient_id = state.data["patient_id"]
-        staff_id = state.data["staff_id"]
-        user_message = trigger_payload["user_message"]
-
-        # Working messages list — mutate in place, persist at end via save_state.
-        messages: list[dict[str, Any]] = list(state.data.get("messages") or [])
-        messages.append({"role": "user", "content": user_message})
-
-        # Shared context for the tool dispatcher. The effects accumulator
-        # collects originated commands / Tasks from write tools (create_task,
-        # originate_prescribe_medication, etc.); the platform dispatches each
-        # exactly once after run() returns via AgentRunResult.effects.
-        #
-        # Resolve the patient's current open note once per turn and stash the
-        # UUID on ctx. The SDK's originate-command tools read ctx["note_id"]
-        # by default — chat-style agents are responsible for populating it;
-        # triggered agents get it from their trigger payload. If no open
-        # note exists, the helper returns the structured no-note error
-        # individually per tool call so the model can tell the clinician.
+        # conversation saved can't diverge. The clinician goes on the tool context
+        # so message drafts are attributed to them and originate tools use their
+        # open note.
         effects: list[Effect] = []
         tool_ctx: dict[str, Any] = {
-            "patient_id": patient_id,
-            "staff_id": staff_id,
+            "patient_id": state.data["patient_id"],
+            "staff_id": state.data["staff_id"],
             "effects": effects,
-            # Stamp the gateway + parent tools registry so composition
-            # tools like `generate_pre_visit_brief` can spawn sub-agents
-            # via run_subagents(). Sub-agents share this same ctx so
-            # their write effects flow into `effects`, and their tool
-            # subset is scoped from `parent_tools`.
+            # Composition tools (generate_pre_visit_brief, ...) run sub-agents with
+            # the run's gateway and a subset of this agent's granted tools.
             "gateway": gateway,
             "parent_tools": self.tools,
         }
         tool_ctx["note_id"] = find_open_note_uuid_from_ctx(tool_ctx)
 
-        client = gateway.client()
-        final_text = ""
-
-        for turn in range(MAX_TURNS):
-            # Plain assignment — RestrictedPython forbids augmented attribute
-            # assignment (`self.x += 1`) in the sandbox.
-            self._llm_turn_count = self._llm_turn_count + 1
-            response = client.messages.create(
-                model=gateway.model,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                # `self.tools` is the manifest-scoped registry — already
-                # filtered to the allowlist when run() fired.
-                tools=cast(Any, self.tools.definitions()),
-                # The newest turns that fit one call; the full history is still saved.
-                messages=cast(Any, window_messages(messages)),
-            )
-            log.info(
-                f"ChartChatAgent turn={turn} stop_reason={response.stop_reason} "
-                f"blocks={[b.type for b in response.content]}"
-            )
-
-            # Persist the assistant turn into the message history before
-            # deciding what to do next. Serialize blocks → dicts so the
-            # next load_state can re-feed them to messages.create unchanged.
-            messages.append(
-                {"role": "assistant", "content": _serialize_assistant_blocks(response.content)}
-            )
-
-            if response.stop_reason == "end_turn":
-                for block in response.content:
-                    if isinstance(block, TextBlock):
-                        final_text = block.text.strip()
-                        break
-                break
-
-            # 'tool_use' is the normal dispatch case. 'max_tokens' means the
-            # model was cut off mid-response — any complete tool_use blocks
-            # in response.content are still valid; dispatch them and let the
-            # next turn pick up.
-            tool_use_blocks = [b for b in response.content if isinstance(b, ToolUseBlock)]
-            if response.stop_reason in ("tool_use", "max_tokens") and tool_use_blocks:
-                if response.stop_reason == "max_tokens":
-                    log.warning(
-                        f"ChartChatAgent turn={turn} hit max_tokens with "
-                        f"{len(tool_use_blocks)} pending tool_use block(s); dispatching anyway"
-                    )
-                tool_results: list[dict[str, Any]] = []
-                for block in tool_use_blocks:
-                    try:
-                        result = self.tools.execute(
-                            block.name,
-                            dict(block.input),
-                            ctx=tool_ctx,
-                        )
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps(result, default=str),
-                            }
-                        )
-                    except Exception as exc:
-                        log.exception(f"ChartChatAgent: tool {block.name!r} raised")
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": f"Tool execution failed: {exc!s}",
-                                "is_error": True,
-                            }
-                        )
-                messages.append({"role": "user", "content": tool_results})
-                continue
-
-            log.warning(f"ChartChatAgent: unexpected stop_reason={response.stop_reason!r}; bailing")
-            break
-        else:
-            log.warning(
-                f"ChartChatAgent: hit MAX_TURNS={MAX_TURNS} without end_turn; "
-                "returning whatever text was last produced"
-            )
-
-        # Update the state object so save_state persists the new messages
-        # and the SimpleAPI caller can read last_response off result.state.
-        state.data["messages"] = messages
-        state.data["last_response"] = final_text or "(no response)"
+        messages = [
+            *state.data["messages"],
+            {"role": "user", "content": trigger_payload["user_message"]},
+        ]
+        result = self.run_tool_loop(
+            gateway, ctx=tool_ctx, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
+        )
+        state.data["messages"] = result.messages
 
         # Opaque identifiers only: logs leave the instance, so no names or chart content.
         log.info(
-            f"ChartChatAgent: turn complete for patient_id={patient_id} "
-            f"({len(messages)} total messages)"
+            f"ChartChatAgent: turn complete for patient_id={state.data['patient_id']} "
+            f"({result.turns} LLM turn(s), {result.stopped}, {len(effects)} effect(s))"
         )
-
         return AgentRunResult(state=state, effects=effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:

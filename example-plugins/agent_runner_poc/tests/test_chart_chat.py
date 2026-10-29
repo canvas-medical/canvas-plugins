@@ -1,6 +1,9 @@
+from types import SimpleNamespace
+
 import pytest
 import pytest_canvas.plugin
 from agent_runner_poc.agents.chart_chat import ChartChatAgent, chart_chat_scope_key
+from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 
@@ -35,3 +38,58 @@ def test_pytest_canvas_still_lacks_the_custom_data_fixture() -> None:
         "pytest-canvas now creates plugin Custom Data tables itself; delete the "
         "custom_data_tables fixture in example-plugins/agent_runner_poc/tests/conftest.py"
     )
+
+
+class _FakeClient:
+    """Returns queued responses in order."""
+
+    def __init__(self, *responses: SimpleNamespace) -> None:
+        self._responses = list(responses)
+        self.messages = self
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        return self._responses.pop(0)
+
+
+class _FakeGateway:
+    model = "claude-test"
+
+    def __init__(self, client: _FakeClient) -> None:
+        self._client = client
+
+    def client(self) -> _FakeClient:
+        return self._client
+
+
+@pytest.mark.django_db
+def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
+    """The agent stores the clinician's turn, the tool exchange, and the answer, and counts turns."""
+    patient = PatientFactory.create()
+    staff = StaffFactory.create()
+    agent = ChartChatAgent()
+    agent.tools = ChartChatAgent.tools.scope({"get_patient_demographics"})
+    agent.on_run_start(chart_chat_scope_key(patient.id, staff.id))
+    gateway = _FakeGateway(
+        _FakeClient(
+            SimpleNamespace(
+                stop_reason="tool_use",
+                content=[
+                    ToolUseBlock(
+                        id="t1", name="get_patient_demographics", input={}, type="tool_use"
+                    )
+                ],
+            ),
+            SimpleNamespace(
+                stop_reason="end_turn", content=[TextBlock(text="She is 54.", type="text")]
+            ),
+        )
+    )
+    state = agent.load_state(chart_chat_scope_key(patient.id, staff.id))
+
+    result = agent.run(state, gateway, {"user_message": "How old is she?"})
+
+    roles = [message["role"] for message in result.state.data["messages"]]
+    assert roles == ["user", "assistant", "user", "assistant"]
+    assert result.state.data["messages"][0] == {"role": "user", "content": "How old is she?"}
+    assert result.state.data["messages"][-1]["content"][0]["text"] == "She is 54."
+    assert agent._llm_turn_count == 2

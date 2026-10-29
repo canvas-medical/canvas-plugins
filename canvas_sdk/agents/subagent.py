@@ -39,16 +39,15 @@ cross-plugin reuse, that's the signal to promote it to a full
 :class:`AgentPlugin` subclass — those are agents, not roles.
 """
 
-import json
 import logging
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any
 
-from anthropic.types import TextBlock, ToolUseBlock
 from django.db import connections
 
 from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.utils.http import ThreadPoolExecutor
 from canvas_sdk.v1.plugin_database_context import (
@@ -101,15 +100,10 @@ def run_subagent(
 ) -> str:
     """Run one sub-agent's focused tool-use loop and return its final text.
 
-    The loop mirrors the standard pattern used by :class:`AgentPlugin`
-    implementations: alternating ``client.messages.create`` calls and
-    ``tool_use`` dispatch until the model emits ``stop_reason="end_turn"``
-    or the turn budget is exhausted.
-
-    Errors during individual tool calls are reported back to the model
-    as ``tool_result`` blocks with ``is_error=True`` so the sub-agent
-    can recover; exceptions from the LLM call or other unexpected
-    failures propagate to the caller.
+    A :func:`run_tool_loop` with the spec's persona, tool subset, and limits, starting
+    from ``user_message`` alone. Tool errors go back to the model as ``is_error``
+    results so the sub-agent can recover; errors from the LLM call propagate to the
+    caller.
 
     Args:
         spec: Persona, tool subset, and limits for this sub-agent.
@@ -125,70 +119,22 @@ def run_subagent(
 
     Returns:
         The sub-agent's final text response, stripped. Empty string if
-        the loop runs out of turns without an ``end_turn`` stop, or if
-        the final turn produced no text block.
+        the loop stops before the model ends its turn, or if the final
+        turn produced no text.
     """
-    sub_tools = parent_tools.scope(spec.allowed_tool_names)
-    client = gateway.client()
-    messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
-
-    for turn in range(spec.max_turns):
-        response = client.messages.create(
-            model=gateway.model,
-            max_tokens=spec.max_tokens,
-            system=spec.system_prompt,
-            tools=cast(Any, sub_tools.definitions()),
-            messages=cast(Any, messages),
-        )
-        log.info(
-            f"SubAgent[{spec.name}] turn={turn} stop_reason={response.stop_reason} "
-            f"blocks={[b.type for b in response.content]}"
-        )
-
-        messages.append(
-            {
-                "role": "assistant",
-                "content": [block.model_dump() for block in response.content],
-            }
-        )
-
-        if response.stop_reason == "end_turn":
-            for block in response.content:
-                if isinstance(block, TextBlock):
-                    return block.text.strip()
-            return ""
-
-        tool_use_blocks = [b for b in response.content if isinstance(b, ToolUseBlock)]
-        if response.stop_reason not in ("tool_use", "max_tokens") or not tool_use_blocks:
-            log.warning(
-                f"SubAgent[{spec.name}]: unexpected stop_reason={response.stop_reason!r}; bailing"
-            )
-            break
-
-        tool_results: list[dict[str, Any]] = []
-        for block in tool_use_blocks:
-            try:
-                result = sub_tools.execute(block.name, dict(block.input), ctx=parent_ctx)
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(result, default=str),
-                    }
-                )
-            except Exception as exc:
-                log.exception(f"SubAgent[{spec.name}]: tool {block.name!r} raised")
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": f"Tool execution failed: {exc!s}",
-                        "is_error": True,
-                    }
-                )
-        messages.append({"role": "user", "content": tool_results})
-
-    return ""
+    result = run_tool_loop(
+        gateway,
+        tools=parent_tools.scope(spec.allowed_tool_names),
+        ctx=parent_ctx,
+        system=spec.system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+        max_turns=spec.max_turns,
+        max_tokens=spec.max_tokens,
+    )
+    if result.stopped != "end_turn":
+        log.warning(f"SubAgent[{spec.name}] stopped without finishing ({result.stopped})")
+        return ""
+    return result.text
 
 
 def _in_database_context_of_this_thread(fn: Callable[..., str]) -> Callable[..., str]:

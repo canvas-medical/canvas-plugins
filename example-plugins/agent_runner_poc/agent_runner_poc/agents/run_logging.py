@@ -10,12 +10,11 @@ MRO: declare the mixin *before* :class:`AgentPlugin`:
 
     class MyAgent(RunLoggingMixin, AgentPlugin):
         def run(self, state, gateway, trigger_payload):
-            for turn_index in range(MAX_TURNS):
-                self._llm_turn_count += 1
-                ...
+            result = self.run_tool_loop(gateway, ctx=..., system=..., messages=...)
+            ...
 
-The agent's loop bumps ``self._llm_turn_count`` on each LLM call; the
-mixin's ``on_run_end`` / ``on_run_error`` stamps it onto the log row.
+``run_tool_loop`` calls :meth:`on_turn` before each LLM call, which counts the
+turns; ``on_run_end`` / ``on_run_error`` stamp the count onto the log row.
 
 Hook failures are swallowed by the plugin-runner (per
 ``_invoke_agent_hook`` in ``plugin_runner.py``), so a broken
@@ -50,6 +49,10 @@ class RunLoggingMixin:
             scope_key=scope_key,
             status="running",
         )
+
+    def on_turn(self, turn_index: int) -> None:
+        """Count LLM turns; run_tool_loop calls this before each one."""
+        self._llm_turn_count = turn_index + 1
 
     def on_run_end(self, result: AgentRunResult) -> None:
         """Close the row as successful."""
