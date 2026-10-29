@@ -25,11 +25,9 @@ Both demonstrate the "sub-agent as role, not class" pattern from
 canvas_sdk.agents.subagent — pure config dataclasses, no AgentPlugin
 registration, no per-spec manifest entries.
 
-ChartChatAgent.respond() resolves the patient's current open note once
-per turn via :func:`canvas_sdk.agents.find_open_note_uuid_from_ctx`
-and stores it on ``tool_ctx["note_id"]``. It also stamps the run's
-``gateway`` and parent ``tools`` registry onto the ctx so composition
-tools like ``generate_pre_visit_brief`` can spawn sub-agents.
+:meth:`AgentPlugin.run_tool_loop` puts the run's ``gateway`` and the
+agent's granted ``tools`` on the ctx as ``gateway`` and ``parent_tools``,
+which composition tools like ``generate_pre_visit_brief`` hand to sub-agents.
 """
 
 from typing import Any
@@ -85,7 +83,7 @@ def _generate_chart_summary(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
 
     Read-only — emits no effects. The parent decides how to surface the
     text. Composition-tool ctx contract: ``parent_tools`` and ``gateway``
-    must be on ctx (stamped by ChartChatAgent.run before each turn).
+    must be on ctx, as :meth:`AgentPlugin.run_tool_loop` puts them.
     """
     parent_tools = ctx.get("parent_tools")
     gateway = ctx.get("gateway")
@@ -94,7 +92,7 @@ def _generate_chart_summary(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
             "ok": False,
             "error": (
                 "generate_chart_summary requires parent_tools and gateway on ctx; "
-                "the calling agent must stamp them before invoking composition tools."
+                "run the agent through AgentPlugin.run_tool_loop, which puts them there."
             ),
         }
 
@@ -210,9 +208,9 @@ def _generate_pre_visit_brief(arguments: dict[str, Any], *, ctx: dict[str, Any])
     """Fan out to 4 focused sub-agents and return their per-domain summaries.
 
     Composition-tool executor — accesses the parent's gateway and tools
-    registry off ``ctx`` (stamped by ChartChatAgent.run before each
-    turn). Sub-agents share the same ``ctx`` so any write effects they
-    originate flow into the parent's accumulator.
+    registry off ``ctx``, where :meth:`AgentPlugin.run_tool_loop` puts them.
+    Sub-agents share the same ``ctx`` so any write effects they originate
+    flow into the parent's accumulator.
     """
     parent_tools = ctx.get("parent_tools")
     gateway = ctx.get("gateway")
@@ -221,7 +219,7 @@ def _generate_pre_visit_brief(arguments: dict[str, Any], *, ctx: dict[str, Any])
             "ok": False,
             "error": (
                 "generate_pre_visit_brief requires parent_tools and gateway on ctx; "
-                "the calling agent must stamp them before invoking composition tools."
+                "run the agent through AgentPlugin.run_tool_loop, which puts them there."
             ),
         }
 

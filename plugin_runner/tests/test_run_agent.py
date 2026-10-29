@@ -43,8 +43,8 @@ def inference_gateway_env(load_test_plugins: None, monkeypatch: pytest.MonkeyPat
 def _make_request(
     *,
     agent_id: str = AGENT_ID,
-    scope_key: str = "test_agent_plugin:patient:p1",
-    trigger_payload: str = '{"note_id": "n1"}',
+    scope_key: str = "patient:p1",
+    trigger_payload: str = '{"message": "hi"}',
     plugin_name: str = "test_agent_plugin",
     handler_name: str = "EchoTrigger",
     actor: str = "1",
@@ -59,6 +59,9 @@ def _make_request(
         handler_name=handler_name,
         actor=actor,
         source=source,
+        patient_id="p1",
+        staff_id="s1",
+        note_id="n1",
     )
 
 
@@ -108,10 +111,27 @@ def test_run_agent_happy_path_returns_emitted_effect(
 
     body = json.loads(effect.payload)
     assert body == {
-        "loaded_with": "test_agent_plugin:patient:p1",
-        "trigger": {"note_id": "n1"},
+        "loaded_with": "patient:p1",
+        "trigger": {"message": "hi"},
+        "subject": ["p1", "s1", "n1"],
         "gateway_model": "claude-sonnet-4-6",
     }
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_leaves_absent_subject_fields_unset(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """A run with no requester, such as one a system event started, has no staff_id."""
+    request = _make_request()
+    request.staff_id = ""
+
+    (response,) = plugin_runner.RunAgent(request, None)
+
+    assert json.loads(response.effects[0].payload)["subject"] == ["p1", None, "n1"]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -443,7 +463,7 @@ def test_run_agent_fires_on_run_start_and_on_run_end_in_order(
     assert response.success is True
 
     assert [name for name, _ in call_log] == ["on_run_start", "on_run_end"]
-    assert call_log[0][1] == "test_agent_plugin:patient:p1"
+    assert call_log[0][1] == "patient:p1"
     assert isinstance(call_log[1][1], AgentRunResult)
 
 
@@ -627,7 +647,7 @@ def test_run_agent_drops_effects_no_granted_tool_declares(
             placement=[AddBannerAlert.Placement.CHART],
             intent=AddBannerAlert.Intent.INFO,
         ).apply(),
-        RunAgentEffect(agent_id=AGENT_ID, scope_key="s").apply(),
+        RunAgentEffect(agent_id=AGENT_ID, scope=RunAgentEffect.Scope.AGENT).apply(),
     ]
     monkeypatch.setattr(
         agent_cls, "run", lambda self, state, gateway, payload: AgentRunResult(state, returned)

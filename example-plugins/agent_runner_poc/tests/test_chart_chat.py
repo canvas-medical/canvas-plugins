@@ -2,32 +2,33 @@ from types import SimpleNamespace
 
 import pytest
 import pytest_canvas.plugin
-from agent_runner_poc.agents.chart_chat import ChartChatAgent, chart_chat_scope_key
+from agent_runner_poc.agents.chart_chat import ChartChatAgent
 from anthropic.types import TextBlock, ToolUseBlock
 
+from canvas_sdk.agents import RunSubject
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 
 
-def test_scope_key_names_the_patient_and_the_clinician() -> None:
-    """Runs serialize per clinician's conversation, not per chart."""
-    assert chart_chat_scope_key("p1", "s1") == "agent_runner_poc:chart_chat:patient:p1:staff:s1"
+def _agent_for(patient_id: str, staff_id: str) -> ChartChatAgent:
+    """A chat agent for one clinician's run on one patient, as the platform sets it up."""
+    agent = ChartChatAgent()
+    agent.subject = RunSubject(patient_id=patient_id, staff_id=staff_id)
+    return agent
 
 
 @pytest.mark.django_db
 def test_each_clinician_has_their_own_conversation() -> None:
     """One clinician's chat never becomes another's context."""
     patient = PatientFactory.create()
-    first = StaffFactory.create()
-    second = StaffFactory.create()
-    agent = ChartChatAgent()
-    first_key = chart_chat_scope_key(patient.id, first.id)
+    first = _agent_for(patient.id, StaffFactory.create().id)
+    second = _agent_for(patient.id, StaffFactory.create().id)
 
-    state = agent.load_state(first_key)
+    state = first.load_state("patient_and_staff")
     state.data["messages"] = [{"role": "user", "content": "How is her A1c trending?"}]
-    agent.save_state(first_key, state)
+    first.save_state("patient_and_staff", state)
 
-    assert agent.load_state(chart_chat_scope_key(patient.id, second.id)).data["messages"] == []
-    assert agent.load_state(first_key).data["messages"] == [
+    assert second.load_state("patient_and_staff").data["messages"] == []
+    assert first.load_state("patient_and_staff").data["messages"] == [
         {"role": "user", "content": "How is her A1c trending?"}
     ]
 
@@ -64,11 +65,9 @@ class _FakeGateway:
 @pytest.mark.django_db
 def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
     """The agent stores the clinician's turn, the tool exchange, and the answer, and counts turns."""
-    patient = PatientFactory.create()
-    staff = StaffFactory.create()
-    agent = ChartChatAgent()
+    agent = _agent_for(PatientFactory.create().id, StaffFactory.create().id)
     agent.tools = ChartChatAgent.tools.scope({"get_patient_demographics"})
-    agent.on_run_start(chart_chat_scope_key(patient.id, staff.id))
+    agent.on_run_start("patient_and_staff")
     gateway = _FakeGateway(
         _FakeClient(
             SimpleNamespace(
@@ -84,7 +83,7 @@ def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
             ),
         )
     )
-    state = agent.load_state(chart_chat_scope_key(patient.id, staff.id))
+    state = agent.load_state("patient_and_staff")
 
     result = agent.run(state, gateway, {"user_message": "How old is she?"})
 
