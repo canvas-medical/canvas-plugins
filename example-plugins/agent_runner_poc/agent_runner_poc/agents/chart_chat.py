@@ -29,7 +29,6 @@ member started.
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
-from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
@@ -192,7 +191,7 @@ def _save_conversation_messages(
         conversation.save()
 
 
-class ChartChatAgent(RunLoggingMixin, AgentPlugin):
+class ChartChatAgent(AgentPlugin):
     """Chat agent backing the in-chart conversation surface.
 
     Snapshot state pattern: the clinician's full message history lives in a

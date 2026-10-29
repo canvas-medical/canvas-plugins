@@ -47,6 +47,7 @@ from typing import Any
 from django.db import connections
 
 from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.run_record import current_recorder
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.utils.http import ThreadPoolExecutor
@@ -141,21 +142,25 @@ def _in_database_context_of_this_thread(fn: Callable[..., str]) -> Callable[...,
     """Wrap ``fn`` to run on a worker thread in the calling thread's plugin database context.
 
     The plugin, custom-data namespace, and access level are thread-local, so a worker
-    thread would otherwise read and write without them. The worker's database
-    connection is closed when ``fn`` returns, since the pool's threads are not reused
-    by anything that would close it.
+    thread would otherwise read and write without them. The run's recorder is a context
+    variable, which a pool thread does not inherit, so it is carried over the same way.
+    The worker's database connection is closed when ``fn`` returns, since the pool's
+    threads are not reused by anything that would close it.
     """
     plugin = get_current_plugin()
     namespace = get_current_schema()
     access_level = get_access_level()
+    recorder = current_recorder.get()
 
     def run_in_context(*args: Any, **kwargs: Any) -> str:
+        token = current_recorder.set(recorder)
         try:
             if plugin is None:
                 return fn(*args, **kwargs)
             with plugin_database_context(plugin, namespace=namespace, access_level=access_level):
                 return fn(*args, **kwargs)
         finally:
+            current_recorder.reset(token)
             connections.close_all()
 
     return run_in_context

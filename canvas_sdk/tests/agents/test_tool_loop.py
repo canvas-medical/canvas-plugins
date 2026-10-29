@@ -17,6 +17,7 @@ from canvas_sdk.agents import (
     require_patient_id,
     run_tool_loop,
 )
+from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 
 
 def _tool_use(name: str, block_id: str, **arguments: Any) -> ToolUseBlock:
@@ -422,3 +423,32 @@ def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> No
     (tool_result,) = client.requests[1]["messages"][-1]["content"]
     assert tool_result["is_error"] is True
     assert "not about a patient" in tool_result["content"]
+
+
+def test_the_runs_recorder_gets_model_calls_tool_calls_and_how_the_loop_ended() -> None:
+    """The platform's run record comes from the loop, not from agent code."""
+    client = _FakeClient(
+        _response("tool_use", _tool_use("read_chart", "t1"), _tool_use("broken", "t2")),
+        _response("end_turn", _text("done")),
+    )
+    recorder = RunRecorder()
+    token = current_recorder.set(recorder)
+    try:
+        _run(client)
+    finally:
+        current_recorder.reset(token)
+
+    assert recorder.model_calls == 2
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("read_chart", True, ""),
+        ("broken", False, "ValueError"),
+    ]
+    assert recorder.stop_reason == "end_turn"
+
+
+def test_without_a_recorder_the_loop_records_nothing() -> None:
+    """Code outside a platform run, such as a test, runs the loop unchanged."""
+    result = _run(_FakeClient(_response("end_turn", _text("ok"))))
+
+    assert result.stopped == "end_turn"
+    assert current_recorder.get() is None

@@ -1,17 +1,18 @@
 """ChartChatApplication — patient-chart embedded chat UI.
 
-Opens a right-pane modal backed by three SimpleAPI endpoints:
+Opens a right-pane modal backed by four SimpleAPI endpoints:
 
 - ``GET /chart-chat-ui?patient={id}`` — serves the chat HTML.
 - ``GET /chart-chat-history?patient={id}`` — returns existing conversation
-  messages as JSON for the UI to render on load and to poll while a
-  response is in flight.
+  messages as JSON for the UI to render on load and once a run succeeds.
 - ``POST /chart-chat-message`` — accepts ``{patient_id, message}``,
   emits a :class:`RunAgentEffect` for :class:`ChartChatAgent`, and
-  returns ``202 Accepted`` immediately. The agent runs asynchronously
-  on the plugin-runner (Celery → ``RunAgent`` RPC, same path as
-  triggered agents); the UI polls ``/chart-chat-history`` until the
-  assistant turn lands.
+  returns ``202 Accepted`` with the run's ``run_id`` immediately. The
+  agent runs asynchronously on the plugin-runner (Celery → ``RunAgent``
+  RPC, same path as triggered agents).
+- ``GET /chart-chat-run?run_id={id}`` — returns the run's status from the
+  platform's :class:`AgentRun` record, which the UI polls until the run
+  finishes.
 
 Going through the standard ``RunAgentEffect`` path means the agent's
 ``load_state`` → ``run`` → ``save_state`` lifecycle runs one at a time
@@ -33,6 +34,7 @@ from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
+from canvas_sdk.v1.data import AgentRun
 
 CHART_CHAT_AGENT_ID = "agent_runner_poc.agents.chart_chat:ChartChatAgent"
 
@@ -93,19 +95,37 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         has their own conversation and the agent attributes drafts to them.
         """
         body = self.request.json()
+        run = RunAgentEffect(
+            agent_id=CHART_CHAT_AGENT_ID,
+            scope=RunAgentEffect.Scope.PATIENT_AND_STAFF,
+            patient_id=body["patient_id"],
+            trigger_payload={"user_message": body["message"]},
+        )
 
         return [
             JSONResponse(
-                {"status": "queued"},
+                {"status": "queued", "run_id": str(run.run_id)},
                 status_code=HTTPStatus.ACCEPTED,
             ),
-            RunAgentEffect(
-                agent_id=CHART_CHAT_AGENT_ID,
-                scope=RunAgentEffect.Scope.PATIENT_AND_STAFF,
-                patient_id=body["patient_id"],
-                trigger_payload={"user_message": body["message"]},
-            ).apply(),
+            run.apply(),
         ]
+
+    @api.get("/chart-chat-run")
+    def chart_chat_run(self) -> list[Response | Effect]:
+        """Return where one of the logged-in clinician's runs stands, from the platform's record.
+
+        A run the record does not show yet reads as queued: the interpreter writes
+        the record as it enqueues the run.
+        """
+        staff_id = self.request.headers["canvas-logged-in-user-id"]
+        run = AgentRun.objects.filter(
+            id=self.request.query_params["run_id"],
+            plugin_name="agent_runner_poc",
+            staff__id=staff_id,
+        ).first()
+        if run is None:
+            return [JSONResponse({"status": "queued", "error_kind": ""})]
+        return [JSONResponse({"status": run.status, "error_kind": run.error_kind})]
 
 
 def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, str]]:
