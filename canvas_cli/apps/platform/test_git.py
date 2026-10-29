@@ -56,6 +56,12 @@ def test_require_installed_names_where_to_get_git() -> None:
         git.require_installed()
 
 
+def test_output_names_the_failed_command(tmp_path: Path) -> None:
+    """A git command that has to succeed and fails is reported by name with git's stderr."""
+    with pytest.raises(git.GitError, match="git status failed: .*missing"):
+        git._output(tmp_path / "missing", "status", what="git status")
+
+
 def test_ensure_repo_refuses_to_init_without_a_terminal(plugin_dir: Path) -> None:
     """Without a TTY it refuses instead of initializing a possibly shared parent."""
     with (
