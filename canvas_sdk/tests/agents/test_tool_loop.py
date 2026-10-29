@@ -1,6 +1,4 @@
-import copy
 import json
-from types import SimpleNamespace
 from typing import Any
 
 import anthropic
@@ -18,44 +16,19 @@ from canvas_sdk.agents import (
     run_tool_loop,
 )
 from canvas_sdk.agents.run_record import RunRecorder, current_recorder
+from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
 
 def _tool_use(name: str, block_id: str, **arguments: Any) -> ToolUseBlock:
-    return ToolUseBlock(id=block_id, name=name, input=arguments, type="tool_use")
+    return tool_use(name, arguments, id=block_id)
 
 
-def _text(text: str) -> TextBlock:
-    return TextBlock(text=text, type="text")
+def _text(value: str) -> TextBlock:
+    return text(value)
 
 
-def _response(stop_reason: str, *content: Any) -> SimpleNamespace:
-    return SimpleNamespace(stop_reason=stop_reason, content=list(content))
-
-
-class _FakeClient:
-    """Returns queued responses and records a copy of each request."""
-
-    def __init__(self, *responses: Any) -> None:
-        self._responses = list(responses)
-        self.requests: list[dict[str, Any]] = []
-        self.messages = self
-
-    def create(self, **kwargs: Any) -> Any:
-        self.requests.append(copy.deepcopy(kwargs))
-        response = self._responses.pop(0)
-        if isinstance(response, Exception):
-            raise response
-        return response
-
-
-class _FakeGateway:
-    model = "claude-test"
-
-    def __init__(self, client: _FakeClient) -> None:
-        self._client = client
-
-    def client(self) -> _FakeClient:
-        return self._client
+def _response(stop_reason: str, *content: Any) -> ModelReply:
+    return reply(*content, stop_reason=stop_reason)
 
 
 def _tools() -> ToolRegistry:
@@ -72,9 +45,9 @@ def _tools() -> ToolRegistry:
     return tools
 
 
-def _run(client: _FakeClient, messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> Any:
+def _run(client: FakeGateway, messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> Any:
     return run_tool_loop(
-        _FakeGateway(client),  # type: ignore[arg-type]
+        client,  # type: ignore[arg-type]
         tools=kwargs.pop("tools", _tools()),
         ctx={"patient_id": "p1"},
         system="You are a test agent.",
@@ -85,7 +58,7 @@ def _run(client: _FakeClient, messages: list[dict[str, Any]] | None = None, **kw
 
 def test_end_turn_returns_the_final_text() -> None:
     """A model that answers without tools ends the loop after one turn."""
-    result = _run(_FakeClient(_response("end_turn", _text("  All clear. "))))
+    result = _run(FakeGateway(_response("end_turn", _text("  All clear. "))))
 
     assert result.text == "All clear."
     assert result.turns == 1
@@ -98,7 +71,7 @@ def test_end_turn_returns_the_final_text() -> None:
 
 def test_tool_calls_are_dispatched_and_their_results_sent_back() -> None:
     """Each tool call runs with ctx and its JSON result goes back on the next turn."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1", section="labs")),
         _response("end_turn", _text("done")),
     )
@@ -120,7 +93,7 @@ def test_tool_calls_are_dispatched_and_their_results_sent_back() -> None:
 
 def test_a_failing_tool_goes_back_to_the_model_as_an_error() -> None:
     """The model sees the failure and can recover; the run does not end."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("broken", "t1")),
         _response("end_turn", _text("sorry")),
     )
@@ -134,7 +107,7 @@ def test_a_failing_tool_goes_back_to_the_model_as_an_error() -> None:
 
 def test_an_ungranted_tool_is_reported_as_unknown() -> None:
     """A tool the scoped registry lacks fails like any other tool, back to the model."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("originate_prescribe_medication", "t1")),
         _response("end_turn", _text("ok")),
     )
@@ -148,7 +121,7 @@ def test_an_ungranted_tool_is_reported_as_unknown() -> None:
 
 def test_complete_tool_calls_cut_off_by_max_tokens_still_run() -> None:
     """max_tokens with tool calls dispatches them and continues."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("max_tokens", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("done")),
     )
@@ -161,7 +134,7 @@ def test_complete_tool_calls_cut_off_by_max_tokens_still_run() -> None:
 
 def test_the_turn_cap_stops_the_loop() -> None:
     """A model that keeps calling tools stops at max_turns with its results recorded."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("tool_use", _tool_use("read_chart", "t2")),
     )
@@ -175,7 +148,7 @@ def test_the_turn_cap_stops_the_loop() -> None:
 
 def test_an_unexpected_stop_never_leaves_a_tool_call_without_a_result() -> None:
     """A stored transcript ending on an unanswered tool call would fail every later call."""
-    client = _FakeClient(_response("refusal", _tool_use("read_chart", "t1")))
+    client = FakeGateway(_response("refusal", _tool_use("read_chart", "t1")))
 
     result = _run(client)
 
@@ -197,7 +170,7 @@ def test_the_model_sees_a_window_and_the_full_history_comes_back() -> None:
         {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
         {"role": "user", "content": "new question"},
     ]
-    client = _FakeClient(_response("end_turn", _text("new answer")))
+    client = FakeGateway(_response("end_turn", _text("new answer")))
 
     result = _run(client, messages=history, history_chars=200)
 
@@ -213,7 +186,7 @@ def test_windowing_can_be_turned_off() -> None:
         {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
         {"role": "user", "content": "new question"},
     ]
-    client = _FakeClient(_response("end_turn", _text("new answer")))
+    client = FakeGateway(_response("end_turn", _text("new answer")))
 
     _run(client, messages=history, history_chars=None)
 
@@ -222,7 +195,7 @@ def test_windowing_can_be_turned_off() -> None:
 
 def test_the_system_prompt_is_marked_for_caching_by_default() -> None:
     """The system prompt is the stable prefix every turn and run shares."""
-    client = _FakeClient(_response("end_turn", _text("ok")))
+    client = FakeGateway(_response("end_turn", _text("ok")))
 
     _run(client)
 
@@ -237,7 +210,7 @@ def test_the_system_prompt_is_marked_for_caching_by_default() -> None:
 
 def test_caching_can_be_turned_off() -> None:
     """cache_system=False sends the system prompt as a plain string."""
-    client = _FakeClient(_response("end_turn", _text("ok")))
+    client = FakeGateway(_response("end_turn", _text("ok")))
 
     _run(client, cache_system=False)
 
@@ -246,7 +219,7 @@ def test_caching_can_be_turned_off() -> None:
 
 def test_the_request_uses_the_gateway_model_and_the_given_limits() -> None:
     """Model defaults to the gateway's; tools come from the registry."""
-    client = _FakeClient(_response("end_turn", _text("ok")))
+    client = FakeGateway(_response("end_turn", _text("ok")))
 
     _run(client, max_tokens=123)
 
@@ -259,7 +232,7 @@ def test_the_request_uses_the_gateway_model_and_the_given_limits() -> None:
 def test_on_turn_fires_before_each_call() -> None:
     """The turn hook sees 0, 1, ... once per LLM call."""
     seen: list[int] = []
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("done")),
     )
@@ -275,7 +248,7 @@ def test_a_failing_turn_hook_does_not_end_the_run() -> None:
     def _broken_hook(turn_index: int) -> None:
         raise RuntimeError("metrics are down")
 
-    result = _run(_FakeClient(_response("end_turn", _text("ok"))), on_turn=_broken_hook)
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))), on_turn=_broken_hook)
 
     assert result.stopped == "end_turn"
 
@@ -286,14 +259,14 @@ def test_gateway_errors_propagate() -> None:
     error = anthropic.APIConnectionError(request=request)
 
     with pytest.raises(anthropic.APIConnectionError):
-        _run(_FakeClient(error))
+        _run(FakeGateway(error))
 
 
 def test_the_callers_message_list_is_not_modified() -> None:
     """The loop works on a copy; the caller decides what to store."""
     history = [{"role": "user", "content": "go"}]
 
-    _run(_FakeClient(_response("end_turn", _text("ok"))), messages=history)
+    _run(FakeGateway(_response("end_turn", _text("ok"))), messages=history)
 
     assert history == [{"role": "user", "content": "go"}]
 
@@ -304,7 +277,7 @@ def test_the_result_effects_are_the_ctx_effects_list() -> None:
     ctx = {"patient_id": "p1", "effects": effects}
 
     result = run_tool_loop(
-        _FakeGateway(_FakeClient(_response("end_turn", _text("ok")))),  # type: ignore[arg-type]
+        FakeGateway(_response("end_turn", _text("ok"))),  # type: ignore[arg-type]
         tools=_tools(),
         ctx=ctx,
         system="s",
@@ -338,13 +311,13 @@ def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
     agent = _LoopingAgent()
     agent.tools = _LoopingAgent.tools.scope({"read_chart"})
     agent.subject = RunSubject(patient_id="p1")
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("done")),
     )
 
     result = agent.run_tool_loop(
-        _FakeGateway(client),  # type: ignore[arg-type]
+        client,  # type: ignore[arg-type]
         system="s",
         messages=[{"role": "user", "content": "go"}],
     )
@@ -359,13 +332,13 @@ def test_the_agent_method_gives_tools_the_run_subject() -> None:
     agent = _LoopingAgent()
     agent.tools = _LoopingAgent.tools.scope({"read_chart"})
     agent.subject = RunSubject(patient_id="p1")
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("done")),
     )
 
     agent.run_tool_loop(
-        _FakeGateway(client),  # type: ignore[arg-type]
+        client,  # type: ignore[arg-type]
         system="s",
         messages=[{"role": "user", "content": "go"}],
     )
@@ -385,13 +358,13 @@ def test_the_agent_method_returns_the_effects_its_tools_staged() -> None:
 
     agent = _LoopingAgent()
     agent.tools = tools
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("stage", "t1")),
         _response("end_turn", _text("done")),
     )
 
     result = agent.run_tool_loop(
-        _FakeGateway(client),  # type: ignore[arg-type]
+        client,  # type: ignore[arg-type]
         system="s",
         messages=[{"role": "user", "content": "go"}],
     )
@@ -407,13 +380,13 @@ def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> No
     def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
         return {"patient": require_patient_id(ctx)}
 
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text("ok")),
     )
 
     run_tool_loop(
-        _FakeGateway(client),  # type: ignore[arg-type]
+        client,  # type: ignore[arg-type]
         tools=tools,
         ctx={"patient_id": None},
         system="s",
@@ -427,7 +400,7 @@ def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> No
 
 def test_the_runs_recorder_gets_model_calls_tool_calls_and_how_the_loop_ended() -> None:
     """The platform's run record comes from the loop, not from agent code."""
-    client = _FakeClient(
+    client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1"), _tool_use("broken", "t2")),
         _response("end_turn", _text("done")),
     )
@@ -448,7 +421,7 @@ def test_the_runs_recorder_gets_model_calls_tool_calls_and_how_the_loop_ended() 
 
 def test_without_a_recorder_the_loop_records_nothing() -> None:
     """Code outside a platform run, such as a test, runs the loop unchanged."""
-    result = _run(_FakeClient(_response("end_turn", _text("ok"))))
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))))
 
     assert result.stopped == "end_turn"
     assert current_recorder.get() is None

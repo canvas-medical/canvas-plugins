@@ -1,19 +1,24 @@
-from types import SimpleNamespace
-
 import pytest
 import pytest_canvas.plugin
-from agent_runner_poc.agents.chart_chat import ChartChatAgent
-from anthropic.types import TextBlock, ToolUseBlock
+from agent_runner_poc.agents.chart_chat import ChartChatAgent, load_conversation_messages
 
-from canvas_sdk.agents import RunSubject
+from canvas_sdk.agents import AgentPlugin, RunSubject
+from canvas_sdk.test_utils.agents import (
+    FakeGateway,
+    prepare_agent,
+    reply,
+    run_agent,
+    text,
+    tool_use,
+)
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 
 
-def _agent_for(patient_id: str, staff_id: str) -> ChartChatAgent:
+def _agent_for(patient_id: str, staff_id: str) -> AgentPlugin:
     """A chat agent for one clinician's run on one patient, as the platform sets it up."""
-    agent = ChartChatAgent()
-    agent.subject = RunSubject(patient_id=patient_id, staff_id=staff_id)
-    return agent
+    return prepare_agent(
+        ChartChatAgent, subject=RunSubject(patient_id=patient_id, staff_id=staff_id)
+    )
 
 
 @pytest.mark.django_db
@@ -41,52 +46,24 @@ def test_pytest_canvas_still_lacks_the_custom_data_fixture() -> None:
     )
 
 
-class _FakeClient:
-    """Returns queued responses in order."""
-
-    def __init__(self, *responses: SimpleNamespace) -> None:
-        self._responses = list(responses)
-        self.messages = self
-
-    def create(self, **kwargs: object) -> SimpleNamespace:
-        return self._responses.pop(0)
-
-
-class _FakeGateway:
-    model = "claude-test"
-
-    def __init__(self, client: _FakeClient) -> None:
-        self._client = client
-
-    def client(self) -> _FakeClient:
-        return self._client
-
-
 @pytest.mark.django_db
 def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
     """The agent stores the clinician's turn, the tool exchange, and the answer."""
-    agent = _agent_for(PatientFactory.create().id, StaffFactory.create().id)
-    agent.tools = ChartChatAgent.tools.scope({"get_patient_demographics"})
-    gateway = _FakeGateway(
-        _FakeClient(
-            SimpleNamespace(
-                stop_reason="tool_use",
-                content=[
-                    ToolUseBlock(
-                        id="t1", name="get_patient_demographics", input={}, type="tool_use"
-                    )
-                ],
-            ),
-            SimpleNamespace(
-                stop_reason="end_turn", content=[TextBlock(text="She is 54.", type="text")]
-            ),
-        )
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+    agent = prepare_agent(
+        ChartChatAgent,
+        allowed=["get_patient_demographics"],
+        subject=RunSubject(patient_id=patient.id, staff_id=staff.id),
     )
-    state = agent.load_state("patient_and_staff")
+    gateway = FakeGateway(
+        reply(tool_use("get_patient_demographics")),
+        reply(text("She is 54.")),
+    )
 
-    result = agent.run(state, gateway, {"user_message": "How old is she?"})
+    run = run_agent(agent, gateway, {"user_message": "How old is she?"})
 
-    roles = [message["role"] for message in result.state.data["messages"]]
-    assert roles == ["user", "assistant", "user", "assistant"]
-    assert result.state.data["messages"][0] == {"role": "user", "content": "How old is she?"}
-    assert result.state.data["messages"][-1]["content"][0]["text"] == "She is 54."
+    saved = load_conversation_messages(patient.id, staff.id)
+    assert [message["role"] for message in saved] == ["user", "assistant", "user", "assistant"]
+    assert saved[0] == {"role": "user", "content": "How old is she?"}
+    assert saved[-1]["content"][0]["text"] == "She is 54."
+    assert [call.name for call in run.tool_calls] == ["get_patient_demographics"]
