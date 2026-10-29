@@ -136,8 +136,12 @@
       const PATIENT_ID = "{{ patient_id|escapejs }}";
       const HISTORY_URL = `/plugin-io/api/agent_runner_poc/chart-chat-history?patient=${encodeURIComponent(PATIENT_ID)}`;
       const MESSAGE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-message';
+      const RUN_URL = '/plugin-io/api/agent_runner_poc/chart-chat-run?run_id=';
       const POLL_INTERVAL_MS = 1500;
-      const POLL_TIMEOUT_MS = 90000;
+      // A run can wait up to about 10 minutes for its scope and then run for up to
+      // 10, so the platform's run record, not this budget, decides the outcome.
+      const POLL_TIMEOUT_MS = 25 * 60 * 1000;
+      const FINISHED_STATUSES = ['succeeded', 'failed', 'refused', 'abandoned', 'gave_up'];
 
       const log = document.getElementById('log');
       const composer = document.getElementById('composer');
@@ -281,7 +285,7 @@
         // Assistant bubbles may contain chart fences and nav markers; route
         // through renderAssistantBubble so they render the same way on
         // history-replay and on fresh polled replies. Don't FIRE navigations
-        // from here — that's pollForAssistantReply's job, since history
+        // from here — that's showLatestReply's job, since history
         // shouldn't auto-scroll the timeline.
         if (role === 'assistant') {
           renderAssistantBubble(div, text);
@@ -316,42 +320,68 @@
         }
       }
 
-      async function pollForAssistantReply(baseline, placeholder) {
-        // Poll /chart-chat-history at a fixed cadence until the assistant
-        // count grows past the baseline (the agent's save_state wrote the
-        // new turn) or we exceed the wall-clock budget.
+      function runFailureMessage(run) {
+        // What the clinician sees when the platform's run record ends without a reply.
+        if (run.status === 'refused') return 'The agent could not start for this chart.';
+        if (run.status === 'gave_up') return 'The agent was busy with another request. Try again.';
+        if (run.status === 'abandoned') return 'The agent ran out of time before it answered.';
+        if (run.error_kind === 'LLM_UNAVAILABLE') return 'The model is unavailable right now. Try again shortly.';
+        if (run.error_kind === 'LLM_REFUSED') return 'The inference gateway refused the request.';
+        if (run.error_kind === 'LLM_NOT_CONFIGURED') return 'The agent has no inference gateway key configured.';
+        return 'The agent hit an error before it answered.';
+      }
+
+      async function showLatestReply(baseline, placeholder) {
+        // The run succeeded, so its save_state has written the reply to the history.
+        const res = await fetch(HISTORY_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('history fetch failed: ' + res.status);
+        const messages = (await res.json()).messages || [];
+        const assistants = messages.filter(m => m.role === 'assistant');
+        if (assistants.length <= baseline) {
+          placeholder.textContent = '(no response)';
+          return;
+        }
+        const reply = assistants[assistants.length - 1];
+        const noteIds = renderAssistantBubble(placeholder, reply.text || '');
+        if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
+        // Fire navigation directives only for NEW replies, not when
+        // appending history — re-opening a chat shouldn't auto-scroll.
+        if (noteIds.length) fireNavigations(noteIds);
+        assistantCount = assistants.length;
+      }
+
+      async function pollRun(runId, baseline, placeholder) {
+        // Poll the platform's record of the run until it finishes, then show the
+        // reply or what went wrong.
         const deadline = Date.now() + POLL_TIMEOUT_MS;
         while (Date.now() < deadline) {
           await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+          let run;
           try {
-            const res = await fetch(HISTORY_URL, { cache: 'no-store' });
+            const res = await fetch(RUN_URL + encodeURIComponent(runId), { cache: 'no-store' });
             if (!res.ok) continue;
-            const data = await res.json();
-            const messages = data.messages || [];
-            const assistants = messages.filter(m => m.role === 'assistant');
-            console.debug('chart-chat poll: messages=' + messages.length + ' assistants=' + assistants.length + ' baseline=' + baseline);
-            if (assistants.length > baseline) {
-              const reply = assistants[assistants.length - 1];
-              const noteIds = renderAssistantBubble(placeholder, reply.text || '');
-              if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
-              // Fire navigation directives only for NEW replies, not when
-              // appending history — re-opening a chat shouldn't auto-scroll.
-              if (noteIds.length) fireNavigations(noteIds);
-              assistantCount = assistants.length;
-              return;
-            }
+            run = await res.json();
           } catch (err) {
-            // Transient network blip — keep polling until the deadline.
+            continue;  // Transient network blip — keep polling until the deadline.
           }
+          console.debug('chart-chat poll: run ' + runId + ' ' + run.status);
+          if (!FINISHED_STATUSES.includes(run.status)) continue;
+          if (run.status === 'succeeded') {
+            await showLatestReply(baseline, placeholder);
+          } else {
+            placeholder.classList.add('error');
+            placeholder.textContent = runFailureMessage(run);
+          }
+          return;
         }
         placeholder.classList.add('error');
-        placeholder.textContent = 'No response after ' + (POLL_TIMEOUT_MS / 1000) + 's; the agent may have crashed. Check the plugin-runner logs.';
+        placeholder.textContent = 'The agent has not finished after ' + (POLL_TIMEOUT_MS / 60000) + ' minutes.';
       }
 
       async function sendMessage(text) {
         // Optimistic render: user bubble + "thinking…" placeholder go up
         // immediately so the UI feels responsive. The placeholder gets
-        // replaced with the agent's reply once polling sees the new turn.
+        // replaced with the agent's reply once its run finishes.
         appendBubble('user', text);
         const placeholder = appendBubble('assistant', '…');
         const baseline = assistantCount;
@@ -362,13 +392,13 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ patient_id: PATIENT_ID, message: text }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
             placeholder.classList.add('error');
             placeholder.textContent = data.error || ('Request failed: ' + res.status);
             return;
           }
-          await pollForAssistantReply(baseline, placeholder);
+          await pollRun(data.run_id, baseline, placeholder);
         } catch (err) {
           placeholder.classList.add('error');
           placeholder.textContent = 'Request failed: ' + err.message;

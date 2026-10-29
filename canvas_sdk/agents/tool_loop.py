@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -10,6 +11,7 @@ from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
+from canvas_sdk.agents.run_record import ToolCallRecord, current_recorder
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
 if TYPE_CHECKING:
@@ -54,12 +56,31 @@ def _tool_result(tool_use_id: str, content: str, *, is_error: bool = False) -> d
 
 def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> dict[str, Any]:
     """Run one tool call; a failure goes back to the model as an error so it can recover."""
+    recorder = current_recorder.get()
+    started = time.perf_counter()
     try:
         result = tools.execute(block.name, dict(block.input), ctx=ctx)
     except Exception as exc:
         log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
+        if recorder is not None:
+            recorder.record_tool_call(
+                ToolCallRecord(block.name, False, type(exc).__name__, _elapsed_ms(started))
+            )
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
+    if recorder is not None:
+        recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
     return _tool_result(block.id, json.dumps(result, default=str))
+
+
+def _elapsed_ms(started: float) -> int:
+    return int((time.perf_counter() - started) * 1000)
+
+
+def _stopped(result: ToolLoopResult) -> ToolLoopResult:
+    """Record how the loop ended in the run's recorder, and return ``result``."""
+    if (recorder := current_recorder.get()) is not None:
+        recorder.record_stop(result.stopped)
+    return result
 
 
 def run_tool_loop(
@@ -126,6 +147,8 @@ def run_tool_loop(
             tools=cast(Any, tools.definitions()),
             messages=cast(Any, sent),
         )
+        if (recorder := current_recorder.get()) is not None:
+            recorder.record_model_call()
         result.turns = turn + 1
         result.stop_reason = response.stop_reason
         log.info(
@@ -143,7 +166,7 @@ def run_tool_loop(
 
         if response.stop_reason == "end_turn":
             result.stopped = "end_turn"
-            return result
+            return _stopped(result)
         if response.stop_reason in _TOOL_STOP_REASONS and tool_uses:
             transcript.append(
                 {"role": "user", "content": [_run_tool(tools, block, ctx) for block in tool_uses]}
@@ -162,10 +185,10 @@ def run_tool_loop(
                 }
             )
         log.warning(f"Tool loop stopped on unexpected stop_reason={response.stop_reason!r}")
-        return result
+        return _stopped(result)
 
     log.warning(f"Tool loop hit max_turns={max_turns}")
-    return result
+    return _stopped(result)
 
 
 __exports__ = ("ToolLoopResult", "run_tool_loop")

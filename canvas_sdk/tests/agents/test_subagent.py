@@ -4,6 +4,7 @@ from typing import Any
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagents
+from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 from canvas_sdk.v1.plugin_database_context import (
     get_access_level,
     get_current_plugin,
@@ -61,3 +62,32 @@ def test_subagent_tools_run_in_the_parent_plugins_database_context() -> None:
 
     assert results == {"labs": "done"}
     assert seen == [("my_plugin", "my_namespace", "read_write")]
+
+
+def test_subagent_model_and_tool_calls_land_in_the_runs_recorder() -> None:
+    """The run record counts sub-agents' work, which happens on pool threads."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    specs = [
+        SubAgentSpec(name=name, system_prompt="x", allowed_tool_names=frozenset({"read_chart"}))
+        for name in ("labs", "meds")
+    ]
+    recorder = RunRecorder()
+    token = current_recorder.set(recorder)
+    try:
+        run_subagents(
+            specs,
+            "question",
+            parent_tools=tools,
+            parent_ctx={},
+            gateway=_FakeGateway(),  # type: ignore[arg-type]
+        )
+    finally:
+        current_recorder.reset(token)
+
+    assert recorder.model_calls == 4
+    assert [(call.name, call.ok) for call in recorder.tool_calls] == [("read_chart", True)] * 2

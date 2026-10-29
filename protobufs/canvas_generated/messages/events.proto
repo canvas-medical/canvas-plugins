@@ -1598,6 +1598,29 @@ message Event {
   string source = 6;
 }
 
+// One tool call an agent's tool loop dispatched. Arguments and results are
+// left out: they carry chart content.
+message AgentToolCall {
+  string name = 1;
+  bool ok = 2;
+  // The exception class name when ok is false.
+  string error_type = 3;
+  int32 duration_ms = 4;
+}
+
+// What one agent run did, recorded by the plugin-runner for home-app's run
+// record. Set on a RunAgent response.
+message AgentRunSummary {
+  // Model calls across the run's tool loops, sub-agents included.
+  int32 model_calls = 1;
+  // How the run's last tool loop ended: end_turn, max_turns, or unexpected.
+  string stop_reason = 2;
+  int32 effects_returned = 3;
+  // Returned effects the tool grant or usage pricing dropped.
+  int32 effects_dropped = 4;
+  repeated AgentToolCall tool_calls = 5;
+}
+
 message EventResponse {
   bool success = 1;
   repeated Effect effects = 2;
@@ -1614,4 +1637,6 @@ message EventResponse {
   //   - "RUNNER_BUSY": the runner already has its share of workers running
   //     agents; worth retrying shortly.
   string error_kind = 3;
+  // Set on RunAgent responses once the agent was loaded.
+  AgentRunSummary agent_run = 4;
 }

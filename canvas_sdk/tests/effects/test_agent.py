@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -30,6 +31,7 @@ def test_run_agent_effect_payload_carries_the_subject_and_scope() -> None:
     data = json.loads(effect.payload)["data"]
     assert data == {
         "agent_id": "my_plugin.agents.x:Agent",
+        "run_id": data["run_id"],
         "scope": "patient",
         "patient_id": "p1",
         "note_id": "n1",
@@ -49,6 +51,21 @@ def test_run_agent_effect_defaults_to_no_subject_and_an_empty_payload() -> None:
     assert data["patient_id"] is None
     assert data["note_id"] is None
     assert data["trigger_payload"] == {}
+
+
+def test_each_effect_gets_its_own_run_id() -> None:
+    """A handler can return the id to a UI before the run is queued."""
+    first = RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.AGENT)
+    second = RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.AGENT)
+
+    assert first.run_id != second.run_id
+    assert json.loads(first.apply().payload)["data"]["run_id"] == str(first.run_id)
+
+
+def test_a_caller_cannot_choose_the_run_id() -> None:
+    """A chosen id could collide with, or impersonate, another run's record."""
+    with pytest.raises(ValidationError, match="run_id"):
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.AGENT, run_id=uuid4())  # type: ignore[call-arg]
 
 
 def test_run_agent_effect_rejects_empty_agent_id() -> None:

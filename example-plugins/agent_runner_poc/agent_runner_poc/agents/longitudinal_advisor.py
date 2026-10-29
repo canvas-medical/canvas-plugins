@@ -1,7 +1,6 @@
 from typing import Any
 
 from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
-from agent_runner_poc.agents.run_logging import RunLoggingMixin
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.v1.data import ProtocolCurrent
 from logger import log
@@ -80,7 +79,7 @@ def _format_protocol_card_context(patient_id: str) -> str:
     return "\n".join(lines)
 
 
-class LongitudinalCareAdvisor(RunLoggingMixin, AgentPlugin):
+class LongitudinalCareAdvisor(AgentPlugin):
     """Reviews each locked encounter against the patient's open protocol cards.
 
     Uses the SDK's ProtocolCard surface (`add_or_update_protocol_card` +

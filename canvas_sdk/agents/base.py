@@ -53,6 +53,10 @@ class AgentPlugin(ABC):
     # every tool, so tools act on the platform's patient, not one the agent chose.
     subject: RunSubject = RunSubject()
 
+    # This run's id, the id of its canvas_sdk.v1.data.AgentRun record, set by the
+    # platform with the subject. Plugin-owned audit rows can carry it to join that record.
+    run_id: str = ""
+
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:
         """Load this run's starting state from per-EHR storage."""

@@ -8,7 +8,6 @@ the fixture below does the same until a release ships it
 from collections.abc import Iterator
 
 import agent_runner_poc.models.conversation  # noqa: F401 - registers the plugin's models
-import agent_runner_poc.models.run_log  # noqa: F401
 import pytest
 from django.apps import apps
 from pytest_django.plugin import DjangoDbBlocker

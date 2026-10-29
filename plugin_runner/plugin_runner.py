@@ -14,7 +14,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from http import HTTPStatus
 from time import sleep
-from typing import Any, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict, cast
 
 import anthropic
 import grpc
@@ -29,6 +29,7 @@ from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
+from canvas_generated.messages.events_pb2 import AgentRunSummary, AgentToolCall
 from canvas_generated.messages.plugins_pb2 import (
     GetRegisteredEventTypesRequest,
     GetRegisteredEventTypesResponse,
@@ -92,6 +93,9 @@ from settings import (
     SECRETS_FILE_NAME,
     SENTRY_DSN,
 )
+
+if TYPE_CHECKING:
+    from canvas_sdk.agents.run_record import RunRecorder
 
 if SENTRY_DSN:
     # Lazy import for faster reload time in dev
@@ -257,6 +261,30 @@ AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
 
 class RunAgentDeadlineExceeded(Exception):
     """The caller's RunAgent deadline passed while the agent was still running."""
+
+
+def _agent_run_summary(
+    recorder: "RunRecorder",
+    *,
+    effects_returned: int = 0,
+    effects_dropped: int = 0,
+) -> AgentRunSummary:
+    """What a run did, for home-app's run record."""
+    return AgentRunSummary(
+        model_calls=recorder.model_calls,
+        stop_reason=recorder.stop_reason,
+        effects_returned=effects_returned,
+        effects_dropped=effects_dropped,
+        tool_calls=[
+            AgentToolCall(
+                name=call.name,
+                ok=call.ok,
+                error_type=call.error_type,
+                duration_ms=call.duration_ms,
+            )
+            for call in recorder.tool_calls
+        ],
+    )
 
 
 def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
@@ -570,6 +598,7 @@ class PluginRunner(PluginRunnerServicer):
             )
 
             from canvas_sdk.agents import RunSubject, ToolRegistry
+            from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 
             if not AGENT_RUN_SLOTS.acquire(blocking=False):
                 log.warning(
@@ -581,6 +610,9 @@ class PluginRunner(PluginRunnerServicer):
                 return
 
             failure: EventResponse | None = None
+            # run_tool_loop records model and tool calls here for home-app's run record.
+            recorder = RunRecorder()
+            recorder_token = current_recorder.set(recorder)
             try:
                 with (
                     plugin_context(f"{module_path}.{class_name}"),
@@ -612,6 +644,7 @@ class PluginRunner(PluginRunnerServicer):
                         staff_id=request.staff_id or None,
                         note_id=request.note_id or None,
                     )
+                    agent.run_id = request.run_id
                     # Lifecycle hooks (doc §6.3): on_run_start before
                     # load_state, on_run_end after a successful save_state,
                     # on_run_error if anything in between raises. Hook
@@ -639,15 +672,25 @@ class PluginRunner(PluginRunnerServicer):
                 log.warning(
                     f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
                 )
-                failure = EventResponse(success=False, effects=[], error_kind=error_kind)
+                failure = EventResponse(
+                    success=False,
+                    effects=[],
+                    error_kind=error_kind,
+                    agent_run=_agent_run_summary(recorder),
+                )
             except RunAgentDeadlineExceeded as exc:
                 log.warning(f"RunAgent: {exc}")
-                failure = EventResponse(success=False, effects=[])
+                failure = EventResponse(
+                    success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                )
             except Exception as exc:
                 log.exception(f"RunAgent: agent {request.agent_id} raised")
                 sentry_sdk.capture_exception(exc)
-                failure = EventResponse(success=False, effects=[])
+                failure = EventResponse(
+                    success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                )
             finally:
+                current_recorder.reset(recorder_token)
                 # Released before anything is yielded, so the slot frees as soon as
                 # the agent finishes rather than when the caller drains the stream.
                 AGENT_RUN_SLOTS.release()
@@ -699,7 +742,15 @@ class PluginRunner(PluginRunnerServicer):
                 f"completed with {len(emitted_effects)} effect(s)"
             )
 
-            yield EventResponse(success=True, effects=emitted_effects)
+            yield EventResponse(
+                success=True,
+                effects=emitted_effects,
+                agent_run=_agent_run_summary(
+                    recorder,
+                    effects_returned=len(result.effects),
+                    effects_dropped=len(result.effects) - len(emitted_effects),
+                ),
+            )
 
     def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
