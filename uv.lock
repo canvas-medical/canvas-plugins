@@ -12,6 +12,7 @@ exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
 certifi = { timestamp = "0001-01-01T00:00:00Z", span = "P3D" }
+pytest-canvas = "2035-01-01T00:00:00Z"
 ruff = "2035-01-01T00:00:00Z"
 ty = "2035-01-01T00:00:00Z"
 uv = "2035-01-01T00:00:00Z"
@@ -246,7 +247,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3.3,<4" },
     { name = "pydantic", specifier = ">=2.12.5,<3" },
     { name = "pyjwt", specifier = "==2.10.1" },
-    { name = "pytest-canvas", marker = "extra == 'test-utils'" },
+    { name = "pytest-canvas", marker = "extra == 'test-utils'", specifier = ">=0.2.0" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2" },
     { name = "python-logstash-async", specifier = ">=4.0.2" },
     { name = "rapidfuzz", specifier = ">=3.10.1,<4" },
@@ -1875,16 +1876,16 @@ wheels = [
 
 [[package]]
 name = "pytest-canvas"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "canvas" },
     { name = "pytest" },
     { name = "pytest-django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/89/7f12457542e24edc9b51d0bb669574f9511241019d8ceb66a9271305293c/pytest_canvas-0.1.0.tar.gz", hash = "sha256:e5e5ca0f354ef497c839703231cdda0349484b7a45f572cd21e0f0952cbca36b", size = 1344, upload-time = "2025-07-22T13:45:17.588Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/79/c2765c2f4ac5544e02dcc899061da52067adafd94fa84a71c2afe287b7e5/pytest_canvas-0.2.0.tar.gz", hash = "sha256:da074645395663dafa146ece6e79a510daa36c39492264a34ba2b5e00644f5b7", size = 2900, upload-time = "2026-10-29T20:05:32.584Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/eb/a43265b34623f6a7bfe2c7d90dcdd38c3f88e76ec1c8c31909e2d5355420/pytest_canvas-0.1.0-py3-none-any.whl", hash = "sha256:edc50b12e618e835d32c44fcbcb1dbe779692e048fc29d559782b9e7c6b247ab", size = 2023, upload-time = "2025-07-22T13:45:16.511Z" },
+    { url = "https://files.pythonhosted.org/packages/66/e4/4e0fecc36450e16d94ee85a6f4868e2346f0446932332c5ce3a6cad1c196/pytest_canvas-0.2.0-py3-none-any.whl", hash = "sha256:e6f23183f70862d04c61c33ba23066f4e411373e1a1e0cb7c443cb151eace504", size = 3536, upload-time = "2026-10-29T20:05:31.765Z" },
 ]
 
 [[package]]

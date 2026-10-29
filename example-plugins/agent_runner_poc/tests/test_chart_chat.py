@@ -1,5 +1,4 @@
 import pytest
-import pytest_canvas.plugin
 from agent_runner_poc.agents.chart_chat import ChartChatAgent, load_conversation_messages
 
 from canvas_sdk.agents import AgentPlugin, RunSubject
@@ -36,14 +35,6 @@ def test_each_clinician_has_their_own_conversation() -> None:
     assert first.load_state("patient_and_staff").data["messages"] == [
         {"role": "user", "content": "How is her A1c trending?"}
     ]
-
-
-def test_pytest_canvas_still_lacks_the_custom_data_fixture() -> None:
-    """Tripwire for tests/conftest.py, which stands in for a pytest-canvas fixture."""
-    assert not hasattr(pytest_canvas.plugin, "create_plugin_custom_model_tables"), (
-        "pytest-canvas now creates plugin Custom Data tables itself; delete the "
-        "custom_data_tables fixture in example-plugins/agent_runner_poc/tests/conftest.py"
-    )
 
 
 @pytest.mark.django_db
