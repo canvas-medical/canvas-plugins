@@ -97,6 +97,7 @@ $ canvas deploy plugins/acme__intake --snapshot --instance acme-staging
 - The commit is authored as the signed-in person or service account, and carries `Monorepo-Commit` and `Monorepo-Path` trailers naming its source.
 - Uncommitted changes in the package are refused, even with `--yes`. So are submodules, symbolic links and files stored through a filter such as Git LFS or git-crypt, which would not reach an instance as their content.
 - Deploy refuses when HEAD lacks changes to the package that the commit `main` was last deployed from made, which would roll the plugin back, and names the files. A branch that was deployed and then squash- or rebase-merged passes, since HEAD carries its changes.
+- A commit on `main` tagged `snapshot-baseline/<anything>`, as Canvas Studio tags the commit it starts `main` from, counts as the last snapshot, with nothing to roll back; lightweight and annotated tags both count. To mark one by hand, push the tag from a `canvas clone` checkout (`git tag snapshot-baseline/<sha> <sha>`, then `git push origin snapshot-baseline/<sha>`).
 - Deploy refuses when `main` has changes to the package since the last snapshot, such as a catalog listing edited in Canvas Platform, that the snapshot would replace. At a terminal it asks before replacing them.
 - Deploy warns when HEAD is on no remote branch, since that code has not been through the repository's review.
 - The manifest `name` decides which Platform repository a snapshot goes to, so deploys from any checkout or CI job land on the same `main`. The CI job needs no git identity.

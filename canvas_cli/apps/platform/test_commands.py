@@ -794,6 +794,114 @@ def test_deploy_snapshot_over_history_that_was_not_snapshotted(
     assert _git(bare, "rev-parse", "main") == pushed
 
 
+def _tag_platform_base(bare: Path, annotated: bool) -> str:
+    """Tag platform's main as Canvas Studio tags the commit it starts main from."""
+    sha = _git(bare, "rev-parse", "main")
+    tag = f"snapshot-baseline/{sha}"
+    _git(bare, "tag", *(["-a", "-m", "baseline"] if annotated else []), tag, sha)
+    return sha
+
+
+@pytest.mark.parametrize("annotated", [False, True], ids=["lightweight", "annotated"])
+def test_deploy_snapshot_onto_a_tagged_base(
+    annotated: bool,
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+) -> None:
+    """A main commit tagged snapshot-baseline/* counts as the last snapshot, so the first
+    snapshot onto it replaces the package without the "pushes that were not snapshots" refusal.
+    """
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    base = _tag_platform_base(bare, annotated)
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
+        monorepo.parent.parent, "rev-parse", f"HEAD:plugins/{NAME}"
+    )
+    assert _git(bare, "rev-parse", "main~1") == base
+
+
+def test_deploy_snapshot_refuses_a_platform_change_since_the_tagged_base(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """Only files changed on platform since the tagged base are listed as replaced, and the
+    refusal names the tag.
+    """
+    _commit_in(package, "handler.py", "x = 0\n")
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    base = _tag_platform_base(bare, annotated=False)
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    edited = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert f"since snapshot-baseline/{base}" in result.output
+    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert f"  {NAME}/handler.py" not in result.output
+    assert _git(bare, "rev-parse", "main") == edited
+
+
+def test_deploy_snapshot_prefers_a_later_snapshot_over_the_tagged_base(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+) -> None:
+    """The newest snapshot or tagged commit on main is the starting point, so a snapshot
+    pushed after the tagged base still gets the rollback check.
+    """
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    _tag_platform_base(bare, annotated=False)
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    first = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    assert first.exit_code == 0, first.output
+    _git(monorepo.parent.parent, "checkout", "-q", "HEAD~1")
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "would roll the plugin back" in result.output
+    assert f"  plugins/{NAME}/handler.py" in result.output
+
+
+def test_deploy_snapshot_ignores_a_baseline_tag_off_main(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    monorepo: Path,
+    signed_in: None,
+) -> None:
+    """Only a tag on main's first-parent chain counts as the last snapshot."""
+    # Passes without tag support too: it pins that a tag elsewhere changes nothing.
+    runner.invoke(app, ["deploy", str(package), "--push-only"])
+    base = _git(bare, "rev-parse", "main")
+    side = _git(bare, "commit-tree", f"{base}^{{tree}}", "-p", base, "-m", "side")
+    _git(bare, "tag", f"snapshot-baseline/{side}", side)
+    _commit_in(monorepo, "CANVAS_MANIFEST.json", EDITED_MANIFEST)
+
+    result = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+
+    assert result.exit_code == 1
+    assert "by pushes that were not snapshots" in result.output
+    assert _git(bare, "rev-parse", "main") == base
+
+
 def test_deploy_snapshot_aborts_when_the_person_declines_to_replace(
     api: requests_mock_module.Mocker,
     bare: Path,
