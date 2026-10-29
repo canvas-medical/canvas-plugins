@@ -4,6 +4,7 @@ from typing import Any
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.state import AgentState
+from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
 
@@ -15,8 +16,9 @@ class AgentPlugin(ABC):
     :class:`BaseHandler`) emits a ``RunAgentEffect``; the platform
     interpreter enqueues the ``run_agent`` task; the worker instantiates
     this class by class path and invokes the three required methods in
-    order — ``load_state`` → ``run`` → ``save_state`` — with the
-    per-``scope_key`` lock held the entire time.
+    order — ``load_state`` → ``run`` → ``save_state``. Runs of one agent
+    on one ``scope_key`` happen one at a time, each starting after the
+    previous run's effects have been applied.
     """
 
     # The agent's tool registry. Set as a class attribute by subclasses
@@ -64,8 +66,34 @@ class AgentPlugin(ABC):
         return None
 
     def on_turn(self, turn_index: int) -> None:
-        """Optional hook fired at the start of each LLM turn. Default: no-op."""
+        """Optional hook fired before each LLM call ``run_tool_loop`` makes. Default: no-op."""
         return None
+
+    def run_tool_loop(
+        self,
+        gateway: LLMGateway,
+        *,
+        ctx: dict[str, Any],
+        system: str,
+        messages: list[dict[str, Any]],
+        **options: Any,
+    ) -> ToolLoopResult:
+        """Run :func:`canvas_sdk.agents.run_tool_loop` with this agent's tools and hooks.
+
+        Uses ``self.tools``, the registry scoped to the manifest's grant, and calls
+        :meth:`on_turn` before each LLM call. ``options`` are the remaining
+        ``run_tool_loop`` arguments (``max_turns``, ``max_tokens``, ``model``,
+        ``history_chars``, ``cache_system``).
+        """
+        return run_tool_loop(
+            gateway,
+            tools=self.tools or ToolRegistry(),
+            ctx=ctx,
+            system=system,
+            messages=messages,
+            on_turn=self.on_turn,
+            **options,
+        )
 
     def on_run_end(self, result: AgentRunResult) -> None:
         """Optional hook fired after ``run`` returns successfully. Default: no-op."""
