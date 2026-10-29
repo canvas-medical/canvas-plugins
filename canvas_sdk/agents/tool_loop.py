@@ -4,13 +4,16 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from canvas_sdk.effects import Effect
 
 log = logging.getLogger("plugin_runner_logger")
 
@@ -31,10 +34,12 @@ class ToolLoopResult:
         stopped: ``"end_turn"`` when the model finished, ``"max_turns"`` when the turn
             cap stopped it, ``"unexpected"`` for any other stop reason.
         stop_reason: The model's stop reason on its last turn.
+        effects: The ``effects`` list from ``ctx``, holding what the tools staged.
     """
 
     text: str = ""
     messages: list[dict[str, Any]] = field(default_factory=list)
+    effects: list["Effect"] = field(default_factory=list)
     turns: int = 0
     stopped: Literal["end_turn", "max_turns", "unexpected"] = "max_turns"
     stop_reason: str | None = None
@@ -84,6 +89,7 @@ def run_tool_loop(
         gateway: The run's :class:`LLMGateway`.
         tools: The tools the model may call, normally the agent's scoped ``self.tools``.
         ctx: Per-run context passed to every tool (``patient_id``, ``effects``, ...).
+            Gets an empty ``effects`` list when it has none.
         system: The system prompt.
         messages: The conversation so far, ending with the turn to answer. Not modified.
         max_turns: The most model calls to make.
@@ -103,7 +109,7 @@ def run_tool_loop(
         if cache_system
         else system
     )
-    result = ToolLoopResult(messages=transcript)
+    result = ToolLoopResult(messages=transcript, effects=ctx.setdefault("effects", []))
 
     for turn in range(max_turns):
         if on_turn is not None:
