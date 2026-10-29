@@ -9,12 +9,14 @@
     "LLMGateway",
     "LLMGatewayConfigurationError",
     "SubAgentSpec",
+    "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
     "run_subagent",
     "run_subagents",
+    "run_tool_loop",
     "standard_tools",
     "window_messages"
   ],
@@ -47,6 +49,10 @@
     "SubAgentSpec",
     "run_subagent",
     "run_subagents"
+  ],
+  "canvas_sdk.agents.tool_loop": [
+    "ToolLoopResult",
+    "run_tool_loop"
   ],
   "canvas_sdk.agents.tool_registry": [
     "EffectField",
