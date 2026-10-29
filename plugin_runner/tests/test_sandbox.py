@@ -680,6 +680,14 @@ def test_statistics_median_is_importable() -> None:
     assert sandbox.execute()["result"] == 2
 
 
+def test_plugin_code_cannot_reach_the_run_recorder() -> None:
+    """Agent code could otherwise falsify the platform's record of its own runs."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.run_record import current_recorder")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
 def test_other_statistics_names_are_refused() -> None:
     """The only name plugin code can import from statistics is median."""
     sandbox = _sandbox_from_code("from statistics import mean")

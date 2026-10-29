@@ -1254,6 +1254,9 @@
     "get_current_plugin"
   ],
   "canvas_sdk.v1.data": [
+    "AgentRun",
+    "AgentRunStatus",
+    "AgentRunToolCall",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Application",
@@ -1542,6 +1545,11 @@
     "VitalSign",
     "VitalSignReading",
     "proxy_field"
+  ],
+  "canvas_sdk.v1.data.agent_run": [
+    "AgentRun",
+    "AgentRunStatus",
+    "AgentRunToolCall"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",

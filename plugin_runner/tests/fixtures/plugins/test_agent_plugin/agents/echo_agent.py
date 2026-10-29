@@ -42,6 +42,7 @@ class EchoAgent(AgentPlugin):
                 "loaded_with": state.data.get("loaded_with"),
                 "trigger": trigger_payload,
                 "subject": [self.subject.patient_id, self.subject.staff_id, self.subject.note_id],
+                "run_id": self.run_id,
                 "gateway_model": gateway.model,
             }
         )
