@@ -17,6 +17,7 @@ from canvas_sdk.v1.data.base import (
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.document_review_delegation import DelegatedDocumentMixin
 from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.task import Task
 
@@ -112,7 +113,7 @@ class ReferralReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
 
 
-class ReferralReport(TimestampedModel, IdentifiableModel, Report):
+class ReferralReport(TimestampedModel, IdentifiableModel, DelegatedDocumentMixin, Report):
     """ReferralReport."""
 
     class Meta:
