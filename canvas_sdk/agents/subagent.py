@@ -44,10 +44,11 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+import anthropic
 from django.db import connections
 
 from canvas_sdk.agents.gateway import LLMGateway
-from canvas_sdk.agents.run_record import current_recorder
+from canvas_sdk.agents.run_record import RunDeadlineExceeded, current_recorder
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.utils.http import ThreadPoolExecutor
@@ -59,6 +60,9 @@ from canvas_sdk.v1.plugin_database_context import (
 )
 
 log = logging.getLogger("plugin_runner_logger")
+
+# The most sub-agents run_subagents runs at once.
+MAX_PARALLEL = 8
 
 
 @dataclass(frozen=True)
@@ -180,7 +184,9 @@ def run_subagents(
     A failed sub-agent's entry is a string starting with
     ``"(sub-agent ... failed: ...)"`` rather than its result — the
     parent can decide whether to mention the failure or proceed with
-    the rest. Order of the returned dict is insertion order of
+    the rest. A gateway error (``anthropic.APIError``) or the run reaching
+    its deadline is raised instead, so it ends the run the way it would in
+    the parent. Order of the returned dict is insertion order of
     ``specs`` (regardless of completion order).
 
     Args:
@@ -195,19 +201,19 @@ def run_subagents(
             sub-agents — write effects from any sub-agent land in the
             same accumulator.
         gateway: The parent's :class:`LLMGateway`.
-        max_parallel: Upper bound on concurrent sub-agents. Defaults
-            to 4. Bigger fan-outs should consider Anthropic
-            per-organization rate limits.
+        max_parallel: Upper bound on concurrent sub-agents, at most
+            :data:`MAX_PARALLEL` (each worker thread holds its own database
+            connection). Defaults to 4.
 
     Returns:
-        Mapping of spec name to final text. Failures are returned as
+        Mapping of spec name to final text. Other failures are returned as
         diagnostic strings, not raised.
     """
     spec_list = list(specs)
     if not spec_list:
         return {}
 
-    workers = min(len(spec_list), max(1, max_parallel))
+    workers = min(len(spec_list), max(1, min(max_parallel, MAX_PARALLEL)))
     results: dict[str, str] = {spec.name: "" for spec in spec_list}
     in_parent_context = _in_database_context_of_this_thread(run_subagent)
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -225,6 +231,9 @@ def run_subagents(
         for future, name in future_to_name.items():
             try:
                 results[name] = future.result()
+            except (anthropic.APIError, RunDeadlineExceeded):
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise
             except Exception as exc:
                 log.exception(f"SubAgent[{name}] failed")
                 results[name] = f"(sub-agent {name!r} failed: {exc!s})"

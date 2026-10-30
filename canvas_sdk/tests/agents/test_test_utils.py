@@ -140,3 +140,16 @@ def test_an_error_in_the_run_reaches_the_test() -> None:
         run_agent(agent, FakeGateway())
 
     assert agent.hooks == ["start", "error"]  # type: ignore[attr-defined]
+
+
+def test_run_agent_holds_the_run_to_the_agents_model_call_ceiling() -> None:
+    """A test sees the call_limit stop the platform would apply."""
+
+    class _Capped(_Agent):
+        max_model_calls = 1
+
+    gateway = FakeGateway(reply(tool_use("broken")), reply(text("never sent")))
+
+    run = run_agent(prepare_agent(_Capped, allowed=["broken"]), gateway)
+
+    assert (run.model_calls, run.stop_reason) == (1, "call_limit")

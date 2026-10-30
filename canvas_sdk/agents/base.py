@@ -48,6 +48,10 @@ class AgentPlugin(ABC):
     # manifest grants none.
     tools_allowed: frozenset[str] = frozenset()
 
+    # The most model calls one run may make, sub-agents included. run_tool_loop stops
+    # with stopped="call_limit" when a run reaches it. Override on the subclass.
+    max_model_calls: int = 40
+
     # Who and what this run is about, validated by the platform and set on the
     # agent instance before lifecycle hooks fire. ``run_tool_loop`` hands it to
     # every tool, so tools act on the platform's patient, not one the agent chose.

@@ -7,11 +7,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+import anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
-from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.gateway import LLMGateway, attempt_timeout
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
-from canvas_sdk.agents.run_record import ToolCallRecord, current_recorder
+from canvas_sdk.agents.run_record import RunDeadlineExceeded, ToolCallRecord, current_recorder
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
 if TYPE_CHECKING:
@@ -22,6 +23,11 @@ log = logging.getLogger("plugin_runner_logger")
 # Stop reasons that can leave complete tool calls to run: a normal tool turn, or a
 # turn cut off by max_tokens after one or more tool calls finished.
 _TOOL_STOP_REASONS = frozenset({"tool_use", "max_tokens"})
+
+# The most of one tool result sent to the model. The history window cannot drop the
+# current turn's results, so an uncapped result (a whole note, a long list) could push
+# the call past the context window.
+MAX_TOOL_RESULT_CHARS = 50_000
 
 
 @dataclass
@@ -34,7 +40,8 @@ class ToolLoopResult:
             JSON-safe dicts. A transcript you can store and pass back on the next run.
         turns: How many times the model was called.
         stopped: ``"end_turn"`` when the model finished, ``"max_turns"`` when the turn
-            cap stopped it, ``"unexpected"`` for any other stop reason.
+            cap stopped it, ``"call_limit"`` when the run's model-call ceiling did, and
+            ``"unexpected"`` for any other stop reason.
         stop_reason: The model's stop reason on its last turn.
         effects: The ``effects`` list from ``ctx``, holding what the tools staged.
     """
@@ -43,7 +50,7 @@ class ToolLoopResult:
     messages: list[dict[str, Any]] = field(default_factory=list)
     effects: list["Effect"] = field(default_factory=list)
     turns: int = 0
-    stopped: Literal["end_turn", "max_turns", "unexpected"] = "max_turns"
+    stopped: Literal["end_turn", "max_turns", "call_limit", "unexpected"] = "max_turns"
     stop_reason: str | None = None
 
 
@@ -55,11 +62,21 @@ def _tool_result(tool_use_id: str, content: str, *, is_error: bool = False) -> d
 
 
 def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> dict[str, Any]:
-    """Run one tool call; a failure goes back to the model as an error so it can recover."""
+    """Run one tool call; a failure goes back to the model as an error so it can recover.
+
+    A gateway error or the run's deadline, raised by a sub-agent the tool ran, ends
+    the run instead.
+    """
     recorder = current_recorder.get()
     started = time.perf_counter()
     try:
         result = tools.execute(block.name, dict(block.input), ctx=ctx)
+    except (anthropic.APIError, RunDeadlineExceeded):
+        if recorder is not None:
+            recorder.record_tool_call(
+                ToolCallRecord(block.name, False, "aborted", _elapsed_ms(started))
+            )
+        raise
     except Exception as exc:
         log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
         if recorder is not None:
@@ -69,7 +86,18 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
-    return _tool_result(block.id, json.dumps(result, default=str))
+    return _tool_result(block.id, _capped(json.dumps(result, default=str)))
+
+
+def _capped(content: str) -> str:
+    """``content`` cut to :data:`MAX_TOOL_RESULT_CHARS`, saying so, so one result fits a call."""
+    if len(content) <= MAX_TOOL_RESULT_CHARS:
+        return content
+    return (
+        content[:MAX_TOOL_RESULT_CHARS]
+        + f"\n[Result cut at {MAX_TOOL_RESULT_CHARS} of {len(content)} characters. "
+        "Narrow the request, for example with filters or a lower limit, to see the rest.]"
+    )
 
 
 def _elapsed_ms(started: float) -> int:
@@ -104,7 +132,14 @@ def run_tool_loop(
     A tool that raises goes back to the model as an ``is_error`` result. The loop ends
     when the model ends its turn, after ``max_turns`` calls, or on any other stop
     reason; in that last case unanswered tool calls get error results, so the returned
-    transcript stays valid to store and send again. Errors from the gateway propagate.
+    transcript stays valid to store and send again. Errors from the gateway propagate,
+    including those from a sub-agent a tool runs.
+
+    In a platform run, the loop also stops when the run reaches its model-call ceiling
+    (``stopped="call_limit"``), raises ``RunDeadlineExceeded`` once the run is too
+    close to its deadline to make another call, and gives each call no longer than the
+    time left, split across its retries. A tool result longer than :data:`MAX_TOOL_RESULT_CHARS` is cut, with a
+    note telling the model.
 
     Args:
         gateway: The run's :class:`LLMGateway`.
@@ -139,6 +174,19 @@ def run_tool_loop(
             except Exception:
                 log.exception("on_turn hook raised; ignoring")
 
+        recorder = current_recorder.get()
+        request_options: dict[str, Any] = {}
+        if recorder is not None:
+            recorder.check_deadline()
+            if not recorder.reserve_model_call():
+                log.warning(
+                    f"Tool loop stopped at the run's {recorder.max_model_calls} model calls"
+                )
+                result.stopped = "call_limit"
+                return _stopped(result)
+            if (left := recorder.seconds_left()) is not None:
+                request_options["timeout"] = attempt_timeout(left)
+
         sent = transcript if history_chars is None else window_messages(transcript, history_chars)
         response = client.messages.create(
             model=model or gateway.model,
@@ -146,9 +194,8 @@ def run_tool_loop(
             system=system_param,
             tools=cast(Any, tools.definitions()),
             messages=cast(Any, sent),
+            **request_options,
         )
-        if (recorder := current_recorder.get()) is not None:
-            recorder.record_model_call()
         result.turns = turn + 1
         result.stop_reason = response.stop_reason
         log.info(
