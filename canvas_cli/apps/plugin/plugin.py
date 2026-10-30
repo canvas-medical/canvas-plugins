@@ -495,8 +495,14 @@ def _list_from_platform(client: PlatformClient, slug: str, host: str) -> None:
                 "credentials.ini."
             ) from error
         raise
+    collected_at = inventory.get("collected_at")
+    if collected_at is None:
+        # Platform has never read the instance, so an empty list says nothing about it.
+        raise click.ClickException(
+            f"Canvas Platform has not read the plugins on {slug} yet; try again shortly."
+        )
     print(
-        f"As of {inventory.get('collected_at')} (Canvas Platform inventory)",
+        f"As of {collected_at} (Canvas Platform inventory)",
         file=sys.stderr,
         flush=True,
     )
