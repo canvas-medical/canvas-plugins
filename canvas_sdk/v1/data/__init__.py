@@ -138,7 +138,14 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
-from .letter import Language, Letter, LetterActionEvent
+from .letter import (
+    Language,
+    Letter,
+    LetterActionEvent,
+    LetterLanguageTemplate,
+    LetterTemplate,
+    LetterTemplateType,
+)
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -431,6 +438,9 @@ __all__ = __exports__ = (
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
