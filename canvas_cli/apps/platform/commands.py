@@ -701,7 +701,7 @@ def init(
     Signed in to Canvas Platform, the plugin is named `<your org prefix>__<package>`,
     registered with platform, and given a git repository whose `origin` is
     platform. Inside an existing git repository it gets no repository of its own;
-    deploy it with `--snapshot`. Signed out, it is scaffolded with the name you give.
+    deploy it with `--snapshot`. A folder that repository ignores counts as outside it. Signed out, it is scaffolded with the name you give.
     """
     platform = auth.resolve_platform_url()
     if auth.stored_tokens(platform) is None:
@@ -742,15 +742,15 @@ def init(
 
     registered = client.register_plugin(chosen["slug"], name)
     print(f"Registered {name} with Canvas Platform.")
+    if git.in_repo(project_dir) and not git.ignored(project_dir):
+        print(
+            f"'{project_dir}' is inside an existing git repository, so the plugin stays in "
+            "that repository and gets no repository of its own. Commit it there, then "
+            "deploy it with --snapshot."
+        )
+        print(f"Deploy it with: canvas deploy {package_dir} --snapshot")
+        return
     if git.repo_root(package_dir) == project_dir.resolve():
-        if git.in_repo(project_dir):
-            print(
-                f"'{project_dir}' is inside an existing git repository, so the plugin stays in "
-                "that repository and gets no repository of its own. Commit it there, then "
-                "deploy it with --snapshot."
-            )
-            print(f"Deploy it with: canvas deploy {package_dir} --snapshot")
-            return
         result = git.run(project_dir, "init")
         if result.returncode != 0:
             raise git.GitError(f"git init failed: {result.stderr.strip()}")

@@ -103,6 +103,15 @@ def in_repo(directory: Path) -> bool:
     return run(directory, "rev-parse", "--is-inside-work-tree").stdout.strip() == "true"
 
 
+def ignored(directory: Path) -> bool:
+    """Whether the enclosing repository's ignore rules cover ``directory``.
+
+    Only ``git check-ignore`` exit 0 counts: exit 1 (not ignored) and an error
+    such as 128 (no repository) both answer False.
+    """
+    return run(directory, "check-ignore", "-q", str(directory.resolve())).returncode == 0
+
+
 def ensure_repo(plugin_dir: Path) -> None:
     """Ensure the plugin is in a git repository, offering to create one at a TTY.
 

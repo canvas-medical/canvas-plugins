@@ -56,6 +56,24 @@ def test_require_installed_names_where_to_get_git() -> None:
         git.require_installed()
 
 
+def test_ignored_matches_a_directory_pattern_of_the_enclosing_repository(tmp_path: Path) -> None:
+    """A folder under a `plugins/` ignore rule is ignored; a tracked-area folder is not."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / ".gitignore").write_text("plugins/\n")
+    ignored_dir: Path = tmp_path / "plugins" / "intake"
+    tracked_dir: Path = tmp_path / "src" / "intake"
+    ignored_dir.mkdir(parents=True)
+    tracked_dir.mkdir(parents=True)
+
+    assert git.ignored(ignored_dir) is True
+    assert git.ignored(tracked_dir) is False
+
+
+def test_ignored_is_false_outside_a_repository(tmp_path: Path) -> None:
+    """check-ignore exits 128 with no repository, which counts as not ignored."""
+    assert git.ignored(tmp_path) is False
+
+
 def test_output_names_the_failed_command(tmp_path: Path) -> None:
     """A git command that has to succeed and fails is reported by name with git's stderr."""
     with pytest.raises(git.GitError, match="git status failed: .*missing"):
