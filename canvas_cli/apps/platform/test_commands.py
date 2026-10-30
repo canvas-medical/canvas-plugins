@@ -521,7 +521,7 @@ def test_deploy_branch_refuses_the_options_that_do_not_push(
 @pytest.mark.parametrize(
     ("branch", "reason"),
     [
-        ("main", "To deploy to 'main', leave --branch out."),
+        ("main", "Leave --branch out to push to the plugin's default branch."),
         ("-x", "'-x' is not a valid branch name."),
         ("a..b", "'a..b' is not a valid branch name."),
         ("@{-1}", "'@{-1}' is not a valid branch name."),

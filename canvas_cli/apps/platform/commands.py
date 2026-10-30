@@ -479,7 +479,8 @@ def _require_branch_name(plugin_dir: Path, branch: str) -> None:
     """
     if branch == "main":
         raise typer.BadParameter(
-            "--branch names a branch other than 'main'. To deploy to 'main', leave --branch out."
+            "--branch names a branch other than 'main', which Canvas Platform deploys to "
+            "every instance. Leave --branch out to push to the plugin's default branch."
         )
     git.require_installed()
     result = git.run(plugin_dir, "check-ref-format", "--branch", branch)
