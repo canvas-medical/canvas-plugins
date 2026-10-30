@@ -34,6 +34,9 @@ HIT = {
     "service": {"name": "plugin-runner"},
 }
 FORBIDDEN = {"error": "That needs read_plugin_logs in Acme.", "code": "forbidden"}
+# What home-app's logs endpoint answers, with 403, for an expired or revoked token.
+NOT_AUTHENTICATED = {"detail": "Authentication credentials were not provided."}
+PLUGINS_DISABLED = {"detail": "Plugins are not enabled on this Canvas instance."}
 INSTANCE_OUTDATED = {
     "error": (
         "acme-prod runs a Canvas release that cannot issue log tokens yet. "
@@ -278,6 +281,79 @@ def test_second_401_names_the_instance(
 
     assert result.exit_code == 1
     assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
+
+
+def test_reissues_after_expired_token_403(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """home-app answers an expired or revoked token with 403, which mints a fresh token too."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    requests_mock.get(
+        LOGS_URL,
+        [
+            {"status_code": 403, "json": NOT_AUTHENTICATED},
+            {"json": {"hits": [HIT], "next": {}}},
+        ],
+    )
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 0, result.output
+    assert "hello from acme" in result.output
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
+
+
+def test_second_403_shows_the_instance_answer(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A refusal that survives a fresh token names the instance and what it answered."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    requests_mock.get(LOGS_URL, status_code=403, json=PLUGINS_DISABLED)
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert PLUGINS_DISABLED["detail"] in result.output
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
+
+
+def test_token_replaced_30_seconds_before_expiry(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A 900-second token is replaced once it has under 30 seconds left, not at expiry."""
+    clock: list[float] = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    pages: list[dict[str, Any]] = [
+        {"hits": [HIT], "next": {"search_after": [1]}},
+        {"hits": [HIT], "next": {}},
+    ]
+
+    def answer(request: Any, context: Any) -> dict[str, Any]:
+        clock[0] += 875
+        return pages.pop(0)
+
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    requests_mock.get(LOGS_URL, json=answer)
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow --all --page-size 1")
+
+    assert result.exit_code == 0, result.output
+    assert _calls_to(requests_mock, LOGS_URL) == 2
     assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
 
 
