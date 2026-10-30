@@ -837,7 +837,7 @@ def test_deploy_snapshot_refuses_to_replace_a_change_made_on_platform(
     # The paths are part of the error, so a CI log that interleaves stdout and stderr
     # shows them together.
     assert result.output.index("Error:") < result.output.index(f"  {NAME}/CANVAS_MANIFEST.json")
-    assert f"`canvas clone {NAME}`" in result.output
+    assert f"`canvas clone {NAME}` checks them out" in result.output
     assert _git(bare, "rev-parse", "main") == edited
 
 
@@ -1538,6 +1538,7 @@ def test_deploy_snapshot_to_an_existing_branch_refuses_a_platform_edit_on_that_b
     assert result.exit_code == 1
     assert "These files on feature-x were changed on Canvas Platform" in result.output
     assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert f"`canvas clone {NAME}`, then `git checkout feature-x`," in result.output
     assert _git(bare, "rev-parse", "feature-x") == branch_tip
 
 

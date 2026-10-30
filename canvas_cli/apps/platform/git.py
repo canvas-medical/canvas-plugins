@@ -480,7 +480,13 @@ def push_snapshot(
                 print(f"Pushed {tip[:12]} to {branch}, which already holds this snapshot.")
                 return tip
             _guard_platform_history(
-                work, snapshot, tip, name, root, branch if target_tip else default_branch
+                work,
+                snapshot,
+                tip,
+                name,
+                root,
+                branch if target_tip else default_branch,
+                default_branch,
             )
             print(_output(work, "diff", "--stat", tip, root, what="git diff").rstrip())
 
@@ -528,7 +534,13 @@ def _paths(work: Path, *args: str) -> set[str]:
 
 
 def _guard_platform_history(
-    work: Path, snapshot: Snapshot, tip: str, name: str, root: str, branch: str
+    work: Path,
+    snapshot: Snapshot,
+    tip: str,
+    name: str,
+    root: str,
+    branch: str,
+    default_branch: str,
 ) -> None:
     """Refuse a snapshot that would undo work on ``branch`` that it does not hold.
 
@@ -548,7 +560,9 @@ def _guard_platform_history(
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
     snapshot was pushed before, are replaced wherever the snapshot differs. At a
-    terminal the person may confirm that; otherwise it is refused.
+    terminal the person may confirm that; otherwise it is refused. ``canvas clone``
+    checks out ``default_branch``, so a refusal on another ``branch`` also says to
+    check that branch out.
     """
     found = _output(
         work,
@@ -616,8 +630,9 @@ def _guard_platform_history(
         if not typer.confirm("Replace them with this snapshot's versions?", default=False):
             raise typer.Abort()
         return
+    checkout = "" if branch == default_branch else f", then `git checkout {branch}`,"
     raise GitError(
         f"{changes}\nThis snapshot would replace them. Copy Canvas Platform's versions into "
-        f"{snapshot.path or 'the plugin'} (`canvas clone {name}` checks them out) and commit "
-        "them, or run deploy at a terminal to confirm replacing them."
+        f"{snapshot.path or 'the plugin'} (`canvas clone {name}`{checkout} checks them out) "
+        "and commit them, or run deploy at a terminal to confirm replacing them."
     )
