@@ -27,21 +27,55 @@ class HttpTransport:
     def send(self, events: list[bytes], **kwargs: Any) -> None:
         """Send a batch of events to Logstash as one JSON array.
 
-        Logstash's json codec turns each array element into its own event. Raising makes
-        the async worker requeue the batch, so network errors, 5xx, and 429 raise; any
-        other 4xx would fail identically on every retry, so the batch is reported and dropped.
+        Logstash's json codec turns each array element into its own event, but a parse failure
+        turns the whole request body into one unparsed event, so an event that is not strict
+        JSON (NaN, Infinity) is sent on its own. Raising makes the async worker requeue the
+        batch, so network errors, 5xx, and 429 raise. Any other 4xx would fail identically on
+        every retry, so a rejected batch is resent one event at a time and each event Logstash
+        still rejects is reported and dropped.
         """
-        response = self.session.post(
-            self.url, data=b"[" + b",".join(event.strip() for event in events) + b"]"
-        )
+        batch = []
+        for event in events:
+            event = event.strip()
+            if _is_strict_json(event):
+                batch.append(event)
+            else:
+                self._send_one(event)
+
+        if len(batch) == 1:
+            self._send_one(batch[0])
+        elif batch and self._post(b"[" + b",".join(batch) + b"]") >= 400:
+            for event in batch:
+                self._send_one(event)
+
+    def _send_one(self, event: bytes) -> None:
+        status_code = self._post(event)
+        if status_code >= 400:
+            print("Logstash rejected an event:", status_code)
+
+    def _post(self, body: bytes) -> int:
+        """POST one request body and return the status code, raising on retryable failures."""
+        response = self.session.post(self.url, data=body)
         if response.status_code == 429 or response.status_code >= 500:
             response.raise_for_status()
-        if response.status_code >= 400:
-            print("Logstash rejected a batch of", len(events), "events:", response.status_code)
+        return response.status_code
 
     def close(self) -> None:
         """Close the transport."""
         pass
+
+
+def _reject_constant(constant: str) -> Any:
+    raise ValueError(constant)
+
+
+def _is_strict_json(event: bytes) -> bool:
+    """Whether Logstash can parse the event: Python's json emits NaN and Infinity, Logstash does not."""
+    try:
+        json.loads(event, parse_constant=_reject_constant)
+    except ValueError:
+        return False
+    return True
 
 
 ExcInfo = tuple[type[BaseException], BaseException, TracebackType | None]
