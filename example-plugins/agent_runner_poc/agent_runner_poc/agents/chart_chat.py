@@ -1,12 +1,13 @@
 """ChartChatAgent — user-initiated chat agent for the patient chart.
 
-Demonstrates the snapshot state pattern from doc §6.12:
+Demonstrates the snapshot state pattern:
 - ``load_state`` reads the patient's :class:`Conversation` row and pulls the
   full message history into ``state.data["messages"]``.
 - ``run()`` appends the clinician's new message and answers it with
   :meth:`AgentPlugin.run_tool_loop`, which returns the history with the new
   turns appended.
-- ``save_state`` writes the updated message list back to the same row.
+- ``save_state`` writes the updated message list back to the same row, keeping the
+  newest :data:`STORED_HISTORY_CHARS` of it.
 
 Dispatched via the standard ``RunAgent`` path: the chat UI's POST
 handler emits a :class:`RunAgentEffect` scoped to the patient and the
@@ -31,7 +32,14 @@ from typing import Any
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
-from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
+from canvas_sdk.agents import (
+    DEFAULT_HISTORY_CHARS,
+    AgentPlugin,
+    AgentRunResult,
+    AgentState,
+    LLMGateway,
+    window_messages,
+)
 from logger import log
 
 SYSTEM_PROMPT = (
@@ -164,6 +172,10 @@ SYSTEM_PROMPT = (
 
 MAX_TURNS = 8
 
+# The most history a conversation keeps: twice what one model call sends, so the
+# clinician can scroll back past the model's window without the row growing forever.
+STORED_HISTORY_CHARS = 2 * DEFAULT_HISTORY_CHARS
+
 
 def load_conversation_messages(patient_id: str, staff_id: str) -> list[dict[str, Any]]:
     """Read a clinician's message history about a patient from Conversation Custom Data."""
@@ -201,7 +213,7 @@ class ChartChatAgent(AgentPlugin):
 
     # The platform scopes this to the manifest's tools.allowed before
     # run() fires; `self.tools.definitions()` and `self.tools.execute(...)`
-    # then see only the authorized subset (doc §6.7 enforcement seam).
+    # then see only the authorized subset.
     tools = _registered_tools
 
     def load_state(self, scope_key: str) -> AgentState:
@@ -237,6 +249,6 @@ class ChartChatAgent(AgentPlugin):
         return AgentRunResult(state=state, effects=result.effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
-        """Persist the updated message snapshot back to the Conversation row."""
-        messages: list[dict[str, Any]] = state.data["messages"]
+        """Persist the newest part of the message snapshot back to the Conversation row."""
+        messages = window_messages(state.data["messages"], STORED_HISTORY_CHARS)
         _save_conversation_messages(self.subject.patient_id, self.subject.staff_id, messages)

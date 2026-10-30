@@ -58,3 +58,29 @@ def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
     assert saved[0] == {"role": "user", "content": "How old is she?"}
     assert saved[-1]["content"][0]["text"] == "She is 54."
     assert [call.name for call in run.tool_calls] == ["get_patient_demographics"]
+
+
+@pytest.mark.django_db
+def test_a_long_conversation_keeps_only_its_newest_part(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The stored row stops growing, and what it keeps starts on a question."""
+    monkeypatch.setattr("agent_runner_poc.agents.chart_chat.STORED_HISTORY_CHARS", 200)
+    agent = _agent_for(PatientFactory.create().id, StaffFactory.create().id)
+    turns = [
+        message
+        for index in range(10)
+        for message in (
+            {"role": "user", "content": f"question {index}"},
+            {"role": "assistant", "content": [{"type": "text", "text": f"answer {index}"}]},
+        )
+    ]
+
+    state = agent.load_state("patient_and_staff")
+    state.data["messages"] = turns
+    agent.save_state("patient_and_staff", state)
+
+    stored = agent.load_state("patient_and_staff").data["messages"]
+    assert 0 < len(stored) < len(turns)
+    assert stored == turns[-len(stored) :]
+    assert stored[0]["role"] == "user" and isinstance(stored[0]["content"], str)

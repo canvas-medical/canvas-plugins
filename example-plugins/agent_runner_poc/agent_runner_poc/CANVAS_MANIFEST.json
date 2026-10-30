@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "agent_runner_poc",
-    "description": "PoC reference agents for the Canvas Agent Runner Framework (KOALA-5544). LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief) replacing the original always-on ChartSummary trigger.",
+    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief).",
     "components": {
         "handlers": [
             {
