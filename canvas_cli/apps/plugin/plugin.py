@@ -499,7 +499,9 @@ def _list_from_platform(client: PlatformClient, slug: str, host: str) -> None:
     if collected_at is None:
         # Platform has never read the instance, so an empty list says nothing about it.
         raise click.ClickException(
-            f"Canvas Platform has not read the plugins on {slug} yet; try again shortly."
+            f"Canvas Platform has not read the plugins on {slug} yet. To list them from the "
+            "instance, sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) and use "
+            "credentials.ini."
         )
     print(
         f"As of {collected_at} (Canvas Platform inventory)",

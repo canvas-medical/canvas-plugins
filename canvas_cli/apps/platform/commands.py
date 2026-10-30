@@ -49,8 +49,6 @@ POLL_TIMEOUT_SECONDS = 300.0
 _SKIPPED_BECAUSE = {
     "configure": "not installed there; the stored values apply when it is next deployed",
     "uninstall": "not installed there",
-    "enable": "not installed there",
-    "disable": "not installed there",
 }
 
 _INSTANCE_HELP = "Instance slug to target (repeatable)"
