@@ -24,14 +24,38 @@ from canvas_cli.apps.plugin.plugin import plugin_url
 
 # Seconds before a minted token's expiry at which it is replaced.
 EXPIRY_MARGIN_SECONDS = 30
+# The instance answers an expired or revoked token with 403, since its logs endpoint tries
+# session authentication first and so sends no WWW-Authenticate challenge. 401 is kept for a
+# proxy or release that does send one.
+REFUSED_TOKEN_STATUSES: tuple[int, ...] = (requests.codes.unauthorized, requests.codes.forbidden)
+
+
+def _instance_answer(response: requests.Response) -> str:
+    """Return the instance's ``detail`` as a sentence to quote, or an empty string.
+
+    Args:
+        response (requests.Response): The instance's refusal.
+
+    Returns:
+        str: ``The instance answered: <detail> `` with a trailing space, or "" when the body
+            carries no ``detail``.
+    """
+    try:
+        body: Any = response.json()
+    except ValueError:
+        return ""
+    detail: Any = body.get("detail") if isinstance(body, dict) else None
+    if not isinstance(detail, str) or not detail:
+        return ""
+    return f"The instance answered: {detail} "
 
 
 class LogToken:
     """A bearer token for an instance's logs, and how to get a fresh one.
 
     The credentials.ini token is requested the way every instance command requests it and is
-    not reissued on a 401. A Platform-issued token is minted on first use, minted again once it
-    nears expiry, and minted again when the instance answers 401.
+    not reissued on a refusal. A Platform-issued token is minted on first use, minted again once
+    it nears expiry, and minted again when the instance answers 401 or 403.
     """
 
     def __init__(
@@ -254,7 +278,7 @@ def search_logs(
 ) -> SearchPage:
     """Fetch logs from Canvas API.
 
-    A ``LogToken`` is asked for its token on each call. On a 401 a reissuable one (the
+    A ``LogToken`` is asked for its token on each call. On a 401 or 403 a reissuable one (the
     Platform path) mints a fresh token and the request is retried once; the credentials.ini
     path and a plain string token are sent as they are.
     """
@@ -291,11 +315,12 @@ def search_logs(
 
     if isinstance(token, LogToken):
         r = fetch(token.get())
-        if r.status_code == requests.codes.unauthorized and token.reissuable:
+        if r.status_code in REFUSED_TOKEN_STATUSES and token.reissuable:
             r = fetch(token.refresh())
-            if r.status_code == requests.codes.unauthorized:
+            if r.status_code in REFUSED_TOKEN_STATUSES:
                 raise click.ClickException(
                     f"{token.slug} refused the log token Canvas Platform issued. "
+                    f"{_instance_answer(r)}"
                     "Run the command again; if it keeps failing, sign out with canvas logout "
                     "to use credentials.ini."
                 )
