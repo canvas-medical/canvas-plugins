@@ -19,7 +19,7 @@ import websocket
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token, instance_slug
 from canvas_cli.apps.platform import auth as platform_auth
-from canvas_cli.apps.platform.client import PlatformClient
+from canvas_cli.apps.platform.routing import managed_instance
 from canvas_cli.apps.plugin.plugin import plugin_url
 
 # Seconds before a minted token's expiry at which it is replaced.
@@ -131,21 +131,17 @@ def log_token_source(host: str) -> LogToken:
     Returns:
         LogToken: The token source.
     """
-    slug: str | None = instance_slug(host)
-    platform: str = platform_auth.resolve_platform_url()
-    if slug is not None and platform_auth.stored_tokens(platform) is not None:
-        client = PlatformClient(platform)
-        row = next((r for r in client.instances() if r.get("slug") == slug), None)
-        if row is not None and row.get("managed"):
+    if (managed := managed_instance(host)) is not None:
+        client, slug = managed
 
-            def mint() -> tuple[str, float | None]:
-                body = client.log_token(slug)
-                return body["access_token"], float(body["expires_in"])
+        def mint() -> tuple[str, float | None]:
+            body = client.log_token(slug)
+            return body["access_token"], float(body["expires_in"])
 
-            return LogToken(slug, mint, reissuable=True)
+        return LogToken(slug, mint, reissuable=True)
 
     return LogToken(
-        slug or host,
+        instance_slug(host) or host,
         lambda: (get_or_request_api_token(host), None),
         reissuable=False,
     )
