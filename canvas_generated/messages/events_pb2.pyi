@@ -1304,6 +1304,10 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CALENDAR_EVENT_UPDATED: _ClassVar[EventType]
     CALENDAR_EVENT_DELETED: _ClassVar[EventType]
     MESSAGE_TEAM_ASSIGNED: _ClassVar[EventType]
+    PORTAL_INVITATION_CREATED: _ClassVar[EventType]
+    PORTAL_INVITATION_OPENED: _ClassVar[EventType]
+    PORTAL_INVITATION_CLAIMED: _ClassVar[EventType]
+    PORTAL_INVITATION_REJECTED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -2598,6 +2602,10 @@ CALENDAR_EVENT_CREATED: EventType
 CALENDAR_EVENT_UPDATED: EventType
 CALENDAR_EVENT_DELETED: EventType
 MESSAGE_TEAM_ASSIGNED: EventType
+PORTAL_INVITATION_CREATED: EventType
+PORTAL_INVITATION_OPENED: EventType
+PORTAL_INVITATION_CLAIMED: EventType
+PORTAL_INVITATION_REJECTED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type", "actor", "source")

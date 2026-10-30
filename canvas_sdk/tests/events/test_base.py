@@ -258,3 +258,32 @@ def test_event_init_for_message_team_assigned(mock_get_model: Mock) -> None:
     assert event.name == "MESSAGE_TEAM_ASSIGNED"
     assert event.target.type == mock_model
     mock_get_model.assert_called_once_with(app_label="v1", model_name="Message")
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_name",
+    [
+        (EventType.PORTAL_INVITATION_CREATED, "PORTAL_INVITATION_CREATED"),
+        (EventType.PORTAL_INVITATION_OPENED, "PORTAL_INVITATION_OPENED"),
+        (EventType.PORTAL_INVITATION_CLAIMED, "PORTAL_INVITATION_CLAIMED"),
+        (EventType.PORTAL_INVITATION_REJECTED, "PORTAL_INVITATION_REJECTED"),
+    ],
+)
+@patch("canvas_sdk.events.base.apps.get_model")
+def test_event_init_for_invitation_events(
+    mock_get_model: Mock, event_type: EventType, expected_name: str
+) -> None:
+    """Portal invitation events resolve to their names and the v1 PortalInvitation target."""
+    mock_model = Mock(spec=models.Model)
+    mock_get_model.return_value = mock_model
+
+    event_request = EventRequest()
+    event_request.type = event_type
+    event_request.target_type = "PortalInvitation"
+    event_request.target = "1"
+
+    event = Event(event_request)
+
+    assert event.name == expected_name
+    assert event.target.type == mock_model
+    mock_get_model.assert_called_once_with(app_label="v1", model_name="PortalInvitation")
