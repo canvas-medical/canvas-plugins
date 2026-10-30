@@ -241,7 +241,7 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
 
     def reschedule(self) -> Effect:
         """Send a RESCHEDULE effect for the appointment."""
-        self._validate_before_effect("update")
+        self._validate_before_effect("reschedule")
 
         # Check if any fields were actually modified
         if self._dirty_keys == {"instance_id"}:
