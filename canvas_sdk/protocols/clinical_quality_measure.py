@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import arrow
 
@@ -9,9 +9,12 @@ from canvas_sdk.protocols.base import BaseProtocol
 from canvas_sdk.protocols.timeframe import Timeframe
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.instruction import Instruction
 from canvas_sdk.v1.data.lab import LabOrder, LabReport
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride
+from canvas_sdk.v1.data.questionnaire import Interview
+from canvas_sdk.v1.data.referral import ReferralReport
 
 if TYPE_CHECKING:
     from django.db.models import Model
@@ -97,19 +100,25 @@ class ClinicalQualityMeasure(BaseProtocol):
         def patient_id(model: type[Model]) -> str:
             if model == Patient:
                 return self.event.target.id
-            else:
-                return cast(
-                    str,
-                    model._default_manager.select_related("patient")
-                    .values_list("patient__id")
-                    .get(id=self.event.target)[0],
-                )
+
+            patient_id = (
+                model._default_manager.select_related("patient")
+                .values_list("patient__id", flat=True)
+                .get(id=self.event.target.id)
+            )
+            if patient_id is None:
+                raise ValueError(f"{model.__name__} {self.event.target.id} has no patient")
+            return str(patient_id)
 
         models = {
             EventType.CONDITION_ASSESSED: Condition,
             EventType.CONDITION_CREATED: Condition,
             EventType.CONDITION_RESOLVED: Condition,
             EventType.CONDITION_UPDATED: Condition,
+            EventType.INSTRUCTION_CREATED: Instruction,
+            EventType.INSTRUCTION_UPDATED: Instruction,
+            EventType.INTERVIEW_CREATED: Interview,
+            EventType.INTERVIEW_UPDATED: Interview,
             EventType.LAB_ORDER_CREATED: LabOrder,
             EventType.LAB_ORDER_UPDATED: LabOrder,
             EventType.LAB_REPORT_CREATED: LabReport,
@@ -121,6 +130,8 @@ class ClinicalQualityMeasure(BaseProtocol):
             EventType.PROTOCOL_OVERRIDE_CREATED: ProtocolOverride,
             EventType.PROTOCOL_OVERRIDE_DELETED: ProtocolOverride,
             EventType.PROTOCOL_OVERRIDE_UPDATED: ProtocolOverride,
+            EventType.REFERRAL_REPORT_CREATED: ReferralReport,
+            EventType.REFERRAL_REPORT_UPDATED: ReferralReport,
         }
 
         if not self._patient_id:
