@@ -218,6 +218,8 @@ def test_list_of_an_inventory_platform_never_read_says_so(
 ) -> None:
     """A null collected_at means Platform has not read the instance, so its empty list says
     nothing about what is installed and the command does not claim the instance runs nothing.
+    Platform's next read of a new instance can be hours away, so the sentence points at
+    credentials.ini rather than promising a wait.
     """
     requests_mock.get(
         f"{API}/instances/acme/plugins",
@@ -226,10 +228,14 @@ def test_list_of_an_inventory_platform_never_read_says_so(
 
     result = runner.invoke(app, ["list", "--host", "acme"])
 
+    said = result.output + result.stderr
     assert result.exit_code == 1
-    assert "Canvas Platform has not read the plugins on acme yet" in result.output + result.stderr
+    assert "Canvas Platform has not read the plugins on acme yet" in said
+    assert "canvas logout" in said
+    assert "credentials.ini" in said
+    assert "shortly" not in said
     assert "No plugins are currently installed" not in result.stdout
-    assert "None" not in result.output + result.stderr
+    assert "None" not in said
     ini_token.assert_not_called()
 
 
