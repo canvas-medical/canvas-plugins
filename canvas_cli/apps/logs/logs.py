@@ -83,7 +83,7 @@ class LogToken:
             slug (str): The instance the token is for, used in messages.
             mint (Callable[[], tuple[str, float | None]]): Returns a token and its lifetime in
                 seconds, or None for a token with no known expiry.
-            reissuable (bool): Whether a 401 should mint a fresh token and retry.
+            reissuable (bool): Whether a 401 or 403 should mint a fresh token and retry.
         """
         self.slug: str = slug
         self.reissuable: bool = reissuable
