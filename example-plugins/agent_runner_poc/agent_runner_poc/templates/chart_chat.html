@@ -359,7 +359,16 @@
           let run;
           try {
             const res = await fetch(RUN_URL + encodeURIComponent(runId), { cache: 'no-store' });
-            if (!res.ok) continue;
+            if (res.status >= 400 && res.status < 500) {
+              // Asking again gets the same answer: the session ended, or the run is not
+              // this clinician's to see.
+              placeholder.classList.add('error');
+              placeholder.textContent = (res.status === 401 || res.status === 403)
+                ? 'Your session has ended. Reload the page to see the reply.'
+                : 'Could not check on the agent (HTTP ' + res.status + ').';
+              return;
+            }
+            if (!res.ok) continue;  // A server error may pass; keep polling until the deadline.
             run = await res.json();
           } catch (err) {
             continue;  // Transient network blip — keep polling until the deadline.

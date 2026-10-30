@@ -58,6 +58,13 @@ class RunAgentEffect(_BaseEffect):
         """Which runs of one agent wait on each other.
 
         Runs of different agents never wait on each other, whatever their scope.
+
+        The scope decides only waiting: ``load_state`` receives the run's ``scope_key``,
+        and nothing stops two patients' runs from sharing one. ``KEY`` and ``AGENT``
+        leave the patient out of the key, so an agent keeping per-patient state under
+        them must key that state by ``self.subject.patient_id``. For example, an
+        ``AGENT``-scoped agent that stored a chat history under ``scope_key`` alone
+        would load one patient's history into the next patient's run.
         """
 
         # Runs on the same patient, one at a time.

@@ -14,7 +14,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from http import HTTPStatus
 from time import monotonic, sleep
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict, cast
+from typing import Any, NotRequired, TypedDict, cast
 
 import anthropic
 import grpc
@@ -45,7 +45,14 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-from canvas_sdk.agents.run_record import RunDeadlineExceeded
+from canvas_sdk.agents import LLMGatewayConfigurationError, RunSubject
+from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
+from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
+from canvas_sdk.agents.run_record import (
+    RunDeadlineExceeded,
+    RunRecorder,
+    current_recorder,
+)
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
@@ -94,9 +101,6 @@ from settings import (
     SECRETS_FILE_NAME,
     SENTRY_DSN,
 )
-
-if TYPE_CHECKING:
-    from canvas_sdk.agents.run_record import RunRecorder
 
 if SENTRY_DSN:
     # Lazy import for faster reload time in dev
@@ -261,7 +265,7 @@ AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
 
 
 def _agent_run_summary(
-    recorder: "RunRecorder",
+    recorder: RunRecorder,
     *,
     effects_returned: int = 0,
     effects_dropped: int = 0,
@@ -555,11 +559,6 @@ class PluginRunner(PluginRunnerServicer):
             agent_class = plugin["class"]
             namespace_config = plugin.get("namespace_config")
 
-            # Late import: canvas_sdk.agents and the SDK Effect wrapper are
-            # only meaningful once plugin modules have loaded.
-            from canvas_sdk.agents import LLMGatewayConfigurationError
-            from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
-
             try:
                 gateway = gateway_from_plugin_secrets(
                     plugin.get("secrets") or {},
@@ -593,10 +592,6 @@ class PluginRunner(PluginRunnerServicer):
                 f"scope_key={request.scope_key} run_id={request.run_id} "
                 f"trigger={request.handler_name}"
             )
-
-            from canvas_sdk.agents import RunSubject
-            from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
-            from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 
             if not AGENT_RUN_SLOTS.acquire(blocking=False):
                 log.warning(

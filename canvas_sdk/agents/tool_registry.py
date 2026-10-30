@@ -156,6 +156,18 @@ class ToolNotAllowed(LookupError):
     """
 
 
+def _refuse_fields_targeting(tool: str, field_map: dict[str, str], injected: set[str]) -> None:
+    """Refuse a model-facing field that would set a kwarg the platform injects.
+
+    The injected value (the run's patient, the clinician's note) comes from the run, so a
+    field mapped onto it would let the model's argument replace it.
+    """
+    if clashes := sorted(arg_name for arg_name, target in field_map.items() if target in injected):
+        raise ValueError(
+            f"Tool {tool!r}: fields {clashes} target {sorted(injected)}, which the run sets."
+        )
+
+
 class ToolRegistry:
     """A composable catalog of agent tools.
 
@@ -614,6 +626,7 @@ class ToolRegistry:
         command_field_map: dict[str, str] = {
             arg_name: (spec.command_field or arg_name) for arg_name, spec in fields.items()
         }
+        _refuse_fields_targeting(name, command_field_map, {"note_uuid"})
 
         def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
             note_uuid = note_resolver(ctx)
@@ -796,6 +809,7 @@ class ToolRegistry:
         effect_field_map: dict[str, str] = {
             arg_name: (spec.command_field or arg_name) for arg_name, spec in fields.items()
         }
+        _refuse_fields_targeting(name, effect_field_map, set(ctx_field_map.values()))
 
         def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
             # Start with ctx-injected fields.

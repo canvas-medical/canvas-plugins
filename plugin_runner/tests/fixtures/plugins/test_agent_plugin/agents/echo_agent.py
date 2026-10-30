@@ -18,6 +18,17 @@ def _echo(arguments: dict, *, ctx: dict) -> dict:
     return {"ok": True}
 
 
+@tools.tool(
+    name="meter",
+    description="Record a unit of usage. The manifest does not grant it; tests grant it.",
+    input_schema={"type": "object"},
+    effect_types=("RECORD_USAGE",),
+)
+def _meter(arguments: dict, *, ctx: dict) -> dict:
+    """Declare RECORD_USAGE, so only the usage gate can drop the agent's usage records."""
+    return {"ok": True}
+
+
 class EchoAgent(AgentPlugin):
     """Test agent: returns a single LOG effect carrying the trigger payload.
 
