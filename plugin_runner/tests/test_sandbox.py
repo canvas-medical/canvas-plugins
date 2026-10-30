@@ -688,6 +688,14 @@ def test_plugin_code_cannot_reach_the_run_recorder() -> None:
         sandbox.execute()
 
 
+def test_plugin_code_cannot_reach_the_tool_grant() -> None:
+    """Agent code could otherwise widen its own grant or keep effects the grant drops."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.grant import apply_tool_grant")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
 def test_other_statistics_names_are_refused() -> None:
     """The only name plugin code can import from statistics is median."""
     sandbox = _sandbox_from_code("from statistics import mean")

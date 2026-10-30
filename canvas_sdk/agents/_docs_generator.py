@@ -11,8 +11,9 @@ target markdown file:
 - ``<!-- AUTOGEN:writes ... -->`` — per-write-tool detail
 
 The hand-written prose around the blocks (concepts, examples, design
-tips) is preserved untouched. CI runs the generator with ``--check``;
-authors run with ``--write`` after touching the catalog.
+tips) is preserved untouched. The target page lives in the documentation
+repository, so the check runs by hand: after touching the catalog, run
+``--check`` against a documentation checkout, and ``--write`` to update it.
 
 Usage::
 
