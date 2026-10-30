@@ -15,10 +15,10 @@ class Conversation(CustomModel):
 
     Storage shape: the entire conversation history lives in a single
     JSONField as a list of Anthropic-shaped message dicts (``{"role":
-    "user|assistant", "content": "..."}`` — see the snapshot
-    serialization in :class:`ConversationState`). This is the "snapshot
-    state" pattern from doc §6.12: ``load_state`` reads the row,
-    ``run()`` mutates the in-memory list, ``save_state`` writes it back.
+    "user|assistant", "content": ...}``), as :class:`ToolLoopResult.messages`
+    returns them. This is the "snapshot state" pattern:
+    :meth:`ChartChatAgent.load_state` reads the row, ``run()`` extends the
+    in-memory list, and ``save_state`` writes back its newest part.
 
     Like other CustomModels, ``flagged_at`` / ``last_updated_at`` are
     declared explicitly (CustomModel does not inherit TimestampedModel).
@@ -31,8 +31,8 @@ class Conversation(CustomModel):
         related_name="chart_chat_conversations",
     )
 
-    # The clinician whose conversation this is. Nullable so the column can be
-    # added to an existing table; every row the agent writes sets it.
+    # The clinician whose conversation this is. Nullable because a column added to a
+    # plugin table cannot be NOT NULL without a default; every row the agent writes sets it.
     staff: ForeignKey[StaffProxy, StaffProxy] = ForeignKey(
         StaffProxy,
         to_field="dbid",

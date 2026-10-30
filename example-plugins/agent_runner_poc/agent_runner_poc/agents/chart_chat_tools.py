@@ -10,12 +10,9 @@ StopMedication).
 Plugin-specific composition tools live here too:
 
 - ``generate_chart_summary`` — single sub-agent that reads the patient's
-  chart and returns a concise narrative. Replaces the original
-  ChartSummary AgentPlugin + ChartSummaryTrigger (which always fired on
-  new-encounter creation, regardless of whether the clinician asked).
-  On-demand now; the parent decides whether to surface the text inline,
-  originate a Plan onto an open encounter, draft it as a review note,
-  or message it to the patient.
+  chart and returns a concise narrative when the clinician asks. The parent
+  decides whether to surface the text inline, originate a Plan onto an open
+  encounter, draft it as a review note, or message it to the patient.
 - ``generate_pre_visit_brief`` — fans out to four focused sub-agents in
   parallel (labs trends / meds changes / recent visits / outstanding work),
   each with a narrow system prompt and a tiny tool subset, then
@@ -44,13 +41,8 @@ tools = ToolRegistry()
 tools.extend(standard_tools)
 
 
-# Chart-summary sub-agent. Demoted from a standalone AgentPlugin
-# (and its always-on note-creation trigger) — the auto-fire was
-# undesirable, and the summary logic naturally fits the same role-as-
-# config shape as the pre-visit-brief specs. ChartChat now calls
-# `generate_chart_summary` on demand; the parent decides whether to
-# surface the text inline, originate a Plan onto an open encounter,
-# draft it as a review note, or send it as a patient message.
+# Chart-summary sub-agent, in the same role-as-config shape as the pre-visit-brief
+# specs. ChartChat calls `generate_chart_summary` when the clinician asks.
 _CHART_SUMMARY_SUBAGENT = SubAgentSpec(
     name="chart_summary",
     system_prompt=(

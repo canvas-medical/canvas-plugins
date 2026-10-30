@@ -5,7 +5,7 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
-description = "PoC reference agent for the Canvas Agent Runner Framework (KOALA-5544)"
+description = "Reference agents for the Canvas Agent Runner Framework"
 license = "MIT"
 name = "agent_runner_poc"
 requires-python = ">=3.11"
