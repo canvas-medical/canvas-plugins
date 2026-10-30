@@ -474,8 +474,8 @@ def _require_branch_name(plugin_dir: Path, branch: str) -> None:
     """Refuse a ``--branch`` that is ``main`` or that git does not accept as a branch name.
 
     ``check-ref-format --branch`` also expands ``@{-1}`` to the name of the branch
-    checked out before the current one, so a name that comes back changed is refused rather than pushed under a
-    name the person did not type.
+    checked out before the current one, so a name that comes back changed is
+    refused rather than pushed under a name the person did not type.
     """
     if branch == "main":
         raise typer.BadParameter(

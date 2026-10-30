@@ -7,8 +7,9 @@ which git runs as the credential helper registered for the git server's host.
 
 A plugin inside a larger repository, such as a monorepo, is published as a
 snapshot instead: its committed package folder becomes the next commit on the
-plugin's ``main``, or on the branch ``--branch`` names, built in a scratch repository so the larger repository's
-remotes, config and index are never touched.
+plugin's ``main``, or on the branch ``--branch`` names, built in a scratch
+repository so the larger repository's remotes, config and index are never
+touched.
 """
 
 from __future__ import annotations
