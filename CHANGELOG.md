@@ -1,6 +1,36 @@
 # CHANGELOG
 
 
+## v0.262.0 (2026-10-29)
+
+### Features
+
+- Add a RecordUsage effect for plugin usage billing
+  ([#1949](https://github.com/canvas-medical/canvas-plugins/pull/1949),
+  [`1d61789`](https://github.com/canvas-medical/canvas-plugins/commit/1d61789e552f5589e88130717d3d655b42295920))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+- **cli**: Add canvas deploy --snapshot for plugins inside a monorepo
+  ([#1955](https://github.com/canvas-medical/canvas-plugins/pull/1955),
+  [`3abceee`](https://github.com/canvas-medical/canvas-plugins/commit/3abceeed7d68c6c79ae2bb7d1f0a8999b55ae9d6))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- **simple-api**: Hold a login acting on a patient's chart to its portal access
+  ([#1954](https://github.com/canvas-medical/canvas-plugins/pull/1954),
+  [`ac8822e`](https://github.com/canvas-medical/canvas-plugins/commit/ac8822e9d3655bfb1e08d2a63590577ec91a1abd))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.261.0 (2026-10-27)
 
 ### Bug Fixes

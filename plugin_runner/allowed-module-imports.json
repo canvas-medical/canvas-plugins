@@ -954,6 +954,9 @@
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
   ],
+  "canvas_sdk.effects.usage": [
+    "RecordUsage"
+  ],
   "canvas_sdk.effects.validation": [
     "EventValidationError",
     "ValidationError"
@@ -1044,6 +1047,8 @@
     "FileFormPart",
     "FormPart",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
     "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
@@ -1088,6 +1093,8 @@
     "BearerCredentials",
     "Credentials",
     "PatientSessionAuthMixin",
+    "PortalAccess",
+    "PortalAccessLevel",
     "SessionCredentials",
     "StaffSessionAuthMixin"
   ],

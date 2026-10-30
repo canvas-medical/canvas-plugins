@@ -555,6 +555,8 @@ enum EffectType {
   UPDATE_SERVICE_PROVIDER = 9107;
   DEACTIVATE_SERVICE_PROVIDER = 9108;
 
+  // Usage Effects
+  RECORD_USAGE = 9200;
 
 
 }

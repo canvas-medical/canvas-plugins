@@ -8,7 +8,8 @@ person signed in with ``canvas login``:
   * ``canvas whoami``: which platform, and who the CLI signs in as there.
   * ``canvas init``: scaffolds a plugin; signed in, it names it
     ``<prefix>__<package>`` and registers it with platform.
-  * ``canvas deploy``: commits and pushes the working tree, then deploys it.
+  * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
+    plugin inside a larger repository, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
   * ``canvas config set`` / ``unset`` and ``canvas uninstall``: through platform
     for a plugin it manages, and directly against the instance otherwise.
@@ -464,8 +465,35 @@ def _require_package_at_repo_root(plugin_dir: Path) -> None:
         raise typer.BadParameter(
             f"'{plugin_dir}' is inside the git repository at {toplevel}, but a plugin's "
             f"repository must be rooted at the directory containing the package ({expected}). "
-            "Move the package into its own repository, or use `canvas clone` to check it out."
+            "To deploy it from this repository, pass --snapshot."
         )
+
+
+def _push_snapshot(
+    client: PlatformClient, plugin_dir: Path, publisher: str, name: str, platform: str
+) -> str:
+    """Register the plugin and push the package's committed contents as one new commit.
+
+    Returns the commit on the default branch.
+    """
+    snapshot = git.snapshot_source(plugin_dir)
+    if not git.on_a_remote(plugin_dir):
+        print(
+            f"Warning: {snapshot.commit[:12]} is not on any remote branch of the repository "
+            "it is in, so it has not been pushed for review there.",
+            file=sys.stderr,
+            flush=True,
+        )
+    registered = client.register_plugin(publisher, name)
+    me = client.me()
+    return git.push_snapshot(
+        snapshot,
+        name,
+        registered["git_url"],
+        registered.get("default_branch") or "main",
+        platform,
+        author=(me.get("name") or me["email"], me["email"]),
+    )
 
 
 def _push(
@@ -476,11 +504,14 @@ def _push(
     platform: str,
     *,
     assume_yes: bool,
+    snapshot: bool,
 ) -> str:
     """Register the plugin, connect its repository and push HEAD to the default branch.
 
     Returns the pushed commit.
     """
+    if snapshot:
+        return _push_snapshot(client, plugin_dir, publisher, name, platform)
     git.ensure_repo(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     registered = client.register_plugin(publisher, name)
@@ -489,7 +520,7 @@ def _push(
     branch = registered.get("default_branch") or "main"
     git.push_head(plugin_dir, branch)
     sha = git.head_sha(plugin_dir)
-    print(f"Pushed {sha[:12]} to {branch}.")
+    print(f"Pushed {name} {sha[:12]} to {branch} on Canvas Platform.")
     return sha
 
 
@@ -506,6 +537,14 @@ def deploy(
     ),
     push_only: bool = typer.Option(
         False, "--push-only", help="Push HEAD to 'main' without deploying it to any instance."
+    ),
+    snapshot: bool = typer.Option(
+        False,
+        "--snapshot",
+        help=(
+            "Push the committed contents of a plugin inside a larger repository, such as a "
+            "monorepo, as one new commit on 'main', leaving that repository's remotes alone."
+        ),
     ),
     assume_yes: bool = typer.Option(
         False,
@@ -536,10 +575,23 @@ def deploy(
     With --push-only, deploy registers and pushes the same way and stops there, so
     it needs no instance: the plugin's code, and its catalog listing, are updated
     on Canvas Platform without being deployed anywhere.
+
+    With --snapshot, the plugin can sit anywhere inside a larger repository. Deploy
+    refuses uncommitted changes in the package rather than committing them, builds
+    a commit whose package folder is the package as committed at HEAD, and pushes
+    it to `main` from a scratch repository, so the larger repository's `origin`
+    and config are untouched. A commit on `main` tagged `snapshot-baseline/...`
+    counts as the last snapshot. It refuses when `main` has changes to the package,
+    such as a catalog listing edited in Canvas Platform, that the snapshot would
+    replace, and asks at a terminal instead.
     """
     if push_only and (instance or ref is not None or no_push):
         raise typer.BadParameter(
             "--push-only pushes without deploying, so it takes no --instance, --ref or --no-push."
+        )
+    if snapshot and (ref is not None or no_push):
+        raise typer.BadParameter(
+            "--snapshot pushes a new commit, so it takes no --ref or --no-push."
         )
     if not plugin_dir.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
@@ -553,14 +605,18 @@ def deploy(
     client = PlatformClient(platform)
     publisher = _publisher(client, name, pushing=pushing)
     if push_only:
-        sha = _push(client, plugin_dir, publisher, name, platform, assume_yes=assume_yes)
-        print(f"Not deployed. Deploy it with: canvas deploy {plugin_dir} --ref {sha[:12]}")
+        sha = _push(
+            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+        )
+        print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
         return
 
     # Resolved before pushing, so a deploy with no clear target moves nothing.
     targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
     if pushing:
-        deploy_ref = _push(client, plugin_dir, publisher, name, platform, assume_yes=assume_yes)
+        deploy_ref = _push(
+            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+        )
     else:
         deploy_ref = ref or "main"
 

@@ -40,6 +40,8 @@ from canvas_sdk.handlers.simple_api.security import (
     BearerCredentials,
     Credentials,
     PatientSessionAuthMixin,
+    PortalAccess,
+    PortalAccessLevel,
     SessionCredentials,
     StaffSessionAuthMixin,
 )
@@ -1160,6 +1162,283 @@ def test_authentication_mixins(
 
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
     assert effects == expected_effects
+
+
+UNAUTHORIZED = [
+    JSONResponse(
+        content={"error": "Provided credentials are invalid"},
+        status_code=HTTPStatus.UNAUTHORIZED,
+    ).apply()
+]
+NO_PORTAL_ACCESS = [
+    JSONResponse(
+        content={"error": "The login acting on this patient's chart does not have access to this"},
+        status_code=HTTPStatus.UNAUTHORIZED,
+    ).apply()
+]
+TASK_CREATED = [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+
+def create_task() -> list[Response | Effect]:
+    """What the routes in these tests return."""
+    return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+
+def acting_headers(acting_user_id: str, **levels: str) -> dict[str, str]:
+    """Session headers for another login acting on a patient's chart, with its access by area."""
+    return {
+        **session_headers("abc123", "Patient"),
+        "canvas-logged-in-acting-user-id": acting_user_id,
+        **{f"canvas-logged-in-access-{area}": level for area, level in levels.items()},
+    }
+
+
+def portal_access(headers: Mapping[str, str]) -> PortalAccess:
+    """The portal access a request with these headers has."""
+    return PortalAccess(CaseInsensitiveMultiDict(headers.items()))
+
+
+FULL_ACCESS = dict.fromkeys(PortalAccess.AREAS, "act")
+
+
+@pytest.mark.parametrize(
+    argnames="mixin_cls", argvalues=[PatientSessionAuthMixin, NoAuthMixin], ids=["patient", "none"]
+)
+@pytest.mark.parametrize(
+    argnames="headers,expected_effects",
+    argvalues=[
+        (session_headers("abc123", "Patient"), TASK_CREATED),
+        (acting_headers("42", **FULL_ACCESS), NO_PORTAL_ACCESS),
+    ],
+    ids=["patient's own chart", "acting with full access"],
+)
+def test_a_login_acting_on_a_patients_chart_is_refused_by_default(
+    mixin_cls: type[AuthSchemeMixin], headers: Mapping[str, str], expected_effects: Sequence[Effect]
+) -> None:
+    """Without PORTAL_ACCESS, a handler refuses a login acting on someone else's chart."""
+
+    class Route(mixin_cls, SimpleAPIRoute):  # type: ignore[misc,valid-type]
+        PATH = "/route"
+
+        def post(self) -> list[Response | Effect]:
+            return create_task()
+
+    assert handle_request(Route, method="POST", path="/route", headers=headers) == expected_effects
+
+
+@pytest.mark.parametrize(
+    argnames="headers,expected_effects",
+    argvalues=[
+        (session_headers("abc123", "Patient"), TASK_CREATED),
+        (acting_headers("42", billing="act"), TASK_CREATED),
+        (acting_headers("42", billing="view"), NO_PORTAL_ACCESS),
+        (acting_headers("42"), NO_PORTAL_ACCESS),
+        (acting_headers("42", billing="unknown"), NO_PORTAL_ACCESS),
+        (session_headers("abc123", "Staff"), UNAUTHORIZED),
+    ],
+    ids=[
+        "patient's own chart",
+        "acting with act",
+        "acting with view",
+        "acting without a level",
+        "acting with an unknown level",
+        "staff",
+    ],
+)
+def test_portal_access_declared_on_a_handler(
+    headers: Mapping[str, str], expected_effects: Sequence[Effect]
+) -> None:
+    """A handler's PORTAL_ACCESS holds a login acting on a patient's chart to that access."""
+
+    class Route(PatientSessionAuthMixin, SimpleAPIRoute):  # type: ignore[misc]
+        PATH = "/route"
+        PORTAL_ACCESS = {"billing": PortalAccessLevel.ACT}
+
+        def post(self) -> list[Response | Effect]:
+            return create_task()
+
+    assert handle_request(Route, method="POST", path="/route", headers=headers) == expected_effects
+
+
+@pytest.mark.parametrize(
+    argnames="method,billing,expected_effects",
+    argvalues=[
+        ("GET", "view", TASK_CREATED),
+        ("GET", "none", NO_PORTAL_ACCESS),
+        ("POST", "view", NO_PORTAL_ACCESS),
+        ("POST", "act", TASK_CREATED),
+    ],
+    ids=["view a view route", "none", "view an act route", "act on an act route"],
+)
+def test_portal_access_declared_on_a_route(
+    method: str, billing: str, expected_effects: Sequence[Effect]
+) -> None:
+    """A route's portal_access replaces the handler's PORTAL_ACCESS for that route."""
+
+    class API(PatientSessionAuthMixin, SimpleAPI):  # type: ignore[misc]
+        PORTAL_ACCESS = {"billing": "view"}
+
+        @api.get("/charges")
+        def charges(self) -> list[Response | Effect]:
+            return create_task()
+
+        @api.post("/charges", portal_access={"billing": PortalAccessLevel.ACT})
+        def charge(self) -> list[Response | Effect]:
+            return create_task()
+
+    effects = handle_request(
+        API, method=method, path="/charges", headers=acting_headers("42", billing=billing)
+    )
+
+    assert effects == expected_effects
+
+
+def test_an_empty_portal_access_leaves_the_checks_to_the_handler() -> None:
+    """An empty PORTAL_ACCESS admits a login acting on a patient's chart; request.portal_access
+    tells the route what it may do.
+    """
+
+    class Route(PatientSessionAuthMixin, SimpleAPIRoute):  # type: ignore[misc]
+        PATH = "/route"
+        PORTAL_ACCESS = {}
+
+        def get(self) -> list[Response | Effect]:
+            access = self.request.portal_access
+            return [
+                JSONResponse(
+                    {"acting_user_id": access.acting_user_id, "billing": access.level("billing")},
+                    status_code=HTTPStatus.OK,
+                )
+            ]
+
+    effects = handle_request(
+        Route, method="GET", path="/route", headers=acting_headers("42", billing="view")
+    )
+
+    assert json_response_body(effects) == {"acting_user_id": "42", "billing": "view"}
+
+
+@pytest.mark.parametrize(
+    argnames="declared,message",
+    argvalues=[
+        ({"pharmacy": "view"}, "Unknown portal area 'pharmacy'"),
+        ({"billing": "ACT"}, "Unknown portal access level 'ACT'"),
+        (["billing"], "must be a mapping"),
+    ],
+    ids=["unknown area", "unknown level", "not a mapping"],
+)
+def test_portal_access_declarations_are_checked(declared: Any, message: str) -> None:
+    """A PORTAL_ACCESS or portal_access the SDK can't enforce is an error when the plugin loads."""
+    with pytest.raises(PluginError, match=message):
+        api.get("/route", portal_access=declared)
+
+    with pytest.raises(PluginError, match=message):
+
+        class Route(NoAuthMixin, SimpleAPIRoute):
+            PATH = "/route"
+            PORTAL_ACCESS = declared
+
+            def get(self) -> list[Response | Effect]:
+                return create_task()
+
+
+def test_portal_access_levels() -> None:
+    """Each area has the level Canvas sent, and an area that doesn't exist is an error."""
+    access = portal_access(
+        acting_headers("42", appointments="act", messaging="view", clinical="none", billing="view")
+    )
+
+    assert access.acting_user_id == "42"
+    assert [access.level(area) for area in PortalAccess.AREAS] == [
+        PortalAccessLevel.ACT,
+        PortalAccessLevel.VIEW,
+        PortalAccessLevel.NONE,
+        PortalAccessLevel.VIEW,
+    ]
+    assert access.allows("messaging", PortalAccessLevel.VIEW)
+    assert not access.allows("messaging", PortalAccessLevel.ACT)
+    assert not access.allows("clinical", PortalAccessLevel.VIEW)
+    with pytest.raises(ValueError):
+        access.level("pharmacy")
+
+
+def test_portal_access_counts_a_missing_or_unknown_level_as_none() -> None:
+    """A login acting on a patient's chart gets no access in an area Canvas didn't name, or
+    named with a level the SDK doesn't recognize.
+    """
+    access = portal_access(acting_headers("42", clinical="View", billing="admin"))
+
+    for area in ("messaging", "clinical", "billing"):
+        assert access.level(area) == PortalAccessLevel.NONE
+        assert not access.allows(area, PortalAccessLevel.VIEW)
+
+
+def test_portal_access_on_a_patients_own_chart() -> None:
+    """With no other login acting, the patient may do everything on their own chart."""
+    access = portal_access(session_headers("abc123", "Patient"))
+
+    assert access.acting_user_id is None
+    assert all(access.allows(area, PortalAccessLevel.ACT) for area in PortalAccess.AREAS)
+
+
+@pytest.mark.parametrize(
+    argnames="headers",
+    argvalues=[
+        {},
+        session_headers("abc123", "Staff"),
+        {**acting_headers("42", **FULL_ACCESS), **session_headers("abc123", "Staff")},
+        {"canvas-logged-in-user-type": "Patient"},
+        api_key_headers(API_KEY),
+    ],
+    ids=["no session", "staff", "staff with acting headers", "patient without an id", "API key"],
+)
+def test_portal_access_without_a_patient_session(headers: Mapping[str, str]) -> None:
+    """A request without a patient session has no access to any area, and no acting login."""
+    access = portal_access(headers)
+
+    assert access.acting_user_id is None
+    assert not any(access.allows(area, PortalAccessLevel.VIEW) for area in PortalAccess.AREAS)
+
+
+def test_portal_access_levels_compare_by_how_much_they_allow() -> None:
+    """NONE < VIEW < ACT, whether compared with a level or its value, and NONE is falsy."""
+    none, view, act = PortalAccessLevel.NONE, PortalAccessLevel.VIEW, PortalAccessLevel.ACT
+
+    assert none < view < act
+    assert act > view > none
+    assert not none >= act
+    assert view >= "view"
+    assert view <= "act"
+    assert "act" > none  # noqa: SIM300
+    assert min(act, none, view) is none
+    assert sorted([act, none, view]) == [none, view, act]
+    assert not none
+    assert view
+    assert act
+    assert none == "none"
+
+    with pytest.raises(ValueError, match="'ACT' is not a valid PortalAccessLevel"):
+        _ = none < "ACT"
+    with pytest.raises(TypeError):
+        _ = none < 1
+
+
+def test_allows_names_a_level_it_does_not_recognize() -> None:
+    """allows() takes a level or its value, and names anything else in the error."""
+    access = portal_access(session_headers("abc123", "Patient"))
+
+    assert access.allows("billing", "act")
+    with pytest.raises(ValueError, match="'ACT' is not a valid PortalAccessLevel"):
+        access.allows("billing", "ACT")
+
+
+def test_portal_access_reads_every_area_whatever_areas_says() -> None:
+    """Rebinding PortalAccess.AREAS doesn't change which areas a request's access covers."""
+    with patch.object(PortalAccess, "AREAS", None):
+        access = portal_access(acting_headers("42", billing="view"))
+
+    assert access.level("billing") == PortalAccessLevel.VIEW
+    assert access.level("appointments") == PortalAccessLevel.NONE
 
 
 # ---------------------------------------------------------------------------
