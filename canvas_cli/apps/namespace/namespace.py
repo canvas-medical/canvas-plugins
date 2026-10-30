@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 from urllib.parse import urljoin
 
+import click
 import requests
 import typer
 
@@ -28,11 +29,32 @@ def _confirm_destructive_action(namespace: str, action_description: str) -> None
         raise typer.Exit(1)
 
 
+def _explain_missing_routes(error: PlatformError) -> None:
+    """Raise a usage error when a Platform 404 carries no ``code``.
+
+    A 404 with no ``code`` means this Platform does not serve the namespace routes. Any other
+    error returns without raising.
+
+    Args:
+        error (PlatformError): The refusal Platform returned.
+
+    Raises:
+        click.ClickException: When the 404 has no ``code``.
+    """
+    if error.status == requests.codes.not_found and not error.code:
+        raise click.ClickException(
+            "Canvas Platform does not manage namespaces yet. To use them on the instance, "
+            "sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) and use "
+            "credentials.ini."
+        ) from error
+
+
 def _through_platform(namespace: str, call: Callable[[], Any]) -> Any:
     """Run a Platform namespace call, showing a missing namespace as the instance path does.
 
-    Any other refusal raises ``PlatformError`` and is shown as Platform wrote it; it is never
-    retried on credentials.ini, because Platform's access and audit rules decide it.
+    A 404 with no ``code`` explains how to use credentials.ini. Any other refusal raises
+    ``PlatformError`` and is shown as Platform wrote it; it is never retried on credentials.ini,
+    because Platform's access and audit rules decide it.
     """
     try:
         return call()
@@ -40,6 +62,7 @@ def _through_platform(namespace: str, call: Callable[[], Any]) -> Any:
         if error.status == requests.codes.not_found and error.code == "not_found":
             print(f"Namespace '{namespace}' does not exist.")
             raise typer.Exit(1) from None
+        _explain_missing_routes(error)
         raise
 
 
@@ -121,7 +144,12 @@ def list_namespaces(
 
     if (managed := managed_instance(host)) is not None:
         client, slug = managed
-        _print_namespaces(client.namespaces(slug).get("namespaces", []))
+        try:
+            listing = client.namespaces(slug)
+        except PlatformError as error:
+            _explain_missing_routes(error)
+            raise
+        _print_namespaces(listing.get("namespaces", []))
         return
 
     token = get_or_request_api_token(host)
