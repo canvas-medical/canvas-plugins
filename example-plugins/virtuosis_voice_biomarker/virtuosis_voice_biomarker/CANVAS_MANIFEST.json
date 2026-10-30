@@ -1,0 +1,37 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.1.0",
+  "name": "virtuosis_voice_biomarker",
+  "description": "Consent-gated Virtuosis voice biomarker analysis for clinical decision support.",
+  "components": {
+    "handlers": [
+      {
+        "class": "virtuosis_voice_biomarker.handlers.api:VirtuosisAnalysisAPI",
+        "description": "Staff-authenticated endpoints for submitting consented recordings and retrieving results.",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "variables": [
+    {
+      "name": "VIRTUOSIS_API_TOKEN",
+      "sensitive": true
+    }
+  ],
+  "tags": {},
+  "references": [
+    "https://docs.virtuosis.ai",
+    "https://www.virtuosis.ai/privacy-policy"
+  ],
+  "license": "MIT",
+  "diagram": false,
+  "readme": "./README.md"
+}
