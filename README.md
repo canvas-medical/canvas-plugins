@@ -62,7 +62,7 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 `canvas list`, `canvas namespace list` / `inspect` / `reset` / `drop` and `canvas logs` decide per instance. Signed in, with the instance in your list and managed by Canvas Platform, the command goes through platform; otherwise (signed out, `localhost`, an instance platform does not manage) it uses `credentials.ini`. A refusal from platform on a managed instance is shown as platform wrote it and is not retried with `credentials.ini`.
 
-`canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
+`canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance; before platform has read the instance at all, the command says so and exits 1. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
 
 git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
 
