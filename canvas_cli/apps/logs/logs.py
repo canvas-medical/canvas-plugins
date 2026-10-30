@@ -50,6 +50,18 @@ def _instance_answer(response: requests.Response) -> str:
     return f"The instance answered: {detail} "
 
 
+def _platform_sign_out() -> str:
+    """Return how to stop using Canvas Platform for logs, for the credential in force.
+
+    Returns:
+        str: ``unset CANVAS_PLATFORM_TOKEN`` under a service account token, which ``canvas
+            logout`` leaves in force, and ``sign out with canvas logout`` otherwise.
+    """
+    if platform_auth.service_token() is not None:
+        return f"unset {platform_auth.SERVICE_TOKEN_ENV}"
+    return "sign out with canvas logout"
+
+
 class LogToken:
     """A bearer token for an instance's logs, and how to get a fresh one.
 
@@ -321,7 +333,7 @@ def search_logs(
                 raise click.ClickException(
                     f"{token.slug} refused the log token Canvas Platform issued. "
                     f"{_instance_answer(r)}"
-                    "Run the command again; if it keeps failing, sign out with canvas logout "
+                    f"Run the command again; if it keeps failing, {_platform_sign_out()} "
                     "to use credentials.ini."
                 )
     else:
