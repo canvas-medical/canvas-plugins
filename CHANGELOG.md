@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.263.0 (2026-10-30)
+
+### Documentation
+
+- Link the credentials.ini migration section to the upgrade guide
+  ([#1958](https://github.com/canvas-medical/canvas-plugins/pull/1958),
+  [`8a56867`](https://github.com/canvas-medical/canvas-plugins/commit/8a568670ab86830ff53f532d806b5d794972f920))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add DocumentHistoryEvent data model and document hand-off events
+  ([#1914](https://github.com/canvas-medical/canvas-plugins/pull/1914),
+  [`b5883cf`](https://github.com/canvas-medical/canvas-plugins/commit/b5883cf91ab5b34d5bd19ee03e3b9be65038e689))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+- **cli**: Count a snapshot-baseline tag on main as the last snapshot (KOALA-8035)
+  ([#1961](https://github.com/canvas-medical/canvas-plugins/pull/1961),
+  [`d3e54ba`](https://github.com/canvas-medical/canvas-plugins/commit/d3e54ba6d0494255c702a70664268832fa8dd86a))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- **cli**: End canvas login on Canvas Platform's own page, and say what deploy --push-only did
+  ([#1938](https://github.com/canvas-medical/canvas-plugins/pull/1938),
+  [`0e4256f`](https://github.com/canvas-medical/canvas-plugins/commit/0e4256ffc0a9793c1bb9b5b092fedb3a46d9a22d))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+
 ## v0.262.0 (2026-10-29)
 
 ### Features
