@@ -213,6 +213,44 @@ def test_list_reports_an_empty_platform_inventory(
     assert f"No plugins are currently installed on {HOST}" in result.stdout
 
 
+def test_list_of_an_inventory_platform_never_read_says_so(
+    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
+) -> None:
+    """A null collected_at means Platform has not read the instance, so its empty list says
+    nothing about what is installed and the command does not claim the instance runs nothing.
+    """
+    requests_mock.get(
+        f"{API}/instances/acme/plugins",
+        json={"instance": "acme", "collected_at": None, "plugins": []},
+    )
+
+    result = runner.invoke(app, ["list", "--host", "acme"])
+
+    assert result.exit_code == 1
+    assert "Canvas Platform has not read the plugins on acme yet" in result.output + result.stderr
+    assert "No plugins are currently installed" not in result.stdout
+    assert "None" not in result.output + result.stderr
+    ini_token.assert_not_called()
+
+
+def test_list_shows_platforms_not_found_sentence(
+    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
+) -> None:
+    """A coded 404 is Platform's refusal, not a Platform without the route."""
+    requests_mock.get(
+        f"{API}/instances/acme/plugins",
+        status_code=404,
+        json={"error": "No such instance.", "code": "not_found"},
+    )
+
+    result = runner.invoke(app, ["list", "--host", "acme"])
+
+    assert result.exit_code == 1
+    assert "No such instance." in result.output + result.stderr
+    assert "does not list plugins yet" not in result.output + result.stderr
+    ini_token.assert_not_called()
+
+
 def test_list_of_an_unmanaged_instance_uses_credentials_ini(
     requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
 ) -> None:
@@ -393,6 +431,33 @@ def test_config_list_with_several_installs_names_them(
     assert "acme, acme-prod" in result.output + result.stderr
 
 
+def test_config_list_with_several_instances_heads_each(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Each named instance is read once, under its own heading."""
+    requests_mock.get(
+        f"{API}/plugins/{NAME}",
+        json={"name": NAME, "publisher": "acme", "installs": []},
+    )
+    for slug, is_set in (("acme", True), ("acme-prod", False)):
+        requests_mock.get(
+            f"{API}/instances/{slug}/plugins/{NAME}/variables",
+            json={"variables": [{"key": "Region", "sensitive": False, "set": is_set}]},
+        )
+
+    result = runner.invoke(
+        app, ["config", "list", NAME, "--instance", "acme", "--instance", "acme-prod"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout.splitlines() == [
+        "acme:",
+        "  Region = [set]",
+        "acme-prod:",
+        "  Region = [not set]",
+    ]
+
+
 def test_config_list_of_an_unmanaged_plugin_goes_to_the_instance(
     requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
@@ -422,6 +487,24 @@ def test_namespace_list_goes_through_platform_for_a_managed_instance(
 
     assert result.exit_code == 0, result.output
     assert f"{NS}\ttables: 4\tcustom: 1" in result.stdout
+    ini_token.assert_not_called()
+
+
+def test_namespace_list_shows_platforms_not_found_sentence(
+    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
+) -> None:
+    """A coded 404 on the list route is Platform's refusal, not a Platform without the route."""
+    requests_mock.get(
+        f"{API}/instances/acme/namespaces",
+        status_code=404,
+        json={"error": "No such instance.", "code": "not_found"},
+    )
+
+    result = runner.invoke(app, ["namespace", "list", "--host", "acme"])
+
+    assert result.exit_code == 1
+    assert "No such instance." in result.output + result.stderr
+    assert "does not manage namespaces yet" not in result.output + result.stderr
     ini_token.assert_not_called()
 
 
