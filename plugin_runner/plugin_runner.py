@@ -1507,11 +1507,9 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
             ("grpc.max_send_message_length", 64 * 1024 * 1024),
         ),
     )
-    server.add_insecure_port("127.0.0.1:" + port)
-
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 
-    log.info(f"Starting server, listening on port {port}")
+    log.info(f"Loading plugins before listening on port {port}")
 
     # Only install plugins and start the synchronizer thread if the plugin runner was not started
     # from the CLI
@@ -1523,7 +1521,13 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
 
     reconcile_plugins(specified_plugin_paths)
 
+    # Bind only now: a bound port accepts connections before the server starts and never answers
+    # them, so home-app would hang on its connect deadline for the whole plugin load instead of
+    # failing fast and reporting the runner as not serving.
+    server.add_insecure_port("127.0.0.1:" + port)
     server.start()
+
+    log.info(f"Server listening on port {port}")
 
     shutdown_reason = "unknown"
 
