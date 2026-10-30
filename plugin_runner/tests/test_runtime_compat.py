@@ -118,7 +118,7 @@ def test_an_allowlisted_load_time_dependency_loads_and_runs(
     monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message"):
-        result = _load(install_test_plugin)["MatchCheck"]
+        result = _load(install_test_plugin)["PrecisionCheck"]
 
     assert result.sandbox_mode is SandboxMode.LEGACY_PERMISSIVE
     assert _run(result) == "True"
@@ -132,7 +132,7 @@ def test_an_unlisted_load_time_dependency_is_refused_naming_it(
     monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
     monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
 
-    result = _load(install_test_plugin)["MatchCheck"]
+    result = _load(install_test_plugin)["PrecisionCheck"]
 
     assert result.error is not None
-    assert "re.Match" in str(result.error)
+    assert "decimal.getcontext" in str(result.error)

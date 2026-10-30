@@ -1960,7 +1960,8 @@
     "ReferralActionEvent",
     "ReferralReport",
     "ReferralReportCoding",
-    "ReferralReportQuerySet"
+    "ReferralReportQuerySet",
+    "ReferralReview"
   ],
   "canvas_sdk.v1.data.refill_request": [
     "RefillRequest",
