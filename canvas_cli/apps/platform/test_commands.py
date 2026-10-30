@@ -554,16 +554,7 @@ def test_deploy_branch_refuses_the_registered_default_branch(
     api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
 ) -> None:
     """The plugin's default branch is what a plain deploy pushes, which Platform deploys anywhere."""
-    api.post(
-        f"{API}/orgs/acme/plugins",
-        status_code=201,
-        json={
-            "name": NAME,
-            "publisher": "acme",
-            "git_url": bare.as_uri(),
-            "default_branch": "trunk",
-        },
-    )
+    _register_with_default_branch(api, bare, "trunk")
 
     result = runner.invoke(app, ["deploy", str(package), "--branch", "trunk"])
 
@@ -1482,6 +1473,34 @@ def test_deploy_snapshot_branch_checks_platform_edits_on_main(
     assert result.exit_code == 1
     assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
     assert _git(bare, "for-each-ref", "refs/heads/feature-x") == ""
+
+
+def test_deploy_snapshot_to_an_existing_branch_checks_platform_edits_made_on_main_since(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A catalog listing edited on main after the branch was pushed is still refused, since the
+    checks read main rather than the branch, whose own history never saw the edit.
+    """
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+    branch_tip = _git(bare, "rev-parse", "feature-x")
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 1
+    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert _git(bare, "rev-parse", "feature-x") == branch_tip
 
 
 def test_deploy_snapshot_branch_rerun_after_push_only_deploys_the_branch_tip(
