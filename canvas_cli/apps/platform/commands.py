@@ -11,8 +11,12 @@ person signed in with ``canvas login``:
   * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
     plugin inside a larger repository, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
-  * ``canvas config set`` / ``unset`` and ``canvas uninstall``: through platform
-    for a plugin it manages, and directly against the instance otherwise.
+  * ``canvas enable`` / ``disable``, ``canvas config list`` / ``set`` / ``unset`` and
+    ``canvas uninstall``: through platform for a plugin it manages, and directly
+    against the instance otherwise.
+  * ``managed_instance``: whether an instance command (``list``, ``logs``,
+    ``namespace *``) goes through platform, which it does for an instance platform
+    manages.
   * ``canvas git-credential``: hidden; git runs it to mint a push token.
 """
 
@@ -32,6 +36,7 @@ import typer
 from canvas_cli.apps.auth.utils import get_default_host
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
+from canvas_cli.apps.platform.routing import managed_instance as managed_instance
 from canvas_cli.apps.plugin import plugin as instance_plugin
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
@@ -44,6 +49,8 @@ POLL_TIMEOUT_SECONDS = 300.0
 _SKIPPED_BECAUSE = {
     "configure": "not installed there; the stored values apply when it is next deployed",
     "uninstall": "not installed there",
+    "enable": "not installed there",
+    "disable": "not installed there",
 }
 
 _INSTANCE_HELP = "Instance slug to target (repeatable)"
@@ -912,6 +919,113 @@ def unset_variables(
         targets,
         what=f"Configuring {plugin_name}",
     )
+
+
+def _switch(plugin_name: str, instance: list[str], host: str | None, *, action: str) -> None:
+    """Enable or disable ``plugin_name`` through platform, or on the instance directly.
+
+    Args:
+        plugin_name (str): The plugin to switch.
+        instance (list[str]): The ``--instance`` slugs; empty targets the only instance the
+            plugin is installed on that the person can deploy to.
+        host (str | None): The ``--host`` for a plugin platform does not manage.
+        action (str): ``enable`` or ``disable``.
+    """
+    managed = _managed(plugin_name)
+    if managed is None:
+        direct = instance_plugin.enable if action == "enable" else instance_plugin.disable
+        for url in _direct_hosts(instance, host):
+            direct(name=plugin_name, host=url)
+        return
+
+    _refuse_host_for_managed(plugin_name, host)
+    client, plugin = managed
+    verb = "Enabling" if action == "enable" else "Disabling"
+    targets = _resolve_instances(
+        client,
+        instance,
+        "deploy_plugin",
+        verb=f"{action} {plugin_name} on",
+        among=_installed_on(plugin),
+    )
+    _dispatch(
+        client,
+        action,
+        [{"name": plugin_name}],
+        targets,
+        what=f"{verb} {plugin_name}",
+    )
+
+
+def enable(
+    plugin_name: str = typer.Argument(..., help="Plugin name to enable"),
+    instance: list[str] = typer.Option([], "--instance", help=_INSTANCE_HELP),
+    host: str | None = typer.Option(None, "--host", help="Canvas instance URL or name"),
+) -> None:
+    """Enable a plugin.
+
+    For a plugin Canvas Platform manages, an enable deployment switches it on at each
+    --instance. Without --instance, the only instance the plugin is installed on that
+    you can deploy to is targeted. For any other plugin, it is enabled on the instance
+    directly.
+    """
+    _switch(plugin_name, instance, host, action="enable")
+
+
+def disable(
+    plugin_name: str = typer.Argument(..., help="Plugin name to disable"),
+    instance: list[str] = typer.Option([], "--instance", help=_INSTANCE_HELP),
+    host: str | None = typer.Option(None, "--host", help="Canvas instance URL or name"),
+) -> None:
+    """Disable a plugin.
+
+    For a plugin Canvas Platform manages, a disable deployment switches it off at each
+    --instance. Without --instance, the only instance the plugin is installed on that
+    you can deploy to is targeted. For any other plugin, it is disabled on the instance
+    directly.
+    """
+    _switch(plugin_name, instance, host, action="disable")
+
+
+def list_variables(
+    plugin_name: str = typer.Argument(..., help="Plugin name to list variables for"),
+    instance: list[str] = typer.Option([], "--instance", help=_INSTANCE_HELP),
+    host: str | None = typer.Option(None, "--host", help="Canvas instance URL or name"),
+) -> None:
+    """List a plugin's variables and whether each is set.
+
+    For a plugin Canvas Platform manages, the keys come from platform. Without
+    --instance, the only instance the plugin is installed on is used. Values are never
+    printed. For any other plugin, the variables are read from the instance directly.
+    """
+    managed = _managed(plugin_name)
+    if managed is None:
+        for url in _direct_hosts(instance, host):
+            instance_plugin.list_secrets(plugin=plugin_name, host=url)
+        return
+
+    _refuse_host_for_managed(plugin_name, host)
+    client, plugin = managed
+    if instance:
+        targets = list(dict.fromkeys(instance))
+    else:
+        installed = sorted(_installed_on(plugin))
+        if len(installed) != 1:
+            where = f" It is installed on: {', '.join(installed)}." if installed else ""
+            raise typer.BadParameter(
+                f"Name the instance to list {plugin_name}'s variables on with --instance.{where}"
+            )
+        targets = installed
+    for slug in targets:
+        if len(targets) > 1:
+            print(f"{slug}:")
+        variables = client.variables(slug, plugin_name)
+        if not variables:
+            print("No variables configured.")
+        for variable in variables:
+            display = "[set]" if variable.get("set") else "[not set]"
+            annotation = "  (sensitive)" if variable.get("sensitive") else ""
+            print(f"  {variable['key']} = {display}{annotation}")
 
 
 def uninstall(
