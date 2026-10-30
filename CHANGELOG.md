@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.264.1 (2026-10-30)
+
+### Bug Fixes
+
+- **data**: Line up coverage plan types with home-app
+  ([#1960](https://github.com/canvas-medical/canvas-plugins/pull/1960),
+  [`eda5218`](https://github.com/canvas-medical/canvas-plugins/commit/eda521843ca85430b9a507763e0e6a728da1d7a6))
+
+
 ## v0.264.0 (2026-10-30)
 
 ### Features
