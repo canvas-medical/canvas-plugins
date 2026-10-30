@@ -16,7 +16,7 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 | Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
 | Used by | `login`, `logout`, `init`, `deploy`, `clone`, `logs` for an instance Canvas Platform manages, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs` for any other instance, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
 
-A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform).
+A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform), and per instance for `logs` as described in [`canvas logs`](#canvas-logs).
 
 #### Migrating from `credentials.ini` to Canvas Platform
 
