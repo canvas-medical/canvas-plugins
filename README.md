@@ -290,6 +290,10 @@ List a plugin's variables and whether each is set; values are never shown. For a
 $ canvas config list [OPTIONS] PLUGIN_NAME
 ```
 
+**Arguments**:
+
+- `PLUGIN_NAME`: Plugin name to list variables for [required]
+
 **Options**:
 
 - `--instance TEXT`: Instance to read from, repeatable
@@ -321,12 +325,12 @@ Enable a plugin. For a plugin Canvas Platform manages, an enable deployment swit
 **Usage**:
 
 ```console
-$ canvas enable [OPTIONS] NAME
+$ canvas enable [OPTIONS] PLUGIN_NAME
 ```
 
 **Arguments**:
 
-- `NAME`: Plugin name to enable [required]
+- `PLUGIN_NAME`: Plugin name to enable [required]
 
 **Options**:
 
@@ -341,12 +345,12 @@ Disable a plugin. For a plugin Canvas Platform manages, a disable deployment swi
 **Usage**:
 
 ```console
-$ canvas disable [OPTIONS] NAME
+$ canvas disable [OPTIONS] PLUGIN_NAME
 ```
 
 **Arguments**:
 
-- `NAME`: Plugin name to disable [required]
+- `PLUGIN_NAME`: Plugin name to disable [required]
 
 **Options**:
 
