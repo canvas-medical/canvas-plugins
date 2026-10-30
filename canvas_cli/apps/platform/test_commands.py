@@ -21,7 +21,7 @@ from unittest.mock import Mock, patch
 import pytest
 import requests_mock as requests_mock_module
 import typer
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from canvas_cli.apps.platform import auth, commands, git
 from canvas_cli.main import app
@@ -1709,7 +1709,7 @@ def test_init_signed_in_prefixes_registers_and_connects_git(
 
 def _assert_init_stays_in_work_tree(
     requests_mock: requests_mock_module.Mocker,
-    result: Any,
+    result: Result,
     work_tree: Path,
     monorepo: Path,
     config_before: str,
