@@ -1472,3 +1472,59 @@ def test_helpers_declare_the_effect_types_they_stage() -> None:
     assert registry.effect_types_for("plan") == frozenset({"ORIGINATE_PLAN_COMMAND"})
     assert registry.effect_types_for("task") == frozenset({"CREATE_TASK"})
     assert registry.effect_types_for("message") == frozenset({"CREATE_MESSAGE"})
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        EffectField(type="string", description="..."),
+        EffectField(type="string", description="...", command_field="patient_id"),
+    ],
+    ids=["same-name", "renamed"],
+)
+def test_add_effect_tool_refuses_a_field_that_targets_an_injected_kwarg(
+    field: EffectField,
+) -> None:
+    """The model's argument would replace the run's patient."""
+    registry = ToolRegistry()
+    name = "patient_id" if field.command_field is None else "patient"
+
+    with pytest.raises(ValueError, match="which the run sets"):
+        registry.add_effect_tool(
+            name="stage_fake",
+            description="...",
+            effect_class=_FakeEffect,
+            fields={name: field},
+        )
+
+
+def test_add_effect_tool_allows_a_field_once_its_kwarg_is_not_injected() -> None:
+    """A tool that injects nothing may take patient_id from the model, as the author chose."""
+    registry = ToolRegistry()
+    registry.add_effect_tool(
+        name="stage_fake",
+        description="...",
+        effect_class=_FakeEffect,
+        fields={"patient_id": EffectField(type="string", description="...")},
+        inject_ctx={},
+    )
+
+    effects: list[Any] = []
+    registry.execute("stage_fake", {"patient_id": "p9"}, ctx={"effects": effects})
+
+    assert effects[0].kwargs == {"patient_id": "p9"}
+
+
+def test_originate_command_tool_refuses_a_field_that_targets_the_note() -> None:
+    """The model's argument would replace the clinician's open note."""
+    registry = ToolRegistry()
+
+    with pytest.raises(ValueError, match="which the run sets"):
+        registry.originate_command_tool(
+            name="originate_fake",
+            description="...",
+            command_class=_FakeCommand,
+            fields={
+                "note": EffectField(type="string", description="...", command_field="note_uuid")
+            },
+        )

@@ -237,8 +237,15 @@ def test_run_agent_drops_usage_the_plugin_is_not_priced_in(
     inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Agent effects pass the same RecordUsage gate handler effects do."""
+    """Agent effects pass the same RecordUsage gate handler effects do.
+
+    The grant includes a tool declaring RECORD_USAGE, so the usage gate is the only
+    thing that can drop the record.
+    """
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    monkeypatch.setitem(
+        LOADED_PLUGINS[AGENT_KEY]["handler"], "tools", {"allowed": ["echo", "meter"]}
+    )
     usage = Effect(
         type=EffectType.RECORD_USAGE,
         payload=json.dumps({"data": {"unit": "unpriced unit", "key": "k", "quantity": 999}}),
@@ -254,6 +261,12 @@ def test_run_agent_drops_usage_the_plugin_is_not_priced_in(
 
     assert response.success is True
     assert [effect.type for effect in response.effects] == [EffectType.LOG]
+    assert response.agent_run.effects_dropped == 1
+
+    monkeypatch.setitem(LOADED_PLUGINS[AGENT_KEY], "usage_units", frozenset({"unpriced unit"}))
+    priced = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert [effect.type for effect in priced.effects] == [EffectType.RECORD_USAGE, EffectType.LOG]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -850,3 +863,26 @@ def test_run_agent_stopped_by_its_deadline_saves_nothing_and_skips_sentry(
     assert list(response.effects) == []
     assert saved == []
     captured.assert_not_called()
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_that_raises_gives_its_slot_back(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing agent must not hold its slot, or failures would starve later runs."""
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+
+    def _boom(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        raise RuntimeError("agent bug")
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _boom)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is False
+    assert slots.acquire(blocking=False), "a failed run must give its slot back"

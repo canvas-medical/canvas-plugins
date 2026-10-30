@@ -2432,7 +2432,14 @@ def _wrap_recommendation_command(cmd: dict[str, Any]) -> dict[str, Any]:
     return {"command": {"type": cmd_type}, "context": context}
 
 
-def _build_protocol_recommendation(raw: dict[str, Any]) -> Recommendation:
+# Record IDs a recommended command's context can carry, and the patient's records each names.
+_RECOMMENDATION_RECORD_IDS = (
+    ("condition_id", Condition, "condition"),
+    ("medication_id", Medication, "medication"),
+)
+
+
+def _build_protocol_recommendation(raw: dict[str, Any], ctx: dict[str, Any]) -> Recommendation:
     """Construct a :class:`Recommendation` from an LLM-supplied dict.
 
     If the dict carries ``commands``, each is wrapped via
@@ -2441,7 +2448,16 @@ def _build_protocol_recommendation(raw: dict[str, Any]) -> Recommendation:
     serialized payload matches what home-app's ProtocolCard renderer
     expects (the same shape a hand-written
     ``Recommendation(commands=[LabOrderCommand(...)])`` would produce).
+
+    A command's ``condition_id`` or ``medication_id`` must name one of the run's
+    patient's records, as the direct write tools require, so the card's button cannot
+    stage a command against another chart's record.
     """
+    for command in raw.get("commands") or []:
+        context = command.get("context") or {}
+        for key, model, label in _RECOMMENDATION_RECORD_IDS:
+            if context.get(key):
+                _require_patients_record(model, context[key], ctx, label)
     if raw.get("commands"):
         raw = {**raw, "commands": [_wrap_recommendation_command(c) for c in raw["commands"]]}
     return Recommendation(**raw)
@@ -2624,7 +2640,7 @@ standard_tools.add_effect_tool(
         "narrative": arguments["narrative"].strip()[:500],
         "status": ProtocolCard.Status(arguments.get("status", "due")),
         "recommendations": [
-            _build_protocol_recommendation(r) for r in (arguments.get("recommendations") or [])
+            _build_protocol_recommendation(r, ctx) for r in (arguments.get("recommendations") or [])
         ],
     },
     response_builder=lambda effect: {"ok": True, "card_key": str(effect.key)},
