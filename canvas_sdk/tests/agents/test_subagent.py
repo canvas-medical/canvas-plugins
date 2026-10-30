@@ -7,9 +7,10 @@ import httpx2
 import pytest
 from anthropic.types import TextBlock, ToolUseBlock
 
-from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagents
+from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents
 from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 from canvas_sdk.agents.subagent import MAX_PARALLEL
+from canvas_sdk.test_utils.agents import FakeGateway, reply, text, tool_use
 from canvas_sdk.v1.plugin_database_context import (
     get_access_level,
     get_current_plugin,
@@ -177,3 +178,52 @@ def test_max_parallel_is_capped() -> None:
     )
 
     assert peak[0] == MAX_PARALLEL
+
+
+def test_a_subagent_reaches_only_the_tools_its_spec_allows() -> None:
+    """A sub-agent's tools are its spec's subset of the parent's granted tools."""
+    called: list[str] = []
+    tools = ToolRegistry()
+    for name in ("read_chart", "write_chart"):
+
+        @tools.tool(name=name, description="x", input_schema={"type": "object"})
+        def _tool(arguments: dict[str, Any], *, ctx: dict[str, Any], _name: str = name) -> dict:
+            called.append(_name)
+            return {}
+
+    gateway = FakeGateway(reply(tool_use("write_chart")), reply(text("done")))
+    spec = SubAgentSpec(
+        name="labs", system_prompt="x", allowed_tool_names=frozenset({"read_chart"})
+    )
+
+    result = run_subagent(
+        spec,
+        "question",
+        parent_tools=tools,
+        parent_ctx={},
+        gateway=gateway,  # type: ignore[arg-type]
+    )
+
+    assert result == "done"
+    assert called == []
+    assert [d["name"] for d in gateway.requests[0]["tools"]] == ["read_chart"]
+
+
+def test_a_subagent_cannot_widen_past_the_parents_grant() -> None:
+    """A spec naming a tool the parent's scoped registry lacks gets nothing for it."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict:
+        return {}
+
+    gateway = FakeGateway(reply(text("done")))
+    spec = SubAgentSpec(
+        name="labs",
+        system_prompt="x",
+        allowed_tool_names=frozenset({"read_chart", "delete_chart"}),
+    )
+
+    run_subagent(spec, "question", parent_tools=tools, parent_ctx={}, gateway=gateway)  # type: ignore[arg-type]
+
+    assert [d["name"] for d in gateway.requests[0]["tools"]] == ["read_chart"]

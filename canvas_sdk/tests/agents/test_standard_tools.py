@@ -1308,3 +1308,63 @@ def test_find_vitals_name_matches_spaces_and_underscores(query: str) -> None:
     )
 
     assert [row["name"] for row in rows] == ["blood_pressure"]
+
+
+def _card_with_command(command_type: str, context: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": "Review",
+        "narrative": "Something to act on.",
+        "recommendations": [
+            {"title": "Act", "commands": [{"type": command_type, "context": context}]}
+        ],
+    }
+
+
+@pytest.mark.django_db
+def test_protocol_card_refuses_another_patients_medication_in_a_command() -> None:
+    """The card's button would stage a Stop Medication against a record the chart lacks."""
+    other_patients_medication = MedicationFactory.create()
+    patient = PatientFactory.create()
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="medication .* not found for this patient"):
+        standard_tools.execute(
+            "add_or_update_protocol_card",
+            _card_with_command(
+                "stopMedication", {"medication_id": str(other_patients_medication.id)}
+            ),
+            ctx={"patient_id": patient.id, "effects": effects},
+        )
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_protocol_card_refuses_a_condition_outside_the_patient_in_a_command() -> None:
+    """An Assess recommendation must name one of the patient's conditions."""
+    patient = PatientFactory.create()
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="condition .* not found for this patient"):
+        standard_tools.execute(
+            "add_or_update_protocol_card",
+            _card_with_command("assess", {"condition_id": "00000000-0000-0000-0000-000000000000"}),
+            ctx={"patient_id": patient.id, "effects": effects},
+        )
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_protocol_card_stages_a_command_naming_the_patients_own_medication() -> None:
+    """The patient's own medication passes the check."""
+    patient = PatientFactory.create()
+    medication = MedicationFactory.create(patient=patient)
+    effects: list[Any] = []
+
+    result = standard_tools.execute(
+        "add_or_update_protocol_card",
+        _card_with_command("stopMedication", {"medication_id": str(medication.id)}),
+        ctx={"patient_id": patient.id, "effects": effects},
+    )
+
+    assert result["ok"] is True
+    assert len(effects) == 1
