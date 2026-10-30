@@ -26,9 +26,6 @@ COMMANDS_TO_SKIP = [
     "VisualExamFindingCommand",
     "RemovePastMedicalHistoryCommand",
     "ImmunizeCommand",
-    "LabReviewCommand",
-    "ReferralReviewCommand",
-    "ImagingReviewCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
 ]
