@@ -1,7 +1,8 @@
 """git plumbing for publishing a plugin to Canvas Platform's git server.
 
-A plugin's repository is rooted one level above its package, the ``canvas init``
-layout ``<repo>/<package>/CANVAS_MANIFEST.json``, and platform's git server is
+A plugin's repository is rooted one level above its package, the layout
+``canvas init`` creates outside an existing repository,
+``<repo>/<package>/CANVAS_MANIFEST.json``, and platform's git server is
 the repository's ``origin``. Pushes authenticate through ``canvas git-credential``,
 which git runs as the credential helper registered for the git server's host.
 
