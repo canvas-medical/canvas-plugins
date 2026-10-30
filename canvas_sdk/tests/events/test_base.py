@@ -263,10 +263,10 @@ def test_event_init_for_message_team_assigned(mock_get_model: Mock) -> None:
 @pytest.mark.parametrize(
     "event_type,expected_name",
     [
-        (EventType.INVITATION_CREATED, "INVITATION_CREATED"),
-        (EventType.INVITATION_OPENED, "INVITATION_OPENED"),
-        (EventType.INVITATION_CLAIMED, "INVITATION_CLAIMED"),
-        (EventType.INVITATION_REJECTED, "INVITATION_REJECTED"),
+        (EventType.PORTAL_INVITATION_CREATED, "PORTAL_INVITATION_CREATED"),
+        (EventType.PORTAL_INVITATION_OPENED, "PORTAL_INVITATION_OPENED"),
+        (EventType.PORTAL_INVITATION_CLAIMED, "PORTAL_INVITATION_CLAIMED"),
+        (EventType.PORTAL_INVITATION_REJECTED, "PORTAL_INVITATION_REJECTED"),
     ],
 )
 @patch("canvas_sdk.events.base.apps.get_model")
