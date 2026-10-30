@@ -1,0 +1,25 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "staff_custom_data",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "data_isolated": true,
+    "components": {
+        "protocols": [
+            {
+                "class": "staff_custom_data.routes.staff_api:StaffDataAPI",
+                "description": "API for managing staff biography and specialties"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
