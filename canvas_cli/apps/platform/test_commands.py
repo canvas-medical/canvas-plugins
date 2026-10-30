@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import threading
@@ -1788,6 +1789,166 @@ def test_init_inside_a_git_worktree_registers_without_nesting_a_repository(
     result = runner.invoke(app, ["init"], input="Intake Forms\n")
 
     _assert_init_stays_in_work_tree(requests_mock, result, worktree, monorepo, config_before)
+
+
+def _customer_monorepo(root: Path) -> str:
+    """A committed repository at ``root`` whose ``origin`` is the customer's own git host.
+
+    Returns its ``.git/config``, for asserting that nothing rewrote it.
+    """
+    (root / "plugins").mkdir(parents=True)
+    (root / "README.md").write_text("monorepo\n")
+    _git(root, "init", "--initial-branch=main")
+    _git(root, "remote", "add", "origin", "https://git.example.com/acme/monorepo.git")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "first")
+    return (root / ".git" / "config").read_text()
+
+
+def _printed_deploy_command(output: str) -> list[str]:
+    """The arguments of the `Deploy it with: canvas ...` line init prints, as a shell splits them."""
+    line = next(line for line in output.splitlines() if line.startswith("Deploy it with: canvas "))
+    return shlex.split(line.removeprefix("Deploy it with: canvas "))
+
+
+def test_init_in_a_monorepo_folder_then_the_printed_deploy_command_publishes_only_the_plugin(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The advice init prints inside a monorepo is the advice deploy accepts: the plain deploy
+    is refused toward --snapshot, and once committed, the printed command pushes only the
+    scaffolded package to platform and leaves the monorepo's remotes and history alone.
+    """
+    root = tmp_path / "monorepo"
+    config_before = _customer_monorepo(root)
+    monkeypatch.chdir(root / "plugins")
+
+    init_result = runner.invoke(app, ["init"], input="Intake\n")
+
+    assert init_result.exit_code == 0, init_result.output
+    project = root / "plugins" / "intake"
+    package_dir = project / NAME
+    printed = _printed_deploy_command(init_result.output)
+    assert printed == ["deploy", str(package_dir), "--snapshot"]
+    assert list(project.rglob(".git")) == []
+
+    plain = runner.invoke(app, ["deploy", str(package_dir), "--instance", "acme-staging"])
+
+    assert plain.exit_code == 2
+    assert "pass --snapshot" in plain.output
+    assert len(_requests_to(api, "POST", "/orgs/acme/plugins")) == 1
+    assert (root / ".git" / "config").read_text() == config_before
+
+    _git(root, "add", "plugins/intake")
+    _git(root, "commit", "-m", "Add the intake plugin")
+    snapshot = split_runner.invoke(app, [*printed, "--instance", "acme-staging"])
+
+    assert snapshot.exit_code == 0, snapshot.output + snapshot.stderr
+    pushed_paths = _git(bare, "ls-tree", "-r", "--name-only", "main").splitlines()
+    assert f"{NAME}/CANVAS_MANIFEST.json" in pushed_paths
+    assert all(path.startswith(f"{NAME}/") for path in pushed_paths), pushed_paths
+    assert _git(bare, "rev-parse", f"main:{NAME}") == _git(
+        root, "rev-parse", f"HEAD:plugins/intake/{NAME}"
+    )
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": _git(bare, "rev-parse", "main")}
+    ]
+    assert (root / ".git" / "config").read_text() == config_before
+    assert _git(root, "status", "--porcelain") == ""
+    assert list(project.rglob(".git")) == []
+
+
+def test_init_application_inside_a_work_tree_says_to_deploy_with_snapshot(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An application scaffolded at a monorepo's root sits directly below that repository's
+    root, so the plain deploy would take the monorepo for the plugin's own repository: point
+    its `origin` at platform and push all of it. Init gives the --snapshot line instead.
+    """
+    root = tmp_path / "monorepo"
+    config_before = _customer_monorepo(root)
+    monkeypatch.chdir(root)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(f"{API}/orgs/acme/plugins", status_code=201, json={"git_url": bare.as_uri()})
+
+    result = runner.invoke(app, ["init", "application"], input="Intake App\n")
+
+    assert result.exit_code == 0, result.output
+    package_dir = root / "acme__intake_app"
+    assert _requests_to(requests_mock, "POST", "/orgs/acme/plugins")[0].json() == {
+        "name": "acme__intake_app"
+    }
+    assert not (package_dir / ".git").exists()
+    assert (root / ".git" / "config").read_text() == config_before
+    assert "inside an existing git repository" in result.output
+    assert _printed_deploy_command(result.output) == ["deploy", str(package_dir), "--snapshot"]
+
+
+def test_init_in_a_folder_the_enclosing_repository_ignores_gets_its_own_repository(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A folder the enclosing repository ignores can never be committed there, so --snapshot
+    would have nothing to push: the plugin gets its own repository with platform as `origin`.
+    """
+    root = tmp_path / "monorepo"
+    _customer_monorepo(root)
+    (root / ".gitignore").write_text("scratch/\n")
+    _git(root, "add", ".gitignore")
+    _git(root, "commit", "-m", "Ignore scratch")
+    config_before = (root / ".git" / "config").read_text()
+    (root / "scratch").mkdir()
+    monkeypatch.chdir(root / "scratch")
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={"name": "acme__intake_forms", "git_url": bare.as_uri()},
+    )
+
+    result = runner.invoke(app, ["init"], input="Intake Forms\n")
+
+    assert result.exit_code == 0, result.output
+    project = root / "scratch" / "intake-forms"
+    assert (project / ".git").is_dir()
+    assert _git(project, "remote", "get-url", "origin") == bare.as_uri()
+    assert (root / ".git" / "config").read_text() == config_before
+    assert "Initialized a git repository" in result.output
+    assert "--snapshot" not in result.output
+
+
+def test_init_without_git_refuses_before_scaffolding_or_registering(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without git the plugin can never be deployed, so init stops before it registers a name
+    on platform or leaves a scaffold behind, inside a work tree as anywhere else.
+    """
+    root = tmp_path / "monorepo"
+    _customer_monorepo(root)
+    monkeypatch.chdir(root)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(f"{API}/orgs/acme/plugins", status_code=201, json={})
+    monkeypatch.setattr(git.shutil, "which", lambda _: None)
+
+    result = runner.invoke(app, ["init"], input="Intake Forms\n")
+
+    assert result.exit_code == 1
+    assert "git was not found on your PATH" in result.output
+    assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
+    assert not (root / "intake-forms").exists()
 
 
 def test_init_asks_which_organization_when_there_are_several(
