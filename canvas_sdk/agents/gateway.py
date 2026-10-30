@@ -11,9 +11,14 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from anthropic import Anthropic
+from anthropic import NOT_GIVEN, Anthropic, NotGiven
+
+from canvas_sdk.agents.run_record import current_recorder
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
+
+# The Anthropic client's own default.
+DEFAULT_MAX_RETRIES = 2
 
 GATEWAY_URL_VARIABLE = "INFERENCE_GATEWAY_URL"
 GATEWAY_KEY_SECRET = "INFERENCE_GATEWAY_KEY"
@@ -38,18 +43,37 @@ class LLMGateway:
     model: str = DEFAULT_MODEL
     attribution: Mapping[str, str] = field(default_factory=dict)
 
-    def client(self, *, max_retries: int = 2) -> Anthropic:
-        """An Anthropic client pointed at the gateway, carrying the attribution headers."""
+    def client(self, *, max_retries: int = DEFAULT_MAX_RETRIES) -> Anthropic:
+        """An Anthropic client pointed at the gateway, carrying the attribution headers.
+
+        In a platform run, each attempt's timeout is the time left before the run's
+        deadline split across the attempts, so retries cannot carry a call past it.
+        """
+        left = _seconds_left()
+        timeout: float | NotGiven = (
+            NOT_GIVEN if left is None else attempt_timeout(left, max_retries)
+        )
         return Anthropic(
             api_key=self.api_key,
             base_url=self.base_url,
             max_retries=max_retries,
+            timeout=timeout,
             default_headers={
                 f"{ATTRIBUTION_PREFIX}{name}": value
                 for name, value in self.attribution.items()
                 if value
             },
         )
+
+
+def attempt_timeout(seconds_left: float, max_retries: int = DEFAULT_MAX_RETRIES) -> float:
+    """One attempt's timeout when ``seconds_left`` must cover the first try and every retry."""
+    return max(1.0, seconds_left / (max_retries + 1))
+
+
+def _seconds_left() -> float | None:
+    recorder = current_recorder.get()
+    return recorder.seconds_left() if recorder is not None else None
 
 
 def gateway_from_plugin_secrets(

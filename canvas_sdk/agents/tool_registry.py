@@ -872,7 +872,7 @@ class ToolRegistry:
     def scope(self, allowed: Iterable[str]) -> "ToolRegistry":
         """Return a *new* registry containing only the named tools.
 
-        The platform's enforcement seam (doc §6.7). The plugin author
+        The platform's enforcement seam. The plugin author
         registers their full tool surface in a module-level registry;
         the platform calls ``scope`` with the manifest's
         ``components.agents[].tools.allowed`` set and substitutes the

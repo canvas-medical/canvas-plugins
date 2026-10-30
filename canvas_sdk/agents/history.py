@@ -26,7 +26,8 @@ def window_messages(
     ``tool_use`` was cut off. The latest question is always kept, even when it alone
     exceeds the budget.
 
-    Pass the result to ``messages.create``; keep storing the full history.
+    Pass the result to ``messages.create``. A stored history can be trimmed the same
+    way, with a larger budget.
     """
     start = len(messages)
     used = 0

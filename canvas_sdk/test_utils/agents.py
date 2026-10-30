@@ -146,11 +146,12 @@ def run_agent(
     """Run a prepared agent through its lifecycle as the plugin-runner does.
 
     Calls ``on_run_start``, ``load_state``, ``run``, ``save_state``, and ``on_run_end``,
-    or ``on_run_error`` when one raises, and records the run like the platform. Unlike
+    or ``on_run_error`` when one raises, and records the run like the platform, holding
+    it to the agent's ``max_model_calls``. Unlike
     the platform, an exception from the run or a hook propagates, so a test sees it.
     """
     granted_effect_types = agent.tools.effect_types() if agent.tools else frozenset()
-    recorder = RunRecorder()
+    recorder = RunRecorder(max_model_calls=agent.max_model_calls)
     token = current_recorder.set(recorder)
     try:
         agent.on_run_start(scope_key)

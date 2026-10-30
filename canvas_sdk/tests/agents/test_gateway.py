@@ -1,10 +1,12 @@
+import time
 from typing import Any
 
 import httpx2
 import pytest
 
 from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
-from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
+from canvas_sdk.agents.gateway import attempt_timeout, gateway_from_plugin_secrets
+from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
 
 GATEWAY_URL = "https://gateway.test"
 KEY = "cnvs_sk_plugin_key"
@@ -111,3 +113,22 @@ def test_gateway_from_plugin_secrets_names_what_is_missing(
     """A missing URL or key is named, with where it is set."""
     with pytest.raises(LLMGatewayConfigurationError, match=missing):
         gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A", environ=environ)
+
+
+def test_in_a_run_the_client_timeout_splits_the_time_left_across_attempts() -> None:
+    """A call and its retries together end before the run's deadline."""
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + 60)
+    token = current_recorder.set(recorder)
+    try:
+        client = gateway().client(max_retries=2)
+    finally:
+        current_recorder.reset(token)
+
+    assert 19 < client.timeout <= 20  # type: ignore[operator]
+    assert client.max_retries == 2
+
+
+def test_attempt_timeout_never_drops_below_a_second() -> None:
+    """A run at its margin still gets a usable timeout; the tool loop stops it first."""
+    assert attempt_timeout(0.5) == 1.0
+    assert attempt_timeout(90, max_retries=2) == 30.0
