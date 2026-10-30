@@ -407,10 +407,11 @@ def push_snapshot(
     The work happens in a scratch repository that borrows the source repository's
     objects through ``objects/info/alternates`` rather than copying them, and that
     holds the credential helper itself. The snapshot replaces the ``name`` folder on
-    ``branch`` and keeps everything else at its root. When the contents are
-    unchanged nothing is pushed, and the commit already on ``branch`` is returned.
+    ``branch`` and keeps everything else at its root. When the contents on an
+    existing ``branch`` are unchanged nothing is pushed, and the commit already on
+    ``branch`` is returned.
 
-    ``default_branch`` is the plugin's default branch, which ``branch`` defaults to.
+    ``default_branch`` is the plugin's default branch, and defaults to ``branch``.
     A ``branch`` that Canvas Platform does not have yet continues from the default
     branch's tip, and the checks against edits made on Canvas Platform and against
     rolling back always read the default branch. Unchanged contents on a new

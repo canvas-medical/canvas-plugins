@@ -100,7 +100,7 @@ $ canvas deploy plugins/acme__intake --snapshot --instance acme-staging
 - A commit on `main`'s first-parent history tagged `snapshot-baseline/<anything>`, as Canvas Studio tags the commit it starts `main` from, counts as a snapshot, and deploy starts from the newest snapshot; lightweight and annotated tags both count. A tagged commit without a `Monorepo-Commit` trailer has nothing to roll back. To mark one by hand, push the tag from a `canvas clone` checkout (`git tag snapshot-baseline/<sha> <sha>`, then `git push origin snapshot-baseline/<sha>`).
 - Deploy refuses when `main` has changes to the package since the last snapshot, such as a catalog listing edited in Canvas Platform, that the snapshot would replace. At a terminal it asks before replacing them.
 - Deploy warns when HEAD is on no remote branch, since that code has not been through the repository's review.
-- With `--branch`, the snapshot goes to that branch, built on its tip on Canvas Platform when it exists and otherwise on `main`. The checks against edits made in Canvas Platform and against rolling back still read `main`.
+- With `--branch`, the snapshot goes to that branch, built on its tip on Canvas Platform when it exists and otherwise on `main`, and an unchanged package points a new branch at `main`'s commit. The checks against edits made in Canvas Platform and against rolling back read `main`.
 - The manifest `name` decides which Platform repository a snapshot goes to, so deploys from any checkout or CI job land on the same `main`. The CI job needs no git identity.
 - The rollback check needs the commit `main` was last deployed from, which a shallow checkout usually lacks, so deploy skips the check there and says so on stderr. Check out full history without file contents to keep it, for example `fetch-depth: 0` with `filter: blob:none` in `actions/checkout`.
 
@@ -215,9 +215,9 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--instance TEXT`: Instance to deploy to, repeatable. Without it, deploy targets the only instance you can deploy to and otherwise lists the choices
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
-- `--push-only`: Push HEAD to `main` without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
+- `--push-only`: Push HEAD to `main`, or to the `--branch` branch, without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
 - `--branch TEXT`: Push HEAD to this branch on Canvas Platform instead of `main`, and deploy that commit. Platform deploys a commit not on `main` only to your organization's test instances, and refuses other instances with a message naming them. Works with `--push-only` and `--snapshot`. Takes no `--ref` or `--no-push`, and refuses `main` and the plugin's default branch
-- `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
+- `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, or on the `--branch` branch, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
 - `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
 - `--help`: Show this message and exit.
 

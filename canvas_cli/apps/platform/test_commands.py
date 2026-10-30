@@ -1482,7 +1482,7 @@ def test_deploy_snapshot_to_an_existing_branch_checks_platform_edits_made_on_mai
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A catalog listing edited on main after the branch was pushed is still refused, since the
+    """A catalog listing edited on main after the branch was pushed is refused, since the
     checks read main rather than the branch, whose own history never saw the edit.
     """
     runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])

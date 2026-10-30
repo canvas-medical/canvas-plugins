@@ -579,7 +579,9 @@ def deploy(
         False, "--no-push", help="Deploy the pushed 'main' as-is, without pushing HEAD first."
     ),
     push_only: bool = typer.Option(
-        False, "--push-only", help="Push HEAD to 'main' without deploying it to any instance."
+        False,
+        "--push-only",
+        help="Push HEAD to 'main', or to the --branch branch, without deploying it to any instance.",
     ),
     branch: str | None = typer.Option(
         None,
@@ -594,7 +596,8 @@ def deploy(
         "--snapshot",
         help=(
             "Push the committed contents of a plugin inside a larger repository, such as a "
-            "monorepo, as one new commit on 'main', leaving that repository's remotes alone."
+            "monorepo, as one new commit on 'main' or on the --branch branch, leaving that "
+            "repository's remotes alone."
         ),
     ),
     assume_yes: bool = typer.Option(
