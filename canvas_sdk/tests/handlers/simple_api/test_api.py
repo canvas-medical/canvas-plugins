@@ -490,6 +490,56 @@ def test_request_routing_path_pattern_multiple_matches(
     assert body == expected_body
 
 
+@pytest.mark.parametrize(
+    argnames="event_type",
+    argvalues=[EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST],
+    ids=["authenticate", "request"],
+)
+def test_matched_route_names_the_template_for_a_simple_api(event_type: EventType) -> None:
+    """A SimpleAPI names the declared route, prefix included, never the request's own path."""
+
+    class API(APINoAuth):
+        PREFIX = "/patients/<patient_id>"
+
+        @api.get("/notes")
+        def notes(self) -> list[Response | Effect]:
+            return []
+
+        @api.post("/notes/<note_id>")
+        def note(self) -> list[Response | Effect]:
+            return []
+
+    handler = API(make_event(event_type, "POST", "/patients/abc123/notes/n-9"))
+
+    assert handler.matched_route == ("POST", "/patients/<patient_id>/notes/<note_id>")
+
+
+def test_matched_route_names_the_path_for_a_simple_api_route() -> None:
+    """A SimpleAPIRoute names its PATH and the method that handled it."""
+
+    class Route(RouteNoAuth):
+        PATH = "/route"
+
+        def patch(self) -> list[Response | Effect]:
+            return []
+
+    handler = Route(make_event(EventType.SIMPLE_API_REQUEST, "PATCH", "/route"))
+
+    assert handler.matched_route == ("PATCH", "/route")
+
+
+def test_matched_route_is_none_when_no_route_matches() -> None:
+    """A request no route handles has no matched route."""
+
+    class API(APINoAuth):
+        @api.get("/notes")
+        def notes(self) -> list[Response | Effect]:
+            return []
+
+    assert API(make_event(EventType.SIMPLE_API_REQUEST, "GET", "/other")).matched_route is None
+    assert API(make_event(EventType.SIMPLE_API_REQUEST, "POST", "/notes")).matched_route is None
+
+
 def test_request_lifecycle() -> None:
     """Test the request-response lifecycle."""
 

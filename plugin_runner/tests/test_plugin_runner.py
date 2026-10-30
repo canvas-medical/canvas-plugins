@@ -1381,6 +1381,64 @@ def test_simple_api(
     assert result[0].effects == [expected_response]
 
 
+def _compute_measure_tags(measure: Mock) -> list[dict[str, str]]:
+    """Return the extra tags of the calls to metrics.measure that time a handler's compute()."""
+    return [
+        c.kwargs["extra_tags"]
+        for c in measure.call_args_list
+        if c.kwargs.get("name", "").endswith(".compute")
+    ]
+
+
+@pytest.mark.parametrize(
+    argnames="path,route",
+    argvalues=[("/route", "GET /route"), ("/items/abc123", "GET /items/<item_id>")],
+    ids=["fixed path", "path parameter"],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+def test_simple_api_timing_is_tagged_with_the_route_template(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    db: None,
+    path: str,
+    route: str,
+) -> None:
+    """A SimpleAPI timing names the route as declared, even when the plugin claims otherwise."""
+    context = {
+        "plugin_name": "test_simple_api",
+        "method": "GET",
+        "path": path,
+        "query_string": "",
+        "body": b64encode(b"").decode(),
+        "headers": {},
+    }
+    event = EventRequest(type=EventType.SIMPLE_API_REQUEST, context=json.dumps(context))
+
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        list(plugin_runner.HandleEvent(event, None))
+
+    assert _compute_measure_tags(measure) == [
+        {"plugin": "test_simple_api", "event": "SIMPLE_API_REQUEST", "route": route}
+    ]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_timing_has_no_route_for_other_handlers(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """A handler that is not a SimpleAPI is timed with no route tag."""
+    with patch("plugin_runner.plugin_runner.metrics.measure", wraps=metrics.measure) as measure:
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    tags = _compute_measure_tags(measure)
+    assert tags
+    assert all("route" not in t for t in tags)
+
+
 @pytest.mark.parametrize(
     argnames="context",
     argvalues=[
