@@ -414,8 +414,9 @@ def push_snapshot(
     ``default_branch`` is the plugin's default branch, and defaults to ``branch``.
     A ``branch`` that Canvas Platform does not have yet continues from the default
     branch's tip, and the checks against edits made on Canvas Platform and against
-    rolling back always read the default branch. Unchanged contents on a new
-    ``branch`` push the default branch's commit to it without a new commit.
+    rolling back read the default branch; an existing ``branch`` is checked against
+    its own tip. Unchanged contents on a new ``branch`` push the default branch's
+    commit to it without a new commit.
 
     ``author`` is the name and email the commit carries, set through the
     environment because a CI runner has no git identity of its own.
@@ -478,8 +479,9 @@ def push_snapshot(
                 _push_ref(work, git_url, tip, branch)
                 print(f"Pushed {tip[:12]} to {branch}, which already holds this snapshot.")
                 return tip
-            if default_tip:
-                _guard_platform_history(work, snapshot, default_tip, name, root, default_branch)
+            _guard_platform_history(
+                work, snapshot, tip, name, root, branch if target_tip else default_branch
+            )
             print(_output(work, "diff", "--stat", tip, root, what="git diff").rstrip())
 
         message = (

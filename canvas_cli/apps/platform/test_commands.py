@@ -732,13 +732,19 @@ def _commit_in(directory: Path, path: str, content: str) -> None:
     _git(directory, "commit", "-m", f"Change {path}")
 
 
-def _commit_on_platform(bare: Path, tmp_path: Path, path: str, content: str) -> None:
+def _commit_on_platform(
+    bare: Path,
+    tmp_path: Path,
+    path: str,
+    content: str,
+    branch: str = "main",
+) -> None:
     """A commit made on platform's side, the way its catalog listing editor commits to main."""
-    checkout = tmp_path / "platform-side"
-    _git(tmp_path, "clone", "-q", bare.as_uri(), str(checkout))
+    checkout = tmp_path / f"platform-side-{branch}"
+    _git(tmp_path, "clone", "-q", "-b", branch, bare.as_uri(), str(checkout))
     (checkout / path).parent.mkdir(parents=True, exist_ok=True)
     _commit_in(checkout, path, content)
-    _git(checkout, "push", "-q", "origin", "HEAD:main")
+    _git(checkout, "push", "-q", "origin", f"HEAD:{branch}")
 
 
 def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
@@ -1475,15 +1481,15 @@ def test_deploy_snapshot_branch_checks_platform_edits_on_main(
     assert _git(bare, "for-each-ref", "refs/heads/feature-x") == ""
 
 
-def test_deploy_snapshot_to_an_existing_branch_checks_platform_edits_made_on_main_since(
+def test_deploy_snapshot_to_an_existing_branch_leaves_platform_edits_on_main_alone(
     api: requests_mock_module.Mocker,
     bare: Path,
     monorepo: Path,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A catalog listing edited on main after the branch was pushed is refused, since the
-    checks read main rather than the branch, whose own history never saw the edit.
+    """A catalog listing edited on main after the branch was pushed is not on the branch, so a
+    snapshot built on the branch tip replaces nothing of it and pushes.
     """
     runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
     _commit_in(monorepo, "handler.py", "x = 1\n")
@@ -1492,6 +1498,37 @@ def test_deploy_snapshot_to_an_existing_branch_checks_platform_edits_made_on_mai
     )
     branch_tip = _git(bare, "rev-parse", "feature-x")
     _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    main_tip = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x^") == branch_tip
+    assert _git(bare, "rev-parse", "main") == main_tip
+
+
+def test_deploy_snapshot_to_an_existing_branch_refuses_a_platform_edit_on_that_branch(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A catalog listing edited on the branch since its last snapshot is refused, naming the
+    branch, the same way an edit on main is refused for a snapshot to main.
+    """
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+    _commit_on_platform(
+        bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST, branch="feature-x"
+    )
+    branch_tip = _git(bare, "rev-parse", "feature-x")
     _commit_in(monorepo, "other.py", "y = 2\n")
 
     result = runner.invoke(
@@ -1499,8 +1536,66 @@ def test_deploy_snapshot_to_an_existing_branch_checks_platform_edits_made_on_mai
     )
 
     assert result.exit_code == 1
+    assert "These files on feature-x were changed on Canvas Platform" in result.output
     assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
     assert _git(bare, "rev-parse", "feature-x") == branch_tip
+
+
+def test_deploy_snapshot_to_an_existing_branch_refuses_to_roll_back_what_it_was_deployed_from(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A second snapshot to a branch from a checkout lacking the first one's package changes is
+    refused, so the branch and the instances testing it are not rolled back.
+    """
+    root = monorepo.parent.parent
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _git(root, "checkout", "-q", "-b", "feature")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    first = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+    assert first.exit_code == 0, first.output
+    deployed = _git(bare, "rev-parse", "feature-x")
+    _git(root, "checkout", "-q", "-b", "stale", "main")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 1
+    assert "feature-x on Canvas Platform was last deployed from" in result.output
+    assert "would roll the plugin back" in result.output
+    assert f"  plugins/{NAME}/handler.py" in result.output
+    assert _git(bare, "rev-parse", "feature-x") == deployed
+
+
+def test_deploy_snapshot_to_an_existing_branch_from_a_checkout_holding_its_changes(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A checkout that merged the work the branch was last deployed from holds its changes under
+    another commit, so the next snapshot to the branch pushes.
+    """
+    root = monorepo.parent.parent
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _git(root, "checkout", "-q", "-b", "feature")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+    deployed = _git(bare, "rev-parse", "feature-x")
+    _git(root, "checkout", "-q", "-b", "rework", "main")
+    _git(root, "merge", "-q", "--squash", "feature")
+    _git(root, "commit", "-q", "-m", "Feature, squashed")
+    _commit_in(monorepo, "other.py", "y = 2\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x^") == deployed
+    assert _git(bare, "show", f"feature-x:{NAME}/handler.py") == "x = 1"
 
 
 def test_deploy_snapshot_branch_rerun_after_push_only_deploys_the_branch_tip(
@@ -1571,8 +1666,8 @@ def test_deploy_snapshot_branch_counts_the_baseline_tag_on_main(
 def test_deploy_snapshot_branch_refuses_to_roll_back_what_main_was_deployed_from(
     api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
 ) -> None:
-    """The rollback check reads main for a branch snapshot, so a checkout lacking main's last
-    deployed changes is refused before the branch exists.
+    """The rollback check reads main for a snapshot to a new branch, so a checkout lacking
+    main's last deployed changes is refused before the branch exists.
     """
     root = monorepo.parent.parent
     _commit_in(monorepo, "handler.py", "x = 1\n")

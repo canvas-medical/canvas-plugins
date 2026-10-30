@@ -645,8 +645,9 @@ def deploy(
     other instances with a message naming them. It combines with --push-only and
     --snapshot, and is refused with --ref or --no-push and for `main` or the
     plugin's default branch. A snapshot on a branch builds on that branch's tip when
-    it exists and otherwise on `main`, and the checks against edits made in Canvas
-    Platform and against rolling back read `main`.
+    it exists, and the checks against edits made in Canvas Platform and against
+    rolling back read that branch. Otherwise it builds on `main` and the checks read
+    `main`.
     """
     if push_only and (instance or ref is not None or no_push):
         raise typer.BadParameter(
