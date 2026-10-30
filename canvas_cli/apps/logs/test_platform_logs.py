@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 
 from canvas_cli.apps.auth.utils import instance_slug
 from canvas_cli.apps.platform import auth
-from canvas_cli.apps.platform.auth import PLATFORM_URL_ENV
+from canvas_cli.apps.platform.auth import PLATFORM_URL_ENV, SERVICE_TOKEN_ENV
 from canvas_cli.apps.plugin.plugin import plugin_url
 from canvas_cli.main import app
 
@@ -40,7 +40,8 @@ PLUGINS_DISABLED = {"detail": "Plugins are not enabled on this Canvas instance."
 INSTANCE_OUTDATED = {
     "error": (
         "acme-prod runs a Canvas release that cannot issue log tokens yet. "
-        "Use the instance's credentials.ini entry until it updates."
+        "Sign out of Canvas Platform (canvas logout, or unset CANVAS_PLATFORM_TOKEN for a "
+        "service account) to read its logs through credentials.ini until it updates."
     ),
     "code": "instance_outdated",
 }
@@ -325,6 +326,67 @@ def test_second_403_shows_the_instance_answer(
     assert "acme-prod refused the log token Canvas Platform issued." in result.output
     assert PLUGINS_DISABLED["detail"] in result.output
     assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
+
+
+def test_second_refusal_without_detail_quotes_nothing(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A refusal whose body carries no ``detail`` adds no instance answer to the sentence."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    requests_mock.get(LOGS_URL, status_code=403, json={"error": "forbidden"})
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "acme-prod refused the log token Canvas Platform issued. Run the command again" in (
+        result.output
+    )
+    assert "The instance answered" not in result.output
+
+
+def test_second_refusal_under_service_token_names_the_variable(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    credentials_token: Mock,
+) -> None:
+    """``canvas logout`` leaves CANVAS_PLATFORM_TOKEN in force, so the way out is unsetting it."""
+    monkeypatch.setenv(SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    requests_mock.get(LOGS_URL, status_code=403, json=PLUGINS_DISABLED)
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "unset CANVAS_PLATFORM_TOKEN to use credentials.ini" in result.output
+    assert "canvas logout" not in result.output
+
+
+def test_credentials_ini_refusal_is_not_retried(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A refused credentials.ini token is sent once and never blamed on Canvas Platform."""
+    requests_mock.get(
+        f"{PLATFORM}/api/v1/instances",
+        json={"instances": [_instance("acme-prod", managed=False)]},
+    )
+    requests_mock.get(LOGS_URL, status_code=403, json=NOT_AUTHENTICATED)
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "Canvas Platform" not in result.output
+    assert _calls_to(requests_mock, LOGS_URL) == 1
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 0
+    credentials_token.assert_called_once()
 
 
 def test_token_replaced_30_seconds_before_expiry(
