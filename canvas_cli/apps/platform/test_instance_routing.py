@@ -625,3 +625,90 @@ def test_namespace_of_an_unmanaged_instance_uses_credentials_ini(
     assert result.exit_code == 0, result.output
     assert NS in result.stdout
     assert not _calls(requests_mock, "GET", f"{API}/instances/legacy/namespaces")
+
+
+# -- scenarios across Platform and the CLI -----------------------------------
+
+
+@pytest.mark.parametrize("verb", ["enable", "disable"])
+def test_a_managed_plugin_on_an_unmanaged_instance_shows_platforms_refusal(
+    verb: str, requests_mock: requests_mock_module.Mocker, managed_plugin: None, ini_token: Mock
+) -> None:
+    """Platform refuses a managed plugin's switch on an instance it does not manage. The CLI shows
+    that and never retries on credentials.ini, which would switch it outside Platform's audit (D1).
+    """
+    requests_mock.post(
+        f"{API}/deployments",
+        status_code=400,
+        json={
+            "error": "legacy trusts another platform to deploy to it, not this one.",
+            "code": "unmanaged",
+        },
+    )
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{verb}") as direct:
+        result = runner.invoke(app, [verb, NAME, "--instance", "legacy"])
+
+    assert result.exit_code == 1
+    assert "legacy trusts another platform" in result.output + result.stderr
+    direct.assert_not_called()
+    ini_token.assert_not_called()
+
+
+def test_namespace_drop_finishes_an_interrupted_drop(
+    requests_mock: requests_mock_module.Mocker, instances: None
+) -> None:
+    """After a drop removed the schema but Platform kept its keys, Platform previews an empty
+    drop and the confirmed real drop forgets them, so the CLI rerun clears the leftover state.
+    """
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=true", json={"dry_run": True, "namespace": NS, "tables": []}
+    )
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=false", json={"dry_run": False, "namespace": NS, "dropped": True}
+    )
+
+    result = runner.invoke(
+        app, ["namespace", "drop", NS, "--host", "acme", "--execute"], input=f"{NS}\n"
+    )
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert f"Namespace '{NS}' has been dropped." in result.stdout
+    assert [r.qs for r in _calls(requests_mock, "POST", f"{NS_URL}/drop")] == [
+        {"dry_run": ["true"]},
+        {"dry_run": ["false"]},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("args", "method", "url"),
+    [
+        (["namespace", "list"], "GET", f"{API}/instances/acme/namespaces"),
+        (["namespace", "inspect", NS], "GET", NS_URL),
+        (["namespace", "reset", NS], "POST", f"{NS_URL}/reset?dry_run=true"),
+        (["namespace", "drop", NS], "POST", f"{NS_URL}/drop?dry_run=true"),
+    ],
+    ids=["list", "inspect", "reset", "drop"],
+)
+def test_namespace_commands_before_platform_serves_them_say_how_to_use_credentials_ini(
+    args: list[str],
+    method: str,
+    url: str,
+    requests_mock: requests_mock_module.Mocker,
+    instances: None,
+    ini_token: Mock,
+) -> None:
+    """A CLI released before Platform has the namespace routes gets Django's bare 404. As with
+    `canvas list`, that means the route is missing, so the command says how to reach the
+    instance directly instead of printing only the status (Q1, option a).
+    """
+    requests_mock.register_uri(method, url, status_code=404, text="<h1>Not Found</h1>")
+
+    result = runner.invoke(app, [*args, "--host", "acme"])
+
+    assert result.exit_code == 1
+    output = result.output + result.stderr
+    assert "Canvas Platform does not" in output
+    assert "canvas logout" in output
+    assert "credentials.ini" in output
+    ini_token.assert_not_called()
