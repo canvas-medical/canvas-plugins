@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.264.0 (2026-10-30)
+
+### Features
+
+- Add claim assignee effect and event to the sdk
+  ([#1796](https://github.com/canvas-medical/canvas-plugins/pull/1796),
+  [`58593a7`](https://github.com/canvas-medical/canvas-plugins/commit/58593a7315a402630d083326e5213cb8c1f56616))
+
+
 ## v0.263.0 (2026-10-30)
 
 ### Documentation
