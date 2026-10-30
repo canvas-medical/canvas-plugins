@@ -5,18 +5,151 @@ import json
 import re
 import shutil
 import sys
+import time
 import zlib
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any, TypedDict, cast
 from urllib.parse import urlparse
 
+import click
 import requests
 import typer
 import websocket
 
-from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token, instance_slug
+from canvas_cli.apps.platform import auth as platform_auth
+from canvas_cli.apps.platform.client import PlatformClient
 from canvas_cli.apps.plugin.plugin import plugin_url
+
+# Seconds before a minted token's expiry at which it is replaced.
+EXPIRY_MARGIN_SECONDS = 30
+# The instance answers an expired or revoked token with 403, since its logs endpoint tries
+# session authentication first and so sends no WWW-Authenticate challenge. 401 is kept for a
+# proxy or release that does send one.
+REFUSED_TOKEN_STATUSES: tuple[int, ...] = (requests.codes.unauthorized, requests.codes.forbidden)
+
+
+def _instance_answer(response: requests.Response) -> str:
+    """Return the instance's ``detail`` as a sentence to quote, or an empty string.
+
+    Args:
+        response (requests.Response): The instance's refusal.
+
+    Returns:
+        str: ``The instance answered: <detail> `` with a trailing space, or "" when the body
+            carries no ``detail``.
+    """
+    try:
+        body: Any = response.json()
+    except ValueError:
+        return ""
+    detail: Any = body.get("detail") if isinstance(body, dict) else None
+    if not isinstance(detail, str) or not detail:
+        return ""
+    return f"The instance answered: {detail} "
+
+
+def _platform_sign_out() -> str:
+    """Return how to stop using Canvas Platform for logs, for the credential in force.
+
+    Returns:
+        str: ``unset CANVAS_PLATFORM_TOKEN`` under a service account token, which ``canvas
+            logout`` leaves in force, and ``sign out with canvas logout`` otherwise.
+    """
+    if platform_auth.service_token() is not None:
+        return f"unset {platform_auth.SERVICE_TOKEN_ENV}"
+    return "sign out with canvas logout"
+
+
+class LogToken:
+    """A bearer token for an instance's logs, and how to get a fresh one.
+
+    The credentials.ini token is requested the way every instance command requests it and is
+    not reissued on a refusal. A Platform-issued token is minted on first use, minted again once
+    it nears expiry, and minted again when the instance answers 401 or 403.
+    """
+
+    def __init__(
+        self,
+        slug: str,
+        mint: Callable[[], tuple[str, float | None]],
+        *,
+        reissuable: bool,
+    ) -> None:
+        """Hold a token source.
+
+        Args:
+            slug (str): The instance the token is for, used in messages.
+            mint (Callable[[], tuple[str, float | None]]): Returns a token and its lifetime in
+                seconds, or None for a token with no known expiry.
+            reissuable (bool): Whether a 401 or 403 should mint a fresh token and retry.
+        """
+        self.slug: str = slug
+        self.reissuable: bool = reissuable
+        self._mint: Callable[[], tuple[str, float | None]] = mint
+        self._token: str | None = None
+        self._expires_at: float | None = None
+
+    def get(self) -> str:
+        """Return the held token, minting one first when none is held or it is near expiry.
+
+        Returns:
+            str: The bearer token.
+        """
+        if self._token is None or (
+            self._expires_at is not None and time.monotonic() >= self._expires_at
+        ):
+            return self.refresh()
+        return self._token
+
+    def refresh(self) -> str:
+        """Mint a fresh token.
+
+        Returns:
+            str: The new bearer token.
+        """
+        token, lifetime = self._mint()
+        self._token = token
+        self._expires_at = (
+            None if lifetime is None else time.monotonic() + lifetime - EXPIRY_MARGIN_SECONDS
+        )
+        return token
+
+
+def log_token_source(host: str) -> LogToken:
+    """Choose where the log token for ``host`` comes from.
+
+    Signed in to Canvas Platform, with the instance in the person's list and managed, Platform
+    issues the token. Otherwise (signed out, localhost, an instance Platform does not manage)
+    the credentials.ini token is used. A failed Platform lookup or refusal raises and never
+    falls back to credentials.ini.
+
+    Args:
+        host (str): The Canvas instance URL.
+
+    Returns:
+        LogToken: The token source.
+    """
+    slug: str | None = instance_slug(host)
+    platform: str = platform_auth.resolve_platform_url()
+    if slug is not None and platform_auth.stored_tokens(platform) is not None:
+        client = PlatformClient(platform)
+        row = next((r for r in client.instances() if r.get("slug") == slug), None)
+        if row is not None and row.get("managed"):
+
+            def mint() -> tuple[str, float | None]:
+                body = client.log_token(slug)
+                return body["access_token"], float(body["expires_in"])
+
+            return LogToken(slug, mint, reissuable=True)
+
+    return LogToken(
+        slug or host,
+        lambda: (get_or_request_api_token(host), None),
+        reissuable=False,
+    )
+
 
 DURATION_REGEX = re.compile(
     r"""
@@ -143,7 +276,7 @@ class SearchPage(TypedDict, total=False):
 
 def search_logs(
     *,
-    token: str,
+    token: str | LogToken,
     host: str,
     source: str | None,
     levels: list[str],
@@ -155,7 +288,12 @@ def search_logs(
     search_after: list[Any] | None,
     query: str | None = None,
 ) -> SearchPage:
-    """Fetch logs from Canvas API."""
+    """Fetch logs from Canvas API.
+
+    A ``LogToken`` is asked for its token on each call. On a 401 or 403 a reissuable one (the
+    Platform path) mints a fresh token and the request is retried once; the credentials.ini
+    path and a plain string token are sent as they are.
+    """
     url = plugin_url(host, "/logs")
 
     params: dict[str, Any] = {
@@ -179,12 +317,27 @@ def search_logs(
     if search_after:
         params["search_after"] = json.dumps(search_after)
 
-    r = requests.get(
-        url,
-        headers={"Authorization": f"Bearer {token}"},
-        params=params,
-        timeout=30,
-    )
+    def fetch(bearer: str) -> requests.Response:
+        return requests.get(
+            url,
+            headers={"Authorization": f"Bearer {bearer}"},
+            params=params,
+            timeout=30,
+        )
+
+    if isinstance(token, LogToken):
+        r = fetch(token.get())
+        if r.status_code in REFUSED_TOKEN_STATUSES and token.reissuable:
+            r = fetch(token.refresh())
+            if r.status_code in REFUSED_TOKEN_STATUSES:
+                raise click.ClickException(
+                    f"{token.slug} refused the log token Canvas Platform issued. "
+                    f"{_instance_answer(r)}"
+                    f"Run the command again; if it keeps failing, {_platform_sign_out()} "
+                    "to use credentials.ini."
+                )
+    else:
+        r = fetch(token)
     r.raise_for_status()
     data = r.json()
 
@@ -196,7 +349,7 @@ def search_logs(
 
 def iter_history(
     *,
-    token: str,
+    token: str | LogToken,
     host: str,
     source: str | None,
     levels: list[str],
@@ -336,7 +489,7 @@ def logs(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    token = get_or_request_api_token(host)
+    token = log_token_source(host)
 
     if since and (start or end):
         raise typer.BadParameter("--since cannot be combined with --start/--end.")
@@ -429,9 +582,8 @@ def logs(
 
         # Resolve the instance name from the Canvas host URL (e.g., extract
         # 'example' from 'https://example.canvasmedical.com/')
-        hostname = cast(str, urlparse(host).hostname)
-        instance = hostname.removesuffix(".canvasmedical.com")
-        websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token}"
+        instance = instance_slug(host) or cast(str, urlparse(host).hostname)
+        websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
 
         try:
             ws = websocket.WebSocketApp(
