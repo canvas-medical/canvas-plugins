@@ -1703,6 +1703,91 @@ def test_init_signed_in_prefixes_registers_and_connects_git(
         "name": "acme__intake_forms"
     }
     assert _git(project, "remote", "get-url", "origin") == bare.as_uri()
+    assert "--snapshot" not in result.output
+
+
+def _assert_init_stays_in_work_tree(
+    requests_mock: requests_mock_module.Mocker,
+    result: Any,
+    work_tree: Path,
+    monorepo: Path,
+    config_before: str,
+) -> None:
+    """Shared assertions: the plugin is registered but no repository is nested in ``work_tree``."""
+    assert result.exit_code == 0, result.output
+    project = work_tree / "intake-forms"
+    package_dir = project / "acme__intake_forms"
+    assert _requests_to(requests_mock, "POST", "/orgs/acme/plugins")[0].json() == {
+        "name": "acme__intake_forms"
+    }
+    # A nested repository would hide the plugin from the monorepo that contains it.
+    assert not (project / ".git").exists()
+    assert Path(_git(project, "rev-parse", "--show-toplevel")).resolve() == work_tree.resolve()
+    assert (monorepo / ".git" / "config").read_text() == config_before
+    assert "Initialized a git repository" not in result.output
+    assert "inside an existing git repository" in result.output
+    assert f"canvas deploy {package_dir} --snapshot" in result.output
+
+
+def test_init_inside_a_work_tree_registers_without_nesting_a_repository(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inside an existing work tree the plugin joins that repository: it is registered, and
+    no repository or `origin` is created around it.
+    """
+    monorepo = tmp_path / "monorepo"
+    monorepo.mkdir()
+    _git(monorepo, "init")
+    _git(monorepo, "remote", "add", "origin", "https://example.com/other/repo.git")
+    config_before = (monorepo / ".git" / "config").read_text()
+    monkeypatch.chdir(monorepo)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={"name": "acme__intake_forms", "git_url": bare.as_uri()},
+    )
+
+    result = runner.invoke(app, ["init"], input="Intake Forms\n")
+
+    _assert_init_stays_in_work_tree(requests_mock, result, monorepo, monorepo, config_before)
+
+
+def test_init_inside_a_git_worktree_registers_without_nesting_a_repository(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A linked worktree has a `.git` file, not a folder, and still counts as a work tree, so
+    no repository is created inside it.
+    """
+    monorepo = tmp_path / "monorepo"
+    monorepo.mkdir()
+    _git(monorepo, "init", "--initial-branch=main")
+    (monorepo / "README.md").write_text("monorepo\n")
+    _git(monorepo, "add", "README.md")
+    _git(monorepo, "commit", "-m", "initial")
+    worktree = tmp_path / "wt"
+    _git(monorepo, "worktree", "add", str(worktree))
+    assert (worktree / ".git").is_file()
+    config_before = (monorepo / ".git" / "config").read_text()
+    monkeypatch.chdir(worktree)
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={"name": "acme__intake_forms", "git_url": bare.as_uri()},
+    )
+
+    result = runner.invoke(app, ["init"], input="Intake Forms\n")
+
+    _assert_init_stays_in_work_tree(requests_mock, result, worktree, monorepo, config_before)
 
 
 def test_init_asks_which_organization_when_there_are_several(

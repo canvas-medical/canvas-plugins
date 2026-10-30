@@ -178,7 +178,7 @@ $ canvas whoami [OPTIONS]
 
 ## `canvas init`
 
-Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>`, registered with platform, and given a git repository whose `origin` is platform. Signed out, it is named from the project name alone, and `init` says that `canvas deploy` refuses such a plugin until you run `canvas login` and `canvas init` again.
+Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>`, registered with platform, and given a git repository whose `origin` is platform. Inside an existing git repository it gets no repository of its own and is deployed with `--snapshot`. Signed out, it is named from the project name alone, and `init` says that `canvas deploy` refuses such a plugin until you run `canvas login` and `canvas init` again.
 
 **Usage**:
 
