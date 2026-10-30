@@ -14,7 +14,7 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 | Signs in as | you, as a member of your Canvas Platform organizations, or a service account of one organization | an OAuth client (`client_id` / `client_secret`) registered on one instance |
 | Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
 | Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
-| Used by | `login`, `logout`, `init`, `deploy`, `clone`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs`, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
+| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `logs` for an instance Canvas Platform manages, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs` for any other instance, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
 
 A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform).
 
@@ -365,7 +365,7 @@ $ canvas validate-manifest [OPTIONS] PACKAGE
 
 ## `canvas logs`
 
-Listens and prints log streams from the instance.
+Listens and prints log streams from the instance. Signed in to Canvas Platform, `canvas logs` asks Platform for a 15-minute log token for an instance it manages, and otherwise uses `credentials.ini`.
 
 **Usage**:
 

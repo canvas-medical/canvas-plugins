@@ -142,6 +142,10 @@ class PlatformClient:
         """``POST /api/v1/plugins/<name>/git-credentials``: a one-hour git token."""
         return self.post(f"/api/v1/plugins/{segment(name)}/git-credentials")
 
+    def log_token(self, slug: str) -> dict[str, Any]:
+        """``POST /api/v1/instances/<slug>/log-token``: a 15-minute token for reading logs."""
+        return self.post(f"/api/v1/instances/{segment(slug)}/log-token")
+
     def set_variable(
         self, instance: str, name: str, key: str, value: str, sensitive: bool | None
     ) -> Any:
