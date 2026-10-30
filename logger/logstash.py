@@ -24,15 +24,20 @@ class HttpTransport:
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
 
-    def send(self, events: list[Any], **kwargs: Any) -> None:
-        """Send events to Logstash."""
-        for event in events:
-            try:
-                self.session.post(self.url, data=event)
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except BaseException as e:
-                print("Logstash exception", e)
+    def send(self, events: list[bytes], **kwargs: Any) -> None:
+        """Send a batch of events to Logstash as one JSON array.
+
+        Logstash's json codec turns each array element into its own event. Raising makes
+        the async worker requeue the batch, so network errors, 5xx, and 429 raise; any
+        other 4xx would fail identically on every retry, so the batch is reported and dropped.
+        """
+        response = self.session.post(
+            self.url, data=b"[" + b",".join(event.strip() for event in events) + b"]"
+        )
+        if response.status_code == 429 or response.status_code >= 500:
+            response.raise_for_status()
+        if response.status_code >= 400:
+            print("Logstash rejected a batch of", len(events), "events:", response.status_code)
 
     def close(self) -> None:
         """Close the transport."""
