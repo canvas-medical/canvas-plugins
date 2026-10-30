@@ -9,7 +9,8 @@ person signed in with ``canvas login``:
   * ``canvas init``: scaffolds a plugin; signed in, it names it
     ``<prefix>__<package>`` and registers it with platform.
   * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
-    plugin inside a larger repository, then deploys it.
+    plugin inside a larger repository, to ``main`` or to the branch ``--branch``
+    names, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
   * ``canvas config set`` / ``unset`` and ``canvas uninstall``: through platform
     for a plugin it manages, and directly against the instance otherwise.
@@ -469,12 +470,50 @@ def _require_package_at_repo_root(plugin_dir: Path) -> None:
         )
 
 
+def _require_branch_name(plugin_dir: Path, branch: str) -> None:
+    """Refuse a ``--branch`` that is ``main`` or that git does not accept as a branch name.
+
+    ``check-ref-format --branch`` also expands ``@{-1}`` to the name of the branch
+    checked out before the current one, so a name that comes back changed is refused rather than pushed under a
+    name the person did not type.
+    """
+    if branch == "main":
+        raise typer.BadParameter(
+            "--branch names a branch other than 'main'. To deploy to 'main', leave --branch out."
+        )
+    git.require_installed()
+    result = git.run(plugin_dir, "check-ref-format", "--branch", branch)
+    if result.returncode != 0 or result.stdout.strip() != branch:
+        raise typer.BadParameter(f"'{branch}' is not a valid branch name.")
+
+
+def _target_and_default_branch(registered: dict[str, Any], branch: str | None) -> tuple[str, str]:
+    """The branch to push to and the plugin's default branch, in that order.
+
+    The target is ``branch``, or the default branch when none is given. A ``--branch``
+    equal to the default branch is refused, because a plain deploy already pushes
+    there and Platform deploys that branch to any instance.
+    """
+    default: str = registered.get("default_branch") or "main"
+    if branch == default:
+        raise typer.BadParameter(
+            f"'{branch}' is the plugin's default branch on Canvas Platform. "
+            "To deploy to it, leave --branch out."
+        )
+    return branch or default, default
+
+
 def _push_snapshot(
-    client: PlatformClient, plugin_dir: Path, publisher: str, name: str, platform: str
+    client: PlatformClient,
+    plugin_dir: Path,
+    publisher: str,
+    name: str,
+    platform: str,
+    branch: str | None,
 ) -> str:
     """Register the plugin and push the package's committed contents as one new commit.
 
-    Returns the commit on the default branch.
+    Returns the commit on ``branch``, or on the default branch when ``branch`` is None.
     """
     snapshot = git.snapshot_source(plugin_dir)
     if not git.on_a_remote(plugin_dir):
@@ -485,14 +524,16 @@ def _push_snapshot(
             flush=True,
         )
     registered = client.register_plugin(publisher, name)
+    target, default = _target_and_default_branch(registered, branch)
     me = client.me()
     return git.push_snapshot(
         snapshot,
         name,
         registered["git_url"],
-        registered.get("default_branch") or "main",
+        target,
         platform,
         author=(me.get("name") or me["email"], me["email"]),
+        default_branch=default,
     )
 
 
@@ -505,22 +546,23 @@ def _push(
     *,
     assume_yes: bool,
     snapshot: bool,
+    branch: str | None,
 ) -> str:
-    """Register the plugin, connect its repository and push HEAD to the default branch.
+    """Register the plugin, connect its repository and push HEAD to ``branch``.
 
-    Returns the pushed commit.
+    ``branch`` defaults to the plugin's default branch. Returns the pushed commit.
     """
     if snapshot:
-        return _push_snapshot(client, plugin_dir, publisher, name, platform)
+        return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
     git.ensure_repo(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     registered = client.register_plugin(publisher, name)
+    target, _ = _target_and_default_branch(registered, branch)
     git.connect_remote(plugin_dir, registered["git_url"], platform)
     git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
-    branch = registered.get("default_branch") or "main"
-    git.push_head(plugin_dir, branch)
+    git.push_head(plugin_dir, target)
     sha = git.head_sha(plugin_dir)
-    print(f"Pushed {name} {sha[:12]} to {branch} on Canvas Platform.")
+    print(f"Pushed {name} {sha[:12]} to {target} on Canvas Platform.")
     return sha
 
 
@@ -537,6 +579,14 @@ def deploy(
     ),
     push_only: bool = typer.Option(
         False, "--push-only", help="Push HEAD to 'main' without deploying it to any instance."
+    ),
+    branch: str | None = typer.Option(
+        None,
+        "--branch",
+        help=(
+            "Push HEAD to this branch on Canvas Platform instead of 'main', and deploy it. "
+            "Platform deploys a commit not on 'main' only to your organization's test instances."
+        ),
     ),
     snapshot: bool = typer.Option(
         False,
@@ -584,6 +634,15 @@ def deploy(
     counts as the last snapshot. It refuses when `main` has changes to the package,
     such as a catalog listing edited in Canvas Platform, that the snapshot would
     replace, and asks at a terminal instead.
+
+    With --branch, deploy pushes HEAD, or the snapshot commit, to that branch on
+    Canvas Platform rather than `main`, and deploys that commit. Platform deploys a
+    commit not on `main` only to your organization's test instances, and refuses
+    other instances with a message naming them. It combines with --push-only and
+    --snapshot, and is refused with --ref or --no-push and for `main` or the
+    plugin's default branch. A snapshot on a branch builds on that branch's tip when
+    it exists and otherwise on `main`, and the checks against edits made in Canvas
+    Platform and against rolling back read `main`.
     """
     if push_only and (instance or ref is not None or no_push):
         raise typer.BadParameter(
@@ -593,8 +652,14 @@ def deploy(
         raise typer.BadParameter(
             "--snapshot pushes a new commit, so it takes no --ref or --no-push."
         )
+    if branch is not None and (ref is not None or no_push):
+        raise typer.BadParameter(
+            "--branch pushes HEAD to a branch, so it takes no --ref or --no-push."
+        )
     if not plugin_dir.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
+    if branch is not None:
+        _require_branch_name(plugin_dir, branch)
     name = manifest_name(plugin_dir)
     require_prefixed_name(name)
     pushing = ref is None and not no_push
@@ -606,7 +671,14 @@ def deploy(
     publisher = _publisher(client, name, pushing=pushing)
     if push_only:
         sha = _push(
-            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+            client,
+            plugin_dir,
+            publisher,
+            name,
+            platform,
+            assume_yes=assume_yes,
+            snapshot=snapshot,
+            branch=branch,
         )
         print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
         return
@@ -615,7 +687,14 @@ def deploy(
     targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
     if pushing:
         deploy_ref = _push(
-            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+            client,
+            plugin_dir,
+            publisher,
+            name,
+            platform,
+            assume_yes=assume_yes,
+            snapshot=snapshot,
+            branch=branch,
         )
     else:
         deploy_ref = ref or "main"

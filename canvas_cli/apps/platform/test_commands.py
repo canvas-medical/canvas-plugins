@@ -449,6 +449,132 @@ def test_deploy_refuses_a_package_nested_deeper_in_a_repository(
     assert not _requests_to(api, "POST", "/orgs/acme/plugins")
 
 
+# -- deploy --branch ---------------------------------------------------------
+
+
+def test_deploy_branch_pushes_head_to_that_branch_and_deploys_the_pushed_commit(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """--branch pushes HEAD to that branch instead of main and deploys the pushed commit."""
+    result = runner.invoke(
+        app, ["deploy", str(package), "--branch", "feature-x", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    head = _git(package, "rev-parse", "HEAD")
+    assert _git(bare, "rev-parse", "feature-x") == head
+    assert _git(bare, "for-each-ref", "refs/heads/main") == ""
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": head}
+    ]
+    assert f"Pushed {NAME} {head[:12]} to feature-x on Canvas Platform." in result.output
+
+
+def test_deploy_branch_surfaces_a_not_on_main_refusal(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """Platform deploys a commit that is not on main only to test instances, and says which."""
+    sentence = (
+        f"{NAME} at abc123def456 isn't on main, so it deploys only to your organization's "
+        "test instances: acme-staging."
+    )
+    api.post(f"{API}/deployments", status_code=400, json={"error": sentence, "code": "not_on_main"})
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--branch", "feature-x", "--instance", "acme-prod"]
+    )
+
+    assert result.exit_code == 1
+    assert sentence in result.output
+    assert _git(bare, "rev-parse", "feature-x") == _git(package, "rev-parse", "HEAD")
+
+
+def test_deploy_branch_push_only_pushes_the_branch_and_deploys_nothing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """--branch with --push-only moves the branch and never looks for an instance."""
+    result = runner.invoke(app, ["deploy", str(package), "--branch", "feature-x", "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x") == _git(package, "rev-parse", "HEAD")
+    assert not _requests_to(api, "GET", "/instances")
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+@pytest.mark.parametrize("extra", [["--ref", "v1.2.0"], ["--no-push"]])
+def test_deploy_branch_refuses_the_options_that_do_not_push(
+    extra: list[str],
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    signed_in: None,
+) -> None:
+    """A branch is something pushed, so an option that skips the push contradicts it."""
+    result = runner.invoke(app, ["deploy", str(package), "--branch", "feature-x", *extra])
+
+    assert result.exit_code == 2
+    assert "--branch pushes HEAD to a branch" in result.output
+    assert not api.called
+    assert _git(bare, "for-each-ref") == ""
+
+
+@pytest.mark.parametrize(
+    ("branch", "reason"),
+    [
+        ("main", "To deploy to 'main', leave --branch out."),
+        ("-x", "'-x' is not a valid branch name."),
+        ("a..b", "'a..b' is not a valid branch name."),
+        ("@{-1}", "'@{-1}' is not a valid branch name."),
+        ("feature x", "'feature x' is not a valid branch name."),
+    ],
+)
+def test_deploy_branch_refuses_main_and_invalid_names(
+    branch: str,
+    reason: str,
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    package: Path,
+    signed_in: None,
+) -> None:
+    """Deploying to main takes no --branch, and a name git rejects, or expands to another
+    branch, would push somewhere the person did not name.
+    """
+    _git(package, "checkout", "-q", "-b", "other")
+    _git(package, "checkout", "-q", "main")
+
+    result = runner.invoke(app, ["deploy", str(package), "--branch", branch])
+
+    assert result.exit_code == 2
+    assert reason in result.output
+    assert not api.called
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_branch_refuses_the_registered_default_branch(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """The plugin's default branch is what a plain deploy pushes, which Platform deploys anywhere."""
+    api.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={
+            "name": NAME,
+            "publisher": "acme",
+            "git_url": bare.as_uri(),
+            "default_branch": "trunk",
+        },
+    )
+
+    result = runner.invoke(app, ["deploy", str(package), "--branch", "trunk"])
+
+    assert result.exit_code == 2
+    assert "default branch" in result.output
+    assert _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert not _requests_to(api, "POST", "/deployments")
+    assert _git(bare, "for-each-ref") == ""
+    assert _git(package, "remote") == ""
+
+
 # -- deploy --snapshot -------------------------------------------------------
 
 
@@ -1143,6 +1269,86 @@ def test_deploy_snapshot_reports_a_refused_push(
     assert result.exit_code == 1
     assert "git push to Canvas Platform failed" in result.output
     assert "listing is invalid" in result.output
+
+
+def test_deploy_snapshot_branch_builds_on_main_when_the_branch_is_new(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A snapshot on a branch Platform does not have yet continues from main, leaving main alone."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    main_tip = _git(bare, "rev-parse", "main")
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x^") == main_tip
+    assert _git(bare, "rev-parse", "main") == main_tip
+    assert _git(bare, "rev-parse", f"feature-x:{NAME}") == _git(
+        monorepo, "rev-parse", f"HEAD:plugins/{NAME}"
+    )
+
+
+def test_deploy_snapshot_branch_builds_on_the_branch_tip_when_it_exists(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """A second snapshot on the branch continues from the branch, not from main."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+    runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+    first = _git(bare, "rev-parse", "feature-x")
+    _commit_in(monorepo, "handler.py", "x = 2\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x^") == first
+    assert _git(bare, "show", f"feature-x:{NAME}/handler.py") == "x = 2"
+
+
+def test_deploy_snapshot_branch_puts_an_unchanged_snapshot_on_the_new_branch(
+    api: requests_mock_module.Mocker, bare: Path, monorepo: Path, signed_in: None
+) -> None:
+    """With nothing new to commit, the new branch points at the commit main already has."""
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    main_tip = _git(bare, "rev-parse", "main")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "rev-parse", "feature-x") == main_tip
+    assert _git(bare, "rev-list", "--count", "main") == "1"
+
+
+def test_deploy_snapshot_branch_checks_platform_edits_on_main(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    monorepo: Path,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A catalog listing edited on main would be replaced by a snapshot built from main's tree,
+    even on another branch, so it is refused the same way.
+    """
+    runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"])
+    _commit_on_platform(bare, tmp_path, f"{NAME}/CANVAS_MANIFEST.json", EDITED_MANIFEST)
+    _commit_in(monorepo, "handler.py", "x = 1\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(monorepo), "--snapshot", "--branch", "feature-x", "--push-only"]
+    )
+
+    assert result.exit_code == 1
+    assert f"  {NAME}/CANVAS_MANIFEST.json" in result.output
+    assert _git(bare, "for-each-ref", "refs/heads/feature-x") == ""
 
 
 def test_deploy_reports_a_failed_target_and_exits_nonzero(

@@ -7,7 +7,7 @@ which git runs as the credential helper registered for the git server's host.
 
 A plugin inside a larger repository, such as a monorepo, is published as a
 snapshot instead: its committed package folder becomes the next commit on the
-plugin's ``main``, built in a scratch repository so the larger repository's
+plugin's ``main``, or on the branch ``--branch`` names, built in a scratch repository so the larger repository's
 remotes, config and index are never touched.
 """
 
@@ -399,6 +399,7 @@ def push_snapshot(
     platform: str,
     *,
     author: tuple[str, str],
+    default_branch: str | None = None,
 ) -> str:
     """Commit the snapshot onto ``branch`` of the plugin's repository, push it, and return it.
 
@@ -408,9 +409,16 @@ def push_snapshot(
     ``branch`` and keeps everything else at its root. When the contents are
     unchanged nothing is pushed, and the commit already on ``branch`` is returned.
 
+    ``default_branch`` is the plugin's default branch, which ``branch`` defaults to.
+    A ``branch`` that Canvas Platform does not have yet continues from the default
+    branch's tip, and the checks against edits made on Canvas Platform and against
+    rolling back always read the default branch. Unchanged contents on a new
+    ``branch`` push the default branch's commit to it without a new commit.
+
     ``author`` is the name and email the commit carries, set through the
     environment because a CI runner has no git identity of its own.
     """
+    default_branch = default_branch or branch
     with tempfile.TemporaryDirectory(prefix="canvas-snapshot-") as scratch:
         work = Path(scratch)
         _output(work, "init", "--bare", "-q", what="git init")
@@ -441,7 +449,13 @@ def push_snapshot(
                 "git fetch from Canvas Platform failed:\n"
                 + (fetch.stderr.strip() or "unknown error")
             )
-        tip = run(work, "rev-parse", "--verify", "-q", f"refs/platform/{branch}").stdout.strip()
+        target_tip = run(
+            work, "rev-parse", "--verify", "-q", f"refs/platform/{branch}"
+        ).stdout.strip()
+        default_tip = run(
+            work, "rev-parse", "--verify", "-q", f"refs/platform/{default_branch}"
+        ).stdout.strip()
+        tip = target_tip or default_tip
 
         kept = _output(work, "ls-tree", "-z", tip, what="git ls-tree").split("\0") if tip else []
         entries = [entry for entry in kept if entry and entry.split("\t", 1)[1] != name]
@@ -456,9 +470,14 @@ def push_snapshot(
 
         if tip:
             if root == _output(work, "rev-parse", f"{tip}^{{tree}}", what="git rev-parse").strip():
-                print(f"{branch} on Canvas Platform already holds this snapshot.")
+                if tip == target_tip:
+                    print(f"{branch} on Canvas Platform already holds this snapshot.")
+                    return tip
+                _push_ref(work, git_url, tip, branch)
+                print(f"Pushed {tip[:12]} to {branch}, which already holds this snapshot.")
                 return tip
-            _guard_platform_history(work, snapshot, tip, name, root, branch)
+            if default_tip:
+                _guard_platform_history(work, snapshot, default_tip, name, root, default_branch)
             print(_output(work, "diff", "--stat", tip, root, what="git diff").rstrip())
 
         message = (
@@ -486,15 +505,18 @@ def push_snapshot(
             what="git commit-tree",
         ).strip()
 
-        push = run(
-            work, "push", "-q", git_url, f"{commit}:refs/heads/{branch}", isolate_config=True
-        )
-        if push.returncode != 0:
-            raise GitError(
-                "git push to Canvas Platform failed:\n" + (push.stderr.strip() or "unknown error")
-            )
+        _push_ref(work, git_url, commit, branch)
         print(f"Pushed {commit[:12]} to {branch}, a snapshot of {snapshot.commit[:12]}.")
         return commit
+
+
+def _push_ref(work: Path, git_url: str, commit: str, branch: str) -> None:
+    """Push ``commit`` to ``branch`` of the plugin's repository from the scratch repository."""
+    push = run(work, "push", "-q", git_url, f"{commit}:refs/heads/{branch}", isolate_config=True)
+    if push.returncode != 0:
+        raise GitError(
+            "git push to Canvas Platform failed:\n" + (push.stderr.strip() or "unknown error")
+        )
 
 
 def _paths(work: Path, *args: str) -> set[str]:
