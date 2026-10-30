@@ -146,6 +146,40 @@ class PlatformClient:
         """``POST /api/v1/instances/<slug>/log-token``: a 15-minute token for reading logs."""
         return self.post(f"/api/v1/instances/{segment(slug)}/log-token")
 
+    def installed_plugins(self, slug: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/plugins``: Platform's inventory of the instance."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/plugins")
+
+    def variables(self, slug: str, name: str) -> list[dict[str, Any]]:
+        """``GET /api/v1/instances/<slug>/plugins/<name>/variables``: each variable's state."""
+        body = self.get(f"/api/v1/instances/{segment(slug)}/plugins/{segment(name)}/variables")
+        return body.get("variables", [])
+
+    def namespaces(self, slug: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/namespaces``: the instance's custom data namespaces."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/namespaces")
+
+    def namespace(self, slug: str, namespace: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/namespaces/<ns>``: a namespace's tables."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}")
+
+    def reset_namespace(self, slug: str, namespace: str, *, dry_run: bool) -> dict[str, Any]:
+        """``POST .../namespaces/<ns>/reset``: preview or perform a reset."""
+        return self._namespace_action(slug, namespace, "reset", dry_run)
+
+    def drop_namespace(self, slug: str, namespace: str, *, dry_run: bool) -> dict[str, Any]:
+        """``POST .../namespaces/<ns>/drop``: preview or perform a drop."""
+        return self._namespace_action(slug, namespace, "drop", dry_run)
+
+    def _namespace_action(
+        self, slug: str, namespace: str, action: str, dry_run: bool
+    ) -> dict[str, Any]:
+        flag = "true" if dry_run else "false"
+        return self.post(
+            f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}/{action}"
+            f"?dry_run={flag}"
+        )
+
     def set_variable(
         self, instance: str, name: str, key: str, value: str, sensitive: bool | None
     ) -> Any:

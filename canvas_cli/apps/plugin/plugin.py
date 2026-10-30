@@ -14,6 +14,7 @@ from pprint import pprint
 from typing import Any, cast
 from urllib.parse import urljoin
 
+import click
 import pathspec
 import requests
 import typer
@@ -21,6 +22,8 @@ from cookiecutter.exceptions import OutputDirExistsException
 from cookiecutter.main import cookiecutter
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+from canvas_cli.apps.platform.client import PlatformClient, PlatformError
+from canvas_cli.apps.platform.routing import managed_instance
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
@@ -476,6 +479,44 @@ def disable(
         raise typer.Exit(1)
 
 
+def _list_from_platform(client: PlatformClient, slug: str, host: str) -> None:
+    """Print the plugins Canvas Platform's inventory holds for the managed instance ``slug``.
+
+    A refusal from Platform is shown and never retried on credentials.ini. A 404 with no
+    ``code`` means this Platform does not serve the route.
+    """
+    try:
+        inventory = client.installed_plugins(slug)
+    except PlatformError as error:
+        if error.status == requests.codes.not_found and not error.code:
+            raise click.ClickException(
+                "Canvas Platform does not list plugins yet. To list them from the instance, "
+                "sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) and use "
+                "credentials.ini."
+            ) from error
+        raise
+    collected_at = inventory.get("collected_at")
+    if collected_at is None:
+        # Platform has never read the instance, so an empty list says nothing about it.
+        raise click.ClickException(
+            f"Canvas Platform has not read the plugins on {slug} yet. To list them from the "
+            "instance, sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) and use "
+            "credentials.ini."
+        )
+    print(
+        f"As of {collected_at} (Canvas Platform inventory)",
+        file=sys.stderr,
+        flush=True,
+    )
+    plugins = inventory.get("plugins", [])
+    if not plugins:
+        print(f"No plugins are currently installed on {host}")
+    for plugin in plugins:
+        print(
+            f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['enabled'] else 'disabled'}"
+        )
+
+
 def list(
     host: str | None = typer.Option(
         callback=get_default_host,
@@ -486,6 +527,10 @@ def list(
     """List all plugins from a Canvas instance."""
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    if (managed := managed_instance(host)) is not None:
+        _list_from_platform(*managed, host)
+        return
 
     token = get_or_request_api_token(host)
     headers = {"Authorization": f"Bearer {token}"}

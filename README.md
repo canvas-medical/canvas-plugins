@@ -14,9 +14,9 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 | Signs in as | you, as a member of your Canvas Platform organizations, or a service account of one organization | an OAuth client (`client_id` / `client_secret`) registered on one instance |
 | Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
 | Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
-| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `logs` for an instance Canvas Platform manages, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs` for any other instance, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
+| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `list`, `logs` and `namespace` for an instance Canvas Platform manages, and `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `list`, `logs` and `namespace` for any other instance, and `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
 
-A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform), and per instance for `logs` as described in [`canvas logs`](#canvas-logs).
+A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform), and per instance for `list`, `logs` and `namespace` as described in [Which instances go through Canvas Platform](#which-instances-go-through-canvas-platform).
 
 #### Migrating from `credentials.ini` to Canvas Platform
 
@@ -51,12 +51,18 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 #### Which plugins go through Canvas Platform
 
-`canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
+`canvas enable`, `canvas disable`, `canvas config list`, `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
 - A name without a prefix, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
 - Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
+
+#### Which instances go through Canvas Platform
+
+`canvas list`, `canvas namespace list` / `inspect` / `reset` / `drop` and `canvas logs` decide per instance. Signed in, with the instance in your list and managed by Canvas Platform, the command goes through platform; otherwise (signed out, `localhost`, an instance platform does not manage) it uses `credentials.ini`. A refusal from platform on a managed instance is shown as platform wrote it and is not retried with `credentials.ini`.
+
+`canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance; before platform has read the instance at all, the command says so and exits 1. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
 
 git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
 
@@ -274,6 +280,26 @@ $ canvas uninstall [OPTIONS] NAME
 - `--force`: Uninstall an enabled plugin from an instance directly
 - `--help`: Show this message and exit.
 
+## `canvas config list`
+
+List a plugin's variables and whether each is set; values are never shown. For a plugin Canvas Platform manages, the keys come from platform, and without `--instance` the only instance it is installed on is used. For any other plugin, they are read from the instance directly.
+
+**Usage**:
+
+```console
+$ canvas config list [OPTIONS] PLUGIN_NAME
+```
+
+**Arguments**:
+
+- `PLUGIN_NAME`: Plugin name to list variables for [required]
+
+**Options**:
+
+- `--instance TEXT`: Instance to read from, repeatable
+- `--host TEXT`: Canvas instance to connect to, for a plugin Canvas Platform does not manage
+- `--help`: Show this message and exit.
+
 ## `canvas config set` / `canvas config unset`
 
 Set or clear a plugin's variable values. For a plugin Canvas Platform manages, values are stored in platform and a configure deployment brings them to the running plugin; without `--instance`, the only instance it is installed on that you can configure is targeted. A variable's sensitivity comes from the manifest's `variables`, and `--secret` / `--variable` state it for a key no revision declares. For any other plugin, values are written to the instance directly, and `unset` sets them empty.
@@ -294,45 +320,47 @@ $ canvas config unset [OPTIONS] PLUGIN_NAME KEY...
 
 ## `canvas enable`
 
-Enable a plugin from a Canvas instance..
+Enable a plugin. For a plugin Canvas Platform manages, an enable deployment switches it on at each `--instance`; without `--instance`, the only instance it is installed on that you can deploy to is targeted. For any other plugin, it is enabled on the instance directly.
 
 **Usage**:
 
 ```console
-$ canvas enable [OPTIONS] NAME
+$ canvas enable [OPTIONS] PLUGIN_NAME
 ```
 
 **Arguments**:
 
-- `NAME`: Plugin name to enable [required]
+- `PLUGIN_NAME`: Plugin name to enable [required]
 
 **Options**:
 
-- `--host TEXT`: Canvas instance to connect to
+- `--instance TEXT`: Instance to enable it on, repeatable
+- `--host TEXT`: Canvas instance to connect to, for a plugin Canvas Platform does not manage
 - `--help`: Show this message and exit.
 
 ## `canvas disable`
 
-Disable a plugin from a Canvas instance..
+Disable a plugin. For a plugin Canvas Platform manages, a disable deployment switches it off at each `--instance`; without `--instance`, the only instance it is installed on that you can deploy to is targeted. For any other plugin, it is disabled on the instance directly.
 
 **Usage**:
 
 ```console
-$ canvas disable [OPTIONS] NAME
+$ canvas disable [OPTIONS] PLUGIN_NAME
 ```
 
 **Arguments**:
 
-- `NAME`: Plugin name to disable [required]
+- `PLUGIN_NAME`: Plugin name to disable [required]
 
 **Options**:
 
-- `--host TEXT`: Canvas instance to connect to
+- `--instance TEXT`: Instance to disable it on, repeatable
+- `--host TEXT`: Canvas instance to connect to, for a plugin Canvas Platform does not manage
 - `--help`: Show this message and exit.
 
 ## `canvas list`
 
-List all plugins from a Canvas instance.
+List all plugins from a Canvas instance. For an instance Canvas Platform manages, the list is platform's last inventory of it.
 
 **Usage**:
 
