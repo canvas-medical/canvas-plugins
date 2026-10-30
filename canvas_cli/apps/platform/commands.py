@@ -14,10 +14,11 @@ person signed in with ``canvas login``:
   * ``canvas enable`` / ``disable``, ``canvas config list`` / ``set`` / ``unset`` and
     ``canvas uninstall``: through platform for a plugin it manages, and directly
     against the instance otherwise.
-  * ``managed_instance``: whether an instance command (``list``, ``logs``,
-    ``namespace *``) goes through platform, which it does for an instance platform
-    manages.
   * ``canvas git-credential``: hidden; git runs it to mint a push token.
+
+``managed_instance``, defined in ``routing`` and re-exported here, decides whether an
+instance command (``list``, ``logs``, ``namespace *``) goes through platform, which it
+does for an instance platform manages.
 """
 
 from __future__ import annotations
