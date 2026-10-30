@@ -9,8 +9,12 @@ import pytest
 import plugin_runner.plugin_runner as runner_module
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import RunAgentRequest
-from canvas_sdk.agents import AgentRunResult
+from canvas_sdk.agents import AgentRunResult, ToolRegistry
+from canvas_sdk.agents.run_record import RunDeadlineExceeded, ToolCallRecord, current_recorder
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.agent import RunAgentEffect
+from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
+from canvas_sdk.effects.task.task import AddTask
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
@@ -439,8 +443,6 @@ def test_run_agent_fires_on_run_start_and_on_run_end_in_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Successful runs invoke on_run_start then on_run_end (no on_run_error)."""
-    from canvas_sdk.agents import AgentRunResult
-
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
     call_log: list[tuple[str, Any]] = []
 
@@ -534,8 +536,6 @@ def test_run_agent_sets_tools_allowed_from_manifest(
     captured: dict[str, Any] = {}
 
     def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
-        from canvas_sdk.agents import AgentRunResult
-
         captured["tools_allowed"] = self.tools_allowed
         return AgentRunResult(state=state, effects=[])
 
@@ -559,8 +559,6 @@ def test_run_agent_scopes_agent_tools_to_manifest_allowlist(
     registry the class was declared with. Disallowed tools are dropped
     entirely (their executors aren't reachable from the scoped registry).
     """
-    from canvas_sdk.agents import AgentRunResult, ToolRegistry
-
     # Equip the test agent with a fake tool registry containing three tools.
     full_registry = ToolRegistry()
     for tool_name in ("read_chart", "write_task", "send_message"):
@@ -621,6 +619,28 @@ def test_run_agent_grants_no_tools_when_manifest_omits_them(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_reloaded_plugins_narrower_grant_applies_at_once(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """An update that takes a tool away must not leave the old, wider grant in force."""
+    manifest_path = install_test_plugin / "CANVAS_MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["components"]["agents"][0]["tools"]["allowed"] = []
+    manifest_path.write_text(json.dumps(manifest))
+
+    runner_module.reload_plugin(install_test_plugin)
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin"}
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is True
+    assert list(response.effects) == []
+    assert response.agent_run.effects_dropped == 1
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_run_agent_drops_effects_no_granted_tool_declares(
     install_test_plugin: Path,
     load_test_plugins: None,
@@ -633,10 +653,6 @@ def test_run_agent_drops_effects_no_granted_tool_declares(
     The fixture grants `echo` (LOG). A task, a banner, and a nested RunAgentEffect
     built directly in agent code are dropped.
     """
-    from canvas_sdk.effects.agent import RunAgentEffect
-    from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
-    from canvas_sdk.effects.task.task import AddTask
-
     agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
     returned = [
         Effect(type=EffectType.LOG, payload="{}"),
@@ -670,12 +686,11 @@ def test_run_agent_reports_the_tool_loop_in_its_summary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Model and tool calls recorded during run() come back on the response, even on failure."""
-    from canvas_sdk.agents.run_record import ToolCallRecord, current_recorder
 
     def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
         recorder = current_recorder.get()
         assert recorder is not None
-        recorder.record_model_call()
+        recorder.reserve_model_call()
         recorder.record_tool_call(ToolCallRecord("echo", False, "ValueError", 12))
         recorder.record_stop("max_turns")
         raise RuntimeError("agent bug")
@@ -731,6 +746,7 @@ def test_run_agent_past_its_deadline_saves_nothing_and_emits_nothing(
         agent_cls, "save_state", lambda self, scope_key, state: saved.append(scope_key)
     )
     context = MagicMock()
+    context.time_remaining.return_value = None
     context.is_active.return_value = False
 
     response = next(iter(plugin_runner.RunAgent(_make_request(), context)))
@@ -771,3 +787,66 @@ def test_run_agent_answers_busy_when_agent_runs_fill_their_share_of_workers(
     assert served.success is True
     assert len(loaded) == 1
     assert slots.acquire(blocking=False), "a finished run must give its slot back"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_gives_the_tool_loop_the_calls_deadline_and_the_agents_ceiling(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The recorder the tool loop checks carries home-app's deadline and the agent's ceiling."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    monkeypatch.setattr(agent_cls, "max_model_calls", 7)
+    seen: list[tuple[float | None, int | None]] = []
+    original_run = agent_cls.run
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        recorder = current_recorder.get()
+        assert recorder is not None
+        seen.append((recorder.seconds_left(), recorder.max_model_calls))
+        return original_run(self, state, gateway, payload)
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+    context = MagicMock()
+    context.time_remaining.return_value = 600.0
+    context.is_active.return_value = True
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), context)))
+
+    assert response.success is True
+    [(seconds_left, ceiling)] = seen
+    assert seconds_left is not None and 560 < seconds_left <= 570
+    assert ceiling == 7
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_stopped_by_its_deadline_saves_nothing_and_skips_sentry(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run the tool loop stopped at its deadline fails quietly, without a half-saved state."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    saved: list[str] = []
+    monkeypatch.setattr(
+        agent_cls, "save_state", lambda self, scope_key, state: saved.append(scope_key)
+    )
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        raise RunDeadlineExceeded("the run reached its deadline")
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+    captured = MagicMock()
+    monkeypatch.setattr(runner_module.sentry_sdk, "capture_exception", captured)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is False
+    assert list(response.effects) == []
+    assert saved == []
+    captured.assert_not_called()

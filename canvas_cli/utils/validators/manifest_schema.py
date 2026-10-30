@@ -142,8 +142,8 @@ manifest_schema = {
             # `allowed` lists tool names and `@category` groups, and `denied`
             # subtracts from them. The plugin runner's `RunAgent` RPC resolves
             # both against the agent's registry (`ToolRegistry.resolve_allowed`)
-            # and swaps in a scoped registry before any lifecycle hook runs
-            # (doc §6.7). An entry without `tools.allowed` grants no tools, and
+            # and swaps in a scoped registry before any lifecycle hook runs.
+            # An entry without `tools.allowed` grants no tools, and
             # the agent may return only effect types its granted tools declare.
             "type": "array",
             "items": {

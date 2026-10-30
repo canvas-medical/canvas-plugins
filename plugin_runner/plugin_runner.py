@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from dataclasses import dataclass
 from http import HTTPStatus
-from time import sleep
+from time import monotonic, sleep
 from typing import TYPE_CHECKING, Any, NotRequired, TypedDict, cast
 
 import anthropic
@@ -45,6 +45,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
+from canvas_sdk.agents.run_record import RunDeadlineExceeded
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
@@ -257,10 +258,6 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
 
 
 AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
-
-
-class RunAgentDeadlineExceeded(Exception):
-    """The caller's RunAgent deadline passed while the agent was still running."""
 
 
 def _agent_run_summary(
@@ -613,6 +610,11 @@ class PluginRunner(PluginRunnerServicer):
             failure: EventResponse | None = None
             # run_tool_loop records model and tool calls here for home-app's run record.
             recorder = RunRecorder()
+            # The tool loop stops making model calls short of home-app's deadline, after
+            # which the run's lease can go to the next run of the same scope.
+            remaining = context.time_remaining() if context is not None else None
+            if remaining is not None:
+                recorder.deadline = monotonic() + remaining
             recorder_token = current_recorder.set(recorder)
             try:
                 with (
@@ -624,8 +626,9 @@ class PluginRunner(PluginRunnerServicer):
                     ),
                 ):
                     agent = agent_class()
+                    recorder.max_model_calls = agent.max_model_calls
                     # The manifest's components.agents[].tools grant is what the
-                    # agent may do (doc §6.7). `allowed` holds tool names and
+                    # agent may do. `allowed` holds tool names and
                     # `@category` references, `denied` is subtracted after
                     # expansion, and an agent whose manifest grants nothing gets
                     # no tools. The agent's registry is swapped for the scoped
@@ -641,7 +644,7 @@ class PluginRunner(PluginRunnerServicer):
                         note_id=request.note_id or None,
                     )
                     agent.run_id = request.run_id
-                    # Lifecycle hooks (doc §6.3): on_run_start before
+                    # Lifecycle hooks: on_run_start before
                     # load_state, on_run_end after a successful save_state,
                     # on_run_error if anything in between raises. Hook
                     # failures are swallowed by `_invoke_agent_hook` so a
@@ -651,9 +654,9 @@ class PluginRunner(PluginRunnerServicer):
                         state = agent.load_state(request.scope_key)
                         result = agent.run(state, gateway, trigger_payload)
                         if context is not None and not context.is_active():
-                            raise RunAgentDeadlineExceeded(
-                                f"RunAgent call for {request.agent_id} run {request.run_id} "
-                                "ended before run() returned; discarding its state and effects"
+                            raise RunDeadlineExceeded(
+                                "the RunAgent call ended before run() returned; "
+                                "its state and effects are discarded"
                             )
                         agent.save_state(request.scope_key, result.state)
                         _invoke_agent_hook(agent, "on_run_end", result)
@@ -674,8 +677,10 @@ class PluginRunner(PluginRunnerServicer):
                     error_kind=error_kind,
                     agent_run=_agent_run_summary(recorder),
                 )
-            except RunAgentDeadlineExceeded as exc:
-                log.warning(f"RunAgent: {exc}")
+            except RunDeadlineExceeded as exc:
+                log.warning(
+                    f"RunAgent: agent {request.agent_id} run {request.run_id} stopped: {exc}"
+                )
                 failure = EventResponse(
                     success=False, effects=[], agent_run=_agent_run_summary(recorder)
                 )
@@ -696,15 +701,10 @@ class PluginRunner(PluginRunnerServicer):
                 yield failure
                 return
 
-            # NOTE: classname is intentionally left empty for agent-emitted
-            # effects. On the home-app side, classname is treated as a
-            # CQM-Protocol identifier — e.g. ProtocolCardEffectInterpreter
-            # derives protocol_key from `{classname}|{plugin_name}` when
-            # classname is set, ignoring the effect's own `key` field.
-            # AgentPlugin subclasses are not CQM Protocol classes, so
-            # populating classname=<AgentSubclass> collapsed every protocol
-            # card from a given agent into a single row per patient
-            # (regardless of the agent's per-call UUID key). KOALA-5544.
+            # Agent effects carry no classname. home-app reads a classname as a CQM
+            # protocol identifier: ProtocolCardEffectInterpreter keys a card on
+            # `{classname}|{plugin_name}` when one is set, ignoring the effect's own
+            # `key`, which would put every card an agent emits for a patient in one row.
             granted_effects, ungranted = split_granted_effects(result.effects, granted_effect_types)
             for effect in ungranted:
                 log.warning(
@@ -1617,6 +1617,8 @@ def import_plugin(path: pathlib.Path) -> bool:
 
                 LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                # The manifest entry carries an agent's tool grant, which an update can narrow.
+                LOADED_PLUGINS[name_and_class]["handler"] = r.handler
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
                 LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
                 LOADED_PLUGINS[name_and_class]["usage_units"] = units
@@ -1814,7 +1816,10 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     # not loaded yet, so home-app sends every event until the first rebuild.
     EVENT_REGISTRY.mark_not_ready()
 
-    executor = ThreadPoolExecutor(max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS)
+    # Agent runs get their own threads, so a full set of agent runs leaves every worker to events.
+    executor = ThreadPoolExecutor(
+        max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS + settings.PLUGIN_RUNNER_MAX_AGENT_RUNS
+    )
     server = grpc.server(
         thread_pool=executor,
         options=(

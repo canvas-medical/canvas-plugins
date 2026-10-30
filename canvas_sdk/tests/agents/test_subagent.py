@@ -1,10 +1,15 @@
+import threading
 from types import SimpleNamespace
 from typing import Any
 
+import anthropic
+import httpx2
+import pytest
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagents
 from canvas_sdk.agents.run_record import RunRecorder, current_recorder
+from canvas_sdk.agents.subagent import MAX_PARALLEL
 from canvas_sdk.v1.plugin_database_context import (
     get_access_level,
     get_current_plugin,
@@ -91,3 +96,84 @@ def test_subagent_model_and_tool_calls_land_in_the_runs_recorder() -> None:
 
     assert recorder.model_calls == 4
     assert [(call.name, call.ok) for call in recorder.tool_calls] == [("read_chart", True)] * 2
+
+
+class _FailingGateway:
+    model = "claude-test"
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def client(self) -> SimpleNamespace:
+        def create(**kwargs: Any) -> None:
+            raise self.error
+
+        return SimpleNamespace(messages=SimpleNamespace(create=create))
+
+
+def test_a_subagents_gateway_error_is_raised_for_the_run_to_report() -> None:
+    """An outage or refusal inside a sub-agent ends the run as LLM_UNAVAILABLE or LLM_REFUSED."""
+    error = anthropic.APIConnectionError(
+        request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+    )
+    spec = SubAgentSpec(name="labs", system_prompt="x")
+
+    with pytest.raises(anthropic.APIConnectionError):
+        run_subagents(
+            [spec],
+            "question",
+            parent_tools=ToolRegistry(),
+            parent_ctx={},
+            gateway=_FailingGateway(error),  # type: ignore[arg-type]
+        )
+
+
+def test_any_other_subagent_failure_comes_back_as_its_result() -> None:
+    """The parent decides what to do about a sub-agent that failed on its own."""
+    spec = SubAgentSpec(name="labs", system_prompt="x")
+
+    results = run_subagents(
+        [spec],
+        "question",
+        parent_tools=ToolRegistry(),
+        parent_ctx={},
+        gateway=_FailingGateway(ValueError("bad prompt")),  # type: ignore[arg-type]
+    )
+
+    assert results == {"labs": "(sub-agent 'labs' failed: bad prompt)"}
+
+
+def test_max_parallel_is_capped() -> None:
+    """Each worker holds a database connection, so a fan-out cannot ask for unbounded threads."""
+    running: list[int] = []
+    peak: list[int] = [0]
+    lock = threading.Lock()
+    release = threading.Event()
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        with lock:
+            running.append(1)
+            peak[0] = max(peak[0], len(running))
+            if len(running) == MAX_PARALLEL:
+                release.set()
+        release.wait(timeout=5)
+        with lock:
+            running.pop()
+        return {}
+
+    specs = [
+        SubAgentSpec(name=f"s{i}", system_prompt="x", allowed_tool_names=frozenset({"read_chart"}))
+        for i in range(MAX_PARALLEL + 4)
+    ]
+    run_subagents(
+        specs,
+        "question",
+        parent_tools=tools,
+        parent_ctx={},
+        gateway=_FakeGateway(),  # type: ignore[arg-type]
+        max_parallel=100,
+    )
+
+    assert peak[0] == MAX_PARALLEL

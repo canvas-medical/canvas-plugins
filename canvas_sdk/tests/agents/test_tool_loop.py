@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Any
 
 import anthropic
@@ -15,7 +16,13 @@ from canvas_sdk.agents import (
     require_patient_id,
     run_tool_loop,
 )
-from canvas_sdk.agents.run_record import RunRecorder, current_recorder
+from canvas_sdk.agents.run_record import (
+    DEADLINE_MARGIN_SECONDS,
+    RunDeadlineExceeded,
+    RunRecorder,
+    current_recorder,
+)
+from canvas_sdk.agents.tool_loop import MAX_TOOL_RESULT_CHARS
 from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
 
@@ -425,3 +432,104 @@ def test_without_a_recorder_the_loop_records_nothing() -> None:
 
     assert result.stopped == "end_turn"
     assert current_recorder.get() is None
+
+
+def _with_recorder(recorder: RunRecorder, client: FakeGateway, **kwargs: Any) -> Any:
+    token = current_recorder.set(recorder)
+    try:
+        return _run(client, **kwargs)
+    finally:
+        current_recorder.reset(token)
+
+
+def test_the_loop_stops_at_the_runs_model_call_ceiling() -> None:
+    """The ceiling covers the whole run, so calls already made count against it."""
+    client = FakeGateway(_response("tool_use", _tool_use("read_chart", "t1")))
+    recorder = RunRecorder(model_calls=2, max_model_calls=3)
+
+    result = _with_recorder(recorder, client)
+
+    assert (result.stopped, result.turns) == ("call_limit", 1)
+    assert len(client.requests) == 1
+    assert (recorder.model_calls, recorder.stop_reason) == (3, "call_limit")
+
+
+def test_the_loop_raises_once_the_run_is_inside_its_deadline_margin() -> None:
+    """No model call starts that could not finish before the run's deadline."""
+    client = FakeGateway(_response("end_turn", _text("late")))
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS - 1)
+
+    with pytest.raises(RunDeadlineExceeded):
+        _with_recorder(recorder, client)
+
+    assert client.requests == []
+
+
+def test_each_model_call_gets_the_time_left_split_across_its_retries() -> None:
+    """Retries of one call cannot carry it past the run's deadline."""
+    client = FakeGateway(_response("end_turn", _text("done")))
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + 90)
+
+    _with_recorder(recorder, client)
+
+    assert 29 < client.requests[0]["timeout"] <= 30
+
+
+def test_without_a_deadline_model_calls_carry_no_timeout() -> None:
+    """Outside a platform run the client's own timeout applies."""
+    client = FakeGateway(_response("end_turn", _text("done")))
+
+    _run(client)
+
+    assert "timeout" not in client.requests[0]
+
+
+def test_a_long_tool_result_is_cut_and_says_so() -> None:
+    """One oversized result cannot push the next call past the context window."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="dump", description="x", input_schema={"type": "object"})
+    def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        return "x" * (MAX_TOOL_RESULT_CHARS * 2)
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("dump", "t1")), _response("end_turn", _text("ok"))
+    )
+
+    result = _run(client, tools=tools)
+
+    content = result.messages[2]["content"][0]["content"]
+    assert content.startswith('"' + "x" * 100)
+    assert content.endswith("to see the rest.]"), (
+        "the model is told the result was cut and how to see the rest"
+    )
+    assert f"Result cut at {MAX_TOOL_RESULT_CHARS} of" in content
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        anthropic.APIConnectionError(
+            request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+        ),
+        RunDeadlineExceeded("the run reached its deadline"),
+    ],
+    ids=["gateway-error", "deadline"],
+)
+def test_a_tool_that_hits_a_gateway_error_or_the_deadline_ends_the_run(error: Exception) -> None:
+    """A composition tool's sub-agent failure is the run's failure, not a result to recover from."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="brief", description="x", input_schema={"type": "object"})
+    def _brief(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise error
+
+    client = FakeGateway(_response("tool_use", _tool_use("brief", "t1")))
+    recorder = RunRecorder()
+
+    with pytest.raises(type(error)):
+        _with_recorder(recorder, client, tools=tools)
+
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("brief", False, "aborted")
+    ]
