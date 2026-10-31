@@ -36,6 +36,7 @@ def _record(staff: Any, status: str, **fields: Any) -> AgentRun:
         queued_at=datetime(2026, 10, 29, tzinfo=UTC),
         attempts=0,
         stop_reason="",
+        capabilities=[],
         **fields,
     )
 

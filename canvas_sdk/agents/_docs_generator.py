@@ -132,6 +132,16 @@ def _format_tool_block(name: str) -> str:
         category_tags = " · ".join(f"`@{c}`" for c in categories)
         parts.append(f"**Category:** {category_tags}")
         parts.append("")
+    requirements = [
+        f"the `{capability.value}` capability"
+        for capability in sorted(standard_tools.required_capabilities_for(name))
+    ] + [f"`{permission}`" for permission in sorted(standard_tools.required_permissions_for(name))]
+    if requirements:
+        parts.append(
+            f"**Offered only to runs with:** {', '.join(requirements)}. The platform hides "
+            "it from other runs."
+        )
+        parts.append("")
     # Description: keep paragraphs together but normalize internal whitespace.
     description = " ".join(definition["description"].split())
     parts.append(description)

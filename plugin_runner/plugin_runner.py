@@ -45,7 +45,12 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-from canvas_sdk.agents import LLMGatewayConfigurationError, RunSubject
+from canvas_sdk.agents import (
+    Capability,
+    LLMGatewayConfigurationError,
+    RunRequester,
+    RunSubject,
+)
 from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.run_record import (
@@ -622,21 +627,37 @@ class PluginRunner(PluginRunnerServicer):
                 ):
                     agent = agent_class()
                     recorder.max_model_calls = agent.max_model_calls
+                    # home-app validated the subject and decided the requester's
+                    # permissions and capabilities before enqueuing the run. A
+                    # capability this SDK does not know names nothing its tools
+                    # check, so it is left out.
+                    agent.subject = RunSubject(
+                        patient_id=request.subject.patient_id or None,
+                        note_id=request.subject.note_id or None,
+                        claim_id=request.subject.claim_id or None,
+                    )
+                    agent.requester = RunRequester(
+                        staff_id=request.requester.staff_id or None,
+                        permissions=(
+                            None
+                            if request.requester.all_permissions
+                            else frozenset(request.requester.permissions)
+                        ),
+                    )
+                    agent.capabilities = frozenset(
+                        Capability(name)
+                        for name in request.capabilities
+                        if name in {known.value for known in Capability}
+                    )
                     # The manifest's components.agents[].tools grant is what the
-                    # agent may do. `allowed` holds tool names and
-                    # `@category` references, `denied` is subtracted after
-                    # expansion, and an agent whose manifest grants nothing gets
-                    # no tools. The agent's registry is swapped for the scoped
-                    # view, and the effect types the granted tools declare bound
-                    # what the agent may return below.
+                    # agent may do, less the tools its requester could not use.
+                    # `allowed` holds tool names and `@category` references,
+                    # `denied` is subtracted after expansion, and an agent whose
+                    # manifest grants nothing gets no tools. The agent's registry is
+                    # swapped for the scoped view, and the effect types the
+                    # remaining tools declare bound what the agent may return below.
                     granted_effect_types = apply_tool_grant(
                         agent, (plugin.get("handler") or {}).get("tools") or {}
-                    )
-                    # home-app validated the subject before enqueuing the run.
-                    agent.subject = RunSubject(
-                        patient_id=request.patient_id or None,
-                        staff_id=request.staff_id or None,
-                        note_id=request.note_id or None,
                     )
                     agent.run_id = request.run_id
                     # Lifecycle hooks: on_run_start before
@@ -714,8 +735,8 @@ class PluginRunner(PluginRunnerServicer):
                     # The agent, not the trigger handler that started it, so the
                     # security audit names the agent behind each write.
                     handler_name=class_name,
-                    actor=request.actor,
-                    source=request.source or "agent",
+                    actor=request.requester.actor,
+                    source=request.requester.source or "agent",
                 )
                 for effect in granted_effects
             ]

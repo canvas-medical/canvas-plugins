@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"\x16\n\x14ReloadPluginsRequest\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13ReloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14ReloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13UnloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14UnloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\" \n\x1eGetRegisteredEventTypesRequest\"_\n\x1fGetRegisteredEventTypesResponse\x12\x13\n\x0b\x65vent_types\x18\x01 \x03(\t\x12\x18\n\x10registry_version\x18\x02 \x01(\t\x12\r\n\x05ready\x18\x03 \x01(\x08\"\xe0\x01\n\x0fRunAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x11\n\tscope_key\x18\x02 \x01(\t\x12\x0e\n\x06run_id\x18\x03 \x01(\t\x12\x17\n\x0ftrigger_payload\x18\x04 \x01(\t\x12\x13\n\x0bplugin_name\x18\x05 \x01(\t\x12\x14\n\x0chandler_name\x18\x06 \x01(\t\x12\r\n\x05\x61\x63tor\x18\x07 \x01(\t\x12\x0e\n\x06source\x18\x08 \x01(\t\x12\x12\n\npatient_id\x18\t \x01(\t\x12\x10\n\x08staff_id\x18\n \x01(\t\x12\x0f\n\x07note_id\x18\x0b \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"\x16\n\x14ReloadPluginsRequest\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13ReloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14ReloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13UnloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14UnloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\" \n\x1eGetRegisteredEventTypesRequest\"_\n\x1fGetRegisteredEventTypesResponse\x12\x13\n\x0b\x65vent_types\x18\x01 \x03(\t\x12\x18\n\x10registry_version\x18\x02 \x01(\t\x12\r\n\x05ready\x18\x03 \x01(\x08\"\xea\x01\n\x0fRunAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x11\n\tscope_key\x18\x02 \x01(\t\x12\x0e\n\x06run_id\x18\x03 \x01(\t\x12\x17\n\x0ftrigger_payload\x18\x04 \x01(\t\x12\x13\n\x0bplugin_name\x18\x05 \x01(\t\x12\x14\n\x0chandler_name\x18\x06 \x01(\t\x12%\n\trequester\x18\x07 \x01(\x0b\x32\x12.RunAgentRequester\x12!\n\x07subject\x18\x08 \x01(\x0b\x32\x10.RunAgentSubject\x12\x14\n\x0c\x63\x61pabilities\x18\t \x03(\t\"r\n\x11RunAgentRequester\x12\r\n\x05\x61\x63tor\x18\x01 \x01(\t\x12\x0e\n\x06source\x18\x02 \x01(\t\x12\x10\n\x08staff_id\x18\x03 \x01(\t\x12\x13\n\x0bpermissions\x18\x04 \x03(\t\x12\x17\n\x0f\x61ll_permissions\x18\x05 \x01(\x08\"H\n\x0fRunAgentSubject\x12\x12\n\npatient_id\x18\x01 \x01(\t\x12\x0f\n\x07note_id\x18\x02 \x01(\t\x12\x10\n\x08\x63laim_id\x18\x03 \x01(\tb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -48,5 +48,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETREGISTEREDEVENTTYPESRESPONSE']._serialized_start=303
   _globals['_GETREGISTEREDEVENTTYPESRESPONSE']._serialized_end=398
   _globals['_RUNAGENTREQUEST']._serialized_start=401
-  _globals['_RUNAGENTREQUEST']._serialized_end=625
+  _globals['_RUNAGENTREQUEST']._serialized_end=635
+  _globals['_RUNAGENTREQUESTER']._serialized_start=637
+  _globals['_RUNAGENTREQUESTER']._serialized_end=751
+  _globals['_RUNAGENTSUBJECT']._serialized_start=753
+  _globals['_RUNAGENTSUBJECT']._serialized_end=825
 # @@protoc_insertion_point(module_scope)

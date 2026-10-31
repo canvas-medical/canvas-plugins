@@ -1,17 +1,28 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.note_helpers import find_open_note
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.state import AgentState
-from canvas_sdk.agents.subject import RunSubject
+from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
 # The tool context keys AgentPlugin.tool_context sets from the run.
 TOOL_CONTEXT_KEYS = frozenset(
-    {"patient_id", "staff_id", "note_id", "effects", "gateway", "parent_tools"}
+    {
+        "patient_id",
+        "staff_id",
+        "note_id",
+        "claim_id",
+        "permissions",
+        "capabilities",
+        "effects",
+        "gateway",
+        "parent_tools",
+    }
 )
 
 
@@ -52,10 +63,17 @@ class AgentPlugin(ABC):
     # with stopped="call_limit" when a run reaches it. Override on the subclass.
     max_model_calls: int = 40
 
-    # Who and what this run is about, validated by the platform and set on the
-    # agent instance before lifecycle hooks fire. ``run_tool_loop`` hands it to
-    # every tool, so tools act on the platform's patient, not one the agent chose.
+    # What this run is about, validated by the platform and set on the agent
+    # instance before lifecycle hooks fire. ``run_tool_loop`` hands it to every
+    # tool, so tools act on the platform's patient, not one the agent chose.
     subject: RunSubject = RunSubject()
+
+    # Who started this run, taken by the platform from the event and set with the subject.
+    requester: RunRequester = RunRequester()
+
+    # What this run may do beyond its manifest's tool grant, decided by the platform
+    # from the requester's permissions and set with the subject.
+    capabilities: frozenset[Capability] = frozenset()
 
     # This run's id, the id of its canvas_sdk.v1.data.AgentRun record, set by the
     # platform with the subject. Plugin-owned audit rows can carry it to join that record.
@@ -122,7 +140,8 @@ class AgentPlugin(ABC):
     ) -> dict[str, Any]:
         """The context every tool call of this run receives.
 
-        Holds the run's subject (``patient_id``, ``staff_id``, ``note_id``), a fresh
+        Holds the run's subject (``patient_id``, ``note_id``, ``claim_id``), its
+        requester's ``staff_id`` and ``permissions``, its ``capabilities``, a fresh
         ``effects`` list, and the ``gateway`` and ``parent_tools`` that composition
         tools hand to sub-agents. ``note_id`` is the subject's note, or for a run a
         staff member started, that staff member's open note on the patient.
@@ -134,15 +153,19 @@ class AgentPlugin(ABC):
                 f"{reserved} are set from the run; pass only agent-specific keys in ctx"
             )
         subject = self.subject
+        staff_id = self.requester.staff_id
         note_id = subject.note_id
-        if note_id is None and subject.patient_id and subject.staff_id:
-            note = find_open_note(subject.patient_id, provider_id=subject.staff_id)
+        if note_id is None and subject.patient_id and staff_id:
+            note = find_open_note(subject.patient_id, provider_id=staff_id)
             note_id = str(note.id) if note is not None else None
         return {
             **extra,
             "patient_id": subject.patient_id,
-            "staff_id": subject.staff_id,
+            "staff_id": staff_id,
             "note_id": note_id,
+            "claim_id": subject.claim_id,
+            "permissions": self.requester.permissions,
+            "capabilities": frozenset(self.capabilities),
             "effects": [],
             "gateway": gateway,
             "parent_tools": self.tools,

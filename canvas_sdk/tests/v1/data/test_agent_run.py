@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from canvas_sdk.test_utils.factories import PatientFactory
-from canvas_sdk.v1.data import AgentRun, AgentRunStatus, AgentRunToolCall
+from canvas_sdk.v1.data import AgentRun, AgentRunStatus, AgentRunSubject, AgentRunToolCall
 
 
 def _run(**fields: object) -> AgentRun:
@@ -21,6 +21,7 @@ def _run(**fields: object) -> AgentRun:
         "queued_at": datetime(2026, 10, 29, tzinfo=UTC),
         "attempts": 0,
         "stop_reason": "end_turn",
+        "capabilities": [],
     }
     return AgentRun.objects.create(**{**defaults, **fields})
 
@@ -45,3 +46,15 @@ def test_a_run_is_found_by_the_run_id_its_effect_carried() -> None:
     _run(id=run_id, status=AgentRunStatus.GAVE_UP)
 
     assert AgentRun.objects.get(id=run_id).status == "gave_up"
+
+
+@pytest.mark.django_db
+def test_a_runs_subject_and_capabilities_are_readable() -> None:
+    """Plugins find runs about a claim, and see what each run was allowed to do."""
+    run = _run(scope="claim", scope_key="claim:c1", capabilities=["revenue"])
+    AgentRunSubject.objects.create(run=run, kind="claim", ref_id="c1")
+
+    found = AgentRun.objects.get(subjects__kind="claim", subjects__ref_id="c1")
+
+    assert found == run
+    assert found.capabilities == ["revenue"]

@@ -8,7 +8,11 @@ import pytest
 
 import plugin_runner.plugin_runner as runner_module
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import RunAgentRequest
+from canvas_generated.messages.plugins_pb2 import (
+    RunAgentRequest,
+    RunAgentRequester,
+    RunAgentSubject,
+)
 from canvas_sdk.agents import AgentRunResult, ToolRegistry
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, ToolCallRecord, current_recorder
 from canvas_sdk.effects import Effect
@@ -61,11 +65,8 @@ def _make_request(
         trigger_payload=trigger_payload,
         plugin_name=plugin_name,
         handler_name=handler_name,
-        actor=actor,
-        source=source,
-        patient_id="p1",
-        staff_id="s1",
-        note_id="n1",
+        requester=RunAgentRequester(actor=actor, source=source, staff_id="s1"),
+        subject=RunAgentSubject(patient_id="p1", note_id="n1"),
     )
 
 
@@ -117,7 +118,7 @@ def test_run_agent_happy_path_returns_emitted_effect(
     assert body == {
         "loaded_with": "patient:p1",
         "trigger": {"message": "hi"},
-        "subject": ["p1", "s1", "n1"],
+        "subject": ["p1", "s1", "n1", None, []],
         "run_id": "run-1",
         "gateway_model": "claude-sonnet-4-6",
     }
@@ -132,11 +133,37 @@ def test_run_agent_leaves_absent_subject_fields_unset(
 ) -> None:
     """A run with no requester, such as one a system event started, has no staff_id."""
     request = _make_request()
-    request.staff_id = ""
+    request.requester.staff_id = ""
 
     (response,) = plugin_runner.RunAgent(request, None)
 
-    assert json.loads(response.effects[0].payload)["subject"] == ["p1", None, "n1"]
+    assert json.loads(response.effects[0].payload)["subject"] == ["p1", None, "n1", None, []]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_sets_the_claim_and_capabilities_from_the_request(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """The claim and the capabilities the platform granted reach the agent.
+
+    A capability this SDK does not know is left out rather than failing the run.
+    """
+    request = _make_request()
+    request.subject.claim_id = "c1"
+    request.capabilities.extend(["revenue", "from_a_newer_platform"])
+
+    (response,) = plugin_runner.RunAgent(request, None)
+
+    assert json.loads(response.effects[0].payload)["subject"] == [
+        "p1",
+        "s1",
+        "n1",
+        "c1",
+        ["revenue"],
+    ]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -556,6 +583,47 @@ def test_run_agent_sets_tools_allowed_from_manifest(
     next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
     assert captured["tools_allowed"] == frozenset({"echo"})
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+@pytest.mark.parametrize(
+    ("permissions", "all_permissions", "offered"),
+    [
+        (["api.view_task"], False, {"echo"}),
+        (["api.change_task"], False, {"echo", "close_task"}),
+        ([], True, {"echo", "close_task"}),
+    ],
+    ids=["lacks-the-permission", "holds-the-permission", "not-limited"],
+)
+def test_run_agent_hides_tools_the_requester_cannot_use(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    permissions: list[str],
+    all_permissions: bool,
+    offered: set[str],
+) -> None:
+    """The requester's permissions from home-app reach the agent and narrow its granted tools."""
+    LOADED_PLUGINS[AGENT_KEY]["handler"]["tools"] = {"allowed": ["echo", "close_task"]}
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    captured: dict[str, Any] = {}
+
+    def _capture(self, state, gateway, trigger_payload):  # type: ignore[no-untyped-def]
+        captured["tools_allowed"] = self.tools_allowed
+        captured["permissions"] = self.requester.permissions
+        return AgentRunResult(state=state, effects=[])
+
+    monkeypatch.setattr(agent_cls, "run", _capture)
+    request = _make_request()
+    request.requester.permissions.extend(permissions)
+    request.requester.all_permissions = all_permissions
+
+    next(iter(plugin_runner.RunAgent(request, None)))
+
+    assert captured["tools_allowed"] == frozenset(offered)
+    assert captured["permissions"] == (None if all_permissions else frozenset(permissions))
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
