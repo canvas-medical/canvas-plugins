@@ -27,6 +27,7 @@ note, which :meth:`AgentPlugin.run_tool_loop` finds for a run a staff
 member started.
 """
 
+import json
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
@@ -40,6 +41,7 @@ from canvas_sdk.agents import (
     LLMGateway,
     window_messages,
 )
+from canvas_sdk.v1.data import AgentRunProposal, AgentRunProposalStatus
 from logger import log
 
 SYSTEM_PROMPT = (
@@ -168,13 +170,27 @@ SYSTEM_PROMPT = (
     "Approval: tasks, banners, protocol cards, and review notes take effect "
     "only after the clinician approves them. Those tools return "
     "`status: awaiting_approval`; say the change is waiting for their "
-    "approval in the card below your reply, and never say it was made.\n\n"
+    "approval in the card below your reply, and never say it was made. "
+    "A later message starting `[Approval decisions` records what the clinician "
+    "decided on those proposals; trust it over the earlier `awaiting_approval` "
+    "results, and never propose a denied change again unless asked.\n\n"
     "For discussion or summary, stay read-only. Use write tools only when "
     "the clinician explicitly asks. Keep responses concise and clinically "
     "focused. Plain text only — no markdown headings."
 )
 
 MAX_TURNS = 8
+
+# Starts the note recording what became of the changes the agent proposed, so the model
+# knows on its next call and the chat leaves the note out of what the clinician sees.
+DECISIONS_NOTE_PREFIX = "[Approval decisions, recorded by the chat, not from the clinician]"
+
+DECISION_TEXT = {
+    AgentRunProposalStatus.APPROVED: "approved by the clinician and applied",
+    AgentRunProposalStatus.DENIED: "denied by the clinician; nothing changed",
+    AgentRunProposalStatus.FAILED: "approved, but could not be applied; nothing changed",
+    AgentRunProposalStatus.EXPIRED: "expired without a decision; nothing changed",
+}
 
 # The most history a conversation keeps: twice what one model call sends, so the
 # clinician can scroll back past the model's window without the row growing forever.
@@ -207,6 +223,69 @@ def _save_conversation_messages(
         conversation.save()
 
 
+def is_decisions_note(message: dict[str, Any]) -> bool:
+    """Whether ``message`` is the chat's note of proposal decisions rather than a clinician's."""
+    content = message.get("content")
+    return (
+        message.get("role") == "user"
+        and isinstance(content, list)
+        and len(content) == 1
+        and isinstance(content[0], dict)
+        and str(content[0].get("text", "")).startswith(DECISIONS_NOTE_PREFIX)
+    )
+
+
+def _proposed_ids(messages: list[dict[str, Any]]) -> list[str]:
+    """The proposal ids the tool results in ``messages`` told the model are awaiting approval."""
+    ids: list[str] = []
+    for message in messages:
+        content = message.get("content")
+        if message.get("role") != "user" or not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "tool_result":
+                continue
+            try:
+                result = json.loads(block.get("content") or "")
+            except ValueError:
+                continue
+            if isinstance(result, dict) and result.get("status") == "awaiting_approval":
+                ids.extend(str(proposal_id) for proposal_id in result.get("proposal_ids") or [])
+    return ids
+
+
+def record_decisions(messages: list[dict[str, Any]], staff_id: str) -> list[dict[str, Any]]:
+    """Return ``messages`` with a note of the proposals decided since the model last heard.
+
+    A proposal the conversation is still waiting on, and that the clinician has approved,
+    denied, or let expire, goes into one note, so the model never treats a decided change
+    as pending or a denied one as made.
+    """
+    recorded = "\n".join(
+        str(message["content"][0]["text"]) for message in messages if is_decisions_note(message)
+    )
+    waiting = [
+        proposal_id for proposal_id in _proposed_ids(messages) if proposal_id not in recorded
+    ]
+    if not waiting:
+        return messages
+    decided = (
+        AgentRunProposal.objects.filter(id__in=waiting, staff__id=staff_id)
+        .exclude(status=AgentRunProposalStatus.PENDING)
+        .order_by("created_at")
+    )
+    lines = []
+    for proposal in decided:
+        line = f"- proposal {proposal.id} ({proposal.tool}): {DECISION_TEXT[proposal.status]}"
+        if proposal.reason:
+            line += f". Reason: {proposal.reason}"
+        lines.append(line)
+    if not lines:
+        return messages
+    note = "\n".join([DECISIONS_NOTE_PREFIX, *lines])
+    return [*messages, {"role": "user", "content": [{"type": "text", "text": note}]}]
+
+
 class ChartChatAgent(AgentPlugin):
     """Chat agent backing the in-chart conversation surface.
 
@@ -235,9 +314,13 @@ class ChartChatAgent(AgentPlugin):
         gateway: LLMGateway,
         trigger_payload: dict,
     ) -> AgentRunResult:
-        """Answer the clinician's new message through the tool-use loop."""
+        """Answer the clinician's new message through the tool-use loop.
+
+        Each run first records the decisions on the agent's earlier proposals, so the
+        model hears of them before the clinician's message.
+        """
         messages = [
-            *state.data["messages"],
+            *record_decisions(state.data["messages"], self.requester.staff_id),
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         result = self.run_tool_loop(

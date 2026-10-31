@@ -1,7 +1,14 @@
 import json
+from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
 
 import pytest
-from agent_runner_poc.agents.chart_chat import ChartChatAgent, load_conversation_messages
+from agent_runner_poc.agents.chart_chat import (
+    DECISIONS_NOTE_PREFIX,
+    ChartChatAgent,
+    load_conversation_messages,
+)
 
 from canvas_sdk.agents import AgentPlugin, RunRequester, RunSubject
 from canvas_sdk.effects import EffectType
@@ -14,6 +21,7 @@ from canvas_sdk.test_utils.agents import (
     tool_use,
 )
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
 
 
 def _agent_for(patient_id: str, staff_id: str) -> AgentPlugin:
@@ -115,3 +123,129 @@ def test_a_task_the_clinician_asks_for_waits_for_their_approval() -> None:
     assert json.loads(proposal.payload)["data"]["effect"]["type"] == "CREATE_TASK"
     tool_result = gateway.requests[1]["messages"][-1]["content"][0]["content"]
     assert json.loads(tool_result)["status"] == "awaiting_approval"
+
+
+def _proposal(staff: Any, status: str, reason: str = "") -> AgentRunProposal:
+    """A proposal the chat agent made for ``staff``, decided as ``status``."""
+    run = AgentRun.objects.create(
+        id=uuid4(),
+        plugin_name="agent_runner_poc",
+        agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
+        handler_name="agent_runner_poc.applications.chart_chat:ChartChatAPI",
+        scope="patient_and_staff",
+        scope_key="k",
+        staff=staff,
+        status=AgentRunStatus.SUCCEEDED,
+        error_kind="",
+        error="",
+        queued_at=datetime(2026, 10, 31, tzinfo=UTC),
+        attempts=0,
+        stop_reason="",
+        capabilities=[],
+    )
+    return AgentRunProposal.objects.create(
+        id=uuid4(),
+        run=run,
+        plugin_name="agent_runner_poc",
+        agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
+        tool="create_task",
+        arguments={"title": "Call about labs"},
+        effect_type="CREATE_TASK",
+        staff=staff,
+        status=status,
+        created_at=datetime(2026, 10, 31, tzinfo=UTC),
+        expires_at=datetime(2026, 10, 31, 1, tzinfo=UTC),
+        reason=reason,
+    )
+
+
+def _proposing_conversation(*proposals: AgentRunProposal) -> list[dict[str, Any]]:
+    """A conversation in which the agent told the clinician the proposals await approval."""
+    awaiting = {"status": "awaiting_approval", "proposal_ids": [str(p.id) for p in proposals]}
+    return [
+        {"role": "user", "content": "Add a task to call her about labs."},
+        {
+            "role": "assistant",
+            "content": [{"type": "tool_use", "id": "t1", "name": "create_task", "input": {}}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "tool_result", "tool_use_id": "t1", "content": json.dumps(awaiting)}
+            ],
+        },
+        {"role": "assistant", "content": [{"type": "text", "text": "It awaits your approval."}]},
+    ]
+
+
+def _start(agent: AgentPlugin, messages: list[dict[str, Any]]) -> None:
+    state = agent.load_state("patient_and_staff")
+    state.data["messages"] = messages
+    agent.save_state("patient_and_staff", state)
+
+
+@pytest.mark.django_db
+def test_an_approval_is_recorded_in_the_conversation_before_the_next_message() -> None:
+    """The next run writes the outcome into the stored conversation, ahead of the question."""
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+    approved = _proposal(staff, AgentRunProposalStatus.APPROVED)
+    agent = _agent_for(patient.id, staff.id)
+    _start(agent, _proposing_conversation(approved))
+
+    run_agent(agent, FakeGateway(reply(text("Done."))), {"user_message": "Anything else?"})
+
+    note, question = load_conversation_messages(patient.id, staff.id)[4:6]
+    assert question == {"role": "user", "content": "Anything else?"}
+    assert note["role"] == "user"
+    assert note["content"][0]["text"] == (
+        f"{DECISIONS_NOTE_PREFIX}\n"
+        f"- proposal {approved.id} (create_task): approved by the clinician and applied"
+    )
+
+
+@pytest.mark.django_db
+def test_the_model_hears_of_a_denial_before_the_next_message_and_only_once() -> None:
+    """A denial and its reason reach the model; a pending proposal is left until decided."""
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+    denied = _proposal(staff, AgentRunProposalStatus.DENIED, reason="Already called her")
+    pending = _proposal(staff, AgentRunProposalStatus.PENDING)
+    agent = _agent_for(patient.id, staff.id)
+    _start(agent, _proposing_conversation(denied, pending))
+    gateway = FakeGateway(reply(text("Understood.")), reply(text("Sure.")))
+
+    run_agent(agent, gateway, {"user_message": "OK, what next?"})
+    run_agent(_agent_for(patient.id, staff.id), gateway, {"user_message": "Thanks."})
+
+    first, second = (request["messages"] for request in gateway.requests)
+    note, question = first[-2:]
+    assert note["content"][0]["text"] == (
+        f"{DECISIONS_NOTE_PREFIX}\n"
+        f"- proposal {denied.id} (create_task): denied by the clinician; nothing changed. "
+        "Reason: Already called her"
+    )
+    assert str(pending.id) not in note["content"][0]["text"]
+    assert question == {"role": "user", "content": "OK, what next?"}
+    notes = [
+        m
+        for m in second
+        if m["role"] == "user"
+        and isinstance(m["content"], list)
+        and m["content"][0].get("text", "").startswith(DECISIONS_NOTE_PREFIX)
+    ]
+    assert len(notes) == 1
+
+
+@pytest.mark.django_db
+def test_another_clinicians_decision_is_not_recorded() -> None:
+    """Only the proposals made for this clinician are looked up."""
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+    theirs = _proposal(StaffFactory.create(), AgentRunProposalStatus.APPROVED)
+    agent = _agent_for(patient.id, staff.id)
+    _start(agent, _proposing_conversation(theirs))
+
+    gateway = FakeGateway(reply(text("Sure.")))
+
+    run_agent(agent, gateway, {"user_message": "Anything else?"})
+
+    assert gateway.requests[0]["messages"][-1] == {"role": "user", "content": "Anything else?"}
+    assert gateway.requests[0]["messages"][-2]["role"] == "assistant"
