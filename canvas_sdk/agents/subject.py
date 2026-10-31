@@ -31,8 +31,9 @@ class RunRequester:
         staff_id: The ``Staff.id`` of the staff member whose action emitted the effect;
             None for a run a patient, a schedule, or a system event started.
         permissions: The staff member's platform permissions, such as
-            ``"api.change_task"``. None when permissions do not limit the run: no staff
-            member started it, or a superuser did. The platform hides tools that need a
+            ``"api.change_task"``; empty for a run a patient started. None when
+            permissions do not limit the run: Canvas Bot is behind it, acting with the
+            plugin's authority, or a superuser is. The platform hides tools that need a
             permission the requester lacks, and checks the requester's permissions
             again on every effect the run returns.
     """
