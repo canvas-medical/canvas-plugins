@@ -124,7 +124,7 @@ def test_a_requester_holding_the_permission_is_offered_the_tool() -> None:
 
 
 def test_a_run_permissions_do_not_limit_is_offered_every_granted_tool() -> None:
-    """Canvas Bot, patient, and superuser runs have no permission set to check."""
+    """Canvas Bot and superuser runs have no permission set to check."""
     agent = _Agent()
     agent.requester = RunRequester(staff_id=None, permissions=None)
 

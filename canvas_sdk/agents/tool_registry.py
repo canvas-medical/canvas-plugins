@@ -324,8 +324,8 @@ class ToolRegistry:
         """Return a new registry of the tools a run with these grants may use.
 
         ``permissions`` are the requester's platform permissions, or None when model
-        permissions do not limit the run (no staff member started it, or a superuser
-        did). The platform uses this to hide tools the requester could not use.
+        permissions do not limit the run (Canvas Bot is behind it, or a superuser is). The
+        platform uses this to hide tools the requester could not use.
         """
         return self.scope(
             definition["name"]
