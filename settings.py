@@ -79,14 +79,26 @@ else:
     CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+
+
+def agent_run_limit(requested: str | None) -> int:
+    """How many agent runs the plugin runner holds at once; at least 1, defaulting to 4.
+
+    Agent runs hold a thread for their whole LLM loop, so they get their own threads on
+    top of PLUGIN_RUNNER_MAX_WORKERS, which stay free for events.
+    """
+    return max(1, int(requested)) if requested else 4
+
+
+PLUGIN_RUNNER_MAX_AGENT_RUNS = agent_run_limit(os.getenv("PLUGIN_RUNNER_MAX_AGENT_RUNS"))
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
-# By default, allow a pool size that gives each worker 2 active connections
+# By default, allow a pool size that gives each worker and agent run 2 active connections
 # and allow overriding via environment variable if necessary
 PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
     os.getenv(
         "PLUGIN_RUNNER_DATABASE_POOL_MAX",
-        PLUGIN_RUNNER_MAX_WORKERS * 2,
+        (PLUGIN_RUNNER_MAX_WORKERS + PLUGIN_RUNNER_MAX_AGENT_RUNS) * 2,
     )
 )
 

@@ -1,4 +1,76 @@
 {
+  "canvas_sdk.agents": [
+    "AgentPlugin",
+    "AgentRunResult",
+    "AgentState",
+    "Capability",
+    "DEFAULT_HISTORY_CHARS",
+    "EffectField",
+    "FilterSpec",
+    "LLMGateway",
+    "LLMGatewayConfigurationError",
+    "RunRequester",
+    "RunSubject",
+    "SubAgentSpec",
+    "ToolLoopResult",
+    "ToolNotAllowed",
+    "ToolRegistry",
+    "find_open_note",
+    "find_open_note_uuid_from_ctx",
+    "require_patient_id",
+    "run_subagent",
+    "run_subagents",
+    "run_tool_loop",
+    "standard_tools",
+    "window_messages"
+  ],
+  "canvas_sdk.agents.base": [
+    "AgentPlugin"
+  ],
+  "canvas_sdk.agents.capabilities": [
+    "Capability"
+  ],
+  "canvas_sdk.agents.gateway": [
+    "LLMGateway",
+    "LLMGatewayConfigurationError"
+  ],
+  "canvas_sdk.agents.history": [
+    "DEFAULT_HISTORY_CHARS",
+    "window_messages"
+  ],
+  "canvas_sdk.agents.note_helpers": [
+    "OPEN_NOTE_STATES",
+    "find_open_note",
+    "find_open_note_uuid_from_ctx"
+  ],
+  "canvas_sdk.agents.result": [
+    "AgentRunResult"
+  ],
+  "canvas_sdk.agents.standard_tools": [
+    "standard_tools"
+  ],
+  "canvas_sdk.agents.state": [
+    "AgentState"
+  ],
+  "canvas_sdk.agents.subagent": [
+    "SubAgentSpec",
+    "run_subagent",
+    "run_subagents"
+  ],
+  "canvas_sdk.agents.subject": [
+    "RunRequester",
+    "RunSubject"
+  ],
+  "canvas_sdk.agents.tool_loop": [
+    "ToolLoopResult",
+    "run_tool_loop"
+  ],
+  "canvas_sdk.agents.tool_registry": [
+    "EffectField",
+    "FilterSpec",
+    "ToolNotAllowed",
+    "ToolRegistry"
+  ],
   "canvas_sdk.caching.client": [
     "get_cache"
   ],
@@ -440,6 +512,9 @@
   "canvas_sdk.effects.action_button": [
     "ReloadNoteActionButtonsEffect",
     "ReloadPatientActionButtonsEffect"
+  ],
+  "canvas_sdk.effects.agent": [
+    "RunAgentEffect"
   ],
   "canvas_sdk.effects.application_notification_badge": [
     "ApplicationNotificationBadge"
@@ -1177,6 +1252,10 @@
     "get_current_plugin"
   ],
   "canvas_sdk.v1.data": [
+    "AgentRun",
+    "AgentRunStatus",
+    "AgentRunSubject",
+    "AgentRunToolCall",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Application",
@@ -1462,6 +1541,12 @@
     "VitalSign",
     "VitalSignReading",
     "proxy_field"
+  ],
+  "canvas_sdk.v1.data.agent_run": [
+    "AgentRun",
+    "AgentRunStatus",
+    "AgentRunSubject",
+    "AgentRunToolCall"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",

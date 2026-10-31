@@ -33,3 +33,71 @@ message GetRegisteredEventTypesResponse {
   // false while the runner is starting or rebuilding its routes; callers must send every event
   bool ready = 3;
 }
+
+// Agent Runner Framework (KOALA-5544)
+//
+// Sent from home-app's `run_agent` Celery task to the plugin-runner to
+// invoke an AgentPlugin subclass. The plugin-runner resolves the agent
+// class from LOADED_PLUGINS, drives load_state/run/save_state with the
+// supplied scope, and streams emitted effects back as EventResponse.
+message RunAgentRequest {
+  // "module.path:Class" — same format as components.handlers[].class.
+  string agent_id = 1;
+
+  // The run's scope, derived by home-app from the effect's scope and the run's
+  // subject. Runs on one agent and scope_key happen one at a time.
+  string scope_key = 2;
+
+  // Identifier for this run; included in audit and effect provenance.
+  string run_id = 3;
+
+  // JSON-encoded dict carrying trigger-shaped data the agent needs in run().
+  string trigger_payload = 4;
+
+  // The plugin whose handler emitted the RunAgentEffect. The plugin-runner
+  // refuses the run unless this plugin ships the agent.
+  string plugin_name = 5;
+
+  // The trigger handler that emitted the RunAgentEffect, for logs. Emitted
+  // effects carry the agent class as their handler_name instead.
+  string handler_name = 6;
+
+  // Who started the run.
+  RunAgentRequester requester = 7;
+
+  // What the run is about, validated by home-app before the run is enqueued.
+  RunAgentSubject subject = 8;
+
+  // What the run may do beyond the tools its manifest grants, such as "revenue",
+  // decided by home-app from the requester's permissions.
+  repeated string capabilities = 9;
+}
+
+message RunAgentRequester {
+  // Provenance, threaded through to each emitted Effect so audit and downstream
+  // interpreters see the originating actor and source.
+  string actor = 1;
+  string source = 2;
+
+  // The staff member behind the event that emitted the RunAgentEffect; empty for
+  // a run a patient, a schedule, or a system event started.
+  string staff_id = 3;
+
+  // The staff member's platform permissions, such as "api.change_task". The
+  // plugin-runner hides tools that need one the requester lacks.
+  repeated string permissions = 4;
+
+  // Set when permissions do not limit the run: Canvas Bot is behind it, acting
+  // with the plugin's authority, or a superuser is. permissions is empty then,
+  // and empty without this flag for a run a patient started.
+  bool all_permissions = 5;
+}
+
+message RunAgentSubject {
+  // Each comes from the RunAgentEffect and is empty when the run has none.
+  // home-app checks the patient exists, the note is that patient's, and the claim
+  // exists and the run has the "revenue" capability.
+  string patient_id = 1;
+  string note_id = 2;
+  string claim_id = 3;
+}

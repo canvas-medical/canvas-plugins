@@ -1,0 +1,86 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.2",
+    "name": "agent_runner_poc",
+    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode.",
+    "components": {
+        "handlers": [
+            {
+                "class": "agent_runner_poc.handlers.longitudinal_trigger:LongitudinalCareAdvisorTrigger",
+                "description": "Emits RunAgentEffect for LongitudinalCareAdvisor when a note transitions to LOCKED"
+            },
+            {
+                "class": "agent_runner_poc.applications.chart_chat:ChartChatAPI",
+                "description": "HTTP API backing the in-chart chat UI"
+            },
+            {
+                "class": "agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+                "description": "HTTP API backing the claims chat UI"
+            }
+        ],
+        "agents": [
+            {
+                "class": "agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
+                "description": "Reviews the locked encounter against prior visits' protocol cards; emits new cards for outstanding follow-up",
+                "tools": {
+                    "allowed": ["@clinical_reads", "@clinical_alerts"]
+                }
+            },
+            {
+                "class": "agent_runner_poc.agents.chart_chat:ChartChatAgent",
+                "description": "Conversational chart-side agent; uses the snapshot state pattern over a Conversation CustomModel",
+                "tools": {
+                    "allowed": [
+                        "@clinical_reads",
+                        "@clinical_writes",
+                        "@task_writes",
+                        "@clinical_alerts",
+                        "@message_reads",
+                        "@message_writes",
+                        "@config_reads",
+                        "@composition"
+                    ]
+                }
+            },
+            {
+                "class": "agent_runner_poc.agents.claims_chat:ClaimsChatAgent",
+                "description": "Claims chat for billing staff; reads and works claims with the SDK's claims tools",
+                "tools": {
+                    "allowed": ["@claims_reads", "@claims_writes"]
+                }
+            }
+        ],
+        "applications": [
+            {
+                "class": "agent_runner_poc.applications.chart_chat:ChartChatApplication",
+                "name": "Chart chat",
+                "description": "Open a chat with an agent that can read this patient's chart",
+                "scope": "patient_specific",
+                "icon": "assets/chart_chat.png"
+            },
+            {
+                "class": "agent_runner_poc.applications.claims_chat:ClaimsChatApplication",
+                "name": "Claims chat",
+                "description": "Ask about your claims queues or one claim, and have the agent move, assign, label, and comment on claims",
+                "scope": "global",
+                "icon": "assets/claims_chat.png"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "custom_data": {
+        "namespace": "custom_data__agent_runner_poc",
+        "access": "read_write"
+    },
+    "variables": [
+        {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true}
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

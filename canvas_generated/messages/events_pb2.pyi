@@ -2615,10 +2615,40 @@ class Event(_message.Message):
     source: str
     def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
+class AgentToolCall(_message.Message):
+    __slots__ = ("name", "ok", "error_type", "duration_ms")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    OK_FIELD_NUMBER: _ClassVar[int]
+    ERROR_TYPE_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MS_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    ok: bool
+    error_type: str
+    duration_ms: int
+    def __init__(self, name: _Optional[str] = ..., ok: bool = ..., error_type: _Optional[str] = ..., duration_ms: _Optional[int] = ...) -> None: ...
+
+class AgentRunSummary(_message.Message):
+    __slots__ = ("model_calls", "stop_reason", "effects_returned", "effects_dropped", "tool_calls")
+    MODEL_CALLS_FIELD_NUMBER: _ClassVar[int]
+    STOP_REASON_FIELD_NUMBER: _ClassVar[int]
+    EFFECTS_RETURNED_FIELD_NUMBER: _ClassVar[int]
+    EFFECTS_DROPPED_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALLS_FIELD_NUMBER: _ClassVar[int]
+    model_calls: int
+    stop_reason: str
+    effects_returned: int
+    effects_dropped: int
+    tool_calls: _containers.RepeatedCompositeFieldContainer[AgentToolCall]
+    def __init__(self, model_calls: _Optional[int] = ..., stop_reason: _Optional[str] = ..., effects_returned: _Optional[int] = ..., effects_dropped: _Optional[int] = ..., tool_calls: _Optional[_Iterable[_Union[AgentToolCall, _Mapping]]] = ...) -> None: ...
+
 class EventResponse(_message.Message):
-    __slots__ = ("success", "effects")
+    __slots__ = ("success", "effects", "error_kind", "agent_run")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     EFFECTS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_KIND_FIELD_NUMBER: _ClassVar[int]
+    AGENT_RUN_FIELD_NUMBER: _ClassVar[int]
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
-    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
+    error_kind: str
+    agent_run: AgentRunSummary
+    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ..., error_kind: _Optional[str] = ..., agent_run: _Optional[_Union[AgentRunSummary, _Mapping]] = ...) -> None: ...

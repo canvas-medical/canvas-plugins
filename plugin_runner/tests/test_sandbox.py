@@ -680,6 +680,22 @@ def test_statistics_median_is_importable() -> None:
     assert sandbox.execute()["result"] == 2
 
 
+def test_plugin_code_cannot_reach_the_run_recorder() -> None:
+    """Agent code could otherwise falsify the platform's record of its own runs."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.run_record import current_recorder")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_plugin_code_cannot_reach_the_tool_grant() -> None:
+    """Agent code could otherwise widen its own grant or keep effects the grant drops."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.grant import apply_tool_grant")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
 def test_other_statistics_names_are_refused() -> None:
     """The only name plugin code can import from statistics is median."""
     sandbox = _sandbox_from_code("from statistics import mean")
@@ -1583,6 +1599,97 @@ def test_coalesce_function_import() -> None:
     scope = sandbox.execute()
     assert scope["result"] == "Coalesce import successful", (
         "Coalesce import should work from django.db.models.functions."
+    )
+
+
+@pytest.mark.parametrize(
+    "symbol",
+    [
+        "Anthropic",
+        "AsyncAnthropic",
+        "APIConnectionError",
+        "APIError",
+        "APIStatusError",
+        "BadRequestError",
+        "RateLimitError",
+    ],
+)
+def test_anthropic_allowed_symbol_import(symbol: str) -> None:
+    """Each allowlisted anthropic symbol is importable inside the sandbox."""
+    sandbox = _sandbox_from_code(f"from anthropic import {symbol}\nresult = {symbol}")
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, f"{symbol} should be importable from anthropic."
+
+
+def test_anthropic_disallowed_symbol_import() -> None:
+    """Non-allowlisted anthropic attributes are denied (locks the allowed-set)."""
+    # `Client` is a real symbol on the anthropic SDK that we intentionally
+    # do not expose — if this test starts failing, the allowed-attribute set
+    # has drifted and needs explicit review.
+    sandbox = _sandbox_from_code("from anthropic import Client")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("symbol", ["TextBlock", "ToolUseBlock"])
+def test_anthropic_types_allowed_symbol_import(symbol: str) -> None:
+    """Each allowlisted anthropic.types symbol is importable inside the sandbox."""
+    sandbox = _sandbox_from_code(f"from anthropic.types import {symbol}\nresult = {symbol}")
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, f"{symbol} should be importable from anthropic.types."
+
+
+def test_anthropic_types_disallowed_symbol_import() -> None:
+    """Non-allowlisted anthropic.types attributes are denied (locks the allowed-set)."""
+    # `MessageParam` is a real symbol on anthropic.types that we intentionally
+    # do not expose — locks the boundary the same way `Client` does for
+    # the top-level anthropic module.
+    sandbox = _sandbox_from_code("from anthropic.types import MessageParam")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_plugin_code_cannot_import_the_gateway_factory() -> None:
+    """Only the runner builds and attributes a gateway; the factory is not exported."""
+    sandbox = _sandbox_from_code(
+        "from canvas_sdk.agents.gateway import gateway_from_plugin_secrets"
+    )
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_canvas_sdk_agents_importable_in_sandbox() -> None:
+    """All four agent SDK exports are reachable from plugin code in the sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
+            result = (AgentPlugin, AgentRunResult, AgentState, LLMGateway)
+        """
+    )
+
+    scope = sandbox.execute()
+    assert all(cls is not None for cls in scope["result"]), (
+        "AgentPlugin/AgentRunResult/AgentState/LLMGateway should all import inside the sandbox."
+    )
+
+
+def test_run_agent_effect_importable_in_sandbox() -> None:
+    """RunAgentEffect — the plugin-facing trigger effect — is reachable from the sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.effects.agent import RunAgentEffect
+            result = RunAgentEffect
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, (
+        "RunAgentEffect should import from canvas_sdk.effects.agent."
     )
 
 

@@ -39,6 +39,7 @@ manifest_schema = {
                 "views": {"$ref": "#/$defs/component"},
                 "applications": {"$ref": "#/$defs/applications"},
                 "questionnaires": {"$ref": "#/$defs/questionnaires"},
+                "agents": {"$ref": "#/$defs/agent"},
             },
             "additionalProperties": False,
             "minProperties": 1,
@@ -128,6 +129,40 @@ manifest_schema = {
                             "event": {"type": "string"},
                             "read": {"type": "array", "items": {"type": "string"}},
                             "write": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "required": ["class", "description"],
+                "additionalProperties": False,
+            },
+        },
+        "agent": {
+            # Same shape as `component` plus an optional `tools` block:
+            # `allowed` lists tool names and `@category` groups, and `denied`
+            # subtracts from them. The plugin runner's `RunAgent` RPC resolves
+            # both against the agent's registry (`ToolRegistry.resolve_allowed`)
+            # and swaps in a scoped registry before any lifecycle hook runs.
+            # An entry without `tools.allowed` grants no tools, and
+            # the agent may return only effect types its granted tools declare.
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "class": {"type": "string"},
+                    "description": {"type": "string"},
+                    "meta": {"type": "object"},
+                    "tools": {
+                        "type": "object",
+                        "properties": {
+                            "allowed": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "denied": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "additionalProperties": False,
                     },

@@ -1,0 +1,149 @@
+from enum import StrEnum
+from typing import Annotated, Any, Self
+from uuid import UUID, uuid4
+
+from pydantic import Field, PrivateAttr, model_validator
+
+from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+# The run subject's fields. They reach the agent as ``self.subject`` after the
+# platform validates them, so they never travel in ``trigger_payload``.
+SUBJECT_FIELDS = frozenset({"patient_id", "staff_id", "note_id", "claim_id"})
+
+
+class RunAgentEffect(_BaseEffect):
+    """Request that the platform invoke an :class:`AgentPlugin` in a worker.
+
+    Plugin authors return this from a trigger handler's ``compute()`` to
+    hand control off to the agent runtime. The platform validates the run's
+    subject, derives its scope key, and runs the agent's
+    ``load_state`` → ``run`` → ``save_state`` one run at a time per scope.
+
+    Fields:
+        agent_id: Class path of the :class:`AgentPlugin` subclass to instantiate,
+            in ``module.path:ClassName`` form.
+        run_id: The run's id, generated when the effect is built and not settable. A handler can
+            return it to a UI, which reads the run's progress from the
+            :class:`canvas_sdk.v1.data.AgentRun` record with that id.
+        scope: Which runs of this agent wait on each other; see :class:`Scope`.
+            The platform derives the scope key from it and the run's subject.
+        patient_id: The patient the run acts on. The platform checks that the
+            patient exists, and a patient requesting a run may only name themselves.
+        note_id: The note the run acts on. Requires ``patient_id``; the platform
+            checks the note belongs to that patient.
+        claim_id: The claim the run acts on, such as a chat opened from a claim. The
+            platform checks the claim exists and that the staff member behind the run
+            may work claims; the claims tools default to it.
+        scope_id: For scope ``KEY``, the plugin's own key for what runs serialize
+            on, such as ``f"appointment:{appointment_id}"``. It decides only which runs wait
+            on each other and gives the agent's tools nothing.
+        trigger_payload: Small dict of trigger-shaped data the agent needs in
+            ``run``, such as a chat message. The subject's fields
+            (``patient_id``, ``staff_id``, ``note_id``, ``claim_id``) are not allowed here.
+
+    The staff member whose action started the run is never a field: the
+    platform takes it from the event and sets it on ``self.requester.staff_id``.
+
+    Example::
+
+        return [RunAgentEffect(
+            agent_id="my_plugin.agents.chart_summary:ChartSummary",
+            scope=RunAgentEffect.Scope.PATIENT,
+            patient_id=patient_id,
+            note_id=note_id,
+        ).apply()]
+    """
+
+    class Meta:
+        effect_type = EffectType.RUN_AGENT
+
+    class Scope(StrEnum):
+        """Which runs of one agent wait on each other.
+
+        Runs of different agents never wait on each other, whatever their scope.
+
+        The scope decides only waiting: ``load_state`` receives the run's ``scope_key``,
+        and nothing stops two patients' runs from sharing one. ``KEY`` and ``AGENT``
+        leave the patient out of the key, so an agent keeping per-patient state under
+        them must key that state by ``self.subject.patient_id``. For example, an
+        ``AGENT``-scoped agent that stored a chat history under ``scope_key`` alone
+        would load one patient's history into the next patient's run.
+        """
+
+        # Runs on the same patient, one at a time.
+        PATIENT = "patient"
+        # Runs on the same patient started by the same staff member, one at a
+        # time; a chat with one clinician about one patient.
+        PATIENT_AND_STAFF = "patient_and_staff"
+        # Runs on the same note, one at a time.
+        NOTE = "note"
+        # Runs started by the same staff member, one at a time; an agent about a
+        # clinician's own work rather than one patient.
+        STAFF = "staff"
+        # Runs on the same claim, one at a time.
+        CLAIM = "claim"
+        # Runs naming the same ``scope_id``, one at a time; for something that is
+        # none of the above, such as an appointment.
+        KEY = "key"
+        # One run of this agent at a time on the instance.
+        AGENT = "agent"
+
+    agent_id: Annotated[str, Field(min_length=1)]
+    scope: Scope
+    patient_id: Annotated[str, Field(min_length=1)] | None = None
+    note_id: Annotated[str, Field(min_length=1)] | None = None
+    claim_id: Annotated[str, Field(min_length=1)] | None = None
+    scope_id: Annotated[str, Field(min_length=1)] | None = None
+    trigger_payload: dict[str, Any] = Field(default_factory=dict)
+    _run_id: UUID = PrivateAttr(default_factory=uuid4)
+
+    @property
+    def run_id(self) -> UUID:
+        """The run's id, generated with the effect."""
+        return self._run_id
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_a_chosen_run_id(cls, data: Any) -> Any:
+        """Refuse a caller-chosen ``run_id``; the effect always generates its own."""
+        if isinstance(data, dict) and "run_id" in data:
+            raise ValueError("'run_id' is generated by the effect and cannot be set")
+        return data
+
+    @model_validator(mode="after")
+    def check_subject(self) -> Self:
+        """Require the subject fields the scope needs and keep them out of the payload."""
+        patient_scopes = (self.Scope.PATIENT, self.Scope.PATIENT_AND_STAFF, self.Scope.NOTE)
+        if self.scope in patient_scopes and self.patient_id is None:
+            raise ValueError(f"scope {self.scope.value!r} requires 'patient_id'")
+        if (self.scope == self.Scope.KEY) != (self.scope_id is not None):
+            raise ValueError("'scope_id' is required by, and only allowed with, scope 'key'")
+        if self.scope == self.Scope.NOTE and self.note_id is None:
+            raise ValueError("scope 'note' requires 'note_id'")
+        if self.scope == self.Scope.CLAIM and self.claim_id is None:
+            raise ValueError("scope 'claim' requires 'claim_id'")
+        if self.note_id is not None and self.patient_id is None:
+            raise ValueError("'note_id' requires 'patient_id'")
+        if subject_keys := sorted(SUBJECT_FIELDS & self.trigger_payload.keys()):
+            raise ValueError(
+                f"trigger_payload cannot carry {subject_keys}; the agent reads the run's "
+                "subject from self.subject"
+            )
+        return self
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """Serialize the run-agent request into the effect payload."""
+        return {
+            "agent_id": self.agent_id,
+            "run_id": str(self.run_id),
+            "scope": self.scope.value,
+            "patient_id": self.patient_id,
+            "note_id": self.note_id,
+            "claim_id": self.claim_id,
+            "scope_id": self.scope_id,
+            "trigger_payload": self.trigger_payload,
+        }
+
+
+__exports__ = ("RunAgentEffect",)

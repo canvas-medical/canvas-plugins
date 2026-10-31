@@ -1,0 +1,535 @@
+import json
+import time
+from typing import Any
+
+import anthropic
+import httpx2
+import pytest
+from anthropic.types import TextBlock, ToolUseBlock
+
+from canvas_sdk.agents import (
+    AgentPlugin,
+    AgentRunResult,
+    AgentState,
+    RunSubject,
+    ToolRegistry,
+    require_patient_id,
+    run_tool_loop,
+)
+from canvas_sdk.agents.run_record import (
+    DEADLINE_MARGIN_SECONDS,
+    RunDeadlineExceeded,
+    RunRecorder,
+    current_recorder,
+)
+from canvas_sdk.agents.tool_loop import MAX_TOOL_RESULT_CHARS
+from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
+
+
+def _tool_use(name: str, block_id: str, **arguments: Any) -> ToolUseBlock:
+    return tool_use(name, arguments, id=block_id)
+
+
+def _text(value: str) -> TextBlock:
+    return text(value)
+
+
+def _response(stop_reason: str, *content: Any) -> ModelReply:
+    return reply(*content, stop_reason=stop_reason)
+
+
+def _tools() -> ToolRegistry:
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"patient": ctx["patient_id"], "asked": arguments}
+
+    @tools.tool(name="broken", description="x", input_schema={"type": "object"})
+    def _broken(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        raise ValueError("no such record")
+
+    return tools
+
+
+def _run(client: FakeGateway, messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> Any:
+    return run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=kwargs.pop("tools", _tools()),
+        ctx={"patient_id": "p1"},
+        system="You are a test agent.",
+        messages=messages or [{"role": "user", "content": "go"}],
+        **kwargs,
+    )
+
+
+def test_end_turn_returns_the_final_text() -> None:
+    """A model that answers without tools ends the loop after one turn."""
+    result = _run(FakeGateway(_response("end_turn", _text("  All clear. "))))
+
+    assert result.text == "All clear."
+    assert result.turns == 1
+    assert result.stopped == "end_turn"
+    assert result.messages[-1] == {
+        "role": "assistant",
+        "content": [{"type": "text", "text": "  All clear. ", "citations": None}],
+    }
+
+
+def test_tool_calls_are_dispatched_and_their_results_sent_back() -> None:
+    """Each tool call runs with ctx and its JSON result goes back on the next turn."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1", section="labs")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = _run(client)
+
+    results = client.requests[1]["messages"][-1]
+    assert results["role"] == "user"
+    assert results["content"] == [
+        {
+            "type": "tool_result",
+            "tool_use_id": "t1",
+            "content": json.dumps({"patient": "p1", "asked": {"section": "labs"}}),
+        }
+    ]
+    assert result.turns == 2
+    assert result.stopped == "end_turn"
+
+
+def test_a_failing_tool_goes_back_to_the_model_as_an_error() -> None:
+    """The model sees the failure and can recover; the run does not end."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("broken", "t1")),
+        _response("end_turn", _text("sorry")),
+    )
+
+    _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "no such record" in tool_result["content"]
+
+
+def test_an_ungranted_tool_is_reported_as_unknown() -> None:
+    """A tool the scoped registry lacks fails like any other tool, back to the model."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("originate_prescribe_medication", "t1")),
+        _response("end_turn", _text("ok")),
+    )
+
+    _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "Unknown tool" in tool_result["content"]
+
+
+def test_complete_tool_calls_cut_off_by_max_tokens_still_run() -> None:
+    """max_tokens with tool calls dispatches them and continues."""
+    client = FakeGateway(
+        _response("max_tokens", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = _run(client)
+
+    assert client.requests[1]["messages"][-1]["content"][0]["tool_use_id"] == "t1"
+    assert result.stopped == "end_turn"
+
+
+def test_the_turn_cap_stops_the_loop() -> None:
+    """A model that keeps calling tools stops at max_turns with its results recorded."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("tool_use", _tool_use("read_chart", "t2")),
+    )
+
+    result = _run(client, max_turns=2)
+
+    assert result.stopped == "max_turns"
+    assert result.turns == 2
+    assert result.messages[-1]["content"][0]["tool_use_id"] == "t2"
+
+
+def test_an_unexpected_stop_never_leaves_a_tool_call_without_a_result() -> None:
+    """A stored transcript ending on an unanswered tool call would fail every later call."""
+    client = FakeGateway(_response("refusal", _tool_use("read_chart", "t1")))
+
+    result = _run(client)
+
+    assert result.stopped == "unexpected"
+    assert result.stop_reason == "refusal"
+    (tool_result,) = result.messages[-1]["content"]
+    assert tool_result == {
+        "type": "tool_result",
+        "tool_use_id": "t1",
+        "content": "Not run: the turn ended with stop reason 'refusal'.",
+        "is_error": True,
+    }
+
+
+def test_the_model_sees_a_window_and_the_full_history_comes_back() -> None:
+    """Long histories are windowed for the call but returned whole for storage."""
+    history: list[dict[str, Any]] = [
+        {"role": "user", "content": "old " + "x" * 5000},
+        {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
+        {"role": "user", "content": "new question"},
+    ]
+    client = FakeGateway(_response("end_turn", _text("new answer")))
+
+    result = _run(client, messages=history, history_chars=200)
+
+    assert client.requests[0]["messages"] == [history[2]]
+    assert result.messages[:3] == history
+    assert len(result.messages) == 4
+
+
+def test_windowing_can_be_turned_off() -> None:
+    """history_chars=None sends everything."""
+    history: list[dict[str, Any]] = [
+        {"role": "user", "content": "old " + "x" * 5000},
+        {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
+        {"role": "user", "content": "new question"},
+    ]
+    client = FakeGateway(_response("end_turn", _text("new answer")))
+
+    _run(client, messages=history, history_chars=None)
+
+    assert client.requests[0]["messages"] == history
+
+
+def test_the_system_prompt_is_marked_for_caching_by_default() -> None:
+    """The system prompt is the stable prefix every turn and run shares."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client)
+
+    assert client.requests[0]["system"] == [
+        {
+            "type": "text",
+            "text": "You are a test agent.",
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+
+
+def test_caching_can_be_turned_off() -> None:
+    """cache_system=False sends the system prompt as a plain string."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client, cache_system=False)
+
+    assert client.requests[0]["system"] == "You are a test agent."
+
+
+def test_the_request_uses_the_gateway_model_and_the_given_limits() -> None:
+    """Model defaults to the gateway's; tools come from the registry."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client, max_tokens=123)
+
+    request = client.requests[0]
+    assert request["model"] == "claude-test"
+    assert request["max_tokens"] == 123
+    assert [tool["name"] for tool in request["tools"]] == ["read_chart", "broken"]
+
+
+def test_on_turn_fires_before_each_call() -> None:
+    """The turn hook sees 0, 1, ... once per LLM call."""
+    seen: list[int] = []
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    _run(client, on_turn=seen.append)
+
+    assert seen == [0, 1]
+
+
+def test_a_failing_turn_hook_does_not_end_the_run() -> None:
+    """Hooks are for observability, so their failures are logged and ignored."""
+
+    def _broken_hook(turn_index: int) -> None:
+        raise RuntimeError("metrics are down")
+
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))), on_turn=_broken_hook)
+
+    assert result.stopped == "end_turn"
+
+
+def test_gateway_errors_propagate() -> None:
+    """The platform classifies gateway failures, so the loop must not swallow them."""
+    request = httpx2.Request("POST", "https://gateway.test/v1/messages")
+    error = anthropic.APIConnectionError(request=request)
+
+    with pytest.raises(anthropic.APIConnectionError):
+        _run(FakeGateway(error))
+
+
+def test_the_callers_message_list_is_not_modified() -> None:
+    """The loop works on a copy; the caller decides what to store."""
+    history = [{"role": "user", "content": "go"}]
+
+    _run(FakeGateway(_response("end_turn", _text("ok"))), messages=history)
+
+    assert history == [{"role": "user", "content": "go"}]
+
+
+def test_the_result_effects_are_the_ctx_effects_list() -> None:
+    """Sub-agents share the parent's ctx, so their effects land in the parent's list."""
+    effects: list[Any] = ["staged earlier"]
+    ctx = {"patient_id": "p1", "effects": effects}
+
+    result = run_tool_loop(
+        FakeGateway(_response("end_turn", _text("ok"))),  # type: ignore[arg-type]
+        tools=_tools(),
+        ctx=ctx,
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects is effects
+
+
+class _LoopingAgent(AgentPlugin):
+    tools = _tools()
+
+    def __init__(self) -> None:
+        self.turns_seen: list[int] = []
+
+    def on_turn(self, turn_index: int) -> None:
+        self.turns_seen.append(turn_index)
+
+    def load_state(self, scope_key: str) -> AgentState:
+        return AgentState()
+
+    def run(self, state: AgentState, gateway: Any, trigger_payload: dict) -> AgentRunResult:
+        return AgentRunResult(state=state)
+
+    def save_state(self, scope_key: str, state: AgentState) -> None:
+        return None
+
+
+def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
+    """AgentPlugin.run_tool_loop passes self.tools and wires on_turn."""
+    agent = _LoopingAgent()
+    agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert [tool["name"] for tool in client.requests[0]["tools"]] == ["read_chart"]
+    assert agent.turns_seen == [0, 1]
+    assert result.stopped == "end_turn"
+
+
+def test_the_agent_method_gives_tools_the_run_subject() -> None:
+    """Tools read the platform's patient; the agent never names one."""
+    agent = _LoopingAgent()
+    agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert json.loads(tool_result["content"])["patient"] == "p1"
+
+
+def test_the_agent_method_returns_the_effects_its_tools_staged() -> None:
+    """Staged effects come back on the result, so the agent returns them as-is."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="stage", description="x", input_schema={"type": "object"})
+    def _stage(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        ctx["effects"].append("an effect")
+        return {"ok": True}
+
+    agent = _LoopingAgent()
+    agent.tools = tools
+    client = FakeGateway(
+        _response("tool_use", _tool_use("stage", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects == ["an effect"]
+
+
+def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> None:
+    """The model hears the run has no patient instead of reading an empty chart."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"patient": require_patient_id(ctx)}
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("ok")),
+    )
+
+    run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=tools,
+        ctx={"patient_id": None},
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "not about a patient" in tool_result["content"]
+
+
+def test_the_runs_recorder_gets_model_calls_tool_calls_and_how_the_loop_ended() -> None:
+    """The platform's run record comes from the loop, not from agent code."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1"), _tool_use("broken", "t2")),
+        _response("end_turn", _text("done")),
+    )
+    recorder = RunRecorder()
+    token = current_recorder.set(recorder)
+    try:
+        _run(client)
+    finally:
+        current_recorder.reset(token)
+
+    assert recorder.model_calls == 2
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("read_chart", True, ""),
+        ("broken", False, "ValueError"),
+    ]
+    assert recorder.stop_reason == "end_turn"
+
+
+def test_without_a_recorder_the_loop_records_nothing() -> None:
+    """Code outside a platform run, such as a test, runs the loop unchanged."""
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))))
+
+    assert result.stopped == "end_turn"
+    assert current_recorder.get() is None
+
+
+def _with_recorder(recorder: RunRecorder, client: FakeGateway, **kwargs: Any) -> Any:
+    token = current_recorder.set(recorder)
+    try:
+        return _run(client, **kwargs)
+    finally:
+        current_recorder.reset(token)
+
+
+def test_the_loop_stops_at_the_runs_model_call_ceiling() -> None:
+    """The ceiling covers the whole run, so calls already made count against it."""
+    client = FakeGateway(_response("tool_use", _tool_use("read_chart", "t1")))
+    recorder = RunRecorder(model_calls=2, max_model_calls=3)
+
+    result = _with_recorder(recorder, client)
+
+    assert (result.stopped, result.turns) == ("call_limit", 1)
+    assert len(client.requests) == 1
+    assert (recorder.model_calls, recorder.stop_reason) == (3, "call_limit")
+
+
+def test_the_loop_raises_once_the_run_is_inside_its_deadline_margin() -> None:
+    """No model call starts that could not finish before the run's deadline."""
+    client = FakeGateway(_response("end_turn", _text("late")))
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS - 1)
+
+    with pytest.raises(RunDeadlineExceeded):
+        _with_recorder(recorder, client)
+
+    assert client.requests == []
+
+
+def test_each_model_call_gets_the_time_left_split_across_its_retries() -> None:
+    """Retries of one call cannot carry it past the run's deadline."""
+    client = FakeGateway(_response("end_turn", _text("done")))
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + 90)
+
+    _with_recorder(recorder, client)
+
+    assert 29 < client.requests[0]["timeout"] <= 30
+
+
+def test_without_a_deadline_model_calls_carry_no_timeout() -> None:
+    """Outside a platform run the client's own timeout applies."""
+    client = FakeGateway(_response("end_turn", _text("done")))
+
+    _run(client)
+
+    assert "timeout" not in client.requests[0]
+
+
+def test_a_long_tool_result_is_cut_and_says_so() -> None:
+    """One oversized result cannot push the next call past the context window."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="dump", description="x", input_schema={"type": "object"})
+    def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        return "x" * (MAX_TOOL_RESULT_CHARS * 2)
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("dump", "t1")), _response("end_turn", _text("ok"))
+    )
+
+    result = _run(client, tools=tools)
+
+    content = result.messages[2]["content"][0]["content"]
+    assert content.startswith('"' + "x" * 100)
+    assert content.endswith("to see the rest.]"), (
+        "the model is told the result was cut and how to see the rest"
+    )
+    assert f"Result cut at {MAX_TOOL_RESULT_CHARS} of" in content
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        anthropic.APIConnectionError(
+            request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+        ),
+        RunDeadlineExceeded("the run reached its deadline"),
+    ],
+    ids=["gateway-error", "deadline"],
+)
+def test_a_tool_that_hits_a_gateway_error_or_the_deadline_ends_the_run(error: Exception) -> None:
+    """A composition tool's sub-agent failure is the run's failure, not a result to recover from."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="brief", description="x", input_schema={"type": "object"})
+    def _brief(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise error
+
+    client = FakeGateway(_response("tool_use", _tool_use("brief", "t1")))
+    recorder = RunRecorder()
+
+    with pytest.raises(type(error)):
+        _with_recorder(recorder, client, tools=tools)
+
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("brief", False, "aborted")
+    ]

@@ -1,0 +1,82 @@
+"""SDK helpers for tools that need to act on a patient's current note.
+
+The canonical "find the patient's open note" lookup, plus a
+ready-made :func:`find_open_note_uuid_from_ctx` resolver compatible
+with :meth:`ToolRegistry.originate_command_tool`'s ``note_resolver``
+parameter.
+
+An agent's :meth:`AgentPlugin.tool_context` already sets ``ctx["note_id"]``
+to the requesting staff member's open note when the run names no note, so
+tools rarely need these directly.
+"""
+
+from typing import Any
+
+from canvas_sdk.v1.data import Note
+from canvas_sdk.v1.data.note import NoteStates
+
+# Notes in any of these states accept new originated commands. Locked /
+# signed / deleted / etc. notes are immutable to clinical-integrity
+# validation, so we exclude them — staging a command on one would fail
+# `canvas_core.commands.utils._validate_note` at ingest time.
+OPEN_NOTE_STATES = (
+    NoteStates.NEW,
+    NoteStates.UNLOCKED,
+    NoteStates.CONVERTED,
+)
+
+
+def find_open_note(patient_id: str, provider_id: str | None = None) -> Note | None:
+    """Return the patient's most-recent mutable note, or ``None``.
+
+    "Open" here means the note is in a state that accepts new originated
+    commands (see :data:`OPEN_NOTE_STATES`). Ordered by
+    ``datetime_of_service`` descending so the clinician's currently-
+    active encounter wins over older drafts.
+
+    Args:
+        patient_id: The patient's UUID (the canonical ``Patient.id``,
+            not the integer ``dbid``).
+        provider_id: When set, only notes whose provider is this staff
+            member count, so a clinician's drafts never land on a
+            colleague's note.
+
+    Returns:
+        The :class:`Note` instance, or ``None`` if the patient has no
+        notes in an open state (for ``provider_id``, when given).
+    """
+    notes = Note.objects.filter(
+        patient__id=patient_id,
+        current_state__state__in=OPEN_NOTE_STATES,
+    )
+    if provider_id:
+        notes = notes.filter(provider__id=provider_id)
+    return notes.order_by("-datetime_of_service").first()
+
+
+def find_open_note_uuid_from_ctx(ctx: dict[str, Any]) -> str | None:
+    """``note_resolver`` for tools that originate on the patient's current open note.
+
+    Drop-in for :meth:`ToolRegistry.originate_command_tool`'s
+    ``note_resolver`` parameter when the agent isn't bound to a specific
+    note (chat-style and user-action surfaces). Falls back to ``None`` if
+    no open note exists — the helper translates that into a structured
+    error returned to the model.
+
+    Reads ``patient_id`` from ``ctx``; the agent is responsible for
+    populating it before invoking tools. When ``ctx`` carries the
+    requesting ``staff_id`` (a chat or other user-initiated run), only that
+    staff member's open notes count.
+    """
+    patient_id = ctx.get("patient_id")
+    if not patient_id:
+        return None
+    note = find_open_note(patient_id, provider_id=ctx.get("staff_id"))
+    return str(note.id) if note is not None else None
+
+
+__exports__ = (
+    "OPEN_NOTE_STATES",
+    "find_open_note",
+    "find_open_note_uuid_from_ctx",
+)
