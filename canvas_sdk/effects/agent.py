@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID, uuid4
 
 from pydantic import Field, PrivateAttr, model_validator
@@ -146,4 +146,39 @@ class RunAgentEffect(_BaseEffect):
         }
 
 
-__exports__ = ("RunAgentEffect",)
+class DecideAgentProposal(_BaseEffect):
+    """The requester's approval or denial of a change an agent proposed.
+
+    An agent whose manifest lists a tool under ``tools.approve`` proposes that tool's
+    changes rather than making them; the platform holds each proposal for an hour as a
+    :class:`canvas_sdk.v1.data.AgentRunProposal`. A plugin's UI shows the proposal and
+    returns this effect when the user decides. The platform accepts it only from a
+    request the user made (a SimpleAPI route, an application, or an action button), only
+    from the user the agent acted for, and only while the proposal is pending; on
+    approval it checks the user's permissions again and applies exactly the proposed
+    change.
+
+    Fields:
+        proposal_id: The proposal's ``id``.
+        decision: ``"approve"`` or ``"deny"``.
+        reason: Why the user denied it, optional.
+    """
+
+    class Meta:
+        effect_type = EffectType.DECIDE_AGENT_PROPOSAL
+
+    proposal_id: UUID | str
+    decision: Literal["approve", "deny"]
+    reason: str = ""
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """Serialize the decision into the effect payload."""
+        return {
+            "proposal_id": str(self.proposal_id),
+            "decision": self.decision,
+            "reason": self.reason,
+        }
+
+
+__exports__ = ("DecideAgentProposal", "RunAgentEffect")

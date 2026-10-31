@@ -85,18 +85,18 @@ def test_a_grant_with_nothing_allowed_gives_no_tools() -> None:
     """An agent whose manifest grants nothing can call nothing and emit nothing."""
     agent = _Agent()
 
-    effect_types = apply_tool_grant(agent, {})
+    grant = apply_tool_grant(agent, {})
 
     assert _names(agent) == set()
-    assert effect_types == frozenset()
+    assert (grant.direct, grant.proposable) == (frozenset(), frozenset())
 
 
 def test_the_grant_returns_the_effect_types_its_tools_declare() -> None:
     """These bound which of the agent's returned effects the platform keeps."""
     agent = _Agent()
 
-    assert apply_tool_grant(agent, {"allowed": ["@reads"]}) == frozenset()
-    assert apply_tool_grant(_Agent(), {"allowed": ["@writes"]}) == frozenset(
+    assert apply_tool_grant(agent, {"allowed": ["@reads"]}).direct == frozenset()
+    assert apply_tool_grant(_Agent(), {"allowed": ["@writes"]}).direct == frozenset(
         {"CREATE_TASK", "UPDATE_TASK"}
     )
 
@@ -106,11 +106,11 @@ def test_tools_the_requester_lacks_a_permission_for_are_hidden() -> None:
     agent = _Agent()
     agent.requester = RunRequester(staff_id="s1", permissions=frozenset({"api.view_task"}))
 
-    effect_types = apply_tool_grant(agent, {"allowed": ["@writes"]})
+    grant = apply_tool_grant(agent, {"allowed": ["@writes"]})
 
     assert _names(agent) == {"write_task"}
     assert agent.tools_allowed == frozenset({"write_task"})
-    assert effect_types == frozenset({"CREATE_TASK"})
+    assert grant.direct == frozenset({"CREATE_TASK"})
 
 
 def test_a_requester_holding_the_permission_is_offered_the_tool() -> None:

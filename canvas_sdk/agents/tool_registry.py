@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.agents.approval import proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
 
 
@@ -214,6 +215,9 @@ class ToolRegistry:
         # needs before the tool is offered to the model.
         self._required_permissions: dict[str, frozenset[str]] = {}
         self._required_capabilities: dict[str, frozenset[Capability]] = {}
+        # Tools whose staged effects become proposals for the requester to approve, set
+        # by the platform from the manifest's tools.approve; see with_approval.
+        self._approval: frozenset[str] = frozenset()
 
     def register(
         self,
@@ -333,13 +337,41 @@ class ToolRegistry:
             if not self._missing_requirements(definition["name"], permissions, capabilities)
         )
 
+    def with_approval(self, names: Iterable[str]) -> "ToolRegistry":
+        """Return a copy in which the named tools propose their changes instead of making them.
+
+        The platform calls this with the manifest's ``tools.approve`` for the agent. Each
+        effect such a tool stages is wrapped in a proposal the requester approves or denies;
+        the model is told the change awaits approval. Names not registered here are ignored.
+        """
+        approving = self.scope(definition["name"] for definition in self._definitions)
+        approving._approval = frozenset(names) & frozenset(self._executors)
+        return approving
+
+    def requires_approval(self, name: str) -> bool:
+        """Whether ``name`` proposes its changes for the requester to approve."""
+        return name in self._approval
+
     def effect_types(self) -> frozenset[str]:
         """Every ``EffectType`` name a tool in this registry can stage.
 
         On the manifest-scoped registry the runner hands an agent, this is the
-        set of effect types the agent may return.
+        set of effect types the agent may return, directly or, for a tool that needs
+        approval, as proposals; see :meth:`direct_effect_types`.
         """
         return frozenset().union(*self._effect_types.values())
+
+    def direct_effect_types(self) -> frozenset[str]:
+        """The effect types a tool that needs no approval stages, which an agent may return."""
+        return frozenset().union(
+            *(types for name, types in self._effect_types.items() if name not in self._approval)
+        )
+
+    def proposable_effect_types(self) -> frozenset[str]:
+        """The effect types a tool that needs approval stages, which an agent may only propose."""
+        return frozenset().union(
+            *(types for name, types in self._effect_types.items() if name in self._approval)
+        )
 
     def tool(
         self,
@@ -947,6 +979,7 @@ class ToolRegistry:
                 required_permissions=other.required_permissions_for(name),
                 required_capabilities=other.required_capabilities_for(name),
             )
+        self._approval |= other._approval
 
     def scope(self, allowed: Iterable[str]) -> "ToolRegistry":
         """Return a *new* registry containing only the named tools.
@@ -985,6 +1018,7 @@ class ToolRegistry:
                     required_permissions=self.required_permissions_for(name),
                     required_capabilities=self.required_capabilities_for(name),
                 )
+        scoped._approval = self._approval & allowed_set
         return scoped
 
     def resolve_allowed(
@@ -1099,7 +1133,23 @@ class ToolRegistry:
             frozenset(granted) if isinstance(granted, set | frozenset) else frozenset(),
         ):
             raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
-        return executor(arguments, ctx=ctx)
+        if name not in self._approval:
+            return executor(arguments, ctx=ctx)
+        staged: list[Any] = []
+        result = executor(arguments, ctx={**ctx, "effects": staged})
+        if not staged:
+            return result
+        proposals = [propose(effect, name, arguments) for effect in staged]
+        ctx["effects"].extend(proposals)
+        return {
+            "status": "awaiting_approval",
+            "proposal_ids": [proposal_id(proposal) for proposal in proposals],
+            "message": (
+                "Nothing has changed yet: this change is proposed, and takes effect only if "
+                "the user approves it. Tell the user it is waiting for their approval."
+            ),
+            "tool_result": result,
+        }
 
 
 __exports__ = ("EffectField", "FilterSpec", "ToolNotAllowed", "ToolRegistry")

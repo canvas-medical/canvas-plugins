@@ -548,6 +548,10 @@ enum EffectType {
 
   // Agent Runner Framework
   RUN_AGENT = 11000;
+  // A change an agent's tool proposes for its requester to approve; the platform holds it.
+  PROPOSE_AGENT_ACTION = 11001;
+  // The requester's approval or denial of a held proposal.
+  DECIDE_AGENT_PROPOSAL = 11002;
 
   // Data Integration Effects
   LINK_DOCUMENT_TO_PATIENT = 9100;

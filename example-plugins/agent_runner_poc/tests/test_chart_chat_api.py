@@ -8,7 +8,7 @@ import pytest
 from agent_runner_poc.applications.chart_chat import ChartChatAPI
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
-from canvas_sdk.v1.data import AgentRun, AgentRunStatus
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
 
 
 def _api(staff_id: str, query: dict[str, str] | None = None, body: Any = None) -> ChartChatAPI:
@@ -69,3 +69,46 @@ def test_another_clinicians_run_is_not_revealed() -> None:
     (response,) = _api(StaffFactory.create().id, {"run_id": str(run.id)}).chart_chat_run()
 
     assert json.loads(response.content) == {"status": "queued", "error_kind": ""}
+
+
+def test_a_decision_goes_to_the_platform_as_the_clinicians() -> None:
+    """The plugin hands the decision over; the platform checks it is the requester's."""
+    proposal_id = str(uuid4())
+
+    response, effect = _api(
+        "s1", body={"proposal_id": proposal_id, "decision": "approve"}
+    ).chart_chat_decide()
+
+    assert response.status_code == 202
+    assert json.loads(effect.payload)["data"] == {
+        "proposal_id": proposal_id,
+        "decision": "approve",
+        "reason": "",
+    }
+
+
+@pytest.mark.django_db
+def test_a_run_shows_only_the_clinicians_own_proposals() -> None:
+    """Another clinician's proposal on the same run id is not offered for approval."""
+    staff, other = StaffFactory.create(), StaffFactory.create()
+    run = _record(staff, AgentRunStatus.SUCCEEDED)
+    for owner, tool in ((staff, "create_task"), (other, "add_banner_alert")):
+        AgentRunProposal.objects.create(
+            id=uuid4(),
+            run=run,
+            plugin_name="agent_runner_poc",
+            agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
+            tool=tool,
+            arguments={"title": "Call"},
+            effect_type="CREATE_TASK",
+            staff=owner,
+            status=AgentRunProposalStatus.PENDING,
+            created_at=datetime(2026, 10, 31, tzinfo=UTC),
+            expires_at=datetime(2026, 10, 31, 1, tzinfo=UTC),
+            reason="",
+        )
+
+    (response,) = _api(staff.id, {"run_id": str(run.id)}).chart_chat_proposals()
+
+    (proposal,) = json.loads(response.content)["proposals"]
+    assert (proposal["tool"], proposal["status"]) == ("create_task", "pending")

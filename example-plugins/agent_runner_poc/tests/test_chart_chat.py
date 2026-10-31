@@ -1,7 +1,10 @@
+import json
+
 import pytest
 from agent_runner_poc.agents.chart_chat import ChartChatAgent, load_conversation_messages
 
 from canvas_sdk.agents import AgentPlugin, RunRequester, RunSubject
+from canvas_sdk.effects import EffectType
 from canvas_sdk.test_utils.agents import (
     FakeGateway,
     prepare_agent,
@@ -87,3 +90,28 @@ def test_a_long_conversation_keeps_only_its_newest_part(
     assert 0 < len(stored) < len(turns)
     assert stored == turns[-len(stored) :]
     assert stored[0]["role"] == "user" and isinstance(stored[0]["content"], str)
+
+
+@pytest.mark.django_db
+def test_a_task_the_clinician_asks_for_waits_for_their_approval() -> None:
+    """With the manifest's approval list, create_task proposes the task instead of making it."""
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+    agent = prepare_agent(
+        ChartChatAgent,
+        allowed=["create_task"],
+        approve=["@task_writes"],
+        subject=RunSubject(patient_id=patient.id),
+        requester=RunRequester(staff_id=staff.id),
+    )
+    gateway = FakeGateway(
+        reply(tool_use("create_task", {"title": "Call about labs"})),
+        reply(text("The task is waiting for your approval below.")),
+    )
+
+    run = run_agent(agent, gateway, {"user_message": "Add a task to call her about labs."})
+
+    (proposal,) = run.effects
+    assert proposal.type == EffectType.PROPOSE_AGENT_ACTION
+    assert json.loads(proposal.payload)["data"]["effect"]["type"] == "CREATE_TASK"
+    tool_result = gateway.requests[1]["messages"][-1]["content"][0]["content"]
+    assert json.loads(tool_result)["status"] == "awaiting_approval"
