@@ -87,8 +87,9 @@ message RunAgentRequester {
   // plugin-runner hides tools that need one the requester lacks.
   repeated string permissions = 4;
 
-  // Set when permissions do not limit the run: no staff member started it, or a
-  // superuser did. permissions is empty then.
+  // Set when permissions do not limit the run: Canvas Bot is behind it, acting
+  // with the plugin's authority, or a superuser is. permissions is empty then,
+  // and empty without this flag for a run a patient started.
   bool all_permissions = 5;
 }
 
