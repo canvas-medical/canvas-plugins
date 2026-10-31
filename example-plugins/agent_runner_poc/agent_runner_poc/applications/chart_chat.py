@@ -26,7 +26,7 @@ for the LLM round-trip).
 from http import HTTPStatus
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat import load_conversation_messages
+from agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -159,7 +159,8 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         """Approve or deny a proposed change; the platform checks the decision is the clinician's.
 
         The platform accepts it only from this clinician, the one the agent acted for,
-        while the proposal is pending, and applies exactly the proposed change.
+        while the proposal is pending, and applies exactly the proposed change. The agent
+        records the outcome in the conversation at the start of its next run.
         """
         body = self.request.json()
         decision = DecideAgentProposal(
@@ -179,10 +180,13 @@ def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, str]]:
     Persisted messages can carry Anthropic block lists in their ``content``
     field (the assistant turns include ToolUseBlocks etc.); the UI only
     needs the human-readable text bits. Tool calls and tool results are
-    elided — clinicians see the conversation, not the agent's plumbing.
+    elided — clinicians see the conversation, not the agent's plumbing — and so
+    is the note of proposal decisions, which the approval cards already show.
     """
     out: list[dict[str, str]] = []
     for message in stored:
+        if is_decisions_note(message):
+            continue
         role = message.get("role")
         content = message.get("content")
         if isinstance(content, str):

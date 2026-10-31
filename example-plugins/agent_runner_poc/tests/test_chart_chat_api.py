@@ -5,7 +5,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from agent_runner_poc.applications.chart_chat import ChartChatAPI
+from agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
+from agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
@@ -75,12 +76,12 @@ def test_a_decision_goes_to_the_platform_as_the_clinicians() -> None:
     """The plugin hands the decision over; the platform checks it is the requester's."""
     proposal_id = str(uuid4())
 
-    response, effect = _api(
+    response, decision = _api(
         "s1", body={"proposal_id": proposal_id, "decision": "approve"}
     ).chart_chat_decide()
 
     assert response.status_code == 202
-    assert json.loads(effect.payload)["data"] == {
+    assert json.loads(decision.payload)["data"] == {
         "proposal_id": proposal_id,
         "decision": "approve",
         "reason": "",
@@ -112,3 +113,20 @@ def test_a_run_shows_only_the_clinicians_own_proposals() -> None:
 
     (proposal,) = json.loads(response.content)["proposals"]
     assert (proposal["tool"], proposal["status"]) == ("create_task", "pending")
+
+
+def test_the_note_of_decisions_is_not_shown_as_the_clinicians_message() -> None:
+    """The approval cards already show each decision; the chat shows only the conversation."""
+    stored: list[dict[str, Any]] = [
+        {"role": "user", "content": "Add a task."},
+        {"role": "assistant", "content": [{"type": "text", "text": "It awaits approval."}]},
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": f"{DECISIONS_NOTE_PREFIX}\n- proposal x"}],
+        },
+    ]
+
+    assert _ui_messages(stored) == [
+        {"role": "user", "text": "Add a task."},
+        {"role": "assistant", "text": "It awaits approval."},
+    ]
