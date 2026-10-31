@@ -1,7 +1,7 @@
 import pytest
 from agent_runner_poc.agents.chart_chat import ChartChatAgent, load_conversation_messages
 
-from canvas_sdk.agents import AgentPlugin, RunSubject
+from canvas_sdk.agents import AgentPlugin, RunRequester, RunSubject
 from canvas_sdk.test_utils.agents import (
     FakeGateway,
     prepare_agent,
@@ -16,7 +16,9 @@ from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 def _agent_for(patient_id: str, staff_id: str) -> AgentPlugin:
     """A chat agent for one clinician's run on one patient, as the platform sets it up."""
     return prepare_agent(
-        ChartChatAgent, subject=RunSubject(patient_id=patient_id, staff_id=staff_id)
+        ChartChatAgent,
+        subject=RunSubject(patient_id=patient_id),
+        requester=RunRequester(staff_id=staff_id),
     )
 
 
@@ -44,7 +46,8 @@ def test_run_answers_through_the_tool_loop_and_keeps_the_transcript() -> None:
     agent = prepare_agent(
         ChartChatAgent,
         allowed=["get_patient_demographics"],
-        subject=RunSubject(patient_id=patient.id, staff_id=staff.id),
+        subject=RunSubject(patient_id=patient.id),
+        requester=RunRequester(staff_id=staff.id),
     )
     gateway = FakeGateway(
         reply(tool_use("get_patient_demographics")),

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.agents.capabilities import Capability
 
 
 def _effect_type_name(effect_class: type, effect_method: str) -> str:
@@ -209,6 +210,10 @@ class ToolRegistry:
         # tool name → the EffectType names the tool can stage. The plugin runner
         # drops any effect an agent returns whose type no granted tool declares.
         self._effect_types: dict[str, frozenset[str]] = {}
+        # tool name → the platform permissions and capabilities a run's requester
+        # needs before the tool is offered to the model.
+        self._required_permissions: dict[str, frozenset[str]] = {}
+        self._required_capabilities: dict[str, frozenset[Capability]] = {}
 
     def register(
         self,
@@ -218,6 +223,8 @@ class ToolRegistry:
         categories: Iterable[str] = (),
         metadata: dict[str, Any] | None = None,
         effect_types: Iterable[str] = (),
+        required_permissions: Iterable[str] = (),
+        required_capabilities: Iterable[Capability] = (),
     ) -> None:
         """Register a tool by passing the definition and executor directly.
 
@@ -237,6 +244,13 @@ class ToolRegistry:
                 ``"CREATE_TASK"``). Granting the tool to an agent lets the agent
                 return effects of these types; the plugin runner drops any
                 other effect the agent returns. A read-only tool declares none.
+            required_permissions: Platform permission names, such as
+                ``"api.change_task"``, the staff member behind a run must hold for
+                the tool to be offered: the permission the chart checks for the same
+                action. The platform hides the tool otherwise, and checks the
+                permission again when it applies the tool's effects.
+            required_capabilities: :class:`Capability` values the run must be
+                granted for the tool to be offered.
 
         Raises:
             ValueError: If ``definition`` is missing a ``"name"`` key, if a
@@ -260,6 +274,10 @@ class ToolRegistry:
             self._metadata[name] = dict(metadata)
         if declared:
             self._effect_types[name] = declared
+        if permissions := frozenset(required_permissions):
+            self._required_permissions[name] = permissions
+        if capabilities := frozenset(required_capabilities):
+            self._required_capabilities[name] = capabilities
 
     def metadata_for(self, name: str) -> dict[str, Any]:
         """Return the docs-oriented metadata for a tool, or an empty dict.
@@ -276,6 +294,44 @@ class ToolRegistry:
     def effect_types_for(self, name: str) -> frozenset[str]:
         """Return the ``EffectType`` names a tool declares it stages."""
         return self._effect_types.get(name, frozenset())
+
+    def required_permissions_for(self, name: str) -> frozenset[str]:
+        """Return the permissions a run's requester needs for the tool to be offered."""
+        return self._required_permissions.get(name, frozenset())
+
+    def required_capabilities_for(self, name: str) -> frozenset[Capability]:
+        """Return the capabilities a run needs for the tool to be offered."""
+        return self._required_capabilities.get(name, frozenset())
+
+    def _missing_requirements(
+        self,
+        name: str,
+        permissions: frozenset[str] | None,
+        capabilities: frozenset[Capability],
+    ) -> list[str]:
+        """What ``name`` requires that the run lacks; ``permissions`` None means no limit."""
+        missing: list[str] = sorted(
+            f"the {capability.value!r} capability"
+            for capability in self.required_capabilities_for(name) - capabilities
+        )
+        if permissions is not None:
+            missing += sorted(self.required_permissions_for(name) - permissions)
+        return missing
+
+    def usable_by(
+        self, permissions: frozenset[str] | None, capabilities: frozenset[Capability]
+    ) -> "ToolRegistry":
+        """Return a new registry of the tools a run with these grants may use.
+
+        ``permissions`` are the requester's platform permissions, or None when model
+        permissions do not limit the run (no staff member started it, or a superuser
+        did). The platform uses this to hide tools the requester could not use.
+        """
+        return self.scope(
+            definition["name"]
+            for definition in self._definitions
+            if not self._missing_requirements(definition["name"], permissions, capabilities)
+        )
 
     def effect_types(self) -> frozenset[str]:
         """Every ``EffectType`` name a tool in this registry can stage.
@@ -294,14 +350,16 @@ class ToolRegistry:
         categories: Iterable[str] = (),
         returns_description: str | None = None,
         effect_types: Iterable[str] = (),
+        required_permissions: Iterable[str] = (),
+        required_capabilities: Iterable[Capability] = (),
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
         ``categories`` tags the tool for shorthand allowlist references — see
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
-        generator. ``effect_types`` names the effects the tool stages — see
-        :meth:`register`.
+        generator. ``effect_types``, ``required_permissions``, and
+        ``required_capabilities`` are as in :meth:`register`.
         """
 
         def decorator(fn: ToolExecutor) -> ToolExecutor:
@@ -314,6 +372,8 @@ class ToolRegistry:
                 categories=categories,
                 metadata=metadata or None,
                 effect_types=effect_types,
+                required_permissions=required_permissions,
+                required_capabilities=required_capabilities,
             )
             return fn
 
@@ -694,6 +754,7 @@ class ToolRegistry:
         categories: Iterable[str] = (),
         returns_description: str | None = None,
         effect_method: str = "apply",
+        required_permissions: Iterable[str] = (),
     ) -> None:
         """Register a tool that stages a non-note-bound Effect.
 
@@ -752,6 +813,7 @@ class ToolRegistry:
                 ``"create"`` / ``"edit"`` / ``"send"`` for the Message
                 effect family (``canvas_sdk.effects.note.message.Message``),
                 which uses explicit verbs instead of a single ``.apply()``.
+            required_permissions: As in :meth:`register`.
 
         Example::
 
@@ -858,6 +920,7 @@ class ToolRegistry:
             categories=categories,
             metadata=metadata,
             effect_types=(_effect_type_name(effect_class, effect_method),),
+            required_permissions=required_permissions,
         )
 
     def extend(self, other: "ToolRegistry") -> None:
@@ -881,6 +944,8 @@ class ToolRegistry:
                 categories=categories,
                 metadata=metadata,
                 effect_types=other.effect_types_for(name),
+                required_permissions=other.required_permissions_for(name),
+                required_capabilities=other.required_capabilities_for(name),
             )
 
     def scope(self, allowed: Iterable[str]) -> "ToolRegistry":
@@ -917,6 +982,8 @@ class ToolRegistry:
                     categories=self.categories_for(name),
                     metadata=self.metadata_for(name),
                     effect_types=self.effect_types_for(name),
+                    required_permissions=self.required_permissions_for(name),
+                    required_capabilities=self.required_capabilities_for(name),
                 )
         return scoped
 
@@ -1016,13 +1083,22 @@ class ToolRegistry:
             ValueError: If ``name`` is not a registered tool. The caller is
                 expected to translate this into a ``tool_result`` with
                 ``is_error=True`` rather than crashing the run.
-            ToolNotAllowed: If ``allowed`` was supplied and ``name`` is not in it.
+            ToolNotAllowed: If ``allowed`` was supplied and ``name`` is not in it, or the
+                run lacks a permission or capability the tool requires. ``ctx`` without
+                a ``permissions`` key, as in a direct call, is not limited by permissions.
         """
         executor = self._executors.get(name)
         if executor is None:
             raise ValueError(f"Unknown tool: {name!r}")
         if allowed is not None and name not in set(allowed):
             raise ToolNotAllowed(f"Tool {name!r} is registered but not in the caller's allowed set")
+        granted = ctx.get("capabilities")
+        if missing := self._missing_requirements(
+            name,
+            ctx.get("permissions"),
+            frozenset(granted) if isinstance(granted, set | frozenset) else frozenset(),
+        ):
+            raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
         return executor(arguments, ctx=ctx)
 
 

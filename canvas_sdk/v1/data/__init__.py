@@ -1,4 +1,4 @@
-from .agent_run import AgentRun, AgentRunStatus, AgentRunToolCall
+from .agent_run import AgentRun, AgentRunStatus, AgentRunSubject, AgentRunToolCall
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .application import Application
 from .appointment import (
@@ -289,6 +289,7 @@ from .vitals import VitalSign, VitalSignReading
 __all__ = __exports__ = (
     "AgentRun",
     "AgentRunStatus",
+    "AgentRunSubject",
     "AgentRunToolCall",
     "Application",
     "Appointment",
