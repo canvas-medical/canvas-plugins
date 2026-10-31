@@ -29,10 +29,11 @@ from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
-from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
+from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
 from canvas_sdk.agents.subject import RunRequester, RunSubject
+from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.effects import Effect
 
 
@@ -101,6 +102,7 @@ def prepare_agent(
     *,
     allowed: Iterable[str] = (),
     denied: Iterable[str] = (),
+    approve: Iterable[str] = (),
     subject: RunSubject | None = None,
     requester: RunRequester | None = None,
     capabilities: Iterable[Capability] = (),
@@ -108,8 +110,8 @@ def prepare_agent(
 ) -> AgentPlugin:
     """An agent set up the way the platform sets one up before a run.
 
-    ``allowed`` and ``denied`` are the manifest's ``tools`` grant: tool names and
-    ``@category`` references. ``requester`` carries the staff member and their
+    ``allowed``, ``denied``, and ``approve`` are the manifest's ``tools`` grant: tool names
+    and ``@category`` references. ``requester`` carries the staff member and their
     permissions, and ``capabilities`` are what the platform would grant them; tools
     either rules out are hidden, as on the platform. ``run_id`` defaults to a fresh one.
     """
@@ -117,7 +119,9 @@ def prepare_agent(
     agent.subject = subject or RunSubject()
     agent.requester = requester or RunRequester()
     agent.capabilities = frozenset(capabilities)
-    apply_tool_grant(agent, {"allowed": list(allowed), "denied": list(denied)})
+    apply_tool_grant(
+        agent, {"allowed": list(allowed), "denied": list(denied), "approve": list(approve)}
+    )
     agent.run_id = run_id or str(uuid4())
     return agent
 
@@ -157,7 +161,10 @@ def run_agent(
     it to the agent's ``max_model_calls``. Unlike
     the platform, an exception from the run or a hook propagates, so a test sees it.
     """
-    granted_effect_types = agent.tools.effect_types() if agent.tools else frozenset()
+    tools = agent.tools or ToolRegistry()
+    effect_grant = EffectGrant(
+        direct=tools.direct_effect_types(), proposable=tools.proposable_effect_types()
+    )
     recorder = RunRecorder(max_model_calls=agent.max_model_calls)
     token = current_recorder.set(recorder)
     try:
@@ -172,7 +179,7 @@ def run_agent(
         agent.on_run_end(result)
     finally:
         current_recorder.reset(token)
-    kept, dropped = split_granted_effects(result.effects, granted_effect_types)
+    kept, dropped = split_granted_effects(result.effects, effect_grant)
     return AgentTestRun(
         result=result,
         effects=kept,

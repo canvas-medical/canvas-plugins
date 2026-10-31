@@ -655,8 +655,9 @@ class PluginRunner(PluginRunnerServicer):
                     # `denied` is subtracted after expansion, and an agent whose
                     # manifest grants nothing gets no tools. The agent's registry is
                     # swapped for the scoped view, and the effect types the
-                    # remaining tools declare bound what the agent may return below.
-                    granted_effect_types = apply_tool_grant(
+                    # remaining tools declare bound what the agent may return below,
+                    # bare or, for tools listed under `approve`, as proposals.
+                    effect_grant = apply_tool_grant(
                         agent, (plugin.get("handler") or {}).get("tools") or {}
                     )
                     agent.run_id = request.run_id
@@ -721,7 +722,7 @@ class PluginRunner(PluginRunnerServicer):
             # protocol identifier: ProtocolCardEffectInterpreter keys a card on
             # `{classname}|{plugin_name}` when one is set, ignoring the effect's own
             # `key`, which would put every card an agent emits for a patient in one row.
-            granted_effects, ungranted = split_granted_effects(result.effects, granted_effect_types)
+            granted_effects, ungranted = split_granted_effects(result.effects, effect_grant)
             for effect in ungranted:
                 log.warning(
                     f"RunAgent: dropping {EffectType.Name(effect.type)} from agent "

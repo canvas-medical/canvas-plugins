@@ -112,6 +112,43 @@
         background: #fef2f2;
         border-color: #fecaca;
       }
+      .proposal {
+        align-self: flex-start;
+        max-width: 85%;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      .proposal-title { font-weight: 600; margin-bottom: 6px; }
+      .proposal dl { margin: 0 0 8px; display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; }
+      .proposal dt { color: var(--muted); }
+      .proposal dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+      .proposal-actions { display: flex; gap: 8px; }
+      .proposal-actions button {
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+        font: inherit;
+        cursor: pointer;
+      }
+      .proposal-actions button.approve { background: var(--bubble-user); color: var(--bubble-user-fg); border-color: var(--bubble-user); }
+      .proposal-actions button[disabled] { opacity: 0.5; cursor: not-allowed; }
+      .proposal-status {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        --c: var(--muted);
+        color: var(--c);
+        background: color-mix(in srgb, var(--c) 16%, transparent);
+      }
+      .proposal-status.approved { --c: #15803d; }
+      .proposal-status.denied, .proposal-status.expired { --c: #6b7280; }
+      .proposal-status.failed { --c: #b91c1c; }
       .chart-embed {
         margin: 8px 0;
         background: #ffffff;
@@ -137,6 +174,14 @@
       const HISTORY_URL = `/plugin-io/api/agent_runner_poc/chart-chat-history?patient=${encodeURIComponent(PATIENT_ID)}`;
       const MESSAGE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-message';
       const RUN_URL = '/plugin-io/api/agent_runner_poc/chart-chat-run?run_id=';
+      const PROPOSALS_URL = '/plugin-io/api/agent_runner_poc/chart-chat-proposals?run_id=';
+      const DECIDE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-decide';
+      const PROPOSAL_STATUS_TEXT = {
+        approved: 'Approved',
+        denied: 'Denied',
+        failed: 'Could not be applied',
+        expired: 'Expired',
+      };
       const POLL_INTERVAL_MS = 1500;
       // A run can wait up to about 10 minutes for its scope and then run for up to
       // 10, so the platform's run record, not this budget, decides the outcome.
@@ -331,6 +376,89 @@
         return 'The agent hit an error before it answered.';
       }
 
+      // Changes the agent proposed wait for the clinician: each gets a card to approve or
+      // deny, and the platform applies an approved one exactly as proposed.
+      function proposalTitle(tool) {
+        return tool.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+      }
+
+      function renderProposal(card, proposal, runId) {
+        card.textContent = '';
+        const title = document.createElement('div');
+        title.className = 'proposal-title';
+        title.textContent = 'Approve this change? ' + proposalTitle(proposal.tool);
+        card.appendChild(title);
+        const fields = document.createElement('dl');
+        for (const [key, value] of Object.entries(proposal.arguments || {})) {
+          const dt = document.createElement('dt');
+          dt.textContent = key.replace(/_/g, ' ');
+          const dd = document.createElement('dd');
+          dd.textContent = typeof value === 'string' ? value : JSON.stringify(value);
+          fields.append(dt, dd);
+        }
+        card.appendChild(fields);
+        if (proposal.status !== 'pending') {
+          const status = document.createElement('span');
+          status.className = 'proposal-status ' + proposal.status;
+          status.textContent = PROPOSAL_STATUS_TEXT[proposal.status] || proposal.status;
+          if (proposal.reason) status.title = proposal.reason;
+          card.appendChild(status);
+          return;
+        }
+        const actions = document.createElement('div');
+        actions.className = 'proposal-actions';
+        for (const decision of ['approve', 'deny']) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = decision;
+          button.textContent = decision === 'approve' ? 'Approve' : 'Deny';
+          button.addEventListener('click', () => decideProposal(card, proposal, decision, runId));
+          actions.appendChild(button);
+        }
+        card.appendChild(actions);
+      }
+
+      async function decideProposal(card, proposal, decision, runId) {
+        card.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        try {
+          const res = await fetch(DECIDE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proposal_id: proposal.id, decision }),
+          });
+          if (!res.ok) throw new Error('decision failed: ' + res.status);
+        } catch (err) {
+          card.querySelectorAll('button').forEach(button => { button.disabled = false; });
+          appendBubble('assistant', 'Could not record the decision: ' + err.message, { error: true });
+          return;
+        }
+        await refreshProposals(runId);
+      }
+
+      const proposalCards = {};
+
+      async function refreshProposals(runId) {
+        let proposals = [];
+        try {
+          const res = await fetch(PROPOSALS_URL + encodeURIComponent(runId), { cache: 'no-store' });
+          if (!res.ok) return;
+          proposals = (await res.json()).proposals || [];
+        } catch (err) {
+          return;
+        }
+        for (const proposal of proposals) {
+          let card = proposalCards[proposal.id];
+          if (!card) {
+            card = document.createElement('div');
+            card.className = 'proposal';
+            log.appendChild(card);
+            proposalCards[proposal.id] = card;
+          }
+          renderProposal(card, proposal, runId);
+        }
+        log.scrollTop = log.scrollHeight;
+      }
+
       async function showLatestReply(baseline, placeholder) {
         // The run succeeded, so its save_state has written the reply to the history.
         const res = await fetch(HISTORY_URL, { cache: 'no-store' });
@@ -377,6 +505,7 @@
           if (!FINISHED_STATUSES.includes(run.status)) continue;
           if (run.status === 'succeeded') {
             await showLatestReply(baseline, placeholder);
+            await refreshProposals(runId);
           } else {
             placeholder.classList.add('error');
             placeholder.textContent = runFailureMessage(run);

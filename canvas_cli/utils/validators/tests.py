@@ -300,3 +300,36 @@ def test_manifest_rejects_malformed_catalog_listing(
     handler_manifest_example["catalog"] = catalog
     with pytest.raises(ValidationError):
         validate_manifest_file(handler_manifest_example)
+
+
+def _agent_manifest(tools: dict) -> dict:
+    """Return a valid manifest with one agent carrying the given tool grant."""
+    return {
+        "sdk_version": "0.3.1",
+        "plugin_version": "1.0.1",
+        "name": "agent plugin",
+        "description": "An agent",
+        "components": {
+            "agents": [
+                {"class": "my_plugin.agents.chat:ChatAgent", "description": "chat", "tools": tools}
+            ]
+        },
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "README.MD",
+    }
+
+
+def test_manifest_accepts_tools_that_need_approval() -> None:
+    """An agent's grant can list tools whose changes the requester approves."""
+    validate_manifest_file(
+        _agent_manifest({"allowed": ["@task_writes"], "approve": ["@task_writes"]})
+    )
+
+
+def test_manifest_rejects_an_unknown_tools_key() -> None:
+    """A misspelled key is refused rather than ignored."""
+    with pytest.raises(ValidationError):
+        validate_manifest_file(_agent_manifest({"allowed": [], "aprove": ["create_task"]}))
