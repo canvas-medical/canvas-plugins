@@ -3,11 +3,13 @@
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
+    "Capability",
     "DEFAULT_HISTORY_CHARS",
     "EffectField",
     "FilterSpec",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "RunRequester",
     "RunSubject",
     "SubAgentSpec",
     "ToolLoopResult",
@@ -24,6 +26,9 @@
   ],
   "canvas_sdk.agents.base": [
     "AgentPlugin"
+  ],
+  "canvas_sdk.agents.capabilities": [
+    "Capability"
   ],
   "canvas_sdk.agents.gateway": [
     "LLMGateway",
@@ -53,6 +58,7 @@
     "run_subagents"
   ],
   "canvas_sdk.agents.subject": [
+    "RunRequester",
     "RunSubject"
   ],
   "canvas_sdk.agents.tool_loop": [
@@ -1248,6 +1254,7 @@
   "canvas_sdk.v1.data": [
     "AgentRun",
     "AgentRunStatus",
+    "AgentRunSubject",
     "AgentRunToolCall",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
@@ -1538,6 +1545,7 @@
   "canvas_sdk.v1.data.agent_run": [
     "AgentRun",
     "AgentRunStatus",
+    "AgentRunSubject",
     "AgentRunToolCall"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [

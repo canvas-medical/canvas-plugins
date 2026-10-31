@@ -62,16 +62,41 @@ message RunAgentRequest {
   // effects carry the agent class as their handler_name instead.
   string handler_name = 6;
 
-  // Provenance fields, threaded through to each emitted Effect so audit
-  // and downstream interpreters see the originating actor and source.
-  string actor = 7;
-  string source = 8;
+  // Who started the run.
+  RunAgentRequester requester = 7;
 
-  // The run's subject, validated by home-app before the run is enqueued, so an
-  // agent's tools can rely on it. Each is empty when the run has none.
-  // patient_id and note_id come from the RunAgentEffect; staff_id is the staff
-  // member behind the event that emitted it.
-  string patient_id = 9;
-  string staff_id = 10;
-  string note_id = 11;
+  // What the run is about, validated by home-app before the run is enqueued.
+  RunAgentSubject subject = 8;
+
+  // What the run may do beyond the tools its manifest grants, such as "revenue",
+  // decided by home-app from the requester's permissions.
+  repeated string capabilities = 9;
+}
+
+message RunAgentRequester {
+  // Provenance, threaded through to each emitted Effect so audit and downstream
+  // interpreters see the originating actor and source.
+  string actor = 1;
+  string source = 2;
+
+  // The staff member behind the event that emitted the RunAgentEffect; empty for
+  // a run a patient, a schedule, or a system event started.
+  string staff_id = 3;
+
+  // The staff member's platform permissions, such as "api.change_task". The
+  // plugin-runner hides tools that need one the requester lacks.
+  repeated string permissions = 4;
+
+  // Set when permissions do not limit the run: no staff member started it, or a
+  // superuser did. permissions is empty then.
+  bool all_permissions = 5;
+}
+
+message RunAgentSubject {
+  // Each comes from the RunAgentEffect and is empty when the run has none.
+  // home-app checks the patient exists, the note is that patient's, and the claim
+  // exists and the run has the "revenue" capability.
+  string patient_id = 1;
+  string note_id = 2;
+  string claim_id = 3;
 }

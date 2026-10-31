@@ -12,7 +12,7 @@ Demonstrates the snapshot state pattern:
 Dispatched via the standard ``RunAgent`` path: the chat UI's POST
 handler emits a :class:`RunAgentEffect` scoped to the patient and the
 clinician behind the request, with ``user_message`` in ``trigger_payload``.
-The platform sets both on ``self.subject``, and runs one at a time per
+The platform sets them on ``self.subject`` and ``self.requester``, and runs one at a time per
 patient and clinician. The UI polls ``/chart-chat-history`` to surface the
 assistant turn when it lands.
 
@@ -220,9 +220,9 @@ class ChartChatAgent(AgentPlugin):
         """Read the clinician's conversation snapshot for this patient.
 
         The run is scoped to the patient and the clinician who sent the message,
-        both of which the platform sets on ``self.subject``.
+        which the platform sets on ``self.subject`` and ``self.requester``.
         """
-        messages = load_conversation_messages(self.subject.patient_id, self.subject.staff_id)
+        messages = load_conversation_messages(self.subject.patient_id, self.requester.staff_id)
         return AgentState(data={"messages": messages})
 
     def run(
@@ -251,4 +251,4 @@ class ChartChatAgent(AgentPlugin):
     def save_state(self, scope_key: str, state: AgentState) -> None:
         """Persist the newest part of the message snapshot back to the Conversation row."""
         messages = window_messages(state.data["messages"], STORED_HISTORY_CHARS)
-        _save_conversation_messages(self.subject.patient_id, self.subject.staff_id, messages)
+        _save_conversation_messages(self.subject.patient_id, self.requester.staff_id, messages)

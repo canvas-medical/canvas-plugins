@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Claims chat</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f7f8;
+        --accent: #2563eb;
+        --accent-fg: #ffffff;
+        --surface: #ffffff;
+        --border: #e5e7eb;
+        --muted: #6b7280;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 95%; margin: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: #111827;
+        display: flex;
+        flex-direction: column;
+      }
+      #mode {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      #mode .label { font-weight: 600; }
+      #mode .claim { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+      #mode a { margin-left: auto; color: var(--accent); text-decoration: none; }
+      #log {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .bubble {
+        max-width: 85%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 14px;
+      }
+      .user {
+        align-self: flex-end;
+        background: var(--accent);
+        color: var(--accent-fg);
+        border-bottom-right-radius: 4px;
+      }
+      .assistant {
+        align-self: flex-start;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+      }
+      .assistant a.claim-link {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--accent);
+      }
+      .meta { font-size: 12px; color: var(--muted); align-self: flex-start; padding: 4px 8px; }
+      .error { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+      #composer {
+        display: flex;
+        gap: 8px;
+        padding: 12px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+      }
+      #composer textarea {
+        flex: 1;
+        min-height: 44px;
+        max-height: 160px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        resize: vertical;
+        font: inherit;
+      }
+      #composer button {
+        padding: 0 16px;
+        background: var(--accent);
+        color: var(--accent-fg);
+        border: 0;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #composer button[disabled] { opacity: 0.5; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+    <div id="mode"></div>
+    <div id="log" aria-live="polite"></div>
+    <form id="composer" autocomplete="off">
+      <textarea id="message" name="message" aria-label="Message" required></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+    <script>
+      const CLAIM_ID = "{{ claim_id|escapejs }}";
+      const BASE = '/plugin-io/api/agent_runner_poc';
+      const CLAIM_QUERY = CLAIM_ID ? `?claim=${encodeURIComponent(CLAIM_ID)}` : '';
+      const HISTORY_URL = `${BASE}/claims-chat-history${CLAIM_QUERY}`;
+      const MESSAGE_URL = `${BASE}/claims-chat-message`;
+      const RUN_URL = `${BASE}/claims-chat-run?run_id=`;
+      const UI_URL = `${BASE}/claims-chat-ui`;
+      const POLL_INTERVAL_MS = 1500;
+      // The platform's run record decides the outcome; this only bounds the page's wait.
+      const POLL_TIMEOUT_MS = 25 * 60 * 1000;
+      const FINISHED_STATUSES = ['succeeded', 'failed', 'refused', 'abandoned', 'gave_up'];
+      const CLAIM_ID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+
+      const mode = document.getElementById('mode');
+      const log = document.getElementById('log');
+      const composer = document.getElementById('composer');
+      const messageEl = document.getElementById('message');
+      const sendBtn = document.getElementById('send');
+      let assistantCount = 0;
+
+      function renderMode() {
+        const label = document.createElement('span');
+        label.className = 'label';
+        if (CLAIM_ID) {
+          label.textContent = 'Claim';
+          const claim = document.createElement('span');
+          claim.className = 'claim';
+          claim.textContent = CLAIM_ID;
+          const back = document.createElement('a');
+          back.href = UI_URL;
+          back.textContent = 'Back to the queues';
+          mode.append(label, claim, back);
+          messageEl.placeholder = 'Ask about this claim...';
+        } else {
+          label.textContent = 'Claims queues';
+          mode.append(label);
+          messageEl.placeholder = 'Ask about your claims...';
+        }
+      }
+
+      function renderAssistantText(div, text) {
+        // A claim id in a reply links to that claim's own conversation.
+        div.textContent = '';
+        let last = 0;
+        for (const match of text.matchAll(CLAIM_ID_RE)) {
+          div.append(text.slice(last, match.index));
+          if (match[0].toLowerCase() === CLAIM_ID.toLowerCase()) {
+            div.append(match[0]);
+          } else {
+            const link = document.createElement('a');
+            link.className = 'claim-link';
+            link.href = `${UI_URL}?claim=${encodeURIComponent(match[0])}`;
+            link.title = 'Open this claim’s chat';
+            link.textContent = match[0];
+            div.append(link);
+          }
+          last = match.index + match[0].length;
+        }
+        div.append(text.slice(last));
+      }
+
+      function appendBubble(role, text, opts) {
+        const div = document.createElement('div');
+        div.className = 'bubble ' + role + (opts && opts.error ? ' error' : '');
+        if (role === 'assistant') renderAssistantText(div, text);
+        else div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+        return div;
+      }
+
+      function appendMeta(text) {
+        const div = document.createElement('div');
+        div.className = 'meta';
+        div.textContent = text;
+        log.appendChild(div);
+      }
+
+      async function fetchMessages() {
+        const res = await fetch(HISTORY_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('history fetch failed: ' + res.status);
+        return (await res.json()).messages || [];
+      }
+
+      async function loadHistory() {
+        try {
+          const messages = await fetchMessages();
+          messages.forEach(m => appendBubble(m.role, m.text));
+          assistantCount = messages.filter(m => m.role === 'assistant').length;
+          if (!messages.length) {
+            appendMeta(CLAIM_ID
+                ? 'Ask what is holding this claim up, or ask the agent to move, assign, label, or comment on it.'
+                : 'Ask what is waiting in a queue, or which claims to work first.');
+          }
+        } catch (err) {
+          appendBubble('assistant', 'Failed to load the conversation: ' + err.message, { error: true });
+        }
+      }
+
+      function runFailureMessage(run) {
+        if (run.status === 'refused') return run.error || 'The agent could not start.';
+        if (run.status === 'gave_up') return 'The agent was busy with another request. Try again.';
+        if (run.status === 'abandoned') return 'The agent ran out of time before it answered.';
+        if (run.error_kind === 'LLM_UNAVAILABLE') return 'The model is unavailable right now. Try again shortly.';
+        if (run.error_kind === 'LLM_REFUSED') return 'The inference gateway refused the request.';
+        if (run.error_kind === 'LLM_NOT_CONFIGURED') return 'The agent has no inference gateway key configured.';
+        return 'The agent hit an error before it answered.';
+      }
+
+      async function showLatestReply(baseline, placeholder) {
+        const assistants = (await fetchMessages()).filter(m => m.role === 'assistant');
+        if (assistants.length <= baseline) {
+          placeholder.textContent = '(no response)';
+          return;
+        }
+        renderAssistantText(placeholder, assistants[assistants.length - 1].text || '');
+        assistantCount = assistants.length;
+      }
+
+      async function pollRun(runId, baseline, placeholder) {
+        const deadline = Date.now() + POLL_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+          let run;
+          try {
+            const res = await fetch(RUN_URL + encodeURIComponent(runId), { cache: 'no-store' });
+            if (res.status >= 400 && res.status < 500) {
+              placeholder.classList.add('error');
+              placeholder.textContent = (res.status === 401 || res.status === 403)
+                ? 'Your session has ended. Reload the page to see the reply.'
+                : 'Could not check on the agent (HTTP ' + res.status + ').';
+              return;
+            }
+            if (!res.ok) continue;
+            run = await res.json();
+          } catch (err) {
+            continue;
+          }
+          if (!FINISHED_STATUSES.includes(run.status)) continue;
+          if (run.status === 'succeeded') {
+            await showLatestReply(baseline, placeholder);
+          } else {
+            placeholder.classList.add('error');
+            placeholder.textContent = runFailureMessage(run);
+          }
+          return;
+        }
+        placeholder.classList.add('error');
+        placeholder.textContent = 'The agent has not finished after ' + (POLL_TIMEOUT_MS / 60000) + ' minutes.';
+      }
+
+      async function sendMessage(text) {
+        appendBubble('user', text);
+        const placeholder = appendBubble('assistant', '…');
+        const baseline = assistantCount;
+        sendBtn.disabled = true;
+        try {
+          const res = await fetch(MESSAGE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ claim_id: CLAIM_ID, message: text }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            placeholder.classList.add('error');
+            placeholder.textContent = data.error || ('Request failed: ' + res.status);
+            return;
+          }
+          await pollRun(data.run_id, baseline, placeholder);
+        } catch (err) {
+          placeholder.classList.add('error');
+          placeholder.textContent = 'Request failed: ' + err.message;
+        } finally {
+          sendBtn.disabled = false;
+          messageEl.focus();
+        }
+      }
+
+      composer.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = messageEl.value.trim();
+        if (!text) return;
+        messageEl.value = '';
+        sendMessage(text);
+      });
+
+      messageEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          composer.requestSubmit();
+        }
+      });
+
+      renderMode();
+      loadHistory();
+    </script>
+  </body>
+</html>

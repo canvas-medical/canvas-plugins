@@ -2340,6 +2340,8 @@ standard_tools.add_effect_tool(
     pre_build=lambda arguments, ctx: _build_update_task_kwargs(arguments, ctx),
     categories=("task_writes",),
     returns_description="`{ok: true}`.",
+    # The chart's task update and task comment paths both check change_task.
+    required_permissions=("api.change_task",),
 )
 
 
@@ -2391,6 +2393,8 @@ standard_tools.add_effect_tool(
     pre_build=_patients_record_check(Task, "task_id", "task"),
     categories=("task_writes",),
     returns_description="`{ok: true}`.",
+    # The chart's task update and task comment paths both check change_task.
+    required_permissions=("api.change_task",),
 )
 
 
@@ -3160,6 +3164,8 @@ standard_tools.register(
     _originate_review_note,
     categories=("clinical_writes",),
     effect_types=("CREATE_NOTE", "ORIGINATE_PLAN_COMMAND"),
+    # The chart's note creation checks add_note.
+    required_permissions=("api.add_note",),
     metadata={
         "command_class": PlanCommand,
         "effect_class": NoteEffect,

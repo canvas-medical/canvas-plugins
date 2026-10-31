@@ -18,13 +18,17 @@ from typing import Any
 
 import pytest
 
-from canvas_sdk.agents import standard_tools
+from canvas_sdk.agents import Capability, standard_tools
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
+    ClaimFactory,
+    ClaimLabelFactory,
+    ClaimQueueFactory,
     MedicationFactory,
     PatientFactory,
     StaffFactory,
     TaskFactory,
+    TaskLabelFactory,
 )
 from canvas_sdk.v1.data import Observation
 
@@ -1208,7 +1212,21 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares() -> None:
 
     patient = PatientFactory.create()
     staff = StaffFactory.create()
-    arguments = _write_tool_arguments(patient)
+    claim = ClaimFactory.create()
+    ClaimQueueFactory.create(queue_sort_ordering=4, name="QueuedForSubmission")
+    ClaimLabelFactory.create(claim=claim, label=TaskLabelFactory.create(name="Carried"))
+    TaskLabelFactory.create(name="Urgent", modules=["claims"])
+    arguments = {
+        **_write_tool_arguments(patient),
+        "move_claim_to_queue": {"queue": "QueuedForSubmission"},
+        "assign_claim": {"staff_id": staff.id},
+        "unassign_claim": {},
+        "add_claim_labels": {"labels": ["Urgent"]},
+        "remove_claim_labels": {"labels": ["Carried"]},
+        "add_claim_comment": {"comment": "Called payer"},
+        "add_claim_banner": {"key": "auth", "narrative": "Prior auth pending", "intent": "info"},
+        "remove_claim_banner": {"key": "auth"},
+    }
     write_tools = {
         d["name"]
         for d in standard_tools.definitions()
@@ -1225,6 +1243,8 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares() -> None:
                 "patient_id": patient.id,
                 "staff_id": staff.id,
                 "note_id": "00000000-0000-0000-0000-000000000001",
+                "claim_id": str(claim.id),
+                "capabilities": frozenset({Capability.REVENUE}),
                 "effects": effects,
             },
         )
@@ -1368,3 +1388,23 @@ def test_protocol_card_stages_a_command_naming_the_patients_own_medication() -> 
 
     assert result["ok"] is True
     assert len(effects) == 1
+
+
+def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
+    """Writes the chart gates on a model permission need the same one; the rest need none.
+
+    The chart checks change_task to update or comment on a task and add_note to create a
+    note. Creating a task, drafting a message or command, and adding a banner or protocol
+    card need only access to the patient, which the platform checks before the run.
+    """
+    gated = {
+        definition["name"]: standard_tools.required_permissions_for(definition["name"])
+        for definition in standard_tools.definitions()
+        if standard_tools.required_permissions_for(definition["name"])
+    }
+
+    assert gated == {
+        "update_task": frozenset({"api.change_task"}),
+        "add_task_comment": frozenset({"api.change_task"}),
+        "originate_review_note": frozenset({"api.add_note"}),
+    }

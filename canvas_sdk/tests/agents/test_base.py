@@ -4,7 +4,9 @@ from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
     AgentState,
+    Capability,
     LLMGateway,
+    RunRequester,
     RunSubject,
     ToolRegistry,
 )
@@ -109,10 +111,11 @@ _GATEWAY = LLMGateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
 
 
 def test_tool_context_carries_the_run_subject() -> None:
-    """Tools get the platform's patient, staff, and note, plus the run's plumbing."""
+    """Tools get the platform's patient, note, and requester, plus the run's plumbing."""
     agent = _MinimalAgent()
     agent.tools = ToolRegistry()
-    agent.subject = RunSubject(patient_id="p1", staff_id="s1", note_id="n1")
+    agent.subject = RunSubject(patient_id="p1", note_id="n1")
+    agent.requester = RunRequester(staff_id="s1", permissions=frozenset({"api.change_task"}))
 
     ctx = agent.tool_context(_GATEWAY, {"focus": "labs"})
 
@@ -121,15 +124,42 @@ def test_tool_context_carries_the_run_subject() -> None:
         "patient_id": "p1",
         "staff_id": "s1",
         "note_id": "n1",
+        "claim_id": None,
+        "permissions": frozenset({"api.change_task"}),
+        "capabilities": frozenset(),
         "effects": [],
         "gateway": _GATEWAY,
         "parent_tools": agent.tools,
     }
 
 
-@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id", "effects", "gateway"])
+def test_tool_context_carries_the_claim_and_capabilities() -> None:
+    """Claims tools get the run's claim and the capabilities the platform granted."""
+    agent = _MinimalAgent()
+    agent.subject = RunSubject(claim_id="c1")
+    agent.capabilities = frozenset({Capability.REVENUE})
+
+    ctx = agent.tool_context(_GATEWAY)
+
+    assert ctx["claim_id"] == "c1"
+    assert ctx["capabilities"] == frozenset({Capability.REVENUE})
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "patient_id",
+        "staff_id",
+        "note_id",
+        "claim_id",
+        "permissions",
+        "capabilities",
+        "effects",
+        "gateway",
+    ],
+)
 def test_tool_context_refuses_to_replace_what_the_run_sets(key: str) -> None:
-    """An agent cannot point its tools at a patient other than the run's."""
+    """An agent cannot point its tools at another patient or claim, or grant itself access."""
     agent = _MinimalAgent()
     agent.subject = RunSubject(patient_id="p1")
 
@@ -160,7 +190,8 @@ def test_tool_context_uses_the_requesting_staffs_open_note() -> None:
     own_note = _open_note(patient=patient, provider=clinician)
     _open_note(patient=patient)
     agent = _MinimalAgent()
-    agent.subject = RunSubject(patient_id=patient.id, staff_id=clinician.id)
+    agent.subject = RunSubject(patient_id=patient.id)
+    agent.requester = RunRequester(staff_id=clinician.id)
 
     assert agent.tool_context(_GATEWAY)["note_id"] == str(own_note.id)
 

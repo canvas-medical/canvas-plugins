@@ -17,18 +17,21 @@ if TYPE_CHECKING:
 
 
 def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> frozenset[str]:
-    """Scope ``agent.tools`` to the manifest's ``tools`` grant; return the effect types it allows.
+    """Scope ``agent.tools`` to what the run may use; return the effect types it allows.
 
-    ``allowed`` holds tool names and ``@category`` references, ``denied`` is subtracted
-    after expansion, and a grant with nothing allowed gives the agent no tools. Sets
-    ``agent.tools_allowed`` and replaces ``agent.tools`` with the scoped view.
+    That is the manifest's ``tools`` grant less the tools the run's requester could not
+    use: those needing a permission ``agent.requester`` lacks or a capability
+    ``agent.capabilities`` lacks, so set both first. ``allowed`` holds tool names and
+    ``@category`` references, ``denied`` is subtracted after expansion, and a grant
+    with nothing allowed gives the agent no tools. Sets ``agent.tools_allowed`` and
+    replaces ``agent.tools`` with the scoped view.
     """
     registry = agent.tools or ToolRegistry()
-    agent.tools_allowed = registry.resolve_allowed(
-        grant.get("allowed") or (),
-        denied=grant.get("denied"),
+    granted = registry.scope(
+        registry.resolve_allowed(grant.get("allowed") or (), denied=grant.get("denied"))
     )
-    agent.tools = registry.scope(agent.tools_allowed)
+    agent.tools = granted.usable_by(agent.requester.permissions, agent.capabilities)
+    agent.tools_allowed = frozenset(d["name"] for d in agent.tools.definitions())
     return agent.tools.effect_types()
 
 

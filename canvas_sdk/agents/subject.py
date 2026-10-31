@@ -3,23 +3,42 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RunSubject:
-    """Who and what an agent run is about, as validated by the platform.
+    """What an agent run is about, as validated by the platform.
 
-    Set on the agent as ``self.subject`` before any lifecycle hook fires.
-    ``patient_id`` and ``note_id`` come from the :class:`RunAgentEffect`,
-    checked by the platform (the patient exists, the note is that patient's).
-    ``staff_id`` is the staff member whose action emitted the effect; a run
-    started by a patient, a schedule, or a system event has none.
+    Set on the agent as ``self.subject`` before any lifecycle hook fires. Each field
+    comes from the :class:`RunAgentEffect`, checked by the platform: the patient
+    exists, the note is that patient's, and the claim exists.
 
     Attributes:
         patient_id: The patient's ``Patient.id``, or None.
-        staff_id: The requesting staff member's ``Staff.id``, or None.
         note_id: The note's ``Note.id``, or None.
+        claim_id: The claim's ``Claim.id``, or None.
     """
 
     patient_id: str | None = None
-    staff_id: str | None = None
     note_id: str | None = None
+    claim_id: str | None = None
 
 
-__exports__ = ("RunSubject",)
+@dataclass(frozen=True)
+class RunRequester:
+    """Who started an agent run, as the platform took it from the event.
+
+    Set on the agent as ``self.requester``. It is never a field of the
+    :class:`RunAgentEffect`, so a plugin cannot choose it.
+
+    Attributes:
+        staff_id: The ``Staff.id`` of the staff member whose action emitted the effect;
+            None for a run a patient, a schedule, or a system event started.
+        permissions: The staff member's platform permissions, such as
+            ``"api.change_task"``. None when permissions do not limit the run: no staff
+            member started it, or a superuser did. The platform hides tools that need a
+            permission the requester lacks, and checks the requester's permissions
+            again on every effect the run returns.
+    """
+
+    staff_id: str | None = None
+    permissions: frozenset[str] | None = None
+
+
+__exports__ = ("RunRequester", "RunSubject")

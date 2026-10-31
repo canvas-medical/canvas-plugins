@@ -2,7 +2,7 @@
 
 Build model replies with :func:`text`, :func:`tool_use`, and :func:`reply`, queue them on
 a :class:`FakeGateway`, and run an agent with :func:`run_agent`, which applies the
-manifest tool grant, sets the run's subject, and drops ungranted effects the way the
+manifest tool grant, sets the run's subject and requester, and drops ungranted effects the way the
 plugin-runner does::
 
     gateway = FakeGateway(
@@ -28,10 +28,11 @@ from uuid import uuid4
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.base import AgentPlugin
+from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
-from canvas_sdk.agents.subject import RunSubject
+from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.effects import Effect
 
 
@@ -101,16 +102,22 @@ def prepare_agent(
     allowed: Iterable[str] = (),
     denied: Iterable[str] = (),
     subject: RunSubject | None = None,
+    requester: RunRequester | None = None,
+    capabilities: Iterable[Capability] = (),
     run_id: str = "",
 ) -> AgentPlugin:
     """An agent set up the way the platform sets one up before a run.
 
     ``allowed`` and ``denied`` are the manifest's ``tools`` grant: tool names and
-    ``@category`` references. ``run_id`` defaults to a fresh one.
+    ``@category`` references. ``requester`` carries the staff member and their
+    permissions, and ``capabilities`` are what the platform would grant them; tools
+    either rules out are hidden, as on the platform. ``run_id`` defaults to a fresh one.
     """
     agent = agent_class()
-    apply_tool_grant(agent, {"allowed": list(allowed), "denied": list(denied)})
     agent.subject = subject or RunSubject()
+    agent.requester = requester or RunRequester()
+    agent.capabilities = frozenset(capabilities)
+    apply_tool_grant(agent, {"allowed": list(allowed), "denied": list(denied)})
     agent.run_id = run_id or str(uuid4())
     return agent
 

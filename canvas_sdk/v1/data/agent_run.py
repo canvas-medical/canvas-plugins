@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, Model
@@ -19,7 +20,8 @@ class AgentRun(IdentifiableModel):
     """The platform's record of one agent run, kept for a limited time.
 
     ``id`` is the ``run_id`` of the :class:`RunAgentEffect` that started the run. The
-    record holds no chart content: the run's subject is recorded by reference.
+    record holds no chart content: the run's patient and requester are recorded by
+    reference here, and the rest of its subject as :class:`AgentRunSubject` rows.
     """
 
     class Meta:
@@ -36,9 +38,8 @@ class AgentRun(IdentifiableModel):
     staff = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, null=True, related_name="agent_runs"
     )
-    note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, null=True, related_name="agent_runs"
-    )
+    # The capabilities the platform granted the run, such as "revenue".
+    capabilities = ArrayField(models.TextField())
     status = models.TextField(choices=AgentRunStatus.choices)
     # Why a run failed or was refused: a structured kind, such as LLM_REFUSED, and a
     # short description.
@@ -77,8 +78,30 @@ class AgentRunToolCall(Model):
     duration_ms = models.IntegerField()
 
 
+class AgentRunSubject(Model):
+    """One part of an agent run's subject other than its patient, such as its note or claim.
+
+    ``kind`` names the part (``"note"``, ``"claim"``) and ``ref_id`` is the ``id`` of
+    the record it names, as the :class:`RunAgentEffect` carried it.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_plugin_io_agentrunsubject_001"
+
+    run = models.ForeignKey(
+        AgentRun,
+        on_delete=models.DO_NOTHING,
+        to_field="id",
+        db_column="run_id",
+        related_name="subjects",
+    )
+    kind = models.TextField()
+    ref_id = models.TextField()
+
+
 __exports__ = (
     "AgentRun",
     "AgentRunStatus",
+    "AgentRunSubject",
     "AgentRunToolCall",
 )
