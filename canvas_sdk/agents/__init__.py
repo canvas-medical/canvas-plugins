@@ -1,4 +1,6 @@
+from canvas_sdk.agents import claim_tools  # noqa: F401  (importing it registers the claims tools)
 from canvas_sdk.agents.base import AgentPlugin
+from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import LLMGateway, LLMGatewayConfigurationError
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.note_helpers import find_open_note, find_open_note_uuid_from_ctx
@@ -6,7 +8,7 @@ from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.state import AgentState
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent, run_subagents
-from canvas_sdk.agents.subject import RunSubject
+from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
@@ -21,10 +23,12 @@ __all__ = __exports__ = (
     "AgentPlugin",
     "AgentRunResult",
     "AgentState",
+    "Capability",
     "EffectField",
     "FilterSpec",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "RunRequester",
     "RunSubject",
     "SubAgentSpec",
     "ToolLoopResult",

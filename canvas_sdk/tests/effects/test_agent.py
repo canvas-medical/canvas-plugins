@@ -5,7 +5,11 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import RunAgentRequest
+from canvas_generated.messages.plugins_pb2 import (
+    RunAgentRequest,
+    RunAgentRequester,
+    RunAgentSubject,
+)
 from canvas_sdk.effects.agent import RunAgentEffect
 
 
@@ -35,6 +39,7 @@ def test_run_agent_effect_payload_carries_the_subject_and_scope() -> None:
         "scope": "patient",
         "patient_id": "p1",
         "note_id": "n1",
+        "claim_id": None,
         "scope_id": None,
         "trigger_payload": {"reason": "locked"},
     }
@@ -107,12 +112,29 @@ def test_staff_scope_needs_no_patient() -> None:
 def test_key_scope_carries_the_plugins_key() -> None:
     """Something that is neither a patient nor a note serializes on the plugin's own key."""
     data = json.loads(
-        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.KEY, scope_id="claim:c1")
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.KEY, scope_id="appointment:a1")
         .apply()
         .payload
     )["data"]
 
-    assert (data["scope"], data["scope_id"]) == ("key", "claim:c1")
+    assert (data["scope"], data["scope_id"]) == ("key", "appointment:a1")
+
+
+def test_claim_scope_carries_the_claim() -> None:
+    """A chat opened from a claim names the claim, which the platform checks and keys on."""
+    data = json.loads(
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.CLAIM, claim_id="c1")
+        .apply()
+        .payload
+    )["data"]
+
+    assert (data["scope"], data["claim_id"], data["patient_id"]) == ("claim", "c1", None)
+
+
+def test_claim_scope_requires_a_claim() -> None:
+    """The claim scope is keyed on the claim."""
+    with pytest.raises(ValidationError, match="requires 'claim_id'"):
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.CLAIM)
 
 
 def test_key_scope_requires_a_scope_id() -> None:
@@ -141,7 +163,7 @@ def test_a_note_requires_its_patient() -> None:
         RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.AGENT, note_id="n1")
 
 
-@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id"])
+@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id", "claim_id"])
 def test_the_subject_cannot_travel_in_the_trigger_payload(key: str) -> None:
     """The agent reads the subject from self.subject, never from the payload."""
     with pytest.raises(ValidationError, match=key):
@@ -171,11 +193,9 @@ def test_run_agent_request_roundtrip() -> None:
         trigger_payload='{"reason": "locked"}',
         plugin_name="my_plugin",
         handler_name="TriggerHandler",
-        actor="1",
-        source="handler",
-        patient_id="p1",
-        staff_id="s1",
-        note_id="n1",
+        requester=RunAgentRequester(actor="1", source="handler", staff_id="s1"),
+        subject=RunAgentSubject(patient_id="p1", note_id="n1", claim_id="c1"),
+        capabilities=["revenue"],
     )
 
     decoded = RunAgentRequest.FromString(request.SerializeToString())

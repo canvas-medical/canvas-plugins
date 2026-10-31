@@ -29,6 +29,18 @@ def _meter(arguments: dict, *, ctx: dict) -> dict:
     return {"ok": True}
 
 
+@tools.tool(
+    name="close_task",
+    description="Close a task. Needs change_task; the manifest does not grant it; tests grant it.",
+    input_schema={"type": "object"},
+    effect_types=("UPDATE_TASK",),
+    required_permissions=("api.change_task",),
+)
+def _close_task(arguments: dict, *, ctx: dict) -> dict:
+    """Stage nothing; the tests only check whether the tool is offered."""
+    return {"ok": True}
+
+
 class EchoAgent(AgentPlugin):
     """Test agent: returns a single LOG effect carrying the trigger payload.
 
@@ -52,7 +64,13 @@ class EchoAgent(AgentPlugin):
             {
                 "loaded_with": state.data.get("loaded_with"),
                 "trigger": trigger_payload,
-                "subject": [self.subject.patient_id, self.subject.staff_id, self.subject.note_id],
+                "subject": [
+                    self.subject.patient_id,
+                    self.requester.staff_id,
+                    self.subject.note_id,
+                    self.subject.claim_id,
+                    sorted(self.capabilities),
+                ],
                 "run_id": self.run_id,
                 "gateway_model": gateway.model,
             }

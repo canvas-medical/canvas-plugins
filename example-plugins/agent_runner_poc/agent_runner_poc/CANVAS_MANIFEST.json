@@ -1,8 +1,8 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
+    "plugin_version": "0.0.2",
     "name": "agent_runner_poc",
-    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief).",
+    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode.",
     "components": {
         "handlers": [
             {
@@ -12,6 +12,10 @@
             {
                 "class": "agent_runner_poc.applications.chart_chat:ChartChatAPI",
                 "description": "HTTP API backing the in-chart chat UI"
+            },
+            {
+                "class": "agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+                "description": "HTTP API backing the claims chat UI"
             }
         ],
         "agents": [
@@ -37,6 +41,13 @@
                         "@composition"
                     ]
                 }
+            },
+            {
+                "class": "agent_runner_poc.agents.claims_chat:ClaimsChatAgent",
+                "description": "Claims chat for billing staff; reads and works claims with the SDK's claims tools",
+                "tools": {
+                    "allowed": ["@claims_reads", "@claims_writes"]
+                }
             }
         ],
         "applications": [
@@ -46,6 +57,13 @@
                 "description": "Open a chat with an agent that can read this patient's chart",
                 "scope": "patient_specific",
                 "icon": "assets/chart_chat.png"
+            },
+            {
+                "class": "agent_runner_poc.applications.claims_chat:ClaimsChatApplication",
+                "name": "Claims chat",
+                "description": "Ask about your claims queues or one claim, and have the agent move, assign, label, and comment on claims",
+                "scope": "global",
+                "icon": "assets/claims_chat.png"
             }
         ],
         "commands": [],
