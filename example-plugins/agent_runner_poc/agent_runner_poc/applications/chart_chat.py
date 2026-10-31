@@ -28,13 +28,13 @@ from typing import Any
 
 from agent_runner_poc.agents.chart_chat import load_conversation_messages
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.agent import RunAgentEffect
+from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import AgentRun
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal
 
 CHART_CHAT_AGENT_ID = "agent_runner_poc.agents.chart_chat:ChartChatAgent"
 
@@ -126,6 +126,51 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         if run is None:
             return [JSONResponse({"status": "queued", "error_kind": ""})]
         return [JSONResponse({"status": run.status, "error_kind": run.error_kind})]
+
+    @api.get("/chart-chat-proposals")
+    def chart_chat_proposals(self) -> list[Response | Effect]:
+        """Return the changes one of the logged-in clinician's runs proposed, for approval cards."""
+        staff_id = self.request.headers["canvas-logged-in-user-id"]
+        proposals = AgentRunProposal.objects.filter(
+            run__id=self.request.query_params["run_id"],
+            plugin_name="agent_runner_poc",
+            staff__id=staff_id,
+        ).order_by("created_at")
+        return [
+            JSONResponse(
+                {
+                    "proposals": [
+                        {
+                            "id": str(proposal.id),
+                            "tool": proposal.tool,
+                            "arguments": proposal.arguments,
+                            "status": proposal.status,
+                            "reason": proposal.reason,
+                            "expires_at": proposal.expires_at.isoformat(),
+                        }
+                        for proposal in proposals
+                    ]
+                }
+            )
+        ]
+
+    @api.post("/chart-chat-decide")
+    def chart_chat_decide(self) -> list[Response | Effect]:
+        """Approve or deny a proposed change; the platform checks the decision is the clinician's.
+
+        The platform accepts it only from this clinician, the one the agent acted for,
+        while the proposal is pending, and applies exactly the proposed change.
+        """
+        body = self.request.json()
+        decision = DecideAgentProposal(
+            proposal_id=body["proposal_id"],
+            decision=body["decision"],
+            reason=body.get("reason") or "",
+        )
+        return [
+            JSONResponse({"status": "decided"}, status_code=HTTPStatus.ACCEPTED),
+            decision.apply(),
+        ]
 
 
 def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, str]]:

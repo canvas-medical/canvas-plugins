@@ -99,8 +99,59 @@ class AgentRunSubject(Model):
     ref_id = models.TextField()
 
 
+class AgentRunProposalStatus(models.TextChoices):
+    """Where a proposal stands. A pending proposal past its expiry reads as expired."""
+
+    PENDING = "pending", "Pending"
+    APPROVED = "approved", "Approved"
+    DENIED = "denied", "Denied"
+    FAILED = "failed", "Failed"
+    EXPIRED = "expired", "Expired"
+
+
+class AgentRunProposal(IdentifiableModel):
+    """A change an agent proposed for its requester to approve, held by the platform.
+
+    An agent whose manifest lists a tool under ``tools.approve`` proposes that tool's
+    changes. ``id`` is what :class:`canvas_sdk.effects.agent.DecideAgentProposal` takes.
+    ``tool`` and ``arguments`` are the tool the model called and what it passed, for a
+    plugin's approval card; ``effect_type`` names the change that applies on approval.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_plugin_io_agentrunproposal_001"
+
+    run = models.ForeignKey(
+        AgentRun,
+        on_delete=models.DO_NOTHING,
+        to_field="id",
+        db_column="run_id",
+        related_name="proposals",
+    )
+    plugin_name = models.TextField()
+    agent_id = models.TextField()
+    tool = models.TextField()
+    arguments = models.JSONField()
+    effect_type = models.TextField()
+    # The staff member the agent acted for, the only one who may decide.
+    staff = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, null=True, related_name="agent_run_proposals"
+    )
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, null=True, related_name="agent_run_proposals"
+    )
+    status = models.TextField(choices=AgentRunProposalStatus.choices)
+    created_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    decided_at = models.DateTimeField(null=True)
+    # The user's reason for a denial, or why an approved change failed to apply.
+    reason = models.TextField()
+
+
 __exports__ = (
     "AgentRun",
+    "AgentRunProposal",
+    "AgentRunProposalStatus",
     "AgentRunStatus",
     "AgentRunSubject",
     "AgentRunToolCall",

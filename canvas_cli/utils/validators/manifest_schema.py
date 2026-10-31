@@ -221,6 +221,10 @@ manifest_schema = {
                                 "type": "array",
                                 "items": {"type": "string"},
                             },
+                            "approve": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
                         "additionalProperties": False,
                     },

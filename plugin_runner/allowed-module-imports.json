@@ -514,6 +514,7 @@
     "ReloadPatientActionButtonsEffect"
   ],
   "canvas_sdk.effects.agent": [
+    "DecideAgentProposal",
     "RunAgentEffect"
   ],
   "canvas_sdk.effects.application_notification_badge": [
@@ -1261,6 +1262,8 @@
   ],
   "canvas_sdk.v1.data": [
     "AgentRun",
+    "AgentRunProposal",
+    "AgentRunProposalStatus",
     "AgentRunStatus",
     "AgentRunSubject",
     "AgentRunToolCall",
@@ -1558,6 +1561,8 @@
   ],
   "canvas_sdk.v1.data.agent_run": [
     "AgentRun",
+    "AgentRunProposal",
+    "AgentRunProposalStatus",
     "AgentRunStatus",
     "AgentRunSubject",
     "AgentRunToolCall"
