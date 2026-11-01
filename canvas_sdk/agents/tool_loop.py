@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -52,6 +53,22 @@ class ToolLoopResult:
     turns: int = 0
     stopped: Literal["end_turn", "max_turns", "call_limit", "unexpected"] = "max_turns"
     stop_reason: str | None = None
+
+
+# Whether this tool loop's reply text may be streamed to the person waiting on the run.
+# A sub-agent's text is working material for its parent, so run_subagent turns it off.
+streams_reply: ContextVar[bool] = ContextVar("streams_reply", default=True)
+
+
+def _api_block(block: Any) -> dict[str, Any]:
+    """A reply block as the Messages API takes it back on the next call.
+
+    A streamed call's final message holds ``ParsedTextBlock``s, whose ``parsed_output``
+    the API refuses in a request, so it is left out.
+    """
+    dumped: dict[str, Any] = block.model_dump()
+    dumped.pop("parsed_output", None)
+    return dumped
 
 
 def _tool_result(tool_use_id: str, content: str, *, is_error: bool = False) -> dict[str, Any]:
@@ -209,14 +226,24 @@ def run_tool_loop(
             recorder.phase = "thinking"
 
         sent = transcript if history_chars is None else window_messages(transcript, history_chars)
-        response = client.messages.create(
-            model=model or gateway.model,
-            max_tokens=max_tokens,
-            system=system_param,
-            tools=cast(Any, tools.definitions()),
-            messages=cast(Any, sent),
+        request = {
+            "model": model or gateway.model,
+            "max_tokens": max_tokens,
+            "system": system_param,
+            "tools": cast(Any, tools.definitions()),
+            "messages": cast(Any, sent),
             **request_options,
-        )
+        }
+        if recorder is not None and recorder.streams_reply and streams_reply.get():
+            # The same call, streamed so the person waiting reads the reply as it is
+            # written; the final message is what the unstreamed call would return.
+            recorder.report_turn()
+            with client.messages.stream(**request) as stream:
+                for text in stream.text_stream:
+                    recorder.report_text(text)
+                response = stream.get_final_message()
+        else:
+            response = client.messages.create(**request)
         result.turns = turn + 1
         result.stop_reason = response.stop_reason
         log.info(
@@ -225,7 +252,7 @@ def run_tool_loop(
         )
 
         transcript.append(
-            {"role": "assistant", "content": [block.model_dump() for block in response.content]}
+            {"role": "assistant", "content": [_api_block(block) for block in response.content]}
         )
         result.text = "\n".join(
             block.text for block in response.content if isinstance(block, TextBlock)

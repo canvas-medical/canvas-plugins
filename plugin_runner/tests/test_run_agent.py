@@ -1197,3 +1197,44 @@ def test_a_streamed_run_that_fails_ends_with_its_failure_and_frees_its_slot(
 
     assert responses[-1].success is False and not responses[-1].HasField("progress")
     assert slots.acquire(blocking=False), "a failed run must give its slot back"
+
+
+@pytest.mark.parametrize(("level", "streams_text"), [("reply", True), ("activity", False)])
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_reply_text_is_streamed_only_at_the_reply_level(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    level: str,
+    streams_text: bool,
+) -> None:
+    """At "reply" the text arrives as it is written; at "activity" it never leaves."""
+    _with_progress(monkeypatch, level)
+    monkeypatch.setattr(runner_module, "PROGRESS_POLL_SECONDS", 0.01)
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    original_run = agent_cls.run
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        recorder = current_recorder.get()
+        assert recorder is not None
+        recorder.report_turn()
+        recorder.report_text("Three records ")
+        time.sleep(0.05)
+        recorder.report_text("need review.")
+        return original_run(self, state, gateway, payload)
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+
+    *progress, final = plugin_runner.RunAgent(_make_request(stream_progress=True), None)
+
+    assert final.success is True
+    texts = [r.progress.text for r in progress if r.progress.kind == "text"]
+    if streams_text:
+        assert "".join(texts) == "Three records need review."
+        assert {r.progress.phase for r in progress if r.progress.kind == "text"} == {"writing"}
+        assert progress[0].progress.kind == "turn_started"
+    else:
+        assert texts == []
+        assert "turn_started" not in {r.progress.kind for r in progress}

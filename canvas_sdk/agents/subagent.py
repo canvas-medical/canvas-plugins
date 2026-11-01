@@ -49,7 +49,7 @@ from django.db import connections
 
 from canvas_sdk.agents.gateway import LLMGateway
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, current_recorder
-from canvas_sdk.agents.tool_loop import run_tool_loop
+from canvas_sdk.agents.tool_loop import run_tool_loop, streams_reply
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.utils.http import ThreadPoolExecutor
 from canvas_sdk.v1.plugin_database_context import (
@@ -127,15 +127,20 @@ def run_subagent(
         the loop stops before the model ends its turn, or if the final
         turn produced no text.
     """
-    result = run_tool_loop(
-        gateway,
-        tools=parent_tools.scope(spec.allowed_tool_names),
-        ctx=parent_ctx,
-        system=spec.system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-        max_turns=spec.max_turns,
-        max_tokens=spec.max_tokens,
-    )
+    # The sub-agent's text is for its parent, never streamed to the person waiting.
+    token = streams_reply.set(False)
+    try:
+        result = run_tool_loop(
+            gateway,
+            tools=parent_tools.scope(spec.allowed_tool_names),
+            ctx=parent_ctx,
+            system=spec.system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            max_turns=spec.max_turns,
+            max_tokens=spec.max_tokens,
+        )
+    finally:
+        streams_reply.reset(token)
     if result.stopped != "end_turn":
         log.warning(f"SubAgent[{spec.name}] stopped without finishing ({result.stopped})")
         return ""

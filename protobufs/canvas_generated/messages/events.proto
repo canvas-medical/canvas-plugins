@@ -1632,15 +1632,19 @@ message AgentRunSummary {
 // asks for it. Carries no tool arguments or results: only what the agent's manifest
 // `progress` level allows the person waiting on the run to see.
 message AgentRunProgress {
-  // "heartbeat" while the run is alive, or "tool_started" / "tool_finished".
+  // "heartbeat" while the run is alive; "tool_started" / "tool_finished"; "turn_started"
+  // when a model call begins, so earlier text can be cleared; "text" for reply text.
   string kind = 1;
-  // What the run is doing: "thinking" during a model call, "working" while tools run.
+  // What the run is doing: "thinking" during a model call, "writing" once its reply
+  // text is arriving, "working" while tools run.
   string phase = 2;
   int32 elapsed_ms = 3;
   // The tool's progress label, such as "Reading lab results", for a tool event.
   string label = 4;
   // Whether the tool succeeded, for "tool_finished".
   bool ok = 5;
+  // Reply text the model wrote since the last "text" event, for "text".
+  string text = 6;
 }
 
 message EventResponse {
