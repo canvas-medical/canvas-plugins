@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from canvas_sdk.agents import Capability, standard_tools
+from canvas_sdk.agents import Capability, history_tools, standard_tools
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     ClaimFactory,
@@ -1155,6 +1155,41 @@ def test_filter_search_tool_respects_supplied_filters_against_empty_db(
     assert result == [], f"{tool_name} with filters {arguments!r} returned non-empty: {result!r}"
 
 
+def _allergy(patient: Any, concept_id: str = "777") -> Any:
+    """An active allergy on ``patient``'s list, coded as the chart codes one."""
+    from datetime import date
+
+    from django.utils import timezone
+
+    from canvas_sdk.v1.data import AllergyIntolerance, AllergyIntoleranceCoding
+
+    allergy = AllergyIntolerance.objects.create(
+        patient=patient,
+        deleted=False,
+        note_id=1,
+        allergy_intolerance_type="",
+        category=2,
+        status="active",
+        severity="",
+        onset_date=date(2020, 1, 1),
+        onset_date_original_input="",
+        last_occurrence=date(2020, 1, 1),
+        last_occurrence_original_input="",
+        recorded_date=timezone.now(),
+        narrative="",
+        committer=CanvasUserFactory.create(),
+    )
+    AllergyIntoleranceCoding.objects.create(
+        allergy_intolerance=allergy,
+        system="http://www.fdbhealth.com/",
+        code=concept_id,
+        display="Penicillin",
+        version="",
+        user_selected=False,
+    )
+    return allergy
+
+
 def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     """Valid arguments for every standard write tool, against ``patient``'s records."""
     from datetime import date
@@ -1171,6 +1206,7 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     note_type = NoteTypeFactory.create(category="review")
     practice_location = PracticeLocationFactory.create()
     medication = MedicationFactory.create(patient=patient)
+    allergy = _allergy(patient)
     condition = Condition.objects.create(
         patient=patient,
         deleted=False,
@@ -1179,6 +1215,8 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         clinical_status="active",
         notes="",
         surgical=False,
+        # Committed, so it is active: resolving takes only an active condition.
+        committer=CanvasUserFactory.create(),
     )
     return {
         "add_banner_alert": {"narrative": "Overdue", "intent": "warning", "placement": ["chart"]},
@@ -1204,13 +1242,40 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
             "note_type_id": str(note_type.id),
             "practice_location_id": str(practice_location.id),
         },
+        "originate_medical_history": {"icd10_code": "K35.80", "display": "Acute appendicitis"},
+        "originate_medication_statement": {"fdb_code": "123456", "display": "lisinopril 10 mg"},
+        "originate_allergy": {"concept_id": 900, "concept_type": 2},
+        "originate_family_history": {
+            "snomed_code": "22298006",
+            "display": "Myocardial infarction",
+            "relative": "father",
+        },
+        "originate_surgical_history": {"snomed_code": "80146002", "display": "Appendectomy"},
+        "originate_immunization_statement": {
+            "cvx_code": "115",
+            "cpt_code": "90715",
+            "display": "Tdap",
+        },
+        "originate_vitals": {"pulse": 72},
+        "originate_resolve_condition": {"condition_id": str(condition.id)},
+        "originate_remove_allergy": {"allergy_id": str(allergy.id)},
     }
 
 
 @pytest.mark.django_db
-def test_every_write_tool_emits_only_the_effect_types_it_declares() -> None:
+def test_every_write_tool_emits_only_the_effect_types_it_declares(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The runner filters agent effects by declared types, so each declaration must be exact."""
     from canvas_generated.messages.effects_pb2 import EffectType
+
+    # The history tools check codes against Canvas's ontology services.
+    monkeypatch.setattr(
+        history_tools,
+        "_medical_history_rows",
+        lambda query: [{"icd10_code": "K35.80", "display": "Acute appendicitis"}],
+    )
+    monkeypatch.setattr(history_tools, "_dea_schedule", lambda fdb_code: "")
 
     patient = PatientFactory.create()
     staff = StaffFactory.create()

@@ -1,6 +1,7 @@
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
+from uuid import uuid4
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import proposal_id, propose
@@ -76,6 +77,9 @@ class EffectField:
             underlying Command/Effect field name, set this to the target
             field name. Defaults to the LLM-facing name (which is the
             dict key in the ``fields`` mapping).
+        pre_build_only: When ``True``, the argument is not set on the
+            Command; only the tool's ``pre_build`` hook reads it, as when two
+            arguments combine into one Command field.
     """
 
     type: str
@@ -89,6 +93,7 @@ class EffectField:
     min_items: int | None = None
     max_items: int | None = None
     command_field: str | None = None
+    pre_build_only: bool = False
 
 
 def require_patient_id(ctx: dict[str, Any]) -> str:
@@ -797,7 +802,9 @@ class ToolRegistry:
 
         # Map LLM-facing arg name to Command field name (defaults to identity).
         command_field_map: dict[str, str] = {
-            arg_name: (spec.command_field or arg_name) for arg_name, spec in fields.items()
+            arg_name: (spec.command_field or arg_name)
+            for arg_name, spec in fields.items()
+            if not spec.pre_build_only
         }
         _refuse_fields_targeting(name, command_field_map, {"note_uuid"})
 
@@ -810,7 +817,9 @@ class ToolRegistry:
             # any per-field rename via command_field. Falsy values (including
             # None / missing) are skipped — Commands have their own field
             # defaults and we don't want to override them with explicit Nones.
-            command_kwargs: dict[str, Any] = {"note_uuid": note_uuid}
+            # The command's id is chosen here so the model can edit or delete the draft.
+            command_uuid = str(uuid4())
+            command_kwargs: dict[str, Any] = {"note_uuid": note_uuid, "command_uuid": command_uuid}
             for arg_name, target_field in command_field_map.items():
                 value = arguments.get(arg_name)
                 if value is None:
@@ -835,6 +844,7 @@ class ToolRegistry:
             return {
                 "ok": True,
                 "note_id": note_uuid,
+                "command_id": command_uuid,
                 "command": command_key or command_class.__name__,
                 "committed": False,
             }
