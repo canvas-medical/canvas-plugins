@@ -128,5 +128,5 @@ def test_the_note_of_decisions_is_not_shown_as_the_clinicians_message() -> None:
 
     assert _ui_messages(stored) == [
         {"role": "user", "text": "Add a task."},
-        {"role": "assistant", "text": "It awaits approval."},
+        {"role": "assistant", "text": "It awaits approval.", "chips": []},
     ]
