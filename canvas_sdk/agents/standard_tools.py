@@ -3754,9 +3754,10 @@ standard_tools.add_effect_tool(
 
 
 _ORIGINATE_RETURNS = (
-    "`{ok: true, note_id: <uuid>, command: '<command_key>', "
+    "`{ok: true, note_id: <uuid>, command_id: <uuid>, command: '<command_key>', "
     "committed: false}`. Never commits — the clinician reviews the "
-    "draft in the chart and decides whether to commit."
+    "draft in the chart and decides whether to commit. `command_id` names the "
+    "draft for `edit_staged_command` or `delete_staged_command`."
 )
 
 
