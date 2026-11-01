@@ -1,4 +1,7 @@
-from canvas_sdk.agents import claim_tools  # noqa: F401  (importing it registers the claims tools)
+from canvas_sdk.agents import (
+    claim_tools,  # noqa: F401  (importing it registers the claims tools)
+    history_tools,  # noqa: F401  (importing it registers the history tools)
+)
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import LLMGateway, LLMGatewayConfigurationError

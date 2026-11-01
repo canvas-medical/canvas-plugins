@@ -718,7 +718,11 @@ def test_originate_command_tool_builds_command_from_arguments() -> None:
     assert len(effects) == 1
     effect = effects[0]
     assert effect.note_uuid == "note-abc"
-    assert effect.payload == {"note_uuid": "note-abc", "narrative": "Recheck A1c in 3 months."}
+    assert effect.payload == {
+        "note_uuid": "note-abc",
+        "command_uuid": result["command_id"],
+        "narrative": "Recheck A1c in 3 months.",
+    }, "the draft's id is chosen up front and returned, so the model can change it later"
 
 
 def test_originate_command_tool_synthesizes_schema_from_fields() -> None:
@@ -786,7 +790,9 @@ def test_originate_command_tool_renames_via_command_field() -> None:
         ctx={"note_id": "n1", "effects": effects},
     )
 
-    assert effects[0].payload == {"note_uuid": "n1", "icd10_codes": ["E11.9"]}
+    payload = dict(effects[0].payload)
+    assert payload.pop("command_uuid")
+    assert payload == {"note_uuid": "n1", "icd10_codes": ["E11.9"]}
 
 
 def test_originate_command_tool_returns_structured_error_when_no_note() -> None:
