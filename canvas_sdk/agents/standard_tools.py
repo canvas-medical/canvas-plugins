@@ -69,10 +69,12 @@ from canvas_sdk.v1.data import (
     Condition,
     Encounter,
     ExternalEvent,
+    FamilyHistory,
     Goal,
     ImagingOrder,
     ImagingReport,
     Immunization,
+    ImmunizationStatement,
     Interview,
     LabOrder,
     LabPartner,
@@ -88,6 +90,8 @@ from canvas_sdk.v1.data import (
     Patient,
     PracticeLocation,
     Prescription,
+    Procedure,
+    ProcedureStatus,
     ProtocolCurrent,
     Referral,
     ReferralReport,
@@ -205,13 +209,14 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
         "ICD-10), `display`, `clinical_status` (active, resolved, remission, "
         "relapse, investigative), `onset_date` (ISO 8601 or null), and "
         "`resolution_date` (ISO 8601 or null). Defaults to active conditions only, "
-        "ordered most-recently-onset first."
+        "ordered most-recently-onset first. Past surgeries are not conditions here: "
+        "read them with `find_history`."
     ),
     queryset_factory=lambda args, pid: (
         Condition.objects.active()
         if args.get("active_only", True)
         else Condition.objects.committed()
-    ).filter(patient__id=pid),
+    ).filter(patient__id=pid, surgical=False),
     filters={
         "name_contains": FilterSpec(
             type="string",
@@ -276,7 +281,8 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
     description=(
         "Search the patient's committed lab results. Returns each matching value "
         "with `test` (lab name), `value`, `units`, `abnormal_flag` (e.g. 'H', 'L', "
-        "or null when normal), and `date` (the report's original_date, ISO 8601). "
+        "or null when normal), `reference_range` (as the lab reported it, or null), "
+        "and `date` (the report's original_date, ISO 8601). "
         "Defaults to the 10 most-recent results."
     ),
     queryset_factory=lambda args, pid: LabValue.objects.filter(
@@ -316,7 +322,7 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
     model=LabValue,
     returns_description=(
         "Array of objects with `id`, `test`, `value`, `units`, "
-        "`abnormal_flag` (e.g. 'H', 'L', or null), `date`."
+        "`abnormal_flag` (e.g. 'H', 'L', or null), `reference_range`, `date`."
     ),
 )
 def _serialize_lab_value(value: Any) -> dict[str, Any]:
@@ -329,6 +335,7 @@ def _serialize_lab_value(value: Any) -> dict[str, Any]:
         "value": value.value,
         "units": value.units,
         "abnormal_flag": value.abnormal_flag or None,
+        "reference_range": value.reference_range or None,
         "date": report_date.isoformat() if report_date else None,
     }
 
@@ -1751,6 +1758,185 @@ def _find_documents(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[d
         key=lambda document: document["date"] or document["received"] or "",
         reverse=True,
     )
+
+
+HISTORY_KINDS = ("surgical", "family", "immunization", "procedure")
+# Longest note or comment find_history returns per entry.
+HISTORY_NOTE_CHARS = 300
+
+
+def _coding_display(codings: Any) -> str | None:
+    coding = next(iter(codings.all()), None)
+    return (coding.display or coding.code or None) if coding is not None else None
+
+
+def _history_entry(
+    record: Any, kind: str, name: str | None, note: Any, **fields: Any
+) -> dict[str, Any]:
+    """One history row; ``note`` is the note it was recorded in, where the model has one."""
+    return {
+        "id": str(record.id),
+        "type": kind,
+        "name": name or kind,
+        **fields,
+        "note_dbid": note.dbid if note is not None else None,
+    }
+
+
+def _surgical_history(patient_id: str, text: str | None, limit: int) -> list[dict[str, Any]]:
+    """Past surgeries, which Canvas keeps as surgical conditions, newest first."""
+    surgeries = (
+        Condition.objects.committed()
+        .filter(patient__id=patient_id, surgical=True)
+        .prefetch_related("codings")
+    )
+    if text:
+        surgeries = surgeries.filter(codings__display__icontains=text).distinct()
+    return [
+        _history_entry(
+            surgery,
+            "Surgical history",
+            _coding_display(surgery.codings),
+            None,
+            date=surgery.onset_date.isoformat() if surgery.onset_date else None,
+            comment=_clip(surgery.notes, HISTORY_NOTE_CHARS),
+        )
+        for surgery in surgeries.order_by("-onset_date", "-created")[:limit]
+    ]
+
+
+def _family_history(patient_id: str, text: str | None, limit: int) -> list[dict[str, Any]]:
+    """Conditions in the patient's relatives, and which relative."""
+    entries = (
+        FamilyHistory.objects.committed()
+        .filter(patient__id=patient_id)
+        .select_related("note")
+        .prefetch_related("coding")
+    )
+    if text:
+        entries = entries.filter(
+            Q(coding__display__icontains=text) | Q(narrative__icontains=text)
+        ).distinct()
+    return [
+        _history_entry(
+            entry,
+            "Family history",
+            _coding_display(entry.coding),
+            entry.note,
+            relation=entry.relation_snomed_term or None,
+            comment=_clip(entry.narrative, HISTORY_NOTE_CHARS),
+        )
+        for entry in entries.order_by("-created")[:limit]
+    ]
+
+
+def _immunization_history(patient_id: str, text: str | None, limit: int) -> list[dict[str, Any]]:
+    """Vaccines recorded as given elsewhere, as reported or from a registry."""
+    statements = (
+        ImmunizationStatement.objects.committed()
+        .filter(patient__id=patient_id)
+        .select_related("note")
+        .prefetch_related("coding")
+    )
+    if text:
+        statements = statements.filter(coding__display__icontains=text).distinct()
+    return [
+        _history_entry(
+            statement,
+            "Immunization history",
+            _coding_display(statement.coding),
+            statement.note,
+            date=statement.date.isoformat() if statement.date else statement.date_original or None,
+            evidence=statement.evidence or None,
+            comment=_clip(statement.comment, HISTORY_NOTE_CHARS),
+        )
+        for statement in statements.order_by("-date", "-created")[:limit]
+    ]
+
+
+def _procedures(patient_id: str, text: str | None, limit: int) -> list[dict[str, Any]]:
+    """Procedures done at the practice, dated by the note they were documented in."""
+    procedures = (
+        Procedure.objects.committed()
+        .filter(patient__id=patient_id)
+        .select_related("note", "provider")
+        .prefetch_related("codings")
+    )
+    if text:
+        procedures = procedures.filter(codings__display__icontains=text).distinct()
+    rows = []
+    for procedure in procedures.order_by("-note__datetime_of_service", "-created")[:limit]:
+        service = procedure.note.datetime_of_service if procedure.note else None
+        rows.append(
+            _history_entry(
+                procedure,
+                "Procedure",
+                _coding_display(procedure.codings),
+                procedure.note,
+                date=service.date().isoformat() if service else None,
+                status=ProcedureStatus(procedure.status).label if procedure.status else None,
+                provider=_staff_name(procedure.provider),
+                comment=_clip(procedure.notes, HISTORY_NOTE_CHARS),
+            )
+        )
+    return rows
+
+
+@standard_tools.tool(
+    name="find_history",
+    description=(
+        "Search the patient's history: past surgeries (`surgical`), conditions in their "
+        "relatives (`family`), vaccines recorded as given elsewhere (`immunization`; "
+        "`find_immunizations` has those given at the practice), and procedures done at "
+        "the practice (`procedure`). Use it for 'has she had her gallbladder out', 'any "
+        "family history of colon cancer', 'when was her last tetanus shot'. Each entry "
+        "has its name, a date where one was recorded, and the note it was recorded in."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "kind": {
+                "type": "string",
+                "enum": list(HISTORY_KINDS),
+                "description": "Only one kind of history. Omit for all four.",
+            },
+            "name_contains": {
+                "type": "string",
+                "description": (
+                    "Case-insensitive match on the surgery, condition, vaccine, or "
+                    "procedure name (e.g. 'cholecystectomy', 'colon', 'tetanus')."
+                ),
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Maximum entries of each kind. Defaults to 25.",
+            },
+        },
+    },
+    categories=("clinical_reads",),
+    cites="History",
+    returns_description=(
+        "Array of objects with `id`, `type` (Surgical history, Family history, "
+        "Immunization history, Procedure), `name`, `note_dbid`, and `comment`; surgeries "
+        "add `date` (when it was done), family history adds `relation`, immunizations "
+        "add `date` and `evidence`, and procedures add `date`, `status`, and `provider`."
+    ),
+)
+def _find_history(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """The patient's surgical, family, immunization, and procedure history."""
+    patient_id = require_patient_id(ctx)
+    limit = min(max(int(arguments.get("limit") or 25), 1), 100)
+    text = arguments.get("name_contains") or None
+    kinds = [arguments["kind"]] if arguments.get("kind") else list(HISTORY_KINDS)
+    readers = {
+        "surgical": _surgical_history,
+        "family": _family_history,
+        "immunization": _immunization_history,
+        "procedure": _procedures,
+    }
+    return [entry for kind in kinds for entry in readers[kind](patient_id, text, limit)]
 
 
 # Largest file read_document sends. A request may be 32 MB and base64 adds a third; the

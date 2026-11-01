@@ -57,7 +57,9 @@ class CardFields(NamedTuple):
 CARD_FIELDS: dict[str, CardFields] = {
     "Medication": CardFields("Medication", "name", ("status",), "start_date"),
     "Condition": CardFields("Condition", "display", ("clinical_status", "code"), "onset_date"),
-    "LabValue": CardFields("Lab result", "test", ("value", "units", "abnormal_flag"), "date"),
+    "LabValue": CardFields(
+        "Lab result", "test", ("value", "units", "abnormal_flag", "reference_range"), "date"
+    ),
     "Assessment": CardFields("Assessment", "condition_display", ("status",), "date"),
     "AllergyIntolerance": CardFields("Allergy", "display", ("severity", "status"), "onset_date"),
     "Immunization": CardFields("Immunization", "display", ("status",), "date_administered"),
@@ -89,6 +91,9 @@ CARD_FIELDS: dict[str, CardFields] = {
         "Stopped medication", "medication_name", ("rationale",), "stopped_at"
     ),
     "OpenLoop": CardFields("Order", "item", ("summary",), "ordered_on", kind_field="type"),
+    "History": CardFields(
+        "History", "name", ("relation", "status", "evidence"), "date", kind_field="type"
+    ),
     "Document": CardFields(
         "Document", "name", ("category", "from", "review"), "date", kind_field="type"
     ),
