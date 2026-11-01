@@ -68,6 +68,9 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
     the run instead.
     """
     recorder = current_recorder.get()
+    label = tools.progress_label_for(block.name)
+    if recorder is not None:
+        recorder.report_tool("tool_started", label)
     started = time.perf_counter()
     try:
         result = tools.execute(block.name, dict(block.input), ctx=ctx)
@@ -76,6 +79,7 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, "aborted", _elapsed_ms(started))
             )
+            recorder.report_tool("tool_finished", label, ok=False)
         raise
     except Exception as exc:
         log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
@@ -83,9 +87,11 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, type(exc).__name__, _elapsed_ms(started))
             )
+            recorder.report_tool("tool_finished", label, ok=False)
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
+        recorder.report_tool("tool_finished", label, ok=True)
     content = json.dumps(result, default=str)
     return _tool_result(
         block.id, _capped(content, tools.max_result_chars_for(block.name), recorder)
@@ -200,6 +206,7 @@ def run_tool_loop(
                 return _stopped(result)
             if (left := recorder.seconds_left()) is not None:
                 request_options["timeout"] = attempt_timeout(left)
+            recorder.phase = "thinking"
 
         sent = transcript if history_chars is None else window_messages(transcript, history_chars)
         response = client.messages.create(
@@ -229,6 +236,8 @@ def run_tool_loop(
             result.stopped = "end_turn"
             return _stopped(result)
         if response.stop_reason in _TOOL_STOP_REASONS and tool_uses:
+            if recorder is not None:
+                recorder.phase = "working"
             transcript.append(
                 {"role": "user", "content": [_run_tool(tools, block, ctx) for block in tool_uses]}
             )

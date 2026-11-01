@@ -1,5 +1,6 @@
 import json
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -64,8 +65,10 @@ def _make_request(
     handler_name: str = "EchoTrigger",
     actor: str = "1",
     source: str = "handler",
+    stream_progress: bool = False,
 ) -> RunAgentRequest:
     return RunAgentRequest(
+        stream_progress=stream_progress,
         agent_id=agent_id,
         scope_key=scope_key,
         run_id="run-1",
@@ -1065,3 +1068,132 @@ def test_extended_runs_always_leave_an_agent_run_for_the_others(
 ) -> None:
     """However the instance is configured, extended runs cannot take every agent thread."""
     assert extended_agent_run_limit(requested, agent_runs) == expected
+
+
+def _with_progress(monkeypatch: pytest.MonkeyPatch, level: str | None) -> None:
+    """Set the test agent's manifest `progress` for this test."""
+    loaded = LOADED_PLUGINS[AGENT_KEY]
+    handler = {**(loaded.get("handler") or {})}
+    handler.pop("progress", None)
+    if level is not None:
+        handler["progress"] = level
+    monkeypatch.setitem(loaded, "handler", handler)
+
+
+def _reporting_run(monkeypatch: pytest.MonkeyPatch, threads: list[int]) -> None:
+    """Make the test agent report one tool call and outlast a heartbeat."""
+    monkeypatch.setattr(runner_module, "HEARTBEAT_SECONDS", 0.05)
+    monkeypatch.setattr(runner_module, "PROGRESS_POLL_SECONDS", 0.01)
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    original_run = agent_cls.run
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        threads.append(threading.get_ident())
+        recorder = current_recorder.get()
+        assert recorder is not None, "the run's recorder follows it onto its thread"
+        recorder.phase = "working"
+        recorder.report_tool("tool_started", "Reading lab results")
+        time.sleep(0.15)
+        recorder.report_tool("tool_finished", "Reading lab results", ok=True)
+        return original_run(self, state, gateway, payload)
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_streamed_run_reports_its_tools_and_heartbeats_before_its_result(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With "activity", the person waiting sees each tool's label and that the run is alive."""
+    _with_progress(monkeypatch, "activity")
+    threads: list[int] = []
+    _reporting_run(monkeypatch, threads)
+
+    responses = list(plugin_runner.RunAgent(_make_request(stream_progress=True), None))
+
+    *progress, final = responses
+    assert final.success is True and not final.HasField("progress")
+    assert len(final.effects) == 1
+    assert all(response.HasField("progress") for response in progress)
+    kinds = [response.progress.kind for response in progress]
+    assert "heartbeat" in kinds
+    tools = [
+        (r.progress.kind, r.progress.label, r.progress.ok)
+        for r in progress
+        if r.progress.kind != "heartbeat"
+    ]
+    assert tools == [
+        ("tool_started", "Reading lab results", False),
+        ("tool_finished", "Reading lab results", True),
+    ]
+    assert {r.progress.phase for r in progress} <= {"thinking", "working"}
+    elapsed = [r.progress.elapsed_ms for r in progress]
+    assert elapsed == sorted(elapsed)
+    assert threads and threads[0] != threading.get_ident(), "the agent ran on its own thread"
+
+
+@pytest.mark.parametrize("level", [None, "status"])
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_agent_at_the_status_level_streams_heartbeats_only(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    level: str | None,
+) -> None:
+    """Tool labels never leave the runner unless the manifest asks for "activity"."""
+    _with_progress(monkeypatch, level)
+    _reporting_run(monkeypatch, [])
+
+    *progress, final = plugin_runner.RunAgent(_make_request(stream_progress=True), None)
+
+    assert final.success is True
+    assert progress and {r.progress.kind for r in progress} == {"heartbeat"}
+    assert {r.progress.label for r in progress} == {""}
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_not_asked_to_stream_answers_once(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A home-app that does not ask for progress gets only the final response."""
+    _with_progress(monkeypatch, "activity")
+    threads: list[int] = []
+    _reporting_run(monkeypatch, threads)
+
+    responses = list(plugin_runner.RunAgent(_make_request(), None))
+
+    assert len(responses) == 1 and responses[0].success is True
+    assert threads == [threading.get_ident()]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_streamed_run_that_fails_ends_with_its_failure_and_frees_its_slot(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run that raises on its thread still answers, and gives its slot back."""
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+
+    def _boom(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        raise RuntimeError("agent bug")
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _boom)
+
+    responses = list(plugin_runner.RunAgent(_make_request(stream_progress=True), None))
+
+    assert responses[-1].success is False and not responses[-1].HasField("progress")
+    assert slots.acquire(blocking=False), "a failed run must give its slot back"

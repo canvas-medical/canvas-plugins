@@ -55,7 +55,7 @@ class GetRegisteredEventTypesResponse(_message.Message):
     def __init__(self, event_types: _Optional[_Iterable[str]] = ..., registry_version: _Optional[str] = ..., ready: bool = ...) -> None: ...
 
 class RunAgentRequest(_message.Message):
-    __slots__ = ("agent_id", "scope_key", "run_id", "trigger_payload", "plugin_name", "handler_name", "requester", "subject", "capabilities")
+    __slots__ = ("agent_id", "scope_key", "run_id", "trigger_payload", "plugin_name", "handler_name", "requester", "subject", "capabilities", "stream_progress")
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     SCOPE_KEY_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -65,6 +65,7 @@ class RunAgentRequest(_message.Message):
     REQUESTER_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_FIELD_NUMBER: _ClassVar[int]
     CAPABILITIES_FIELD_NUMBER: _ClassVar[int]
+    STREAM_PROGRESS_FIELD_NUMBER: _ClassVar[int]
     agent_id: str
     scope_key: str
     run_id: str
@@ -74,7 +75,8 @@ class RunAgentRequest(_message.Message):
     requester: RunAgentRequester
     subject: RunAgentSubject
     capabilities: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, agent_id: _Optional[str] = ..., scope_key: _Optional[str] = ..., run_id: _Optional[str] = ..., trigger_payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., handler_name: _Optional[str] = ..., requester: _Optional[_Union[RunAgentRequester, _Mapping]] = ..., subject: _Optional[_Union[RunAgentSubject, _Mapping]] = ..., capabilities: _Optional[_Iterable[str]] = ...) -> None: ...
+    stream_progress: bool
+    def __init__(self, agent_id: _Optional[str] = ..., scope_key: _Optional[str] = ..., run_id: _Optional[str] = ..., trigger_payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., handler_name: _Optional[str] = ..., requester: _Optional[_Union[RunAgentRequester, _Mapping]] = ..., subject: _Optional[_Union[RunAgentSubject, _Mapping]] = ..., capabilities: _Optional[_Iterable[str]] = ..., stream_progress: bool = ...) -> None: ...
 
 class RunAgentRequester(_message.Message):
     __slots__ = ("actor", "source", "staff_id", "permissions", "all_permissions")
