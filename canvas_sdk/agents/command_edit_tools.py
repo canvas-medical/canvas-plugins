@@ -5,9 +5,14 @@ command in the run's own note, of a kind one of the standard ``originate_*`` too
 stages. An edit sets only the fields that tool marks ``editable``, so it never sets a
 code or a chart id the tool would have checked before staging; to change one of those,
 the draft is deleted and staged again.
+
+They change a kind only when the run is granted a tool that stages it, and only with
+approval when that tool needs approval: an agent cannot change what it could not stage,
+or change without approval what it could stage only with it.
 """
 
 import json
+from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
@@ -18,16 +23,32 @@ from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.v1.data import Command
 
 
-def _draft_kinds() -> dict[str, tuple[type[_BaseCommand], dict[str, EffectField]]]:
-    """Each command key a standard originate tool stages: its class and editable fields."""
-    kinds: dict[str, tuple[type[_BaseCommand], dict[str, EffectField]]] = {}
+@dataclass
+class DraftKind:
+    """A command kind the standard originate tools stage.
+
+    Attributes:
+        command_class: The SDK command class.
+        editable: The fields an edit may set, by the originate tool's argument names.
+        originators: The originate tools that stage it.
+    """
+
+    command_class: type[_BaseCommand]
+    editable: dict[str, EffectField] = field(default_factory=dict)
+    originators: set[str] = field(default_factory=set)
+
+
+def _draft_kinds() -> dict[str, DraftKind]:
+    """Each command key a standard originate tool stages, by key."""
+    kinds: dict[str, DraftKind] = {}
     for definition in standard_tools.definitions():
         metadata = standard_tools.metadata_for(definition["name"])
         if metadata.get("kind") != "originate_command":
             continue
         command_class = metadata["command_class"]
-        _, editable = kinds.setdefault(command_class.Meta.key, (command_class, {}))
-        editable.update(metadata["editable_fields"])
+        kind = kinds.setdefault(command_class.Meta.key, DraftKind(command_class))
+        kind.editable.update(metadata["editable_fields"])
+        kind.originators.add(definition["name"])
     return kinds
 
 
@@ -38,8 +59,8 @@ DRAFT_KINDS = _draft_kinds()
 def _effect_types(action: str) -> tuple[str, ...]:
     return tuple(
         sorted(
-            f"{action}_{command_class.constantized_key()}_COMMAND"
-            for command_class, _ in DRAFT_KINDS.values()
+            f"{action}_{kind.command_class.constantized_key()}_COMMAND"
+            for kind in DRAFT_KINDS.values()
         )
     )
 
@@ -55,13 +76,37 @@ def _run_staged(command_id: str, ctx: dict[str, Any]) -> int | None:
     return None
 
 
-def _staged_draft(
-    command_id: str, ctx: dict[str, Any]
-) -> tuple[str, type[_BaseCommand], dict[str, EffectField]]:
-    """The key, class, and editable fields of a staged draft in the run's note.
+def _require_grant(key: str, tool: str, ctx: dict[str, Any]) -> None:
+    """Raise unless the run may change a ``key`` draft with ``tool``.
+
+    The run's tools (``ctx["parent_tools"]``, the agent's granted registry) must include
+    a tool that stages the kind, and when one of those needs approval, ``tool`` must too.
+    """
+    tools = ctx.get("parent_tools")
+    if tools is None:
+        raise ValueError("Changing a draft needs the agent's granted tools in the run.")
+    granted = {definition["name"] for definition in tools.definitions()}
+    originators = DRAFT_KINDS[key].originators & granted
+    if not originators:
+        raise ValueError(
+            f"This agent does not stage {key} commands, so it cannot change them; the "
+            "clinician changes it in the note."
+        )
+    if not tools.requires_approval(tool) and any(
+        tools.requires_approval(name) for name in originators
+    ):
+        raise ValueError(
+            f"This agent stages {key} commands only with the clinician's approval, so "
+            "it cannot change one without it; the clinician changes it in the note."
+        )
+
+
+def _staged_draft(command_id: str, tool: str, ctx: dict[str, Any]) -> tuple[str, DraftKind]:
+    """The key and kind of a staged draft in the run's note that ``tool`` may change.
 
     Raises when ``command_id`` is not a staged command of the run's patient in the
-    run's note, or is of a kind no originate tool stages.
+    run's note, is of a kind no originate tool stages, or is of a kind the run may not
+    change with ``tool`` (see :func:`_require_grant`).
     """
     patient_id = require_patient_id(ctx)
     note_id = ctx.get("note_id")
@@ -88,8 +133,8 @@ def _staged_draft(
             f"Only a staged draft can be changed, and this one is {command.state}; the "
             "clinician changes it in the note."
         )
-    command_class, editable = DRAFT_KINDS[command.schema_key]
-    return command.schema_key, command_class, editable
+    _require_grant(command.schema_key, tool, ctx)
+    return command.schema_key, DRAFT_KINDS[command.schema_key]
 
 
 def _checked(key: str, editable: dict[str, EffectField], fields: Any) -> dict[str, Any]:
@@ -119,7 +164,7 @@ def _checked(key: str, editable: dict[str, EffectField], fields: Any) -> dict[st
 
 
 _KINDS_DESCRIPTION = "; ".join(
-    f"{key}: {', '.join(editable)}" for key, (_, editable) in DRAFT_KINDS.items() if editable
+    f"{key}: {', '.join(kind.editable)}" for key, kind in DRAFT_KINDS.items() if kind.editable
 )
 
 
@@ -162,10 +207,10 @@ def _edit_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> d
             "This run staged that draft, so it cannot be edited yet; delete it with "
             "delete_staged_command and stage it again with the right values."
         )
-    key, command_class, editable = _staged_draft(command_id, ctx)
+    key, kind = _staged_draft(command_id, "edit_staged_command", ctx)
     fields = arguments.get("fields")
-    kwargs = _checked(key, editable, fields)
-    ctx["effects"].append(command_class(command_uuid=command_id, **kwargs).edit())
+    kwargs = _checked(key, kind.editable, fields)
+    ctx["effects"].append(kind.command_class(command_uuid=command_id, **kwargs).edit())
     return {
         "ok": True,
         "command_id": command_id,
@@ -204,8 +249,8 @@ def _delete_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
         # The draft has not reached the note yet, so it is simply not staged.
         effects.pop(index)
         return {"ok": True, "command_id": command_id, "command": None, "deleted": True}
-    key, command_class, _ = _staged_draft(command_id, ctx)
-    effects.append(command_class(command_uuid=command_id).delete())
+    key, kind = _staged_draft(command_id, "delete_staged_command", ctx)
+    effects.append(kind.command_class(command_uuid=command_id).delete())
     return {"ok": True, "command_id": command_id, "command": key, "deleted": True}
 
 
