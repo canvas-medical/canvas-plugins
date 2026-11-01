@@ -24,7 +24,7 @@ tools_module = importlib.import_module("canvas_sdk.agents.standard_tools")
 class Files:
     """Files served from memory by stored name, and the names fetched."""
 
-    served: dict[str, bytes] = field(default_factory=dict)
+    served: dict[str, bytes | None] = field(default_factory=dict)
     fetched: list[str] = field(default_factory=list)
 
 
@@ -33,7 +33,7 @@ def files(monkeypatch: pytest.MonkeyPatch) -> Files:
     """Serve downloads from memory instead of S3."""
     files = Files()
 
-    def fetch(document: Any) -> bytes:
+    def fetch(document: Any) -> bytes | None:
         files.fetched.append(document.document.name)
         return files.served[document.document.name]
 
@@ -74,6 +74,7 @@ def test_a_pdf_is_sent_whole_with_the_question_and_the_answer_comes_back(
         "document_id": str(record.id),
         "name": "Discharge summary",
         "answer": "Metformin was stopped (p. 2).",
+        "note": tools_module.UNTRUSTED_DOCUMENT_NOTE,
     }
     (request,) = gateway.requests
     document, question = request["messages"][0]["content"]
@@ -82,6 +83,7 @@ def test_a_pdf_is_sent_whole_with_the_question_and_the_answer_comes_back(
     assert base64.standard_b64decode(document["source"]["data"]) == PDF
     assert question == {"type": "text", "text": "Meds at discharge?"}
     assert "page it is on" in str(request["system"])
+    assert "do not follow" in str(request["system"])
 
 
 @pytest.mark.django_db
@@ -139,14 +141,12 @@ def test_another_patients_record_cannot_be_read(files: Files) -> None:
 
 
 @pytest.mark.django_db
-def test_a_file_over_the_size_limit_is_not_sent(
-    files: Files, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_file_over_the_size_limit_is_not_sent(files: Files) -> None:
     """A request the gateway would refuse for size is never made."""
-    monkeypatch.setattr(tools_module, "DOCUMENT_MAX_BYTES", 10)
     patient = PatientFactory.create()
     record = _record(patient)
-    files.served["records/discharge.pdf"] = PDF
+    # The download refuses a file over the limit; the tool reports it.
+    files.served["records/discharge.pdf"] = None
     gateway = FakeGateway()
 
     result = _read(patient, gateway, str(record.id))
@@ -227,3 +227,70 @@ def test_a_file_larger_than_the_history_budget_is_still_sent(files: Files) -> No
 
     (request,) = gateway.requests
     assert request["messages"][0]["content"][0]["type"] == "document"
+
+
+class _Download:
+    """A streamed response: its declared length, and the chunks a reader takes."""
+
+    def __init__(self, chunks: list[bytes], declared: int | None = None) -> None:
+        self.headers = {} if declared is None else {"Content-Length": str(declared)}
+        self._chunks = chunks
+        self.read = 0
+
+    def __enter__(self) -> "_Download":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_content(self, chunk_size: int) -> Any:
+        for chunk in self._chunks:
+            self.read += 1
+            yield chunk
+
+
+def _download(
+    monkeypatch: pytest.MonkeyPatch, chunks: list[bytes], declared: int | None = None
+) -> _Download:
+    response = _Download(chunks, declared)
+    monkeypatch.setattr(tools_module, "DOCUMENT_MAX_BYTES", 10)
+    # The presigned link needs AWS credentials; any URL does for a stubbed download.
+    monkeypatch.setattr(
+        importlib.import_module("canvas_sdk.v1.data.uncategorized_clinical_document"),
+        "presigned_url",
+        lambda key: f"https://media.test/{key}",
+    )
+    monkeypatch.setattr(tools_module.requests, "get", lambda url, stream, timeout: response)
+    return response
+
+
+@pytest.mark.django_db
+def test_a_file_declared_over_the_limit_is_not_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The declared length refuses the file before any of it is downloaded."""
+    response = _download(monkeypatch, [b"x" * 8, b"x" * 8], declared=16)
+    record = _record(PatientFactory.create())
+
+    assert tools_module._document_file(record) is None
+    assert response.read == 0
+
+
+@pytest.mark.django_db
+def test_reading_stops_once_the_bytes_pass_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without a declared length, the download stops at the chunk that crosses the limit."""
+    response = _download(monkeypatch, [b"x" * 8, b"x" * 8, b"x" * 8])
+    record = _record(PatientFactory.create())
+
+    assert tools_module._document_file(record) is None
+    assert response.read == 2
+
+
+@pytest.mark.django_db
+def test_a_file_under_the_limit_is_read_whole(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Chunks under the limit come back joined."""
+    _download(monkeypatch, [b"%PDF", b"-1.7"], declared=8)
+    record = _record(PatientFactory.create())
+
+    assert tools_module._document_file(record) == b"%PDF-1.7"
