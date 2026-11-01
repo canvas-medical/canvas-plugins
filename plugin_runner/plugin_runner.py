@@ -55,7 +55,7 @@ from canvas_sdk.agents import (
 )
 from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
-from canvas_sdk.agents.progress import ProgressFeed, agent_progress_level
+from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
     DEFAULT_RUN_SECONDS,
     RUN_TOOL_RESULT_CHARS,
@@ -300,8 +300,9 @@ def _stream_progress(
     """Run ``execute`` on its own thread, streaming the run's progress until it returns.
 
     The thread runs in a copy of this context and closes its database connections when
-    it finishes. A heartbeat goes out whenever HEARTBEAT_SECONDS pass without a tool
-    event, so the person waiting on the run can tell it is alive.
+    it finishes. A heartbeat goes out whenever HEARTBEAT_SECONDS pass without another
+    event, so the person waiting on the run can tell it is alive. Reply text that
+    arrives between polls goes out as one event.
     """
     feed = recorder.progress
     assert feed is not None
@@ -320,26 +321,27 @@ def _stream_progress(
     threading.Thread(target=work, name="agent-run", daemon=True).start()
     last_sent = started
 
-    def progress(kind: str, label: str = "", ok: bool = False) -> EventResponse:
+    def progress(event: ProgressEvent | None = None) -> EventResponse:
         return EventResponse(
             progress=AgentRunProgress(
-                kind=kind,
+                kind=event.kind if event else "heartbeat",
                 phase=recorder.phase,
                 elapsed_ms=int((monotonic() - started) * 1000),
-                label=label,
-                ok=ok,
+                label=event.label if event else "",
+                ok=event.ok if event else False,
+                text=event.text if event else "",
             )
         )
 
     while not finished.is_set():
         if (event := feed.next(timeout=PROGRESS_POLL_SECONDS)) is not None:
-            yield progress(event.kind, event.label, event.ok)
+            yield progress(event)
             last_sent = monotonic()
         elif monotonic() - last_sent >= HEARTBEAT_SECONDS:
-            yield progress("heartbeat")
+            yield progress()
             last_sent = monotonic()
     while (event := feed.next(timeout=0)) is not None:
-        yield progress(event.kind, event.label, event.ok)
+        yield progress(event)
     return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
 
 

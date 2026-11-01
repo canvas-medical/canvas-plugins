@@ -20,12 +20,13 @@ plugin-runner does::
 """
 
 import copy
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
-from anthropic.types import TextBlock, ToolUseBlock
+from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
@@ -65,12 +66,49 @@ def reply(*blocks: TextBlock | ToolUseBlock, stop_reason: str = "") -> ModelRepl
     return ModelReply(stop_reason=stop_reason, content=list(blocks))
 
 
+class FakeStream:
+    """A streamed model call: its reply's text a word at a time, then the whole reply."""
+
+    def __init__(self, answer: ModelReply) -> None:
+        self._answer = answer
+
+    def __enter__(self) -> "FakeStream":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    @property
+    def text_stream(self) -> Iterator[str]:
+        """The reply's text, word by word with the spaces kept, as the model writes it."""
+        for block in self._answer.content:
+            if isinstance(block, TextBlock):
+                yield from (word for word in re.split(r"(?<= )", block.text) if word)
+
+    def get_final_message(self) -> ModelReply:
+        """The whole reply, as the stream's final message.
+
+        As from the SDK, its text blocks are ``ParsedTextBlock``s, which carry a
+        ``parsed_output`` field the Messages API does not accept back.
+        """
+        return ModelReply(
+            stop_reason=self._answer.stop_reason,
+            content=[
+                ParsedTextBlock(type="text", text=block.text, parsed_output=None)
+                if isinstance(block, TextBlock)
+                else block
+                for block in self._answer.content
+            ],
+        )
+
+
 class FakeGateway:
     """An :class:`LLMGateway` stand-in that answers model calls from a queue.
 
-    Each call to ``client().messages.create`` takes the next reply, or raises it when it
-    is an exception, such as an ``anthropic.APIConnectionError`` for an outage. A copy of
-    each request's arguments is kept on :attr:`requests`.
+    Each call to ``client().messages.create``, or to ``messages.stream`` when the run's
+    reply is streamed, takes the next reply, or raises it when it is an exception, such
+    as an ``anthropic.APIConnectionError`` for an outage. A copy of each request's
+    arguments is kept on :attr:`requests`.
     """
 
     model = "claude-test"
@@ -95,6 +133,10 @@ class FakeGateway:
         if isinstance(answer, Exception):
             raise answer
         return answer
+
+    def stream(self, **kwargs: Any) -> FakeStream:
+        """Answer one streamed model call with the next queued reply."""
+        return FakeStream(self.create(**kwargs))
 
 
 def prepare_agent(

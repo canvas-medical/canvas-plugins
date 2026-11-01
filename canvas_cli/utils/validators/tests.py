@@ -354,7 +354,7 @@ def test_manifest_rejects_run_seconds_outside_the_ceiling(run_seconds: object) -
         validate_manifest_file(_with_run_seconds(run_seconds))
 
 
-@pytest.mark.parametrize("level", ["status", "activity"])
+@pytest.mark.parametrize("level", ["status", "activity", "reply"])
 def test_manifest_accepts_a_progress_level(level: str) -> None:
     """An agent may declare how much of a run's progress its user sees."""
     manifest = _agent_manifest({"allowed": []})
@@ -362,7 +362,7 @@ def test_manifest_accepts_a_progress_level(level: str) -> None:
     validate_manifest_file(manifest)
 
 
-@pytest.mark.parametrize("level", ["reply", "everything", 1])
+@pytest.mark.parametrize("level", ["everything", "replies", 1])
 def test_manifest_rejects_an_unknown_progress_level(level: object) -> None:
     """Only the levels the platform streams can be declared."""
     manifest = _agent_manifest({"allowed": []})

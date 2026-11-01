@@ -152,7 +152,8 @@ manifest_schema = {
             # MAX_RUN_SECONDS; a run above the default is extended, and the plugin
             # runner admits only a few of those at once. `progress` is the most of
             # a run's progress the person waiting on it sees: "status" (heartbeats,
-            # the default) or "activity" (adds a label per tool call).
+            # the default), "activity" (adds a label per tool call), or "reply" (adds
+            # the reply text as it is written).
             "type": "array",
             "items": {
                 "type": "object",

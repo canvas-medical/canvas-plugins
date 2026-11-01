@@ -108,6 +108,10 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
+      .progress-preview {
+        white-space: pre-wrap;
+        margin-bottom: 4px;
+      }
       .progress-status {
         color: #6b7280;
       }
@@ -263,7 +267,19 @@
       // Heartbeats come every couple of seconds; this long without one means the run is
       // waiting on the model rather than working.
       const PROGRESS_QUIET_MS = 30 * 1000;
-      const PHASE_TEXT = { thinking: 'Thinking', working: 'Working' };
+      const PHASE_TEXT = { thinking: 'Thinking', writing: 'Writing', working: 'Working' };
+
+      // The reply as written so far, shown as plain text until the finished reply replaces
+      // it: citation and navigation markers, and code fences (charts, suggestions), only
+      // make sense rendered from the whole reply, so they are left out of the preview.
+      function previewText(text) {
+        const fence = text.indexOf('```');
+        let shown = fence === -1 ? text : text.slice(0, fence);
+        shown = shown.replace(/\[\[[^\]]*\]\]/g, '');
+        const open = shown.lastIndexOf('[[');
+        if (open !== -1) shown = shown.slice(0, open);
+        return shown.trim();
+      }
 
       const log = document.getElementById('log');
       const composer = document.getElementById('composer');
@@ -671,6 +687,9 @@
         } catch (err) {
           return () => {};
         }
+        const preview = document.createElement('div');
+        preview.className = 'progress-preview';
+        let replyText = '';
         const status = document.createElement('div');
         status.className = 'progress-status';
         const details = document.createElement('details');
@@ -689,8 +708,10 @@
           if (status.parentNode !== placeholder) {
             // Take over only the bare placeholder: once the reply has replaced it, stop.
             if (placeholder.textContent !== '…') return;
-            placeholder.replaceChildren(status, details);
+            placeholder.replaceChildren(preview, status, details);
           }
+          preview.textContent = previewText(replyText);
+          preview.hidden = !preview.textContent;
           const seconds = Math.round(lastElapsed / 1000);
           status.textContent = Date.now() - lastHeard > PROGRESS_QUIET_MS
             ? 'Still waiting on the model · ' + seconds + 's'
@@ -708,7 +729,12 @@
           lastHeard = Date.now();
           lastPhase = progress.phase || lastPhase;
           lastElapsed = progress.elapsed_ms || lastElapsed;
-          if (progress.kind === 'tool_started') {
+          if (progress.kind === 'turn_started') {
+            // Only the last model call's text becomes the reply; start this one afresh.
+            replyText = '';
+          } else if (progress.kind === 'text') {
+            replyText += progress.text || '';
+          } else if (progress.kind === 'tool_started') {
             const step = document.createElement('li');
             step.textContent = progress.label;
             step.dataset.label = progress.label;

@@ -73,7 +73,7 @@ class RunRecorder:
     tool_result_chars: int = 0
     max_tool_result_chars: int | None = None
     # What the run is doing, for its heartbeats: "thinking" during a model call,
-    # "working" while tools run.
+    # "writing" once its reply text arrives, "working" while tools run.
     phase: str = "thinking"
     # Where tool events go when the platform streams the run's progress; None otherwise.
     progress: ProgressFeed | None = None
@@ -106,6 +106,22 @@ class RunRecorder:
         left = self.seconds_left()
         if left is not None and left <= 0:
             raise RunDeadlineExceeded("the run reached its deadline")
+
+    @property
+    def streams_reply(self) -> bool:
+        """Whether the run's reply text is streamed as the model writes it."""
+        return self.progress is not None and self.progress.shows_reply
+
+    def report_turn(self) -> None:
+        """Report that a model call is starting, when reply text is streamed."""
+        if self.progress is not None:
+            self.progress.turn()
+
+    def report_text(self, delta: str) -> None:
+        """Report reply text as it arrives, when reply text is streamed."""
+        if self.progress is not None:
+            self.phase = "writing"
+            self.progress.text(delta)
 
     def report_tool(self, kind: str, label: str, ok: bool = False) -> None:
         """Report a tool call starting or finishing, when the run's progress is streamed."""

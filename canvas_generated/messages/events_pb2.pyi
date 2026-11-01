@@ -2652,18 +2652,20 @@ class AgentRunSummary(_message.Message):
     def __init__(self, model_calls: _Optional[int] = ..., stop_reason: _Optional[str] = ..., effects_returned: _Optional[int] = ..., effects_dropped: _Optional[int] = ..., tool_calls: _Optional[_Iterable[_Union[AgentToolCall, _Mapping]]] = ...) -> None: ...
 
 class AgentRunProgress(_message.Message):
-    __slots__ = ("kind", "phase", "elapsed_ms", "label", "ok")
+    __slots__ = ("kind", "phase", "elapsed_ms", "label", "ok", "text")
     KIND_FIELD_NUMBER: _ClassVar[int]
     PHASE_FIELD_NUMBER: _ClassVar[int]
     ELAPSED_MS_FIELD_NUMBER: _ClassVar[int]
     LABEL_FIELD_NUMBER: _ClassVar[int]
     OK_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
     kind: str
     phase: str
     elapsed_ms: int
     label: str
     ok: bool
-    def __init__(self, kind: _Optional[str] = ..., phase: _Optional[str] = ..., elapsed_ms: _Optional[int] = ..., label: _Optional[str] = ..., ok: bool = ...) -> None: ...
+    text: str
+    def __init__(self, kind: _Optional[str] = ..., phase: _Optional[str] = ..., elapsed_ms: _Optional[int] = ..., label: _Optional[str] = ..., ok: bool = ..., text: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects", "error_kind", "agent_run", "progress")

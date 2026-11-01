@@ -17,13 +17,14 @@ from canvas_sdk.agents import (
     run_tool_loop,
     standard_tools,
 )
-from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, ProgressFeed
+from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, MAX_QUEUED_EVENTS, ProgressFeed
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
     RunDeadlineExceeded,
     RunRecorder,
     current_recorder,
 )
+from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent
 from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
 from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
@@ -675,3 +676,102 @@ def test_every_standard_tool_has_a_progress_label() -> None:
     ]
 
     assert unlabeled == []
+
+
+def _events(feed: ProgressFeed) -> list[tuple[str, str]]:
+    events = []
+    while (event := feed.next(timeout=0)) is not None:
+        events.append((event.kind, event.text or event.label))
+    return events
+
+
+def test_at_the_reply_level_the_loop_streams_each_turns_text() -> None:
+    """The person waiting reads each model call's text as it arrives, turn by turn."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(
+        _response("tool_use", _text("Let me look."), _tool_use("records", "t1")),
+        _response("end_turn", _text("Three records need review.")),
+    )
+
+    result = _with_recorder(recorder, client, tools=tools)
+
+    assert result.text == "Three records need review."
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == [
+        ("turn_started", ""),
+        ("text", "Let me look."),
+        ("tool_started", "Reading outside records"),
+        ("tool_finished", "Reading outside records"),
+        ("turn_started", ""),
+        ("text", "Three records need review."),
+    ], "text arriving faster than it is streamed merges into one event"
+    assert recorder.phase == "writing"
+
+
+def test_below_the_reply_level_the_loop_does_not_stream() -> None:
+    """At "activity" the call is made unstreamed and no text is queued."""
+    recorder = RunRecorder(progress=ProgressFeed("activity"))
+    client = FakeGateway(_response("end_turn", _text("Done.")))
+    client.stream = None  # type: ignore[assignment]
+
+    _with_recorder(recorder, client)
+
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == []
+
+
+def test_a_sub_agents_text_is_never_streamed() -> None:
+    """A sub-agent writes for its parent, not for the person waiting on the run."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10)
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(_response("end_turn", _text("Sub-agent notes.")))
+    token = current_recorder.set(recorder)
+    try:
+        run_subagent(
+            SubAgentSpec(
+                name="notes",
+                system_prompt="Summarize.",
+                allowed_tool_names=frozenset({"records"}),
+            ),
+            "Summarize the records.",
+            parent_tools=tools,
+            parent_ctx={},
+            gateway=client,  # type: ignore[arg-type]
+        )
+    finally:
+        current_recorder.reset(token)
+
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == []
+
+
+def test_text_merges_and_is_never_dropped_while_tool_events_are() -> None:
+    """A slow reader loses tool events, never words of the reply."""
+    feed = ProgressFeed("reply")
+    for index in range(MAX_QUEUED_EVENTS + 5):
+        feed.tool("tool_started", f"Tool {index}")
+    feed.text("Three ")
+    feed.text("records.")
+
+    events = _events(feed)
+
+    assert len([kind for kind, _ in events if kind == "tool_started"]) == MAX_QUEUED_EVENTS
+    assert events[-1] == ("text", "Three records.")
+
+
+def test_a_streamed_reply_is_stored_in_the_shape_the_api_takes_back() -> None:
+    """The stream's final message carries SDK-only fields; the transcript must not."""
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(_response("end_turn", _text("Three records need review.")))
+
+    result = _with_recorder(recorder, client)
+
+    (block,) = result.messages[-1]["content"]
+    assert "parsed_output" not in block
+    assert block == {"type": "text", "text": "Three records need review.", "citations": None}
