@@ -26,6 +26,7 @@
         --bubble-assistant-fg: #111827;
         --border: #e5e7eb;
         --muted: #6b7280;
+        --chip: #2563eb;
       }
       * { box-sizing: border-box; }
       html, body { height: 95%; margin: 0; }
@@ -112,6 +113,35 @@
         background: #fef2f2;
         border-color: #fecaca;
       }
+      #chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 12px 8px;
+      }
+      #chips:empty { display: none; }
+      .chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--chip) 30%, transparent);
+        background: color-mix(in srgb, var(--chip) 10%, transparent);
+        color: var(--chip);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .chip:hover { background: color-mix(in srgb, var(--chip) 18%, transparent); }
+      .chip[disabled] { opacity: 0.5; cursor: not-allowed; }
+      .starters { display: flex; flex-direction: column; gap: 6px; }
+      .starters-label {
+        margin-top: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .starters-row { display: flex; flex-wrap: wrap; gap: 6px; }
       .proposal {
         align-self: flex-start;
         max-width: 85%;
@@ -165,6 +195,7 @@
   </head>
   <body>
     <div id="log" aria-live="polite"></div>
+    <div id="chips"></div>
     <form id="composer" autocomplete="off">
       <textarea id="message" name="message" placeholder="Ask about this patient..." aria-label="Message" required></textarea>
       <button id="send" type="submit">Send</button>
@@ -192,6 +223,35 @@
       const composer = document.getElementById('composer');
       const messageEl = document.getElementById('message');
       const sendBtn = document.getElementById('send');
+      const chipsEl = document.getElementById('chips');
+      // What an empty conversation offers, grouped by what the agent's tools can do.
+      const STARTER_GROUPS = [
+        { label: 'Prepare', prompts: [
+          'Prep me for this visit',
+          'Summarize this patient',
+          'What changed since the last visit?',
+        ] },
+        { label: 'Review', prompts: [
+          'Active medications',
+          'Active conditions',
+          'Allergies',
+          'Recent labs',
+          'Immunizations',
+          'Open referrals and imaging',
+          'Care team',
+        ] },
+        { label: 'Trends', prompts: [
+          'Plot weight over time',
+          'Plot blood pressure this year',
+          'Trend recent lab results',
+        ] },
+        { label: 'Act', prompts: [
+          'Draft a reply to the last patient message',
+          'Create a follow-up task',
+          'Draft a chart review note',
+          'Open the last visit note',
+        ] },
+      ];
 
       // Count of assistant turns already rendered. Polling uses this as the
       // baseline to detect when the agent's reply has landed in Conversation.
@@ -342,11 +402,47 @@
         return div;
       }
 
-      function appendMeta(text) {
-        const div = document.createElement('div');
-        div.className = 'meta';
-        div.textContent = text;
-        log.appendChild(div);
+      // Prompts the clinician can send with one click: a starting set for an empty
+      // conversation, then the next steps the latest reply suggested.
+      function showChips(prompts) {
+        chipsEl.textContent = '';
+        for (const prompt of prompts || []) chipsEl.appendChild(chipButton(prompt));
+      }
+
+      function chipButton(prompt) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = prompt;
+        chip.addEventListener('click', () => {
+          if (!sendBtn.disabled) sendMessage(prompt);
+        });
+        return chip;
+      }
+
+      function showStarters() {
+        const panel = document.createElement('div');
+        panel.className = 'starters';
+        const intro = document.createElement('div');
+        intro.className = 'meta';
+        intro.textContent = 'Ask anything about this patient, or start with one of these:';
+        panel.appendChild(intro);
+        for (const group of STARTER_GROUPS) {
+          const heading = document.createElement('div');
+          heading.className = 'starters-label';
+          heading.textContent = group.label;
+          const row = document.createElement('div');
+          row.className = 'starters-row';
+          group.prompts.forEach(prompt => row.appendChild(chipButton(prompt)));
+          panel.append(heading, row);
+        }
+        log.appendChild(panel);
+      }
+
+      function chipsAfter(messages) {
+        if (!messages.length) return [];
+        const last = messages[messages.length - 1];
+        return last.role === 'assistant' ? last.chips : [];
       }
 
       async function loadHistory() {
@@ -357,8 +453,9 @@
           const messages = data.messages || [];
           messages.forEach(m => appendBubble(m.role, m.text));
           assistantCount = messages.filter(m => m.role === 'assistant').length;
+          showChips(chipsAfter(messages));
           if (!messages.length) {
-            appendMeta('Start the conversation. The agent can read this patient’s conditions, recent labs, and medications.');
+            showStarters();
           }
         } catch (err) {
           appendBubble('assistant', 'Failed to load conversation history: ' + err.message, { error: true });
@@ -470,6 +567,7 @@
           return;
         }
         const reply = assistants[assistants.length - 1];
+        showChips(reply.chips);
         const noteIds = renderAssistantBubble(placeholder, reply.text || '');
         if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
         // Fire navigation directives only for NEW replies, not when
@@ -520,6 +618,8 @@
         // Optimistic render: user bubble + "thinking…" placeholder go up
         // immediately so the UI feels responsive. The placeholder gets
         // replaced with the agent's reply once its run finishes.
+        showChips([]);
+        log.querySelectorAll('.starters').forEach(panel => panel.remove());
         appendBubble('user', text);
         const placeholder = appendBubble('assistant', '…');
         const baseline = assistantCount;
