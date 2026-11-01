@@ -12,6 +12,7 @@ import pytest
 from canvas_sdk.agents import DEFAULT_HISTORY_CHARS, standard_tools
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text
 from canvas_sdk.test_utils.factories import (
+    ImagingReportFactory,
     IntegrationTaskFactory,
     IntegrationTaskReviewFactory,
     PatientFactory,
@@ -40,8 +41,10 @@ def files(monkeypatch: pytest.MonkeyPatch) -> Files:
     files = Files()
 
     def fetch(document: Any) -> bytes | None:
-        files.fetched.append(document.document.name)
-        return files.served[document.document.name]
+        # An imaging report holds its file's address; the other holders hold the file.
+        name = getattr(document, "s3_report_url", None) or document.document.name
+        files.fetched.append(name)
+        return files.served[name]
 
     monkeypatch.setattr(tools_module, "_document_file", fetch)
     return files
@@ -144,6 +147,57 @@ def test_a_consult_report_with_no_fax_file_is_not_fetched(files: Files) -> None:
 
     assert result == {"ok": False, "error": "This document has no attached file to read."}
     assert files.fetched == []
+
+
+def _imaging_report(patient: Any, file_url: str | None) -> Any:
+    """An MRI report filed from the file at ``file_url``."""
+    return ImagingReportFactory.create(
+        patient=patient, name="MRI lumbar spine", s3_report_url=file_url
+    )
+
+
+@pytest.mark.django_db
+def test_an_imaging_report_is_read_from_the_file_it_was_filed_from(files: Files) -> None:
+    """What the radiologist found is only in the report's file; the tool reads it."""
+    patient = PatientFactory.create()
+    report = _imaging_report(patient, "https://bucket.s3.amazonaws.com/faxes/mri.pdf")
+    files.served["https://bucket.s3.amazonaws.com/faxes/mri.pdf"] = PDF
+    gateway = FakeGateway(reply(text("Mild L4-5 disc bulge (p. 1).")))
+
+    result = _read(patient, gateway, str(report.id), question="What did the MRI show?")
+
+    assert (result["ok"], result["name"], result["answer"]) == (
+        True,
+        "MRI lumbar spine",
+        "Mild L4-5 disc bulge (p. 1).",
+    )
+    assert files.fetched == ["https://bucket.s3.amazonaws.com/faxes/mri.pdf"]
+
+
+@pytest.mark.django_db
+def test_another_patients_imaging_report_cannot_be_read(files: Files) -> None:
+    """The imaging report's patient is checked before its file is fetched."""
+    patient = PatientFactory.create()
+    theirs = _imaging_report(PatientFactory.create(), "https://bucket.s3.amazonaws.com/mri.pdf")
+
+    with pytest.raises(ValueError, match="not found for this patient"):
+        _read(patient, FakeGateway(), str(theirs.id))
+    assert files.fetched == []
+
+
+@pytest.mark.django_db
+def test_an_imaging_report_with_no_file_is_not_fetched(files: Files) -> None:
+    """A report entered by hand has no file to read, and find_imaging_reports says so."""
+    patient = PatientFactory.create()
+    report = _imaging_report(patient, None)
+
+    result = _read(patient, FakeGateway(), str(report.id))
+
+    assert result == {"ok": False, "error": "This document has no attached file to read."}
+    assert files.fetched == []
+    (row,) = standard_tools.execute("find_imaging_reports", {}, ctx={"patient_id": patient.id})
+    assert row["has_file"] is False
+    assert row["date"] == report.original_date.isoformat()
 
 
 @pytest.mark.django_db

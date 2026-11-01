@@ -25,6 +25,7 @@ from canvas_sdk.test_utils.factories import (
     LabReportFactory,
     LabValueFactory,
     MedicationFactory,
+    MedicationHistoryMedicationFactory,
     MedicationStatementFactory,
     NoteFactory,
     PatientFactory,
@@ -163,6 +164,10 @@ SEEDED_READS: list[tuple[str, Callable[..., _Record]]] = [
         ),
     ),
     ("find_lab_results", _seed_lab_value),
+    (
+        "find_pharmacy_fills",
+        lambda patient: MedicationHistoryMedicationFactory.create(patient=patient),
+    ),
     ("find_protocol_cards", lambda patient: ProtocolCurrentFactory.create(patient=patient)),
 ]
 

@@ -86,6 +86,16 @@ CARD_FIELDS: dict[str, CardFields] = {
     "Prescription": CardFields(
         "Prescription", "medication_name", ("status", "sig_original_input"), "written_date"
     ),
+    "MedicationHistoryMedication": CardFields(
+        "Pharmacy fill", "drug", ("pharmacy", "days_supply"), "last_fill_date"
+    ),
+    "PharmacyRequest": CardFields(
+        "Pharmacy request",
+        "medication",
+        ("change", "status", "response"),
+        "received",
+        kind_field="type",
+    ),
     "Interview": CardFields("Questionnaire", "name", ("status",), "answered_at"),
     "StopMedicationEvent": CardFields(
         "Stopped medication", "medication_name", ("rationale",), "stopped_at"

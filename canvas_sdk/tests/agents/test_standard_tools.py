@@ -1063,6 +1063,8 @@ _LIST_RETURNING_TOOLS = (
     "find_medication_statements",
     "find_external_events",
     "find_prescriptions",
+    "find_pharmacy_fills",
+    "find_pharmacy_requests",
     "find_questionnaire_responses",
     "find_stop_medication_events",
     "find_banner_alerts",
