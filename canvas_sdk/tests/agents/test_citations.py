@@ -157,10 +157,9 @@ def test_every_citable_standard_tool_has_a_card() -> None:
     Banner and protocol card rows carry no ``id``, so they are never cited.
     """
     citable_models = {
-        metadata["model"].__name__
+        metadata.get("record_type") or metadata["model"].__name__
         for definition in standard_tools.definitions()
-        if (metadata := standard_tools.metadata_for(definition["name"])).get("model")
-        and metadata.get("citable")
+        if (metadata := standard_tools.metadata_for(definition["name"])).get("citable")
     }
 
     assert citable_models - set(CARD_FIELDS) == {"BannerAlert", "ProtocolCurrent"}

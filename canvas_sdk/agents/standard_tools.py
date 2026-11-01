@@ -65,11 +65,14 @@ from canvas_sdk.v1.data import (
     Encounter,
     ExternalEvent,
     Goal,
+    ImagingOrder,
     ImagingReport,
     Immunization,
     Interview,
+    LabOrder,
     LabPartner,
     LabPartnerTest,
+    LabTest,
     LabValue,
     Medication,
     MedicationStatement,
@@ -87,6 +90,7 @@ from canvas_sdk.v1.data import (
 )
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.care_team import CareTeamMembershipStatus
+from canvas_sdk.v1.data.common import OrderStatus, ReviewStatus
 from canvas_sdk.v1.data.encounter import EncounterState
 from canvas_sdk.v1.data.goal import GoalAchievementStatus, GoalLifecycleStatus, GoalPriority
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
@@ -1324,6 +1328,261 @@ def _serialize_referral(referral: Any) -> dict[str, Any]:
         "service_provider_name": provider_name or None,
         "forwarded": bool(referral.forwarded),
     }
+
+
+# How far back find_open_loops looks for orders when the model names no date.
+OPEN_LOOPS_DEFAULT_DAYS = 180
+# Most orders of each kind find_open_loops reconciles, newest first.
+OPEN_LOOPS_PER_KIND = 25
+
+# Imaging orders that will never produce a result.
+_IMAGING_ORDERS_THAT_ENDED = (
+    OrderStatus.CANCELLED,
+    OrderStatus.REJECTED,
+    OrderStatus.ENTERED_IN_ERROR,
+)
+
+
+def _staff_name(staff: Any) -> str | None:
+    if staff is None:
+        return None
+    return f"{staff.first_name or ''} {staff.last_name or ''}".strip() or None
+
+
+def _is_reviewed(review: Any) -> bool:
+    return review is not None and review.status == ReviewStatus.STATUS_REVIEWED
+
+
+def _as_date(value: date | datetime | None) -> date | None:
+    return value.date() if isinstance(value, datetime) else value
+
+
+def _no_result_yet(noun: str, waited: int | None) -> str:
+    if waited is None:
+        return f"No {noun} yet"
+    if waited == 0:
+        return f"No {noun} yet, ordered today"
+    return f"No {noun} after {waited} day{'' if waited == 1 else 's'}"
+
+
+def _open_loop(
+    *,
+    record: Any,
+    kind: str,
+    item: str,
+    ordered: datetime,
+    ordered_by: str | None,
+    resulted_on: list[date | datetime | None],
+    resulted: bool,
+    reviewed: bool,
+    today: date,
+    **extra: Any,
+) -> dict[str, Any]:
+    """One reconciled order: whether its result came back and whether it was reviewed."""
+    ordered_on = _as_date(ordered)
+    result_dates = [d for d in (_as_date(value) for value in resulted_on) if d is not None]
+    latest_result = max(result_dates) if result_dates else None
+    noun = "consult note" if kind == "Referral" else "result"
+    if not resulted:
+        status = "awaiting_result"
+        waited = (today - ordered_on).days if ordered_on else None
+        summary = _no_result_yet(noun, waited)
+    elif not reviewed:
+        status = "awaiting_review"
+        since = latest_result or ordered_on
+        waited = (today - since).days if since else None
+        received = f" {latest_result.isoformat()}" if latest_result else ""
+        summary = f"{noun.capitalize()} received{received}, not reviewed"
+    else:
+        status = "closed"
+        waited = None
+        summary = f"{noun.capitalize()} reviewed"
+    note = getattr(record, "note", None)
+    return {
+        "id": str(record.id),
+        "type": kind,
+        "item": item,
+        "ordered_on": ordered_on.isoformat() if ordered_on else None,
+        "ordered_by": ordered_by,
+        "status": status,
+        "resulted_on": latest_result.isoformat() if latest_result else None,
+        "days_waiting": waited,
+        "summary": summary,
+        "note_dbid": note.dbid if note is not None else None,
+        **extra,
+    }
+
+
+def _lab_order_loops(patient_id: str, since: str, today: date) -> list[dict[str, Any]]:
+    """Lab orders, closed once every active test has resulted and been reviewed."""
+    resulted_statuses = (LabTest.LabTestOrderStatus.RECEIVED, LabTest.LabTestOrderStatus.REVIEWED)
+    orders = (
+        LabOrder.objects.committed()
+        .filter(patient__id=patient_id, date_ordered__date__gte=since)
+        .select_related("ordering_provider", "note")
+        .prefetch_related("tests__report__review")
+        .order_by("-date_ordered")[:OPEN_LOOPS_PER_KIND]
+    )
+    loops = []
+    for order in orders:
+        tests = [
+            test for test in order.tests.all() if test.status != LabTest.LabTestOrderStatus.INACTIVE
+        ]
+        if not tests:
+            continue
+        resulted = [t for t in tests if t.status in resulted_statuses or t.report is not None]
+        reviewed = [
+            t
+            for t in resulted
+            if t.status == LabTest.LabTestOrderStatus.REVIEWED
+            or (t.report is not None and _is_reviewed(t.report.review))
+        ]
+        pending = [t.ontology_test_name or t.ontology_test_code for t in tests if t not in resulted]
+        # A result waiting for review is the more urgent loop, so it wins over a test
+        # still out; the order closes once every test has resulted and been reviewed.
+        waiting_review = len(reviewed) < len(resulted)
+        loop = _open_loop(
+            record=order,
+            kind="Lab order",
+            item=", ".join(t.ontology_test_name or t.ontology_test_code for t in tests),
+            ordered=order.date_ordered,
+            ordered_by=_staff_name(order.ordering_provider),
+            resulted_on=[t.report.original_date for t in resulted if t.report is not None],
+            resulted=waiting_review or not pending,
+            reviewed=not waiting_review and not pending,
+            today=today,
+            pending_tests=pending,
+        )
+        # Name the tests still out, so a summary of the tests that came back is not
+        # read as covering them.
+        if pending and resulted:
+            still_out = ", ".join(pending)
+            if loop["status"] == "awaiting_result":
+                loop["summary"] = _no_result_yet(f"result for {still_out}", loop["days_waiting"])
+            else:
+                loop["summary"] += f"; no result yet for {still_out}"
+        loops.append(loop)
+    return loops
+
+
+def _imaging_order_loops(patient_id: str, since: str, today: date) -> list[dict[str, Any]]:
+    """Imaging orders, closed once a report came back and every report was reviewed."""
+    orders = (
+        ImagingOrder.objects.committed()
+        .filter(patient__id=patient_id, date_time_ordered__date__gte=since)
+        .exclude(status__in=_IMAGING_ORDERS_THAT_ENDED)
+        .select_related("ordering_provider", "note")
+        .prefetch_related("results__review")
+        .order_by("-date_time_ordered")[:OPEN_LOOPS_PER_KIND]
+    )
+    loops = []
+    for order in orders:
+        reports = list(order.results.all())
+        loops.append(
+            _open_loop(
+                record=order,
+                kind="Imaging order",
+                item=order.imaging or "Imaging",
+                ordered=order.date_time_ordered,
+                ordered_by=_staff_name(order.ordering_provider),
+                resulted_on=[r.result_date or r.original_date for r in reports],
+                resulted=bool(reports),
+                reviewed=bool(reports) and all(_is_reviewed(r.review) for r in reports),
+                today=today,
+            )
+        )
+    return loops
+
+
+def _referral_loops(patient_id: str, since: str, today: date) -> list[dict[str, Any]]:
+    """Referrals, closed once a consult note came back and every one was reviewed."""
+    referrals = (
+        Referral.objects.committed()
+        .filter(patient__id=patient_id, date_referred__date__gte=since)
+        .select_related("service_provider", "note")
+        .prefetch_related("reports__review")
+        .order_by("-date_referred")[:OPEN_LOOPS_PER_KIND]
+    )
+    loops = []
+    for referral in referrals:
+        reports = list(referral.reports.all())
+        provider = referral.service_provider
+        to = (
+            f"{provider.first_name or ''} {provider.last_name or ''}".strip()
+            if provider is not None
+            else ""
+        )
+        loops.append(
+            _open_loop(
+                record=referral,
+                kind="Referral",
+                item=to or "Referral",
+                ordered=referral.date_referred,
+                ordered_by=None,
+                resulted_on=[r.original_date for r in reports],
+                resulted=bool(reports),
+                reviewed=bool(reports) and all(_is_reviewed(r.review) for r in reports),
+                today=today,
+                clinical_question=referral.clinical_question or None,
+            )
+        )
+    return loops
+
+
+@standard_tools.tool(
+    name="find_open_loops",
+    description=(
+        "Reconcile the patient's lab orders, imaging orders, and referrals with what came "
+        "back: for each order, whether its result (or a referral's consult note) arrived, "
+        "whether anyone reviewed it, and how many days it has waited. Use it to answer "
+        "'did the labs come back', 'was the study done', 'did we get the consult note', "
+        "and to brief a clinician on what is still open since a visit. Status is "
+        "`awaiting_result`, `awaiting_review`, or `closed`; only open orders are returned "
+        "unless include_closed is true. Newest orders first."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "ordered_on_or_after": {
+                "type": "string",
+                "format": "date",
+                "description": (
+                    "ISO 8601 date. Only orders placed on or after this date; pass the "
+                    "last visit's date of service for 'since the last visit'. Defaults "
+                    f"to {OPEN_LOOPS_DEFAULT_DAYS} days ago."
+                ),
+            },
+            "include_closed": {
+                "type": "boolean",
+                "description": "When true, also return orders already resulted and reviewed.",
+            },
+        },
+    },
+    categories=("clinical_reads",),
+    cites="OpenLoop",
+    returns_description=(
+        "Array of objects with `id` (the order or referral), `type` (Lab order, Imaging "
+        "order, Referral), `item`, `ordered_on`, `ordered_by`, `status` "
+        "(awaiting_result|awaiting_review|closed), `resulted_on`, `days_waiting`, "
+        "`summary`, `note_dbid` (the note it was ordered on), plus `pending_tests` for "
+        "lab orders and `clinical_question` for referrals."
+    ),
+)
+def _find_open_loops(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every recent order with whether its result came back and was reviewed."""
+    patient_id = require_patient_id(ctx)
+    today = datetime.now(UTC).date()
+    since = arguments.get("ordered_on_or_after") or (
+        date.fromordinal(today.toordinal() - OPEN_LOOPS_DEFAULT_DAYS).isoformat()
+    )
+    loops = [
+        *_lab_order_loops(patient_id, since, today),
+        *_imaging_order_loops(patient_id, since, today),
+        *_referral_loops(patient_id, since, today),
+    ]
+    if not arguments.get("include_closed"):
+        loops = [loop for loop in loops if loop["status"] != "closed"]
+    return sorted(loops, key=lambda loop: loop["ordered_on"] or "", reverse=True)
 
 
 @standard_tools.filter_search_tool(
