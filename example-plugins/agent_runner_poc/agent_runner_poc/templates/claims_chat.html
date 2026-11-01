@@ -12,6 +12,7 @@
         --surface: #ffffff;
         --border: #e5e7eb;
         --muted: #6b7280;
+        --chip: #2563eb;
       }
       * { box-sizing: border-box; }
       html, body { height: 95%; margin: 0; }
@@ -67,6 +68,25 @@
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         color: var(--accent);
       }
+      #chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 12px 8px;
+      }
+      #chips:empty { display: none; }
+      .chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--chip) 30%, transparent);
+        background: color-mix(in srgb, var(--chip) 10%, transparent);
+        color: var(--chip);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .chip:hover { background: color-mix(in srgb, var(--chip) 18%, transparent); }
+      .chip[disabled] { opacity: 0.5; cursor: not-allowed; }
       .meta { font-size: 12px; color: var(--muted); align-self: flex-start; padding: 4px 8px; }
       .error { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
       #composer {
@@ -101,6 +121,7 @@
   <body>
     <div id="mode"></div>
     <div id="log" aria-live="polite"></div>
+    <div id="chips"></div>
     <form id="composer" autocomplete="off">
       <textarea id="message" name="message" aria-label="Message" required></textarea>
       <button id="send" type="submit">Send</button>
@@ -124,6 +145,10 @@
       const composer = document.getElementById('composer');
       const messageEl = document.getElementById('message');
       const sendBtn = document.getElementById('send');
+      const chipsEl = document.getElementById('chips');
+      const STARTER_CHIPS = CLAIM_ID
+        ? ['What is holding this claim up?', 'Show its comments and banners', 'Check its coverage']
+        : ['Summarize my queues', 'Claims assigned to me', 'Oldest claims with a balance'];
       let assistantCount = 0;
 
       function renderMode() {
@@ -177,6 +202,28 @@
         return div;
       }
 
+      // Prompts the user can send with one click: a starting set for an empty
+      // conversation, then the next steps the latest reply suggested.
+      function showChips(prompts) {
+        chipsEl.textContent = '';
+        for (const prompt of prompts || []) {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'chip';
+          chip.textContent = prompt;
+          chip.addEventListener('click', () => {
+            if (!sendBtn.disabled) sendMessage(prompt);
+          });
+          chipsEl.appendChild(chip);
+        }
+      }
+
+      function chipsAfter(messages) {
+        if (!messages.length) return STARTER_CHIPS;
+        const last = messages[messages.length - 1];
+        return last.role === 'assistant' ? last.chips : [];
+      }
+
       function appendMeta(text) {
         const div = document.createElement('div');
         div.className = 'meta';
@@ -195,6 +242,7 @@
           const messages = await fetchMessages();
           messages.forEach(m => appendBubble(m.role, m.text));
           assistantCount = messages.filter(m => m.role === 'assistant').length;
+          showChips(chipsAfter(messages));
           if (!messages.length) {
             appendMeta(CLAIM_ID
                 ? 'Ask what is holding this claim up, or ask the agent to move, assign, label, or comment on it.'
@@ -221,7 +269,9 @@
           placeholder.textContent = '(no response)';
           return;
         }
-        renderAssistantText(placeholder, assistants[assistants.length - 1].text || '');
+        const reply = assistants[assistants.length - 1];
+        renderAssistantText(placeholder, reply.text || '');
+        showChips(reply.chips);
         assistantCount = assistants.length;
       }
 
@@ -258,6 +308,7 @@
       }
 
       async function sendMessage(text) {
+        showChips([]);
         appendBubble('user', text);
         const placeholder = appendBubble('assistant', '…');
         const baseline = assistantCount;

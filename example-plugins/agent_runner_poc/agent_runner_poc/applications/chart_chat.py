@@ -27,6 +27,7 @@ from http import HTTPStatus
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
+from agent_runner_poc.agents.suggestions import split_suggestions
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -174,7 +175,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         ]
 
 
-def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten the persisted message history into ``{role, text}`` pairs for the UI.
 
     Persisted messages can carry Anthropic block lists in their ``content``
@@ -182,23 +183,30 @@ def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, str]]:
     needs the human-readable text bits. Tool calls and tool results are
     elided — clinicians see the conversation, not the agent's plumbing — and so
     is the note of proposal decisions, which the approval cards already show.
+    An assistant reply's suggested next steps come out of its text as ``chips``.
     """
-    out: list[dict[str, str]] = []
+    out: list[dict[str, Any]] = []
     for message in stored:
         if is_decisions_note(message):
             continue
         role = message.get("role")
+        if role not in {"user", "assistant"}:
+            continue
         content = message.get("content")
         if isinstance(content, str):
-            if role in {"user", "assistant"} and content.strip():
-                out.append({"role": role, "text": content})
+            text = content.strip()
+        elif isinstance(content, list):
+            text = "\n".join(
+                str(block.get("text", ""))
+                for block in content
+                if isinstance(block, dict) and block.get("type") == "text" and block.get("text")
+            ).strip()
+        else:
             continue
-        if isinstance(content, list):
-            text_parts: list[str] = []
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    text_parts.append(str(block.get("text", "")))
-            joined = "\n".join(part for part in text_parts if part).strip()
-            if joined and role in {"user", "assistant"}:
-                out.append({"role": role, "text": joined})
+        if role == "assistant":
+            text, chips = split_suggestions(text)
+            if text or chips:
+                out.append({"role": role, "text": text, "chips": chips})
+        elif text:
+            out.append({"role": role, "text": text})
     return out

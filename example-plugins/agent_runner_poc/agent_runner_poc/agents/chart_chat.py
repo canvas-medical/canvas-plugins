@@ -31,6 +31,7 @@ import json
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
+from agent_runner_poc.agents.suggestions import suggestions_guidance
 from agent_runner_poc.models.conversation import Conversation
 from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.agents import (
@@ -174,7 +175,14 @@ SYSTEM_PROMPT = (
     "A later message starting `[Approval decisions` records what the clinician "
     "decided on those proposals; trust it over the earlier `awaiting_approval` "
     "results, and never propose a denied change again unless asked.\n\n"
-    "For discussion or summary, stay read-only. Use write tools only when "
+    + suggestions_guidance(
+        '["Trend her A1c over 12 months", "Show the last visit note", '
+        '"Draft a task to call about labs"]',
+        "Suggest only looking something up in the chart, summarizing it, or a chore "
+        "such as drafting a task or a message; never a medication, dose, diagnosis, "
+        "order, or other clinical choice.",
+    )
+    + "For discussion or summary, stay read-only. Use write tools only when "
     "the clinician explicitly asks. Keep responses concise and clinically "
     "focused. Plain text only — no markdown headings."
 )

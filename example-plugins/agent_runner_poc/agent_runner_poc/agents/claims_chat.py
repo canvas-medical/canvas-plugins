@@ -18,6 +18,7 @@ State follows the chart chat's snapshot pattern over :class:`ClaimConversation`.
 
 from typing import Any
 
+from agent_runner_poc.agents.suggestions import suggestions_guidance
 from agent_runner_poc.models.claim_conversation import ClaimConversation
 from agent_runner_poc.models.proxy import StaffProxy
 from canvas_sdk.agents import (
@@ -57,7 +58,12 @@ SYSTEM_PROMPT = (
     "- You cannot submit claims, post payments, edit line items, or trash a claim; say "
     "so when asked.\n"
     "- Write every claim id in full so the user can open that claim's chat from it.\n"
-    "- Plain text only, no markdown headings. Keep answers short."
+    "- Plain text only, no markdown headings. Keep answers short.\n\n"
+) + suggestions_guidance(
+    '["Show claims waiting on this payer", "Summarize my queues", '
+    '"Add a comment asking for the EOB"]',
+    "Suggest only looking claims up or a workflow change to one claim; never a code, "
+    "a modifier, or a change to many claims at once.",
 )
 
 QUEUE_MODE = (
