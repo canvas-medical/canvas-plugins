@@ -1319,6 +1319,7 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares(
                 "claim_id": str(claim.id),
                 "capabilities": frozenset({Capability.REVENUE}),
                 "effects": effects,
+                "parent_tools": standard_tools,
             },
         )
         assert result["ok"] is True, (name, result)

@@ -9,6 +9,7 @@ import pytest
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
+from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import Command, Note, Patient
 
@@ -37,12 +38,16 @@ def staged_command(
     )
 
 
-def _run(tool: str, patient: Patient, **arguments: Any) -> tuple[Any, list[Any]]:
+def _run(
+    tool: str,
+    patient: Patient,
+    granted: ToolRegistry = standard_tools,
+    **arguments: Any,
+) -> tuple[Any, list[Any]]:
+    """Run ``tool`` for ``patient`` in a run granted ``granted``."""
     effects: list[Any] = []
-    result = standard_tools.execute(
-        tool, arguments, ctx={"patient_id": patient.id, "note_id": NOTE, "effects": effects}
-    )
-    return result, effects
+    ctx = {"patient_id": patient.id, "note_id": NOTE, "effects": effects, "parent_tools": granted}
+    return standard_tools.execute(tool, arguments, ctx=ctx), effects
 
 
 def _sent(effect: Any) -> tuple[str, dict[str, Any]]:
@@ -54,10 +59,10 @@ def _sent(effect: Any) -> tuple[str, dict[str, Any]]:
 
 def test_only_fields_no_check_guards_are_editable() -> None:
     """A code or a chart id an originate tool checks is never editable."""
-    assert set(DRAFT_KINDS["medicationStatement"][1]) == {"sig"}
-    assert "fdb_code" not in DRAFT_KINDS["prescribe"][1]
-    assert set(DRAFT_KINDS["resolveCondition"][1]) == {"rationale", "show_in_condition_list"}
-    assert "concept_id" not in DRAFT_KINDS["allergy"][1]
+    assert set(DRAFT_KINDS["medicationStatement"].editable) == {"sig"}
+    assert "fdb_code" not in DRAFT_KINDS["prescribe"].editable
+    assert set(DRAFT_KINDS["resolveCondition"].editable) == {"rationale", "show_in_condition_list"}
+    assert "concept_id" not in DRAFT_KINDS["allergy"].editable
 
 
 @pytest.mark.django_db
@@ -157,7 +162,12 @@ def test_a_draft_this_run_staged_is_deleted_before_it_reaches_the_note() -> None
     """Deleting the run's own draft drops its originate effect; editing it is refused."""
     patient = PatientFactory.create()
     effects: list[Any] = []
-    ctx = {"patient_id": patient.id, "note_id": NOTE, "effects": effects}
+    ctx = {
+        "patient_id": patient.id,
+        "note_id": NOTE,
+        "effects": effects,
+        "parent_tools": standard_tools,
+    }
     staged = standard_tools.execute("originate_plan", {"narrative": "Recheck"}, ctx=ctx)
 
     with pytest.raises(ValueError, match="This run staged that draft"):
@@ -172,3 +182,51 @@ def test_a_draft_this_run_staged_is_deleted_before_it_reaches_the_note() -> None
 
     assert result["deleted"] is True
     assert effects == []
+
+
+@pytest.mark.parametrize("tool", ["edit_staged_command", "delete_staged_command"])
+@pytest.mark.django_db
+def test_an_agent_changes_only_kinds_it_is_granted_to_stage(tool: str) -> None:
+    """An agent without the prescribing tool cannot change a prescription draft."""
+    patient = PatientFactory.create()
+    command = staged_command(patient, "prescribe")
+    arguments: dict[str, Any] = {"command_id": str(command.id)}
+    if tool == "edit_staged_command":
+        arguments["fields"] = {"sig": "1 daily"}
+    granted = standard_tools.scope([tool, "originate_plan"])
+
+    with pytest.raises(ValueError, match="does not stage prescribe commands"):
+        _run(tool, patient, granted, **arguments)
+    granted = standard_tools.scope([tool, "originate_prescribe_medication"])
+    assert _run(tool, patient, granted, **arguments)[0]["ok"] is True
+
+
+@pytest.mark.parametrize("tool", ["edit_staged_command", "delete_staged_command"])
+@pytest.mark.django_db
+def test_a_kind_staged_only_with_approval_is_changed_only_with_approval(tool: str) -> None:
+    """Approval on the originate tool carries over to changing what it stages."""
+    patient = PatientFactory.create()
+    command = staged_command(patient, "prescribe")
+    arguments: dict[str, Any] = {"command_id": str(command.id)}
+    if tool == "edit_staged_command":
+        arguments["fields"] = {"sig": "1 daily"}
+    scoped = standard_tools.scope([tool, "originate_prescribe_medication"])
+
+    with pytest.raises(ValueError, match="only with the clinician's approval"):
+        _run(tool, patient, scoped.with_approval(["originate_prescribe_medication"]), **arguments)
+    approving = scoped.with_approval(["originate_prescribe_medication", tool])
+    assert _run(tool, patient, approving, **arguments)[0]["ok"] is True
+
+
+@pytest.mark.django_db
+def test_a_run_without_its_granted_tools_changes_nothing() -> None:
+    """Without the agent's registry the grant cannot be checked, so the change is refused."""
+    patient = PatientFactory.create()
+    command = staged_command(patient, "plan")
+
+    with pytest.raises(ValueError, match="needs the agent's granted tools"):
+        standard_tools.execute(
+            "delete_staged_command",
+            {"command_id": str(command.id)},
+            ctx={"patient_id": patient.id, "note_id": NOTE, "effects": []},
+        )
