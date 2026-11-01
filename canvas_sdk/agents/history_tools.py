@@ -270,16 +270,25 @@ standard_tools.originate_command_tool(
             pre_build_only=True,
         ),
         "approximate_start_date": EffectField(
-            type="string", format="date", description="ISO 8601 date it began, if known."
+            type="string",
+            format="date",
+            description="ISO 8601 date it began, if known.",
+            editable=True,
         ),
         "approximate_end_date": EffectField(
-            type="string", format="date", description="ISO 8601 date it ended, if it has."
+            type="string",
+            format="date",
+            description="ISO 8601 date it ended, if it has.",
+            editable=True,
         ),
         "show_on_condition_list": EffectField(
             type="boolean",
             description="Whether it appears on the conditions list. Defaults to true.",
+            editable=True,
         ),
-        "comments": EffectField(type="string", description="Optional comment, up to 1000 chars."),
+        "comments": EffectField(
+            type="string", description="Optional comment, up to 1000 chars.", editable=True
+        ),
     },
     pre_build=_medical_history_pre_build,
     categories=("clinical_writes",),
@@ -376,7 +385,9 @@ standard_tools.originate_command_tool(
             pre_build_only=True,
         ),
         "sig": EffectField(
-            type="string", description="How the patient takes it, e.g. '1 tablet daily'."
+            type="string",
+            description="How the patient takes it, e.g. '1 tablet daily'.",
+            editable=True,
         ),
     },
     pre_build=_medication_statement_pre_build,
@@ -404,12 +415,10 @@ def _allergy_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[s
         .exists()
     ):
         raise ValueError("The patient's allergy list already has this allergen.")
-    severity = arguments.get("severity")
     return {
         "allergy": Allergen(
             concept_id=concept_id, concept_type=AllergenType(int(arguments["concept_type"]))
-        ),
-        "severity": AllergyCommand.Severity(severity) if severity else None,
+        )
     }
 
 
@@ -435,13 +444,19 @@ standard_tools.originate_command_tool(
             pre_build_only=True,
         ),
         "severity": EffectField(
-            type="string", enum=_SEVERITIES, description="Severity, if known.", pre_build_only=True
+            type="string",
+            enum=_SEVERITIES,
+            description="Severity, if known.",
+            editable=True,
         ),
         "narrative": EffectField(
-            type="string", description="The reaction, in words, up to 512 chars."
+            type="string", description="The reaction, in words, up to 512 chars.", editable=True
         ),
         "approximate_date": EffectField(
-            type="string", format="date", description="ISO 8601 date of onset, if known."
+            type="string",
+            format="date",
+            description="ISO 8601 date of onset, if known.",
+            editable=True,
         ),
     },
     pre_build=_allergy_pre_build,
@@ -484,9 +499,11 @@ standard_tools.originate_command_tool(
             type="string", description="The `display` that came with it.", pre_build_only=True
         ),
         "relative": EffectField(
-            type="string", description="The relative, e.g. 'mother'.", required=True
+            type="string", description="The relative, e.g. 'mother'.", required=True, editable=True
         ),
-        "note": EffectField(type="string", description="Optional note, up to 512 chars."),
+        "note": EffectField(
+            type="string", description="Optional note, up to 512 chars.", editable=True
+        ),
     },
     pre_build=_snomed_coding("snomed_code", "family_history"),
     categories=("clinical_writes",),
@@ -513,9 +530,14 @@ standard_tools.originate_command_tool(
             type="string", description="The `display` that came with it.", pre_build_only=True
         ),
         "approximate_date": EffectField(
-            type="string", format="date", description="ISO 8601 date of the surgery, if known."
+            type="string",
+            format="date",
+            description="ISO 8601 date of the surgery, if known.",
+            editable=True,
         ),
-        "comment": EffectField(type="string", description="Optional comment, up to 1000 chars."),
+        "comment": EffectField(
+            type="string", description="Optional comment, up to 1000 chars.", editable=True
+        ),
     },
     pre_build=_snomed_coding("snomed_code", "past_surgical_history"),
     categories=("clinical_writes",),
@@ -561,9 +583,14 @@ standard_tools.originate_command_tool(
             type="string", description="The `display` that came with it.", pre_build_only=True
         ),
         "approximate_date": EffectField(
-            type="string", format="date", description="ISO 8601 date it was given, if known."
+            type="string",
+            format="date",
+            description="ISO 8601 date it was given, if known.",
+            editable=True,
         ),
-        "comments": EffectField(type="string", description="Optional comment, up to 255 chars."),
+        "comments": EffectField(
+            type="string", description="Optional comment, up to 255 chars.", editable=True
+        ),
     },
     pre_build=_immunization_pre_build,
     categories=("clinical_writes",),
@@ -598,25 +625,33 @@ standard_tools.originate_command_tool(
     ),
     command_class=VitalsCommand,
     fields={
-        "height": EffectField(type="integer", minimum=10, maximum=108, description="Inches."),
-        "weight_lbs": EffectField(type="integer", minimum=1, maximum=1500, description="Pounds."),
+        "height": EffectField(
+            type="integer", minimum=10, maximum=108, description="Inches.", editable=True
+        ),
+        "weight_lbs": EffectField(
+            type="integer", minimum=1, maximum=1500, description="Pounds.", editable=True
+        ),
         "body_temperature": EffectField(
-            type="number", minimum=85, maximum=107, description="Degrees Fahrenheit."
+            type="number", minimum=85, maximum=107, description="Degrees Fahrenheit.", editable=True
         ),
         "blood_pressure_systole": EffectField(
-            type="integer", minimum=30, maximum=305, description="Systolic mmHg."
+            type="integer", minimum=30, maximum=305, description="Systolic mmHg.", editable=True
         ),
         "blood_pressure_diastole": EffectField(
-            type="integer", minimum=20, maximum=180, description="Diastolic mmHg."
+            type="integer", minimum=20, maximum=180, description="Diastolic mmHg.", editable=True
         ),
-        "pulse": EffectField(type="integer", minimum=30, maximum=250, description="Beats/min."),
+        "pulse": EffectField(
+            type="integer", minimum=30, maximum=250, description="Beats/min.", editable=True
+        ),
         "respiration_rate": EffectField(
-            type="integer", minimum=6, maximum=60, description="Breaths/min."
+            type="integer", minimum=6, maximum=60, description="Breaths/min.", editable=True
         ),
         "oxygen_saturation": EffectField(
-            type="integer", minimum=60, maximum=100, description="SpO2 percent."
+            type="integer", minimum=60, maximum=100, description="SpO2 percent.", editable=True
         ),
-        "note": EffectField(type="string", description="Optional note, up to 150 chars."),
+        "note": EffectField(
+            type="string", description="Optional note, up to 150 chars.", editable=True
+        ),
     },
     pre_build=_require_a_reading,
     categories=("clinical_writes",),
@@ -637,11 +672,12 @@ standard_tools.originate_command_tool(
             type="string", description="The condition's `id` from find_conditions.", required=True
         ),
         "rationale": EffectField(
-            type="string", description="Why it is resolved, up to 1024 chars."
+            type="string", description="Why it is resolved, up to 1024 chars.", editable=True
         ),
         "show_in_condition_list": EffectField(
             type="boolean",
             description="Whether it stays on the conditions list as resolved. Defaults to false.",
+            editable=True,
         ),
     },
     pre_build=_patients_record_check(Condition, "condition_id", "condition"),
@@ -662,7 +698,9 @@ standard_tools.originate_command_tool(
         "allergy_id": EffectField(
             type="string", description="The allergy's `id` from find_allergies.", required=True
         ),
-        "narrative": EffectField(type="string", description="Why it is removed, up to 512 chars."),
+        "narrative": EffectField(
+            type="string", description="Why it is removed, up to 512 chars.", editable=True
+        ),
     },
     pre_build=_patients_record_check(AllergyIntolerance, "allergy_id", "allergy"),
     categories=("clinical_writes",),
