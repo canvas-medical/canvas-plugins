@@ -1628,6 +1628,21 @@ message AgentRunSummary {
   repeated AgentToolCall tool_calls = 5;
 }
 
+// Live progress of an agent run, streamed before its final response when home-app
+// asks for it. Carries no tool arguments or results: only what the agent's manifest
+// `progress` level allows the person waiting on the run to see.
+message AgentRunProgress {
+  // "heartbeat" while the run is alive, or "tool_started" / "tool_finished".
+  string kind = 1;
+  // What the run is doing: "thinking" during a model call, "working" while tools run.
+  string phase = 2;
+  int32 elapsed_ms = 3;
+  // The tool's progress label, such as "Reading lab results", for a tool event.
+  string label = 4;
+  // Whether the tool succeeded, for "tool_finished".
+  bool ok = 5;
+}
+
 message EventResponse {
   bool success = 1;
   repeated Effect effects = 2;
@@ -1646,4 +1661,7 @@ message EventResponse {
   string error_kind = 3;
   // Set on RunAgent responses once the agent was loaded.
   AgentRunSummary agent_run = 4;
+  // Set on RunAgent responses sent while the run is in progress; the final response
+  // leaves it unset.
+  AgentRunProgress progress = 5;
 }

@@ -15,7 +15,9 @@ from canvas_sdk.agents import (
     ToolRegistry,
     require_patient_id,
     run_tool_loop,
+    standard_tools,
 )
+from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, ProgressFeed
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
     RunDeadlineExceeded,
@@ -598,3 +600,78 @@ def test_a_tool_that_hits_a_gateway_error_or_the_deadline_ends_the_run(error: Ex
     assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
         ("brief", False, "aborted")
     ]
+
+
+def test_the_loop_reports_each_tools_label_and_outcome() -> None:
+    """A streamed run's tool calls arrive as labels, never as names or arguments."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+
+    @tools.tool(name="broken", description="x", input_schema={"type": "object"})
+    def _broken(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise RuntimeError("no")
+
+    recorder = RunRecorder(progress=ProgressFeed("activity"))
+    client = FakeGateway(
+        _response(
+            "tool_use", _tool_use("records", "t1", query="metformin"), _tool_use("broken", "t2")
+        ),
+        _response("end_turn", _text("ok")),
+    )
+
+    _with_recorder(recorder, client, tools=tools)
+
+    feed = recorder.progress
+    assert feed is not None
+    events = []
+    while (event := feed.next(timeout=0)) is not None:
+        events.append((event.kind, event.label, event.ok))
+    assert events == [
+        ("tool_started", "Reading outside records", False),
+        ("tool_finished", "Reading outside records", True),
+        ("tool_started", DEFAULT_PROGRESS_LABEL, False),
+        ("tool_finished", DEFAULT_PROGRESS_LABEL, False),
+    ]
+    assert recorder.phase == "thinking", "the last model call leaves the run thinking"
+
+
+def test_a_status_feed_drops_tool_events() -> None:
+    """At the default level nothing about the tools is queued."""
+    feed = ProgressFeed("status")
+    feed.tool("tool_started", "Reading lab results")
+
+    assert feed.next(timeout=0) is None
+
+
+def test_progress_labels_survive_scoping_and_extending() -> None:
+    """The manifest-scoped registry and a plugin's copy of the catalog keep the labels."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+    copy = ToolRegistry()
+    copy.extend(tools)
+
+    assert tools.scope(["records"]).progress_label_for("records") == "Reading outside records"
+    assert copy.progress_label_for("records") == "Reading outside records"
+
+
+def test_labels_can_only_name_registered_tools() -> None:
+    """A misspelled name fails loudly rather than leaving a tool unlabeled."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10)
+
+    tools.set_progress_labels({"records": "Reading outside records"})
+    with pytest.raises(ValueError, match="No such tools"):
+        tools.set_progress_labels({"recrods": "Reading outside records"})
+
+    assert tools.progress_label_for("records") == "Reading outside records"
+
+
+def test_every_standard_tool_has_a_progress_label() -> None:
+    """A new standard tool must say what it is doing, not show the generic label."""
+    unlabeled = [
+        definition["name"]
+        for definition in standard_tools.definitions()
+        if standard_tools.progress_label_for(definition["name"]) == DEFAULT_PROGRESS_LABEL
+    ]
+
+    assert unlabeled == []

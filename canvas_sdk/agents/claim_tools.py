@@ -731,4 +731,24 @@ def _remove_claim_banner(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> d
     return _staged(ctx, effect, claim, key=arguments["key"])
 
 
+standard_tools.set_progress_labels(
+    {
+        "find_claims": "Reading claims",
+        "get_claim": "Reading a claim",
+        "summarize_claims": "Summarizing claims",
+        "find_claim_queues": "Looking up claim queues",
+        "find_claim_labels": "Looking up claim labels",
+        "find_claim_assignees": "Looking up claim assignees",
+        "move_claim_to_queue": "Moving a claim",
+        "assign_claim": "Assigning a claim",
+        "unassign_claim": "Unassigning a claim",
+        "add_claim_labels": "Labeling a claim",
+        "remove_claim_labels": "Removing claim labels",
+        "add_claim_comment": "Commenting on a claim",
+        "add_claim_banner": "Adding a claim banner",
+        "remove_claim_banner": "Removing a claim banner",
+    }
+)
+
+
 __exports__ = ()

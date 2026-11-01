@@ -5,6 +5,7 @@ from typing import Any, Protocol
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
+from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL
 
 # The most of one tool's result the model is sent, unless the tool registers its own
 # limit. The history window cannot drop the current turn's results, so an uncapped
@@ -227,6 +228,9 @@ class ToolRegistry:
         # tool name → the most of its result the model is sent, for a tool that set its
         # own limit; every other tool's is DEFAULT_TOOL_RESULT_CHARS.
         self._max_result_chars: dict[str, int] = {}
+        # tool name → what the person waiting on a run sees while the tool runs, such
+        # as "Reading lab results"; a tool without one shows DEFAULT_PROGRESS_LABEL.
+        self._progress_labels: dict[str, str] = {}
         # Tools whose staged effects become proposals for the requester to approve, set
         # by the platform from the manifest's tools.approve; see with_approval.
         self._approval: frozenset[str] = frozenset()
@@ -242,6 +246,7 @@ class ToolRegistry:
         required_permissions: Iterable[str] = (),
         required_capabilities: Iterable[Capability] = (),
         max_result_chars: int | None = None,
+        progress_label: str | None = None,
     ) -> None:
         """Register a tool by passing the definition and executor directly.
 
@@ -273,6 +278,10 @@ class ToolRegistry:
                 saying so. Defaults to :data:`DEFAULT_TOOL_RESULT_CHARS`. Raise it only
                 for a tool whose answer cannot be split, since the result is sent again
                 on every later call in the run.
+            progress_label: What the person waiting on a run sees while the tool runs,
+                for an agent whose manifest sets ``"progress": "activity"``, such as
+                ``"Reading lab results"``. Name what the tool does, never its arguments.
+                Defaults to :data:`DEFAULT_PROGRESS_LABEL`.
 
         Raises:
             ValueError: If ``definition`` is missing a ``"name"`` key, if a
@@ -308,6 +317,25 @@ class ToolRegistry:
             self._required_capabilities[name] = capabilities
         if max_result_chars is not None:
             self._max_result_chars[name] = max_result_chars
+        if progress_label:
+            self._progress_labels[name] = progress_label
+
+    def progress_label_for(self, name: str) -> str:
+        """What the person waiting on a run sees while ``name`` runs."""
+        return self._progress_labels.get(name, DEFAULT_PROGRESS_LABEL)
+
+    def set_progress_labels(self, labels: dict[str, str]) -> None:
+        """Give registered tools their progress labels, by tool name.
+
+        For tools registered through a helper that takes no ``progress_label``.
+
+        Raises:
+            ValueError: If a name is not a registered tool.
+        """
+        unknown = sorted(set(labels) - set(self._executors))
+        if unknown:
+            raise ValueError(f"No such tools to label: {unknown}")
+        self._progress_labels.update(labels)
 
     def max_result_chars_for(self, name: str) -> int:
         """The most of ``name``'s result the model is sent."""
@@ -416,6 +444,7 @@ class ToolRegistry:
         required_capabilities: Iterable[Capability] = (),
         cites: str | None = None,
         max_result_chars: int | None = None,
+        progress_label: str | None = None,
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
@@ -423,8 +452,8 @@ class ToolRegistry:
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
         generator. ``effect_types``, ``required_permissions``,
-        ``required_capabilities``, and ``max_result_chars`` are as in
-        :meth:`register`. ``cites`` names the
+        ``required_capabilities``, ``max_result_chars``, and ``progress_label`` are
+        as in :meth:`register`. ``cites`` names the
         record type of the rows the tool returns, which makes them citable (see
         :mod:`canvas_sdk.agents.citations`), keyed by each row's ``id``.
         """
@@ -445,6 +474,7 @@ class ToolRegistry:
                 required_permissions=required_permissions,
                 required_capabilities=required_capabilities,
                 max_result_chars=max_result_chars,
+                progress_label=progress_label,
             )
             return fn
 
@@ -468,6 +498,7 @@ class ToolRegistry:
         returns_description: str | None = None,
         citable: bool = True,
         max_result_chars: int | None = None,
+        progress_label: str | None = None,
     ) -> Callable[[Callable[[Any], dict[str, Any]]], Callable[[Any], dict[str, Any]]]:
         """Register a patient-scoped filter-spec read tool.
 
@@ -531,6 +562,7 @@ class ToolRegistry:
                 patient's records.
             max_result_chars: As in :meth:`register`. A lower ``limit_max`` is
                 usually the better way to keep a list's result small.
+            progress_label: As in :meth:`register`.
 
         Returns:
             A decorator. Apply it to a ``(row) -> dict`` function; the
@@ -649,6 +681,7 @@ class ToolRegistry:
                 categories=categories,
                 metadata=metadata,
                 max_result_chars=max_result_chars,
+                progress_label=progress_label,
             )
             return serializer
 
@@ -1027,6 +1060,7 @@ class ToolRegistry:
                 required_permissions=other.required_permissions_for(name),
                 required_capabilities=other.required_capabilities_for(name),
                 max_result_chars=other._max_result_chars.get(name),
+                progress_label=other._progress_labels.get(name),
             )
         self._approval |= other._approval
 
@@ -1067,6 +1101,7 @@ class ToolRegistry:
                     required_permissions=self.required_permissions_for(name),
                     required_capabilities=self.required_capabilities_for(name),
                     max_result_chars=self._max_result_chars.get(name),
+                    progress_label=self._progress_labels.get(name),
                 )
         scoped._approval = self._approval & allowed_set
         return scoped
