@@ -27,7 +27,10 @@ from http import HTTPStatus
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
+from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from agent_runner_poc.agents.suggestions import split_suggestions
+from canvas_sdk.agents import ToolRegistry
+from canvas_sdk.agents.citations import Sources, cite
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -75,7 +78,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         messages = load_conversation_messages(patient_id, staff_id)
         return [
             JSONResponse(
-                {"messages": _ui_messages(messages)},
+                {"messages": _ui_messages(messages, chart_chat_tools)},
                 status_code=HTTPStatus.OK,
             )
         ]
@@ -175,7 +178,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         ]
 
 
-def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _ui_messages(stored: list[dict[str, Any]], tools: ToolRegistry) -> list[dict[str, Any]]:
     """Flatten the persisted message history into ``{role, text}`` pairs for the UI.
 
     Persisted messages can carry Anthropic block lists in their ``content``
@@ -183,9 +186,13 @@ def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, Any]]:
     needs the human-readable text bits. Tool calls and tool results are
     elided — clinicians see the conversation, not the agent's plumbing — and so
     is the note of proposal decisions, which the approval cards already show.
-    An assistant reply's suggested next steps come out of its text as ``chips``.
+    An assistant reply's suggested next steps come out of its text as ``chips``, and
+    its citations become numbered references with a card for each in ``citations``,
+    described from the rows ``tools`` returned earlier in the conversation; a citation
+    of a record no tool returned is dropped.
     """
     out: list[dict[str, Any]] = []
+    sources = Sources(tools)
     for message in stored:
         if is_decisions_note(message):
             continue
@@ -205,8 +212,19 @@ def _ui_messages(stored: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         if role == "assistant":
             text, chips = split_suggestions(text)
+            text, citations = cite(text, sources)
             if text or chips:
-                out.append({"role": role, "text": text, "chips": chips})
+                out.append(
+                    {
+                        "role": role,
+                        "text": text,
+                        "chips": chips,
+                        "citations": [citation.to_dict() for citation in citations],
+                    }
+                )
         elif text:
             out.append({"role": role, "text": text})
+        # A reply cites rows from earlier tool results, so a message's own calls and
+        # results count only after its text.
+        sources.add(message)
     return out
