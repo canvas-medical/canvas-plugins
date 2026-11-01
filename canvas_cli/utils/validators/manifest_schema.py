@@ -1,3 +1,5 @@
+from canvas_sdk.agents.run_record import MAX_RUN_SECONDS
+
 # A video's YouTube address: a watch link, a youtu.be link or an embed link, each naming
 # an 11-character id, never the embed words for a playlist or a live stream. No named
 # groups, since editors read the schema as ECMA regex.
@@ -158,6 +160,9 @@ manifest_schema = {
             # and swaps in a scoped registry before any lifecycle hook runs.
             # An entry without `tools.allowed` grants no tools, and
             # the agent may return only effect types its granted tools declare.
+            # `run_seconds` asks for more than the default time per run, up to
+            # MAX_RUN_SECONDS; a run above the default is extended, and the plugin
+            # runner admits only a few of those at once.
             "type": "array",
             "items": {
                 "type": "object",
@@ -165,6 +170,11 @@ manifest_schema = {
                     "class": {"type": "string"},
                     "description": {"type": "string"},
                     "meta": {"type": "object"},
+                    "run_seconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": MAX_RUN_SECONDS,
+                    },
                     "tools": {
                         "type": "object",
                         "properties": {

@@ -14,7 +14,13 @@ from canvas_generated.messages.plugins_pb2 import (
     RunAgentSubject,
 )
 from canvas_sdk.agents import AgentRunResult, ToolRegistry
-from canvas_sdk.agents.run_record import RunDeadlineExceeded, ToolCallRecord, current_recorder
+from canvas_sdk.agents.run_record import (
+    DEADLINE_MARGIN_SECONDS,
+    RUN_TOOL_RESULT_CHARS,
+    RunDeadlineExceeded,
+    ToolCallRecord,
+    current_recorder,
+)
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
@@ -24,6 +30,7 @@ from plugin_runner.plugin_runner import (
     LOADED_PLUGINS,
     PluginRunner,
 )
+from settings import extended_agent_run_limit
 
 AGENT_KEY = "test_agent_plugin:test_agent_plugin.agents.echo_agent:EchoAgent"
 AGENT_ID = "test_agent_plugin.agents.echo_agent:EchoAgent"
@@ -954,3 +961,107 @@ def test_a_run_that_raises_gives_its_slot_back(
 
     assert response.success is False
     assert slots.acquire(blocking=False), "a failed run must give its slot back"
+
+
+def _with_run_seconds(monkeypatch: pytest.MonkeyPatch, run_seconds: int) -> None:
+    """Set the test agent's manifest `run_seconds` for this test."""
+    loaded = LOADED_PLUGINS[AGENT_KEY]
+    monkeypatch.setitem(
+        loaded, "handler", {**(loaded.get("handler") or {}), "run_seconds": run_seconds}
+    )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_extended_run_waits_for_an_extended_slot_and_frees_its_agent_slot(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With the extended share taken, a long run is turned away without holding a thread."""
+    slots = threading.BoundedSemaphore(4)
+    extended = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+    monkeypatch.setattr(runner_module, "EXTENDED_AGENT_RUN_SLOTS", extended)
+    _with_run_seconds(monkeypatch, 1200)
+
+    assert extended.acquire(blocking=False)
+    busy = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+    extended.release()
+    served = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert (busy.success, busy.error_kind) == (False, "EXTENDED_RUNS_BUSY")
+    assert served.success is True
+    assert all(slots.acquire(blocking=False) for _ in range(4)), "every agent slot is free again"
+    assert extended.acquire(blocking=False), "the extended slot is free again"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_at_the_default_time_needs_no_extended_slot(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Chat runs keep going while extended runs hold their whole share."""
+    extended = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(runner_module, "EXTENDED_AGENT_RUN_SLOTS", extended)
+    assert extended.acquire(blocking=False)
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert response.success is True
+
+
+@pytest.mark.parametrize(
+    ("run_seconds", "time_remaining", "expected"),
+    [(1200, 1200.0, 1200), (900, 1200.0, 900), (1200, 600.0, 600)],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_gets_the_shorter_of_its_manifest_time_and_the_calls_timeout(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    run_seconds: int,
+    time_remaining: float,
+    expected: int,
+) -> None:
+    """The tool loop stops by the agent's own time, and caps its total tool output."""
+    _with_run_seconds(monkeypatch, run_seconds)
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    seen: list[tuple[float | None, int | None]] = []
+    original_run = agent_cls.run
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        recorder = current_recorder.get()
+        assert recorder is not None
+        seen.append((recorder.seconds_left(), recorder.max_tool_result_chars))
+        return original_run(self, state, gateway, payload)
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+    context = MagicMock()
+    context.time_remaining.return_value = time_remaining
+    context.is_active.return_value = True
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), context)))
+
+    assert response.success is True
+    [(seconds_left, total)] = seen
+    latest = expected - DEADLINE_MARGIN_SECONDS
+    assert seconds_left is not None and latest - 10 < seconds_left <= latest
+    assert total == RUN_TOOL_RESULT_CHARS
+
+
+@pytest.mark.parametrize(
+    ("requested", "agent_runs", "expected"),
+    [(None, 4, 1), ("2", 4, 2), ("9", 4, 3), ("3", 1, 1), ("0", 4, 1)],
+)
+def test_extended_runs_always_leave_an_agent_run_for_the_others(
+    requested: str | None, agent_runs: int, expected: int
+) -> None:
+    """However the instance is configured, extended runs cannot take every agent thread."""
+    assert extended_agent_run_limit(requested, agent_runs) == expected

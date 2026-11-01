@@ -72,8 +72,10 @@
     "run_tool_loop"
   ],
   "canvas_sdk.agents.tool_registry": [
+    "DEFAULT_TOOL_RESULT_CHARS",
     "EffectField",
     "FilterSpec",
+    "MAX_TOOL_RESULT_CHARS",
     "ToolNotAllowed",
     "ToolRegistry"
   ],

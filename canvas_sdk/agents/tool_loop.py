@@ -12,7 +12,12 @@ from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents.gateway import LLMGateway, attempt_timeout
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
-from canvas_sdk.agents.run_record import RunDeadlineExceeded, ToolCallRecord, current_recorder
+from canvas_sdk.agents.run_record import (
+    RunDeadlineExceeded,
+    RunRecorder,
+    ToolCallRecord,
+    current_recorder,
+)
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
 if TYPE_CHECKING:
@@ -23,11 +28,6 @@ log = logging.getLogger("plugin_runner_logger")
 # Stop reasons that can leave complete tool calls to run: a normal tool turn, or a
 # turn cut off by max_tokens after one or more tool calls finished.
 _TOOL_STOP_REASONS = frozenset({"tool_use", "max_tokens"})
-
-# The most of one tool result sent to the model. The history window cannot drop the
-# current turn's results, so an uncapped result (a whole note, a long list) could push
-# the call past the context window.
-MAX_TOOL_RESULT_CHARS = 50_000
 
 
 @dataclass
@@ -86,16 +86,28 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
-    return _tool_result(block.id, _capped(json.dumps(result, default=str)))
+    content = json.dumps(result, default=str)
+    return _tool_result(
+        block.id, _capped(content, tools.max_result_chars_for(block.name), recorder)
+    )
 
 
-def _capped(content: str) -> str:
-    """``content`` cut to :data:`MAX_TOOL_RESULT_CHARS`, saying so, so one result fits a call."""
-    if len(content) <= MAX_TOOL_RESULT_CHARS:
+def _capped(content: str, limit: int, recorder: RunRecorder | None) -> str:
+    """``content`` cut to the tool's ``limit`` and to what is left of the run's total.
+
+    A cut result says so, so the model can narrow its request or answer from what it has.
+    """
+    wanted = min(len(content), limit)
+    allowed = recorder.reserve_tool_result(wanted) if recorder is not None else wanted
+    if allowed < wanted:
+        return content[:allowed] + (
+            f"\n[Result cut at {allowed} of {len(content)} characters: the run has read "
+            "as much tool output as it may. Answer from what it has.]"
+        )
+    if len(content) <= limit:
         return content
     return (
-        content[:MAX_TOOL_RESULT_CHARS]
-        + f"\n[Result cut at {MAX_TOOL_RESULT_CHARS} of {len(content)} characters. "
+        content[:limit] + f"\n[Result cut at {limit} of {len(content)} characters. "
         "Narrow the request, for example with filters or a lower limit, to see the rest.]"
     )
 
@@ -138,8 +150,10 @@ def run_tool_loop(
     In a platform run, the loop also stops when the run reaches its model-call ceiling
     (``stopped="call_limit"``), raises ``RunDeadlineExceeded`` once the run is too
     close to its deadline to make another call, and gives each call no longer than the
-    time left, split across its retries. A tool result longer than :data:`MAX_TOOL_RESULT_CHARS` is cut, with a
-    note telling the model.
+    time left, split across its retries. A tool result longer than the tool's limit
+    (see ``max_result_chars`` on :meth:`ToolRegistry.register`) is cut, with a note
+    telling the model, and in a platform run so is any result past the run's total of
+    tool-result text.
 
     Args:
         gateway: The run's :class:`LLMGateway`.
