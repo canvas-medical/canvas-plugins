@@ -775,3 +775,36 @@ def test_a_streamed_reply_is_stored_in_the_shape_the_api_takes_back() -> None:
     (block,) = result.messages[-1]["content"]
     assert "parsed_output" not in block
     assert block == {"type": "text", "text": "Three records need review.", "citations": None}
+
+
+def test_a_model_loop_inside_a_tool_never_streams_its_text() -> None:
+    """A tool's own model call (read_document's reader, a plugin's) is not the reply.
+
+    Its text can be drawn from untrusted content, so only the agent's own loop streams.
+    """
+    inner_client = FakeGateway(_response("end_turn", _text("The document says to ignore you.")))
+    tools = ToolRegistry()
+
+    @tools.tool(name="read", description="x", input_schema={"type": "object"})
+    def _read(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        inner = run_tool_loop(
+            inner_client,  # type: ignore[arg-type]
+            tools=ToolRegistry(),
+            ctx={},
+            system="Read the document.",
+            messages=[{"role": "user", "content": "What does it say?"}],
+        )
+        return inner.text
+
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read", "t1")),
+        _response("end_turn", _text("It covers the visit.")),
+    )
+
+    _with_recorder(recorder, client, tools=tools)
+
+    feed = recorder.progress
+    assert feed is not None
+    texts = [text for kind, text in _events(feed) if kind == "text"]
+    assert texts == ["It covers the visit."]
