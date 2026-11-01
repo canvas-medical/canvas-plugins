@@ -24,6 +24,7 @@ the agent's tools, which the platform gates on the revenue capability.
 from http import HTTPStatus
 
 from agent_runner_poc.agents.claims_chat import load_claims_conversation
+from agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
 from agent_runner_poc.applications.chart_chat import _ui_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
@@ -70,7 +71,11 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
         """Return the logged-in staff member's conversation for the claim, or the queues."""
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         messages = load_claims_conversation(staff_id, self._claim_id() or None)
-        return [JSONResponse({"messages": _ui_messages(messages)}, status_code=HTTPStatus.OK)]
+        return [
+            JSONResponse(
+                {"messages": _ui_messages(messages, claims_chat_tools)}, status_code=HTTPStatus.OK
+            )
+        ]
 
     @api.post("/claims-chat-message")
     def claims_chat_message(self) -> list[Response | Effect]:

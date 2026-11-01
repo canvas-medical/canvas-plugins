@@ -427,6 +427,7 @@ class ToolRegistry:
         categories: Iterable[str] = (),
         model: type | None = None,
         returns_description: str | None = None,
+        citable: bool = True,
     ) -> Callable[[Callable[[Any], dict[str, Any]]], Callable[[Any], dict[str, Any]]]:
         """Register a patient-scoped filter-spec read tool.
 
@@ -477,14 +478,17 @@ class ToolRegistry:
                 references (e.g., ``"clinical_reads"``). See
                 :meth:`resolve_allowed` for how categories are used.
             model: Optional Django model class backing this read tool
-                (e.g., :class:`canvas_sdk.v1.data.Medication`). Not used
-                at runtime; surfaced via :meth:`metadata_for` for docs
-                generation so plugin authors can see what data model
-                the tool draws from.
+                (e.g., :class:`canvas_sdk.v1.data.Medication`). Surfaced
+                via :meth:`metadata_for` for docs generation, and makes the
+                rows the tool returns citable (see
+                :mod:`canvas_sdk.agents.citations`), keyed by their ``id``.
             returns_description: Optional free-text summary of the
                 tool's return shape (e.g., ``"Each row: id, name,
                 status."``). Not used at runtime; consumed by the docs
                 generator.
+            citable: Whether a reply may cite the rows this tool returns.
+                ``False`` for tools that read configuration rather than a
+                patient's records.
 
         Returns:
             A decorator. Apply it to a ``(row) -> dict`` function; the
@@ -594,6 +598,7 @@ class ToolRegistry:
             metadata: dict[str, Any] = {"kind": "filter_search", "serializer": serializer}
             if model is not None:
                 metadata["model"] = model
+                metadata["citable"] = citable
             if returns_description is not None:
                 metadata["returns_description"] = returns_description
             self.register(

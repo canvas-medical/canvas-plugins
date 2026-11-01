@@ -132,6 +132,29 @@
       }
       .chip:hover { background: color-mix(in srgb, var(--chip) 18%, transparent); }
       .chip[disabled] { opacity: 0.5; cursor: not-allowed; }
+      .sources {
+        margin: 8px 0 0;
+        padding: 6px 0 0 22px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .sources li { padding-left: 2px; }
+      .sources li.navigable { cursor: pointer; }
+      .sources li.navigable:hover .source-label { text-decoration: underline; }
+      .source-kind {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--chip) 12%, transparent);
+        color: var(--chip);
+        font-size: 11px;
+      }
+      .source-label { font-weight: 600; }
+      .source-meta { margin-left: 6px; color: var(--muted); }
       .starters { display: flex; flex-direction: column; gap: 6px; }
       .starters-label {
         margin-top: 4px;
@@ -355,7 +378,41 @@
         return { segments, noteIds };
       }
 
-      function renderAssistantBubble(div, text) {
+      // The records a reply cites, numbered as in its text. Each card describes the row
+      // a tool returned, never text the model wrote; a cited note scrolls the chart to it.
+      function renderSources(div, citations) {
+        if (!citations || !citations.length) return;
+        const list = document.createElement('ol');
+        list.className = 'sources';
+        for (const citation of citations) {
+          const item = document.createElement('li');
+          item.value = citation.number;
+          const kind = document.createElement('span');
+          kind.className = 'source-kind';
+          kind.textContent = citation.kind;
+          const label = document.createElement('span');
+          label.className = 'source-label';
+          label.textContent = citation.label;
+          item.append(kind, label);
+          const meta = [citation.detail, citation.date && citation.date.slice(0, 10)].filter(Boolean);
+          if (meta.length) {
+            const metaEl = document.createElement('span');
+            metaEl.className = 'source-meta';
+            metaEl.textContent = meta.join(' · ');
+            item.appendChild(metaEl);
+          }
+          if (citation.note_dbid) {
+            item.classList.add('navigable');
+            item.title = 'Show this note in the chart';
+            item.tabIndex = 0;
+            item.addEventListener('click', () => fireNavigations([citation.note_dbid]));
+          }
+          list.appendChild(item);
+        }
+        div.appendChild(list);
+      }
+
+      function renderAssistantBubble(div, text, citations) {
         // Clear any prior content (e.g. the "…" placeholder) before
         // appending segment nodes.
         div.textContent = '';
@@ -381,6 +438,7 @@
             }
           }
         }
+        renderSources(div, citations);
         return noteIds;
       }
 
@@ -393,7 +451,7 @@
         // from here — that's showLatestReply's job, since history
         // shouldn't auto-scroll the timeline.
         if (role === 'assistant') {
-          renderAssistantBubble(div, text);
+          renderAssistantBubble(div, text, opts && opts.citations);
         } else {
           div.textContent = text;
         }
@@ -451,7 +509,7 @@
           if (!res.ok) throw new Error('history fetch failed: ' + res.status);
           const data = await res.json();
           const messages = data.messages || [];
-          messages.forEach(m => appendBubble(m.role, m.text));
+          messages.forEach(m => appendBubble(m.role, m.text, { citations: m.citations }));
           assistantCount = messages.filter(m => m.role === 'assistant').length;
           showChips(chipsAfter(messages));
           if (!messages.length) {
@@ -568,7 +626,7 @@
         }
         const reply = assistants[assistants.length - 1];
         showChips(reply.chips);
-        const noteIds = renderAssistantBubble(placeholder, reply.text || '');
+        const noteIds = renderAssistantBubble(placeholder, reply.text || '', reply.citations);
         if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
         // Fire navigation directives only for NEW replies, not when
         // appending history — re-opening a chat shouldn't auto-scroll.

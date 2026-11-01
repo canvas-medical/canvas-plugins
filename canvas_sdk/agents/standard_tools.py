@@ -1433,6 +1433,7 @@ def _serialize_care_team_member(membership: Any) -> dict[str, Any]:
     limit_description="Maximum results. Defaults to 50.",
     categories=("config_reads",),
     model=NoteType,
+    citable=False,
     returns_description=(
         "Array of objects with `id`, `name`, `category` (NoteTypeCategories), "
         "`is_active`, `is_visible`, `is_billable`, `is_sig_required`."
@@ -1482,6 +1483,7 @@ def _serialize_note_type(note_type: Any) -> dict[str, Any]:
     limit_description="Maximum results. Defaults to 25.",
     categories=("config_reads",),
     model=PracticeLocation,
+    citable=False,
     returns_description=(
         "Array of objects with `id`, `full_name`, `short_name`, `place_of_service_code`, `active`."
     ),
@@ -1538,6 +1540,7 @@ def _serialize_practice_location(loc: Any) -> dict[str, Any]:
     limit_description="Maximum results. Defaults to 25.",
     categories=("config_reads",),
     model=LabPartner,
+    citable=False,
     returns_description=(
         "Array of objects with `id`, `name`, `active`, `electronic_ordering_enabled`."
     ),
@@ -1626,6 +1629,7 @@ def _lab_partner_tests_queryset(args: dict[str, Any], pid: str) -> Any:
     limit_description="Maximum results. Defaults to 25.",
     categories=("config_reads",),
     model=LabPartnerTest,
+    citable=False,
     returns_description=("Array of objects with `id`, `order_code`, `order_name`, `cpt_code`."),
 )
 def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:

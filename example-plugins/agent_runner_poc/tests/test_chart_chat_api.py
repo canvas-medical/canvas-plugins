@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
+from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
@@ -126,7 +127,48 @@ def test_the_note_of_decisions_is_not_shown_as_the_clinicians_message() -> None:
         },
     ]
 
-    assert _ui_messages(stored) == [
+    assert _ui_messages(stored, chart_chat_tools) == [
         {"role": "user", "text": "Add a task."},
-        {"role": "assistant", "text": "It awaits approval.", "chips": []},
+        {"role": "assistant", "text": "It awaits approval.", "chips": [], "citations": []},
     ]
+
+
+def test_a_replys_citations_are_cards_of_the_rows_its_tools_returned() -> None:
+    """A cited lab shows as the lab the tool read; a cited id no tool returned is dropped."""
+    lab = {
+        "id": "lab-1",
+        "test": "Hemoglobin A1c",
+        "value": "7.4",
+        "units": "%",
+        "date": "2026-03-02",
+    }
+    stored: list[dict[str, Any]] = [
+        {"role": "user", "content": "Latest A1c?"},
+        {
+            "role": "assistant",
+            "content": [{"type": "tool_use", "id": "t1", "name": "find_lab_results", "input": {}}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": json.dumps([lab])}],
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "7.4% in March [[cite:lab-1]], above goal [[cite:made-up]].",
+                }
+            ],
+        },
+    ]
+
+    reply = _ui_messages(stored, chart_chat_tools)[-1]
+
+    assert reply["text"] == "7.4% in March [1], above goal."
+    (citation,) = reply["citations"]
+    assert (citation["kind"], citation["label"], citation["date"]) == (
+        "Lab result",
+        "Hemoglobin A1c",
+        "2026-03-02",
+    )

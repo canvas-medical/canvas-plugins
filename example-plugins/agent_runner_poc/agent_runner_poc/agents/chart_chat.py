@@ -42,6 +42,7 @@ from canvas_sdk.agents import (
     LLMGateway,
     window_messages,
 )
+from canvas_sdk.agents.citations import CITATION_GUIDANCE
 from canvas_sdk.v1.data import AgentRunProposal, AgentRunProposalStatus
 from logger import log
 
@@ -184,7 +185,7 @@ SYSTEM_PROMPT = (
     )
     + "For discussion or summary, stay read-only. Use write tools only when "
     "the clinician explicitly asks. Keep responses concise and clinically "
-    "focused. Plain text only — no markdown headings."
+    "focused. Plain text only — no markdown headings." + CITATION_GUIDANCE
 )
 
 MAX_TURNS = 8
