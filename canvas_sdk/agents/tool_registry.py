@@ -6,6 +6,15 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
 
+# The most of one tool's result the model is sent, unless the tool registers its own
+# limit. The history window cannot drop the current turn's results, so an uncapped
+# result could push a call past the context window.
+DEFAULT_TOOL_RESULT_CHARS = 50_000
+# The highest limit a tool may register: about 50k tokens, which holds one patient's
+# full set of outside records. A larger result costs tokens on every later call in the
+# run, so a tool that needs more should page its results instead.
+MAX_TOOL_RESULT_CHARS = 200_000
+
 
 def _effect_type_name(effect_class: type, effect_method: str) -> str:
     """The ``EffectType`` name ``effect_class(...).<effect_method>()`` produces.
@@ -215,6 +224,9 @@ class ToolRegistry:
         # needs before the tool is offered to the model.
         self._required_permissions: dict[str, frozenset[str]] = {}
         self._required_capabilities: dict[str, frozenset[Capability]] = {}
+        # tool name → the most of its result the model is sent, for a tool that set its
+        # own limit; every other tool's is DEFAULT_TOOL_RESULT_CHARS.
+        self._max_result_chars: dict[str, int] = {}
         # Tools whose staged effects become proposals for the requester to approve, set
         # by the platform from the manifest's tools.approve; see with_approval.
         self._approval: frozenset[str] = frozenset()
@@ -229,6 +241,7 @@ class ToolRegistry:
         effect_types: Iterable[str] = (),
         required_permissions: Iterable[str] = (),
         required_capabilities: Iterable[Capability] = (),
+        max_result_chars: int | None = None,
     ) -> None:
         """Register a tool by passing the definition and executor directly.
 
@@ -255,11 +268,17 @@ class ToolRegistry:
                 permission again when it applies the tool's effects.
             required_capabilities: :class:`Capability` values the run must be
                 granted for the tool to be offered.
+            max_result_chars: The most of the tool's result the model is sent, up to
+                :data:`MAX_TOOL_RESULT_CHARS`; a longer result is cut, with a note
+                saying so. Defaults to :data:`DEFAULT_TOOL_RESULT_CHARS`. Raise it only
+                for a tool whose answer cannot be split, since the result is sent again
+                on every later call in the run.
 
         Raises:
             ValueError: If ``definition`` is missing a ``"name"`` key, if a
-                tool with that name is already registered, or if an effect
-                type is not an ``EffectType`` name.
+                tool with that name is already registered, if an effect
+                type is not an ``EffectType`` name, or if ``max_result_chars`` is
+                not between 1 and :data:`MAX_TOOL_RESULT_CHARS`.
         """
         name = definition.get("name")
         if not name:
@@ -270,6 +289,11 @@ class ToolRegistry:
         unknown = sorted(declared - set(EffectType.keys()))
         if unknown:
             raise ValueError(f"Tool {name!r} declares unknown effect types: {unknown}")
+        if max_result_chars is not None and not 0 < max_result_chars <= MAX_TOOL_RESULT_CHARS:
+            raise ValueError(
+                f"Tool {name!r} sets max_result_chars={max_result_chars}; it must be "
+                f"between 1 and {MAX_TOOL_RESULT_CHARS}. Page a larger result instead."
+            )
         self._definitions.append(definition)
         self._executors[name] = executor
         for category in categories:
@@ -282,6 +306,12 @@ class ToolRegistry:
             self._required_permissions[name] = permissions
         if capabilities := frozenset(required_capabilities):
             self._required_capabilities[name] = capabilities
+        if max_result_chars is not None:
+            self._max_result_chars[name] = max_result_chars
+
+    def max_result_chars_for(self, name: str) -> int:
+        """The most of ``name``'s result the model is sent."""
+        return self._max_result_chars.get(name, DEFAULT_TOOL_RESULT_CHARS)
 
     def metadata_for(self, name: str) -> dict[str, Any]:
         """Return the docs-oriented metadata for a tool, or an empty dict.
@@ -385,14 +415,16 @@ class ToolRegistry:
         required_permissions: Iterable[str] = (),
         required_capabilities: Iterable[Capability] = (),
         cites: str | None = None,
+        max_result_chars: int | None = None,
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
         ``categories`` tags the tool for shorthand allowlist references — see
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
-        generator. ``effect_types``, ``required_permissions``, and
-        ``required_capabilities`` are as in :meth:`register`. ``cites`` names the
+        generator. ``effect_types``, ``required_permissions``,
+        ``required_capabilities``, and ``max_result_chars`` are as in
+        :meth:`register`. ``cites`` names the
         record type of the rows the tool returns, which makes them citable (see
         :mod:`canvas_sdk.agents.citations`), keyed by each row's ``id``.
         """
@@ -412,6 +444,7 @@ class ToolRegistry:
                 effect_types=effect_types,
                 required_permissions=required_permissions,
                 required_capabilities=required_capabilities,
+                max_result_chars=max_result_chars,
             )
             return fn
 
@@ -434,6 +467,7 @@ class ToolRegistry:
         model: type | None = None,
         returns_description: str | None = None,
         citable: bool = True,
+        max_result_chars: int | None = None,
     ) -> Callable[[Callable[[Any], dict[str, Any]]], Callable[[Any], dict[str, Any]]]:
         """Register a patient-scoped filter-spec read tool.
 
@@ -495,6 +529,8 @@ class ToolRegistry:
             citable: Whether a reply may cite the rows this tool returns.
                 ``False`` for tools that read configuration rather than a
                 patient's records.
+            max_result_chars: As in :meth:`register`. A lower ``limit_max`` is
+                usually the better way to keep a list's result small.
 
         Returns:
             A decorator. Apply it to a ``(row) -> dict`` function; the
@@ -612,6 +648,7 @@ class ToolRegistry:
                 executor,
                 categories=categories,
                 metadata=metadata,
+                max_result_chars=max_result_chars,
             )
             return serializer
 
@@ -989,6 +1026,7 @@ class ToolRegistry:
                 effect_types=other.effect_types_for(name),
                 required_permissions=other.required_permissions_for(name),
                 required_capabilities=other.required_capabilities_for(name),
+                max_result_chars=other._max_result_chars.get(name),
             )
         self._approval |= other._approval
 
@@ -1028,6 +1066,7 @@ class ToolRegistry:
                     effect_types=self.effect_types_for(name),
                     required_permissions=self.required_permissions_for(name),
                     required_capabilities=self.required_capabilities_for(name),
+                    max_result_chars=self._max_result_chars.get(name),
                 )
         scoped._approval = self._approval & allowed_set
         return scoped
@@ -1163,4 +1202,11 @@ class ToolRegistry:
         }
 
 
-__exports__ = ("EffectField", "FilterSpec", "ToolNotAllowed", "ToolRegistry")
+__exports__ = (
+    "DEFAULT_TOOL_RESULT_CHARS",
+    "MAX_TOOL_RESULT_CHARS",
+    "EffectField",
+    "FilterSpec",
+    "ToolNotAllowed",
+    "ToolRegistry",
+)
