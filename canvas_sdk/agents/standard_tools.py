@@ -3779,6 +3779,7 @@ standard_tools.originate_command_tool(
                 "this becomes the body of the Plan command on the note."
             ),
             required=True,
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -3807,6 +3808,7 @@ standard_tools.originate_command_tool(
             type="string",
             description="Patient instructions (e.g. 'Take 1 tablet by mouth daily').",
             required=True,
+            editable=True,
         ),
         "indications_icd10": EffectField(
             type="array",
@@ -3819,11 +3821,13 @@ standard_tools.originate_command_tool(
             type="integer",
             minimum=1,
             description="Days supply for the prescription. Optional.",
+            editable=True,
         ),
         "refills": EffectField(
             type="integer",
             minimum=0,
             description="Refills (0 = no refills). Optional.",
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -3859,12 +3863,12 @@ standard_tools.originate_command_tool(
             ),
         ),
         "comment": EffectField(
-            type="string",
-            description="Optional free-text instructions to the lab.",
+            type="string", description="Optional free-text instructions to the lab.", editable=True
         ),
         "fasting_required": EffectField(
             type="boolean",
             description="Whether the patient needs to fast before collection.",
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -3889,15 +3893,18 @@ standard_tools.originate_command_tool(
         "today_assessment": EffectField(
             type="string",
             description="Today's assessment narrative for this diagnosis.",
+            editable=True,
         ),
         "background": EffectField(
             type="string",
             description="Optional background/context for the diagnosis.",
+            editable=True,
         ),
         "approximate_date_of_onset": EffectField(
             type="string",
             format="date",
             description="ISO 8601 date of approximate onset. Optional.",
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -3923,25 +3930,30 @@ standard_tools.originate_command_tool(
             type="string",
             description="Plain-text statement of the goal.",
             required=True,
+            editable=True,
         ),
         "priority": EffectField(
             type="string",
             description="Goal priority. Optional.",
             enum=_GOAL_PRIORITIES,
+            editable=True,
         ),
         "achievement_status": EffectField(
             type="string",
             description="Current achievement status. Default 'in-progress' if omitted.",
             enum=_GOAL_ACHIEVEMENT_STATUSES,
+            editable=True,
         ),
         "due_date": EffectField(
             type="string",
             format="date",
             description="ISO 8601 target date for the goal. Optional.",
+            editable=True,
         ),
         "progress": EffectField(
             type="string",
             description="Optional free-text note about current progress.",
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -3982,14 +3994,15 @@ standard_tools.originate_command_tool(
             type="string",
             description="Status of the condition today relative to its prior state.",
             enum=_ASSESS_STATUSES,
+            editable=True,
         ),
         "narrative": EffectField(
             type="string",
             description="Today's assessment narrative for this condition.",
+            editable=True,
         ),
         "background": EffectField(
-            type="string",
-            description="Optional background/context.",
+            type="string", description="Optional background/context.", editable=True
         ),
     },
     pre_build=lambda arguments, ctx: _build_assess_kwargs(arguments, ctx),
@@ -4011,6 +4024,7 @@ standard_tools.originate_command_tool(
             type="string",
             format="date",
             description="ISO 8601 target date for the follow-up.",
+            editable=True,
         ),
         "comment": EffectField(
             type="string",
@@ -4018,6 +4032,7 @@ standard_tools.originate_command_tool(
                 "Free-text reason for the follow-up (visible to scheduling). "
                 "E.g., 'recheck BP after med adjustment'."
             ),
+            editable=True,
         ),
     },
     categories=("clinical_writes",),
@@ -4050,6 +4065,7 @@ standard_tools.originate_command_tool(
                 "Reason for stopping (e.g., 'side effects', 'completed course', "
                 "'ineffective'). Visible to anyone reviewing the chart."
             ),
+            editable=True,
         ),
     },
     pre_build=_patients_record_check(Medication, "medication_id", "medication"),

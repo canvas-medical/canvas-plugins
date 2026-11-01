@@ -80,6 +80,10 @@ class EffectField:
         pre_build_only: When ``True``, the argument is not set on the
             Command; only the tool's ``pre_build`` hook reads it, as when two
             arguments combine into one Command field.
+        editable: When ``True``, ``edit_staged_command`` may change the field on a
+            staged draft of the tool's command. Leave it ``False`` for a field the
+            tool's ``pre_build`` checks or derives (a code, an id from the chart), so
+            an edit cannot set what the tool would have refused to stage.
     """
 
     type: str
@@ -94,6 +98,7 @@ class EffectField:
     max_items: int | None = None
     command_field: str | None = None
     pre_build_only: bool = False
+    editable: bool = False
 
 
 def require_patient_id(ctx: dict[str, Any]) -> str:
@@ -852,6 +857,11 @@ class ToolRegistry:
         metadata: dict[str, Any] = {
             "kind": "originate_command",
             "command_class": command_class,
+            "editable_fields": {
+                arg_name: spec
+                for arg_name, spec in fields.items()
+                if spec.editable and not spec.pre_build_only
+            },
         }
         if returns_description is not None:
             metadata["returns_description"] = returns_description
