@@ -91,6 +91,22 @@ def agent_run_limit(requested: str | None) -> int:
 
 
 PLUGIN_RUNNER_MAX_AGENT_RUNS = agent_run_limit(os.getenv("PLUGIN_RUNNER_MAX_AGENT_RUNS"))
+
+
+def extended_agent_run_limit(requested: str | None, agent_runs: int) -> int:
+    """How many of the agent runs may be extended ones; defaults to 1.
+
+    An extended run (its manifest sets `run_seconds` above the default) holds its thread
+    for longer, so at least one agent run is always left for the others whenever there
+    is more than one.
+    """
+    limit = max(1, int(requested)) if requested else 1
+    return min(limit, max(1, agent_runs - 1))
+
+
+PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS = extended_agent_run_limit(
+    os.getenv("PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS"), PLUGIN_RUNNER_MAX_AGENT_RUNS
+)
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
 # By default, allow a pool size that gives each worker and agent run 2 active connections

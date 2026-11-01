@@ -22,7 +22,7 @@ from canvas_sdk.agents.run_record import (
     RunRecorder,
     current_recorder,
 )
-from canvas_sdk.agents.tool_loop import MAX_TOOL_RESULT_CHARS
+from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
 from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
 
@@ -490,7 +490,7 @@ def test_a_long_tool_result_is_cut_and_says_so() -> None:
 
     @tools.tool(name="dump", description="x", input_schema={"type": "object"})
     def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
-        return "x" * (MAX_TOOL_RESULT_CHARS * 2)
+        return "x" * (DEFAULT_TOOL_RESULT_CHARS * 2)
 
     client = FakeGateway(
         _response("tool_use", _tool_use("dump", "t1")), _response("end_turn", _text("ok"))
@@ -503,7 +503,72 @@ def test_a_long_tool_result_is_cut_and_says_so() -> None:
     assert content.endswith("to see the rest.]"), (
         "the model is told the result was cut and how to see the rest"
     )
-    assert f"Result cut at {MAX_TOOL_RESULT_CHARS} of" in content
+    assert f"Result cut at {DEFAULT_TOOL_RESULT_CHARS} of" in content
+
+
+def _dump_tool(tools: ToolRegistry, name: str, size: int, **options: Any) -> None:
+    @tools.tool(name=name, description="x", input_schema={"type": "object"}, **options)
+    def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        return "x" * size
+
+
+def test_a_tool_that_sets_a_larger_limit_sends_more() -> None:
+    """A tool whose answer cannot be split registers a limit above the default."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 120_000, max_result_chars=150_000)
+
+    result = _run(
+        FakeGateway(
+            _response("tool_use", _tool_use("records", "t1")), _response("end_turn", _text("ok"))
+        ),
+        tools=tools,
+    )
+
+    content = result.messages[2]["content"][0]["content"]
+    assert content == json.dumps("x" * 120_000)
+
+
+@pytest.mark.parametrize("limit", [0, MAX_TOOL_RESULT_CHARS + 1])
+def test_a_tool_limit_outside_the_ceiling_is_refused_at_registration(limit: int) -> None:
+    """A plugin cannot register a tool that sends more than the ceiling, or nothing."""
+    with pytest.raises(ValueError, match="max_result_chars"):
+        _dump_tool(ToolRegistry(), "records", 10, max_result_chars=limit)
+
+
+def test_a_tools_limit_survives_scoping_and_extending() -> None:
+    """The manifest-scoped registry and a plugin's copy of the catalog keep the limit."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, max_result_chars=150_000)
+    _dump_tool(tools, "other", 10)
+    copy = ToolRegistry()
+    copy.extend(tools)
+
+    assert tools.scope(["records"]).max_result_chars_for("records") == 150_000
+    assert copy.max_result_chars_for("records") == 150_000
+    assert copy.max_result_chars_for("other") == DEFAULT_TOOL_RESULT_CHARS
+
+
+def test_results_past_the_runs_total_are_cut() -> None:
+    """However many large tools a run calls, the text it sends the model is bounded."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 100, max_result_chars=150_000)
+    recorder = RunRecorder(max_tool_result_chars=250)
+    client = FakeGateway(
+        _response("tool_use", _tool_use("records", "t1"), _tool_use("records", "t2")),
+        _response("tool_use", _tool_use("records", "t3")),
+        _response("end_turn", _text("ok")),
+    )
+
+    result = _with_recorder(recorder, client, tools=tools)
+
+    first, second = (block["content"] for block in result.messages[2]["content"])
+    third = result.messages[4]["content"][0]["content"]
+    assert (first, second) == (json.dumps("x" * 100), json.dumps("x" * 100))
+    # Each result is 102 characters with its JSON quotes, so the third gets the last 46.
+    sent, note = third.split("\n", 1)
+    assert sent == '"' + "x" * 45
+    assert note.startswith("[Result cut at 46 of 102") and "as much tool output as it may" in note
+    assert recorder.tool_result_chars == 250
 
 
 @pytest.mark.parametrize(

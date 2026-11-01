@@ -54,8 +54,11 @@ from canvas_sdk.agents import (
 from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.run_record import (
+    DEFAULT_RUN_SECONDS,
+    RUN_TOOL_RESULT_CHARS,
     RunDeadlineExceeded,
     RunRecorder,
+    agent_run_seconds,
     current_recorder,
 )
 from canvas_sdk.effects.simple_api import Response
@@ -102,6 +105,7 @@ from settings import (
     PLUGIN_DIRECTORY,
     PLUGIN_RUNNER_EVENT_REGISTRY_PATH,
     PLUGIN_RUNNER_MAX_AGENT_RUNS,
+    PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
@@ -267,6 +271,9 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
 
 
 AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
+# Of those, the ones an extended run (manifest `run_seconds` above the default) may hold,
+# so long runs cannot take every thread from the agents people are waiting on.
+EXTENDED_AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS)
 
 
 def _agent_run_summary(
@@ -607,14 +614,31 @@ class PluginRunner(PluginRunnerServicer):
                 yield EventResponse(success=False, effects=[], error_kind="RUNNER_BUSY")
                 return
 
+            run_seconds = agent_run_seconds(plugin.get("handler") or {})
+            extended = run_seconds > DEFAULT_RUN_SECONDS
+            if extended and not EXTENDED_AGENT_RUN_SLOTS.acquire(blocking=False):
+                AGENT_RUN_SLOTS.release()
+                log.warning(
+                    f"RunAgent: {PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS} extended agent run(s) "
+                    f"already in progress; turning away agent_id={request.agent_id} "
+                    f"run_id={request.run_id} to retry"
+                )
+                sentry_sdk.set_tag("agent-id", None)
+                yield EventResponse(success=False, effects=[], error_kind="EXTENDED_RUNS_BUSY")
+                return
+
             failure: EventResponse | None = None
             # run_tool_loop records model and tool calls here for home-app's run record.
             recorder = RunRecorder()
             # The tool loop stops making model calls short of home-app's deadline, after
             # which the run's lease can go to the next run of the same scope.
+            # home-app sets the call's timeout from the same manifest entry; the shorter of
+            # the two stands.
             remaining = context.time_remaining() if context is not None else None
-            if remaining is not None:
-                recorder.deadline = monotonic() + remaining
+            recorder.deadline = monotonic() + min(
+                run_seconds, remaining if remaining is not None else run_seconds
+            )
+            recorder.max_tool_result_chars = RUN_TOOL_RESULT_CHARS
             recorder_token = current_recorder.set(recorder)
             try:
                 with (
@@ -711,6 +735,8 @@ class PluginRunner(PluginRunnerServicer):
                 current_recorder.reset(recorder_token)
                 # Released before anything is yielded, so the slot frees as soon as
                 # the agent finishes rather than when the caller drains the stream.
+                if extended:
+                    EXTENDED_AGENT_RUN_SLOTS.release()
                 AGENT_RUN_SLOTS.release()
                 sentry_sdk.set_tag("agent-id", None)
 

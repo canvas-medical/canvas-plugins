@@ -15,6 +15,29 @@ from threading import Lock
 # saving its state and returning its effects.
 DEADLINE_MARGIN_SECONDS = 30.0
 
+# How long a run may take, from the RunAgent call to its effects being returned, unless
+# its agent's manifest entry sets `run_seconds`.
+DEFAULT_RUN_SECONDS = 600
+# The most `run_seconds` may be. A run above the default is extended: it holds an agent
+# thread that long, so the plugin runner admits only a few at a time (see
+# PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS).
+MAX_RUN_SECONDS = 1800
+
+
+def agent_run_seconds(manifest_entry: dict) -> int:
+    """How long a run of the agent ``manifest_entry`` declares may take, within the ceiling."""
+    requested = manifest_entry.get("run_seconds")
+    if not isinstance(requested, int) or isinstance(requested, bool):
+        return DEFAULT_RUN_SECONDS
+    return min(max(requested, 1), MAX_RUN_SECONDS)
+
+
+# The most tool-result text one run sends the model, summed over its tool calls and its
+# sub-agents'. Each result stays in the conversation and is sent again on every later
+# call, so this bounds the run's memory and input tokens however many large tools it
+# calls: three results at the largest per-tool limit.
+RUN_TOOL_RESULT_CHARS = 600_000
+
 
 class RunDeadlineExceeded(Exception):
     """The run is too close to its deadline to finish; its state and effects are discarded."""
@@ -36,7 +59,8 @@ class RunRecorder:
 
     ``deadline`` is a ``time.monotonic()`` value, or None for no deadline.
     ``max_model_calls`` caps the model calls of the whole run, sub-agents included.
-    Sub-agents record from worker threads, so writes take a lock.
+    ``max_tool_result_chars`` caps the tool-result text the run sends the model, also
+    across sub-agents. Sub-agents record from worker threads, so writes take a lock.
     """
 
     model_calls: int = 0
@@ -44,6 +68,8 @@ class RunRecorder:
     tool_calls: list[ToolCallRecord] = field(default_factory=list)
     deadline: float | None = None
     max_model_calls: int | None = None
+    tool_result_chars: int = 0
+    max_tool_result_chars: int | None = None
     _lock: Lock = field(default_factory=Lock, repr=False)
 
     def reserve_model_call(self) -> bool:
@@ -53,6 +79,14 @@ class RunRecorder:
                 return False
             self.model_calls += 1
             return True
+
+    def reserve_tool_result(self, chars: int) -> int:
+        """Count up to ``chars`` of a tool result against the run's total; return how many fit."""
+        with self._lock:
+            if self.max_tool_result_chars is not None:
+                chars = max(min(chars, self.max_tool_result_chars - self.tool_result_chars), 0)
+            self.tool_result_chars += chars
+            return chars
 
     def seconds_left(self) -> float | None:
         """Seconds until the deadline less the margin, or None without a deadline."""

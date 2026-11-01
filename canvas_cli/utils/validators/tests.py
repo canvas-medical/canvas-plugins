@@ -5,6 +5,7 @@ import pytest
 from jsonschema import ValidationError
 
 from canvas_cli.utils.validators import validate_manifest_file
+from canvas_sdk.agents.run_record import MAX_RUN_SECONDS
 
 
 @pytest.fixture
@@ -333,3 +334,21 @@ def test_manifest_rejects_an_unknown_tools_key() -> None:
     """A misspelled key is refused rather than ignored."""
     with pytest.raises(ValidationError):
         validate_manifest_file(_agent_manifest({"allowed": [], "aprove": ["create_task"]}))
+
+
+def _with_run_seconds(run_seconds: object) -> dict:
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["run_seconds"] = run_seconds
+    return manifest
+
+
+def test_manifest_accepts_run_seconds_up_to_the_ceiling() -> None:
+    """An agent may ask for more time per run, up to the platform's ceiling."""
+    validate_manifest_file(_with_run_seconds(MAX_RUN_SECONDS))
+
+
+@pytest.mark.parametrize("run_seconds", [MAX_RUN_SECONDS + 1, 0, "900"])
+def test_manifest_rejects_run_seconds_outside_the_ceiling(run_seconds: object) -> None:
+    """Asking for more than the ceiling, nothing, or a string fails validation."""
+    with pytest.raises(ValidationError):
+        validate_manifest_file(_with_run_seconds(run_seconds))
