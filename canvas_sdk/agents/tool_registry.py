@@ -384,6 +384,7 @@ class ToolRegistry:
         effect_types: Iterable[str] = (),
         required_permissions: Iterable[str] = (),
         required_capabilities: Iterable[Capability] = (),
+        cites: str | None = None,
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
@@ -391,13 +392,18 @@ class ToolRegistry:
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
         generator. ``effect_types``, ``required_permissions``, and
-        ``required_capabilities`` are as in :meth:`register`.
+        ``required_capabilities`` are as in :meth:`register`. ``cites`` names the
+        record type of the rows the tool returns, which makes them citable (see
+        :mod:`canvas_sdk.agents.citations`), keyed by each row's ``id``.
         """
 
         def decorator(fn: ToolExecutor) -> ToolExecutor:
             metadata: dict[str, Any] = {}
             if returns_description is not None:
                 metadata["returns_description"] = returns_description
+            if cites is not None:
+                metadata["record_type"] = cites
+                metadata["citable"] = True
             self.register(
                 {"name": name, "description": description, "input_schema": input_schema},
                 fn,
