@@ -56,7 +56,9 @@ class ToolLoopResult:
 
 
 # Whether this tool loop's reply text may be streamed to the person waiting on the run.
-# A sub-agent's text is working material for its parent, so run_subagent turns it off.
+# Only the agent's own loop streams: it is off while a tool runs, so a model call a tool
+# makes (read_document's reader, a plugin's own) never streams, and run_subagent turns
+# it off on the worker threads its sub-agents run on, which do not inherit it.
 streams_reply: ContextVar[bool] = ContextVar("streams_reply", default=True)
 
 
@@ -89,6 +91,9 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
     if recorder is not None:
         recorder.report_tool("tool_started", label)
     started = time.perf_counter()
+    # What a tool's own model calls write is the tool's working material, and can be
+    # drawn from untrusted content such as a document, so none of it streams.
+    quiet = streams_reply.set(False)
     try:
         result = tools.execute(block.name, dict(block.input), ctx=ctx)
     except (anthropic.APIError, RunDeadlineExceeded):
@@ -106,6 +111,8 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
             )
             recorder.report_tool("tool_finished", label, ok=False)
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
+    finally:
+        streams_reply.reset(quiet)
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
         recorder.report_tool("tool_finished", label, ok=True)
