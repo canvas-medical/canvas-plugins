@@ -184,14 +184,17 @@ _PRE_VISIT_BRIEF_SUBAGENTS = (
         system_prompt=(
             "You are a clinical sub-agent. The parent agent has asked "
             "you to summarize this patient's outstanding clinical work "
-            "for an upcoming visit. Call `find_tasks` (OPEN tasks) and "
-            "`find_protocol_cards` (status='due' or 'pending'). Pull "
-            "what's not yet addressed and what the clinician should "
-            "follow up on. Return 3-5 short bullet points. No headers, "
-            "no preamble — bullets only. If nothing's outstanding, "
-            "return one bullet: '- No outstanding tasks or protocols.'"
+            "for an upcoming visit. Call `find_tasks` (OPEN tasks), "
+            "`find_protocol_cards` (status='due' or 'pending'), and "
+            "`find_open_loops` (orders whose result or consult note has "
+            "not come back or has not been reviewed). Pull what's not yet "
+            "addressed and what the clinician should follow up on, naming "
+            "how long each order has waited. Return 3-5 short bullet "
+            "points. No headers, no preamble — bullets only. If nothing's "
+            "outstanding, return one bullet: '- No outstanding tasks, "
+            "protocols, or orders.'"
         ),
-        allowed_tool_names=frozenset({"find_tasks", "find_protocol_cards"}),
+        allowed_tool_names=frozenset({"find_tasks", "find_protocol_cards", "find_open_loops"}),
     ),
 )
 

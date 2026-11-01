@@ -8,7 +8,8 @@ for each. A marker whose id no tool returned is dropped, so every citation is a 
 SDK read from the chart, described from that row rather than from text the model wrote.
 
 A tool is citable when it was registered with a ``model`` (as
-:meth:`ToolRegistry.filter_search_tool` does) and not marked ``citable=False``.
+:meth:`ToolRegistry.filter_search_tool` does) and not marked ``citable=False``, or with
+``cites=<record type>`` (as :meth:`ToolRegistry.tool` takes).
 """
 
 import json
@@ -38,15 +39,21 @@ MAX_DETAIL_CHARS = 160
 
 
 class CardFields(NamedTuple):
-    """Which fields of a tool's row describe a cited record."""
+    """Which fields of a tool's row describe a cited record.
+
+    ``kind_field`` names a row field that holds the kind, for a tool whose rows are of
+    several kinds; ``kind`` is used when the row leaves it empty.
+    """
 
     kind: str
     label: str
     details: tuple[str, ...] = ()
     date: str | None = None
+    kind_field: str | None = None
 
 
-# Keyed by the SDK model's class name. A model missing here is described generically.
+# Keyed by the SDK model's class name, or the record type a tool cites. A type missing
+# here is described generically.
 CARD_FIELDS: dict[str, CardFields] = {
     "Medication": CardFields("Medication", "name", ("status",), "start_date"),
     "Condition": CardFields("Condition", "display", ("clinical_status", "code"), "onset_date"),
@@ -81,12 +88,16 @@ CARD_FIELDS: dict[str, CardFields] = {
     "StopMedicationEvent": CardFields(
         "Stopped medication", "medication_name", ("rationale",), "stopped_at"
     ),
+    "OpenLoop": CardFields("Order", "item", ("summary",), "ordered_on", kind_field="type"),
 }
 
 
 @dataclass(frozen=True)
 class Source:
-    """A row a citable read tool returned: the record and what the tool said about it."""
+    """A row a citable read tool returned: the record and what the tool said about it.
+
+    ``model`` is the SDK model's class name, or the record type the tool cites.
+    """
 
     id: str
     tool: str
@@ -98,7 +109,8 @@ class Source:
 class Citation:
     """A numbered reference in a reply, described from the row its tool returned.
 
-    ``note_dbid`` is set for a note, so a chart surface can navigate to it.
+    ``note_dbid`` is set for a note, or for a record whose row names the note it was
+    made on, so a chart surface can navigate to it.
     """
 
     number: int
@@ -163,7 +175,8 @@ class Sources:
             return
         metadata = self._tools.metadata_for(tool)
         model = metadata.get("model")
-        if model is None or not metadata.get("citable", True):
+        record_type = metadata.get("record_type") or (model.__name__ if model else None)
+        if record_type is None or not metadata.get("citable", True):
             return
         try:
             rows = json.loads(block.get("content") or "")
@@ -178,7 +191,7 @@ class Sources:
         for row in rows:
             if isinstance(row, dict) and row.get("id"):
                 record_id = str(row["id"])
-                self._rows[record_id] = Source(record_id, tool, model.__name__, row)
+                self._rows[record_id] = Source(record_id, tool, record_type, row)
 
 
 def cite(text: str, sources: Sources) -> tuple[str, list[Citation]]:
@@ -211,16 +224,17 @@ def _citation(number: int, source: Source) -> Citation:
         fields = CardFields(_humanize(source.model), "")
     else:
         label = _text(row.get(fields.label))
+    kind = _text(row.get(fields.kind_field)) if fields.kind_field else ""
     detail = ", ".join(text for key in fields.details if (text := _text(row.get(key))))
     date = _text(row.get(fields.date)) if fields.date else ""
     return Citation(
         number=number,
         id=source.id,
-        kind=fields.kind,
-        label=label or fields.kind,
+        kind=kind or fields.kind,
+        label=label or kind or fields.kind,
         detail=detail[:MAX_DETAIL_CHARS],
         date=date or None,
-        note_dbid=row.get("dbid") if source.model == "Note" else None,
+        note_dbid=row.get("dbid") if source.model == "Note" else row.get("note_dbid"),
     )
 
 
