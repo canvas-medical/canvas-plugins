@@ -20,15 +20,18 @@ filter-search shape (e.g., scalar reads like ``get_patient_demographics``)
 is hand-registered via :meth:`ToolRegistry.tool`.
 """
 
+import base64
 import re
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any
 from uuid import uuid4
 
+import anthropic
 from django.db.models import Q
 
 from canvas_sdk.agents.note_helpers import find_open_note
+from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
     FilterSpec,
@@ -54,6 +57,7 @@ from canvas_sdk.effects.note.message import Message as MessageEffect
 from canvas_sdk.effects.note.note import Note as NoteEffect
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard, Recommendation
 from canvas_sdk.effects.task.task import AddTask, AddTaskComment, TaskStatus, UpdateTask
+from canvas_sdk.utils.http import Http
 from canvas_sdk.v1.data import (
     AllergyIntolerance,
     Appointment,
@@ -1750,6 +1754,137 @@ def _find_documents(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[d
         key=lambda document: document["date"] or document["received"] or "",
         reverse=True,
     )
+
+
+# Largest file read_document sends. A request may be 32 MB and base64 adds a third; the
+# inference gateway also holds budget by request size, which a scanned file inflates.
+DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+# Most tokens of the answer read_document asks for.
+READ_DOCUMENT_MAX_TOKENS = 2048
+
+READ_DOCUMENT_SYSTEM = (
+    "You read one clinical document from a patient's chart for a clinician and answer "
+    "their question from it. Use only what the document says. After each fact, give "
+    "the page it is on, as (p. 3). If the document does not answer the question, say "
+    "so plainly and say what the document does cover. Quote numbers, doses, and dates "
+    "exactly as written. Do not add advice or interpretation the document does not "
+    "contain. Plain text, no headings, under 250 words."
+)
+
+# The first bytes of each file type read_document can send, and how it sends it.
+_DOCUMENT_SIGNATURES = (
+    (b"%PDF", "document", "application/pdf"),
+    (b"\x89PNG", "image", "image/png"),
+    (b"\xff\xd8\xff", "image", "image/jpeg"),
+)
+
+
+def _document_file(document: Any) -> bytes:
+    """Download a document's file through its presigned URL."""
+    response = Http().get(document.document_url)
+    response.raise_for_status()
+    return response.content
+
+
+def _document_block(content: bytes) -> dict[str, Any] | None:
+    """The content block that sends ``content`` to the model, or None for another type."""
+    for signature, block_type, media_type in _DOCUMENT_SIGNATURES:
+        if content.startswith(signature):
+            return {
+                "type": block_type,
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": base64.standard_b64encode(content).decode("ascii"),
+                },
+            }
+    return None
+
+
+@standard_tools.tool(
+    name="read_document",
+    description=(
+        "Read an outside record's attached file and answer a question from it, with page "
+        "numbers. Use it when the answer is in the document's text rather than in what "
+        "`find_documents` returns, e.g. 'what did the discharge summary say about her "
+        "medications'. Takes the `id` of an outside record from `find_documents` that "
+        "`has_file`. Reads the whole file with a separate model call, so it is slow and "
+        "costly: ask one focused question, and do not call it for every document."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "document_id": {
+                "type": "string",
+                "description": "The `id` of an outside record from `find_documents`.",
+            },
+            "question": {
+                "type": "string",
+                "description": "What to find in the document, in the clinician's words.",
+            },
+        },
+        "required": ["document_id", "question"],
+    },
+    categories=("document_reads",),
+    returns_description=(
+        "Object with `ok`, `document_id`, `name`, and `answer` (the answer, with page "
+        "numbers); `ok: false` with `error` when the record has no readable file."
+    ),
+)
+def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    """Answer a question from one outside record's file, in a model call of its own."""
+    gateway = ctx.get("gateway")
+    if gateway is None:
+        raise ValueError("read_document needs the run's gateway on ctx")
+    document = (
+        UncategorizedClinicalDocument.objects.filter(
+            id=arguments["document_id"], patient__id=require_patient_id(ctx), junked=False
+        )
+        .only("id", "name", "document")
+        .first()
+    )
+    if document is None:
+        raise ValueError(f"Outside record {arguments['document_id']!r} not found for this patient")
+    if not document.document:
+        return {"ok": False, "error": "This record has no attached file to read."}
+    content = _document_file(document)
+    if len(content) > DOCUMENT_MAX_BYTES:
+        return {"ok": False, "error": "The file is too large to read here; open it in the chart."}
+    block = _document_block(content)
+    if block is None:
+        return {
+            "ok": False,
+            "error": "The file is not a PDF or an image the model can read; open it in the chart.",
+        }
+    try:
+        result = run_tool_loop(
+            gateway,
+            tools=ToolRegistry(),
+            ctx=ctx,
+            system=READ_DOCUMENT_SYSTEM,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [block, {"type": "text", "text": str(arguments["question"])}],
+                }
+            ],
+            max_turns=1,
+            max_tokens=READ_DOCUMENT_MAX_TOKENS,
+            # The file is sent whole: windowing would drop the only message it is in.
+            history_chars=None,
+        )
+    except anthropic.APIStatusError as exc:
+        # The model's limits (400) or the gateway's budget hold (402) refused this file;
+        # the run goes on without it. Anything else is the platform's to classify.
+        if exc.status_code not in (400, 402):
+            raise
+        return {"ok": False, "error": f"This file could not be read: {exc.message}"}
+    return {
+        "ok": True,
+        "document_id": str(document.id),
+        "name": document.name,
+        "answer": result.text,
+    }
 
 
 @standard_tools.filter_search_tool(
