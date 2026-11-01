@@ -352,3 +352,20 @@ def test_manifest_rejects_run_seconds_outside_the_ceiling(run_seconds: object) -
     """Asking for more than the ceiling, nothing, or a string fails validation."""
     with pytest.raises(ValidationError):
         validate_manifest_file(_with_run_seconds(run_seconds))
+
+
+@pytest.mark.parametrize("level", ["status", "activity"])
+def test_manifest_accepts_a_progress_level(level: str) -> None:
+    """An agent may declare how much of a run's progress its user sees."""
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["progress"] = level
+    validate_manifest_file(manifest)
+
+
+@pytest.mark.parametrize("level", ["reply", "everything", 1])
+def test_manifest_rejects_an_unknown_progress_level(level: object) -> None:
+    """Only the levels the platform streams can be declared."""
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["progress"] = level
+    with pytest.raises(ValidationError):
+        validate_manifest_file(manifest)

@@ -1,3 +1,4 @@
+from canvas_sdk.agents.progress import PROGRESS_LEVELS
 from canvas_sdk.agents.run_record import MAX_RUN_SECONDS
 
 manifest_schema = {
@@ -149,7 +150,9 @@ manifest_schema = {
             # the agent may return only effect types its granted tools declare.
             # `run_seconds` asks for more than the default time per run, up to
             # MAX_RUN_SECONDS; a run above the default is extended, and the plugin
-            # runner admits only a few of those at once.
+            # runner admits only a few of those at once. `progress` is the most of
+            # a run's progress the person waiting on it sees: "status" (heartbeats,
+            # the default) or "activity" (adds a label per tool call).
             "type": "array",
             "items": {
                 "type": "object",
@@ -162,6 +165,7 @@ manifest_schema = {
                         "minimum": 1,
                         "maximum": MAX_RUN_SECONDS,
                     },
+                    "progress": {"type": "string", "enum": list(PROGRESS_LEVELS)},
                     "tools": {
                         "type": "object",
                         "properties": {

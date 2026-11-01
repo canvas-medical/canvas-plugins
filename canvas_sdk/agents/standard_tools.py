@@ -4265,4 +4265,64 @@ standard_tools.register(
 )
 
 
+# What the person waiting on a run sees while each tool runs, for an agent whose manifest
+# sets "progress": "activity". Labels name the work, never the arguments.
+standard_tools.set_progress_labels(
+    {
+        "find_medications": "Reading medications",
+        "find_conditions": "Reading conditions",
+        "find_lab_results": "Reading lab results",
+        "find_assessments": "Reading assessments",
+        "find_allergies": "Reading allergies",
+        "find_immunizations": "Reading immunizations",
+        "find_vitals": "Reading vitals",
+        "find_tasks": "Reading tasks",
+        "find_messages": "Reading messages",
+        "find_appointments": "Reading appointments",
+        "find_encounters": "Reading encounters",
+        "find_notes": "Reading notes",
+        "get_open_note": "Finding the open note",
+        "get_note_content": "Reading a note",
+        "find_goals": "Reading goals",
+        "find_imaging_reports": "Reading imaging reports",
+        "find_referrals": "Reading referrals",
+        "find_open_loops": "Checking open orders",
+        "find_documents": "Reading consult reports and outside records",
+        "find_history": "Reading history",
+        "read_document": "Reading a document",
+        "find_care_team_members": "Reading the care team",
+        "find_note_types": "Looking up note types",
+        "find_practice_locations": "Looking up practice locations",
+        "find_lab_partners": "Looking up labs",
+        "find_lab_partner_tests": "Looking up lab tests",
+        "find_medication_statements": "Reading medication statements",
+        "find_external_events": "Reading hospital and ER visits",
+        "find_prescriptions": "Reading prescriptions",
+        "find_pharmacy_fills": "Reading pharmacy fills",
+        "find_pharmacy_requests": "Reading pharmacy requests",
+        "find_questionnaire_responses": "Reading questionnaires",
+        "find_stop_medication_events": "Reading stopped medications",
+        "find_banner_alerts": "Reading banner alerts",
+        "find_protocol_cards": "Reading protocol cards",
+        "get_patient_demographics": "Reading demographics",
+        "add_banner_alert": "Adding a banner alert",
+        "remove_banner_alert": "Removing a banner alert",
+        "create_task": "Creating a task",
+        "update_task": "Updating a task",
+        "add_task_comment": "Commenting on a task",
+        "add_or_update_protocol_card": "Updating a protocol card",
+        "originate_plan": "Drafting a plan",
+        "originate_prescribe_medication": "Drafting a prescription",
+        "originate_lab_order": "Drafting a lab order",
+        "originate_diagnose_condition": "Drafting a diagnosis",
+        "originate_goal": "Drafting a goal",
+        "originate_assessment": "Drafting an assessment",
+        "originate_follow_up": "Drafting a follow-up",
+        "originate_stop_medication": "Drafting a stopped medication",
+        "originate_message": "Drafting a message",
+        "originate_review_note": "Drafting a review note",
+    }
+)
+
+
 __exports__ = ("standard_tools",)

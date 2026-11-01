@@ -2651,14 +2651,30 @@ class AgentRunSummary(_message.Message):
     tool_calls: _containers.RepeatedCompositeFieldContainer[AgentToolCall]
     def __init__(self, model_calls: _Optional[int] = ..., stop_reason: _Optional[str] = ..., effects_returned: _Optional[int] = ..., effects_dropped: _Optional[int] = ..., tool_calls: _Optional[_Iterable[_Union[AgentToolCall, _Mapping]]] = ...) -> None: ...
 
+class AgentRunProgress(_message.Message):
+    __slots__ = ("kind", "phase", "elapsed_ms", "label", "ok")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    PHASE_FIELD_NUMBER: _ClassVar[int]
+    ELAPSED_MS_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    OK_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    phase: str
+    elapsed_ms: int
+    label: str
+    ok: bool
+    def __init__(self, kind: _Optional[str] = ..., phase: _Optional[str] = ..., elapsed_ms: _Optional[int] = ..., label: _Optional[str] = ..., ok: bool = ...) -> None: ...
+
 class EventResponse(_message.Message):
-    __slots__ = ("success", "effects", "error_kind", "agent_run")
+    __slots__ = ("success", "effects", "error_kind", "agent_run", "progress")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     EFFECTS_FIELD_NUMBER: _ClassVar[int]
     ERROR_KIND_FIELD_NUMBER: _ClassVar[int]
     AGENT_RUN_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
     error_kind: str
     agent_run: AgentRunSummary
-    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ..., error_kind: _Optional[str] = ..., agent_run: _Optional[_Union[AgentRunSummary, _Mapping]] = ...) -> None: ...
+    progress: AgentRunProgress
+    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ..., error_kind: _Optional[str] = ..., agent_run: _Optional[_Union[AgentRunSummary, _Mapping]] = ..., progress: _Optional[_Union[AgentRunProgress, _Mapping]] = ...) -> None: ...

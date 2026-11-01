@@ -108,6 +108,21 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
+      .progress-status {
+        color: #6b7280;
+      }
+      .progress-details {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .progress-details summary {
+        cursor: pointer;
+      }
+      .progress-details ul {
+        margin: 4px 0 0;
+        padding-left: 16px;
+      }
       .error {
         color: #b91c1c;
         background: #fef2f2;
@@ -241,6 +256,14 @@
       // 10, so the platform's run record, not this budget, decides the outcome.
       const POLL_TIMEOUT_MS = 25 * 60 * 1000;
       const FINISHED_STATUSES = ['succeeded', 'failed', 'refused', 'abandoned', 'gave_up'];
+      // The run's live progress: heartbeats, and a label per tool call. The platform only
+      // lets the clinician who started the run listen.
+      const PROGRESS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://')
+        + location.host + '/plugin-io/ws/agent_runner_poc/agent-run-';
+      // Heartbeats come every couple of seconds; this long without one means the run is
+      // waiting on the model rather than working.
+      const PROGRESS_QUIET_MS = 30 * 1000;
+      const PHASE_TEXT = { thinking: 'Thinking', working: 'Working' };
 
       const log = document.getElementById('log');
       const composer = document.getElementById('composer');
@@ -638,6 +661,81 @@
         assistantCount = assistants.length;
       }
 
+      // Show the run's progress in its placeholder until the reply replaces it. Returns a
+      // function that stops listening. Polling stays the source of truth: when the
+      // socket cannot open, the placeholder just keeps its ellipsis.
+      function watchProgress(runId, placeholder) {
+        let socket;
+        try {
+          socket = new WebSocket(PROGRESS_URL + encodeURIComponent(runId) + '/');
+        } catch (err) {
+          return () => {};
+        }
+        const status = document.createElement('div');
+        status.className = 'progress-status';
+        const details = document.createElement('details');
+        details.className = 'progress-details';
+        details.hidden = true;
+        const summary = document.createElement('summary');
+        summary.textContent = 'Show details';
+        const steps = document.createElement('ul');
+        details.append(summary, steps);
+        let lastHeard = 0;
+        let lastPhase = 'thinking';
+        let lastElapsed = 0;
+
+        function showStatus() {
+          if (!placeholder.isConnected || placeholder.classList.contains('error')) return;
+          if (status.parentNode !== placeholder) {
+            // Take over only the bare placeholder: once the reply has replaced it, stop.
+            if (placeholder.textContent !== '…') return;
+            placeholder.replaceChildren(status, details);
+          }
+          const seconds = Math.round(lastElapsed / 1000);
+          status.textContent = Date.now() - lastHeard > PROGRESS_QUIET_MS
+            ? 'Still waiting on the model · ' + seconds + 's'
+            : (PHASE_TEXT[lastPhase] || 'Working') + ' · ' + seconds + 's';
+        }
+
+        socket.addEventListener('message', (e) => {
+          let progress;
+          try {
+            progress = JSON.parse(e.data).message;
+          } catch (err) {
+            return;
+          }
+          if (!progress || !progress.kind) return;
+          lastHeard = Date.now();
+          lastPhase = progress.phase || lastPhase;
+          lastElapsed = progress.elapsed_ms || lastElapsed;
+          if (progress.kind === 'tool_started') {
+            const step = document.createElement('li');
+            step.textContent = progress.label;
+            step.dataset.label = progress.label;
+            steps.appendChild(step);
+            details.hidden = false;
+          } else if (progress.kind === 'tool_finished') {
+            const open = [...steps.children].reverse()
+              .find(step => step.dataset.label === progress.label && !step.dataset.done);
+            if (open) {
+              open.dataset.done = '1';
+              open.textContent = progress.label + (progress.ok ? ' ✓' : ' (failed)');
+            }
+          }
+          showStatus();
+        });
+        // Between messages, keep the elapsed time moving and notice a quiet stretch.
+        const ticker = setInterval(() => {
+          if (!lastHeard) return;
+          lastElapsed += 1000;
+          showStatus();
+        }, 1000);
+        return () => {
+          clearInterval(ticker);
+          socket.close();
+        };
+      }
+
       async function pollRun(runId, baseline, placeholder) {
         // Poll the platform's record of the run until it finishes, then show the
         // reply or what went wrong.
@@ -698,7 +796,12 @@
             placeholder.textContent = data.error || ('Request failed: ' + res.status);
             return;
           }
-          await pollRun(data.run_id, baseline, placeholder);
+          const stopWatching = watchProgress(data.run_id, placeholder);
+          try {
+            await pollRun(data.run_id, baseline, placeholder);
+          } finally {
+            stopWatching();
+          }
         } catch (err) {
           placeholder.classList.add('error');
           placeholder.textContent = 'Request failed: ' + err.message;

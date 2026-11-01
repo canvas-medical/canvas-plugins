@@ -71,6 +71,10 @@ message RunAgentRequest {
   // What the run may do beyond the tools its manifest grants, such as "revenue",
   // decided by home-app from the requester's permissions.
   repeated string capabilities = 9;
+
+  // Stream AgentRunProgress responses while the run is in progress, before its
+  // final response.
+  bool stream_progress = 10;
 }
 
 message RunAgentRequester {

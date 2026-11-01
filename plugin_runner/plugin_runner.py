@@ -1,4 +1,5 @@
 import base64
+import contextvars
 import json
 import os
 import pathlib
@@ -8,7 +9,7 @@ import sys
 import threading
 import warnings
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ import redis
 import sentry_sdk
 from django.apps import apps as django_apps
 from django.core.signals import request_finished, request_started
+from django.db import connections
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import ConnectionError, TimeoutError
 from redis.retry import Retry
@@ -29,7 +31,7 @@ from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
-from canvas_generated.messages.events_pb2 import AgentRunSummary, AgentToolCall
+from canvas_generated.messages.events_pb2 import AgentRunProgress, AgentRunSummary, AgentToolCall
 from canvas_generated.messages.plugins_pb2 import (
     GetRegisteredEventTypesRequest,
     GetRegisteredEventTypesResponse,
@@ -53,6 +55,7 @@ from canvas_sdk.agents import (
 )
 from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
+from canvas_sdk.agents.progress import ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
     DEFAULT_RUN_SECONDS,
     RUN_TOOL_RESULT_CHARS,
@@ -274,6 +277,70 @@ AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
 # Of those, the ones an extended run (manifest `run_seconds` above the default) may hold,
 # so long runs cannot take every thread from the agents people are waiting on.
 EXTENDED_AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS)
+
+
+# How often a streamed run reports it is alive when nothing else happened, and how
+# often the stream checks for tool events and for the run finishing.
+HEARTBEAT_SECONDS = 2.0
+PROGRESS_POLL_SECONDS = 0.25
+
+
+@dataclass
+class _AgentExecution:
+    """How a run's agent finished: a failure response, or its result and tool grant."""
+
+    failure: EventResponse | None = None
+    result: Any = None
+    effect_grant: Any = None
+
+
+def _stream_progress(
+    recorder: RunRecorder, execute: Callable[[], _AgentExecution]
+) -> Generator[EventResponse, None, _AgentExecution]:
+    """Run ``execute`` on its own thread, streaming the run's progress until it returns.
+
+    The thread runs in a copy of this context and closes its database connections when
+    it finishes. A heartbeat goes out whenever HEARTBEAT_SECONDS pass without a tool
+    event, so the person waiting on the run can tell it is alive.
+    """
+    feed = recorder.progress
+    assert feed is not None
+    outcome: list[_AgentExecution] = []
+    finished = threading.Event()
+    run_context = contextvars.copy_context()
+
+    def work() -> None:
+        try:
+            outcome.append(run_context.run(execute))
+        finally:
+            connections.close_all()
+            finished.set()
+
+    started = monotonic()
+    threading.Thread(target=work, name="agent-run", daemon=True).start()
+    last_sent = started
+
+    def progress(kind: str, label: str = "", ok: bool = False) -> EventResponse:
+        return EventResponse(
+            progress=AgentRunProgress(
+                kind=kind,
+                phase=recorder.phase,
+                elapsed_ms=int((monotonic() - started) * 1000),
+                label=label,
+                ok=ok,
+            )
+        )
+
+    while not finished.is_set():
+        if (event := feed.next(timeout=PROGRESS_POLL_SECONDS)) is not None:
+            yield progress(event.kind, event.label, event.ok)
+            last_sent = monotonic()
+        elif monotonic() - last_sent >= HEARTBEAT_SECONDS:
+            yield progress("heartbeat")
+            last_sent = monotonic()
+    while (event := feed.next(timeout=0)) is not None:
+        yield progress(event.kind, event.label, event.ok)
+    return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
 
 
 def _agent_run_summary(
@@ -627,7 +694,6 @@ class PluginRunner(PluginRunnerServicer):
                 yield EventResponse(success=False, effects=[], error_kind="EXTENDED_RUNS_BUSY")
                 return
 
-            failure: EventResponse | None = None
             # run_tool_loop records model and tool calls here for home-app's run record.
             recorder = RunRecorder()
             # The tool loop stops making model calls short of home-app's deadline, after
@@ -639,110 +705,129 @@ class PluginRunner(PluginRunnerServicer):
                 run_seconds, remaining if remaining is not None else run_seconds
             )
             recorder.max_tool_result_chars = RUN_TOOL_RESULT_CHARS
-            recorder_token = current_recorder.set(recorder)
-            try:
-                with (
-                    plugin_context(f"{module_path}.{class_name}"),
-                    plugin_database_context(
-                        base_plugin_name,
-                        namespace=db_namespace,
-                        access_level=db_access_level,
-                    ),
-                ):
-                    agent = agent_class()
-                    recorder.max_model_calls = agent.max_model_calls
-                    # home-app validated the subject and decided the requester's
-                    # permissions and capabilities before enqueuing the run. A
-                    # capability this SDK does not know names nothing its tools
-                    # check, so it is left out.
-                    agent.subject = RunSubject(
-                        patient_id=request.subject.patient_id or None,
-                        note_id=request.subject.note_id or None,
-                        claim_id=request.subject.claim_id or None,
-                    )
-                    agent.requester = RunRequester(
-                        staff_id=request.requester.staff_id or None,
-                        permissions=(
-                            None
-                            if request.requester.all_permissions
-                            else frozenset(request.requester.permissions)
-                        ),
-                    )
-                    agent.capabilities = frozenset(
-                        Capability(name)
-                        for name in request.capabilities
-                        if name in {known.value for known in Capability}
-                    )
-                    # The manifest's components.agents[].tools grant is what the
-                    # agent may do, less the tools its requester could not use.
-                    # `allowed` holds tool names and `@category` references,
-                    # `denied` is subtracted after expansion, and an agent whose
-                    # manifest grants nothing gets no tools. The agent's registry is
-                    # swapped for the scoped view, and the effect types the
-                    # remaining tools declare bound what the agent may return below,
-                    # bare or, for tools listed under `approve`, as proposals.
-                    effect_grant = apply_tool_grant(
-                        agent, (plugin.get("handler") or {}).get("tools") or {}
-                    )
-                    agent.run_id = request.run_id
-                    # Lifecycle hooks: on_run_start before
-                    # load_state, on_run_end after a successful save_state,
-                    # on_run_error if anything in between raises. Hook
-                    # failures are swallowed by `_invoke_agent_hook` so a
-                    # botched hook can't crash the underlying run.
-                    _invoke_agent_hook(agent, "on_run_start", request.scope_key)
-                    try:
-                        state = agent.load_state(request.scope_key)
-                        result = agent.run(state, gateway, trigger_payload)
-                        if context is not None and not context.is_active():
-                            raise RunDeadlineExceeded(
-                                "the RunAgent call ended before run() returned; "
-                                "its state and effects are discarded"
-                            )
-                        agent.save_state(request.scope_key, result.state)
-                        _invoke_agent_hook(agent, "on_run_end", result)
-                    except Exception as run_exc:
-                        _invoke_agent_hook(agent, "on_run_error", run_exc)
-                        raise
-            except anthropic.APIError as exc:
-                # The gateway refused the call or could not complete it. Only an
-                # outage is worth retrying: a refusal (budget, model, auth,
-                # request shape) would be refused again.
-                error_kind = llm_error_kind(exc)
-                log.warning(
-                    f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
-                )
-                failure = EventResponse(
-                    success=False,
-                    effects=[],
-                    error_kind=error_kind,
-                    agent_run=_agent_run_summary(recorder),
-                )
-            except RunDeadlineExceeded as exc:
-                log.warning(
-                    f"RunAgent: agent {request.agent_id} run {request.run_id} stopped: {exc}"
-                )
-                failure = EventResponse(
-                    success=False, effects=[], agent_run=_agent_run_summary(recorder)
-                )
-            except Exception as exc:
-                log.exception(f"RunAgent: agent {request.agent_id} raised")
-                sentry_sdk.capture_exception(exc)
-                failure = EventResponse(
-                    success=False, effects=[], agent_run=_agent_run_summary(recorder)
-                )
-            finally:
-                current_recorder.reset(recorder_token)
-                # Released before anything is yielded, so the slot frees as soon as
-                # the agent finishes rather than when the caller drains the stream.
-                if extended:
-                    EXTENDED_AGENT_RUN_SLOTS.release()
-                AGENT_RUN_SLOTS.release()
-                sentry_sdk.set_tag("agent-id", None)
 
-            if failure is not None:
-                yield failure
+            def execute() -> _AgentExecution:
+                """Run the agent and release its slots; never raises."""
+                outcome = _AgentExecution()
+                sentry_sdk.set_tag("agent-id", request.agent_id)
+                recorder_token = current_recorder.set(recorder)
+                try:
+                    with (
+                        plugin_context(f"{module_path}.{class_name}"),
+                        plugin_database_context(
+                            base_plugin_name,
+                            namespace=db_namespace,
+                            access_level=db_access_level,
+                        ),
+                    ):
+                        agent = agent_class()
+                        recorder.max_model_calls = agent.max_model_calls
+                        # home-app validated the subject and decided the requester's
+                        # permissions and capabilities before enqueuing the run. A
+                        # capability this SDK does not know names nothing its tools
+                        # check, so it is left out.
+                        agent.subject = RunSubject(
+                            patient_id=request.subject.patient_id or None,
+                            note_id=request.subject.note_id or None,
+                            claim_id=request.subject.claim_id or None,
+                        )
+                        agent.requester = RunRequester(
+                            staff_id=request.requester.staff_id or None,
+                            permissions=(
+                                None
+                                if request.requester.all_permissions
+                                else frozenset(request.requester.permissions)
+                            ),
+                        )
+                        agent.capabilities = frozenset(
+                            Capability(name)
+                            for name in request.capabilities
+                            if name in {known.value for known in Capability}
+                        )
+                        # The manifest's components.agents[].tools grant is what the
+                        # agent may do, less the tools its requester could not use.
+                        # `allowed` holds tool names and `@category` references,
+                        # `denied` is subtracted after expansion, and an agent whose
+                        # manifest grants nothing gets no tools. The agent's registry is
+                        # swapped for the scoped view, and the effect types the
+                        # remaining tools declare bound what the agent may return below,
+                        # bare or, for tools listed under `approve`, as proposals.
+                        outcome.effect_grant = apply_tool_grant(
+                            agent, (plugin.get("handler") or {}).get("tools") or {}
+                        )
+                        agent.run_id = request.run_id
+                        # Lifecycle hooks: on_run_start before
+                        # load_state, on_run_end after a successful save_state,
+                        # on_run_error if anything in between raises. Hook
+                        # failures are swallowed by `_invoke_agent_hook` so a
+                        # botched hook can't crash the underlying run.
+                        _invoke_agent_hook(agent, "on_run_start", request.scope_key)
+                        try:
+                            state = agent.load_state(request.scope_key)
+                            result = agent.run(state, gateway, trigger_payload)
+                            outcome.result = result
+                            if context is not None and not context.is_active():
+                                raise RunDeadlineExceeded(
+                                    "the RunAgent call ended before run() returned; "
+                                    "its state and effects are discarded"
+                                )
+                            agent.save_state(request.scope_key, result.state)
+                            _invoke_agent_hook(agent, "on_run_end", result)
+                        except Exception as run_exc:
+                            _invoke_agent_hook(agent, "on_run_error", run_exc)
+                            raise
+                except anthropic.APIError as exc:
+                    # The gateway refused the call or could not complete it. Only an
+                    # outage is worth retrying: a refusal (budget, model, auth,
+                    # request shape) would be refused again.
+                    error_kind = llm_error_kind(exc)
+                    log.warning(
+                        f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
+                    )
+                    outcome.failure = EventResponse(
+                        success=False,
+                        effects=[],
+                        error_kind=error_kind,
+                        agent_run=_agent_run_summary(recorder),
+                    )
+                except RunDeadlineExceeded as exc:
+                    log.warning(
+                        f"RunAgent: agent {request.agent_id} run {request.run_id} stopped: {exc}"
+                    )
+                    outcome.failure = EventResponse(
+                        success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                    )
+                except Exception as exc:
+                    log.exception(f"RunAgent: agent {request.agent_id} raised")
+                    sentry_sdk.capture_exception(exc)
+                    outcome.failure = EventResponse(
+                        success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                    )
+                finally:
+                    current_recorder.reset(recorder_token)
+                    # Released before anything is yielded, so the slot frees as soon as
+                    # the agent finishes rather than when the caller drains the stream.
+                    if extended:
+                        EXTENDED_AGENT_RUN_SLOTS.release()
+                    AGENT_RUN_SLOTS.release()
+                    sentry_sdk.set_tag("agent-id", None)
+
+                return outcome
+
+            if request.stream_progress:
+                # The agent runs on its own thread while this call streams its progress.
+                recorder.progress = ProgressFeed(agent_progress_level(plugin.get("handler") or {}))
+                execution = yield from _stream_progress(recorder, execute)
+            else:
+                execution = execute()
+            sentry_sdk.set_tag("agent-id", None)
+
+            if execution.failure is not None:
+                yield execution.failure
                 return
+            result = execution.result
+            effect_grant = execution.effect_grant
+            assert result is not None and effect_grant is not None
 
             # Agent effects carry no classname. home-app reads a classname as a CQM
             # protocol identifier: ProtocolCardEffectInterpreter keys a card on

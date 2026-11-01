@@ -11,6 +11,8 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from threading import Lock
 
+from canvas_sdk.agents.progress import ProgressFeed
+
 # Time kept back from a run's deadline for what follows the agent's last model call:
 # saving its state and returning its effects.
 DEADLINE_MARGIN_SECONDS = 30.0
@@ -70,6 +72,11 @@ class RunRecorder:
     max_model_calls: int | None = None
     tool_result_chars: int = 0
     max_tool_result_chars: int | None = None
+    # What the run is doing, for its heartbeats: "thinking" during a model call,
+    # "working" while tools run.
+    phase: str = "thinking"
+    # Where tool events go when the platform streams the run's progress; None otherwise.
+    progress: ProgressFeed | None = None
     _lock: Lock = field(default_factory=Lock, repr=False)
 
     def reserve_model_call(self) -> bool:
@@ -99,6 +106,11 @@ class RunRecorder:
         left = self.seconds_left()
         if left is not None and left <= 0:
             raise RunDeadlineExceeded("the run reached its deadline")
+
+    def report_tool(self, kind: str, label: str, ok: bool = False) -> None:
+        """Report a tool call starting or finishing, when the run's progress is streamed."""
+        if self.progress is not None:
+            self.progress.tool(kind, label, ok)
 
     def record_tool_call(self, call: ToolCallRecord) -> None:
         """Record one dispatched tool call."""
