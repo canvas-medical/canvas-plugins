@@ -1,5 +1,6 @@
 from canvas_sdk.agents import (
     claim_tools,  # noqa: F401  (importing it registers the claims tools)
+    command_edit_tools,  # noqa: F401  (importing it registers the draft edit tools)
     history_tools,  # noqa: F401  (importing it registers the history tools)
 )
 from canvas_sdk.agents.base import AgentPlugin

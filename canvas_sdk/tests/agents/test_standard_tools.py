@@ -30,6 +30,7 @@ from canvas_sdk.test_utils.factories import (
     TaskFactory,
     TaskLabelFactory,
 )
+from canvas_sdk.tests.agents.test_command_edit_tools import staged_command
 from canvas_sdk.v1.data import Observation
 
 EXPECTED_TOOLS = (
@@ -1218,7 +1219,12 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         # Committed, so it is active: resolving takes only an active condition.
         committer=CanvasUserFactory.create(),
     )
+    # Drafts in the run's note, for the edit tools; the second shares the first's note.
+    edited = staged_command(patient)
+    deleted = staged_command(patient, "plan", note=edited.note)
     return {
+        "edit_staged_command": {"command_id": str(edited.id), "fields": {"sig": "2 daily"}},
+        "delete_staged_command": {"command_id": str(deleted.id)},
         "add_banner_alert": {"narrative": "Overdue", "intent": "warning", "placement": ["chart"]},
         "remove_banner_alert": {"banner_key": "banner-1"},
         "create_task": {"title": "Call patient"},
