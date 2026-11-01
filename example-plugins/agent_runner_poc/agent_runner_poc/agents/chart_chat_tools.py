@@ -186,7 +186,7 @@ _PRE_VISIT_BRIEF_SUBAGENTS = (
             "you to summarize this patient's outstanding clinical work "
             "for an upcoming visit. Call `find_tasks` (OPEN tasks), "
             "`find_protocol_cards` (status='due' or 'pending'), and "
-            "`find_open_loops` (orders whose result or consult note has "
+            "`find_open_loops` (orders whose result or consult report has "
             "not come back or has not been reviewed). Pull what's not yet "
             "addressed and what the clinician should follow up on, naming "
             "how long each order has waited. Return 3-5 short bullet "

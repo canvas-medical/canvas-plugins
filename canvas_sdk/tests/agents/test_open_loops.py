@@ -170,8 +170,8 @@ def test_imaging_is_open_until_a_report_comes_back_and_is_reviewed() -> None:
 
 
 @pytest.mark.django_db
-def test_a_referral_waits_for_its_consult_note() -> None:
-    """'Why didn't I get the consult note?' is answered with the specialist and the wait."""
+def test_a_referral_waits_for_its_consult_report() -> None:
+    """'Why didn't I get the consult report?' is answered with the specialist and the wait."""
     patient = PatientFactory.create()
     committer = CanvasUserFactory.create()
     cardiology = ServiceProviderFactory.create(first_name="Heart", last_name="Partners")
@@ -194,8 +194,8 @@ def test_a_referral_waits_for_its_consult_note() -> None:
     waiting = loops["awaiting_result"]
     assert (waiting["type"], waiting["item"]) == ("Referral", "Heart Partners")
     assert waiting["clinical_question"] == "Palpitations"
-    assert waiting["summary"] == "No consult note after 41 days"
-    assert loops["awaiting_review"]["summary"].startswith("Consult note received")
+    assert waiting["summary"] == "No consult report after 41 days"
+    assert loops["awaiting_review"]["summary"].startswith("Consult report received")
 
 
 @pytest.mark.django_db
