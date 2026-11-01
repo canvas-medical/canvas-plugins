@@ -89,6 +89,9 @@ CARD_FIELDS: dict[str, CardFields] = {
         "Stopped medication", "medication_name", ("rationale",), "stopped_at"
     ),
     "OpenLoop": CardFields("Order", "item", ("summary",), "ordered_on", kind_field="type"),
+    "Document": CardFields(
+        "Document", "name", ("category", "from", "review"), "date", kind_field="type"
+    ),
 }
 
 

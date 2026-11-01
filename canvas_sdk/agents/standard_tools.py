@@ -85,8 +85,10 @@ from canvas_sdk.v1.data import (
     Prescription,
     ProtocolCurrent,
     Referral,
+    ReferralReport,
     StopMedicationEvent,
     Task,
+    UncategorizedClinicalDocument,
 )
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.care_team import CareTeamMembershipStatus
@@ -1583,6 +1585,171 @@ def _find_open_loops(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[
     if not arguments.get("include_closed"):
         loops = [loop for loop in loops if loop["status"] != "closed"]
     return sorted(loops, key=lambda loop: loop["ordered_on"] or "", reverse=True)
+
+
+# Longest staff comment, and longest coded value, find_documents returns per document.
+DOCUMENT_COMMENT_CHARS = 500
+DOCUMENT_VALUE_CHARS = 300
+DOCUMENT_KINDS = ("consult_note", "outside_record")
+
+
+def _clip(text: str | None, limit: int) -> str | None:
+    text = (text or "").strip()
+    if not text:
+        return None
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _document_review(review: Any) -> str:
+    if review is None:
+        return "not reviewed"
+    return "reviewed" if review.status == ReviewStatus.STATUS_REVIEWED else "in review"
+
+
+def _consult_notes(patient_id: str, arguments: dict[str, Any], limit: int) -> list[dict[str, Any]]:
+    """Consult notes from referrals: specialty, coded values, and the staff comment."""
+    reports = (
+        ReferralReport.objects.filter(patient__id=patient_id, junked=False)
+        .select_related("review__note", "referral__service_provider")
+        .prefetch_related("codings")
+    )
+    if text := arguments.get("name_contains"):
+        reports = reports.filter(Q(specialty__icontains=text) | Q(comment__icontains=text))
+    if since := arguments.get("dated_on_or_after"):
+        reports = reports.filter(original_date__gte=since)
+    if arguments.get("unreviewed_only"):
+        reports = reports.exclude(review__status=ReviewStatus.STATUS_REVIEWED)
+    rows = []
+    for report in reports.order_by("-original_date", "-created")[:limit]:
+        referral = report.referral
+        provider = referral.service_provider if referral is not None else None
+        review = report.review
+        rows.append(
+            {
+                "id": str(report.id),
+                "type": "Consult note",
+                "name": report.specialty or "Consult note",
+                "from": (
+                    f"{provider.first_name or ''} {provider.last_name or ''}".strip() or None
+                    if provider is not None
+                    else None
+                ),
+                "date": report.original_date.isoformat() if report.original_date else None,
+                "received": report.created.date().isoformat() if report.created else None,
+                "review": _document_review(review),
+                "comment": _clip(report.comment, DOCUMENT_COMMENT_CHARS),
+                "values": [
+                    {
+                        "name": coding.display or coding.code,
+                        "value": _clip(coding.value, DOCUMENT_VALUE_CHARS),
+                    }
+                    for coding in report.codings.all()
+                    if coding.value
+                ],
+                "referral_id": str(referral.id) if referral is not None else None,
+                "note_dbid": review.note.dbid if review is not None and review.note else None,
+            }
+        )
+    return rows
+
+
+def _outside_records(
+    patient_id: str, arguments: dict[str, Any], limit: int
+) -> list[dict[str, Any]]:
+    """Outside records filed on the chart: their name, category, and the staff comment."""
+    documents = UncategorizedClinicalDocument.objects.filter(
+        patient__id=patient_id, junked=False
+    ).select_related("review", "code")
+    if text := arguments.get("name_contains"):
+        documents = documents.filter(
+            Q(name__icontains=text) | Q(comment__icontains=text) | Q(code__display__icontains=text)
+        )
+    if since := arguments.get("dated_on_or_after"):
+        documents = documents.filter(original_date__gte=since)
+    if arguments.get("unreviewed_only"):
+        documents = documents.exclude(review__status=ReviewStatus.STATUS_REVIEWED)
+    return [
+        {
+            "id": str(document.id),
+            "type": "Outside record",
+            "name": document.name or "Outside record",
+            "category": document.code.display if document.code else None,
+            "date": document.original_date.isoformat() if document.original_date else None,
+            "received": document.created.date().isoformat() if document.created else None,
+            "review": _document_review(document.review),
+            "comment": _clip(document.comment, DOCUMENT_COMMENT_CHARS),
+            "has_file": bool(document.document),
+        }
+        for document in documents.order_by("-original_date", "-created")[:limit]
+    ]
+
+
+@standard_tools.tool(
+    name="find_documents",
+    description=(
+        "List consult notes (specialists' reports back on a referral) and outside records "
+        "(documents from other providers filed on the chart) for the patient, newest first. "
+        "Each has its name or specialty, dates, review status, and the staff comment; a "
+        "consult note also has the values entered when it was filed. The documents' full "
+        "text is not included: it lives in the attached file. Use this for 'did the "
+        "cardiology note come in', 'what outside records do we have', and to find a "
+        "document before quoting what staff noted about it."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "kind": {
+                "type": "string",
+                "enum": list(DOCUMENT_KINDS),
+                "description": "Only consult notes or only outside records. Omit for both.",
+            },
+            "name_contains": {
+                "type": "string",
+                "description": (
+                    "Case-insensitive match on the specialty or document name, category, "
+                    "or staff comment (e.g. 'cardiology', 'echo', 'discharge')."
+                ),
+            },
+            "dated_on_or_after": {
+                "type": "string",
+                "format": "date",
+                "description": "ISO 8601 date. Only documents dated on or after it.",
+            },
+            "unreviewed_only": {
+                "type": "boolean",
+                "description": "When true, only documents nobody has finished reviewing.",
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50,
+                "description": "Maximum documents of each kind. Defaults to 15.",
+            },
+        },
+    },
+    categories=("clinical_reads",),
+    cites="Document",
+    returns_description=(
+        "Array of objects with `id`, `type` (Consult note, Outside record), `name`, `date`, "
+        "`received`, `review` (reviewed|in review|not reviewed), and `comment`; consult notes "
+        "add `from`, `values` (`name`, `value`), `referral_id`, and `note_dbid` (the review "
+        "note); outside records add `category` and `has_file`."
+    ),
+)
+def _find_documents(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """The patient's consult notes and outside records, newest first."""
+    patient_id = require_patient_id(ctx)
+    limit = min(max(int(arguments.get("limit") or 15), 1), 50)
+    kind = arguments.get("kind")
+    documents = [
+        *(_consult_notes(patient_id, arguments, limit) if kind != "outside_record" else []),
+        *(_outside_records(patient_id, arguments, limit) if kind != "consult_note" else []),
+    ]
+    return sorted(
+        documents,
+        key=lambda document: document["date"] or document["received"] or "",
+        reverse=True,
+    )
 
 
 @standard_tools.filter_search_tool(

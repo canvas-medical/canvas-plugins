@@ -259,3 +259,21 @@ def test_the_wait_reads_naturally(days: int, summary: str) -> None:
     (loop,) = _loops(patient)
 
     assert loop["summary"] == summary
+
+
+@pytest.mark.django_db
+def test_another_patients_orders_are_absent() -> None:
+    """With orders of every kind on two charts, only the run's patient's are reconciled."""
+    patient, other = PatientFactory.create(), PatientFactory.create()
+    committer = CanvasUserFactory.create()
+    for owner in (patient, other):
+        _lab_order(owner, ("CBC", Status.PROCESSING, None))
+        ImagingOrderFactory.create(patient=owner, imaging="MRI", committer=committer)
+        ReferralFactory.create(patient=owner, committer=committer)
+
+    loops = _loops(patient)
+
+    assert sorted(loop["type"] for loop in loops) == ["Imaging order", "Lab order", "Referral"]
+    assert {loop["note_dbid"] for loop in loops}.isdisjoint(
+        {order.note.dbid for order in other.lab_orders.all()}
+    )
