@@ -30,6 +30,12 @@
   "canvas_sdk.agents.capabilities": [
     "Capability"
   ],
+  "canvas_sdk.agents.citations": [
+    "CITATION_GUIDANCE",
+    "Citation",
+    "Sources",
+    "cite"
+  ],
   "canvas_sdk.agents.gateway": [
     "LLMGateway",
     "LLMGatewayConfigurationError"

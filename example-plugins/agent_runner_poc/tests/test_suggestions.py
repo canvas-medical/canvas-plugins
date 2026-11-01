@@ -1,6 +1,7 @@
 from typing import Any
 
 from agent_runner_poc.agents.chart_chat import SYSTEM_PROMPT as CHART_PROMPT
+from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from agent_runner_poc.agents.claims_chat import SYSTEM_PROMPT as CLAIMS_PROMPT
 from agent_runner_poc.agents.suggestions import split_suggestions
 from agent_runner_poc.applications.chart_chat import _ui_messages
@@ -50,12 +51,13 @@ def test_the_history_carries_each_replys_chips() -> None:
         {"role": "assistant", "content": [{"type": "text", "text": REPLY}]},
     ]
 
-    assert _ui_messages(stored) == [
+    assert _ui_messages(stored, chart_chat_tools) == [
         {"role": "user", "text": "How is her A1c?"},
         {
             "role": "assistant",
             "text": "Her A1c rose from 6.8 to 7.4 over the year.",
             "chips": ["Trend her A1c over 12 months", "Show the last visit note"],
+            "citations": [],
         },
     ]
     assert "```suggestions" in stored[1]["content"][0]["text"]
