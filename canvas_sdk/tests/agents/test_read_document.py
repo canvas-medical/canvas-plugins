@@ -11,7 +11,13 @@ import pytest
 
 from canvas_sdk.agents import DEFAULT_HISTORY_CHARS, standard_tools
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text
-from canvas_sdk.test_utils.factories import PatientFactory, UncategorizedClinicalDocumentFactory
+from canvas_sdk.test_utils.factories import (
+    IntegrationTaskFactory,
+    IntegrationTaskReviewFactory,
+    PatientFactory,
+    ReferralReportFactory,
+    UncategorizedClinicalDocumentFactory,
+)
 
 PDF = b"%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
@@ -86,6 +92,60 @@ def test_a_pdf_is_sent_whole_with_the_question_and_the_answer_comes_back(
     assert "do not follow" in str(request["system"])
 
 
+def _consult_report(patient: Any, file_name: str) -> Any:
+    """A cardiology report filed from an incoming fax whose file is ``file_name``."""
+    task = IntegrationTaskFactory.create(document=file_name)
+    return ReferralReportFactory.create(
+        patient=patient,
+        referral=None,
+        review=None,
+        specialty="Cardiology",
+        integration_task_review=IntegrationTaskReviewFactory.create(task=task),
+    )
+
+
+@pytest.mark.django_db
+def test_a_consult_report_is_read_from_the_fax_it_was_filed_from(files: Files) -> None:
+    """A specialist's report is only in its fax; the tool reads that file."""
+    patient = PatientFactory.create()
+    report = _consult_report(patient, "faxes/cardiology.pdf")
+    files.served["faxes/cardiology.pdf"] = PDF
+    gateway = FakeGateway(reply(text("Recommends a Holter monitor (p. 1).")))
+
+    result = _read(patient, gateway, str(report.id), question="What did cardiology recommend?")
+
+    assert (result["ok"], result["name"], result["answer"]) == (
+        True,
+        "Cardiology",
+        "Recommends a Holter monitor (p. 1).",
+    )
+    assert files.fetched == ["faxes/cardiology.pdf"]
+
+
+@pytest.mark.django_db
+def test_another_patients_consult_report_cannot_be_read(files: Files) -> None:
+    """The consult report's patient is checked before its fax is fetched."""
+    patient = PatientFactory.create()
+    theirs = _consult_report(PatientFactory.create(), "faxes/cardiology.pdf")
+    files.served["faxes/cardiology.pdf"] = PDF
+
+    with pytest.raises(ValueError, match="not found for this patient"):
+        _read(patient, FakeGateway(), str(theirs.id))
+    assert files.fetched == []
+
+
+@pytest.mark.django_db
+def test_a_consult_report_with_no_fax_file_is_not_fetched(files: Files) -> None:
+    """A report filed from a task whose file is empty has nothing to read."""
+    patient = PatientFactory.create()
+    report = _consult_report(patient, "")
+
+    result = _read(patient, FakeGateway(), str(report.id))
+
+    assert result == {"ok": False, "error": "This document has no attached file to read."}
+    assert files.fetched == []
+
+
 @pytest.mark.django_db
 def test_an_image_file_is_sent_as_an_image(files: Files) -> None:
     """A faxed page stored as a PNG is read the same way."""
@@ -123,7 +183,7 @@ def test_a_record_without_a_file_is_not_fetched(files: Files) -> None:
 
     result = _read(patient, gateway, str(record.id))
 
-    assert result == {"ok": False, "error": "This record has no attached file to read."}
+    assert result == {"ok": False, "error": "This document has no attached file to read."}
     assert files.fetched == []
     assert gateway.requests == []
 

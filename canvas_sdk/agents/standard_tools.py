@@ -1389,7 +1389,7 @@ def _open_loop(
     ordered_on = _as_date(ordered)
     result_dates = [d for d in (_as_date(value) for value in resulted_on) if d is not None]
     latest_result = max(result_dates) if result_dates else None
-    noun = "consult note" if kind == "Referral" else "result"
+    noun = "consult report" if kind == "Referral" else "result"
     if not resulted:
         status = "awaiting_result"
         waited = (today - ordered_on).days if ordered_on else None
@@ -1502,7 +1502,7 @@ def _imaging_order_loops(patient_id: str, since: str, today: date) -> list[dict[
 
 
 def _referral_loops(patient_id: str, since: str, today: date) -> list[dict[str, Any]]:
-    """Referrals, closed once a consult note came back and every one was reviewed."""
+    """Referrals, closed once a consult report came back and every one was reviewed."""
     referrals = (
         Referral.objects.committed()
         .filter(patient__id=patient_id, date_referred__date__gte=since)
@@ -1540,9 +1540,9 @@ def _referral_loops(patient_id: str, since: str, today: date) -> list[dict[str, 
     name="find_open_loops",
     description=(
         "Reconcile the patient's lab orders, imaging orders, and referrals with what came "
-        "back: for each order, whether its result (or a referral's consult note) arrived, "
+        "back: for each order, whether its result (or a referral's consult report) arrived, "
         "whether anyone reviewed it, and how many days it has waited. Use it to answer "
-        "'did the labs come back', 'was the study done', 'did we get the consult note', "
+        "'did the labs come back', 'was the study done', 'did we get the consult report', "
         "and to brief a clinician on what is still open since a visit. Status is "
         "`awaiting_result`, `awaiting_review`, or `closed`; only open orders are returned "
         "unless include_closed is true. Newest orders first."
@@ -1592,10 +1592,9 @@ def _find_open_loops(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[
     return sorted(loops, key=lambda loop: loop["ordered_on"] or "", reverse=True)
 
 
-# Longest staff comment, and longest coded value, find_documents returns per document.
+# Longest staff comment find_documents returns per document.
 DOCUMENT_COMMENT_CHARS = 500
-DOCUMENT_VALUE_CHARS = 300
-DOCUMENT_KINDS = ("consult_note", "outside_record")
+DOCUMENT_KINDS = ("consult_report", "outside_record")
 
 
 def _clip(text: str | None, limit: int) -> str | None:
@@ -1611,12 +1610,15 @@ def _document_review(review: Any) -> str:
     return "reviewed" if review.status == ReviewStatus.STATUS_REVIEWED else "in review"
 
 
-def _consult_notes(patient_id: str, arguments: dict[str, Any], limit: int) -> list[dict[str, Any]]:
-    """Consult notes from referrals: specialty, coded values, and the staff comment."""
-    reports = (
-        ReferralReport.objects.filter(patient__id=patient_id, junked=False)
-        .select_related("review__note", "referral__service_provider")
-        .prefetch_related("codings")
+def _consult_reports(
+    patient_id: str, arguments: dict[str, Any], limit: int
+) -> list[dict[str, Any]]:
+    """Specialists' consult reports: specialty, sender, the staff comment, and review.
+
+    The report's content is in its file, on the incoming fax or upload it was filed from.
+    """
+    reports = ReferralReport.objects.filter(patient__id=patient_id, junked=False).select_related(
+        "review__note", "referral__service_provider", "integration_task_review__task"
     )
     if text := arguments.get("name_contains"):
         reports = reports.filter(Q(specialty__icontains=text) | Q(comment__icontains=text))
@@ -1629,11 +1631,12 @@ def _consult_notes(patient_id: str, arguments: dict[str, Any], limit: int) -> li
         referral = report.referral
         provider = referral.service_provider if referral is not None else None
         review = report.review
+        filed_from = report.integration_task_review
         rows.append(
             {
                 "id": str(report.id),
-                "type": "Consult note",
-                "name": report.specialty or "Consult note",
+                "type": "Consult report",
+                "name": report.specialty or "Consult report",
                 "from": (
                     f"{provider.first_name or ''} {provider.last_name or ''}".strip() or None
                     if provider is not None
@@ -1643,14 +1646,7 @@ def _consult_notes(patient_id: str, arguments: dict[str, Any], limit: int) -> li
                 "received": report.created.date().isoformat() if report.created else None,
                 "review": _document_review(review),
                 "comment": _clip(report.comment, DOCUMENT_COMMENT_CHARS),
-                "values": [
-                    {
-                        "name": coding.display or coding.code,
-                        "value": _clip(coding.value, DOCUMENT_VALUE_CHARS),
-                    }
-                    for coding in report.codings.all()
-                    if coding.value
-                ],
+                "has_file": bool(filed_from is not None and filed_from.task.document),
                 "referral_id": str(referral.id) if referral is not None else None,
                 "note_dbid": review.note.dbid if review is not None and review.note else None,
             }
@@ -1692,13 +1688,13 @@ def _outside_records(
 @standard_tools.tool(
     name="find_documents",
     description=(
-        "List consult notes (specialists' reports back on a referral) and outside records "
-        "(documents from other providers filed on the chart) for the patient, newest first. "
-        "Each has its name or specialty, dates, review status, and the staff comment; a "
-        "consult note also has the values entered when it was filed. The documents' full "
-        "text is not included: it lives in the attached file. Use this for 'did the "
-        "cardiology note come in', 'what outside records do we have', and to find a "
-        "document before quoting what staff noted about it."
+        "List consult reports (letters and visit notes specialists send back, filed on the "
+        "chart) and outside records (documents from other providers) for the patient, "
+        "newest first. Each has its specialty or name, dates, review status, a short staff "
+        "comment made when it was filed, and whether a file is attached. What a document "
+        "says is only in its file: read it with `read_document`. Use this for 'did the "
+        "cardiology report come in', 'what outside records do we have', and to find a "
+        "document to read."
     ),
     input_schema={
         "type": "object",
@@ -1706,7 +1702,7 @@ def _outside_records(
             "kind": {
                 "type": "string",
                 "enum": list(DOCUMENT_KINDS),
-                "description": "Only consult notes or only outside records. Omit for both.",
+                "description": "Only consult reports or only outside records. Omit for both.",
             },
             "name_contains": {
                 "type": "string",
@@ -1735,20 +1731,20 @@ def _outside_records(
     categories=("clinical_reads",),
     cites="Document",
     returns_description=(
-        "Array of objects with `id`, `type` (Consult note, Outside record), `name`, `date`, "
-        "`received`, `review` (reviewed|in review|not reviewed), and `comment`; consult notes "
-        "add `from`, `values` (`name`, `value`), `referral_id`, and `note_dbid` (the review "
-        "note); outside records add `category` and `has_file`."
+        "Array of objects with `id`, `type` (Consult report, Outside record), `name`, `date`, "
+        "`received`, `review` (reviewed|in review|not reviewed), `comment`, and `has_file`; "
+        "consult reports add `from`, `referral_id`, and `note_dbid` (the review note); "
+        "outside records add `category`."
     ),
 )
 def _find_documents(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
-    """The patient's consult notes and outside records, newest first."""
+    """The patient's consult reports and outside records, newest first."""
     patient_id = require_patient_id(ctx)
     limit = min(max(int(arguments.get("limit") or 15), 1), 50)
     kind = arguments.get("kind")
     documents = [
-        *(_consult_notes(patient_id, arguments, limit) if kind != "outside_record" else []),
-        *(_outside_records(patient_id, arguments, limit) if kind != "consult_note" else []),
+        *(_consult_reports(patient_id, arguments, limit) if kind != "outside_record" else []),
+        *(_outside_records(patient_id, arguments, limit) if kind != "consult_report" else []),
     ]
     return sorted(
         documents,
@@ -1831,13 +1827,41 @@ def _document_block(content: bytes) -> dict[str, Any] | None:
     return None
 
 
+def _document_to_read(document_id: str, patient_id: str) -> tuple[str, Any] | None:
+    """A patient's document by id: its name, and the record holding its file.
+
+    An outside record holds its own file; a consult report's file is on the incoming
+    fax or upload it was filed from. The holder is None when there is no file, and the
+    result is None when the patient has no document with that id.
+    """
+    record = (
+        UncategorizedClinicalDocument.objects.filter(
+            id=document_id, patient__id=patient_id, junked=False
+        )
+        .only("id", "name", "document")
+        .first()
+    )
+    if record is not None:
+        return record.name or "Outside record", record if record.document else None
+    report = (
+        ReferralReport.objects.filter(id=document_id, patient__id=patient_id, junked=False)
+        .select_related("integration_task_review__task")
+        .first()
+    )
+    if report is None:
+        return None
+    review = report.integration_task_review
+    task = review.task if review is not None else None
+    return report.specialty or "Consult report", task if task and task.document else None
+
+
 @standard_tools.tool(
     name="read_document",
     description=(
-        "Read an outside record's attached file and answer a question from it, with page "
-        "numbers. Use it when the answer is in the document's text rather than in what "
-        "`find_documents` returns, e.g. 'what did the discharge summary say about her "
-        "medications'. Takes the `id` of an outside record from `find_documents` that "
+        "Read a document's attached file and answer a question from it, with page numbers. "
+        "Use it when the answer is in what the document says, e.g. 'what did cardiology "
+        "recommend' or 'what did the discharge summary say about her medications'. Takes "
+        "the `id` of a consult report or outside record from `find_documents` that "
         "`has_file`. Reads the whole file with a separate model call, so it is slow and "
         "costly: ask one focused question, and do not call it for every document."
     ),
@@ -1846,7 +1870,7 @@ def _document_block(content: bytes) -> dict[str, Any] | None:
         "properties": {
             "document_id": {
                 "type": "string",
-                "description": "The `id` of an outside record from `find_documents`.",
+                "description": "The `id` of a document from `find_documents`.",
             },
             "question": {
                 "type": "string",
@@ -1857,27 +1881,24 @@ def _document_block(content: bytes) -> dict[str, Any] | None:
     },
     categories=("document_reads",),
     returns_description=(
-        "Object with `ok`, `document_id`, `name`, and `answer` (the answer, with page "
-        "numbers); `ok: false` with `error` when the record has no readable file."
+        "Object with `ok`, `document_id`, `name`, `answer` (the answer, with page "
+        "numbers), and `note`; `ok: false` with `error` when the document has no readable "
+        "file."
     ),
 )
 def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
-    """Answer a question from one outside record's file, in a model call of its own."""
+    """Answer a question from one document's file, in a model call of its own."""
     gateway = ctx.get("gateway")
     if gateway is None:
         raise ValueError("read_document needs the run's gateway on ctx")
-    document = (
-        UncategorizedClinicalDocument.objects.filter(
-            id=arguments["document_id"], patient__id=require_patient_id(ctx), junked=False
-        )
-        .only("id", "name", "document")
-        .first()
-    )
-    if document is None:
-        raise ValueError(f"Outside record {arguments['document_id']!r} not found for this patient")
-    if not document.document:
-        return {"ok": False, "error": "This record has no attached file to read."}
-    content = _document_file(document)
+    document_id = str(arguments["document_id"])
+    found = _document_to_read(document_id, require_patient_id(ctx))
+    if found is None:
+        raise ValueError(f"Document {document_id!r} not found for this patient")
+    name, holder = found
+    if holder is None:
+        return {"ok": False, "error": "This document has no attached file to read."}
+    content = _document_file(holder)
     if content is None:
         return {"ok": False, "error": "The file is too large to read here; open it in the chart."}
     block = _document_block(content)
@@ -1911,8 +1932,8 @@ def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
         return {"ok": False, "error": f"This file could not be read: {exc.message}"}
     return {
         "ok": True,
-        "document_id": str(document.id),
-        "name": document.name,
+        "document_id": document_id,
+        "name": name,
         "answer": result.text,
         "note": UNTRUSTED_DOCUMENT_NOTE,
     }
