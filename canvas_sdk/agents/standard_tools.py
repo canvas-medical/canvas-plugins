@@ -24,7 +24,7 @@ import base64
 import re
 import time
 from collections.abc import Callable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -82,6 +82,7 @@ from canvas_sdk.v1.data import (
     LabTest,
     LabValue,
     Medication,
+    MedicationHistoryMedication,
     MedicationStatement,
     Message,
     Note,
@@ -90,11 +91,17 @@ from canvas_sdk.v1.data import (
     Patient,
     PracticeLocation,
     Prescription,
+    PrescriptionChangeRequest,
+    PrescriptionChangeRequestType,
+    PrescriptionChangeResponse,
+    PrescriptionResponse,
+    PrescriptionStatus,
     Procedure,
     ProcedureStatus,
     ProtocolCurrent,
     Referral,
     ReferralReport,
+    RefillRequest,
     StopMedicationEvent,
     Task,
     UncategorizedClinicalDocument,
@@ -1238,11 +1245,12 @@ def _serialize_goal(goal: Any) -> dict[str, Any]:
     name="find_imaging_reports",
     description=(
         "Search the patient's imaging reports. Returns each report with "
-        "`id`, `name` (test or modality, e.g., 'Chest X-ray'), "
-        "`assigned_date` (ISO 8601 or null), `source` (e.g., 'internal', "
-        "'external'), and `requires_signature` (bool). Patient scope is "
-        "enforced and junked reports are excluded. Defaults to the 25 "
-        "most-recent reports."
+        "`id`, `name` (test or modality, e.g., 'Chest X-ray'), `date` (when the "
+        "study was done, ISO 8601 or null), `assigned_date` (ISO 8601 or null), "
+        "`source` (e.g., 'internal', 'external'), `requires_signature` (bool), and "
+        "`has_file`. What the radiologist found is in the report's file: read it "
+        "with `read_document`. Patient scope is enforced and junked reports are "
+        "excluded. Defaults to the 25 most-recent reports."
     ),
     queryset_factory=lambda args, pid: ImagingReport.objects.filter(patient__id=pid, junked=False),
     filters={
@@ -1268,7 +1276,8 @@ def _serialize_goal(goal: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=ImagingReport,
     returns_description=(
-        "Array of objects with `id`, `name`, `assigned_date`, `source`, `requires_signature`."
+        "Array of objects with `id`, `name`, `date`, `assigned_date`, `source`, "
+        "`requires_signature`, `has_file`."
     ),
 )
 def _serialize_imaging_report(report: Any) -> dict[str, Any]:
@@ -1276,9 +1285,12 @@ def _serialize_imaging_report(report: Any) -> dict[str, Any]:
     return {
         "id": str(report.id),
         "name": report.name or None,
+        "date": report.original_date.isoformat() if report.original_date else None,
         "assigned_date": report.assigned_date.isoformat() if report.assigned_date else None,
         "source": report.source or None,
         "requires_signature": bool(report.requires_signature),
+        # The address of the file the report was filed from, which read_document reads.
+        "has_file": bool(report.s3_report_url),
     }
 
 
@@ -2016,9 +2028,10 @@ def _document_block(content: bytes) -> dict[str, Any] | None:
 def _document_to_read(document_id: str, patient_id: str) -> tuple[str, Any] | None:
     """A patient's document by id: its name, and the record holding its file.
 
-    An outside record holds its own file; a consult report's file is on the incoming
-    fax or upload it was filed from. The holder is None when there is no file, and the
-    result is None when the patient has no document with that id.
+    An outside record holds its own file, and an imaging report the address of the file
+    it was filed from; a consult report's file is on the incoming fax or upload it was
+    filed from. The holder is None when there is no file, and the result is None when
+    the patient has no document with that id.
     """
     record = (
         UncategorizedClinicalDocument.objects.filter(
@@ -2029,6 +2042,13 @@ def _document_to_read(document_id: str, patient_id: str) -> tuple[str, Any] | No
     )
     if record is not None:
         return record.name or "Outside record", record if record.document else None
+    imaging = (
+        ImagingReport.objects.filter(id=document_id, patient__id=patient_id, junked=False)
+        .only("id", "name", "s3_report_url")
+        .first()
+    )
+    if imaging is not None:
+        return imaging.name or "Imaging report", imaging if imaging.s3_report_url else None
     report = (
         ReferralReport.objects.filter(id=document_id, patient__id=patient_id, junked=False)
         .select_related("integration_task_review__task")
@@ -2046,8 +2066,9 @@ def _document_to_read(document_id: str, patient_id: str) -> tuple[str, Any] | No
     description=(
         "Read a document's attached file and answer a question from it, with page numbers. "
         "Use it when the answer is in what the document says, e.g. 'what did cardiology "
-        "recommend' or 'what did the discharge summary say about her medications'. Takes "
-        "the `id` of a consult report or outside record from `find_documents` that "
+        "recommend', 'what did the MRI show', or 'what did the discharge summary say about "
+        "her medications'. Takes the `id` of a consult report or outside record from "
+        "`find_documents`, or of an imaging report from `find_imaging_reports`, that "
         "`has_file`. Reads the whole file with a separate model call, so it is slow and "
         "costly: ask one focused question, and do not call it for every document."
     ),
@@ -2056,7 +2077,10 @@ def _document_to_read(document_id: str, patient_id: str) -> tuple[str, Any] | No
         "properties": {
             "document_id": {
                 "type": "string",
-                "description": "The `id` of a document from `find_documents`.",
+                "description": (
+                    "The `id` of a document from `find_documents` or an imaging report "
+                    "from `find_imaging_reports`."
+                ),
             },
             "question": {
                 "type": "string",
@@ -2555,13 +2579,16 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
 @standard_tools.filter_search_tool(
     name="find_prescriptions",
     description=(
-        "Search the patient's prescription records (actual Rx events — "
-        "distinct from `find_medications` which surfaces the medication "
-        "list). Each result has `medication_name`, `status`, `written_date` "
-        "(ISO 8601), `dispensed_date` (ISO 8601 or null), `end_date` (ISO "
-        "8601 or null), `sig_original_input`, `dose_form`, `dose_route`, "
-        "`dose_frequency_interval`, and `is_refill`. Patient scope is "
-        "enforced. Defaults to committed prescriptions ordered "
+        "Search the prescriptions written for the patient here (actual Rx events, "
+        "distinct from `find_medications`, which is the medication list, and from "
+        "`find_pharmacy_fills`, which is what pharmacies dispensed). Each result has "
+        "`medication_name`, `status` (where the prescription stands on its way to the "
+        "pharmacy), `written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
+        "`dispense_quantity`, `days_supply`, `refills` (refills allowed), `pharmacy`, "
+        "`prescriber`, `dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`, "
+        "`response` (set when the prescription answers a pharmacy's refill request: "
+        "Approved, Denied, ...), and `error` (why sending failed, when `status` is error). "
+        "Patient scope is enforced. Defaults to committed prescriptions ordered "
         "most-recent first."
     ),
     queryset_factory=lambda args, pid: Prescription.objects.committed().filter(patient__id=pid),
@@ -2575,11 +2602,12 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
         ),
         "status": FilterSpec(
             type="string",
+            enum=[status.value for status in PrescriptionStatus],
             description=(
-                "Filter to a specific prescription status (e.g., 'active', "
-                "'completed', 'cancelled'). Case-insensitive."
+                "Only prescriptions with this status: e.g. 'error' for prescriptions the "
+                "pharmacy never received, 'delivered' for those it did."
             ),
-            apply=lambda qs, v: qs.filter(status__iexact=v),
+            apply=lambda qs, v: qs.filter(status=v),
         ),
         "written_on_or_after": FilterSpec(
             type="string",
@@ -2589,7 +2617,7 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
         ),
     },
     ordering=("-written_date",),
-    select_related=("medication",),
+    select_related=("medication", "compound_medication", "prescriber"),
     prefetch_related=("medication__codings",),
     limit_default=25,
     limit_max=100,
@@ -2599,7 +2627,9 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
     returns_description=(
         "Array of objects with `id`, `medication_name`, `status`, "
         "`written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
-        "`dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`."
+        "`dispense_quantity`, `days_supply`, `refills`, `pharmacy`, `prescriber`, "
+        "`dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`, `response`, "
+        "`error`, `note_dbid`."
     ),
 )
 def _serialize_prescription(prescription: Any) -> dict[str, Any]:
@@ -2610,6 +2640,9 @@ def _serialize_prescription(prescription: Any) -> dict[str, Any]:
         coding = medication.codings.first()
         if coding is not None:
             medication_name = coding.display or ""
+    elif prescription.compound_medication is not None:
+        medication_name = prescription.compound_medication.formulation
+    prescriber = prescription.prescriber
     return {
         "id": str(prescription.id),
         "medication_name": medication_name or "(unknown)",
@@ -2621,12 +2654,263 @@ def _serialize_prescription(prescription: Any) -> dict[str, Any]:
             prescription.dispensed_date.isoformat() if prescription.dispensed_date else None
         ),
         "end_date": prescription.end_date.isoformat() if prescription.end_date else None,
-        "sig_original_input": prescription.sig_original_input or None,
+        "sig_original_input": prescription.combined_sig or None,
+        "dispense_quantity": prescription.dispense_quantity,
+        "days_supply": prescription.duration_in_days,
+        "refills": prescription.count_of_refills_allowed,
+        "pharmacy": prescription.pharmacy_name or None,
+        "prescriber": prescriber.full_name if prescriber is not None else None,
         "dose_form": prescription.dose_form or None,
         "dose_route": prescription.dose_route or None,
         "dose_frequency_interval": prescription.dose_frequency_interval or None,
         "is_refill": bool(prescription.is_refill),
+        "response": (
+            PrescriptionResponse(prescription.response_type).label
+            if prescription.response_type
+            else None
+        ),
+        "error": (
+            prescription.error_message or None
+            if prescription.status == PrescriptionStatus.ERROR
+            else None
+        ),
+        "note_dbid": prescription.note_id,
     }
+
+
+@standard_tools.filter_search_tool(
+    name="find_pharmacy_fills",
+    description=(
+        "Search what pharmacies dispensed to the patient, from the pharmacy network's "
+        "medication history: whatever prescriber wrote it, here or elsewhere. Use it for "
+        "'is she filling her statin', 'when did he last pick up his inhaler', or 'who "
+        "else prescribes for this patient'. Each fill has `drug`, `last_fill_date`, "
+        "`days_supply`, `supply_ends` (last fill plus days supply), `quantity`, "
+        "`refills_remaining`, `fill_number`, `sig`, `pharmacy`, `prescriber`, "
+        "`written_date`, and `retrieved` (when the history was requested). The history is "
+        "only on file once someone requests it for the patient and is current as of "
+        "`retrieved`; no results means no history is on file, not that nothing was filled."
+    ),
+    queryset_factory=lambda args, pid: MedicationHistoryMedication.objects.filter(patient__id=pid),
+    filters={
+        "name_contains": FilterSpec(
+            type="string",
+            description="Case-insensitive substring match on the drug description.",
+            apply=lambda qs, v: qs.filter(drug_description__icontains=v),
+        ),
+        "filled_on_or_after": FilterSpec(
+            type="string",
+            format="date",
+            description="ISO 8601 date. Only fills last filled on or after this date.",
+            apply=lambda qs, v: qs.filter(last_fill_date__date__gte=v),
+        ),
+    },
+    ordering=("-last_fill_date",),
+    limit_default=25,
+    limit_max=100,
+    limit_description="Maximum results to return. Defaults to 25.",
+    categories=("clinical_reads",),
+    model=MedicationHistoryMedication,
+    returns_description=(
+        "Array of objects with `id`, `drug`, `last_fill_date`, `days_supply`, "
+        "`supply_ends`, `quantity`, `refills_remaining`, `fill_number`, `sig`, `pharmacy`, "
+        "`prescriber`, `written_date`, `retrieved`."
+    ),
+)
+def _serialize_pharmacy_fill(fill: Any) -> dict[str, Any]:
+    """Per-row serializer for find_pharmacy_fills."""
+    filled = fill.last_fill_date.date()
+    prescriber = " ".join(filter(None, [fill.prescriber_first_name, fill.prescriber_last_name]))
+    return {
+        "id": str(fill.id),
+        "drug": fill.drug_description or None,
+        "last_fill_date": filled.isoformat(),
+        "days_supply": fill.days_supply,
+        "supply_ends": (
+            (filled + timedelta(days=fill.days_supply)).isoformat() if fill.days_supply else None
+        ),
+        "quantity": fill.quantity,
+        "refills_remaining": fill.refills_remaining,
+        "fill_number": fill.fill_number,
+        "sig": fill.sig or None,
+        "pharmacy": fill.pharmacy_name or None,
+        "prescriber": prescriber or fill.prescriber_business_name or None,
+        "written_date": fill.written_date.date().isoformat() if fill.written_date else None,
+        "retrieved": fill.created.date().isoformat(),
+    }
+
+
+PHARMACY_REQUEST_KINDS = ("refill", "change")
+# Where a pharmacy's request stands: nobody has answered it, a prescriber has, or staff
+# set it aside without answering.
+PHARMACY_REQUEST_STATUSES = ("waiting", "answered", "ignored")
+# How many of each kind of request find_pharmacy_requests reads to filter on status.
+PHARMACY_REQUEST_SCAN = 200
+
+
+def _dispensed(content: dict[str, Any]) -> dict[str, Any]:
+    """The medication a pharmacy's request names, from its Surescripts content."""
+    medication = content.get("dispensed_medication") or content.get("prescribed_medication")
+    return medication if isinstance(medication, dict) else {}
+
+
+def _pharmacy_name(content: dict[str, Any]) -> str | None:
+    pharmacy = content.get("pharmacy")
+    return (pharmacy.get("name") or None) if isinstance(pharmacy, dict) else None
+
+
+def _refill_requests(patient_id: str, limit: int) -> list[dict[str, Any]]:
+    """Refill requests, newest first, each with the prescription that answered it.
+
+    A pharmacy resends a request nobody answered, under the same Rx reference number, so
+    a request counts as answered when any request for that reference has an answer.
+    """
+    requests_ = list(
+        RefillRequest.objects.filter(patient__id=patient_id).order_by("-created")[:limit]
+    )
+    answers: dict[str, Any] = {}
+    for answer in (
+        Prescription.objects.committed()
+        .filter(patient__id=patient_id, refill_request__isnull=False)
+        .exclude(status=PrescriptionStatus.ERROR)
+        .select_related("refill_request")
+        .order_by("written_date")
+    ):
+        reference = answer.refill_request.content.get("rx_reference_number")
+        answers[reference or str(answer.refill_request.id)] = answer
+    rows = []
+    for request in requests_:
+        content = request.content or {}
+        medication = _dispensed(content)
+        answer = answers.get(content.get("rx_reference_number") or str(request.id))
+        status = "answered" if answer else "ignored" if request.ignored else "waiting"
+        rows.append(
+            {
+                "id": str(request.id),
+                "type": "Refill request",
+                "received": request.created.date().isoformat(),
+                "medication": medication.get("drug_description") or None,
+                "sig": medication.get("directions") or None,
+                "quantity": medication.get("quantity") or None,
+                "days_supply": medication.get("days_supply") or None,
+                "last_fill_date": medication.get("last_fill_date") or None,
+                "pharmacy": _pharmacy_name(content),
+                "status": status,
+                "response": (
+                    PrescriptionResponse(answer.response_type).label
+                    if answer is not None and answer.response_type
+                    else None
+                ),
+                "note_dbid": answer.note_id if answer is not None else None,
+            }
+        )
+    return rows
+
+
+def _change_requests(patient_id: str, limit: int) -> list[dict[str, Any]]:
+    """Change requests (substitution, prior authorization, ...), newest first."""
+    requests_ = list(
+        PrescriptionChangeRequest.objects.filter(patient__id=patient_id).order_by("-created")[
+            :limit
+        ]
+    )
+    answers = {
+        response.request_id: response
+        for response in PrescriptionChangeResponse.objects.committed()
+        .filter(request__in=requests_)
+        .order_by("created")
+    }
+    rows = []
+    for request in requests_:
+        content = request.content or {}
+        answer = answers.get(request.dbid)
+        requested = [
+            medication.get("drug_description")
+            for medication in content.get("requested_medications") or []
+            if isinstance(medication, dict) and medication.get("drug_description")
+        ]
+        rows.append(
+            {
+                "id": str(request.id),
+                "type": "Change request",
+                "received": request.created.date().isoformat(),
+                "medication": _dispensed(content).get("drug_description") or None,
+                "change": (
+                    PrescriptionChangeRequestType(request.type_code).label
+                    if request.type_code in PrescriptionChangeRequestType.values
+                    else None
+                ),
+                "requested": requested,
+                "pharmacy": _pharmacy_name(content),
+                "status": "answered" if answer else "waiting",
+                "response": (answer.get_response_type_display() or None) if answer else None,
+                "note_dbid": answer.note_id if answer is not None else None,
+            }
+        )
+    return rows
+
+
+@standard_tools.tool(
+    name="find_pharmacy_requests",
+    description=(
+        "List what pharmacies have asked the practice about the patient's prescriptions, "
+        "newest first: refill requests (renew a prescription that has run out of refills) "
+        "and change requests (a generic or therapeutic substitution, a prior "
+        "authorization, a clarification). Each has the medication, what the pharmacy "
+        "asked, when it arrived, and `status`: waiting (nobody has answered), answered "
+        "(with the prescriber's `response`), or ignored (set aside without an answer). "
+        "Use it for 'any refill requests waiting', 'did we answer the pharmacy about her "
+        "lisinopril', or 'why did the pharmacy ask for a prior auth'."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "kind": {
+                "type": "string",
+                "enum": list(PHARMACY_REQUEST_KINDS),
+                "description": "Only refill requests or only change requests. Omit for both.",
+            },
+            "status": {
+                "type": "string",
+                "enum": list(PHARMACY_REQUEST_STATUSES),
+                "description": "Only requests with this status, e.g. 'waiting'.",
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50,
+                "description": "Maximum requests of each kind. Defaults to 15.",
+            },
+        },
+    },
+    categories=("clinical_reads",),
+    cites="PharmacyRequest",
+    returns_description=(
+        "Array of objects with `id`, `type` (Refill request, Change request), `received`, "
+        "`medication`, "
+        "`pharmacy`, `status` (waiting|answered|ignored), `response`, and `note_dbid` (the "
+        "note the answer was made in); refills add `sig`, `quantity`, `days_supply`, and "
+        "`last_fill_date`; changes add `change` (what kind) and `requested` (the "
+        "medications the pharmacy proposed)."
+    ),
+)
+def _find_pharmacy_requests(
+    arguments: dict[str, Any], *, ctx: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """The patient's refill and change requests from pharmacies, newest first."""
+    patient_id = require_patient_id(ctx)
+    limit = min(max(int(arguments.get("limit") or 15), 1), 50)
+    kind = arguments.get("kind")
+    status = arguments.get("status")
+    # A status is only known once a request is matched to its answer, so a status filter
+    # looks further back and keeps the first ``limit`` matches of each kind.
+    scan = PHARMACY_REQUEST_SCAN if status else limit
+    requests_ = []
+    for wanted, read in (("refill", _refill_requests), ("change", _change_requests)):
+        if kind in (None, wanted):
+            rows = read(patient_id, scan)
+            requests_ += [row for row in rows if status in (None, row["status"])][:limit]
+    return sorted(requests_, key=lambda request: request["received"], reverse=True)
 
 
 @standard_tools.filter_search_tool(
