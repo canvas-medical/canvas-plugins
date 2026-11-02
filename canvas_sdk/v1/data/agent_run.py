@@ -115,7 +115,8 @@ class AgentRunProposal(IdentifiableModel):
     An agent whose manifest lists a tool under ``tools.approve`` proposes that tool's
     changes. ``id`` is what :class:`canvas_sdk.effects.agent.DecideAgentProposal` takes.
     ``tool`` and ``arguments`` are the tool the model called and what it passed, for a
-    plugin's approval card; ``effect_type`` names the change that applies on approval.
+    plugin's approval card; ``effect_types`` names, in order, the changes that apply
+    together on approval.
     """
 
     class Meta:
@@ -132,7 +133,7 @@ class AgentRunProposal(IdentifiableModel):
     agent_id = models.TextField()
     tool = models.TextField()
     arguments = models.JSONField()
-    effect_type = models.TextField()
+    effect_types = models.JSONField()
     # The staff member the agent acted for, the only one who may decide.
     staff = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, null=True, related_name="agent_run_proposals"

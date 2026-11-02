@@ -102,7 +102,7 @@ def test_a_run_shows_only_the_clinicians_own_proposals() -> None:
             agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
             tool=tool,
             arguments={"title": "Call"},
-            effect_type="CREATE_TASK",
+            effect_types=["CREATE_TASK"],
             staff=owner,
             status=AgentRunProposalStatus.PENDING,
             created_at=datetime(2026, 10, 31, tzinfo=UTC),
