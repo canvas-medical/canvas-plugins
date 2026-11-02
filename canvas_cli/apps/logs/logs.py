@@ -21,6 +21,7 @@ from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_toke
 from canvas_cli.apps.platform import auth as platform_auth
 from canvas_cli.apps.platform.client import PlatformClient
 from canvas_cli.apps.plugin.plugin import plugin_url
+from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 # Seconds before a minted token's expiry at which it is replaced.
 EXPIRY_MARGIN_SECONDS = 30
@@ -28,6 +29,8 @@ EXPIRY_MARGIN_SECONDS = 30
 # session authentication first and so sends no WWW-Authenticate challenge. 401 is kept for a
 # proxy or release that does send one.
 REFUSED_TOKEN_STATUSES: tuple[int, ...] = (requests.codes.unauthorized, requests.codes.forbidden)
+# The close code Console sends when it re-checks a Platform-issued token and finds it inactive.
+STREAM_TOKEN_INACTIVE = 4401
 
 
 def _instance_answer(response: requests.Response) -> str:
@@ -120,30 +123,44 @@ class LogToken:
 def log_token_source(host: str) -> LogToken:
     """Choose where the log token for ``host`` comes from.
 
-    Signed in to Canvas Platform, with the instance in the person's list and managed, Platform
-    issues the token. Otherwise (signed out, localhost, an instance Platform does not manage)
-    the credentials.ini token is used. A failed Platform lookup or refusal raises and never
-    falls back to credentials.ini.
+    Signed in to Canvas Platform, a Canvas instance goes through Platform: Platform issues the
+    token for an instance it manages, and any other instance is refused with the way to sign
+    out. Signed out, or for localhost and other hosts that are not Canvas instances, the
+    credentials.ini token is used and the deprecation notice is printed. A failed Platform
+    lookup or refusal raises and never falls back to credentials.ini.
 
     Args:
         host (str): The Canvas instance URL.
 
     Returns:
         LogToken: The token source.
+
+    Raises:
+        click.ClickException: Signed in, and Platform does not manage the instance.
     """
     slug: str | None = instance_slug(host)
     platform: str = platform_auth.resolve_platform_url()
     if slug is not None and platform_auth.stored_tokens(platform) is not None:
         client = PlatformClient(platform)
         row = next((r for r in client.instances() if r.get("slug") == slug), None)
-        if row is not None and row.get("managed"):
+        if row is None or not row.get("managed"):
+            cause: str = (
+                f"{slug} is not one of your instances on Canvas Platform."
+                if row is None
+                else f"Canvas Platform does not manage {slug}."
+            )
+            raise click.ClickException(
+                f"{cause} While you are signed in to Canvas Platform, instance commands go "
+                f"through it. To read {slug}'s logs with credentials.ini, {_platform_sign_out()}."
+            )
 
-            def mint() -> tuple[str, float | None]:
-                body = client.log_token(slug)
-                return body["access_token"], float(body["expires_in"])
+        def mint() -> tuple[str, float | None]:
+            body = client.log_token(slug)
+            return body["access_token"], float(body["expires_in"])
 
-            return LogToken(slug, mint, reissuable=True)
+        return LogToken(slug, mint, reissuable=True)
 
+    print_credentials_ini_deprecation("logs")
     return LogToken(
         slug or host,
         lambda: (get_or_request_api_token(host), None),
@@ -330,12 +347,7 @@ def search_logs(
         if r.status_code in REFUSED_TOKEN_STATUSES and token.reissuable:
             r = fetch(token.refresh())
             if r.status_code in REFUSED_TOKEN_STATUSES:
-                raise click.ClickException(
-                    f"{token.slug} refused the log token Canvas Platform issued. "
-                    f"{_instance_answer(r)}"
-                    f"Run the command again; if it keeps failing, {_platform_sign_out()} "
-                    "to use credentials.ini."
-                )
+                raise _refused_platform_token(token, _instance_answer(r))
     else:
         r = fetch(token)
     r.raise_for_status()
@@ -441,7 +453,7 @@ def _on_error(ws: websocket.WebSocket, error: str) -> None:
     print(f"Error: {error}")
 
 
-def _on_close(ws: websocket.WebSocket, close_status_code: str, close_msg: str) -> None:
+def _on_close(ws: websocket.WebSocket, close_status_code: int | None, close_msg: str) -> None:
     print(f"Connection closed with status code {close_status_code}: {close_msg}")
 
 
@@ -580,19 +592,87 @@ def logs(
         else:
             print("")
 
-        # Resolve the instance name from the Canvas host URL (e.g., extract
-        # 'example' from 'https://example.canvasmedical.com/')
-        instance = instance_slug(host) or cast(str, urlparse(host).hostname)
-        websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
-
         try:
-            ws = websocket.WebSocketApp(
-                websocket_uri,
-                on_message=_on_message,
-                on_error=_on_error,
-                on_close=_on_close,
-            )
-            ws.on_open = _on_open
-            ws.run_forever()
+            stream_logs(host, token)
         except KeyboardInterrupt:
             raise typer.Exit(0) from None
+
+
+def _refused_platform_token(token: LogToken, answer: str = "") -> click.ClickException:
+    """Return the error for a Platform-issued log token the instance or Console refused.
+
+    Args:
+        token (LogToken): The Platform token source.
+        answer (str): What the instance answered, from ``_instance_answer``, or "".
+
+    Returns:
+        click.ClickException: The error naming the instance and the way off Platform.
+    """
+    return click.ClickException(
+        f"{token.slug} refused the log token Canvas Platform issued. {answer}"
+        f"Run the command again; if it keeps failing, {_platform_sign_out()} "
+        "to use credentials.ini."
+    )
+
+
+def _stream_once(url: str) -> tuple[bool, int | None]:
+    """Print one Console log stream connection until it closes.
+
+    Args:
+        url (str): The stream URL, carrying the token.
+
+    Returns:
+        tuple[bool, int | None]: Whether the stream opened, and the close code Console sent
+            (None when the connection ended without one, such as on Ctrl-C).
+    """
+    opened: list[bool] = [False]
+    close_code: list[int | None] = [None]
+
+    def on_open(ws: websocket.WebSocket) -> None:
+        opened[0] = True
+        _on_open(ws)
+
+    def on_close(ws: websocket.WebSocket, close_status_code: int | None, close_msg: str) -> None:
+        close_code[0] = close_status_code
+        _on_close(ws, close_status_code, close_msg)
+
+    ws = websocket.WebSocketApp(
+        url,
+        on_message=_on_message,
+        on_error=_on_error,
+        on_close=on_close,
+    )
+    ws.on_open = on_open
+    ws.run_forever()
+    return opened[0], close_code[0]
+
+
+def stream_logs(host: str, token: LogToken) -> None:
+    """Print the instance's live log stream from Console until it closes.
+
+    Console re-checks a Platform-issued token while the stream is open and closes the stream
+    with ``STREAM_TOKEN_INACTIVE`` once the token is inactive. A Platform stream then mints a
+    fresh token through Platform, which re-checks the person's access, and reconnects. Any
+    other close ends the stream, as does a 4401 on a credentials.ini stream.
+
+    Args:
+        host (str): The Canvas instance URL.
+        token (LogToken): The token source.
+
+    Raises:
+        click.ClickException: Console closed a Platform stream with 4401 before it opened.
+    """
+    # Resolve the instance name from the Canvas host URL (e.g., extract
+    # 'example' from 'https://example.canvasmedical.com/')
+    instance = instance_slug(host) or cast(str, urlparse(host).hostname)
+    while True:
+        opened, close_code = _stream_once(
+            f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
+        )
+        if close_code != STREAM_TOKEN_INACTIVE or not token.reissuable:
+            return
+        if not opened:
+            # A token that is inactive before the stream opens would reconnect in a loop.
+            raise _refused_platform_token(token)
+        print("Reconnecting with a fresh log token from Canvas Platform.", file=sys.stderr)
+        token.refresh()
