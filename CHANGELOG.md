@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.266.1 (2026-11-02)
+
+### Bug Fixes
+
+- Adds validation for rescheduling an appointment
+  ([#1968](https://github.com/canvas-medical/canvas-plugins/pull/1968),
+  [`fb671a0`](https://github.com/canvas-medical/canvas-plugins/commit/fb671a0a762274440de49812c48490a2df97f764))
+
+
 ## v0.266.0 (2026-11-02)
 
 ### Features
