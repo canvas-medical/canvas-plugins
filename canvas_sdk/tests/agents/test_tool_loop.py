@@ -129,16 +129,23 @@ def test_an_ungranted_tool_is_reported_as_unknown() -> None:
     assert "Unknown tool" in tool_result["content"]
 
 
-def test_complete_tool_calls_cut_off_by_max_tokens_still_run() -> None:
-    """max_tokens with tool calls dispatches them and continues."""
+def test_a_turn_cut_off_by_max_tokens_runs_only_its_complete_tool_calls() -> None:
+    """The last call in a cut-off turn is where generation stopped, so its input may be cut.
+
+    The calls before it run; the last is answered with an error asking the model to make
+    it again, rather than run with missing or truncated arguments.
+    """
     client = FakeGateway(
-        _response("max_tokens", _tool_use("read_chart", "t1")),
+        _response("max_tokens", _tool_use("read_chart", "t1"), _tool_use("read_chart", "t2")),
         _response("end_turn", _text("done")),
     )
 
     result = _run(client)
 
-    assert client.requests[1]["messages"][-1]["content"][0]["tool_use_id"] == "t1"
+    first, last = client.requests[1]["messages"][-1]["content"]
+    assert (first["tool_use_id"], first.get("is_error", False)) == ("t1", False)
+    assert (last["tool_use_id"], last["is_error"]) == ("t2", True)
+    assert "cut off" in last["content"]
     assert result.stopped == "end_turn"
 
 
