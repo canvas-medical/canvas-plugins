@@ -68,7 +68,7 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 `canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance; before platform has read the instance at all, the command says so and exits 1. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
 
-git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
+git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin and publisher named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
 
 ```console
 $ canvas login
@@ -241,8 +241,13 @@ $ canvas clone [OPTIONS] NAME [DIRECTORY]
 
 **Arguments**:
 
-- `NAME`: Plugin name, e.g. `acme__intake` [required]
+- `NAME`: Plugin name, e.g. `intake` [required]
 - `DIRECTORY`: Where to clone it, a directory named after the plugin by default
+
+**Options**:
+
+- `--publisher <slug>`: Organization that publishes the plugin, when two publishers share the name
+- `--help`: Show this message and exit.
 
 ## `canvas install`
 

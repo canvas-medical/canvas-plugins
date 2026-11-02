@@ -418,9 +418,25 @@ def _read_credential_request(stream: TextIO) -> dict[str, str]:
     return request
 
 
-def plugin_from_repo_path(path: str) -> str:
-    """The plugin name in a repository path ``<publisher>/<name>.git``."""
-    return path.strip("/").rsplit("/", 1)[-1].removesuffix(".git")
+def repo_plugin(path: str) -> tuple[str | None, str]:
+    """The publisher and plugin name in a repository path.
+
+    Platform's paths are ``/git/<publisher>/<name>.git``. The leading ``git`` segment is
+    the server's mount point, so the publisher is the segment before the name only when
+    one remains.
+
+    Args:
+        path (str): The repository path git sends to the credential helper.
+
+    Returns:
+        tuple[str | None, str]: The publisher (None for a bare ``<name>.git``) and the name.
+    """
+    segments: list[str] = path.strip("/").split("/")
+    if segments[0] == "git":
+        segments = segments[1:]
+    name: str = segments[-1].removesuffix(".git")
+    publisher: str | None = segments[-2] if len(segments) >= 2 else None
+    return publisher, name
 
 
 def git_credential(
@@ -446,7 +462,8 @@ def git_credential(
         raise typer.Exit(1)
     try:
         client = PlatformClient(auth.resolve_platform_url(platform))
-        credential = client.git_credentials(plugin_from_repo_path(path))
+        publisher, name = repo_plugin(path)
+        credential = client.git_credentials(name, publisher)
     except click.ClickException as error:
         print(f"canvas: {error.message}", file=sys.stderr)
         raise typer.Exit(1) from error
@@ -644,17 +661,25 @@ def deploy(
 
 
 def clone(
-    name: str = typer.Argument(..., help="Name of the plugin to clone, e.g. acme__intake"),
+    name: str = typer.Argument(..., help="Name of the plugin to clone, e.g. intake"),
     directory: Path | None = typer.Argument(
         None, help="Where to clone it [default: a directory named after the plugin]"
+    ),
+    publisher: str | None = typer.Option(
+        None,
+        "--publisher",
+        help="Organization slug that publishes the plugin, when two publishers share the name",
     ),
 ) -> None:
     """Clone a plugin's repository from Canvas Platform, ready to deploy."""
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
-    plugin = client.plugin(name)
+    plugin = client.plugin(name, publisher)
     if plugin is None:
-        raise typer.BadParameter(f"Canvas Platform has no plugin named '{name}' that you can see.")
+        by: str = f" published by '{publisher}'" if publisher else ""
+        raise typer.BadParameter(
+            f"Canvas Platform has no plugin named '{name}'{by} that you can see."
+        )
     destination = directory or Path(name)
     if destination.exists():
         raise typer.BadParameter(f"'{destination}' already exists.")

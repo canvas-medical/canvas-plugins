@@ -1329,7 +1329,9 @@ def test_deploy_denies_consent_interactively(
 def test_git_credential_mints_a_token_for_the_repository_in_the_request(
     requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """`get` derives the plugin from the repository path and prints git's credential fields."""
+    """`get` derives the plugin and publisher from the repository path and prints git's
+    credential fields.
+    """
     requests_mock.post(
         f"{API}/plugins/{NAME}/git-credentials",
         json={"username": "dana", "password": "cnvs_git_1", "expires_at": "2026-10-01T13:00:00Z"},
@@ -1347,6 +1349,28 @@ def test_git_credential_mints_a_token_for_the_repository_in_the_request(
         "password=cnvs_git_1",
         "password_expiry_utc=1790859600",
     ]
+    assert requests_mock.last_request is not None
+    assert requests_mock.last_request.qs == {"publisher": ["acme"]}
+
+
+def test_git_credential_for_a_bare_repository_path_sends_no_publisher(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A path with only `<name>.git` names no publisher, so Platform resolves the name alone."""
+    requests_mock.post(
+        f"{API}/plugins/intake/git-credentials",
+        json={"username": "dana", "password": "cnvs_git_1"},
+    )
+
+    result = runner.invoke(
+        app,
+        ["git-credential", "--platform", PLATFORM, "get"],
+        input="protocol=https\nhost=git.platform.example\npath=intake.git\n\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert requests_mock.last_request is not None
+    assert requests_mock.last_request.qs == {}
 
 
 def test_git_credential_without_a_path_names_the_setting(
@@ -1388,10 +1412,14 @@ def test_git_credential_refusal_goes_to_stderr_and_fails(
     assert "password=" not in result.output
 
 
-def test_plugin_from_repo_path() -> None:
-    """The plugin is the last path segment without `.git`, with or without a leading slash."""
-    assert commands.plugin_from_repo_path(f"acme/{NAME}.git") == NAME
-    assert commands.plugin_from_repo_path(f"/git/acme/{NAME}.git") == NAME
+def test_repo_plugin() -> None:
+    """The name is the last path segment without `.git`; the segment before it is the publisher."""
+    assert commands.repo_plugin(f"acme/{NAME}.git") == ("acme", NAME)
+    assert commands.repo_plugin("/git/acme/intake.git") == ("acme", "intake")
+    assert commands.repo_plugin("intake.git") == (None, "intake")
+    assert commands.repo_plugin("/intake.git") == (None, "intake")
+    # `git` is the server's mount point, not a publisher.
+    assert commands.repo_plugin("/git/intake.git") == (None, "intake")
 
 
 # -- config and uninstall ----------------------------------------------------
@@ -1672,6 +1700,37 @@ def test_clone_of_an_unknown_plugin(
     assert "no plugin named" in result.output
 
 
+def test_clone_passes_the_publisher(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """`--publisher` selects the plugin when two publishers share the name, and the refusal
+    names it.
+    """
+    requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
+
+    result = runner.invoke(app, ["clone", "intake", "--publisher", "acme"])
+
+    assert result.exit_code == 2
+    assert requests_mock.last_request is not None
+    assert requests_mock.last_request.qs == {"publisher": ["acme"]}
+    assert "published by 'acme'" in result.output
+
+
+def test_clone_of_an_ambiguous_name_prints_platforms_sentence(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A 409 from Platform tells the person to pass `--publisher`; the CLI relays that sentence."""
+    sentence = "Two publishers have a plugin named 'intake'; pass ?publisher=<slug>."
+    requests_mock.get(
+        f"{API}/plugins/intake", status_code=409, json={"error": sentence, "code": "ambiguous"}
+    )
+
+    result = runner.invoke(app, ["clone", "intake"])
+
+    assert result.exit_code == 1
+    assert sentence in result.output
+
+
 # -- init --------------------------------------------------------------------
 
 
@@ -1871,7 +1930,9 @@ def test_git_runs_the_credential_helper_with_the_repository_path(
 
     assert result.returncode == 0, result.stderr
     assert "password=cnvs_git_1" in result.stdout.splitlines()
-    assert minted == [(f"/api/v1/plugins/{NAME}/git-credentials", "Bearer cnvs_ua_9")]
+    assert minted == [
+        (f"/api/v1/plugins/{NAME}/git-credentials?publisher=acme", "Bearer cnvs_ua_9")
+    ]
 
 
 # -- manifest names ----------------------------------------------------------
