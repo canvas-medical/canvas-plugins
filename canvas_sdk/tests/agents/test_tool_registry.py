@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry
+from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
 
 
 def _passthrough(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
@@ -1534,3 +1534,102 @@ def test_originate_command_tool_refuses_a_field_that_targets_the_note() -> None:
                 "note": EffectField(type="string", description="...", command_field="note_uuid")
             },
         )
+
+
+def _frozen_registry() -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register(
+        {"name": "echo", "description": "echo", "input_schema": {"type": "object"}},
+        _passthrough,
+    )
+    registry.freeze()
+    return registry
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(
+            lambda r: r.register({"name": "extra", "input_schema": {}}, _passthrough),
+            id="register",
+        ),
+        pytest.param(
+            lambda r: r.tool(name="extra", description="...", input_schema={})(_passthrough),
+            id="tool",
+        ),
+        pytest.param(lambda r: r.extend(ToolRegistry()), id="extend"),
+        pytest.param(lambda r: r.set_progress_labels({"echo": "Echoing"}), id="labels"),
+        pytest.param(
+            lambda r: r.add_effect_tool(
+                name="stage_fake", description="...", effect_class=_FakeEffect, fields={}
+            ),
+            id="add_effect_tool",
+        ),
+    ],
+)
+def test_a_frozen_registry_refuses_changes(mutate: Any) -> None:
+    """Once frozen, nothing can add a tool to a registry or relabel one."""
+    registry = _frozen_registry()
+
+    with pytest.raises(RuntimeError, match="read-only"):
+        mutate(registry)
+
+    assert [d["name"] for d in registry.definitions()] == ["echo"]
+    assert registry.progress_label_for("echo") != "Echoing"
+
+
+def test_a_frozen_registry_can_still_be_copied_from() -> None:
+    """Plugins adopt a frozen catalog with extend, scope, and with_approval."""
+    registry = _frozen_registry()
+    mine = ToolRegistry()
+
+    mine.extend(registry)
+    mine.register({"name": "mine", "input_schema": {}}, _passthrough)
+
+    assert [d["name"] for d in mine.definitions()] == ["echo", "mine"]
+    assert [d["name"] for d in registry.scope(["echo"]).definitions()] == ["echo"]
+    assert registry.with_approval(["echo"]).requires_approval("echo")
+
+
+def test_definitions_returned_are_copies() -> None:
+    """Editing a returned definition, however deep, leaves the registry's own unchanged."""
+    registry = ToolRegistry()
+    registry.register(
+        {
+            "name": "echo",
+            "description": "echo",
+            "input_schema": {"type": "object", "properties": {"q": {"type": "string"}}},
+        },
+        _passthrough,
+    )
+
+    returned = registry.definitions()[0]
+    returned["description"] = "changed"
+    returned["input_schema"]["properties"].clear()
+
+    assert registry.definitions()[0]["description"] == "echo"
+    assert registry.definitions()[0]["input_schema"]["properties"] == {"q": {"type": "string"}}
+
+
+def test_registered_definitions_do_not_share_state_with_their_source() -> None:
+    """A registry built from another, or from a caller's dict, holds its own definitions."""
+    definition: dict[str, Any] = {
+        "name": "echo",
+        "input_schema": {"type": "object", "properties": {}},
+    }
+    source = ToolRegistry()
+    source.register(definition, _passthrough)
+    copied = ToolRegistry()
+    copied.extend(source)
+    scoped = source.scope(["echo"])
+
+    definition["input_schema"]["properties"]["injected"] = {"type": "string"}
+
+    for registry in (source, copied, scoped):
+        assert registry.definitions()[0]["input_schema"]["properties"] == {}
+
+
+def test_standard_tools_is_frozen() -> None:
+    """The SDK's shared catalog is complete at import, and no plugin can add to it."""
+    with pytest.raises(RuntimeError, match="read-only"):
+        standard_tools.register({"name": "extra", "input_schema": {}}, _passthrough)

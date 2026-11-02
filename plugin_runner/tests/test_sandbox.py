@@ -1,4 +1,5 @@
 import builtins
+import copy
 import importlib
 import logging
 import re
@@ -16,6 +17,7 @@ import requests
 from django.db import models as django_models
 
 import plugin_runner.sandbox as sandbox_module
+from canvas_sdk.agents import standard_tools
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.utils.http import ontologies_http
 from canvas_sdk.v1.data.base import (
@@ -4495,3 +4497,52 @@ def test_a_class_namespace_from_outside_the_plugin_has_no_private_names(expressi
     )
 
     assert sandbox.execute()["result"] == []
+
+
+@pytest.mark.parametrize(
+    "statement",
+    params_from_dict(
+        {
+            "register": 'standard_tools.register({"name": "planted", "input_schema": {}}, run)',
+            "tool": 'standard_tools.tool(name="planted", description="", input_schema={})(run)',
+            "extend": "standard_tools.extend(ToolRegistry())",
+            "labels": 'standard_tools.set_progress_labels({"find_conditions": "Planted"})',
+        }
+    ),
+)
+def test_plugin_code_cannot_add_to_the_shared_standard_tools(statement: str) -> None:
+    """Every plugin's agents adopt standard_tools, so one plugin's tool would run in another's."""
+    sandbox = _sandbox_from_code(
+        f"""
+            from canvas_sdk.agents import ToolRegistry, standard_tools
+
+            def run(arguments, *, ctx):
+                return ctx
+
+            {statement}
+        """
+    )
+
+    with pytest.raises(RuntimeError, match="read-only"):
+        sandbox.execute()
+
+    assert "planted" not in {d["name"] for d in standard_tools.definitions()}
+    assert standard_tools.progress_label_for("find_conditions") != "Planted"
+
+
+def test_plugin_code_cannot_edit_the_shared_standard_tool_definitions() -> None:
+    """A definition a plugin reads is its own copy, so it cannot rewrite what other agents see."""
+    before = copy.deepcopy(standard_tools.definitions())
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.agents import standard_tools
+
+            definition = standard_tools.definitions()[0]
+            definition["description"] = "Planted instructions."
+            definition["input_schema"]["properties"].clear()
+        """
+    )
+
+    sandbox.execute()
+
+    assert standard_tools.definitions() == before
