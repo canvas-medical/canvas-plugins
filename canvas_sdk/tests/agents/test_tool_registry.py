@@ -1668,3 +1668,39 @@ def test_a_tool_that_fails_keeps_none_of_what_it_staged() -> None:
         registry.execute("half_done", {}, ctx={"effects": effects})
 
     assert effects == ["earlier"]
+
+
+def test_a_failed_call_takes_back_only_its_own_effects_from_a_shared_run_list() -> None:
+    """Sub-agent threads stage into the same run list, so a failure removes only its own.
+
+    The other thread's effect lands after the failing call's, and must survive it.
+    """
+    registry = ToolRegistry()
+    run_effects: list[Any] = ["earlier"]
+    other_threads = _FakeEffect(title="another sub-agent's change")
+
+    @registry.tool(name="half_done", description="...", input_schema={"type": "object"})
+    def _half_done(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        ctx["effects"].append(_FakeEffect(title="staged before failing"))
+        run_effects.append(other_threads)
+        raise ValueError("bad input")
+
+    with pytest.raises(ValueError, match="bad input"):
+        registry.execute("half_done", {}, ctx={"effects": run_effects})
+
+    assert run_effects == ["earlier", other_threads]
+
+
+def test_a_tool_sees_and_removes_the_runs_earlier_drafts() -> None:
+    """A tool reads, and may pop, effects earlier calls in the run staged."""
+    registry = ToolRegistry()
+    run_effects: list[Any] = ["draft", "other"]
+
+    @registry.tool(name="drop_draft", description="...", input_schema={"type": "object"})
+    def _drop_draft(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[Any]:
+        seen = list(ctx["effects"])
+        ctx["effects"].pop(0)
+        return seen
+
+    assert registry.execute("drop_draft", {}, ctx={"effects": run_effects}) == ["draft", "other"]
+    assert run_effects == ["other"]
