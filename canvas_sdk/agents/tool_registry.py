@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -212,7 +213,9 @@ class ToolRegistry:
     The platform-provided :data:`canvas_sdk.agents.standard_tools` is the
     canonical SDK-side registry; plugin authors call
     ``my_registry.extend(standard_tools)`` to adopt the SDK catalog and then
-    layer their own tools on top.
+    layer their own tools on top. Every plugin's agents adopt that one catalog, so
+    it is frozen once the SDK has built it (see :meth:`freeze`), and each registry
+    holds its own copy of every definition.
     """
 
     def __init__(self) -> None:
@@ -244,6 +247,22 @@ class ToolRegistry:
         # Tools whose staged effects become proposals for the requester to approve, set
         # by the platform from the manifest's tools.approve; see with_approval.
         self._approval: frozenset[str] = frozenset()
+        self._frozen = False
+
+    def freeze(self) -> None:
+        """Refuse any further change to this registry's tools or their labels.
+
+        A frozen registry can still be read, copied with :meth:`extend`, and narrowed with
+        :meth:`scope` and :meth:`with_approval`, which return new registries.
+        """
+        self._frozen = True
+
+    def _ensure_mutable(self) -> None:
+        if self._frozen:
+            raise RuntimeError(
+                "This tool registry is read-only. Register tools on your plugin's own "
+                "ToolRegistry, and adopt the standard tools with extend(standard_tools)."
+            )
 
     def register(
         self,
@@ -298,7 +317,9 @@ class ToolRegistry:
                 tool with that name is already registered, if an effect
                 type is not an ``EffectType`` name, or if ``max_result_chars`` is
                 not between 1 and :data:`MAX_TOOL_RESULT_CHARS`.
+            RuntimeError: If the registry is frozen.
         """
+        self._ensure_mutable()
         name = definition.get("name")
         if not name:
             raise ValueError("Tool definition is missing a 'name' key")
@@ -313,7 +334,7 @@ class ToolRegistry:
                 f"Tool {name!r} sets max_result_chars={max_result_chars}; it must be "
                 f"between 1 and {MAX_TOOL_RESULT_CHARS}. Page a larger result instead."
             )
-        self._definitions.append(definition)
+        self._definitions.append(copy.deepcopy(definition))
         self._executors[name] = executor
         for category in categories:
             self._categories.setdefault(category, set()).add(name)
@@ -341,7 +362,9 @@ class ToolRegistry:
 
         Raises:
             ValueError: If a name is not a registered tool.
+            RuntimeError: If the registry is frozen.
         """
+        self._ensure_mutable()
         unknown = sorted(set(labels) - set(self._executors))
         if unknown:
             raise ValueError(f"No such tools to label: {unknown}")
@@ -1066,7 +1089,9 @@ class ToolRegistry:
 
         Raises:
             ValueError: On name collisions between the two registries.
+            RuntimeError: If this registry is frozen.
         """
+        self._ensure_mutable()
         for definition in other._definitions:
             name = definition["name"]
             categories = other.categories_for(name)
@@ -1188,11 +1213,15 @@ class ToolRegistry:
                 (defense in depth — a manifest typo doesn't surface anything
                 extra to the model). When ``None`` (the default), every
                 registered tool is returned.
+
+        Each definition is a copy, so editing one leaves the registry unchanged.
         """
-        if allowed is None:
-            return list(self._definitions)
-        allowed_set = set(allowed)
-        return [d for d in self._definitions if d["name"] in allowed_set]
+        allowed_set = None if allowed is None else set(allowed)
+        return [
+            copy.deepcopy(d)
+            for d in self._definitions
+            if allowed_set is None or d["name"] in allowed_set
+        ]
 
     def execute(
         self,
