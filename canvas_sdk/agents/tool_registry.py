@@ -1,4 +1,5 @@
 import copy
+import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -100,6 +101,62 @@ class EffectField:
     command_field: str | None = None
     pre_build_only: bool = False
     editable: bool = False
+
+
+# Serializes removals from a run's effects list. Sub-agent threads append to the same
+# list, which only adds to its end, so a removal's index stays valid while it holds this.
+_RUN_EFFECTS_LOCK = threading.RLock()
+
+
+class _CallEffects:
+    """A run's effects list as one tool call sees it.
+
+    Reads, appends, and pops go to the run's own list, so a tool sees and can remove
+    drafts earlier calls staged, and other threads see what this call stages. What this
+    call appends is remembered, so a call that fails takes back exactly its own effects,
+    never one a concurrent sub-agent staged after them.
+    """
+
+    def __init__(self, run_effects: Any) -> None:
+        self._run_effects = run_effects
+        self._appended: list[Any] = []
+
+    def append(self, effect: Any) -> None:
+        self._run_effects.append(effect)
+        self._appended.append(effect)
+
+    def extend(self, effects: Iterable[Any]) -> None:
+        for effect in effects:
+            self.append(effect)
+
+    def pop(self, index: int = -1) -> Any:
+        with _RUN_EFFECTS_LOCK:
+            return self._run_effects.pop(index)
+
+    def __iter__(self) -> Any:
+        return iter(list(self._run_effects))
+
+    def __len__(self) -> int:
+        return len(self._run_effects)
+
+    def __getitem__(self, index: Any) -> Any:
+        return self._run_effects[index]
+
+    def take_back(self) -> None:
+        """Remove what this call appended, by identity, from the run's list."""
+        with _RUN_EFFECTS_LOCK:
+            for effect in self._appended:
+                self._remove(effect)
+            self._appended.clear()
+
+    def _remove(self, effect: Any) -> None:
+        if isinstance(self._run_effects, _CallEffects):
+            self._run_effects._remove(effect)
+            return
+        for index, staged in enumerate(self._run_effects):
+            if staged is effect:
+                del self._run_effects[index]
+                return
 
 
 def require_patient_id(ctx: dict[str, Any]) -> str:
@@ -1271,16 +1328,16 @@ class ToolRegistry:
         ):
             raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
         if name not in self._approval:
-            run_effects: list[Any] | None = ctx.get("effects")
-            staged_before = len(run_effects) if run_effects is not None else 0
-            try:
+            if "effects" not in ctx:
+                # Nothing to stage into, as in a direct call to a read tool.
                 return executor(arguments, ctx=ctx)
+            # A call that raises keeps none of what it staged: the model is told it failed,
+            # and a retry would duplicate it.
+            call_effects = _CallEffects(ctx["effects"])
+            try:
+                return executor(arguments, ctx={**ctx, "effects": call_effects})
             except Exception:
-                # A call that raises keeps none of what it staged: the model is told it
-                # failed, and a retry would duplicate it. The tool stages into the run's
-                # own list, so a tool that reads the run's drafts sees them.
-                if run_effects is not None:
-                    del run_effects[staged_before:]
+                call_effects.take_back()
                 raise
         staged: list[Any] = []
         result = executor(arguments, ctx={**ctx, "effects": staged})
