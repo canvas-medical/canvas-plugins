@@ -5,8 +5,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from agent_runner_poc.agents.claims_chat import _save_claims_conversation
-from agent_runner_poc.applications.claims_chat import CLAIMS_CHAT_AGENT_ID, ClaimsChatAPI
+from canvas__agent_runner_poc.agents.claims_chat import _save_claims_conversation
+from canvas__agent_runner_poc.applications.claims_chat import CLAIMS_CHAT_AGENT_ID, ClaimsChatAPI
 
 from canvas_sdk.test_utils.factories import StaffFactory
 from canvas_sdk.v1.data import AgentRun, AgentRunStatus
@@ -52,9 +52,9 @@ def test_a_refused_run_reports_the_platforms_reason() -> None:
     staff = StaffFactory.create()
     run = AgentRun.objects.create(
         id=uuid4(),
-        plugin_name="agent_runner_poc",
+        plugin_name="canvas__agent_runner_poc",
         agent_id=CLAIMS_CHAT_AGENT_ID,
-        handler_name="agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+        handler_name="canvas__agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
         scope="claim",
         scope_key="",
         staff=staff,

@@ -244,11 +244,11 @@
     </form>
     <script>
       const PATIENT_ID = "{{ patient_id|escapejs }}";
-      const HISTORY_URL = `/plugin-io/api/agent_runner_poc/chart-chat-history?patient=${encodeURIComponent(PATIENT_ID)}`;
-      const MESSAGE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-message';
-      const RUN_URL = '/plugin-io/api/agent_runner_poc/chart-chat-run?run_id=';
-      const PROPOSALS_URL = '/plugin-io/api/agent_runner_poc/chart-chat-proposals?run_id=';
-      const DECIDE_URL = '/plugin-io/api/agent_runner_poc/chart-chat-decide';
+      const HISTORY_URL = `/plugin-io/api/canvas__agent_runner_poc/chart-chat-history?patient=${encodeURIComponent(PATIENT_ID)}`;
+      const MESSAGE_URL = '/plugin-io/api/canvas__agent_runner_poc/chart-chat-message';
+      const RUN_URL = '/plugin-io/api/canvas__agent_runner_poc/chart-chat-run?run_id=';
+      const PROPOSALS_URL = '/plugin-io/api/canvas__agent_runner_poc/chart-chat-proposals?run_id=';
+      const DECIDE_URL = '/plugin-io/api/canvas__agent_runner_poc/chart-chat-decide';
       const PROPOSAL_STATUS_TEXT = {
         approved: 'Approved',
         denied: 'Denied',
@@ -263,7 +263,7 @@
       // The run's live progress: heartbeats, and a label per tool call. The platform only
       // lets the clinician who started the run listen.
       const PROGRESS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://')
-        + location.host + '/plugin-io/ws/agent_runner_poc/agent-run-';
+        + location.host + '/plugin-io/ws/canvas__agent_runner_poc/agent-run-';
       // Heartbeats come every couple of seconds; this long without one means the run is
       // waiting on the model rather than working.
       const PROGRESS_QUIET_MS = 30 * 1000;

@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from agent_runner_poc.handlers.longitudinal_trigger import LongitudinalCareAdvisorTrigger
+from canvas__agent_runner_poc.handlers.longitudinal_trigger import LongitudinalCareAdvisorTrigger
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.events import Event, EventRequest, EventType

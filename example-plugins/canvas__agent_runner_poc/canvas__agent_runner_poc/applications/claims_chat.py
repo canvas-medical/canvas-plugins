@@ -23,9 +23,9 @@ the agent's tools, which the platform gates on the revenue capability.
 
 from http import HTTPStatus
 
-from agent_runner_poc.agents.claims_chat import load_claims_conversation
-from agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
-from agent_runner_poc.applications.chart_chat import _ui_messages
+from canvas__agent_runner_poc.agents.claims_chat import load_claims_conversation
+from canvas__agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
+from canvas__agent_runner_poc.applications.chart_chat import _ui_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -35,7 +35,7 @@ from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import AgentRun
 
-CLAIMS_CHAT_AGENT_ID = "agent_runner_poc.agents.claims_chat:ClaimsChatAgent"
+CLAIMS_CHAT_AGENT_ID = "canvas__agent_runner_poc.agents.claims_chat:ClaimsChatAgent"
 
 
 class ClaimsChatApplication(Application):
@@ -44,7 +44,7 @@ class ClaimsChatApplication(Application):
     def on_open(self) -> Effect:
         """Open the chat in queue mode."""
         return LaunchModalEffect(
-            url="/plugin-io/api/agent_runner_poc/claims-chat-ui",
+            url="/plugin-io/api/canvas__agent_runner_poc/claims-chat-ui",
             target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
             title="Claims chat",
         ).apply()
@@ -114,7 +114,7 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         run = AgentRun.objects.filter(
             id=self.request.query_params["run_id"],
-            plugin_name="agent_runner_poc",
+            plugin_name="canvas__agent_runner_poc",
             agent_id=CLAIMS_CHAT_AGENT_ID,
             staff__id=staff_id,
         ).first()

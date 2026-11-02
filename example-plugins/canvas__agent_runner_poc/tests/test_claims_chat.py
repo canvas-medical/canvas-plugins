@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from agent_runner_poc.agents.claims_chat import (
+from canvas__agent_runner_poc.agents.claims_chat import (
     NO_REVENUE_ACCESS,
     ClaimsChatAgent,
     load_claims_conversation,

@@ -18,9 +18,9 @@ State follows the chart chat's snapshot pattern over :class:`ClaimConversation`.
 
 from typing import Any
 
-from agent_runner_poc.agents.suggestions import suggestions_guidance
-from agent_runner_poc.models.claim_conversation import ClaimConversation
-from agent_runner_poc.models.proxy import StaffProxy
+from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
+from canvas__agent_runner_poc.models.claim_conversation import ClaimConversation
+from canvas__agent_runner_poc.models.proxy import StaffProxy
 from canvas_sdk.agents import (
     DEFAULT_HISTORY_CHARS,
     AgentPlugin,

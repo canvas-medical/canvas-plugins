@@ -5,9 +5,9 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
-from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
-from agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
+from canvas__agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
+from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
+from canvas__agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
@@ -26,9 +26,9 @@ def _api(staff_id: str, query: dict[str, str] | None = None, body: Any = None) -
 def _record(staff: Any, status: str, **fields: Any) -> AgentRun:
     return AgentRun.objects.create(
         id=uuid4(),
-        plugin_name="agent_runner_poc",
-        agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
-        handler_name="agent_runner_poc.applications.chart_chat:ChartChatAPI",
+        plugin_name="canvas__agent_runner_poc",
+        agent_id="canvas__agent_runner_poc.agents.chart_chat:ChartChatAgent",
+        handler_name="canvas__agent_runner_poc.applications.chart_chat:ChartChatAPI",
         scope="patient_and_staff",
         scope_key="k",
         staff=staff,
@@ -98,8 +98,8 @@ def test_a_run_shows_only_the_clinicians_own_proposals() -> None:
         AgentRunProposal.objects.create(
             id=uuid4(),
             run=run,
-            plugin_name="agent_runner_poc",
-            agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
+            plugin_name="canvas__agent_runner_poc",
+            agent_id="canvas__agent_runner_poc.agents.chart_chat:ChartChatAgent",
             tool=tool,
             arguments={"title": "Call"},
             effect_types=["CREATE_TASK"],

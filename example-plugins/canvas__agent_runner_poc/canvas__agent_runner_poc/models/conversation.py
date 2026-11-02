@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.db.models import DO_NOTHING, DateTimeField, ForeignKey, Index, JSONField
 
-from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
+from canvas__agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.v1.data.base import CustomModel
 
 
