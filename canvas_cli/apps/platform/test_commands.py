@@ -2769,3 +2769,455 @@ def test_whoami_platform_option_suggests_logging_in_there(
     assert result.exit_code == 1
     assert f"Platform: {PLATFORM} (from --platform)" in result.output
     assert f"Run `canvas login --platform {PLATFORM}`." in result.output
+
+
+# -- scenarios across names, publishers and the wire --------------------------
+
+
+TWO_ORGS: dict[str, Any] = {**ME, "organizations": [ACME, BIG_LEAP]}
+
+
+def _register_big_leap(api: requests_mock_module.Mocker, bare: Path) -> None:
+    """Platform registers ``intake`` under big-leap, answering with ``bare`` as its repository."""
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        status_code=201,
+        json={
+            "name": "intake",
+            "publisher": "big-leap",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+
+
+def _has_main(bare: Path) -> bool:
+    """Whether anything was pushed to the bare repository's ``main``."""
+    probe = subprocess.run(
+        ["git", "-C", str(bare), "rev-parse", "--verify", "-q", "main"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return probe.returncode == 0
+
+
+def test_a_second_deploy_reads_the_publisher_the_first_one_recorded(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S1: the person is asked once, at a terminal, and every later deploy publishes as that
+    choice without a terminal, in registration and in the deployment entry alike.
+    """
+    api.get(f"{API}/me", json=TWO_ORGS)
+    _register_big_leap(api, bare)
+    package = _plain_package(tmp_path)
+
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    first = runner.invoke(
+        app,
+        ["deploy", str(package), "--instance", "acme-staging"],
+        input="2\ny\nRecord publisher\n",
+    )
+    assert first.exit_code == 0, first.output
+    first_sha = _git(bare, "rev-parse", "main")
+
+    monkeypatch.setattr(git, "interactive", lambda: False)
+    (package / "handlers.py").write_text("x = 1\n")
+    _git(package, "add", ".")
+    _git(package, "commit", "-m", "second")
+    second = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert second.exit_code == 0, second.output
+    assert "Which organization" not in second.output
+    assert "several organizations" not in second.output
+    second_sha = _git(bare, "rev-parse", "main")
+    assert second_sha != first_sha
+    assert len(_requests_to(api, "POST", "/orgs/big-leap/plugins")) == 2
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert [r.json()["plugins"] for r in _requests_to(api, "POST", "/deployments")] == [
+        [{"name": "intake", "ref": first_sha, "publisher": "big-leap"}],
+        [{"name": "intake", "ref": second_sha, "publisher": "big-leap"}],
+    ]
+
+
+def test_a_refused_registration_keeps_the_choice_for_the_rerun(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S2: Platform refusing the registration pushes and deploys nothing, and the rerun, often
+    without a terminal, publishes as the org the person already chose instead of asking again.
+    """
+    api.get(f"{API}/me", json=TWO_ORGS)
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        [
+            {
+                "status_code": 403,
+                "json": {
+                    "error": "That needs push_plugin_code in Big Leap.",
+                    "code": "forbidden",
+                },
+            },
+            {
+                "status_code": 201,
+                "json": {
+                    "name": "intake",
+                    "publisher": "big-leap",
+                    "git_url": bare.as_uri(),
+                    "default_branch": "main",
+                },
+            },
+        ],
+    )
+    package = _plain_package(tmp_path)
+
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    refused = runner.invoke(
+        app, ["deploy", str(package), "--instance", "acme-staging"], input="2\n"
+    )
+
+    assert refused.exit_code == 1, refused.output
+    assert "That needs push_plugin_code in Big Leap." in refused.output
+    assert not _has_main(bare)
+    assert not _requests_to(api, "POST", "/deployments")
+    assert commands.manifest_publisher(package) == "big-leap"
+
+    monkeypatch.setattr(git, "interactive", lambda: False)
+    rerun = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging", "--yes"])
+
+    assert rerun.exit_code == 0, rerun.output
+    assert "Which organization" not in rerun.output
+    assert json.loads(_git(bare, "show", "main:intake/CANVAS_MANIFEST.json"))["publisher"] == (
+        "big-leap"
+    )
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"][0]["publisher"] == (
+        "big-leap"
+    )
+
+
+def test_a_monorepo_deploy_refused_for_missing_snapshot_leaves_the_manifest_for_the_rerun(
+    api: requests_mock_module.Mocker,
+    monorepo: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S3: a deploy refused because the package needs --snapshot writes nothing, so the
+    --snapshot rerun the refusal recommends finds the package committed.
+    """
+    api.get(f"{API}/me", json=TWO_ORGS)
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    manifest = monorepo / "CANVAS_MANIFEST.json"
+    before: bytes = manifest.read_bytes()
+
+    refused = runner.invoke(
+        app, ["deploy", str(monorepo), "--instance", "acme-staging"], input="1\n"
+    )
+
+    assert refused.exit_code == 2, refused.output
+    assert "pass --snapshot" in refused.output
+    assert manifest.read_bytes() == before
+
+    rerun = runner.invoke(app, ["deploy", str(monorepo), "--snapshot", "--push-only"], input="1\n")
+
+    assert rerun.exit_code == 0, rerun.output
+    assert _has_main(bare)
+
+
+def test_an_init_scaffold_deploys_as_its_recorded_publisher_after_joining_a_second_org(
+    api: requests_mock_module.Mocker,
+    signed_in: None,
+    bare: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S4: init records the publisher, so a deploy without a terminal after the person joins a
+    second org neither asks nor refuses, and the entry names the org init chose.
+    """
+    monkeypatch.chdir(tmp_path)
+    api.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=201,
+        json={
+            "name": "acme__intake_forms",
+            "publisher": "acme",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+    initialized = runner.invoke(app, ["init"], input="Intake Forms\n")
+    assert initialized.exit_code == 0, initialized.output
+    package_dir = tmp_path / "intake-forms" / "acme__intake_forms"
+
+    api.get(f"{API}/me", json=TWO_ORGS)
+    result = runner.invoke(app, ["deploy", str(package_dir), "--instance", "acme-staging", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "Which organization" not in result.output
+    assert "several organizations" not in result.output
+    pushed = json.loads(_git(bare, "show", "main:acme__intake_forms/CANVAS_MANIFEST.json"))
+    assert (pushed["name"], pushed["publisher"]) == ("acme__intake_forms", "acme")
+    assert len(_requests_to(api, "POST", "/orgs/acme/plugins")) == 2
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "acme__intake_forms", "ref": _git(bare, "rev-parse", "main"), "publisher": "acme"}
+    ]
+
+
+def test_a_clone_by_publisher_mints_git_tokens_for_that_publisher(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S5: `clone --publisher` finds big-leap's `intake`, and git asking for credentials on the
+    clone's origin gets a token minted for big-leap's repository, taken from the cloned path.
+    """
+    canvas = Path(sys.executable).parent / "canvas"
+    if not canvas.exists():
+        pytest.skip("the canvas entry point is not installed beside this interpreter")
+
+    # Platform's git URLs are `<git host>/<publisher>/<name>.git`.
+    git_url = "https://git.platform.example/big-leap/intake.git"
+    source = _plain_package(tmp_path)
+    bare = tmp_path / "server" / "intake.git"
+    bare.mkdir(parents=True)
+    _git(bare, "init", "--bare", "--initial-branch=main")
+    _git(source, "push", bare.as_uri(), "HEAD:main")
+
+    seen: list[tuple[str, str]] = []
+
+    class FakePlatform(BaseHTTPRequestHandler):
+        def _answer(self, payload: dict[str, Any]) -> None:
+            body = json.dumps(payload).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self) -> None:
+            seen.append(("GET", self.path))
+            self._answer({"name": "intake", "publisher": "big-leap", "git_url": git_url})
+
+        def do_POST(self) -> None:
+            seen.append(("POST", self.path))
+            self._answer({"username": "dana", "password": "cnvs_git_1"})
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Keep the request log out of the test output."""
+
+    server = HTTPServer(("127.0.0.1", 0), FakePlatform)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    platform = f"http://127.0.0.1:{server.server_address[1]}"
+    home = tmp_path / "home"
+    credentials = home / ".canvas" / "platform-credentials.json"
+    credentials.parent.mkdir(parents=True)
+    tokens = {"access_token": "cnvs_ua_9", "refresh_token": "cnvs_rt_9", "expires_at": 4102444800}
+    credentials.write_text(json.dumps({"default": platform, "platforms": {platform: tokens}}))
+    monkeypatch.setattr(auth, "CREDENTIALS_PATH", credentials)
+    monkeypatch.setattr(sys, "argv", [str(canvas)])
+    # The clone fetches big-leap's repository from disk; its origin stays Platform's URL.
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", f"url.{bare.as_uri()}.insteadOf")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", git_url)
+    destination = tmp_path / "cloned"
+
+    try:
+        cloned = runner.invoke(
+            app, ["clone", "intake", str(destination), "--publisher", "big-leap"]
+        )
+        assert cloned.exit_code == 0, cloned.output
+        # `remote get-url` applies insteadOf; the configured URL is what git authenticates for.
+        origin = _git(destination, "config", "remote.origin.url")
+        filled = subprocess.run(
+            ["git", "-C", str(destination), "credential", "fill"],
+            input=f"url={origin}\n\n",
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(home), "GIT_CONFIG_GLOBAL": os.devnull},
+            timeout=60,
+        )
+    finally:
+        server.shutdown()
+
+    assert origin == git_url
+    assert filled.returncode == 0, filled.stderr
+    assert "password=cnvs_git_1" in filled.stdout.splitlines()
+    assert seen == [
+        ("GET", "/api/v1/plugins/intake?publisher=big-leap"),
+        ("POST", "/api/v1/plugins/intake/git-credentials?publisher=big-leap"),
+    ]
+
+
+def test_a_platform_that_still_requires_a_prefix_stops_the_deploy_before_git(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None, bare: Path
+) -> None:
+    """S6: until Platform accepts plain names, its registration refusal reaches the person and
+    no code reaches its git server, since there is no publisher to push `intake` under.
+    """
+    sentence = (
+        "A plugin name is lowercase letters, digits and underscores in the form "
+        "<prefix>__<package>, such as acme__my_plugin."
+    )
+    api.post(
+        f"{API}/orgs/acme/plugins",
+        status_code=400,
+        json={"error": sentence, "code": "invalid_name"},
+    )
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert sentence in result.output
+    assert not _has_main(bare)
+    assert not _requests_to(api, "POST", "/deployments")
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+
+
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_on_a_name_two_publishers_share_fails_closed(
+    mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """S7: an ambiguous name is refused with Platform's sentence rather than written through
+    credentials.ini, which would change an instance behind Platform's back.
+    """
+    sentence = "Two publishers have a plugin named 'intake': acme, big-leap. Pass ?publisher=."
+    requests_mock.get(
+        f"{API}/plugins/intake", status_code=409, json={"error": sentence, "code": "ambiguous"}
+    )
+
+    result = runner.invoke(app, ["config", "set", "intake", "A=1", "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert sentence in result.output
+    assert not [r for r in requests_mock.request_history if r.method == "PUT"]
+    mock_update.assert_not_called()
+
+
+def test_an_abandoned_organization_prompt_records_and_registers_nothing(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S8: an unanswered question chose nothing, so nothing is written, registered or committed."""
+    api.get(f"{API}/me", json=TWO_ORGS)
+    _register_big_leap(api, bare)
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+    head = _git(package, "rev-parse", "HEAD")
+
+    def interrupted(*args: object, **kwargs: object) -> None:
+        """Ctrl-C at the prompt, which click turns into Abort."""
+        raise typer.Abort()
+
+    # CliRunner answers an exhausted input with an empty line, so a required prompt would
+    # repeat forever; the interrupt is raised where the prompt reads instead.
+    monkeypatch.setattr(typer, "prompt", interrupted)
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert "Aborted" in result.output
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+    assert _git(package, "rev-parse", "HEAD") == head
+    assert not any("/orgs/" in r.url for r in api.request_history if r.method == "POST")
+
+
+def test_an_org_without_the_push_role_is_not_offered_for_a_push(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """S9: an org where the person cannot push code is no choice for a push, so the one org that
+    can push is used without a prompt or a manifest write.
+    """
+    reader = {**BIG_LEAP, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, reader]})
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert "Which organization" not in result.output
+    assert "Publishing as acme, the only organization you can publish in." in result.output
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+
+
+def test_a_prefixed_name_without_a_publisher_does_not_pick_the_org_from_its_prefix(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """Q2: the prefix is a naming convention only, so a member of several orgs without a
+    terminal is asked to name the publisher even for `acme__intake`.
+    """
+    api.get(f"{API}/me", json=TWO_ORGS)
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "main", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "You can publish in several organizations: acme, big-leap." in result.output
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+def test_a_deploy_of_a_pushed_ref_uses_the_choice_without_writing_the_manifest(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Q4: `--ref` commits nothing, so a recorded choice would sit uncommitted; the choice is
+    used for this deploy and the manifest line is printed instead.
+    """
+    api.get(f"{API}/me", json=TWO_ORGS)
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "main", "--instance", "acme-staging"], input="2\n"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+    assert 'Add "publisher": "big-leap" to CANVAS_MANIFEST.json' in result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": "main", "publisher": "big-leap"}
+    ]
+
+
+def test_an_empty_manifest_publisher_is_refused_as_naming_no_org(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """Q5: an empty string names no organization, so it is refused rather than read as absent."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": ""}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 2, result.output
+    assert "names publisher '', which is not an organization you belong to" in result.output
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+def test_a_null_manifest_publisher_counts_as_absent(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """Q5: `null` is the same as no `publisher`, so the one org publishes."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": None}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"][0]["publisher"] == "acme"
