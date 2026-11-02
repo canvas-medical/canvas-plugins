@@ -53,6 +53,22 @@ class EffectGrant:
         return name in self.direct
 
 
+def _approval_closure(tools: ToolRegistry, approve: frozenset[str]) -> frozenset[str]:
+    """``approve`` and every tool that stages an effect type an approving tool stages.
+
+    The grant check sees effect types, not which tool staged an effect, so a change one
+    tool may only propose cannot also be one another granted tool makes directly.
+    """
+    names = [definition["name"] for definition in tools.definitions()]
+    closed = set(approve)
+    while True:
+        proposable = frozenset().union(*(tools.effect_types_for(name) for name in closed))
+        widened = {name for name in names if tools.effect_types_for(name) & proposable}
+        if widened <= closed:
+            return frozenset(closed)
+        closed |= widened
+
+
 def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGrant:
     """Scope ``agent.tools`` to what the run may use; return what the agent may return.
 
@@ -61,7 +77,8 @@ def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGr
     ``agent.capabilities`` lacks, so set both first. ``allowed`` holds tool names and
     ``@category`` references, ``denied`` is subtracted after expansion, and a grant
     with nothing allowed gives the agent no tools. Tools ``approve`` names, in the same
-    shape, propose their changes for the requester to approve. Sets
+    shape, propose their changes for the requester to approve, and so does any granted
+    tool that stages an effect type one of them stages. Sets
     ``agent.tools_allowed`` and replaces ``agent.tools`` with the scoped view.
     """
     registry = agent.tools or ToolRegistry()
@@ -69,7 +86,9 @@ def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGr
         registry.resolve_allowed(grant.get("allowed") or (), denied=grant.get("denied"))
     )
     usable = granted.usable_by(agent.requester.permissions, agent.capabilities)
-    agent.tools = usable.with_approval(usable.resolve_allowed(grant.get("approve") or ()))
+    agent.tools = usable.with_approval(
+        _approval_closure(usable, usable.resolve_allowed(grant.get("approve") or ()))
+    )
     agent.tools_allowed = frozenset(d["name"] for d in agent.tools.definitions())
     return EffectGrant(
         direct=agent.tools.direct_effect_types(),

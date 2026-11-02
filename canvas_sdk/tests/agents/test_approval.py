@@ -220,3 +220,32 @@ def test_a_decision_carries_the_proposal_and_the_users_choice() -> None:
         "decision": "deny",
         "reason": "wrong patient",
     }
+
+
+@tools.tool(
+    name="create_task_too",
+    description="x",
+    input_schema={"type": "object"},
+    effect_types=("CREATE_TASK",),
+)
+def _create_task_too(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    ctx["effects"].append(Effect(type=EffectType.CREATE_TASK, payload='{"data": {"title": "y"}}'))
+    return {"ok": True}
+
+
+def test_a_tool_sharing_an_effect_type_with_an_approval_tool_proposes_too() -> None:
+    """Approval covers the change, not one tool's name, so no granted tool can make it bare.
+
+    Otherwise agent code could return the change unwrapped, as if a tool needing no
+    approval had staged it, and the grant check could not tell the two apart.
+    """
+    agent = _Agent()
+    grant = apply_tool_grant(
+        agent, {"allowed": ["create_task", "create_task_too"], "approve": ["create_task"]}
+    )
+    assert agent.tools is not None
+    bare = Effect(type=EffectType.CREATE_TASK, payload="{}")
+
+    assert agent.tools.requires_approval("create_task_too")
+    assert grant.direct == frozenset()
+    assert split_granted_effects([bare], grant) == ([], [bare])
