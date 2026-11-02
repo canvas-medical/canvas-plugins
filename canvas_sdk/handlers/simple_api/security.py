@@ -3,9 +3,11 @@ from __future__ import annotations
 from base64 import b64decode
 from collections.abc import Mapping
 from enum import StrEnum
+from functools import cached_property
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
+from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
 from logger import log
 from plugin_runner.exceptions import PluginError
 
@@ -124,7 +126,8 @@ class PortalAccessLevel(StrEnum):
     """
     How much a login may do in one area of the patient's chart.
 
-    Levels compare by how much they allow, NONE < VIEW < ACT, and NONE is falsy.
+    With NONE, hide the area; with VIEW, show it read-only; with ACT, allow its actions too. Levels
+    compare by how much they allow, NONE < VIEW < ACT, and NONE is falsy.
     """
 
     NONE = "none"
@@ -172,7 +175,9 @@ class PortalAccess:
     When another login, such as a parent's, acts on a patient's chart, acting_user_id names it and
     each area is limited to the access it was given; an area Canvas didn't name, or a level it
     doesn't recognize, counts as none. A patient on their own chart may do everything, and a
-    request without a patient session may do nothing.
+    request without a patient session may do nothing. patient is the chart and actor the login
+    acting on it, the patient's own on their own chart; grant is the PortalAccessGrant that gives
+    another login its access there.
     """
 
     AREAS = _PORTAL_AREAS
@@ -181,6 +186,7 @@ class PortalAccess:
         patient_session = headers.get("canvas-logged-in-user-type") == "Patient" and bool(
             headers.get("canvas-logged-in-user-id")
         )
+        self._patient_id = headers.get("canvas-logged-in-user-id") if patient_session else None
 
         # The CanvasUser dbid of the login acting on the patient's chart, when it isn't theirs.
         self.acting_user_id: str | None = (
@@ -209,6 +215,27 @@ class PortalAccess:
     def allows(self, area: str, level: PortalAccessLevel | str) -> bool:
         """Whether the login may do at least `level` in one area of the chart."""
         return self.level(area) >= PortalAccessLevel(level)
+
+    @cached_property
+    def patient(self) -> Patient | None:
+        """The patient whose chart the request acts on, or None without a patient session."""
+        return Patient.objects.filter(id=self._patient_id).first() if self._patient_id else None
+
+    @cached_property
+    def actor(self) -> CanvasUser | None:
+        """The login acting on the chart: acting_user_id's, or on a patient's own chart, theirs."""
+        if self.acting_user_id:
+            return CanvasUser.objects.filter(dbid=self.acting_user_id).first()
+        return self.patient.user if self.patient else None
+
+    @cached_property
+    def grant(self) -> PortalAccessGrant | None:
+        """The grant that gives acting_user_id the chart, or None on a patient's own chart."""
+        if not self.acting_user_id:
+            return None
+        return PortalAccessGrant.objects.filter(
+            user__dbid=self.acting_user_id, patient__id=self._patient_id, revoked_at__isnull=True
+        ).first()
 
 
 def validate_portal_access(

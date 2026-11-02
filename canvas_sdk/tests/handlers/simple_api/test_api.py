@@ -1,3 +1,4 @@
+import datetime
 import json
 import re
 from base64 import b64decode, b64encode
@@ -50,6 +51,7 @@ from canvas_sdk.handlers.simple_api.tools import (
     MultiDict,
     separate_headers,
 )
+from canvas_sdk.test_utils.factories import PatientFactory, PortalAccessGrantFactory
 from plugin_runner.exceptions import PluginError
 
 REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -1184,10 +1186,12 @@ def create_task() -> list[Response | Effect]:
     return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
 
 
-def acting_headers(acting_user_id: str, **levels: str) -> dict[str, str]:
+def acting_headers(
+    acting_user_id: str, patient_id: str = "abc123", **levels: str
+) -> dict[str, str]:
     """Session headers for another login acting on a patient's chart, with its access by area."""
     return {
-        **session_headers("abc123", "Patient"),
+        **session_headers(patient_id, "Patient"),
         "canvas-logged-in-acting-user-id": acting_user_id,
         **{f"canvas-logged-in-access-{area}": level for area, level in levels.items()},
     }
@@ -1381,6 +1385,86 @@ def test_portal_access_on_a_patients_own_chart() -> None:
     assert all(access.allows(area, PortalAccessLevel.ACT) for area in PortalAccess.AREAS)
 
 
+@pytest.mark.django_db
+def test_a_portal_page_reads_the_representative_the_child_and_their_grant() -> None:
+    """A route serving a representative gets them as the actor, the child as the patient, and the
+    grant that gives them the child's chart.
+    """
+    child = PatientFactory.create()
+    grant = PortalAccessGrantFactory.create(patient=child, clinical="none", billing="view")
+
+    class Page(PatientSessionAuthMixin, SimpleAPIRoute):  # type: ignore[misc]
+        PATH = "/page"
+        PORTAL_ACCESS = {}
+
+        def get(self) -> list[Response | Effect]:
+            access = self.request.portal_access
+            assert access.actor and access.patient and access.grant
+            return [
+                JSONResponse(
+                    {
+                        "actor": access.actor.dbid,
+                        "patient": access.patient.id,
+                        "grant": {area: getattr(access.grant, area) for area in PortalAccess.AREAS},
+                    },
+                    status_code=HTTPStatus.OK,
+                )
+            ]
+
+    levels = {area: getattr(grant, area) for area in PortalAccess.AREAS}
+    headers = acting_headers(str(grant.user.dbid), patient_id=child.id, **levels)
+    effects = handle_request(Page, method="GET", path="/page", headers=headers)
+
+    assert json_response_body(effects) == {
+        "actor": grant.user.dbid,
+        "patient": child.id,
+        "grant": {"appointments": "act", "messaging": "act", "clinical": "none", "billing": "view"},
+    }
+
+
+@pytest.mark.django_db
+def test_on_a_patients_own_chart_the_patient_is_the_actor() -> None:
+    """On their own chart, the patient's own login is the actor, and no grant is involved."""
+    patient = PatientFactory.create()
+
+    access = portal_access(session_headers(patient.id, "Patient"))
+
+    assert access.patient == patient
+    assert access.actor == patient.user
+    assert access.grant is None
+
+
+@pytest.mark.django_db
+def test_a_parent_who_is_a_patient_acts_on_their_childs_chart_with_their_own_login() -> None:
+    """A parent with a chart of their own is the actor on a child's chart, with that child's grant."""
+    parent = PatientFactory.create()
+    PortalAccessGrantFactory.create(user=parent.user, patient=PatientFactory.create())
+    child = PatientFactory.create()
+    grant = PortalAccessGrantFactory.create(user=parent.user, patient=child)
+
+    access = portal_access(acting_headers(str(grant.user.dbid), patient_id=child.id))
+
+    assert access.patient == child
+    assert access.actor == parent.user
+    assert access.grant == grant
+
+
+@pytest.mark.django_db
+def test_a_revoked_grant_is_not_the_one_that_gives_the_chart() -> None:
+    """Once revoked, a grant is history: the session's grant is one given since, if any."""
+    child = PatientFactory.create()
+    revoked = PortalAccessGrantFactory.create(
+        patient=child, revoked_at=datetime.datetime.now(datetime.UTC)
+    )
+    headers = acting_headers(str(revoked.user.dbid), patient_id=child.id)
+
+    assert portal_access(headers).grant is None
+
+    given_again = PortalAccessGrantFactory.create(patient=child, user=revoked.user)
+
+    assert portal_access(headers).grant == given_again
+
+
 @pytest.mark.parametrize(
     argnames="headers",
     argvalues=[
@@ -1398,6 +1482,9 @@ def test_portal_access_without_a_patient_session(headers: Mapping[str, str]) -> 
 
     assert access.acting_user_id is None
     assert not any(access.allows(area, PortalAccessLevel.VIEW) for area in PortalAccess.AREAS)
+    assert access.patient is None
+    assert access.actor is None
+    assert access.grant is None
 
 
 def test_portal_access_levels_compare_by_how_much_they_allow() -> None:
