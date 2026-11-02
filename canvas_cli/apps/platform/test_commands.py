@@ -172,45 +172,278 @@ def _requests_to(mock: requests_mock_module.Mocker, method: str, suffix: str) ->
 # -- deploy: validation first ------------------------------------------------
 
 
+BIG_LEAP: dict[str, Any] = {
+    **ACME,
+    "slug": "big-leap",
+    "name": "Big Leap",
+    "plugin_prefix": "big_leap",
+}
+
+
+def _plain_package(tmp_path: Path, manifest: str | None = None, name: str = "intake") -> Path:
+    """A committed package named ``name`` with no org prefix, at ``<repo>/<name>``."""
+    repo = tmp_path / "plain"
+    directory = repo / name
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        manifest if manifest is not None else json.dumps({"name": name})
+    )
+    _git(repo, "init", "--initial-branch=main")
+    _git(repo, "add", name)
+    _git(repo, "commit", "-m", "first")
+    return directory
+
+
+def test_deploy_accepts_a_plain_name(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """A package name needs no org prefix; the publisher is the one organization."""
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    head = _git(package, "rev-parse", "HEAD")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": head, "publisher": "acme"}
+    ]
+    assert "Publishing as acme, the only organization you can publish in." in result.output
+
+
+@pytest.mark.parametrize("name", ["Intake", "1abc", "a" * 64])
 @patch("subprocess.run")
-def test_deploy_refuses_an_unprefixed_name_before_any_git_or_network(
+def test_deploy_refuses_an_invalid_name_before_any_git_or_network(
     mock_run: Mock,
+    name: str,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """An unprefixed manifest name is refused before git runs or platform is called."""
-    directory = tmp_path / "intake"
+    """A name that is not a Python package and a Postgres identifier is refused up front."""
+    directory = tmp_path / name
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake"}))
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": name}))
 
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "publisher-prefixed name like `<your org prefix>__intake`" in result.output
+    assert "at most 63 characters" in result.output
+    assert "starts with a lowercase letter" in result.output
     mock_run.assert_not_called()
     assert not requests_mock.called
 
 
-@patch("subprocess.run")
-def test_deploy_refuses_a_prefix_of_no_organization_the_person_belongs_to(
-    mock_run: Mock,
-    requests_mock: requests_mock_module.Mocker,
-    signed_in: None,
-    tmp_path: Path,
+def test_deploy_uses_the_manifest_publisher(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None, bare: Path
 ) -> None:
-    """A well-formed name with someone else's prefix is refused, listing the person's prefixes."""
-    requests_mock.get(f"{API}/me", json=ME)
-    directory = tmp_path / "beta__intake"
-    directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "beta__intake"}))
+    """A manifest publisher picks the org without a prompt, among several."""
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BIG_LEAP]})
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        status_code=201,
+        json={
+            "name": "intake",
+            "publisher": "big-leap",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "big-leap"}))
 
-    result = runner.invoke(app, ["deploy", str(directory)])
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert "Which organization" not in result.output
+    assert _requests_to(api, "POST", "/orgs/big-leap/plugins")
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+def test_deploy_entry_carries_the_manifest_publisher(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None, bare: Path
+) -> None:
+    """The deployment entry names the publisher the manifest chose."""
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BIG_LEAP]})
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        status_code=201,
+        json={
+            "name": "intake",
+            "publisher": "big-leap",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "big-leap"}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    plugins = _requests_to(api, "POST", "/deployments")[0].json()["plugins"]
+    assert plugins[0]["publisher"] == "big-leap"
+
+
+def test_deploy_refuses_a_manifest_publisher_you_do_not_belong_to(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """A forged publisher is refused before any push, because the CLI trusts only me()."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "globex"}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "<your org prefix>__intake" in result.output
-    assert "acme" in result.output
-    mock_run.assert_not_called()
+    assert "names publisher 'globex', which is not an organization you belong to" in result.output
+    assert "Your organizations: acme." in result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert not any("/orgs/" in r.url for r in api.request_history if r.method == "POST")
+
+
+def test_deploy_names_no_organization_when_the_person_has_none(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """With no membership there is no publisher to choose, and the refusal says so."""
+    api.get(f"{API}/me", json={**ME, "organizations": []})
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "globex"}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "You do not belong to any organization on Canvas Platform." in result.output
+
+
+def test_deploy_refuses_a_manifest_publisher_without_push_role(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """Pushing needs the Plugin developer role in the org the manifest names."""
+    reader = {**ACME, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(f"{API}/me", json={**ME, "organizations": [reader]})
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "acme"}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "Plugin developer" in result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+
+
+def test_deploy_without_push_role_anywhere_names_the_missing_role(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """With no publisher in the manifest and no org that can push, the refusal names the role."""
+    reader = {**ACME, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(f"{API}/me", json={**ME, "organizations": [reader]})
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "Plugin developer" in result.output
+
+
+def test_deploy_with_one_org_leaves_the_manifest_alone(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """The only organization is used without rewriting the person's manifest."""
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+
+
+def test_deploy_with_several_orgs_prompts_and_records_the_choice(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """At a terminal the choice is asked once and recorded in the manifest that gets pushed."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BIG_LEAP]})
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        status_code=201,
+        json={
+            "name": "intake",
+            "publisher": "big-leap",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["deploy", str(package), "--instance", "acme-staging"],
+        input="2\ny\nRecord publisher\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest: dict[str, Any] = json.loads((package / "CANVAS_MANIFEST.json").read_text())
+    assert list(manifest) == ["name", "publisher"]
+    assert manifest["publisher"] == "big-leap"
+    assert "CANVAS_MANIFEST.json now names big-leap as the publisher." in result.output
+    pushed = json.loads(_git(bare, "show", "main:intake/CANVAS_MANIFEST.json"))
+    assert pushed["publisher"] == "big-leap"
+
+
+def test_deploy_with_several_orgs_without_a_terminal_lists_them(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """With no terminal to ask at, the refusal lists the orgs and names the manifest key."""
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BIG_LEAP]})
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "You can publish in several organizations: acme, big-leap." in result.output
+    assert '"publisher"' in result.output
+    assert not any("/orgs/" in r.url for r in api.request_history if r.method == "POST")
+
+
+def test_snapshot_deploy_with_several_orgs_does_not_write_the_manifest(
+    api: requests_mock_module.Mocker,
+    tmp_path: Path,
+    signed_in: None,
+    bare: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A snapshot publishes committed content, so the choice is printed as a hint, not written."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BIG_LEAP]})
+    api.post(
+        f"{API}/orgs/big-leap/plugins",
+        status_code=201,
+        json={
+            "name": "intake",
+            "publisher": "big-leap",
+            "git_url": bare.as_uri(),
+            "default_branch": "main",
+        },
+    )
+    package = _plain_package(tmp_path)
+    before: bytes = (package / "CANVAS_MANIFEST.json").read_bytes()
+
+    result = runner.invoke(app, ["deploy", str(package), "--snapshot", "--push-only"], input="2\n")
+
+    assert result.exit_code == 0, result.output
+    assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
+    assert 'Add "publisher": "big-leap" to CANVAS_MANIFEST.json and commit it' in result.output
+
+
+def test_a_forged_manifest_publisher_is_refused_for_every_deploy_mode(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """The membership check runs for --no-push too, since the deployment entry names the org."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "globex"}))
+
+    result = runner.invoke(app, ["deploy", str(package), "--no-push", "--instance", "acme-staging"])
+
+    assert result.exit_code == 2
+    assert not _requests_to(api, "POST", "/deployments")
 
 
 def test_deploy_needs_a_session(package: Path) -> None:
@@ -241,7 +474,7 @@ def test_deploy_registers_pushes_and_deploys_the_pushed_commit(
     deployment = _requests_to(api, "POST", "/deployments")[0].json()
     assert deployment == {
         "action": "deploy",
-        "plugins": [{"name": NAME, "ref": head}],
+        "plugins": [{"name": NAME, "ref": head, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -310,7 +543,7 @@ def test_deploy_no_push_deploys_main_without_git(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "main"}
+        {"name": NAME, "ref": "main", "publisher": "acme"}
     ]
     mock_run.assert_not_called()
 
@@ -326,7 +559,7 @@ def test_deploy_ref_deploys_that_ref(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "v1.2.0"}
+        {"name": NAME, "ref": "v1.2.0", "publisher": "acme"}
     ]
     mock_run.assert_not_called()
 
@@ -516,7 +749,7 @@ def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
     assert trailers == f"Monorepo-Commit: {head}\nMonorepo-Path: plugins/{NAME}"
     _git(bare, "fsck", "--strict")
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
     assert (root / ".git" / "config").read_text() == config
     assert _git(root, "status", "--porcelain") == ""
@@ -556,7 +789,7 @@ def test_deploy_snapshot_keeps_platform_files_beside_the_package_and_skips_an_un
     assert "Pushed" not in again.output
     assert _git(bare, "rev-parse", "main") == pushed
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
 
 
@@ -1570,10 +1803,25 @@ def test_config_set_signed_out_writes_each_instance_directly(
 
 
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
-def test_config_on_an_unprefixed_plugin_never_asks_platform(
+def test_config_on_a_plain_name_is_refused_for_an_instance_platform_does_not_manage(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """A name platform could never hold goes straight to the instance."""
+    """A plain name is asked of platform like any other; a 404 refuses a Canvas instance target."""
+    requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
+
+    result = runner.invoke(app, ["config", "unset", "intake", "A", "--instance", "legacy"])
+
+    assert result.exit_code == 1
+    assert "Canvas Platform does not manage intake." in result.output
+    assert _requests_to(requests_mock, "GET", "/plugins/intake")
+    mock_update.assert_not_called()
+
+
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_on_a_host_that_is_not_a_canvas_instance_never_asks_platform(
+    mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Platform can never manage a non-Canvas host, so it goes straight to that host."""
     result = runner.invoke(app, ["config", "unset", "intake", "A", "--host", "https://x.example"])
 
     assert result.exit_code == 0, result.output
@@ -1773,6 +2021,7 @@ def test_init_signed_in_prefixes_registers_and_connects_git(
     package_dir = project / "acme__intake_forms"
     manifest = json.loads((package_dir / "CANVAS_MANIFEST.json").read_text())
     assert manifest["name"] == "acme__intake_forms"
+    assert manifest["publisher"] == "acme"
     assert manifest["components"]["handlers"][0]["class"].startswith("acme__intake_forms.handlers.")
     assert _requests_to(requests_mock, "POST", "/orgs/acme/plugins")[0].json() == {
         "name": "acme__intake_forms"
@@ -1803,7 +2052,8 @@ def test_init_asks_which_organization_when_there_are_several(
     result = runner.invoke(app, ["init"], input="2\nIntake\n")
 
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "intake" / "big_leap__intake" / "CANVAS_MANIFEST.json").exists()
+    manifest_path = tmp_path / "intake" / "big_leap__intake" / "CANVAS_MANIFEST.json"
+    assert json.loads(manifest_path.read_text())["publisher"] == "big-leap"
 
 
 def test_init_org_option_must_be_one_the_person_can_publish_in(
@@ -1960,6 +2210,70 @@ def test_manifest_name_requires_a_name(tmp_path: Path) -> None:
         commands.manifest_name(tmp_path)
 
 
+def test_manifest_publisher_is_none_without_the_field(tmp_path: Path) -> None:
+    """A manifest with no `publisher` has none, which is different from an unreadable one."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake"}))
+
+    assert commands.manifest_publisher(tmp_path) is None
+
+
+def test_manifest_publisher_reports_an_unreadable_manifest(tmp_path: Path) -> None:
+    """An unreadable manifest fails closed rather than counting as no publisher."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text("{not json")
+
+    with pytest.raises(typer.BadParameter, match="Could not read"):
+        commands.manifest_publisher(tmp_path)
+
+
+@pytest.mark.parametrize("indent", [2, 4])
+@pytest.mark.parametrize("trailing_newline", [True, False])
+def test_write_manifest_publisher_keeps_the_manifests_formatting(
+    tmp_path: Path, indent: int, trailing_newline: bool
+) -> None:
+    """The publisher lands right after `name`, keeping indent, non-ASCII text and the final newline."""
+    original = {"name": "intake", "description": "Café intake", "components": {"handlers": []}}
+    text = json.dumps(original, indent=indent, ensure_ascii=False)
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text(text + ("\n" if trailing_newline else ""), encoding="utf-8")
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    expected = json.dumps(
+        {
+            "name": "intake",
+            "publisher": "acme",
+            **{k: v for k, v in original.items() if k != "name"},
+        },
+        indent=indent,
+        ensure_ascii=False,
+    )
+    assert manifest.read_text(encoding="utf-8") == expected + ("\n" if trailing_newline else "")
+
+
+def test_write_manifest_publisher_replaces_an_existing_publisher_in_place(tmp_path: Path) -> None:
+    """An existing publisher keeps its position and takes the new slug."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text(
+        json.dumps({"name": "intake", "version": "1", "publisher": "old", "z": 1}, indent=4)
+    )
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert list(json.loads(manifest.read_text())) == ["name", "version", "publisher", "z"]
+    assert json.loads(manifest.read_text())["publisher"] == "acme"
+
+
+def test_write_manifest_publisher_refuses_an_invalid_manifest(tmp_path: Path) -> None:
+    """An unreadable manifest is refused, and the file is left as it was."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text("{not json")
+
+    with pytest.raises(typer.BadParameter, match="Could not read"):
+        commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert manifest.read_text() == "{not json"
+
+
 def test_package_dir_is_the_project_when_the_manifest_sits_at_its_root(tmp_path: Path) -> None:
     """A template that puts the manifest at the project root has the project as its package."""
     (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
@@ -1997,27 +2311,24 @@ def test_deploy_with_no_deployable_instance_says_to_name_one(
     assert not _requests_to(api, "POST", "/deployments")
 
 
-def test_canvas_employee_deploys_a_plugin_under_its_existing_publisher(
+def test_staff_cannot_deploy_under_an_org_they_do_not_belong_to(
     requests_mock: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
 ) -> None:
-    """A Canvas employee outside the plugin's organization deploys it as its existing publisher."""
-    directory = tmp_path / "other__intake"
+    """Staff reach other orgs through Platform, not through a publisher the CLI cannot verify."""
+    directory = tmp_path / "intake"
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "other__intake"}))
-    requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
-    requests_mock.get(
-        f"{API}/plugins/other__intake", json={"name": "other__intake", "publisher": "other"}
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({"name": "intake", "publisher": "globex"})
     )
-    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("succeeded"))
+    requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
 
     result = runner.invoke(
         app, ["deploy", str(directory), "--no-push", "--instance", "other-staging"]
     )
 
-    assert result.exit_code == 0, result.output
-    assert _requests_to(requests_mock, "POST", "/deployments")[0].json()["instances"] == [
-        "other-staging"
-    ]
+    assert result.exit_code == 2
+    assert "which is not an organization you belong to" in result.output
+    assert not _requests_to(requests_mock, "POST", "/deployments")
 
 
 def test_deploy_waits_through_consent_another_person_already_answered(
@@ -2140,17 +2451,18 @@ def test_init_org_option_picks_that_organization(
 
     assert result.exit_code == 0, result.output
     assert "Which organization" not in result.output
-    assert (tmp_path / "intake" / "big_leap__intake" / "CANVAS_MANIFEST.json").exists()
+    manifest_path = tmp_path / "intake" / "big_leap__intake" / "CANVAS_MANIFEST.json"
+    assert json.loads(manifest_path.read_text())["publisher"] == "big-leap"
 
 
-def test_init_without_a_publishing_organization_scaffolds_unprefixed(
+def test_init_without_a_publishing_organization_scaffolds_unregistered(
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Signed in without the right to push code anywhere, init scaffolds without a prefix and
-    registers nothing.
+    """Signed in without the right to push code anywhere, init scaffolds without registering,
+    and records no publisher.
     """
     monkeypatch.chdir(tmp_path)
     viewer = {**ACME, "capabilities": ["view_org_assets"]}
@@ -2159,25 +2471,27 @@ def test_init_without_a_publishing_organization_scaffolds_unprefixed(
     result = runner.invoke(app, ["init"], input="Intake\n")
 
     assert result.exit_code == 0, result.output
-    assert "scaffolded without a publisher prefix" in result.output
-    assert (tmp_path / "intake" / "intake" / "CANVAS_MANIFEST.json").exists()
+    assert "is scaffolded without registration or a git repository" in result.output
+    manifest_path = tmp_path / "intake" / "intake" / "CANVAS_MANIFEST.json"
+    assert "publisher" not in json.loads(manifest_path.read_text())
     assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
 
 
-def test_init_refuses_a_scaffolded_name_platform_would_reject(
+def test_init_refuses_a_scaffolded_name_that_is_too_long(
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A project name that yields an invalid plugin name is refused before registering."""
+    """A project name that yields a name over 63 characters is refused before registering."""
     monkeypatch.chdir(tmp_path)
     requests_mock.get(f"{API}/me", json=ME)
 
-    result = runner.invoke(app, ["init"], input="1 Intake\n")
+    result = runner.invoke(app, ["init"], input=f"{'a' * 60}\n")
 
     assert result.exit_code == 2
     assert "is not a valid plugin name" in result.output
+    assert "at most 63 characters" in result.output
     assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
 
 
@@ -2254,9 +2568,9 @@ def test_init_application_registers_without_creating_a_repository(
 
     assert result.exit_code == 0, result.output
     package_dir = tmp_path / "acme__intake_app"
-    assert json.loads((package_dir / "CANVAS_MANIFEST.json").read_text())["name"] == (
-        "acme__intake_app"
-    )
+    manifest = json.loads((package_dir / "CANVAS_MANIFEST.json").read_text())
+    assert manifest["name"] == "acme__intake_app"
+    assert manifest["publisher"] == "acme"
     assert _requests_to(requests_mock, "POST", "/orgs/acme/plugins")[0].json() == {
         "name": "acme__intake_app"
     }
@@ -2268,17 +2582,18 @@ def test_init_application_registers_without_creating_a_repository(
 # -- init: signed out says so ------------------------------------------------
 
 
-def test_init_signed_out_says_the_plugin_cannot_be_deployed_yet(
+def test_init_signed_out_says_how_to_get_a_registered_plugin(
     requests_mock: requests_mock_module.Mocker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Signed out, init names the platform it checked and says how to get a deployable plugin."""
+    """Signed out, init names the platform it checked and says how to get a registered plugin."""
     monkeypatch.chdir(tmp_path)
 
     result = runner.invoke(app, ["init"], input="Intake Forms\n")
 
     assert result.exit_code == 0, result.output
     assert f"not signed in to Canvas Platform at {auth.DEFAULT_PLATFORM_URL}" in result.output
-    assert "run `canvas login`, then `canvas init` again" in result.output
+    assert "is scaffolded without registration or a git repository" in result.output
+    assert "`canvas login` then `canvas init` gives a registered plugin" in result.output
     assert not requests_mock.called
 
 

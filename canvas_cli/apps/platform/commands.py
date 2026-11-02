@@ -6,8 +6,8 @@ person signed in with ``canvas login``:
 
   * ``canvas login`` / ``canvas logout``: the browser sign-in and its revocation.
   * ``canvas whoami``: which platform, and who the CLI signs in as there.
-  * ``canvas init``: scaffolds a plugin; signed in, it names it
-    ``<prefix>__<package>`` and registers it with platform.
+  * ``canvas init``: scaffolds a plugin; signed in, it names it ``<prefix>__<package>``
+    by convention, records the publisher in its manifest and registers it with platform.
   * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
     plugin inside a larger repository, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
@@ -43,7 +43,10 @@ from canvas_cli.apps.platform.routing import refuse_unmanaged
 from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
-PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
+PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+# A plugin name is a Python package and a Postgres identifier (see PG_NAMEDATALEN in
+# plugin_runner/namespace.py).
+PLUGIN_NAME_MAX_LENGTH = 63
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -61,30 +64,99 @@ _INSTANCE_HELP = "Instance slug to target (repeatable)"
 # -- names and publishers ----------------------------------------------------
 
 
-def manifest_name(plugin_dir: Path) -> str:
-    """The manifest ``name`` of the plugin package in ``plugin_dir``."""
-    manifest = plugin_dir / "CANVAS_MANIFEST.json"
+def _read_manifest(plugin_dir: Path) -> tuple[Path, str, dict[str, Any]]:
+    """The manifest path, its text and its parsed object.
+
+    Args:
+        plugin_dir (Path): The plugin package directory.
+
+    Returns:
+        tuple[Path, str, dict[str, Any]]: The manifest path, its raw text and its JSON object.
+
+    Raises:
+        typer.BadParameter: The manifest is missing, unreadable or not a JSON object.
+    """
+    manifest: Path = plugin_dir / "CANVAS_MANIFEST.json"
     if not manifest.exists():
         raise typer.BadParameter(f"'{plugin_dir}' has no CANVAS_MANIFEST.json")
     try:
-        name = json.loads(manifest.read_text()).get("name")
+        text: str = manifest.read_text(encoding="utf-8")
+        data: Any = json.loads(text)
     except (ValueError, OSError) as exc:
         raise typer.BadParameter(f"Could not read {manifest}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise typer.BadParameter(f"Could not read {manifest}: it is not a JSON object")
+    return manifest, text, data
+
+
+def manifest_name(plugin_dir: Path) -> str:
+    """The manifest ``name`` of the plugin package in ``plugin_dir``."""
+    manifest, _, data = _read_manifest(plugin_dir)
+    name: Any = data.get("name")
     if not name:
         raise typer.BadParameter(f'{manifest} is missing a "name"')
     return str(name)
 
 
-def require_prefixed_name(name: str) -> None:
-    """Refuse a manifest name that does not carry a publisher prefix."""
-    if PLUGIN_NAME_PATTERN.match(name):
+def manifest_publisher(plugin_dir: Path) -> str | None:
+    """The manifest ``publisher`` of the plugin package in ``plugin_dir``.
+
+    Args:
+        plugin_dir (Path): The plugin package directory.
+
+    Returns:
+        str | None: The publisher slug, or None when the manifest has no ``publisher``.
+
+    Raises:
+        typer.BadParameter: The manifest is missing or unreadable.
+    """
+    _, _, data = _read_manifest(plugin_dir)
+    publisher: Any = data.get("publisher")
+    return str(publisher) if publisher else None
+
+
+def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
+    """Record ``slug`` as the manifest's ``publisher``, right after ``name``.
+
+    The manifest keeps its indent and its trailing newline. An existing ``publisher``
+    is replaced in place.
+
+    Args:
+        plugin_dir (Path): The plugin package directory.
+        slug (str): The slug of the Canvas Platform organization that publishes the plugin.
+
+    Raises:
+        typer.BadParameter: The manifest is missing or unreadable.
+    """
+    manifest, text, data = _read_manifest(plugin_dir)
+    indent_match: re.Match[str] | None = re.search(r"^( +|\t)\S", text, flags=re.MULTILINE)
+    indent: str | int = indent_match.group(1) if indent_match else 4
+    rebuilt: dict[str, Any] = {}
+    if "publisher" in data:
+        rebuilt = {**data, "publisher": slug}
+    else:
+        for key, value in data.items():
+            rebuilt[key] = value
+            if key == "name":
+                rebuilt["publisher"] = slug
+        rebuilt.setdefault("publisher", slug)
+    output: str = json.dumps(rebuilt, indent=indent, ensure_ascii=False)
+    if text.endswith("\n"):
+        output += "\n"
+    manifest.write_text(output, encoding="utf-8")
+
+
+def require_valid_name(name: str) -> None:
+    """Refuse a manifest name that is not a valid Python package and Postgres identifier."""
+    if PLUGIN_NAME_PATTERN.match(name) and len(name) <= PLUGIN_NAME_MAX_LENGTH:
         return
-    package = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "package"
+    package: str = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "package"
+    package = package.lstrip("0123456789_")[:PLUGIN_NAME_MAX_LENGTH] or "package"
     raise typer.BadParameter(
-        f"The plugin name '{name}' is not publisher-prefixed. Canvas Platform needs a "
-        f"publisher-prefixed name like `<your org prefix>__{package}`, made of lowercase "
-        "letters, digits and underscores, in the manifest, the package folder and its "
-        "imports. `canvas login` lists your organizations' prefixes."
+        f"The plugin name '{name}' is not valid. A name starts with a lowercase letter, then "
+        f"holds lowercase letters, digits and underscores, at most {PLUGIN_NAME_MAX_LENGTH} "
+        "characters, because it is a Python package and a Postgres identifier. Rename it in "
+        f"the manifest, the package folder and its imports, for example `{package}`."
     )
 
 
@@ -106,49 +178,86 @@ def require_folder_matches_name(plugin_dir: Path, name: str) -> None:
     )
 
 
-def _matching_organization(me: dict[str, Any], name: str) -> dict[str, Any] | None:
-    """The organization whose prefix the name carries; the longest prefix wins."""
-    matches = [
-        organization
-        for organization in me.get("organizations", [])
-        if organization.get("plugin_prefix")
-        and name.startswith(f"{organization['plugin_prefix']}__")
-    ]
-    return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
+def _no_push_role(organization: dict[str, Any]) -> typer.BadParameter:
+    """The refusal for an organization whose roles do not include pushing plugin code."""
+    return typer.BadParameter(
+        f"Your roles in {organization.get('name') or organization['slug']} do not include "
+        "pushing plugin code. Ask an organization admin for the Plugin developer role."
+    )
 
 
-def _publisher(client: PlatformClient, name: str, *, pushing: bool) -> str:
+def _publisher(
+    client: PlatformClient, plugin_dir: Path, name: str, *, pushing: bool, snapshot: bool
+) -> str:
     """The slug of the organization that publishes ``name``.
 
-    It is the person's organization whose ``plugin_prefix`` the name carries. A
-    Canvas employee, who reaches every organization without belonging to it, may
-    also deploy a plugin that already exists under another publisher.
+    It is the manifest's ``publisher`` when it names an organization the person belongs
+    to; else the only organization the person can publish in; else, at a terminal, the
+    one the person picks, which is recorded in the manifest (a snapshot commits the
+    manifest, so it prints the line to add instead). Without a terminal, several
+    organizations are refused with the manifest line that chooses one.
+
+    Args:
+        client (PlatformClient): The signed-in platform client.
+        plugin_dir (Path): The plugin package directory.
+        name (str): The plugin name, for messages.
+        pushing (bool): Whether the command pushes code, which needs ``push_plugin_code``.
+        snapshot (bool): Whether the command pushes a snapshot of committed content.
+
+    Returns:
+        str: The publishing organization's slug.
+
+    Raises:
+        typer.BadParameter: No organization can publish the plugin, or the choice is unclear.
     """
-    me = client.me()
-    organization = _matching_organization(me, name)
-    if organization is None:
-        if me.get("canvas_employee") and (existing := client.plugin(name)):
-            return str(existing["publisher"])
-        prefixes = sorted(
-            {o["plugin_prefix"] for o in me.get("organizations", []) if o.get("plugin_prefix")}
+    organizations: list[dict[str, Any]] = client.me().get("organizations", [])
+    slugs: str = ", ".join(str(o["slug"]) for o in organizations)
+    declared: str | None = manifest_publisher(plugin_dir)
+    if declared is not None:
+        match: dict[str, Any] | None = next(
+            (o for o in organizations if o["slug"] == declared), None
         )
-        package = name.split("__", 1)[-1]
-        yours = (
-            f" Your organizations' prefixes: {', '.join(prefixes)}."
-            if prefixes
-            else " You do not belong to any organization on Canvas Platform."
-        )
+        if match is None:
+            yours: str = (
+                f"Your organizations: {slugs}."
+                if organizations
+                else "You do not belong to any organization on Canvas Platform."
+            )
+            raise typer.BadParameter(
+                f"'{name}' names publisher '{declared}', which is not an organization you "
+                f"belong to on Canvas Platform. {yours}"
+            )
+        if pushing and "push_plugin_code" not in match.get("capabilities", []):
+            raise _no_push_role(match)
+        return declared
+
+    eligible: list[dict[str, Any]] = [
+        o for o in organizations if not pushing or "push_plugin_code" in o.get("capabilities", [])
+    ]
+    if not eligible:
+        if organizations:
+            raise _no_push_role(organizations[0])
+        raise typer.BadParameter("You do not belong to any organization on Canvas Platform.")
+    if len(eligible) == 1:
+        only: str = str(eligible[0]["slug"])
+        print(f"Publishing as {only}, the only organization you can publish in.")
+        return only
+    if not git.interactive():
         raise typer.BadParameter(
-            f"'{name}' does not start with the prefix of an organization you belong to, so "
-            f"there is no publisher to deploy it as. Use a publisher-prefixed name like "
-            f"`<your org prefix>__{package}`.{yours}"
+            "You can publish in several organizations: "
+            f"{', '.join(str(o['slug']) for o in eligible)}. "
+            'Add "publisher": "<slug>" to CANVAS_MANIFEST.json to choose one.'
         )
-    if pushing and "push_plugin_code" not in organization.get("capabilities", []):
-        raise typer.BadParameter(
-            f"Your roles in {organization.get('name') or organization['slug']} do not include "
-            "pushing plugin code. Ask an organization admin for the Plugin developer role."
+    chosen: str = str(_choose_organization(eligible, None)["slug"])
+    if snapshot:
+        print(
+            f'Add "publisher": "{chosen}" to CANVAS_MANIFEST.json and commit it to skip '
+            "this question."
         )
-    return str(organization["slug"])
+    else:
+        write_manifest_publisher(plugin_dir, chosen)
+        print(f"CANVAS_MANIFEST.json now names {chosen} as the publisher.")
+    return chosen
 
 
 # -- targets -----------------------------------------------------------------
@@ -585,8 +694,10 @@ def deploy(
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
 
-    The manifest `name` must be publisher-prefixed, `<your org prefix>__<package>`,
-    and the prefix decides which of your organizations publishes the plugin.
+    The manifest `name` is a plain package name: lowercase, at most 63 characters,
+    with an org prefix recommended. The publisher is the manifest `publisher`, else
+    the only organization you can publish in, else, at a terminal, the organization
+    you pick, which is recorded in the manifest.
 
     Without --ref or --no-push, deploy registers the plugin, points the
     repository's `origin` at Canvas Platform with a credential helper, commits any
@@ -622,14 +733,14 @@ def deploy(
     if not plugin_dir.is_dir():
         raise typer.BadParameter(f"Plugin '{plugin_dir}' needs to be a valid directory")
     name = manifest_name(plugin_dir)
-    require_prefixed_name(name)
+    require_valid_name(name)
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
 
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
-    publisher = _publisher(client, name, pushing=pushing)
+    publisher = _publisher(client, plugin_dir, name, pushing=pushing, snapshot=snapshot)
     if push_only:
         sha = _push(
             client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
@@ -650,7 +761,7 @@ def deploy(
     _dispatch(
         client,
         "deploy",
-        [{"name": name, "ref": deploy_ref}],
+        [{"name": name, "ref": deploy_ref, "publisher": publisher}],
         targets,
         what=f"Deploy of {name}",
         assume_yes=assume_yes,
@@ -707,7 +818,12 @@ def _choose_organization(
         return organizations[0]
     print("Which organization publishes this plugin?")
     for number, organization in enumerate(organizations, start=1):
-        print(f"  {number}. {organization.get('name')} (prefix {organization['plugin_prefix']}__)")
+        prefix: str = (
+            f" (prefix {organization['plugin_prefix']}__)"
+            if organization.get("plugin_prefix")
+            else ""
+        )
+        print(f"  {number}. {organization.get('name') or organization['slug']}{prefix}")
     choice: int = typer.prompt("Organization", type=click.IntRange(1, len(organizations)))
     return organizations[choice - 1]
 
@@ -732,17 +848,17 @@ def init(
 ) -> None:
     """Create a new plugin.
 
-    Signed in to Canvas Platform, the plugin is named `<your org prefix>__<package>`,
-    registered with platform, and given a git repository whose `origin` is
-    platform. Signed out, it is scaffolded with the name you give.
+    Signed in to Canvas Platform, the plugin is named `<your org prefix>__<package>` as a
+    recommended convention, its manifest records the publisher, and it is registered
+    with platform and given a git repository whose `origin` is platform. Signed out,
+    it is scaffolded with the name you give.
     """
     platform = auth.resolve_platform_url()
     if auth.stored_tokens(platform) is None:
         print(
             f"You are not signed in to Canvas Platform at {platform}, so this plugin is "
-            "scaffolded without a publisher prefix, registration or git repository, and "
-            "`canvas deploy` refuses it. For a plugin you can deploy, run `canvas login`, "
-            "then `canvas init` again."
+            "scaffolded without registration or a git repository. Running `canvas login` "
+            "then `canvas init` gives a registered plugin."
         )
         instance_plugin.scaffold(plugin_type)
         return
@@ -756,7 +872,9 @@ def init(
     if not publishers:
         print(
             "None of your organizations on Canvas Platform lets you push plugin code, so "
-            "this plugin is scaffolded without a publisher prefix and is not registered."
+            "this plugin is scaffolded without registration or a git repository. Once an "
+            "organization admin gives you the Plugin developer role, `canvas login` then "
+            "`canvas init` gives a registered plugin."
         )
         instance_plugin.scaffold(plugin_type)
         return
@@ -766,12 +884,14 @@ def init(
     project_dir = instance_plugin.scaffold(plugin_type, prefix=chosen["plugin_prefix"])
     package_dir = _package_dir(project_dir)
     name = manifest_name(package_dir)
-    if not PLUGIN_NAME_PATTERN.match(name):
+    try:
+        require_valid_name(name)
+    except typer.BadParameter as exc:
         raise typer.BadParameter(
-            f"The scaffolded name '{name}' is not a valid plugin name: after the prefix it "
-            "must start with a letter and hold only lowercase letters, digits and "
-            "underscores. Rename the package and its manifest `name`, then run `canvas deploy`."
-        )
+            f"The scaffolded name '{name}' is not a valid plugin name. {exc.message} "
+            "Then run `canvas deploy`."
+        ) from exc
+    write_manifest_publisher(package_dir, chosen["slug"])
 
     registered = client.register_plugin(chosen["slug"], name)
     print(f"Registered {name} with Canvas Platform.")
@@ -798,10 +918,10 @@ def _managed(
     When every named target is localhost or another host that is not a Canvas instance,
     which platform can never manage, the answer is None without asking platform, and no
     deprecation notice prints, since `canvas login` cannot serve those hosts. Otherwise,
-    signed in, a publisher-prefixed plugin that answers ``GET /api/v1/plugins/<name>`` goes
-    through platform, and any other plugin aimed at a Canvas instance is refused with the
-    way to sign out. Signed out, the answer is None: the caller uses credentials.ini, and
-    the deprecation notice for ``command`` is printed.
+    signed in, a plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform,
+    and any other plugin aimed at a Canvas instance is refused with the way to sign out.
+    Signed out, the answer is None: the caller uses credentials.ini, and the deprecation
+    notice for ``command`` is printed.
 
     Args:
         name (str): The plugin name.
@@ -822,8 +942,11 @@ def _managed(
         return None
     platform = auth.resolve_platform_url()
     if auth.stored_tokens(platform) is not None:
+        # With no --instance or --host, platform chooses the targets from the plugin's
+        # installs, so it is asked first; credentials.ini's default host decides only
+        # when platform does not have the plugin.
         client = PlatformClient(platform)
-        plugin = client.plugin(name) if PLUGIN_NAME_PATTERN.match(name) else None
+        plugin = client.plugin(name)
         if plugin is not None:
             return client, plugin
         if any(instance_slug(url) is not None for url in _direct_hosts(instances, host)):
