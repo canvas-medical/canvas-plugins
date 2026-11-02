@@ -1,3 +1,4 @@
+import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -206,3 +207,27 @@ def test_the_link_travels_in_the_effect_payload(patient: Patient, note: Note) ->
     effect = InstructCommand(note_uuid=str(note.id), assessment_id=assessment.id).originate()
 
     assert f'"assessment_id": "{assessment.id}"' in effect.payload
+
+
+def test_a_structured_assessment_without_a_questionnaire_can_be_linked(
+    patient: Patient, note: Note
+) -> None:
+    """The note UI creates the command before a questionnaire is picked, and it still edits."""
+    assessment = _assessment(patient, note)
+    structured = Command.objects.create(
+        note=note,
+        patient=note.patient,
+        state="staged",
+        schema_key="structuredAssessment",
+        # What the note UI stores before a questionnaire is picked.
+        data={"questionnaire": None},
+        origination_source="user",
+        anchor_object_type="",
+        anchor_object_dbid=0,
+    )
+
+    effect = StructuredAssessmentCommand(
+        command_uuid=str(structured.id), assessment_id=assessment.id
+    ).edit()
+
+    assert json.loads(effect.payload)["data"]["assessment_id"] == str(assessment.id)
