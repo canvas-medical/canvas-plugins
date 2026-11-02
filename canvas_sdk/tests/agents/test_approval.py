@@ -249,3 +249,15 @@ def test_a_tool_sharing_an_effect_type_with_an_approval_tool_proposes_too() -> N
     assert agent.tools.requires_approval("create_task_too")
     assert grant.direct == frozenset()
     assert split_granted_effects([bare], grant) == ([], [bare])
+
+
+def test_a_malformed_proposal_is_dropped_rather_than_crashing_the_run() -> None:
+    """Agent code can build any effect; one the platform cannot read is dropped like any other."""
+    _, grant = _granted(["create_task"])
+    malformed = [
+        Effect(type=EffectType.PROPOSE_AGENT_ACTION, payload="not json"),
+        Effect(type=EffectType.PROPOSE_AGENT_ACTION, payload='{"data": {}}'),
+        Effect(type=EffectType.PROPOSE_AGENT_ACTION, payload='{"data": {"effects": [{}]}}'),
+    ]
+
+    assert split_granted_effects(malformed, grant) == ([], malformed)
