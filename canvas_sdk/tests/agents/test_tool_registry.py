@@ -1633,3 +1633,21 @@ def test_standard_tools_is_frozen() -> None:
     """The SDK's shared catalog is complete at import, and no plugin can add to it."""
     with pytest.raises(RuntimeError, match="read-only"):
         standard_tools.register({"name": "extra", "input_schema": {}}, _passthrough)
+
+
+def test_add_effect_tool_refuses_a_run_with_no_patient_when_it_injects_one() -> None:
+    """A task or banner built for the run's patient is refused when the run has none.
+
+    Building it anyway would create a task linked to no patient in a STAFF, KEY, or AGENT
+    run.
+    """
+    registry = ToolRegistry()
+    registry.add_effect_tool(
+        name="stage_fake", description="...", effect_class=_FakeEffect, fields={}
+    )
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="patient"):
+        registry.execute("stage_fake", {}, ctx={"effects": effects})
+
+    assert effects == []
