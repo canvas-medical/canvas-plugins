@@ -18,6 +18,7 @@ from django.db import models as django_models
 
 import plugin_runner.sandbox as sandbox_module
 from canvas_sdk.agents import standard_tools
+from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.utils.http import ontologies_http
 from canvas_sdk.v1.data.base import (
@@ -4517,3 +4518,36 @@ def test_plugin_code_cannot_edit_the_shared_standard_tool_definitions() -> None:
     sandbox.execute()
 
     assert standard_tools.definitions() == before
+
+
+@pytest.mark.parametrize(
+    "statement",
+    params_from_dict(
+        {
+            "attribute": 'spec.command_field = "fdb_code"',
+            "list": 'severity.enum.append("planted")',
+        }
+    ),
+)
+def test_plugin_code_cannot_change_what_the_shared_draft_edits_allow(statement: str) -> None:
+    """The fields an edit may set are checked for every plugin, so no plugin can widen them."""
+    sig = DRAFT_KINDS["medicationStatement"].editable["sig"]
+    severities = list(DRAFT_KINDS["allergy"].editable["severity"].enum or [])
+    sandbox = _sandbox_from_code(
+        f"""
+            from canvas_sdk.agents import standard_tools
+
+            spec = standard_tools.metadata_for("originate_medication_statement")["editable_fields"]["sig"]
+            severity = standard_tools.metadata_for("originate_allergy")["editable_fields"]["severity"]
+            try:
+                {statement}
+            except Exception:
+                pass
+        """
+    )
+
+    sandbox.execute()
+
+    assert DRAFT_KINDS["medicationStatement"].editable["sig"] is sig
+    assert sig.command_field is None
+    assert DRAFT_KINDS["allergy"].editable["severity"].enum == severities
