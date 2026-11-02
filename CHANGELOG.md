@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.265.0 (2026-11-02)
+
+### Bug Fixes
+
+- Update python version ([#1969](https://github.com/canvas-medical/canvas-plugins/pull/1969),
+  [`8389107`](https://github.com/canvas-medical/canvas-plugins/commit/8389107f8156e750408054592ffc0d12c2c7442a))
+
+### Features
+
+- Add appointment slots search ([#1952](https://github.com/canvas-medical/canvas-plugins/pull/1952),
+  [`6bf6dea`](https://github.com/canvas-medical/canvas-plugins/commit/6bf6dea90fed4c63f9e88e24d7a0e6023188b87e))
+
+
 ## v0.264.1 (2026-10-30)
 
 ### Bug Fixes
