@@ -1,13 +1,13 @@
 from typing import Any
 
-from agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
+from canvas__agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 from canvas_sdk.v1.data import ProtocolCurrent
 from logger import log
 
 # Used both in find_protocol_cards filters and in the user-message preamble
 # so the agent has a clear handle on "these are mine vs. someone else's."
-PLUGIN_NAME = "agent_runner_poc"
+PLUGIN_NAME = "canvas__agent_runner_poc"
 
 SYSTEM_PROMPT = (
     "You are a longitudinal care advisor reviewing a patient's just-completed "

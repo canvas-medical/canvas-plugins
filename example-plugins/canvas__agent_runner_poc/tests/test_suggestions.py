@@ -1,10 +1,10 @@
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat import SYSTEM_PROMPT as CHART_PROMPT
-from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
-from agent_runner_poc.agents.claims_chat import SYSTEM_PROMPT as CLAIMS_PROMPT
-from agent_runner_poc.agents.suggestions import split_suggestions
-from agent_runner_poc.applications.chart_chat import _ui_messages
+from canvas__agent_runner_poc.agents.chart_chat import SYSTEM_PROMPT as CHART_PROMPT
+from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
+from canvas__agent_runner_poc.agents.claims_chat import SYSTEM_PROMPT as CLAIMS_PROMPT
+from canvas__agent_runner_poc.agents.suggestions import split_suggestions
+from canvas__agent_runner_poc.applications.chart_chat import _ui_messages
 
 REPLY = (
     "Her A1c rose from 6.8 to 7.4 over the year.\n\n"

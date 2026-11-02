@@ -7,7 +7,7 @@ dependencies = [
 ]
 description = "Reference agents for the Canvas Agent Runner Framework"
 license = "MIT"
-name = "agent_runner_poc"
+name = "canvas__agent_runner_poc"
 requires-python = ">=3.11"
 version = "0.0.1"
 

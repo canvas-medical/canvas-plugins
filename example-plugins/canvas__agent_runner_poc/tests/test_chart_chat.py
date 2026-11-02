@@ -4,7 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from agent_runner_poc.agents.chart_chat import (
+from canvas__agent_runner_poc.agents.chart_chat import (
     DECISIONS_NOTE_PREFIX,
     ChartChatAgent,
     load_conversation_messages,
@@ -79,7 +79,7 @@ def test_a_long_conversation_keeps_only_its_newest_part(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The stored row stops growing, and what it keeps starts on a question."""
-    monkeypatch.setattr("agent_runner_poc.agents.chart_chat.STORED_HISTORY_CHARS", 200)
+    monkeypatch.setattr("canvas__agent_runner_poc.agents.chart_chat.STORED_HISTORY_CHARS", 200)
     agent = _agent_for(PatientFactory.create().id, StaffFactory.create().id)
     turns = [
         message
@@ -129,9 +129,9 @@ def _proposal(staff: Any, status: str, reason: str = "") -> AgentRunProposal:
     """A proposal the chat agent made for ``staff``, decided as ``status``."""
     run = AgentRun.objects.create(
         id=uuid4(),
-        plugin_name="agent_runner_poc",
-        agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
-        handler_name="agent_runner_poc.applications.chart_chat:ChartChatAPI",
+        plugin_name="canvas__agent_runner_poc",
+        agent_id="canvas__agent_runner_poc.agents.chart_chat:ChartChatAgent",
+        handler_name="canvas__agent_runner_poc.applications.chart_chat:ChartChatAPI",
         scope="patient_and_staff",
         scope_key="k",
         staff=staff,
@@ -146,8 +146,8 @@ def _proposal(staff: Any, status: str, reason: str = "") -> AgentRunProposal:
     return AgentRunProposal.objects.create(
         id=uuid4(),
         run=run,
-        plugin_name="agent_runner_poc",
-        agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
+        plugin_name="canvas__agent_runner_poc",
+        agent_id="canvas__agent_runner_poc.agents.chart_chat:ChartChatAgent",
         tool="create_task",
         arguments={"title": "Call about labs"},
         effect_types=["CREATE_TASK"],
