@@ -2843,6 +2843,12 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
                 clients = list(patient_portal_http.__dict__.values())
                 clients[0]
             """,
+            "appointment_slots_http_client_by_value": """
+                from canvas_sdk.utils.appointment_slots import appointment_slots_http
+
+                clients = list(appointment_slots_http.__dict__.values())
+                clients[0]
+            """,
         }
     ),
 )
@@ -2859,6 +2865,51 @@ def test_sandbox_keeps_service_client_internals_out_of_reach(
 
     mock_get.assert_not_called()
     mock_delete.assert_not_called()
+
+
+@patch("requests.Session.post")
+def test_sandbox_searches_appointment_slots(mock_post: MagicMock) -> None:
+    """Plugin code can search slots, read each slot, and catch the documented error."""
+    found = MagicMock(status_code=200)
+    found.json.return_value = {
+        "slots": [
+            {
+                "staff_id": "a" * 32,
+                "start": "2026-11-02T09:00:00-08:00",
+                "end": "2026-11-02T09:30:00-08:00",
+            }
+        ]
+    }
+    refused = MagicMock(status_code=400)
+    refused.json.return_value = {"location_id": ["No practice location has this id."]}
+    mock_post.side_effect = [found, refused]
+
+    sandbox = _sandbox_from_code(
+        source_code="""
+            import arrow
+            from canvas_sdk.utils.appointment_slots import SlotSearchError, appointment_slots_http
+
+            start = arrow.get("2026-11-02T09:00:00-08:00").datetime
+            end = arrow.get("2026-11-02T17:00:00-08:00").datetime
+
+            slots = appointment_slots_http.search_slots(
+                location_id="l", start=start, end=end, duration=30
+            )
+            first = (slots[0].staff_id, slots[0].start.hour, slots[0].end.minute)
+
+            try:
+                appointment_slots_http.search_slots(
+                    location_id="missing", start=start, end=end, duration=30
+                )
+            except SlotSearchError as error:
+                status_code = error.status_code
+        """
+    )
+
+    scope = sandbox.execute()
+
+    assert scope["first"] == ("a" * 32, 9, 30)
+    assert scope["status_code"] == 400
 
 
 @pytest.mark.parametrize(

@@ -1148,6 +1148,11 @@
     "batch_post",
     "batch_put"
   ],
+  "canvas_sdk.utils.appointment_slots": [
+    "Slot",
+    "SlotSearchError",
+    "appointment_slots_http"
+  ],
   "canvas_sdk.utils.db": [
     "thread_cleanup"
   ],
