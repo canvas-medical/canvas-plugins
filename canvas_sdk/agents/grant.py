@@ -13,7 +13,7 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import (
     DECISION_EFFECT_TYPE,
     PROPOSAL_EFFECT_TYPE,
-    proposed_effect_type,
+    proposed_effect_types,
 )
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
@@ -38,16 +38,17 @@ class EffectGrant:
         """Whether the agent may return ``effect``.
 
         Never a decision on a proposal, which only the requester makes, and never a
-        proposal of one.
+        proposal of one. A proposal must carry at least one change, and every change it
+        carries must be one an approval-listed tool stages.
         """
         name = EffectType.Name(effect.type)
         if name == DECISION_EFFECT_TYPE:
             return False
         if name == PROPOSAL_EFFECT_TYPE:
-            proposed = proposed_effect_type(effect)
-            return proposed in self.proposable and proposed not in (
-                PROPOSAL_EFFECT_TYPE,
-                DECISION_EFFECT_TYPE,
+            proposed = proposed_effect_types(effect)
+            return bool(proposed) and all(
+                each in self.proposable and each not in (PROPOSAL_EFFECT_TYPE, DECISION_EFFECT_TYPE)
+                for each in proposed
             )
         return name in self.direct
 

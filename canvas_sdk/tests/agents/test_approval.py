@@ -40,6 +40,19 @@ def _read(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     return {"rows": []}
 
 
+@tools.tool(
+    name="note_and_plan",
+    description="x",
+    input_schema={"type": "object"},
+    effect_types=("CREATE_NOTE", "ORIGINATE_PLAN_COMMAND"),
+)
+def _note_and_plan(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    """Stages a note and a plan on it, as originate_review_note does."""
+    ctx["effects"].append(Effect(type=EffectType.CREATE_NOTE, payload='{"note": "n1"}'))
+    ctx["effects"].append(Effect(type=EffectType.ORIGINATE_PLAN_COMMAND, payload='{"note": "n1"}'))
+    return {"ok": True}
+
+
 class _Agent(AgentPlugin):
     tools = tools
 
@@ -71,10 +84,48 @@ def test_an_approval_listed_tool_proposes_its_change_and_says_so() -> None:
     assert proposal.type == EffectType.PROPOSE_AGENT_ACTION
     data = json.loads(proposal.payload)["data"]
     assert (data["tool"], data["arguments"]) == ("create_task", {"title": "Call"})
-    assert data["effect"]["type"] == "CREATE_TASK"
+    assert data["effects"] == [{"type": "CREATE_TASK", "payload": '{"data": {"title": "x"}}'}]
     assert result["status"] == "awaiting_approval"
     assert result["proposal_ids"] == [data["proposal_id"]]
     assert result["tool_result"] == {"ok": True}
+
+
+def test_a_tool_call_that_stages_several_changes_proposes_them_together() -> None:
+    """The requester approves or denies the whole call, and its changes apply in order.
+
+    A plan on a note the same call creates cannot apply, or be approved, without the note.
+    """
+    agent = _Agent()
+    grant = apply_tool_grant(agent, {"allowed": ["note_and_plan"], "approve": ["note_and_plan"]})
+    assert agent.tools is not None
+    effects: list[Effect] = []
+
+    result = agent.tools.execute("note_and_plan", {}, ctx={"effects": effects})
+
+    (proposal,) = effects
+    data = json.loads(proposal.payload)["data"]
+    assert [effect["type"] for effect in data["effects"]] == [
+        "CREATE_NOTE",
+        "ORIGINATE_PLAN_COMMAND",
+    ]
+    assert result["proposal_ids"] == [data["proposal_id"]]
+    assert split_granted_effects([proposal], grant) == ([proposal], [])
+
+
+def test_a_proposal_mixing_in_a_change_no_approval_tool_stages_is_dropped() -> None:
+    """Every change a proposal carries must be one the agent's approval-listed tools make."""
+    _, grant = _granted(["create_task"])
+    mixed = propose(
+        [
+            Effect(type=EffectType.CREATE_TASK, payload="{}"),
+            Effect(type=EffectType.ADD_BANNER_ALERT, payload="{}"),
+        ],
+        "create_task",
+        {},
+    )
+    empty = propose([], "create_task", {})
+
+    assert split_granted_effects([mixed, empty], grant) == ([], [mixed, empty])
 
 
 def test_a_tool_not_listed_makes_its_change() -> None:
@@ -116,7 +167,7 @@ def test_a_change_listed_for_approval_cannot_be_returned_bare() -> None:
     """Agent code appending the raw effect would skip approval, so the platform drops it."""
     _, grant = _granted(["create_task", "refuse"])
     bare = Effect(type=EffectType.CREATE_TASK, payload="{}")
-    proposed = propose(bare, "create_task", {})
+    proposed = propose([bare], "create_task", {})
 
     kept, dropped = split_granted_effects([bare, proposed], grant)
 
@@ -133,9 +184,9 @@ def test_an_agent_can_never_decide_or_nest_a_proposal() -> None:
     decision = DecideAgentProposal(
         proposal_id="00000000-0000-0000-0000-000000000001", decision="approve"
     ).apply()
-    nested = propose(propose(Effect(type=EffectType.CREATE_TASK), "t", {}), "t", {})
+    nested = propose([propose([Effect(type=EffectType.CREATE_TASK)], "t", {})], "t", {})
 
-    kept, dropped = split_granted_effects([decision, propose(decision, "t", {}), nested], grant)
+    kept, dropped = split_granted_effects([decision, propose([decision], "t", {}), nested], grant)
 
     assert kept == []
     assert len(dropped) == 3
@@ -144,7 +195,7 @@ def test_an_agent_can_never_decide_or_nest_a_proposal() -> None:
 def test_a_proposal_of_an_effect_no_approval_tool_stages_is_dropped() -> None:
     """A proposal still has to wrap a change the agent's approval-listed tools make."""
     _, grant = _granted(["create_task"])
-    other = propose(Effect(type=EffectType.ADD_BANNER_ALERT, payload="{}"), "create_task", {})
+    other = propose([Effect(type=EffectType.ADD_BANNER_ALERT, payload="{}")], "create_task", {})
 
     assert split_granted_effects([other], grant) == ([], [other])
 

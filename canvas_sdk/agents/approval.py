@@ -1,8 +1,10 @@
 """Proposals: how an approval-listed tool's changes wait for the requester.
 
-The platform wraps each effect such a tool stages in a ``PROPOSE_AGENT_ACTION`` effect,
-which home-app holds until the requester approves or denies it. Not importable from the
-plugin sandbox: plugin code decides with :class:`canvas_sdk.effects.agent.DecideAgentProposal`.
+The platform wraps the effects one call of such a tool stages, in order, in one
+``PROPOSE_AGENT_ACTION`` effect, which home-app holds until the requester approves or
+denies the whole call. A tool that stages a note and a plan on it is one decision, so the
+plan can neither apply nor be approved without its note. Not importable from the plugin
+sandbox: plugin code decides with :class:`canvas_sdk.effects.agent.DecideAgentProposal`.
 """
 
 import json
@@ -15,8 +17,8 @@ PROPOSAL_EFFECT_TYPE = "PROPOSE_AGENT_ACTION"
 DECISION_EFFECT_TYPE = "DECIDE_AGENT_PROPOSAL"
 
 
-def propose(effect: Effect, tool: str, arguments: dict[str, Any]) -> Effect:
-    """Wrap ``effect``, which ``tool`` staged from ``arguments``, as a proposal."""
+def propose(effects: list[Effect], tool: str, arguments: dict[str, Any]) -> Effect:
+    """Wrap ``effects``, which one call of ``tool`` staged from ``arguments``, as a proposal."""
     return Effect(
         type=EffectType.PROPOSE_AGENT_ACTION,
         payload=json.dumps(
@@ -25,7 +27,10 @@ def propose(effect: Effect, tool: str, arguments: dict[str, Any]) -> Effect:
                     "proposal_id": str(uuid4()),
                     "tool": tool,
                     "arguments": arguments,
-                    "effect": {"type": EffectType.Name(effect.type), "payload": effect.payload},
+                    "effects": [
+                        {"type": EffectType.Name(effect.type), "payload": effect.payload}
+                        for effect in effects
+                    ],
                 }
             },
             default=str,
@@ -38,9 +43,9 @@ def proposal_id(proposal: Effect) -> str:
     return str(json.loads(proposal.payload)["data"]["proposal_id"])
 
 
-def proposed_effect_type(proposal: Effect) -> str:
-    """The ``EffectType`` name of the change a proposal effect wraps."""
-    return str(json.loads(proposal.payload)["data"]["effect"]["type"])
+def proposed_effect_types(proposal: Effect) -> list[str]:
+    """The ``EffectType`` names of the changes a proposal effect wraps, in order."""
+    return [str(effect["type"]) for effect in json.loads(proposal.payload)["data"]["effects"]]
 
 
 # Nothing here is importable from the plugin sandbox.
