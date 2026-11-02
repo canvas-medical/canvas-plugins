@@ -48,6 +48,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from canvas_sdk.agents import (
+    AgentPlugin,
     Capability,
     LLMGatewayConfigurationError,
     RunRequester,
@@ -638,6 +639,12 @@ class PluginRunner(PluginRunnerServicer):
 
             plugin = LOADED_PLUGINS[registry_key]
             agent_class = plugin["class"]
+            # A plugin's handlers and applications load beside its agents; only an
+            # agent runs here.
+            if not (isinstance(agent_class, type) and issubclass(agent_class, AgentPlugin)):
+                log.error(f"RunAgent: {request.agent_id!r} is not an agent")
+                yield EventResponse(success=False, effects=[])
+                return
             namespace_config = plugin.get("namespace_config")
 
             try:
