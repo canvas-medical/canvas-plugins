@@ -29,6 +29,10 @@ log = logging.getLogger("plugin_runner_logger")
 # Stop reasons that can leave complete tool calls to run: a normal tool turn, or a
 # turn cut off by max_tokens after one or more tool calls finished.
 _TOOL_STOP_REASONS = frozenset({"tool_use", "max_tokens"})
+_CUT_OFF = (
+    "Not run: your turn was cut off by the token limit while writing this call, so its "
+    "input may be incomplete. Make the call again."
+)
 
 
 @dataclass
@@ -272,8 +276,17 @@ def run_tool_loop(
         if response.stop_reason in _TOOL_STOP_REASONS and tool_uses:
             if recorder is not None:
                 recorder.phase = "working"
+            complete, cut_off = tool_uses, []
+            if response.stop_reason == "max_tokens":
+                # Generation stopped at the last call, so its input may be incomplete;
+                # the model makes it again rather than a write running half-specified.
+                complete, cut_off = tool_uses[:-1], tool_uses[-1:]
             transcript.append(
-                {"role": "user", "content": [_run_tool(tools, block, ctx) for block in tool_uses]}
+                {
+                    "role": "user",
+                    "content": [_run_tool(tools, block, ctx) for block in complete]
+                    + [_tool_result(block.id, _CUT_OFF, is_error=True) for block in cut_off],
+                }
             )
             continue
 
