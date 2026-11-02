@@ -105,14 +105,20 @@ def manifest_publisher(plugin_dir: Path) -> str | None:
         plugin_dir (Path): The plugin package directory.
 
     Returns:
-        str | None: The publisher slug, or None when the manifest has no ``publisher``.
+        str | None: The publisher slug, or None when the manifest has no ``publisher`` or
+            it is null. An empty string is returned as is.
 
     Raises:
-        typer.BadParameter: The manifest is missing or unreadable.
+        typer.BadParameter: The manifest is missing or unreadable, or ``publisher`` is
+            not a string.
     """
-    _, _, data = _read_manifest(plugin_dir)
+    manifest, _, data = _read_manifest(plugin_dir)
     publisher: Any = data.get("publisher")
-    return str(publisher) if publisher else None
+    if publisher is None:
+        return None
+    if not isinstance(publisher, str):
+        raise typer.BadParameter(f'{manifest} has a "publisher" that is not a string')
+    return publisher
 
 
 def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
@@ -187,25 +193,28 @@ def _no_push_role(organization: dict[str, Any]) -> typer.BadParameter:
 
 
 def _publisher(
-    client: PlatformClient, plugin_dir: Path, name: str, *, pushing: bool, snapshot: bool
-) -> str:
-    """The slug of the organization that publishes ``name``.
+    client: PlatformClient, plugin_dir: Path, name: str, *, pushing: bool, records: bool
+) -> tuple[str, bool]:
+    """The slug of the organization that publishes ``name``, and whether the person picked it.
 
     It is the manifest's ``publisher`` when it names an organization the person belongs
     to; else the only organization the person can publish in; else, at a terminal, the
-    one the person picks, which is recorded in the manifest (a snapshot commits the
-    manifest, so it prints the line to add instead). Without a terminal, several
-    organizations are refused with the manifest line that chooses one.
+    one the person picks. The choice is returned, not written: a regular push records it
+    in the manifest once the package is accepted (``records``), and any other deploy
+    prints the line to add instead. Without a terminal, several organizations are
+    refused with the manifest line that chooses one.
 
     Args:
         client (PlatformClient): The signed-in platform client.
         plugin_dir (Path): The plugin package directory.
         name (str): The plugin name, for messages.
         pushing (bool): Whether the command pushes code, which needs ``push_plugin_code``.
-        snapshot (bool): Whether the command pushes a snapshot of committed content.
+        records (bool): Whether the command is a regular push, which records a picked
+            publisher in the manifest.
 
     Returns:
-        str: The publishing organization's slug.
+        tuple[str, bool]: The publishing organization's slug, and whether the person
+            picked it at the prompt and the regular push is to record it.
 
     Raises:
         typer.BadParameter: No organization can publish the plugin, or the choice is unclear.
@@ -213,7 +222,7 @@ def _publisher(
     organizations: list[dict[str, Any]] = client.me().get("organizations", [])
     slugs: str = ", ".join(str(o["slug"]) for o in organizations)
     declared: str | None = manifest_publisher(plugin_dir)
-    if declared is not None:
+    if declared is not None:  # "" is a value too, and is refused below as no organization
         match: dict[str, Any] | None = next(
             (o for o in organizations if o["slug"] == declared), None
         )
@@ -229,7 +238,7 @@ def _publisher(
             )
         if pushing and "push_plugin_code" not in match.get("capabilities", []):
             raise _no_push_role(match)
-        return declared
+        return declared, False
 
     eligible: list[dict[str, Any]] = [
         o for o in organizations if not pushing or "push_plugin_code" in o.get("capabilities", [])
@@ -241,7 +250,7 @@ def _publisher(
     if len(eligible) == 1:
         only: str = str(eligible[0]["slug"])
         print(f"Publishing as {only}, the only organization you can publish in.")
-        return only
+        return only, False
     if not git.interactive():
         raise typer.BadParameter(
             "You can publish in several organizations: "
@@ -249,15 +258,14 @@ def _publisher(
             'Add "publisher": "<slug>" to CANVAS_MANIFEST.json to choose one.'
         )
     chosen: str = str(_choose_organization(eligible, None)["slug"])
-    if snapshot:
-        print(
-            f'Add "publisher": "{chosen}" to CANVAS_MANIFEST.json and commit it to skip '
-            "this question."
-        )
-    else:
-        write_manifest_publisher(plugin_dir, chosen)
-        print(f"CANVAS_MANIFEST.json now names {chosen} as the publisher.")
-    return chosen
+    if not records:
+        print(_publisher_hint(chosen))
+    return chosen, records
+
+
+def _publisher_hint(slug: str) -> str:
+    """The manifest line that skips the publisher question, for a deploy that does not write it."""
+    return f'Add "publisher": "{slug}" to CANVAS_MANIFEST.json and commit it to skip this question.'
 
 
 # -- targets -----------------------------------------------------------------
@@ -640,8 +648,12 @@ def _push(
     *,
     assume_yes: bool,
     snapshot: bool,
+    record_publisher: bool,
 ) -> str:
     """Register the plugin, connect its repository and push HEAD to the default branch.
+
+    With ``record_publisher``, the manifest names ``publisher`` before the commit, so the
+    push carries it.
 
     Returns the pushed commit.
     """
@@ -649,6 +661,9 @@ def _push(
         return _push_snapshot(client, plugin_dir, publisher, name, platform)
     git.ensure_repo(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
+    if record_publisher:
+        write_manifest_publisher(plugin_dir, publisher)
+        print(f"CANVAS_MANIFEST.json now names {publisher} as the publisher.")
     registered = client.register_plugin(publisher, name)
     git.connect_remote(plugin_dir, registered["git_url"], platform)
     git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
@@ -697,7 +712,9 @@ def deploy(
     The manifest `name` is a plain package name: lowercase, at most 63 characters,
     with an org prefix recommended. The publisher is the manifest `publisher`, else
     the only organization you can publish in, else, at a terminal, the organization
-    you pick, which is recorded in the manifest.
+    you pick. A regular push records the pick in the manifest once the package is
+    accepted, so the push commits it; --ref, --no-push and --snapshot print the
+    manifest line to add instead.
 
     Without --ref or --no-push, deploy registers the plugin, points the
     repository's `origin` at Canvas Platform with a credential helper, commits any
@@ -740,10 +757,23 @@ def deploy(
 
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
-    publisher = _publisher(client, plugin_dir, name, pushing=pushing, snapshot=snapshot)
+    publisher, picked = _publisher(
+        client,
+        plugin_dir,
+        name,
+        pushing=pushing,
+        records=pushing and not snapshot,
+    )
     if push_only:
         sha = _push(
-            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+            client,
+            plugin_dir,
+            publisher,
+            name,
+            platform,
+            assume_yes=assume_yes,
+            snapshot=snapshot,
+            record_publisher=picked,
         )
         print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
         return
@@ -752,7 +782,14 @@ def deploy(
     targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
     if pushing:
         deploy_ref = _push(
-            client, plugin_dir, publisher, name, platform, assume_yes=assume_yes, snapshot=snapshot
+            client,
+            plugin_dir,
+            publisher,
+            name,
+            platform,
+            assume_yes=assume_yes,
+            snapshot=snapshot,
+            record_publisher=picked,
         )
     else:
         deploy_ref = ref or "main"
