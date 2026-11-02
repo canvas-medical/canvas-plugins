@@ -14,7 +14,7 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 | Signs in as | you, as a member of your Canvas Platform organizations, or a service account of one organization | an OAuth client (`client_id` / `client_secret`) registered on one instance |
 | Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
 | Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
-| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `logs` for an instance Canvas Platform manages, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs` for any other instance, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
+| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `logs` for every Canvas instance while you are signed in, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `enable`, `disable`, `list`, `config list`, `logs` while signed out or for localhost, `namespace`, and `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
 
 A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform), and per instance for `logs` as described in [`canvas logs`](#canvas-logs).
 
@@ -367,7 +367,11 @@ $ canvas validate-manifest [OPTIONS] PACKAGE
 
 ## `canvas logs`
 
-Listens and prints log streams from the instance. Signed in to Canvas Platform, `canvas logs` asks Platform for a 15-minute log token for an instance it manages, and otherwise uses `credentials.ini`.
+Listens and prints log streams from the instance.
+
+- Signed in to Canvas Platform, `canvas logs` asks Platform for a 15-minute log token for an instance it manages. An instance Platform does not manage is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), so `credentials.ini` is used only once you are signed out.
+- While following, Console closes the stream with code 4401 once the log token is inactive; `canvas logs` then asks Platform for a fresh token, which re-checks your access, and reconnects.
+- Signed out, or for localhost and other hosts that are not Canvas instances, `canvas logs` uses `credentials.ini` and prints a deprecation notice on stderr.
 
 **Usage**:
 

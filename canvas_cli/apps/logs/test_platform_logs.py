@@ -132,43 +132,55 @@ def test_platform_chosen_over_credentials_ini(
     assert _calls_to(requests_mock, LOG_TOKEN_URL) == 1
 
 
-def test_unmanaged_instance_uses_credentials_ini(
+@pytest.mark.parametrize(
+    ("instances", "cause"),
+    [
+        ([_instance("acme-prod", managed=False)], "Canvas Platform does not manage acme-prod."),
+        ([], "acme-prod is not one of your instances on Canvas Platform."),
+    ],
+    ids=["unmanaged", "not-listed"],
+)
+def test_signed_in_refuses_instance_platform_does_not_manage(
+    instances: list[dict[str, Any]],
+    cause: str,
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     credentials_token: Mock,
 ) -> None:
-    """D1 keeps credentials.ini for instances Platform does not manage."""
+    """Signed in, an instance Platform does not manage is refused, never read with credentials.ini."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": instances})
+    _answer_logs_for(requests_mock, "ini-tok")
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert cause in result.output
+    assert "sign out with canvas logout" in result.output
+    credentials_token.assert_not_called()
+    assert _calls_to(requests_mock, LOGS_URL) == 0
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 0
+
+
+def test_service_token_refusal_names_the_variable(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    credentials_token: Mock,
+) -> None:
+    """Under CANVAS_PLATFORM_TOKEN the refusal names unsetting it, since logout leaves it."""
+    monkeypatch.setenv(SERVICE_TOKEN_ENV, "cnvs_sa_ci")
     requests_mock.get(
         f"{PLATFORM}/api/v1/instances",
         json={"instances": [_instance("acme-prod", managed=False)]},
     )
-    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    _answer_logs_for(requests_mock, "ini-tok")
 
     result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
 
-    assert result.exit_code == 0, result.output
-    assert "hello from acme" in result.output
-    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 0
-
-
-def test_instance_not_in_platform_list_uses_credentials_ini(
-    cli_runner: CliRunner,
-    requests_mock: requests_mock_module.Mocker,
-    signed_in: None,
-    credentials_token: Mock,
-) -> None:
-    """An instance outside the person's Platform list keeps the credentials.ini path."""
-    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": []})
-    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    _answer_logs_for(requests_mock, "ini-tok")
-
-    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
-
-    assert result.exit_code == 0, result.output
-    assert "hello from acme" in result.output
-    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 0
+    assert result.exit_code == 1
+    assert "unset CANVAS_PLATFORM_TOKEN" in result.output
+    assert "canvas logout" not in result.output
+    credentials_token.assert_not_called()
 
 
 def test_signed_out_uses_credentials_ini(
@@ -370,14 +382,9 @@ def test_second_refusal_under_service_token_names_the_variable(
 def test_credentials_ini_refusal_is_not_retried(
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
-    signed_in: None,
     credentials_token: Mock,
 ) -> None:
     """A refused credentials.ini token is sent once and never blamed on Canvas Platform."""
-    requests_mock.get(
-        f"{PLATFORM}/api/v1/instances",
-        json={"instances": [_instance("acme-prod", managed=False)]},
-    )
     requests_mock.get(LOGS_URL, status_code=403, json=NOT_AUTHENTICATED)
 
     result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
@@ -498,3 +505,182 @@ def test_minted_token_is_not_cached_with_instance_tokens(
 def test_instance_slug(host: str, slug: str | None) -> None:
     """Only a canvasmedical.com host names a Platform instance."""
     assert instance_slug(host) == slug
+
+
+class _FakeStream:
+    """A ``WebSocketApp`` stand-in that replays one scripted connection per instance.
+
+    Each script entry is ``(opens, close_code)``: whether the stream opens before it closes,
+    and the close code Console sends. Every instance records the URL it was built with.
+    """
+
+    script: list[tuple[bool, int | None]] = []
+    urls: list[str] = []
+
+    def __init__(self, url: str, **callbacks: Any) -> None:
+        self.url: str = url
+        self.callbacks: dict[str, Any] = callbacks
+        self.on_open: Any = None
+        _FakeStream.urls.append(url)
+
+    def run_forever(self) -> bool:
+        opens, close_code = _FakeStream.script.pop(0)
+        if opens:
+            self.on_open(self)
+        self.callbacks["on_close"](self, close_code, "")
+        return False
+
+
+@pytest.fixture
+def fake_stream() -> Iterator[type[_FakeStream]]:
+    """Patch the websocket client with ``_FakeStream`` and reset its script."""
+    _FakeStream.script = []
+    _FakeStream.urls = []
+    with patch("canvas_cli.apps.logs.logs.websocket.WebSocketApp", _FakeStream):
+        yield _FakeStream
+
+
+def _stream_url(token: str) -> str:
+    return f"wss://logs.console.canvasmedical.com/acme-prod?token={token}"
+
+
+def test_stream_reconnects_with_fresh_token_after_4401(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console closing a Platform stream with 4401 mints a new token through Platform and reconnects."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
+    )
+    fake_stream.script = [(True, 4401), (True, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 2
+    credentials_token.assert_not_called()
+
+
+def test_stream_ends_when_platform_refuses_the_new_token(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A person who lost read_plugin_logs is stopped at the re-mint, with Platform's sentence."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [{"json": MINTED}, {"status_code": 403, "json": FORBIDDEN}],
+    )
+    fake_stream.script = [(True, 4401)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert FORBIDDEN["error"] in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_refused_on_fresh_token_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A 4401 before the stream ever opened ends the run instead of reconnecting in a loop."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(False, 4401)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert len(fake_stream.urls) == 1
+
+
+@pytest.mark.parametrize("close_code", [1000, 1011, None], ids=["normal", "error", "interrupt"])
+def test_stream_other_closes_end_the_run(
+    close_code: int | None,
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Only 4401 reconnects; any other close, or Ctrl-C (no code), ends the stream."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(True, close_code)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert len(fake_stream.urls) == 1
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 1
+
+
+def test_credentials_ini_stream_does_not_reconnect_on_4401(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """credentials.ini streams keep check-at-connect: a 4401 ends them as any close does."""
+    fake_stream.script = [(True, 4401)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("ini-tok")]
+    credentials_token.assert_called_once()
+
+
+CREDENTIALS_INI_NOTICE = (
+    "`canvas logs` with credentials.ini is deprecated in favor of `canvas login`, and is no "
+    "longer supported as of December 14, 2026."
+)
+
+
+@pytest.mark.parametrize("host", ["acme-prod", "localhost"])
+def test_credentials_ini_run_prints_deprecation_notice(
+    host: str,
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+) -> None:
+    """Every credentials.ini run warns on stderr, leaving stdout to the logs."""
+    requests_mock.get(LOGS_URL, json={"hits": [HIT], "next": {}})
+    requests_mock.get(
+        plugin_url("http://localhost:8000", "/logs"), json={"hits": [HIT], "next": {}}
+    )
+
+    result = CliRunner(mix_stderr=False).invoke(app, f"logs --host {host} --no-follow")
+
+    assert result.exit_code == 0, result.output
+    assert CREDENTIALS_INI_NOTICE in result.stderr
+    assert "canvas-plugins#migrating-from-credentialsini-to-canvas-platform" in result.stderr
+    assert "deprecated" not in result.stdout
+
+
+def test_platform_run_prints_no_deprecation_notice(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """The Platform path is the supported one, so it prints no credentials.ini notice."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    _answer_logs_for(requests_mock, "plat-tok")
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 0, result.output
+    assert "deprecated" not in result.stderr

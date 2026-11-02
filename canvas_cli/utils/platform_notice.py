@@ -27,6 +27,21 @@ def print_install_deprecation() -> None:
     )
 
 
+def print_credentials_ini_deprecation(command: str) -> None:
+    """Warn that running ``canvas <command>`` with credentials.ini is deprecated.
+
+    Args:
+        command (str): The command as typed after ``canvas``, such as ``logs`` or
+            ``namespace list``.
+    """
+    print(
+        f"{_notice_label()} `canvas {command}` with credentials.ini is deprecated in favor of "
+        f"`canvas login`, and is no longer supported as of {END_OF_SUPPORT}. See {MIGRATION_URL}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def show_platform_notice(app_dir: str) -> None:
     """Print the authentication and deployment notice unless it was shown in the last day."""
     cache_path = Path(app_dir) / CACHE_FILENAME
