@@ -177,6 +177,12 @@ class Interview(TimestampedModel, IdentifiableModel):
     )
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
+    assessment = models.ForeignKey(
+        "v1.Assessment",
+        on_delete=models.DO_NOTHING,
+        related_name="linked_interviews",
+        null=True,
+    )
     questionnaires = models.ManyToManyField(
         Questionnaire,
         through="v1.InterviewQuestionnaireMap",

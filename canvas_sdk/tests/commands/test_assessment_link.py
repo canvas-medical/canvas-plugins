@@ -19,6 +19,7 @@ from canvas_sdk.commands import (
     ReferCommand,
     RefillCommand,
     StopMedicationCommand,
+    StructuredAssessmentCommand,
     TaskCommand,
     UpdateGoalCommand,
 )
@@ -47,6 +48,7 @@ ASSESSMENT_LINKED_COMMANDS = (
     ReferCommand,
     RefillCommand,
     StopMedicationCommand,
+    StructuredAssessmentCommand,
     TaskCommand,
     UpdateGoalCommand,
 )
