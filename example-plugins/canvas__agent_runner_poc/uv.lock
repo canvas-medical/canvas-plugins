@@ -7,17 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agent-runner-poc"
-version = "0.0.1"
-source = { virtual = "." }
-dependencies = [
-    { name = "canvas", extra = ["test-utils"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "canvas", extras = ["test-utils"], editable = "../../" }]
-
-[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -164,7 +153,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.261.0"
+version = "0.266.0"
 source = { editable = "../../" }
 dependencies = [
     { name = "anthropic" },
@@ -270,6 +259,17 @@ dev = [
     { name = "types-protobuf" },
     { name = "types-requests" },
 ]
+
+[[package]]
+name = "canvas-agent-runner-poc"
+version = "0.0.1"
+source = { virtual = "." }
+dependencies = [
+    { name = "canvas", extra = ["test-utils"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "canvas", extras = ["test-utils"], editable = "../../" }]
 
 [[package]]
 name = "certifi"

@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from agent_runner_poc.agents.longitudinal_advisor import LongitudinalCareAdvisor
+from canvas__agent_runner_poc.agents.longitudinal_advisor import LongitudinalCareAdvisor
 
 from canvas_sdk.agents import RunSubject
 from canvas_sdk.effects import EffectType

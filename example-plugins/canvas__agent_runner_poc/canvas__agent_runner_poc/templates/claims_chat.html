@@ -128,7 +128,7 @@
     </form>
     <script>
       const CLAIM_ID = "{{ claim_id|escapejs }}";
-      const BASE = '/plugin-io/api/agent_runner_poc';
+      const BASE = '/plugin-io/api/canvas__agent_runner_poc';
       const CLAIM_QUERY = CLAIM_ID ? `?claim=${encodeURIComponent(CLAIM_ID)}` : '';
       const HISTORY_URL = `${BASE}/claims-chat-history${CLAIM_QUERY}`;
       const MESSAGE_URL = `${BASE}/claims-chat-message`;

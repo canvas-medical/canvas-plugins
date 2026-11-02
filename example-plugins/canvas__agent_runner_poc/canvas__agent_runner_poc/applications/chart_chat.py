@@ -26,9 +26,9 @@ for the LLM round-trip).
 from http import HTTPStatus
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
-from agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
-from agent_runner_poc.agents.suggestions import split_suggestions
+from canvas__agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
+from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
+from canvas__agent_runner_poc.agents.suggestions import split_suggestions
 from canvas_sdk.agents import ToolRegistry
 from canvas_sdk.agents.citations import Sources, cite
 from canvas_sdk.effects import Effect
@@ -40,7 +40,7 @@ from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import AgentRun, AgentRunProposal
 
-CHART_CHAT_AGENT_ID = "agent_runner_poc.agents.chart_chat:ChartChatAgent"
+CHART_CHAT_AGENT_ID = "canvas__agent_runner_poc.agents.chart_chat:ChartChatAgent"
 
 
 class ChartChatApplication(Application):
@@ -50,7 +50,7 @@ class ChartChatApplication(Application):
         """Launch the chat modal pointing at the GET endpoint that serves the UI."""
         patient_id = self.context["patient"]["id"]
         return LaunchModalEffect(
-            url=f"/plugin-io/api/agent_runner_poc/chart-chat-ui?patient={patient_id}",
+            url=f"/plugin-io/api/canvas__agent_runner_poc/chart-chat-ui?patient={patient_id}",
             target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
             title="Chart chat",
         ).apply()
@@ -124,7 +124,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         run = AgentRun.objects.filter(
             id=self.request.query_params["run_id"],
-            plugin_name="agent_runner_poc",
+            plugin_name="canvas__agent_runner_poc",
             staff__id=staff_id,
         ).first()
         if run is None:
@@ -137,7 +137,7 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         proposals = AgentRunProposal.objects.filter(
             run__id=self.request.query_params["run_id"],
-            plugin_name="agent_runner_poc",
+            plugin_name="canvas__agent_runner_poc",
             staff__id=staff_id,
         ).order_by("created_at")
         return [

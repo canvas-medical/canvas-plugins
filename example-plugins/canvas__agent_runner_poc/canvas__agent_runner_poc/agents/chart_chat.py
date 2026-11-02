@@ -30,10 +30,10 @@ member started.
 import json
 from typing import Any
 
-from agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
-from agent_runner_poc.agents.suggestions import suggestions_guidance
-from agent_runner_poc.models.conversation import Conversation
-from agent_runner_poc.models.proxy import PatientProxy, StaffProxy
+from canvas__agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
+from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
+from canvas__agent_runner_poc.models.conversation import Conversation
+from canvas__agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.agents import (
     DEFAULT_HISTORY_CHARS,
     AgentPlugin,
