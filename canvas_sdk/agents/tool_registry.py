@@ -431,9 +431,10 @@ class ToolRegistry:
     def with_approval(self, names: Iterable[str]) -> "ToolRegistry":
         """Return a copy in which the named tools propose their changes instead of making them.
 
-        The platform calls this with the manifest's ``tools.approve`` for the agent. Each
-        effect such a tool stages is wrapped in a proposal the requester approves or denies;
-        the model is told the change awaits approval. Names not registered here are ignored.
+        The platform calls this with the manifest's ``tools.approve`` for the agent. The
+        effects one call of such a tool stages are wrapped, in order, in one proposal the
+        requester approves or denies as a whole; the model is told the change awaits
+        approval. Names not registered here are ignored.
         """
         approving = self.scope(definition["name"] for definition in self._definitions)
         approving._approval = frozenset(names) & frozenset(self._executors)
@@ -1273,11 +1274,12 @@ class ToolRegistry:
         result = executor(arguments, ctx={**ctx, "effects": staged})
         if not staged:
             return result
-        proposals = [propose(effect, name, arguments) for effect in staged]
-        ctx["effects"].extend(proposals)
+        # One proposal for the whole call, so its changes are decided and applied together.
+        proposal = propose(staged, name, arguments)
+        ctx["effects"].append(proposal)
         return {
             "status": "awaiting_approval",
-            "proposal_ids": [proposal_id(proposal) for proposal in proposals],
+            "proposal_ids": [proposal_id(proposal)],
             "message": (
                 "Nothing has changed yet: this change is proposed, and takes effect only if "
                 "the user approves it. Tell the user it is waiting for their approval."

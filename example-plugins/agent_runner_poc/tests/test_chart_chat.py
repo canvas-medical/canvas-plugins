@@ -120,7 +120,7 @@ def test_a_task_the_clinician_asks_for_waits_for_their_approval() -> None:
 
     (proposal,) = run.effects
     assert proposal.type == EffectType.PROPOSE_AGENT_ACTION
-    assert json.loads(proposal.payload)["data"]["effect"]["type"] == "CREATE_TASK"
+    assert [e["type"] for e in json.loads(proposal.payload)["data"]["effects"]] == ["CREATE_TASK"]
     tool_result = gateway.requests[1]["messages"][-1]["content"][0]["content"]
     assert json.loads(tool_result)["status"] == "awaiting_approval"
 
@@ -150,7 +150,7 @@ def _proposal(staff: Any, status: str, reason: str = "") -> AgentRunProposal:
         agent_id="agent_runner_poc.agents.chart_chat:ChartChatAgent",
         tool="create_task",
         arguments={"title": "Call about labs"},
-        effect_type="CREATE_TASK",
+        effect_types=["CREATE_TASK"],
         staff=staff,
         status=status,
         created_at=datetime(2026, 10, 31, tzinfo=UTC),
