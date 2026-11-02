@@ -22,6 +22,10 @@ from canvas_sdk.agents.tool_registry import (
     require_patient_id,
 )
 
+# The modules above have registered every standard tool. Every plugin's agents adopt
+# this one catalog in the runner's shared process, so no plugin may add to it.
+standard_tools.freeze()
+
 __all__ = __exports__ = (
     "DEFAULT_HISTORY_CHARS",
     "AgentPlugin",
