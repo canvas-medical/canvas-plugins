@@ -156,7 +156,7 @@ def test_signed_in_refuses_instance_platform_does_not_manage(
 
     assert result.exit_code == 1
     assert cause in result.output
-    assert "sign out with canvas logout" in result.output
+    assert "sign out with `canvas logout`" in result.output
     credentials_token.assert_not_called()
     assert _calls_to(requests_mock, LOGS_URL) == 0
     assert _calls_to(requests_mock, LOG_TOKEN_URL) == 0
