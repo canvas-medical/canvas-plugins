@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import anthropic
+import httpx2
 import pytest
 
 import plugin_runner.plugin_runner as runner_module
@@ -367,18 +369,12 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
 
 
 def _status_error(status: int) -> Exception:
-    import anthropic
-    import httpx2
-
     request = httpx2.Request("POST", "https://gateway.test/v1/messages")
     response = httpx2.Response(status, request=request, json={"error": {"message": "no"}})
     return anthropic.APIStatusError("no", response=response, body=None)
 
 
 def _connection_error() -> Exception:
-    import anthropic
-    import httpx2
-
     return anthropic.APIConnectionError(
         request=httpx2.Request("POST", "https://gateway.test/v1/messages")
     )
@@ -1238,3 +1234,36 @@ def test_reply_text_is_streamed_only_at_the_reply_level(
     else:
         assert texts == []
         assert "turn_started" not in {r.progress.kind for r in progress}
+
+
+class _NotAnAgent:
+    """A handler-like class a plugin loads alongside its agents; records being built."""
+
+    instantiated: list[object] = []
+
+    def __init__(self) -> None:
+        _NotAnAgent.instantiated.append(self)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_refuses_a_loaded_class_that_is_not_an_agent(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only a class the plugin declares as an agent runs; a handler named as one does not."""
+    handler_id = "test_agent_plugin.handlers.trigger:Trigger"
+    monkeypatch.setitem(
+        LOADED_PLUGINS,
+        f"test_agent_plugin:{handler_id}",
+        {**LOADED_PLUGINS[AGENT_KEY], "class": _NotAnAgent},
+    )
+
+    _NotAnAgent.instantiated.clear()
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(agent_id=handler_id), None)))
+
+    assert response.success is False
+    assert _NotAnAgent.instantiated == []
