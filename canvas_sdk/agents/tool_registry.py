@@ -1271,7 +1271,17 @@ class ToolRegistry:
         ):
             raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
         if name not in self._approval:
-            return executor(arguments, ctx=ctx)
+            run_effects: list[Any] | None = ctx.get("effects")
+            staged_before = len(run_effects) if run_effects is not None else 0
+            try:
+                return executor(arguments, ctx=ctx)
+            except Exception:
+                # A call that raises keeps none of what it staged: the model is told it
+                # failed, and a retry would duplicate it. The tool stages into the run's
+                # own list, so a tool that reads the run's drafts sees them.
+                if run_effects is not None:
+                    del run_effects[staged_before:]
+                raise
         staged: list[Any] = []
         result = executor(arguments, ctx={**ctx, "effects": staged})
         if not staged:

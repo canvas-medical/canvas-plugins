@@ -1651,3 +1651,20 @@ def test_add_effect_tool_refuses_a_run_with_no_patient_when_it_injects_one() -> 
         registry.execute("stage_fake", {}, ctx={"effects": effects})
 
     assert effects == []
+
+
+def test_a_tool_that_fails_keeps_none_of_what_it_staged() -> None:
+    """The model is told the call failed, so nothing it staged on the way may apply."""
+    registry = ToolRegistry()
+
+    @registry.tool(name="half_done", description="...", input_schema={"type": "object"})
+    def _half_done(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        ctx["effects"].append(_FakeEffect(title="staged before failing"))
+        raise ValueError("bad input")
+
+    effects: list[Any] = ["earlier"]
+
+    with pytest.raises(ValueError, match="bad input"):
+        registry.execute("half_done", {}, ctx={"effects": effects})
+
+    assert effects == ["earlier"]
