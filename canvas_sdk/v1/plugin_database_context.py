@@ -72,6 +72,21 @@ def _set_search_path(schema: str) -> None:
         cursor.execute("SET search_path = %s, public", [schema])
 
 
+def _set_connection_plugin(plugin_name: str) -> None:
+    """Name the plugin whose queries the connection runs. No-op on SQLite.
+
+    home-app's views over agent run records keep only that plugin's rows, so a plugin never
+    reads another's runs or proposals; an empty name reads none.
+    """
+    if not _is_postgres():
+        return
+
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT set_config('canvas.plugin_name', %s, false)", [plugin_name])
+
+
 def _reset_search_path() -> None:
     """Reset PostgreSQL search_path to default. No-op on SQLite."""
     if not _is_postgres():
@@ -142,6 +157,7 @@ def plugin_database_context(
     # Only change search_path if a namespace is declared
     if namespace:
         _set_search_path(namespace)
+    _set_connection_plugin(plugin_name)
 
     # In SQLite mode, the default connection is read-only. Swap to the
     # writable connection for plugins that have read_write access so that
@@ -158,6 +174,7 @@ def plugin_database_context(
             _restore_connection(original_connection)
 
         # Restore previous context
+        _set_connection_plugin(old_plugin or "")
         if old_plugin:
             _plugin_context.plugin_name = old_plugin
             _plugin_context.schema = old_schema
