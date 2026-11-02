@@ -124,5 +124,5 @@ def test_plugin_caller_name_cannot_be_set(
 
 def test_plugins_cache_uses_configured_max_entries() -> None:
     """Test that the plugins cache backend culls at PLUGINS_CACHE_MAX_ENTRIES, not Django's default of 300."""
-    assert settings.PLUGINS_CACHE_MAX_ENTRIES == 1_000_000
+    assert settings.PLUGINS_CACHE_MAX_ENTRIES == 1_000
     assert caches["plugins"]._max_entries == settings.PLUGINS_CACHE_MAX_ENTRIES

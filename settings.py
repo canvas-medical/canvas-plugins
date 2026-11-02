@@ -48,7 +48,7 @@ CANVAS_SDK_PLUGINS_CACHE_LOCATION = os.getenv(
 CANVAS_SDK_CACHE_TIMEOUT_SECONDS = int(os.getenv("CANVAS_SDK_CACHE_TIMEOUT", FOURTEEN_DAYS))
 # Every plugin on an instance shares this cache, so Django's default of 300 entries
 # culls keys across plugins far too early.
-PLUGINS_CACHE_MAX_ENTRIES = int(os.getenv("PLUGINS_CACHE_MAX_ENTRIES", 1_000_000))
+PLUGINS_CACHE_MAX_ENTRIES = int(os.getenv("PLUGINS_CACHE_MAX_ENTRIES", 1_000))
 
 
 METRICS_ENABLED = env_to_bool("PLUGINS_METRICS_ENABLED", not IS_SCRIPT)
