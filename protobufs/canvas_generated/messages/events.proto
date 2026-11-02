@@ -1620,7 +1620,8 @@ message AgentToolCall {
 message AgentRunSummary {
   // Model calls across the run's tool loops, sub-agents included.
   int32 model_calls = 1;
-  // How the run's last tool loop ended: end_turn, max_turns, or unexpected.
+  // How the run's last tool loop ended: end_turn, max_turns, call_limit, or
+  // unexpected.
   string stop_reason = 2;
   int32 effects_returned = 3;
   // Returned effects the tool grant or usage pricing dropped.
@@ -1662,6 +1663,8 @@ message EventResponse {
   //   - "LLM_NOT_CONFIGURED": the gateway URL or the plugin's key is unset.
   //   - "RUNNER_BUSY": the runner already has its share of workers running
   //     agents; worth retrying shortly.
+  //   - "EXTENDED_RUNS_BUSY": the runner already holds its share of extended
+  //     runs (run_seconds above the default); worth retrying shortly.
   string error_kind = 3;
   // Set on RunAgent responses once the agent was loaded.
   AgentRunSummary agent_run = 4;
