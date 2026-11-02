@@ -1034,7 +1034,9 @@ class ToolRegistry:
             # Start with ctx-injected fields.
             effect_kwargs: dict[str, Any] = {}
             for ctx_key, target_field in ctx_field_map.items():
-                value = ctx.get(ctx_key)
+                # A tool built for the run's patient refuses a run with none, rather
+                # than staging the effect for no one.
+                value = require_patient_id(ctx) if ctx_key == "patient_id" else ctx.get(ctx_key)
                 if value is not None:
                     effect_kwargs[target_field] = value
 
