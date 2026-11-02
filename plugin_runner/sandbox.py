@@ -801,19 +801,6 @@ STANDARD_LIBRARY_MODULES = {
 
 
 THIRD_PARTY_MODULES = {
-    "anthropic": {
-        "Anthropic",
-        "AsyncAnthropic",
-        "APIConnectionError",
-        "APIError",
-        "APIStatusError",
-        "BadRequestError",
-        "RateLimitError",
-    },
-    "anthropic.types": {
-        "TextBlock",
-        "ToolUseBlock",
-    },
     "arrow": {
         "Arrow",
         "get",

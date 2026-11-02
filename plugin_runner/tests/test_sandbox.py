@@ -1605,51 +1605,22 @@ def test_coalesce_function_import() -> None:
 
 
 @pytest.mark.parametrize(
-    "symbol",
+    "statement",
     [
-        "Anthropic",
-        "AsyncAnthropic",
-        "APIConnectionError",
-        "APIError",
-        "APIStatusError",
-        "BadRequestError",
-        "RateLimitError",
+        "from anthropic import Anthropic",
+        "from anthropic import AsyncAnthropic",
+        "from anthropic import APIStatusError",
+        "from anthropic.types import ToolUseBlock",
+        "import anthropic",
     ],
 )
-def test_anthropic_allowed_symbol_import(symbol: str) -> None:
-    """Each allowlisted anthropic symbol is importable inside the sandbox."""
-    sandbox = _sandbox_from_code(f"from anthropic import {symbol}\nresult = {symbol}")
+def test_plugin_code_cannot_import_anthropic(statement: str) -> None:
+    """An agent reaches a model only through gateway.client(), which the SDK builds.
 
-    scope = sandbox.execute()
-    assert scope["result"] is not None, f"{symbol} should be importable from anthropic."
-
-
-def test_anthropic_disallowed_symbol_import() -> None:
-    """Non-allowlisted anthropic attributes are denied (locks the allowed-set)."""
-    # `Client` is a real symbol on the anthropic SDK that we intentionally
-    # do not expose — if this test starts failing, the allowed-attribute set
-    # has drifted and needs explicit review.
-    sandbox = _sandbox_from_code("from anthropic import Client")
-
-    with pytest.raises(ImportError):
-        sandbox.execute()
-
-
-@pytest.mark.parametrize("symbol", ["TextBlock", "ToolUseBlock"])
-def test_anthropic_types_allowed_symbol_import(symbol: str) -> None:
-    """Each allowlisted anthropic.types symbol is importable inside the sandbox."""
-    sandbox = _sandbox_from_code(f"from anthropic.types import {symbol}\nresult = {symbol}")
-
-    scope = sandbox.execute()
-    assert scope["result"] is not None, f"{symbol} should be importable from anthropic.types."
-
-
-def test_anthropic_types_disallowed_symbol_import() -> None:
-    """Non-allowlisted anthropic.types attributes are denied (locks the allowed-set)."""
-    # `MessageParam` is a real symbol on anthropic.types that we intentionally
-    # do not expose — locks the boundary the same way `Client` does for
-    # the top-level anthropic module.
-    sandbox = _sandbox_from_code("from anthropic.types import MessageParam")
+    A plugin with its own Anthropic client would send chart data around the inference
+    gateway, its key, its ledger, and the run's attribution.
+    """
+    sandbox = _sandbox_from_code(statement)
 
     with pytest.raises(ImportError):
         sandbox.execute()
