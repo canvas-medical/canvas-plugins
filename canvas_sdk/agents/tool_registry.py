@@ -46,7 +46,7 @@ class ToolExecutor(Protocol):
         ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class EffectField:
     """One field on the argument schema for an effect tool.
 
@@ -184,7 +184,7 @@ def _note_id_from_ctx(ctx: dict[str, Any]) -> str | None:
     return ctx.get("note_id")
 
 
-@dataclass
+@dataclass(frozen=True)
 class FilterSpec:
     """One filter parameter advertised on a :meth:`ToolRegistry.filter_search_tool`.
 
@@ -435,9 +435,10 @@ class ToolRegistry:
         """Return the docs-oriented metadata for a tool, or an empty dict.
 
         Used by the docs generator and other introspection callers; the
-        runtime tool-dispatch path does not consult this.
+        runtime tool-dispatch path does not consult this. The metadata is a copy, nested
+        values included, so editing it leaves the registry unchanged.
         """
-        return dict(self._metadata.get(name, {}))
+        return copy.deepcopy(self._metadata.get(name, {}))
 
     def categories_for(self, name: str) -> tuple[str, ...]:
         """Return the categories a tool is tagged with, in registration order."""
