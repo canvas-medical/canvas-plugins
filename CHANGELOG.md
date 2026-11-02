@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.266.0 (2026-11-02)
+
+### Features
+
+- Add login email event and effect
+  ([#1950](https://github.com/canvas-medical/canvas-plugins/pull/1950),
+  [`c76ae08`](https://github.com/canvas-medical/canvas-plugins/commit/c76ae08fd06db46f02fa6b7b68d2f8bda5426615))
+
+
 ## v0.265.0 (2026-11-02)
 
 ### Bug Fixes
