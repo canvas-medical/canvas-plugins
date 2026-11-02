@@ -45,7 +45,12 @@ class EffectGrant:
         if name == DECISION_EFFECT_TYPE:
             return False
         if name == PROPOSAL_EFFECT_TYPE:
-            proposed = proposed_effect_types(effect)
+            try:
+                proposed = proposed_effect_types(effect)
+            except (ValueError, KeyError, TypeError):
+                # A payload the platform cannot read is dropped like any effect it
+                # cannot allow, rather than failing a run whose state is already saved.
+                return False
             return bool(proposed) and all(
                 each in self.proposable and each not in (PROPOSAL_EFFECT_TYPE, DECISION_EFFECT_TYPE)
                 for each in proposed
