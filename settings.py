@@ -109,13 +109,28 @@ PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS = extended_agent_run_limit(
 )
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
-# By default, allow a pool size that gives each worker and agent run 2 active connections
-# and allow overriding via environment variable if necessary
-PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
-    os.getenv(
-        "PLUGIN_RUNNER_DATABASE_POOL_MAX",
-        (PLUGIN_RUNNER_MAX_WORKERS + PLUGIN_RUNNER_MAX_AGENT_RUNS) * 2,
-    )
+# How many sub-agents one run_subagents call runs at once, each on its own thread with its
+# own database connection; canvas_sdk.agents.subagent.MAX_PARALLEL, which importing here
+# would load the SDK's models before settings finish.
+SUBAGENT_MAX_PARALLEL = 8
+
+
+def database_pool_max(requested: str | None, *, workers: int, agent_runs: int) -> int:
+    """The database pool's size, or ``requested`` when set.
+
+    Each worker and agent run gets 2 active connections, and each agent run one more for
+    every sub-agent it can run at once, so a run fanning out to sub-agents never leaves
+    event handling waiting on the pool.
+    """
+    if requested:
+        return int(requested)
+    return (workers + agent_runs) * 2 + agent_runs * SUBAGENT_MAX_PARALLEL
+
+
+PLUGIN_RUNNER_DATABASE_POOL_MAX = database_pool_max(
+    os.getenv("PLUGIN_RUNNER_DATABASE_POOL_MAX"),
+    workers=PLUGIN_RUNNER_MAX_WORKERS,
+    agent_runs=PLUGIN_RUNNER_MAX_AGENT_RUNS,
 )
 
 if CANVAS_SDK_DB_BACKEND == "postgres":
