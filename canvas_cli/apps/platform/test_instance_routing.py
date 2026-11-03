@@ -770,6 +770,26 @@ def test_namespace_drop_on_production_also_asks_for_the_instance_slug(
     assert len(_calls(requests_mock, "POST", f"{NS_URL}/drop?dry_run=false")) == real_calls
 
 
+@pytest.mark.parametrize("verb", ["reset", "drop"])
+def test_a_real_run_on_production_sends_the_typed_slug_to_platform(
+    verb: str, requests_mock: requests_mock_module.Mocker, production_instance: None
+) -> None:
+    """Platform refuses a real reset or drop on production unless the request names the
+    instance, so the slug typed at the prompt goes with the real call and not the preview.
+    """
+    requests_mock.post(f"{NS_URL}/{verb}", json={"dry_run": True, "namespace": NS})
+
+    result = runner.invoke(
+        app, ["namespace", verb, NS, "--host", "acme", "--execute"], input=f"{NS}\nacme\n"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [r.qs for r in _calls(requests_mock, "POST", f"{NS_URL}/{verb}")] == [
+        {"dry_run": ["true"]},
+        {"dry_run": ["false"], "confirm_production": ["acme"]},
+    ]
+
+
 def test_namespace_drop_refused_for_pending_consent(
     requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
 ) -> None:
