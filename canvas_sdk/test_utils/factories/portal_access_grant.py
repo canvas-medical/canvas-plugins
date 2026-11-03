@@ -21,4 +21,3 @@ class PortalAccessGrantFactory(factory.django.DjangoModelFactory[PortalAccessGra
     billing = "act"
     dob_verified_at = factory.LazyFunction(lambda: datetime.datetime.now(datetime.UTC))
     granted_by = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
-    granted_at = factory.LazyFunction(lambda: datetime.datetime.now(datetime.UTC))

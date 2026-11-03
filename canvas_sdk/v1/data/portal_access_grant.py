@@ -94,7 +94,7 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     flagged_at = models.DateTimeField(null=True, blank=True)
 
     granted_by = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, related_name="+")
-    granted_at = models.DateTimeField()
+    granted_at = models.DateTimeField(auto_now_add=True)
     notified_at = models.DateTimeField(null=True, blank=True)
 
     revoked_at = models.DateTimeField(null=True)

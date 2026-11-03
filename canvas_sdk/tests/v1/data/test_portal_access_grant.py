@@ -53,6 +53,17 @@ def test_a_chart_names_who_it_was_given_to_and_keeps_ended_access_as_history() -
     assert giving.contact_relationship == "Father"
 
 
+@pytest.mark.django_db
+def test_a_grant_is_dated_when_it_is_created_whatever_date_is_passed() -> None:
+    """granted_at is set when the grant is created, so a date passed in is ignored."""
+    long_ago = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+    before = datetime.datetime.now(datetime.UTC)
+
+    grant = PortalAccessGrantFactory.create(granted_at=long_ago)
+
+    assert grant.granted_at >= before
+
+
 def test_each_area_takes_a_portal_access_level_and_allows_act_unless_limited() -> None:
     """Each area's level is one of PortalAccessLevel's choices, act unless staff limited it."""
     grant = PortalAccessGrant()
