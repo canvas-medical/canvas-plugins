@@ -24,6 +24,10 @@ from canvas_sdk.test_utils.factories import (
     ClaimFactory,
     ClaimLabelFactory,
     ClaimQueueFactory,
+    DocumentTypeFactory,
+    IntegrationTaskFactory,
+    LabReportTemplateFactory,
+    LabReportTemplateFieldFactory,
     MedicationFactory,
     PatientFactory,
     StaffFactory,
@@ -1219,12 +1223,25 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         # Committed, so it is active: resolving takes only an active condition.
         committer=CanvasUserFactory.create(),
     )
+    # What the intake tools file an incoming document as.
+    document_type = DocumentTypeFactory.create()
+    lab_template = LabReportTemplateFactory.create()
+    LabReportTemplateFieldFactory.create(report_template=lab_template, code="2093-3")
+    reviewer = StaffFactory.create()
     # Drafts in the run's note, for the edit tools; the second shares the first's note.
     edited = staged_command(patient)
     deleted = staged_command(patient, "plan", note=edited.note)
     return {
         "edit_staged_command": {"command_id": str(edited.id), "fields": {"sig": "2 daily"}},
         "delete_staged_command": {"command_id": str(deleted.id)},
+        "suggest_patient": {"mrn": patient.mrn},
+        "categorize_document": {"document_type_key": document_type.key},
+        "prefill_document_fields": {
+            "template_type": "lab",
+            "template_id": lab_template.dbid,
+            "fields": {"2093-3": {"value": "212"}},
+        },
+        "assign_document_reviewer": {"staff_id": str(reviewer.id)},
         "add_banner_alert": {"narrative": "Overdue", "intent": "warning", "placement": ["chart"]},
         "remove_banner_alert": {"banner_key": "banner-1"},
         "create_task": {"title": "Call patient"},
@@ -1317,6 +1334,7 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares(
                 "staff_id": staff.id,
                 "note_id": "00000000-0000-0000-0000-000000000001",
                 "claim_id": str(claim.id),
+                "document_id": str(IntegrationTaskFactory.create(patient=None).id),
                 "capabilities": frozenset({Capability.REVENUE}),
                 "effects": effects,
                 "parent_tools": standard_tools,
@@ -1467,9 +1485,10 @@ def test_protocol_card_stages_a_command_naming_the_patients_own_medication() -> 
 def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
     """Writes the chart gates on a model permission need the same one; the rest need none.
 
-    The chart checks change_task to update or comment on a task and add_note to create a
-    note. Creating a task, drafting a message or command, and adding a banner or protocol
-    card need only access to the patient, which the platform checks before the run.
+    The chart checks change_task to update or comment on a task, add_note to create a
+    note, and access_dataintegration to work the data integration queue, which the intake
+    tools act in. Creating a task, drafting a message or command, and adding a banner or
+    protocol card need only access to the patient, which the platform checks before the run.
     """
     gated = {
         definition["name"]: standard_tools.required_permissions_for(definition["name"])
@@ -1481,4 +1500,17 @@ def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
         "update_task": frozenset({"api.change_task"}),
         "add_task_comment": frozenset({"api.change_task"}),
         "originate_review_note": frozenset({"api.add_note"}),
+        **{
+            name: frozenset({"api.access_dataintegration"})
+            for name in (
+                "read_incoming_document",
+                "match_patient",
+                "find_document_types",
+                "find_report_templates",
+                "suggest_patient",
+                "categorize_document",
+                "prefill_document_fields",
+                "assign_document_reviewer",
+            )
+        },
     }

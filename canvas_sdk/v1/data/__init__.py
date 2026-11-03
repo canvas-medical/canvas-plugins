@@ -83,6 +83,7 @@ from .document_reference import (
     DocumentReferenceStatus,
 )
 from .document_review_delegation import DocumentReviewDelegation
+from .document_type import DocumentType
 from .educational_material import EducationalMaterial
 from .eligibility_response import (
     EligibilityRequest,
@@ -379,6 +380,7 @@ __all__ = __exports__ = (
     "DocumentHistoryEvent",
     "DocumentHistoryEventType",
     "DocumentReviewDelegation",
+    "DocumentType",
     "EducationalMaterial",
     "EligibilityRequest",
     "EligibilityResponse",
