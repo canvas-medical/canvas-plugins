@@ -64,12 +64,13 @@ def test_a_chart_given_to_no_one_reads_no_level_through_its_grants() -> None:
 
 
 def test_each_area_takes_a_portal_access_level_and_allows_act_unless_limited() -> None:
-    """Each area's level is one of PortalAccessLevel's choices, act unless staff limited it."""
+    """Each area's level is one of PortalAccessLevel's values, act unless staff limited it."""
     grant = PortalAccessGrant()
 
     for area in PortalAccess.AREAS:
         field = PortalAccessGrant._meta.get_field(area)
-        assert isinstance(field, models.CharField) and field.choices == PortalAccessLevel.choices
+        assert isinstance(field, models.CharField)
+        assert field.choices == [("none", "None"), ("view", "View"), ("act", "Act")]
         assert getattr(grant, area) == PortalAccessLevel.ACT
 
 

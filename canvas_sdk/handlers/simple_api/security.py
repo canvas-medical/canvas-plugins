@@ -6,7 +6,7 @@ from functools import cached_property
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
-from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant, PortalAccessLevel
+from canvas_sdk.v1.portal_access_level import PortalAccessLevel
 from logger import log
 from plugin_runner.exceptions import PluginError
 
@@ -18,6 +18,8 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
+    from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
+
     from .api import Request
     from .tools import CaseInsensitiveMultiDict
 
@@ -181,11 +183,15 @@ class PortalAccess:
     @cached_property
     def patient(self) -> Patient | None:
         """The patient whose chart the request acts on, or None without a patient session."""
+        from canvas_sdk.v1.data import Patient
+
         return Patient.objects.filter(id=self._patient_id).first() if self._patient_id else None
 
     @cached_property
     def actor(self) -> CanvasUser | None:
         """The login acting on the chart: acting_user_id's, or on a patient's own chart, theirs."""
+        from canvas_sdk.v1.data import CanvasUser
+
         if self.grant:
             return self.grant.user
         if self.acting_user_id:

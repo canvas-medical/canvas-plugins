@@ -3,47 +3,9 @@ from typing import Any
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.portal_access_level import PortalAccessLevel
 
-
-class PortalAccessLevel(models.TextChoices):
-    """
-    How much a login may do in one area of the patient's chart.
-
-    With NONE, hide the area; with VIEW, show it read-only; with ACT, allow its actions too. Levels
-    compare by how much they allow, NONE < VIEW < ACT, and NONE is falsy.
-    """
-
-    NONE = "none"
-    VIEW = "view"
-    ACT = "act"
-
-    def __lt__(self, other: object) -> bool:
-        return _rank(self) < _rank(other)
-
-    def __le__(self, other: object) -> bool:
-        return _rank(self) <= _rank(other)
-
-    def __gt__(self, other: object) -> bool:
-        return _rank(self) > _rank(other)
-
-    def __ge__(self, other: object) -> bool:
-        return _rank(self) >= _rank(other)
-
-    def __bool__(self) -> bool:
-        return _rank(self) > 0
-
-
-_PORTAL_ACCESS_RANKS = {
-    PortalAccessLevel.NONE: 0,
-    PortalAccessLevel.VIEW: 1,
-    PortalAccessLevel.ACT: 2,
-}
-
-
-def _rank(level: object) -> int:
-    if not isinstance(level, str):
-        raise TypeError(f"Cannot compare a portal access level with {type(level).__name__}")
-    return _PORTAL_ACCESS_RANKS[PortalAccessLevel(level)]
+_PORTAL_ACCESS_LEVEL_CHOICES = [(level.value, level.name.title()) for level in PortalAccessLevel]
 
 
 class _PortalAccessLevelField(models.CharField):
@@ -88,16 +50,16 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     contact_relationship = models.CharField(max_length=255, blank=True, default="")
 
     appointments = _PortalAccessLevelField(
-        max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
+        max_length=4, choices=_PORTAL_ACCESS_LEVEL_CHOICES, default=PortalAccessLevel.ACT
     )
     messaging = _PortalAccessLevelField(
-        max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
+        max_length=4, choices=_PORTAL_ACCESS_LEVEL_CHOICES, default=PortalAccessLevel.ACT
     )
     clinical = _PortalAccessLevelField(
-        max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
+        max_length=4, choices=_PORTAL_ACCESS_LEVEL_CHOICES, default=PortalAccessLevel.ACT
     )
     billing = _PortalAccessLevelField(
-        max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
+        max_length=4, choices=_PORTAL_ACCESS_LEVEL_CHOICES, default=PortalAccessLevel.ACT
     )
 
     dob_verified_at = models.DateTimeField(null=True, blank=True)
