@@ -1356,6 +1356,7 @@
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
     "DocumentReviewDelegation",
+    "DocumentType",
     "EducationalMaterial",
     "EligibilityRequest",
     "EligibilityResponse",
@@ -1778,6 +1779,9 @@
   ],
   "canvas_sdk.v1.data.document_review_delegation": [
     "DocumentReviewDelegation"
+  ],
+  "canvas_sdk.v1.data.document_type": [
+    "DocumentType"
   ],
   "canvas_sdk.v1.data.educational_material": [
     "EducationalMaterial"
