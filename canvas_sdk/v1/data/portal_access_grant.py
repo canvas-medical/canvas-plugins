@@ -29,6 +29,7 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
         on_delete=models.DO_NOTHING,
         related_name="portal_grants",
         null=True,
+        blank=True,
     )
     contact_name = models.CharField(max_length=255, blank=True, default="")
     contact_relationship = models.CharField(max_length=255, blank=True, default="")
