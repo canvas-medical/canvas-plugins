@@ -70,6 +70,7 @@ class EchoAgent(AgentPlugin):
                     self.subject.note_id,
                     self.subject.claim_id,
                     sorted(self.capabilities),
+                    self.subject.document_id,
                 ],
                 "run_id": self.run_id,
                 "gateway_model": gateway.model,

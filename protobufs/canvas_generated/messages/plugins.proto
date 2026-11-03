@@ -99,9 +99,11 @@ message RunAgentRequester {
 
 message RunAgentSubject {
   // Each comes from the RunAgentEffect and is empty when the run has none.
-  // home-app checks the patient exists, the note is that patient's, and the claim
-  // exists and the run has the "revenue" capability.
+  // home-app checks the patient exists, the note is that patient's, the claim
+  // exists and the run has the "revenue" capability, and the document is an
+  // incoming document in the data integration queue that the requester may work.
   string patient_id = 1;
   string note_id = 2;
   string claim_id = 3;
+  string document_id = 4;
 }
