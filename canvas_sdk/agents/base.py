@@ -17,6 +17,7 @@ TOOL_CONTEXT_KEYS = frozenset(
         "staff_id",
         "note_id",
         "claim_id",
+        "document_id",
         "permissions",
         "capabilities",
         "effects",
@@ -140,7 +141,8 @@ class AgentPlugin(ABC):
     ) -> dict[str, Any]:
         """The context every tool call of this run receives.
 
-        Holds the run's subject (``patient_id``, ``note_id``, ``claim_id``), its
+        Holds the run's subject (``patient_id``, ``note_id``, ``claim_id``,
+        ``document_id``), its
         requester's ``staff_id`` and ``permissions``, its ``capabilities``, a fresh
         ``effects`` list, and the ``gateway`` and ``parent_tools`` that composition
         tools hand to sub-agents. ``note_id`` is the subject's note, or for a run a
@@ -164,6 +166,7 @@ class AgentPlugin(ABC):
             "staff_id": staff_id,
             "note_id": note_id,
             "claim_id": subject.claim_id,
+            "document_id": subject.document_id,
             "permissions": self.requester.permissions,
             "capabilities": frozenset(self.capabilities),
             "effects": [],

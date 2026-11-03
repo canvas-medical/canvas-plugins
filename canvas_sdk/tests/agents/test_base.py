@@ -125,6 +125,7 @@ def test_tool_context_carries_the_run_subject() -> None:
         "staff_id": "s1",
         "note_id": "n1",
         "claim_id": None,
+        "document_id": None,
         "permissions": frozenset({"api.change_task"}),
         "capabilities": frozenset(),
         "effects": [],
@@ -145,6 +146,14 @@ def test_tool_context_carries_the_claim_and_capabilities() -> None:
     assert ctx["capabilities"] == frozenset({Capability.REVENUE})
 
 
+def test_tool_context_carries_the_document() -> None:
+    """Intake tools get the incoming document the platform checked."""
+    agent = _MinimalAgent()
+    agent.subject = RunSubject(document_id="d1")
+
+    assert agent.tool_context(_GATEWAY)["document_id"] == "d1"
+
+
 @pytest.mark.parametrize(
     "key",
     [
@@ -152,6 +161,7 @@ def test_tool_context_carries_the_claim_and_capabilities() -> None:
         "staff_id",
         "note_id",
         "claim_id",
+        "document_id",
         "permissions",
         "capabilities",
         "effects",

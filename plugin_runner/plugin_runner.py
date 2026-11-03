@@ -739,6 +739,7 @@ class PluginRunner(PluginRunnerServicer):
                             patient_id=request.subject.patient_id or None,
                             note_id=request.subject.note_id or None,
                             claim_id=request.subject.claim_id or None,
+                            document_id=request.subject.document_id or None,
                         )
                         agent.requester = RunRequester(
                             staff_id=request.requester.staff_id or None,

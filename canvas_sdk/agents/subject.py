@@ -7,17 +7,20 @@ class RunSubject:
 
     Set on the agent as ``self.subject`` before any lifecycle hook fires. Each field
     comes from the :class:`RunAgentEffect`, checked by the platform: the patient
-    exists, the note is that patient's, and the claim exists.
+    exists, the note is that patient's, the claim exists, and the document is an
+    incoming document the requester may work.
 
     Attributes:
         patient_id: The patient's ``Patient.id``, or None.
         note_id: The note's ``Note.id``, or None.
         claim_id: The claim's ``Claim.id``, or None.
+        document_id: The incoming document's ``IntegrationTask.id``, or None.
     """
 
     patient_id: str | None = None
     note_id: str | None = None
     claim_id: str | None = None
+    document_id: str | None = None
 
 
 @dataclass(frozen=True)

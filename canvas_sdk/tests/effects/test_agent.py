@@ -40,6 +40,7 @@ def test_run_agent_effect_payload_carries_the_subject_and_scope() -> None:
         "patient_id": "p1",
         "note_id": "n1",
         "claim_id": None,
+        "document_id": None,
         "scope_id": None,
         "trigger_payload": {"reason": "locked"},
     }
@@ -137,6 +138,23 @@ def test_claim_scope_requires_a_claim() -> None:
         RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.CLAIM)
 
 
+def test_document_scope_carries_the_document() -> None:
+    """A run about an incoming document names it, which the platform checks and keys on."""
+    data = json.loads(
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.DOCUMENT, document_id="d1")
+        .apply()
+        .payload
+    )["data"]
+
+    assert (data["scope"], data["document_id"], data["patient_id"]) == ("document", "d1", None)
+
+
+def test_document_scope_requires_a_document() -> None:
+    """The document scope is keyed on the document."""
+    with pytest.raises(ValidationError, match="requires 'document_id'"):
+        RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.DOCUMENT)
+
+
 def test_key_scope_requires_a_scope_id() -> None:
     """Without one, every run would share one key."""
     with pytest.raises(ValidationError, match="scope_id"):
@@ -163,7 +181,7 @@ def test_a_note_requires_its_patient() -> None:
         RunAgentEffect(agent_id="any", scope=RunAgentEffect.Scope.AGENT, note_id="n1")
 
 
-@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id", "claim_id"])
+@pytest.mark.parametrize("key", ["patient_id", "staff_id", "note_id", "claim_id", "document_id"])
 def test_the_subject_cannot_travel_in_the_trigger_payload(key: str) -> None:
     """The agent reads the subject from self.subject, never from the payload."""
     with pytest.raises(ValidationError, match=key):
@@ -194,7 +212,7 @@ def test_run_agent_request_roundtrip() -> None:
         plugin_name="my_plugin",
         handler_name="TriggerHandler",
         requester=RunAgentRequester(actor="1", source="handler", staff_id="s1"),
-        subject=RunAgentSubject(patient_id="p1", note_id="n1", claim_id="c1"),
+        subject=RunAgentSubject(patient_id="p1", note_id="n1", claim_id="c1", document_id="d1"),
         capabilities=["revenue"],
     )
 

@@ -93,11 +93,13 @@ class RunAgentRequester(_message.Message):
     def __init__(self, actor: _Optional[str] = ..., source: _Optional[str] = ..., staff_id: _Optional[str] = ..., permissions: _Optional[_Iterable[str]] = ..., all_permissions: bool = ...) -> None: ...
 
 class RunAgentSubject(_message.Message):
-    __slots__ = ("patient_id", "note_id", "claim_id")
+    __slots__ = ("patient_id", "note_id", "claim_id", "document_id")
     PATIENT_ID_FIELD_NUMBER: _ClassVar[int]
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     CLAIM_ID_FIELD_NUMBER: _ClassVar[int]
+    DOCUMENT_ID_FIELD_NUMBER: _ClassVar[int]
     patient_id: str
     note_id: str
     claim_id: str
-    def __init__(self, patient_id: _Optional[str] = ..., note_id: _Optional[str] = ..., claim_id: _Optional[str] = ...) -> None: ...
+    document_id: str
+    def __init__(self, patient_id: _Optional[str] = ..., note_id: _Optional[str] = ..., claim_id: _Optional[str] = ..., document_id: _Optional[str] = ...) -> None: ...

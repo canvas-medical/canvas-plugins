@@ -130,7 +130,7 @@ def test_run_agent_happy_path_returns_emitted_effect(
     assert body == {
         "loaded_with": "patient:p1",
         "trigger": {"message": "hi"},
-        "subject": ["p1", "s1", "n1", None, []],
+        "subject": ["p1", "s1", "n1", None, [], None],
         "run_id": "run-1",
         "gateway_model": "claude-sonnet-4-6",
     }
@@ -149,7 +149,7 @@ def test_run_agent_leaves_absent_subject_fields_unset(
 
     (response,) = plugin_runner.RunAgent(request, None)
 
-    assert json.loads(response.effects[0].payload)["subject"] == ["p1", None, "n1", None, []]
+    assert json.loads(response.effects[0].payload)["subject"] == ["p1", None, "n1", None, [], None]
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
@@ -175,6 +175,7 @@ def test_run_agent_sets_the_claim_and_capabilities_from_the_request(
         "n1",
         "c1",
         ["revenue"],
+        None,
     ]
 
 
@@ -1267,3 +1268,19 @@ def test_run_agent_refuses_a_loaded_class_that_is_not_an_agent(
 
     assert response.success is False
     assert _NotAnAgent.instantiated == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_sets_the_document_from_the_request(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """The incoming document the platform checked reaches the agent."""
+    request = _make_request()
+    request.subject.document_id = "d1"
+
+    (response,) = plugin_runner.RunAgent(request, None)
+
+    assert json.loads(response.effects[0].payload)["subject"][-1] == "d1"
