@@ -225,7 +225,7 @@ def test_reset_execute(
     reset(namespace="acme__clinical", execute=True, host=host)
 
     assert mock_requests_post.call_count == 2
-    mock_confirm.assert_called_once_with("acme__clinical", "reset")
+    mock_confirm.assert_called_once_with("acme__clinical", "reset", host)
     mock_print.assert_any_call("\nNamespace 'acme__clinical' has been reset.")
 
 
@@ -295,7 +295,7 @@ def test_drop_execute(
     drop(namespace="acme__clinical", execute=True, host=host)
 
     assert mock_requests_post.call_count == 2
-    mock_confirm.assert_called_once_with("acme__clinical", "permanently drop")
+    mock_confirm.assert_called_once_with("acme__clinical", "permanently drop", host)
     mock_print.assert_any_call("\nNamespace 'acme__clinical' has been dropped.")
 
 
@@ -307,8 +307,12 @@ def test_drop_execute(
 def test_confirm_destructive_action_success(mock_print: Mock, mock_input: Mock) -> None:
     """Test that confirmation succeeds when the user types the correct name."""
     # Should not raise
-    _confirm_destructive_action("acme__clinical", "reset")
+    _confirm_destructive_action("acme__clinical", "reset", "http://localhost:8000")
     mock_input.assert_called_once()
+    mock_print.assert_any_call(
+        "\nThis will reset namespace 'acme__clinical' on http://localhost:8000. "
+        "This cannot be undone."
+    )
 
 
 @patch("builtins.input", return_value="wrong_name")
@@ -316,7 +320,7 @@ def test_confirm_destructive_action_success(mock_print: Mock, mock_input: Mock) 
 def test_confirm_destructive_action_mismatch(mock_print: Mock, mock_input: Mock) -> None:
     """Test that confirmation fails when the user types the wrong name."""
     with pytest.raises(typer.Exit):
-        _confirm_destructive_action("acme__clinical", "reset")
+        _confirm_destructive_action("acme__clinical", "reset", "http://localhost:8000")
 
     mock_print.assert_any_call("Confirmation did not match. Aborting.")
 

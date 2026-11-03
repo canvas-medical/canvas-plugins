@@ -126,7 +126,7 @@ def log_token_source(host: str) -> LogToken:
         click.ClickException: Signed in, and Platform does not manage the instance.
     """
     if (managed := managed_instance(host, "logs")) is not None:
-        client, slug = managed
+        client, slug = managed.client, managed.slug
 
         def mint() -> tuple[str, float | None]:
             try:
