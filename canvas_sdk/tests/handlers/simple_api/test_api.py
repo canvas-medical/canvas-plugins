@@ -1465,6 +1465,34 @@ def test_a_revoked_grant_is_not_the_one_that_gives_the_chart() -> None:
     assert portal_access(headers).grant == given_again
 
 
+@pytest.mark.django_db
+def test_a_flagged_grant_no_longer_gives_the_chart() -> None:
+    """Once the login says it doesn't know the patient, its grant no longer gives the chart."""
+    grant = PortalAccessGrantFactory.create()
+    headers = acting_headers(str(grant.user.dbid), patient_id=grant.patient.id)
+
+    assert portal_access(headers).grant == grant
+
+    grant.flagged_at = datetime.datetime.now(datetime.UTC)
+    grant.save()
+
+    assert portal_access(headers).grant is None
+
+
+@pytest.mark.django_db
+def test_a_grant_on_a_deactivated_patient_no_longer_gives_the_chart() -> None:
+    """Once the patient is deactivated, a grant to their chart no longer gives it."""
+    grant = PortalAccessGrantFactory.create()
+    headers = acting_headers(str(grant.user.dbid), patient_id=grant.patient.id)
+
+    assert portal_access(headers).grant == grant
+
+    grant.patient.active = False
+    grant.patient.save()
+
+    assert portal_access(headers).grant is None
+
+
 @pytest.mark.parametrize(
     argnames="headers",
     argvalues=[

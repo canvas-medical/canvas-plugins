@@ -189,15 +189,15 @@ class PortalAccess:
 
     @cached_property
     def grant(self) -> PortalAccessGrant | None:
-        """The grant that gives acting_user_id the chart, or None on a patient's own chart.
-
-        It's read from the database, while level() and allows() use the levels sent with the
-        request, so the two can disagree for a moment after staff change a level.
-        """
+        """The grant that gives acting_user_id the chart, or None on a patient's own chart."""
         if not self.acting_user_id:
             return None
         return PortalAccessGrant.objects.filter(
-            user__dbid=self.acting_user_id, patient__id=self._patient_id, revoked_at__isnull=True
+            user__dbid=self.acting_user_id,
+            patient__id=self._patient_id,
+            revoked_at__isnull=True,
+            flagged_at__isnull=True,
+            patient__active=True,
         ).first()
 
 
