@@ -127,7 +127,8 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     The deploy commits the manifest, so only the ``publisher`` line changes: an existing
     top-level value is replaced where it stands, or a line is added after the top-level
     ``name`` line. A manifest whose top level does not sit one key per line (a one-line
-    manifest, say) is written out again with its indent and its trailing newline.
+    manifest, say) is written out again with its indent and its trailing newline. Its
+    line endings, LF or CRLF, are kept.
 
     Args:
         plugin_dir (Path): The plugin package directory.
@@ -137,13 +138,15 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
         typer.BadParameter: The manifest is missing or unreadable.
     """
     manifest, text, data = _read_manifest(plugin_dir)
+    # read_text turns CRLF into "\n"; write_text turns "\n" back into this.
+    newline: str = "\r\n" if b"\r\n" in manifest.read_bytes() else "\n"
     indent_match: re.Match[str] | None = re.search(r"^( +|\t)\S", text, flags=re.MULTILINE)
     indent: str | int = indent_match.group(1) if indent_match else 4
     expected: dict[str, Any] = {**data, "publisher": slug}
     if indent_match:
         edited: str | None = _edit_publisher_line(text, indent_match.group(1), slug)
         if edited is not None and _loads_without_duplicate_keys(edited) == expected:
-            manifest.write_text(edited, encoding="utf-8")
+            manifest.write_text(edited, encoding="utf-8", newline=newline)
             return
     rebuilt: dict[str, Any] = {}
     if "publisher" in data:
@@ -157,7 +160,7 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     output: str = json.dumps(rebuilt, indent=indent, ensure_ascii=False)
     if text.endswith("\n"):
         output += "\n"
-    manifest.write_text(output, encoding="utf-8")
+    manifest.write_text(output, encoding="utf-8", newline=newline)
 
 
 def _loads_without_duplicate_keys(text: str) -> Any:

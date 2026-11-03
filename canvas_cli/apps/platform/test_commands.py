@@ -2359,6 +2359,34 @@ def test_write_manifest_publisher_changes_only_the_publisher_line(tmp_path: Path
     )
 
 
+@pytest.mark.parametrize(
+    "publisher_line",
+    ['    "publisher": "old",\r\n', ""],
+    ids=["replaced", "added"],
+)
+def test_write_manifest_publisher_keeps_crlf_line_endings(
+    tmp_path: Path, publisher_line: str
+) -> None:
+    """A manifest committed with CRLF endings keeps them, so only the publisher line changes."""
+    text = (
+        "{\r\n"
+        '    "sdk_version": "0.1.4",\r\n'
+        '    "name": "intake",\r\n'
+        f"{publisher_line}"
+        '    "secrets": ["api-key"]\r\n'
+        "}\r\n"
+    )
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_bytes(text.encode())
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    expected = text.replace(publisher_line, "").replace(
+        '    "name": "intake",\r\n', '    "name": "intake",\r\n    "publisher": "acme",\r\n'
+    )
+    assert manifest.read_bytes() == expected.encode()
+
+
 def test_write_manifest_publisher_replaces_only_the_existing_value(tmp_path: Path) -> None:
     """An existing top-level publisher takes the new slug; a nested `publisher` is untouched."""
     text = '{\n  "name": "intake",\n  "publisher":"old",\n  "catalog": {"publisher": "keep"}\n}\n'
