@@ -101,13 +101,15 @@ class ClinicalQualityMeasure(BaseProtocol):
             if model == Patient:
                 return self.event.target.id
 
+            # Removing a command soft-deletes its record and sends *_UPDATED, so the lookup
+            # bypasses the default manager's deleted=False filter.
             patient_id = (
-                model._default_manager.select_related("patient")
+                model._base_manager.filter(id=self.event.target.id)
                 .values_list("patient__id", flat=True)
-                .get(id=self.event.target.id)
+                .first()
             )
             if patient_id is None:
-                raise ValueError(f"{model.__name__} {self.event.target.id} has no patient")
+                raise ValueError(f"No patient found for {model.__name__} {self.event.target.id}")
             return str(patient_id)
 
         models = {
