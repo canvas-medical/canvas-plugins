@@ -91,7 +91,7 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     dob_verified_at = models.DateTimeField(null=True, blank=True)
     dob_failed_attempts = models.PositiveSmallIntegerField(default=0)
     # Set when the login said "I don't know this person".
-    flagged_at = models.DateTimeField(null=True)
+    flagged_at = models.DateTimeField(null=True, blank=True)
 
     granted_by = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, related_name="+")
     granted_at = models.DateTimeField()
