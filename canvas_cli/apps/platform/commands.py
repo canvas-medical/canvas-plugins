@@ -142,7 +142,7 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     expected: dict[str, Any] = {**data, "publisher": slug}
     if indent_match:
         edited: str | None = _edit_publisher_line(text, indent_match.group(1), slug)
-        if edited is not None and json.loads(edited) == expected:
+        if edited is not None and _loads_without_duplicate_keys(edited) == expected:
             manifest.write_text(edited, encoding="utf-8")
             return
     rebuilt: dict[str, Any] = {}
@@ -158,6 +158,31 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     if text.endswith("\n"):
         output += "\n"
     manifest.write_text(output, encoding="utf-8")
+
+
+def _loads_without_duplicate_keys(text: str) -> Any:
+    """``text`` parsed as JSON, or None when an object in it repeats a key.
+
+    ``json.loads`` keeps the last of two equal keys, so an edit that adds a second
+    ``publisher`` would otherwise parse to the expected manifest.
+
+    Args:
+        text (str): JSON text.
+
+    Returns:
+        Any: The parsed value, or None when a key repeats.
+    """
+
+    def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        keys: list[str] = [key for key, _ in pairs]
+        if len(keys) != len(set(keys)):
+            raise ValueError("repeated key")
+        return dict(pairs)
+
+    try:
+        return json.loads(text, object_pairs_hook=unique)
+    except ValueError:
+        return None
 
 
 _JSON_STRING = r'"(?:[^"\\]|\\.)*"'
@@ -182,7 +207,7 @@ def _edit_publisher_line(text: str, indent: str, slug: str) -> str | None:
     value: str = json.dumps(slug, ensure_ascii=False)
     key: str = rf"^{re.escape(indent)}(?=\S)"
     existing: re.Pattern[str] = re.compile(
-        rf'({key}"publisher"\s*:\s*){_JSON_STRING}', flags=re.MULTILINE
+        rf'({key}"publisher"\s*:\s*)(?:{_JSON_STRING}|null)', flags=re.MULTILINE
     )
     if existing.search(text):
         return existing.sub(lambda m: m.group(1) + value, text, count=1)

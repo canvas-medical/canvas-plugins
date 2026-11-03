@@ -2384,6 +2384,62 @@ def test_write_manifest_publisher_replaces_a_null_publisher_rather_than_adding_a
     assert text.count('"publisher"') == 1
 
 
+def test_write_manifest_publisher_replaces_a_null_publisher_that_precedes_the_name(
+    tmp_path: Path,
+) -> None:
+    """A null publisher above `name` is replaced in place, never followed by a second key."""
+    text = '{\n    "publisher": null,\n    "name": "intake",\n    "secrets": ["api-key"]\n}\n'
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text(text)
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert manifest.read_text() == text.replace('"publisher": null', '"publisher": "acme"')
+
+
+def test_write_manifest_publisher_never_leaves_a_second_publisher_key(tmp_path: Path) -> None:
+    """A top-level value the line edit cannot replace is rewritten, not followed by a twin."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text('{\n    "publisher": 5,\n    "name": "intake",\n    "secrets": []\n}\n')
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    text: str = manifest.read_text()
+    assert json.loads(text) == {"publisher": "acme", "name": "intake", "secrets": []}
+    assert text.count('"publisher"') == 1
+
+
+def test_write_manifest_publisher_rewrites_a_one_line_manifest_with_publisher_after_name(
+    tmp_path: Path,
+) -> None:
+    """A one-line manifest is written out again, the publisher right after `name`."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text('{"sdk_version": "0.1.4", "name": "intake", "secrets": []}')
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert list(json.loads(manifest.read_text()).items()) == [
+        ("sdk_version", "0.1.4"),
+        ("name", "intake"),
+        ("publisher", "acme"),
+        ("secrets", []),
+    ]
+
+
+def test_write_manifest_publisher_rewrites_a_manifest_whose_name_is_the_last_key(
+    tmp_path: Path,
+) -> None:
+    """With no `name,` line to add after, the manifest is written out again in its indent."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text('{\n  "sdk_version": "0.1.4",\n  "name": "intake"\n}\n')
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert manifest.read_text() == (
+        '{\n  "sdk_version": "0.1.4",\n  "name": "intake",\n  "publisher": "acme"\n}\n'
+    )
+
+
 def test_write_manifest_publisher_replaces_an_existing_publisher_in_place(tmp_path: Path) -> None:
     """An existing publisher keeps its position and takes the new slug."""
     manifest = tmp_path / "CANVAS_MANIFEST.json"
