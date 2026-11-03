@@ -80,7 +80,10 @@ class QuestionnaireCommand(_BaseCommand):
                     # `questionnaire: None`.
                     if questionnaire_dbid := (command_data.get("questionnaire") or {}).get("value"):
                         questionnaire = Questionnaire.objects.get(dbid=questionnaire_dbid)
-                        self.questionnaire_id = str(questionnaire.id)
+                        # Written to the instance dict rather than assigned: a validated
+                        # assignment replaces that dict, which would drop `questions` while it
+                        # is being computed, and with it the responses set on those questions.
+                        self.__dict__["questionnaire_id"] = str(questionnaire.id)
                         return questionnaire
                 except (Command.DoesNotExist, Questionnaire.DoesNotExist):
                     return None
