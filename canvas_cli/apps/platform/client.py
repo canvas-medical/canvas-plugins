@@ -187,21 +187,45 @@ class PlatformClient:
         """``GET /api/v1/instances/<slug>/namespaces/<ns>``: a namespace's tables."""
         return self.get(f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}")
 
-    def reset_namespace(self, slug: str, namespace: str, *, dry_run: bool) -> dict[str, Any]:
+    def reset_namespace(
+        self, slug: str, namespace: str, *, dry_run: bool, confirm_production: bool = False
+    ) -> dict[str, Any]:
         """``POST .../namespaces/<ns>/reset``: preview or perform a reset."""
-        return self._namespace_action(slug, namespace, "reset", dry_run)
+        return self._namespace_action(slug, namespace, "reset", dry_run, confirm_production)
 
-    def drop_namespace(self, slug: str, namespace: str, *, dry_run: bool) -> dict[str, Any]:
+    def drop_namespace(
+        self, slug: str, namespace: str, *, dry_run: bool, confirm_production: bool = False
+    ) -> dict[str, Any]:
         """``POST .../namespaces/<ns>/drop``: preview or perform a drop."""
-        return self._namespace_action(slug, namespace, "drop", dry_run)
+        return self._namespace_action(slug, namespace, "drop", dry_run, confirm_production)
 
     def _namespace_action(
-        self, slug: str, namespace: str, action: str, dry_run: bool
+        self,
+        slug: str,
+        namespace: str,
+        action: str,
+        dry_run: bool,
+        confirm_production: bool,
     ) -> dict[str, Any]:
-        flag = "true" if dry_run else "false"
+        """POST a namespace reset or drop.
+
+        Args:
+            slug (str): The instance.
+            namespace (str): The namespace.
+            action (str): ``reset`` or ``drop``.
+            dry_run (bool): Whether to preview rather than perform it.
+            confirm_production (bool): Whether to name the instance with
+                ``confirm_production=<slug>``, which Platform requires for a real run on a
+                production instance.
+
+        Returns:
+            dict[str, Any]: Platform's body.
+        """
+        query = f"dry_run={'true' if dry_run else 'false'}"
+        if confirm_production:
+            query += f"&confirm_production={quote(slug, safe='')}"
         return self.post(
-            f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}/{action}"
-            f"?dry_run={flag}",
+            f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}/{action}?{query}",
             timeout=TIMEOUT_SECONDS if dry_run else NAMESPACE_ACTION_TIMEOUT_SECONDS,
         )
 
