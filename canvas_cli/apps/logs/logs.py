@@ -18,10 +18,9 @@ import typer
 import websocket
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token, instance_slug
-from canvas_cli.apps.platform import auth as platform_auth
-from canvas_cli.apps.platform.client import PlatformClient, PlatformError
+from canvas_cli.apps.platform.client import PlatformError
+from canvas_cli.apps.platform.routing import managed_instance, platform_sign_out
 from canvas_cli.apps.plugin.plugin import plugin_url
-from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 # Seconds before a minted token's expiry at which it is replaced.
 EXPIRY_MARGIN_SECONDS = 30
@@ -51,18 +50,6 @@ def _instance_answer(response: requests.Response) -> str:
     if not isinstance(detail, str) or not detail:
         return ""
     return f"The instance answered: {detail} "
-
-
-def _platform_sign_out() -> str:
-    """Return how to stop using Canvas Platform for logs, for the credential in force.
-
-    Returns:
-        str: ``unset CANVAS_PLATFORM_TOKEN`` under a service account token, which ``canvas
-            logout`` leaves in force, and "sign out with `canvas logout`" otherwise.
-    """
-    if platform_auth.service_token() is not None:
-        return f"unset {platform_auth.SERVICE_TOKEN_ENV}"
-    return "sign out with `canvas logout`"
 
 
 class LogToken:
@@ -138,21 +125,8 @@ def log_token_source(host: str) -> LogToken:
     Raises:
         click.ClickException: Signed in, and Platform does not manage the instance.
     """
-    slug: str | None = instance_slug(host)
-    platform: str = platform_auth.resolve_platform_url()
-    if slug is not None and platform_auth.stored_tokens(platform) is not None:
-        client = PlatformClient(platform)
-        row = next((r for r in client.instances() if r.get("slug") == slug), None)
-        if row is None or not row.get("managed"):
-            cause: str = (
-                f"{slug} is not one of your instances on Canvas Platform."
-                if row is None
-                else f"Canvas Platform does not manage {slug}."
-            )
-            raise click.ClickException(
-                f"{cause} While you are signed in to Canvas Platform, instance commands go "
-                f"through it. To read {slug}'s logs with credentials.ini, {_platform_sign_out()}."
-            )
+    if (managed := managed_instance(host, "logs")) is not None:
+        client, slug = managed
 
         def mint() -> tuple[str, float | None]:
             try:
@@ -170,9 +144,8 @@ def log_token_source(host: str) -> LogToken:
 
         return LogToken(slug, mint, reissuable=True)
 
-    print_credentials_ini_deprecation("logs")
     return LogToken(
-        slug or host,
+        instance_slug(host) or host,
         lambda: (get_or_request_api_token(host), None),
         reissuable=False,
     )
@@ -620,7 +593,7 @@ def _refused_platform_token(token: LogToken, answer: str = "") -> click.ClickExc
     """
     return click.ClickException(
         f"{token.slug} refused the log token Canvas Platform issued. {answer}"
-        f"Run the command again; if it keeps failing, {_platform_sign_out()} "
+        f"Run the command again; if it keeps failing, {platform_sign_out()} "
         "to use credentials.ini."
     )
 

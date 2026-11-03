@@ -528,7 +528,7 @@ def list(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    if (managed := managed_instance(host)) is not None:
+    if (managed := managed_instance(host, "list")) is not None:
         _list_from_platform(*managed, host)
         return
 

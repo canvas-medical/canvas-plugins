@@ -13,13 +13,14 @@ person signed in with ``canvas login``:
     names, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
   * ``canvas enable`` / ``disable``, ``canvas config list`` / ``set`` / ``unset`` and
-    ``canvas uninstall``: through platform for a plugin it manages, and directly
-    against the instance otherwise.
+    ``canvas uninstall``: through platform for a plugin it manages. Signed in, any
+    other plugin is refused unless it targets localhost; signed out, these go directly
+    against the instance.
   * ``canvas git-credential``: hidden; git runs it to mint a push token.
 
 ``managed_instance``, defined in ``routing`` and re-exported here, decides whether an
 instance command (``list``, ``logs``, ``namespace *``) goes through platform, which it
-does for an instance platform manages.
+does for an instance platform manages, and refuses any other Canvas instance while signed in.
 """
 
 from __future__ import annotations
@@ -35,11 +36,13 @@ from typing import Any, TextIO
 import click
 import typer
 
-from canvas_cli.apps.auth.utils import get_default_host
+from canvas_cli.apps.auth.utils import get_default_host, instance_slug
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.platform.routing import managed_instance as managed_instance
+from canvas_cli.apps.platform.routing import refuse_unmanaged
 from canvas_cli.apps.plugin import plugin as instance_plugin
+from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
@@ -869,22 +872,49 @@ def init(
 # -- config and uninstall ----------------------------------------------------
 
 
-def _managed(name: str) -> tuple[PlatformClient, dict[str, Any]] | None:
-    """Platform's record of ``name`` when platform manages it, else None.
+def _managed(
+    name: str,
+    instances: list[str],
+    host: str | None,
+    command: str,
+) -> tuple[PlatformClient, dict[str, Any]] | None:
+    """Platform's record of ``name`` when the command goes through platform, else None.
 
-    A plugin platform manages has a publisher-prefixed name and answers
-    ``GET /api/v1/plugins/<name>``. Without a platform session there is no way
-    to ask, so the plugin is treated as one the instance manages; the instance
-    then refuses a write to a platform-managed plugin and says so.
+    When every named target is localhost or another host that is not a Canvas instance,
+    which platform can never manage, the answer is None without asking platform, and no
+    deprecation notice prints, since `canvas login` cannot serve those hosts. Otherwise,
+    signed in, a publisher-prefixed plugin that answers ``GET /api/v1/plugins/<name>`` goes
+    through platform, and any other plugin aimed at a Canvas instance is refused with the
+    way to sign out. Signed out, the answer is None: the caller uses credentials.ini, and
+    the deprecation notice for ``command`` is printed.
+
+    Args:
+        name (str): The plugin name.
+        instances (list[str]): The ``--instance`` slugs.
+        host (str | None): The ``--host`` option.
+        command (str): The command as typed after ``canvas``, for the deprecation notice.
+
+    Returns:
+        tuple[PlatformClient, dict[str, Any]] | None: The client and plugin record, or None
+            for credentials.ini.
+
+    Raises:
+        click.ClickException: Signed in, and platform does not manage the plugin.
     """
-    if not PLUGIN_NAME_PATTERN.match(name):
+    if (instances or host) and all(
+        instance_slug(url) is None for url in _direct_hosts(instances, host)
+    ):
         return None
     platform = auth.resolve_platform_url()
-    if auth.stored_tokens(platform) is None:
-        return None
-    client = PlatformClient(platform)
-    plugin = client.plugin(name)
-    return (client, plugin) if plugin is not None else None
+    if auth.stored_tokens(platform) is not None:
+        client = PlatformClient(platform)
+        plugin = client.plugin(name) if PLUGIN_NAME_PATTERN.match(name) else None
+        if plugin is not None:
+            return client, plugin
+        if any(instance_slug(url) is not None for url in _direct_hosts(instances, host)):
+            raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
+    print_credentials_ini_deprecation(command)
+    return None
 
 
 def _direct_hosts(instances: list[str], host: str | None) -> list[str]:
@@ -953,7 +983,7 @@ def set_variables(
             "Provide at least one variable: KEY=value, --secret KEY=value, or --variable KEY=value."
         )
 
-    managed = _managed(plugin_name)
+    managed = _managed(plugin_name, instance, host, "config set")
     if managed is None:
         pairs = [f"{key}={value}" for key, value, _ in parsed]
         for url in _direct_hosts(instance, host):
@@ -996,7 +1026,7 @@ def unset_variables(
     configure deployment removes them from the running plugin. For any other
     plugin, each value is set to empty on the instance directly.
     """
-    managed = _managed(plugin_name)
+    managed = _managed(plugin_name, instance, host, "config unset")
     if managed is None:
         for url in _direct_hosts(instance, host):
             instance_plugin.update(
@@ -1040,7 +1070,7 @@ def _switch(plugin_name: str, instance: list[str], host: str | None, *, action: 
         host (str | None): The ``--host`` for a plugin platform does not manage.
         action (str): ``enable`` or ``disable``.
     """
-    managed = _managed(plugin_name)
+    managed = _managed(plugin_name, instance, host, action)
     if managed is None:
         direct = instance_plugin.enable if action == "enable" else instance_plugin.disable
         for url in _direct_hosts(instance, host):
@@ -1107,7 +1137,7 @@ def list_variables(
     --instance, the only instance the plugin is installed on is used. Values are never
     printed. For any other plugin, the variables are read from the instance directly.
     """
-    managed = _managed(plugin_name)
+    managed = _managed(plugin_name, instance, host, "config list")
     if managed is None:
         for url in _direct_hosts(instance, host):
             instance_plugin.list_secrets(plugin=plugin_name, host=url)
@@ -1154,7 +1184,7 @@ def uninstall(
     each --instance, which is required. For any other plugin, it is removed from
     the instance directly.
     """
-    managed = _managed(plugin_name)
+    managed = _managed(plugin_name, instance, host, "uninstall")
     if managed is None:
         for url in _direct_hosts(instance, host):
             instance_plugin.uninstall(name=plugin_name, force=force, host=url)

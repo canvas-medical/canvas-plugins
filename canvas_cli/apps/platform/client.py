@@ -17,6 +17,9 @@ import requests
 from canvas_cli.apps.platform import auth
 
 TIMEOUT_SECONDS = 30
+# Platform waits up to 60 s on the instance for a real namespace reset or drop, so the CLI
+# waits past that before calling the outcome unknown.
+NAMESPACE_ACTION_TIMEOUT_SECONDS = 90
 
 
 class PlatformError(click.ClickException):
@@ -42,6 +45,10 @@ class PlatformError(click.ClickException):
         return cls(str(message), status=response.status_code, code=str(body.get("code") or ""))
 
 
+class PlatformTimeout(PlatformError):
+    """Canvas Platform did not answer in time; the call may still have taken effect."""
+
+
 def segment(value: str) -> str:
     """A path segment with everything but unreserved characters escaped."""
     return quote(value, safe="")
@@ -54,7 +61,12 @@ class PlatformClient:
         self.platform = platform
 
     def _send(
-        self, method: str, path: str, access_token: str, body: dict[str, Any] | None
+        self,
+        method: str,
+        path: str,
+        access_token: str,
+        body: dict[str, Any] | None,
+        timeout: float,
     ) -> requests.Response:
         try:
             return requests.request(
@@ -65,17 +77,27 @@ class PlatformClient:
                     "Accept": "application/json",
                 },
                 json=body,
-                timeout=TIMEOUT_SECONDS,
+                timeout=timeout,
             )
+        except requests.Timeout as exc:
+            raise PlatformTimeout(
+                f"Canvas Platform at {self.platform} did not answer within {timeout:g} seconds."
+            ) from exc
         except requests.RequestException as exc:
             raise PlatformError(
                 f"Could not reach Canvas Platform at {self.platform}: {exc}"
             ) from exc
 
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+        timeout: float = TIMEOUT_SECONDS,
+    ) -> Any:
         """Send one call and return its parsed JSON body (None for an empty one)."""
         tokens = auth.valid_tokens(self.platform)
-        response = self._send(method, path, tokens["access_token"], body)
+        response = self._send(method, path, tokens["access_token"], body, timeout)
         if response.status_code == requests.codes.unauthorized and tokens.get("service"):
             raise auth.PlatformAuthError(
                 f"Canvas Platform at {self.platform} did not accept {auth.SERVICE_TOKEN_ENV}. "
@@ -83,7 +105,7 @@ class PlatformClient:
             )
         if response.status_code == requests.codes.unauthorized:
             tokens = auth.refresh(self.platform, tokens["refresh_token"])
-            response = self._send(method, path, tokens["access_token"], body)
+            response = self._send(method, path, tokens["access_token"], body, timeout)
             if response.status_code == requests.codes.unauthorized:
                 raise auth.PlatformAuthError(
                     f"Canvas Platform at {self.platform} did not accept your session. "
@@ -99,9 +121,11 @@ class PlatformClient:
         """GET ``path``."""
         return self.request("GET", path)
 
-    def post(self, path: str, body: dict[str, Any] | None = None) -> Any:
+    def post(
+        self, path: str, body: dict[str, Any] | None = None, timeout: float = TIMEOUT_SECONDS
+    ) -> Any:
         """POST ``body`` to ``path``."""
-        return self.request("POST", path, body)
+        return self.request("POST", path, body, timeout)
 
     def put(self, path: str, body: dict[str, Any]) -> Any:
         """PUT ``body`` to ``path``."""
@@ -177,7 +201,8 @@ class PlatformClient:
         flag = "true" if dry_run else "false"
         return self.post(
             f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}/{action}"
-            f"?dry_run={flag}"
+            f"?dry_run={flag}",
+            timeout=TIMEOUT_SECONDS if dry_run else NAMESPACE_ACTION_TIMEOUT_SECONDS,
         )
 
     def set_variable(

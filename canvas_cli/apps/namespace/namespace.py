@@ -9,8 +9,8 @@ import requests
 import typer
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
-from canvas_cli.apps.platform.client import PlatformError
-from canvas_cli.apps.platform.routing import managed_instance
+from canvas_cli.apps.platform.client import PlatformError, PlatformTimeout
+from canvas_cli.apps.platform.routing import managed_instance, platform_sign_out
 
 
 def namespace_url(host: str, *paths: str) -> str:
@@ -30,17 +30,23 @@ def _confirm_destructive_action(namespace: str, action_description: str) -> None
 
 
 def _explain_missing_routes(error: PlatformError) -> None:
-    """Raise a usage error when a Platform 404 carries no ``code``.
+    """Raise a usage error naming credentials.ini when Platform cannot serve namespaces.
 
-    A 404 with no ``code`` means this Platform does not serve the namespace routes. Any other
+    A 404 with no ``code`` means this Platform does not serve the namespace routes, and
+    ``instance_outdated`` means the instance's release cannot manage namespaces yet. Any other
     error returns without raising.
 
     Args:
         error (PlatformError): The refusal Platform returned.
 
     Raises:
-        click.ClickException: When the 404 has no ``code``.
+        click.ClickException: When the 404 has no ``code``, or the instance is outdated.
     """
+    if error.code == "instance_outdated":
+        raise click.ClickException(
+            f"{error.message} To use its namespaces until it updates, {platform_sign_out()} "
+            "and use credentials.ini."
+        ) from error
     if error.status == requests.codes.not_found and not error.code:
         raise click.ClickException(
             "Canvas Platform does not manage namespaces yet. To use them on the instance, "
@@ -106,6 +112,7 @@ def _print_reset_result(namespace: str, data: dict[str, Any]) -> None:
 
 def _platform_action(
     namespace: str,
+    slug: str,
     execute: bool,
     preview: Callable[[bool], dict[str, Any]],
     print_preview: Callable[[dict[str, Any]], None],
@@ -116,6 +123,7 @@ def _platform_action(
 
     Args:
         namespace (str): The namespace acted on.
+        slug (str): The instance slug, for the command that checks a timed-out real run.
         execute (bool): Whether ``--execute`` was given.
         preview (Callable[[bool], dict[str, Any]]): Makes the call, given ``dry_run``.
         print_preview (Callable[[dict[str, Any]], None]): Prints a dry-run body.
@@ -128,7 +136,15 @@ def _platform_action(
         print("\nThis is a dry run. To execute, re-run with --execute")
         return
     _confirm_destructive_action(namespace, confirm_as)
-    print_result(_through_platform(namespace, lambda: preview(False)))
+    try:
+        result = _through_platform(namespace, lambda: preview(False))
+    except PlatformTimeout as error:
+        raise click.ClickException(
+            f"{error.message} Whether namespace '{namespace}' was changed is unknown: the "
+            f"instance may still finish. Check with `canvas namespace inspect {namespace} "
+            f"--host {slug}`."
+        ) from error
+    print_result(result)
 
 
 def list_namespaces(
@@ -142,7 +158,7 @@ def list_namespaces(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    if (managed := managed_instance(host)) is not None:
+    if (managed := managed_instance(host, "namespace list")) is not None:
         client, slug = managed
         try:
             listing = client.namespaces(slug)
@@ -189,7 +205,7 @@ def inspect(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    if (managed := managed_instance(host)) is not None:
+    if (managed := managed_instance(host, "namespace inspect")) is not None:
         client, slug = managed
         _print_inspection(_through_platform(namespace, lambda: client.namespace(slug, namespace)))
         return
@@ -250,10 +266,11 @@ def reset(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    if (managed := managed_instance(host)) is not None:
+    if (managed := managed_instance(host, "namespace reset")) is not None:
         client, slug = managed
         _platform_action(
             namespace,
+            slug,
             execute,
             lambda dry_run: client.reset_namespace(slug, namespace, dry_run=dry_run),
             _print_reset_preview,
@@ -364,10 +381,11 @@ def drop(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    if (managed := managed_instance(host)) is not None:
+    if (managed := managed_instance(host, "namespace drop")) is not None:
         client, slug = managed
         _platform_action(
             namespace,
+            slug,
             execute,
             lambda dry_run: client.drop_namespace(slug, namespace, dry_run=dry_run),
             _print_drop_preview,
