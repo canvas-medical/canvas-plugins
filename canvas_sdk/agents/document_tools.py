@@ -93,10 +93,10 @@ def _annotations(arguments: dict[str, Any]) -> list[AnnotationItem] | None:
 def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
     """The patients the document's identifiers match, and what they matched on.
 
-    An MRN identifies one patient; any name or birth date given with it must agree. Without
-    one, the last name and birth date are required, and the first name, when given, must
-    be the patient's first name or nickname. Names compare without case or surrounding
-    space.
+    An MRN counts only with the last name or birth date agreeing with it, so an MRN alone
+    never names a patient. Without one, the last name and birth date are required. The
+    first name, when given, must be the patient's first name or nickname. Names compare
+    without case or surrounding space.
     """
     first = str(arguments.get("first_name") or "").strip()
     last = str(arguments.get("last_name") or "").strip()
@@ -106,8 +106,10 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
         birth_date = date.fromisoformat(raw_birth_date) if raw_birth_date else None
     except ValueError:
         raise ValueError(f"birth_date {raw_birth_date!r} is not a YYYY-MM-DD date") from None
+    if mrn and not (last or birth_date):
+        raise ValueError("Pass the last name or birth date with the MRN.")
     if not mrn and not (last and birth_date):
-        raise ValueError("Pass the MRN, or the last name and birth date.")
+        raise ValueError("Pass the last name and birth date, with the MRN when there is one.")
 
     patients = Patient.objects.all()
     matched_on = []
@@ -123,7 +125,7 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
     if first:
         patients = patients.filter(Q(first_name__iexact=first) | Q(nickname__iexact=first))
         matched_on.append("first_name")
-    found = list(patients.only("id", "first_name", "last_name", "birth_date", "mrn")[:2])
+    found = list(patients.only("id")[:2])
     return found, ", ".join(matched_on)
 
 
@@ -193,19 +195,19 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
 @standard_tools.tool(
     name="match_patient",
     description=(
-        "Check which Canvas patient the identifiers on the document match, without "
-        "suggesting anything. Pass the MRN, or the last name and birth date, plus the "
-        "first name when the document gives it, exactly as the document shows them. "
-        "Returns the patient only when exactly one matches; otherwise it says none or "
-        "several did and names no one. Never guess or loosen identifiers to get a match: "
-        "a document no one patient matches is for a person to file."
+        "Check whether the identifiers on the document match exactly one Canvas patient, "
+        "without suggesting anything. Pass the last name and birth date, plus the first "
+        "name and MRN when the document gives them, exactly as the document shows them. "
+        "Returns the patient's id only when exactly one matches; otherwise it says none "
+        "or several did and names no one. Never guess or loosen identifiers to get a "
+        "match: a document no one patient matches is for a person to file."
     ),
     input_schema={"type": "object", "properties": _PATIENT_PROPERTIES},
     categories=("intake_reads",),
     required_permissions=(QUEUE_PERMISSION,),
     returns_description=(
-        "`{match: {patient_id, first_name, last_name, birth_date, mrn}, matched_on}` when "
-        "exactly one patient matches, else `{match: null, reason}`."
+        "`{match: {patient_id}, matched_on}` when exactly one patient matches, else "
+        "`{match: null, reason}`."
     ),
     progress_label="Matching the patient",
 )
@@ -215,17 +217,7 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     found, matched_on = _matching_patients(arguments)
     if len(found) != 1:
         return _no_match(found)
-    patient = found[0]
-    return {
-        "match": {
-            "patient_id": str(patient.id),
-            "first_name": patient.first_name,
-            "last_name": patient.last_name,
-            "birth_date": patient.birth_date.isoformat() if patient.birth_date else None,
-            "mrn": patient.mrn,
-        },
-        "matched_on": matched_on,
-    }
+    return {"match": {"patient_id": str(found[0].id)}, "matched_on": matched_on}
 
 
 @standard_tools.tool(

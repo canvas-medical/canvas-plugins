@@ -131,17 +131,26 @@ def test_an_mrn_must_agree_with_the_rest(document: Any) -> None:
     """An MRN whose patient has another birth date matches no one."""
     patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
 
-    alone, _ = _run("match_patient", document, mrn=patient.mrn)
+    agreeing, _ = _run("match_patient", document, mrn=patient.mrn, last_name="doe")
     disagreeing, _ = _run("match_patient", document, mrn=patient.mrn, birth_date="1999-09-09")
 
-    assert alone["match"]["patient_id"] == str(patient.id)
+    assert agreeing == {"match": {"patient_id": str(patient.id)}, "matched_on": "mrn, last_name"}
     assert disagreeing["match"] is None
+
+
+@pytest.mark.django_db
+def test_an_mrn_alone_names_no_one(document: Any) -> None:
+    """A model fed a made-up MRN cannot learn whose it is."""
+    patient = PatientFactory.create()
+
+    with pytest.raises(ValueError, match="last name or birth date with the MRN"):
+        _run("match_patient", document, mrn=patient.mrn)
 
 
 @pytest.mark.django_db
 def test_a_name_alone_is_not_enough(document: Any) -> None:
     """Without an MRN, the last name and birth date are both required."""
-    with pytest.raises(ValueError, match="MRN, or the last name and birth date"):
+    with pytest.raises(ValueError, match="last name and birth date"):
         _run("match_patient", document, first_name="Jane", last_name="Doe")
 
 
