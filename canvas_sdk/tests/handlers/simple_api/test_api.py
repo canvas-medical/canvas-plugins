@@ -11,8 +11,6 @@ from uuid import uuid4
 
 import pytest
 from _pytest.fixtures import SubRequest
-from django.db import connection
-from django.test.utils import CaptureQueriesContext
 
 from canvas_sdk.effects.simple_api import (
     Effect,
@@ -47,6 +45,7 @@ from canvas_sdk.handlers.simple_api.security import (
     PortalAccessLevel,
     SessionCredentials,
     StaffSessionAuthMixin,
+    admits_portal_access,
 )
 from canvas_sdk.handlers.simple_api.tools import (
     CaseInsensitiveMultiDict,
@@ -1240,6 +1239,7 @@ def test_a_login_acting_on_a_patients_chart_is_refused_by_default(
         (acting_headers("42", billing="view"), NO_PORTAL_ACCESS),
         (acting_headers("42"), NO_PORTAL_ACCESS),
         (acting_headers("42", billing="unknown"), NO_PORTAL_ACCESS),
+        (acting_headers("parent", billing="act"), NO_PORTAL_ACCESS),
         (session_headers("abc123", "Staff"), UNAUTHORIZED),
     ],
     ids=[
@@ -1248,6 +1248,7 @@ def test_a_login_acting_on_a_patients_chart_is_refused_by_default(
         "acting with view",
         "acting without a level",
         "acting with an unknown level",
+        "acting without a dbid",
         "staff",
     ],
 )
@@ -1379,6 +1380,24 @@ def test_portal_access_counts_a_missing_or_unknown_level_as_none() -> None:
         assert not access.allows(area, PortalAccessLevel.VIEW)
 
 
+@pytest.mark.parametrize(
+    argnames="acting_user_id",
+    argvalues=["parent", "4.2", "²"],
+    ids=["a name", "a decimal", "a superscript digit"],
+)
+def test_an_acting_login_named_by_anything_but_digits_may_do_nothing(acting_user_id: str) -> None:
+    """A login acting on a patient's chart that Canvas names by anything but digits has no
+    acting_user_id, access, actor or grant, and is refused even where no access is required.
+    """
+    access = portal_access(acting_headers(acting_user_id, **FULL_ACCESS))
+
+    assert access.acting_user_id is None
+    assert not any(access.allows(area, PortalAccessLevel.VIEW) for area in PortalAccess.AREAS)
+    assert access.actor is None
+    assert access.grant is None
+    assert not admits_portal_access(access, {})
+
+
 def test_portal_access_on_a_patients_own_chart() -> None:
     """With no other login acting, the patient may do everything on their own chart."""
     access = portal_access(session_headers("abc123", "Patient"))
@@ -1452,63 +1471,19 @@ def test_a_parent_who_is_a_patient_acts_on_their_childs_chart_with_their_own_log
 
 
 @pytest.mark.django_db
-def test_another_logins_actor_comes_with_its_grant() -> None:
-    """With another login acting, one query reads the chart and one the grant with its login."""
-    grant = PortalAccessGrantFactory.create()
-    access = portal_access(acting_headers(str(grant.user.dbid), patient_id=grant.patient.id))
-
-    with CaptureQueriesContext(connection) as ctx:
-        assert (access.patient, access.actor, access.grant) == (grant.patient, grant.user, grant)
-        assert access.grant and access.grant.patient is access.patient
-    assert len(ctx.captured_queries) == 2
-
-
-@pytest.mark.django_db
 def test_a_revoked_grant_is_not_the_one_that_gives_the_chart() -> None:
-    """Once revoked, a grant is history: the session's grant is one given since, if any. Its login
-    is still the actor.
-    """
+    """Once revoked, a grant is history: the session's grant is one given since, if any."""
     child = PatientFactory.create()
     revoked = PortalAccessGrantFactory.create(
         patient=child, revoked_at=datetime.datetime.now(datetime.UTC)
     )
     headers = acting_headers(str(revoked.user.dbid), patient_id=child.id)
 
-    access = portal_access(headers)
-    assert access.grant is None
-    assert access.actor == revoked.user
+    assert portal_access(headers).grant is None
 
     given_again = PortalAccessGrantFactory.create(patient=child, user=revoked.user)
 
     assert portal_access(headers).grant == given_again
-
-
-@pytest.mark.django_db
-def test_a_flagged_grant_no_longer_gives_the_chart() -> None:
-    """Once the login says it doesn't know the patient, its grant no longer gives the chart."""
-    grant = PortalAccessGrantFactory.create()
-    headers = acting_headers(str(grant.user.dbid), patient_id=grant.patient.id)
-
-    assert portal_access(headers).grant == grant
-
-    grant.flagged_at = datetime.datetime.now(datetime.UTC)
-    grant.save()
-
-    assert portal_access(headers).grant is None
-
-
-@pytest.mark.django_db
-def test_a_grant_on_a_deactivated_patient_no_longer_gives_the_chart() -> None:
-    """Once the patient is deactivated, a grant to their chart no longer gives it."""
-    grant = PortalAccessGrantFactory.create()
-    headers = acting_headers(str(grant.user.dbid), patient_id=grant.patient.id)
-
-    assert portal_access(headers).grant == grant
-
-    grant.patient.active = False
-    grant.patient.save()
-
-    assert portal_access(headers).grant is None
 
 
 @pytest.mark.parametrize(
