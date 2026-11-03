@@ -88,7 +88,7 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
         max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
     )
 
-    dob_verified_at = models.DateTimeField(null=True)
+    dob_verified_at = models.DateTimeField(null=True, blank=True)
     dob_failed_attempts = models.PositiveSmallIntegerField(default=0)
     # Set when the login said "I don't know this person".
     flagged_at = models.DateTimeField(null=True)
