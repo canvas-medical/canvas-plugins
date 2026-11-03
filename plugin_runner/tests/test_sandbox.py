@@ -1374,6 +1374,52 @@ def test_support_dataclasses() -> None:
     sandbox.execute()
 
 
+def test_dataclass_with_postponed_annotations_in_the_handler_module() -> None:
+    """A dataclass under `from __future__ import annotations` works in the module a
+    handler is loaded from, which dataclasses looks up in `sys.modules` by name.
+    """
+    sandbox = _sandbox_from_code("""
+        from __future__ import annotations
+
+        from dataclasses import dataclass
+
+        @dataclass
+        class TokenTotal:
+            prompt: int
+            generated: int
+
+        result = TokenTotal(prompt=1, generated=2).generated
+    """)
+
+    assert sandbox.execute()["result"] == 2
+
+
+def test_dataclass_with_postponed_annotations_in_an_imported_module() -> None:
+    """A dataclass under `from __future__ import annotations` works in another module of
+    the plugin.
+    """
+    sandbox = _sandbox_from_code(
+        """
+        from plugin_name.structures import TokenTotal
+
+        result = TokenTotal(prompt=1, generated=2).generated
+        """,
+        extra_source_code="""
+        from __future__ import annotations
+
+        from dataclasses import dataclass
+
+        @dataclass
+        class TokenTotal:
+            prompt: int
+            generated: int
+        """,
+        extra_module_name="plugin_name.structures",
+    )
+
+    assert sandbox.execute()["result"] == 2
+
+
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
