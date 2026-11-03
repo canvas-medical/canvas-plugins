@@ -59,3 +59,12 @@ def test_last_login_reads_through_the_user() -> None:
     user = CanvasUserFactory.create(last_login=logged_in_at)
 
     assert CanvasUser.objects.get(dbid=user.dbid).last_login == logged_in_at
+
+
+def test_a_click_on_a_used_link_has_its_own_reason() -> None:
+    """A registered patient reopening a used link is told apart from a lapsed link."""
+    assert PortalInvitationRejectionReason.values == [
+        "expired",
+        "different_account",
+        "already_claimed",
+    ]

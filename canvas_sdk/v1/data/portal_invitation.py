@@ -17,6 +17,8 @@ class PortalInvitationRejectionReason(models.TextChoices):
 
     EXPIRED = "expired", "Expired"
     DIFFERENT_ACCOUNT = "different_account", "Different account"
+    # The link was already used to set a password, so the person is registered.
+    ALREADY_CLAIMED = "already_claimed", "Already claimed"
 
 
 class PortalInvitation(TimestampedModel, IdentifiableModel):
