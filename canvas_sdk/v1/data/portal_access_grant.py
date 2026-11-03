@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
@@ -44,15 +46,25 @@ def _rank(level: object) -> int:
     return _PORTAL_ACCESS_RANKS[PortalAccessLevel(level)]
 
 
+class _PortalAccessLevelField(models.CharField):
+    """A level loaded as a PortalAccessLevel, so it compares by how much it allows."""
+
+    def from_db_value(
+        self, value: str | None, expression: Any, connection: Any
+    ) -> PortalAccessLevel | None:
+        # None when an outer join finds no grant, e.g. values("portal_grants__clinical").
+        return None if value is None else PortalAccessLevel(value)
+
+
 class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     """
     A portal login's access to a patient's chart that isn't its own, such as a parent's to a child's.
 
     Staff give it from one of the patient's contacts. Its level in each area, appointments,
     messaging, clinical and billing, is "none" (hide the area), "view" (show it read-only) or "act"
-    (allow its actions too); wrap one in PortalAccessLevel to compare it. Revoked and flagged
-    grants stay as history: only a grant that is neither, on an active patient, gives the login
-    the chart.
+    (allow its actions too), read as a PortalAccessLevel so it compares by how much it allows.
+    Revoked and flagged grants stay as history: only a grant that is neither, on an active
+    patient, gives the login the chart.
     """
 
     class Meta:
@@ -75,16 +87,16 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     contact_name = models.CharField(max_length=255, blank=True, default="")
     contact_relationship = models.CharField(max_length=255, blank=True, default="")
 
-    appointments = models.CharField(
+    appointments = _PortalAccessLevelField(
         max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
     )
-    messaging = models.CharField(
+    messaging = _PortalAccessLevelField(
         max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
     )
-    clinical = models.CharField(
+    clinical = _PortalAccessLevelField(
         max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
     )
-    billing = models.CharField(
+    billing = _PortalAccessLevelField(
         max_length=4, choices=PortalAccessLevel.choices, default=PortalAccessLevel.ACT
     )
 

@@ -9,7 +9,7 @@ from canvas_sdk.test_utils.factories import (
     PatientFactory,
     PortalAccessGrantFactory,
 )
-from canvas_sdk.v1.data import PortalAccessGrant
+from canvas_sdk.v1.data import Patient, PortalAccessGrant
 
 
 @pytest.mark.django_db
@@ -33,8 +33,8 @@ def test_a_login_reads_each_chart_it_was_given_and_its_access() -> None:
         "none",
         "view",
     ]
-    assert not PortalAccessLevel(grant.clinical)
-    assert PortalAccessLevel(grant.billing) < PortalAccessLevel.ACT
+    assert not grant.clinical
+    assert grant.clinical < grant.billing < grant.appointments
 
 
 @pytest.mark.django_db
@@ -51,6 +51,16 @@ def test_a_chart_names_who_it_was_given_to_and_keeps_ended_access_as_history() -
         giving
     ]
     assert giving.contact_relationship == "Father"
+
+
+@pytest.mark.django_db
+def test_a_chart_given_to_no_one_reads_no_level_through_its_grants() -> None:
+    """A level read through a chart's grants is None when the chart wasn't given to anyone."""
+    maya = PatientFactory.create()
+
+    levels = Patient.objects.filter(id=maya.id).values_list("portal_grants__clinical", flat=True)
+
+    assert list(levels) == [None]
 
 
 def test_each_area_takes_a_portal_access_level_and_allows_act_unless_limited() -> None:
