@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from decimal import Decimal
 
 import pytest
 
@@ -8,6 +9,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.test_utils.factories import (
+    ImagingReportFactory,
     LabReportFactory,
     NoteFactory,
     PatientFactory,
@@ -15,6 +17,7 @@ from canvas_sdk.test_utils.factories import (
 )
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.instruction import Instruction
 from canvas_sdk.v1.data.questionnaire import Interview
 
@@ -59,6 +62,16 @@ def _referral_report(patient: Patient) -> IdentifiableModel:
     return ReferralReportFactory.create(patient=patient)
 
 
+def _billing_line_item(patient: Patient) -> BillingLineItem:
+    return BillingLineItem.objects.create(
+        patient=patient, charge=Decimal("100.00"), units=1, command_id=1
+    )
+
+
+def _imaging_report(patient: Patient) -> IdentifiableModel:
+    return ImagingReportFactory.create(patient=patient)
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     ("event_types", "make_target"),
@@ -69,6 +82,14 @@ def _referral_report(patient: Patient) -> IdentifiableModel:
         (
             (EventType.REFERRAL_REPORT_CREATED, EventType.REFERRAL_REPORT_UPDATED),
             _referral_report,
+        ),
+        (
+            (EventType.BILLING_LINE_ITEM_CREATED, EventType.BILLING_LINE_ITEM_UPDATED),
+            _billing_line_item,
+        ),
+        (
+            (EventType.IMAGING_REPORT_CREATED, EventType.IMAGING_REPORT_UPDATED),
+            _imaging_report,
         ),
     ],
 )

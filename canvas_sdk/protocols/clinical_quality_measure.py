@@ -8,7 +8,9 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols.base import BaseProtocol
 from canvas_sdk.protocols.timeframe import Timeframe
 from canvas_sdk.v1.data import Patient
+from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.instruction import Instruction
 from canvas_sdk.v1.data.lab import LabOrder, LabReport
 from canvas_sdk.v1.data.medication import Medication
@@ -113,10 +115,14 @@ class ClinicalQualityMeasure(BaseProtocol):
             return str(patient_id)
 
         models = {
+            EventType.BILLING_LINE_ITEM_CREATED: BillingLineItem,
+            EventType.BILLING_LINE_ITEM_UPDATED: BillingLineItem,
             EventType.CONDITION_ASSESSED: Condition,
             EventType.CONDITION_CREATED: Condition,
             EventType.CONDITION_RESOLVED: Condition,
             EventType.CONDITION_UPDATED: Condition,
+            EventType.IMAGING_REPORT_CREATED: ImagingReport,
+            EventType.IMAGING_REPORT_UPDATED: ImagingReport,
             EventType.INSTRUCTION_CREATED: Instruction,
             EventType.INSTRUCTION_UPDATED: Instruction,
             EventType.INTERVIEW_CREATED: Interview,
