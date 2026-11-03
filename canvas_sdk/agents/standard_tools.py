@@ -2106,6 +2106,22 @@ def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     if found is None:
         raise ValueError(f"Document {document_id!r} not found for this patient")
     name, holder = found
+    answered = answer_from_file(holder, str(arguments["question"]), gateway=gateway, ctx=ctx)
+    if not answered["ok"]:
+        return answered
+    return {"document_id": document_id, "name": name, **answered}
+
+
+def answer_from_file(
+    holder: Any, question: str, *, gateway: Any, ctx: dict[str, Any]
+) -> dict[str, Any]:
+    """Answer ``question`` from the file ``holder`` keeps, in a model call of its own.
+
+    ``holder`` is a record whose file :func:`_document_file` downloads, or None when it
+    has none. Returns ``{ok: True, answer, note}``, or ``{ok: False, error}`` when the
+    file is missing, too large, unreadable, or refused by the model or the gateway's
+    budget.
+    """
     if holder is None:
         return {"ok": False, "error": "This document has no attached file to read."}
     content = _document_file(holder)
@@ -2126,7 +2142,7 @@ def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
             messages=[
                 {
                     "role": "user",
-                    "content": [block, {"type": "text", "text": str(arguments["question"])}],
+                    "content": [block, {"type": "text", "text": question}],
                 }
             ],
             max_turns=1,
@@ -2140,13 +2156,7 @@ def _read_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
         if exc.status_code not in (400, 402):
             raise
         return {"ok": False, "error": f"This file could not be read: {exc.message}"}
-    return {
-        "ok": True,
-        "document_id": document_id,
-        "name": name,
-        "answer": result.text,
-        "note": UNTRUSTED_DOCUMENT_NOTE,
-    }
+    return {"ok": True, "answer": result.text, "note": UNTRUSTED_DOCUMENT_NOTE}
 
 
 @standard_tools.filter_search_tool(

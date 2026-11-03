@@ -36,6 +36,7 @@ from .django_content_type import ContentTypeFactory
 from .dme import DmeOrderFactory, DmeProductFactory
 from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
+from .document_type import DocumentTypeFactory
 from .educational_material import EducationalMaterialFactory
 from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
@@ -218,6 +219,7 @@ __all__ = (
     "DocumentCodingFactory",
     "DocumentHistoryEventFactory",
     "DocumentReviewDelegationFactory",
+    "DocumentTypeFactory",
     "EducationalMaterialFactory",
     "EligibilityRequestFactory",
     "EligibilityResponseFactory",
