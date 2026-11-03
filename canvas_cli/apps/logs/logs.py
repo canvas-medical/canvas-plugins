@@ -19,7 +19,7 @@ import websocket
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token, instance_slug
 from canvas_cli.apps.platform import auth as platform_auth
-from canvas_cli.apps.platform.client import PlatformClient
+from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.plugin.plugin import plugin_url
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
@@ -155,7 +155,17 @@ def log_token_source(host: str) -> LogToken:
             )
 
         def mint() -> tuple[str, float | None]:
-            body = client.log_token(slug)
+            try:
+                body = client.log_token(slug)
+            except PlatformError as error:
+                # A 404 with no ``code`` means this Platform does not serve the route.
+                if error.status == requests.codes.not_found and not error.code:
+                    raise click.ClickException(
+                        "Canvas Platform does not issue log tokens yet. To read the instance's "
+                        "logs, sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) "
+                        "and use credentials.ini."
+                    ) from error
+                raise
             return body["access_token"], float(body["expires_in"])
 
         return LogToken(slug, mint, reissuable=True)
@@ -615,22 +625,48 @@ def _refused_platform_token(token: LogToken, answer: str = "") -> click.ClickExc
     )
 
 
+def _is_console_error(message: str) -> bool:
+    """Return whether ``message`` is one of Console's error notices.
+
+    Console sends a refusal, such as "Token authorization failed.", as JSON with ``severity``
+    ``error`` before it closes the stream. Everything it sends once the token is accepted, from
+    "Connecting to log stream..." on, is a plain string or a log line.
+
+    Args:
+        message (str): A message Console sent on the stream.
+
+    Returns:
+        bool: True for a JSON object whose ``severity`` is ``error``.
+    """
+    try:
+        body: Any = json.loads(message)
+    except ValueError:
+        return False
+    return isinstance(body, dict) and body.get("severity") == "error"
+
+
 def _stream_once(url: str) -> tuple[bool, int | None]:
     """Print one Console log stream connection until it closes.
+
+    The stream counts as opened once Console sends a message other than an error notice.
+    websocket-client fires ``on_open`` at the HTTP upgrade, before Console checks the token, so
+    a refused token also reaches ``on_open``.
 
     Args:
         url (str): The stream URL, carrying the token.
 
     Returns:
-        tuple[bool, int | None]: Whether the stream opened, and the close code Console sent
-            (None when the connection ended without one, such as on Ctrl-C).
+        tuple[bool, int | None]: Whether Console accepted the token and started the stream, and
+            the close code Console sent (None when the connection ended without one, such as on
+            Ctrl-C).
     """
     opened: list[bool] = [False]
     close_code: list[int | None] = [None]
 
-    def on_open(ws: websocket.WebSocket) -> None:
-        opened[0] = True
-        _on_open(ws)
+    def on_message(ws: websocket.WebSocket, message: str) -> None:
+        if not _is_console_error(message):
+            opened[0] = True
+        _on_message(ws, message)
 
     def on_close(ws: websocket.WebSocket, close_status_code: int | None, close_msg: str) -> None:
         close_code[0] = close_status_code
@@ -638,11 +674,11 @@ def _stream_once(url: str) -> tuple[bool, int | None]:
 
     ws = websocket.WebSocketApp(
         url,
-        on_message=_on_message,
+        on_message=on_message,
         on_error=_on_error,
         on_close=on_close,
     )
-    ws.on_open = on_open
+    ws.on_open = _on_open
     ws.run_forever()
     return opened[0], close_code[0]
 
@@ -653,14 +689,16 @@ def stream_logs(host: str, token: LogToken) -> None:
     Console re-checks a Platform-issued token while the stream is open and closes the stream
     with ``STREAM_TOKEN_INACTIVE`` once the token is inactive. A Platform stream then mints a
     fresh token through Platform, which re-checks the person's access, and reconnects. Any
-    other close ends the stream, as does a 4401 on a credentials.ini stream.
+    other close ends the stream, as does a 4401 on a credentials.ini stream. A Platform stream
+    that Console closes before starting it, as it does after "Token authorization failed.", is
+    a refused token.
 
     Args:
         host (str): The Canvas instance URL.
         token (LogToken): The token source.
 
     Raises:
-        click.ClickException: Console closed a Platform stream with 4401 before it opened.
+        click.ClickException: Console closed a Platform stream before starting it.
     """
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
@@ -669,10 +707,10 @@ def stream_logs(host: str, token: LogToken) -> None:
         opened, close_code = _stream_once(
             f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
         )
+        if token.reissuable and not opened and close_code is not None:
+            # Also stops a re-minted token Console refuses from reconnecting in a loop.
+            raise _refused_platform_token(token)
         if close_code != STREAM_TOKEN_INACTIVE or not token.reissuable:
             return
-        if not opened:
-            # A token that is inactive before the stream opens would reconnect in a loop.
-            raise _refused_platform_token(token)
         print("Reconnecting with a fresh log token from Canvas Platform.", file=sys.stderr)
         token.refresh()
