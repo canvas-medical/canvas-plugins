@@ -1028,9 +1028,10 @@ def _managed(
     which platform can never manage, the answer is None without asking platform, and no
     deprecation notice prints, since `canvas login` cannot serve those hosts. Otherwise,
     signed in, a plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform,
-    and any other plugin aimed at a Canvas instance is refused with the way to sign out.
-    Signed out, the answer is None: the caller uses credentials.ini, and the deprecation
-    notice for ``command`` is printed.
+    and any other plugin aimed at a Canvas instance is refused with the way to sign out;
+    with no ``--instance`` or ``--host``, platform is asked first. Signed out, the answer
+    is None: the caller uses credentials.ini, and the deprecation notice for ``command`` is
+    printed.
 
     Args:
         name (str): The plugin name.

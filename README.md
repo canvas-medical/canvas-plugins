@@ -47,14 +47,14 @@ client_secret=localclientsecret
 
 Canvas Platform hosts a plugin's git repository and deploys it to the instances it manages. Sign in once per machine with `canvas login`, which opens your browser; the session is stored per platform in `~/.canvas/platform-credentials.json`, readable only by you, and refreshes itself. `canvas login --platform <url>` or `CANVAS_PLATFORM_URL` points the CLI at a platform other than https://platform.canvasmedical.com, and later commands keep using the platform you last signed in to.
 
-A plugin deployed through Canvas Platform has a plain package name (lowercase letters, digits and underscores, starting with a letter, at most 63 characters), used for the manifest `name`, the package folder and its imports. `canvas init` recommends the convention `<org prefix>__<package>` (for example `acme__intake`), and `canvas login` lists the prefix of each organization you belong to. The organization that publishes the plugin is the manifest `publisher` (an organization slug), else the only organization you can publish in, else the one you pick at a terminal, which `canvas deploy` records in the manifest.
+A plugin deployed through Canvas Platform has a plain package name (lowercase letters, digits and underscores, starting with a letter, at most 63 characters), used for the manifest `name`, the package folder and its imports. `canvas init` recommends the convention `<org prefix>__<package>` (for example `acme__intake`), and `canvas login` lists the prefix of each organization you belong to. The organization that publishes the plugin is the manifest `publisher` (an organization slug), else the only organization you can publish in, else the one you pick at a terminal, which a regular `canvas deploy` push records in the manifest.
 
 #### Which plugins go through Canvas Platform
 
 `canvas enable`, `canvas disable`, `canvas config list`, `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
 - Signed out, the command goes straight to the instance with `credentials.ini`, as `canvas install` always has, and prints a deprecation notice on stderr.
-- Signed in, the CLI asks platform for the plugin when a target is a Canvas instance, and the command goes through platform when platform has it. Any other plugin is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), unless every target is `localhost` or another host that is not a Canvas instance, which keeps `credentials.ini` and never asks platform.
+- Signed in, the CLI asks platform for the plugin when a target is a Canvas instance or when no `--instance` or `--host` is given, and the command goes through platform when platform has it. Any other plugin is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), unless every target is `localhost` or another host that is not a Canvas instance, which keeps `credentials.ini`. When `--instance` or `--host` names only such hosts, platform is not asked.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
 
