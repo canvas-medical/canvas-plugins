@@ -529,7 +529,7 @@ def list(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     if (managed := managed_instance(host, "list")) is not None:
-        _list_from_platform(*managed, host)
+        _list_from_platform(managed.client, managed.slug, host)
         return
 
     token = get_or_request_api_token(host)

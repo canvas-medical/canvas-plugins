@@ -10,7 +10,7 @@ import typer
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.apps.platform.client import PlatformError, PlatformTimeout
-from canvas_cli.apps.platform.routing import managed_instance, platform_sign_out
+from canvas_cli.apps.platform.routing import ManagedInstance, managed_instance, platform_sign_out
 
 
 def namespace_url(host: str, *paths: str) -> str:
@@ -20,13 +20,40 @@ def namespace_url(host: str, *paths: str) -> str:
     return urljoin(host, join)
 
 
-def _confirm_destructive_action(namespace: str, action_description: str) -> None:
-    """Prompt the user to confirm a destructive action by typing the namespace name."""
-    print(f"\nThis will {action_description} namespace '{namespace}'. This cannot be undone.")
-    confirmation = input("Type the full namespace name to confirm: ")
-    if confirmation != namespace:
-        print("Confirmation did not match. Aborting.")
-        raise typer.Exit(1)
+def _confirm_destructive_action(
+    namespace: str,
+    action_description: str,
+    instance: str,
+    production: bool = False,
+) -> None:
+    """Prompt the user to confirm a destructive action by typing the namespace name.
+
+    A namespace has the same name on every instance a plugin runs on, so the prompt names the
+    instance, and on a production instance the instance slug must be typed as well.
+
+    Args:
+        namespace (str): The namespace acted on.
+        action_description (str): The action phrase, such as "reset".
+        instance (str): The instance the call goes to: its slug, or the credentials.ini host.
+        production (bool): Whether Canvas Platform marks the instance as production.
+
+    Raises:
+        typer.Exit: When a typed confirmation does not match.
+    """
+    target = f"{instance} (PRODUCTION)" if production else instance
+    print(
+        f"\nThis will {action_description} namespace '{namespace}' on {target}. "
+        "This cannot be undone."
+    )
+    confirmations: list[tuple[str, str]] = [
+        ("Type the full namespace name to confirm: ", namespace)
+    ]
+    if production:
+        confirmations.append(("Type the instance slug to confirm: ", instance))
+    for prompt, expected in confirmations:
+        if input(prompt) != expected:
+            print("Confirmation did not match. Aborting.")
+            raise typer.Exit(1)
 
 
 def _explain_missing_routes(error: PlatformError) -> None:
@@ -112,7 +139,7 @@ def _print_reset_result(namespace: str, data: dict[str, Any]) -> None:
 
 def _platform_action(
     namespace: str,
-    slug: str,
+    instance: ManagedInstance,
     execute: bool,
     preview: Callable[[bool], dict[str, Any]],
     print_preview: Callable[[dict[str, Any]], None],
@@ -123,7 +150,8 @@ def _platform_action(
 
     Args:
         namespace (str): The namespace acted on.
-        slug (str): The instance slug, for the command that checks a timed-out real run.
+        instance (ManagedInstance): The instance acted on, named in the confirmation and in the
+            command that checks a timed-out real run.
         execute (bool): Whether ``--execute`` was given.
         preview (Callable[[bool], dict[str, Any]]): Makes the call, given ``dry_run``.
         print_preview (Callable[[dict[str, Any]], None]): Prints a dry-run body.
@@ -135,14 +163,14 @@ def _platform_action(
     if not execute:
         print("\nThis is a dry run. To execute, re-run with --execute")
         return
-    _confirm_destructive_action(namespace, confirm_as)
+    _confirm_destructive_action(namespace, confirm_as, instance.slug, instance.production)
     try:
         result = _through_platform(namespace, lambda: preview(False))
     except PlatformTimeout as error:
         raise click.ClickException(
             f"{error.message} Whether namespace '{namespace}' was changed is unknown: the "
             f"instance may still finish. Check with `canvas namespace inspect {namespace} "
-            f"--host {slug}`."
+            f"--host {instance.slug}`."
         ) from error
     print_result(result)
 
@@ -159,7 +187,7 @@ def list_namespaces(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     if (managed := managed_instance(host, "namespace list")) is not None:
-        client, slug = managed
+        client, slug = managed.client, managed.slug
         try:
             listing = client.namespaces(slug)
         except PlatformError as error:
@@ -206,7 +234,7 @@ def inspect(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     if (managed := managed_instance(host, "namespace inspect")) is not None:
-        client, slug = managed
+        client, slug = managed.client, managed.slug
         _print_inspection(_through_platform(namespace, lambda: client.namespace(slug, namespace)))
         return
 
@@ -267,10 +295,10 @@ def reset(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     if (managed := managed_instance(host, "namespace reset")) is not None:
-        client, slug = managed
+        client, slug = managed.client, managed.slug
         _platform_action(
             namespace,
-            slug,
+            managed,
             execute,
             lambda dry_run: client.reset_namespace(slug, namespace, dry_run=dry_run),
             _print_reset_preview,
@@ -300,7 +328,7 @@ def reset(
 
         data = r.json()
         _print_reset_preview(data)
-        _confirm_destructive_action(namespace, "reset")
+        _confirm_destructive_action(namespace, "reset", host)
 
         # Now execute
         try:
@@ -382,10 +410,10 @@ def drop(
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     if (managed := managed_instance(host, "namespace drop")) is not None:
-        client, slug = managed
+        client, slug = managed.client, managed.slug
         _platform_action(
             namespace,
-            slug,
+            managed,
             execute,
             lambda dry_run: client.drop_namespace(slug, namespace, dry_run=dry_run),
             _print_drop_preview,
@@ -415,7 +443,7 @@ def drop(
 
         data = r.json()
         _print_drop_preview(data)
-        _confirm_destructive_action(namespace, "permanently drop")
+        _confirm_destructive_action(namespace, "permanently drop", host)
 
         # Now execute
         try:

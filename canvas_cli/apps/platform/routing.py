@@ -7,6 +7,8 @@ This lives apart from ``commands`` because the instance commands (``list``, ``lo
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 import click
 
 from canvas_cli.apps.auth.utils import instance_slug
@@ -43,8 +45,22 @@ def refuse_unmanaged(cause: str, target: str) -> click.ClickException:
     )
 
 
-def managed_instance(host: str, command: str) -> tuple[PlatformClient, str] | None:
-    """Platform's client and the instance slug when the command goes through Platform.
+class ManagedInstance(NamedTuple):
+    """An instance Canvas Platform manages, from the person's instance list.
+
+    Attributes:
+        client (PlatformClient): The client for the Platform that manages it.
+        slug (str): The instance slug.
+        production (bool): Whether Platform marks the instance as production.
+    """
+
+    client: PlatformClient
+    slug: str
+    production: bool
+
+
+def managed_instance(host: str, command: str) -> ManagedInstance | None:
+    """Platform's client and the instance when the command goes through Platform.
 
     Signed in to Canvas Platform, a Canvas instance goes through Platform when it is in the
     person's list with ``managed`` set, and is refused otherwise. Signed out, or for
@@ -58,7 +74,8 @@ def managed_instance(host: str, command: str) -> tuple[PlatformClient, str] | No
         command (str): The command as typed after ``canvas``, for the deprecation notice.
 
     Returns:
-        tuple[PlatformClient, str] | None: The client and slug, or None for credentials.ini.
+        ManagedInstance | None: The client, slug and production flag, or None for
+            credentials.ini.
 
     Raises:
         click.ClickException: Signed in, and Platform does not manage the instance.
@@ -76,4 +93,4 @@ def managed_instance(host: str, command: str) -> tuple[PlatformClient, str] | No
         raise refuse_unmanaged(f"{slug} is not one of your instances on Canvas Platform.", slug)
     if not row.get("managed"):
         raise refuse_unmanaged(f"Canvas Platform does not manage {slug}.", slug)
-    return client, slug
+    return ManagedInstance(client, slug, bool(row.get("production")))

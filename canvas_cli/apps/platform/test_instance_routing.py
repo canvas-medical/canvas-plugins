@@ -34,12 +34,17 @@ INSTANCE_TOKEN = "canvas_cli.apps.plugin.plugin.get_or_request_api_token"
 NAMESPACE_TOKEN = "canvas_cli.apps.namespace.namespace.get_or_request_api_token"
 
 
-def _instance(slug: str, *capabilities: str, managed: bool = True) -> dict[str, Any]:
+def _instance(
+    slug: str,
+    *capabilities: str,
+    managed: bool = True,
+    production: bool = False,
+) -> dict[str, Any]:
     return {
         "slug": slug,
         "organization": "acme",
-        "stage": "staging",
-        "production": False,
+        "stage": "production" if production else "staging",
+        "production": production,
         "managed": managed,
         "capabilities": list(capabilities),
     }
@@ -146,7 +151,8 @@ def test_managed_instance_returns_client_and_slug(instances: None) -> None:
     found = managed_instance(HOST, "list")
 
     assert found is not None
-    assert found[1] == "acme"
+    assert found.slug == "acme"
+    assert found.production is False
 
 
 @pytest.mark.parametrize(
@@ -720,6 +726,48 @@ def test_namespace_drop_execute_with_typed_name(
 
     assert result.exit_code == 0, result.output
     assert f"Namespace '{NS}' has been dropped." in result.stdout
+    assert f"permanently drop namespace '{NS}' on acme." in result.stdout
+    assert "instance slug" not in result.stdout
+
+
+@pytest.fixture
+def production_instance(requests_mock: requests_mock_module.Mocker, signed_in: None) -> None:
+    """`acme` is a managed production instance."""
+    requests_mock.get(
+        f"{API}/instances",
+        json={"instances": [_instance("acme", "view_instance", production=True)]},
+    )
+
+
+@pytest.mark.parametrize(
+    ("typed", "real_calls"),
+    [("acme", 1), ("acme-staging", 0)],
+    ids=["slug-matches", "slug-mismatch"],
+)
+def test_namespace_drop_on_production_also_asks_for_the_instance_slug(
+    typed: str,
+    real_calls: int,
+    requests_mock: requests_mock_module.Mocker,
+    production_instance: None,
+) -> None:
+    """A namespace has the same name on every instance a plugin runs on, so on production the
+    typed slug is what catches a drop aimed at the wrong instance.
+    """
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=true", json={"dry_run": True, "namespace": NS, "tables": []}
+    )
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=false", json={"dry_run": False, "namespace": NS, "dropped": True}
+    )
+
+    result = runner.invoke(
+        app, ["namespace", "drop", NS, "--host", "acme", "--execute"], input=f"{NS}\n{typed}\n"
+    )
+
+    assert f"permanently drop namespace '{NS}' on acme (PRODUCTION)." in result.stdout
+    assert "Type the instance slug to confirm" in result.stdout
+    assert result.exit_code == (0 if real_calls else 1), result.output
+    assert len(_calls(requests_mock, "POST", f"{NS_URL}/drop?dry_run=false")) == real_calls
 
 
 def test_namespace_drop_refused_for_pending_consent(
