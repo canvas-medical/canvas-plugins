@@ -1,8 +1,9 @@
 import datetime
 
 import pytest
+from django.db import models
 
-from canvas_sdk.handlers.simple_api import PortalAccessLevel
+from canvas_sdk.handlers.simple_api import PortalAccess, PortalAccessLevel
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     PatientFactory,
@@ -50,6 +51,16 @@ def test_a_chart_names_who_it_was_given_to_and_keeps_ended_access_as_history() -
         giving
     ]
     assert giving.contact_relationship == "Father"
+
+
+def test_each_area_takes_a_portal_access_level_and_allows_act_unless_limited() -> None:
+    """Each area's level is one of PortalAccessLevel's choices, act unless staff limited it."""
+    grant = PortalAccessGrant()
+
+    for area in PortalAccess.AREAS:
+        field = PortalAccessGrant._meta.get_field(area)
+        assert isinstance(field, models.CharField) and field.choices == PortalAccessLevel.choices
+        assert getattr(grant, area) == PortalAccessLevel.ACT
 
 
 def test_reads_the_portal_access_grant_view() -> None:

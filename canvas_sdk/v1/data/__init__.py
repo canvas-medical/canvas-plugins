@@ -197,7 +197,7 @@ from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
-from .portal_access_grant import PortalAccessGrant
+from .portal_access_grant import PortalAccessGrant, PortalAccessLevel
 from .portal_invitation import (
     PortalInvitation,
     PortalInvitationRejectionReason,
@@ -494,6 +494,7 @@ __all__ = __exports__ = (
     "Plan",
     "PluginCommand",
     "PortalAccessGrant",
+    "PortalAccessLevel",
     "PortalInvitation",
     "PortalInvitationRejectionReason",
     "PortalInvitationStatus",

@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from base64 import b64decode
 from collections.abc import Mapping
-from enum import StrEnum
 from functools import cached_property
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
-from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
+from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant, PortalAccessLevel
 from logger import log
 from plugin_runner.exceptions import PluginError
 
@@ -122,50 +121,10 @@ class APIKeyCredentials(Credentials):
         self.key = key
 
 
-class PortalAccessLevel(StrEnum):
-    """
-    How much a login may do in one area of the patient's chart.
-
-    With NONE, hide the area; with VIEW, show it read-only; with ACT, allow its actions too. Levels
-    compare by how much they allow, NONE < VIEW < ACT, and NONE is falsy.
-    """
-
-    NONE = "none"
-    VIEW = "view"
-    ACT = "act"
-
-    def __lt__(self, other: object) -> bool:
-        return _rank(self) < _rank(other)
-
-    def __le__(self, other: object) -> bool:
-        return _rank(self) <= _rank(other)
-
-    def __gt__(self, other: object) -> bool:
-        return _rank(self) > _rank(other)
-
-    def __ge__(self, other: object) -> bool:
-        return _rank(self) >= _rank(other)
-
-    def __bool__(self) -> bool:
-        return _rank(self) > 0
-
-
-_PORTAL_ACCESS_RANKS = {
-    PortalAccessLevel.NONE: 0,
-    PortalAccessLevel.VIEW: 1,
-    PortalAccessLevel.ACT: 2,
-}
-
 _PORTAL_AREAS = ("appointments", "messaging", "clinical", "billing")
 
 # The least level, by area, that a login acting on a patient's chart needs there.
 PortalAccessRequirement: TypeAlias = Mapping[str, PortalAccessLevel | str]
-
-
-def _rank(level: object) -> int:
-    if not isinstance(level, str):
-        raise TypeError(f"Cannot compare a portal access level with {type(level).__name__}")
-    return _PORTAL_ACCESS_RANKS[PortalAccessLevel(level)]
 
 
 class PortalAccess:

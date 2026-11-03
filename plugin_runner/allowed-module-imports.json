@@ -1394,6 +1394,7 @@
     "Plan",
     "PluginCommand",
     "PortalAccessGrant",
+    "PortalAccessLevel",
     "PortalInvitation",
     "PortalInvitationRejectionReason",
     "PortalInvitationStatus",
@@ -1899,7 +1900,8 @@
     "PluginCommand"
   ],
   "canvas_sdk.v1.data.portal_access_grant": [
-    "PortalAccessGrant"
+    "PortalAccessGrant",
+    "PortalAccessLevel"
   ],
   "canvas_sdk.v1.data.portal_invitation": [
     "PortalInvitation",
