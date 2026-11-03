@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.266.2 (2026-11-03)
+
+### Bug Fixes
+
+- Resolve CQM patients from record events and interview/instruction/referral-report targets
+  ([#1962](https://github.com/canvas-medical/canvas-plugins/pull/1962),
+  [`4727da5`](https://github.com/canvas-medical/canvas-plugins/commit/4727da55d9403e480a92eda30c526d43d2f0b934))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+
 ## v0.266.1 (2026-11-02)
 
 ### Bug Fixes
