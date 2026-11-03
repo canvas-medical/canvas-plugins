@@ -105,17 +105,17 @@ def manifest_publisher(plugin_dir: Path) -> str | None:
         plugin_dir (Path): The plugin package directory.
 
     Returns:
-        str | None: The publisher slug, or None when the manifest has no ``publisher`` or
-            it is null. An empty string is returned as is.
+        str | None: The publisher slug, or None when the manifest has no ``publisher``.
+            An empty string is returned as is.
 
     Raises:
         typer.BadParameter: The manifest is missing or unreadable, or ``publisher`` is
-            not a string.
+            not a string, null included, since Canvas Platform refuses that at push.
     """
     manifest, _, data = _read_manifest(plugin_dir)
-    publisher: Any = data.get("publisher")
-    if publisher is None:
+    if "publisher" not in data:
         return None
+    publisher: Any = data["publisher"]
     if not isinstance(publisher, str):
         raise typer.BadParameter(f'{manifest} has a "publisher" that is not a string')
     return publisher
@@ -270,7 +270,9 @@ def _publisher(
     """The slug of the organization that publishes ``name``, and whether the person picked it.
 
     It is the manifest's ``publisher`` when it names an organization the person belongs
-    to; else the only organization the person can publish in; else, at a terminal, the
+    to, or any ``publisher`` for a deploy that pushes nothing, whose deployment Canvas
+    Platform authorizes on its own (a Canvas employee deploys in every organization
+    without belonging to it); else the only organization the person can publish in; else, at a terminal, the
     one the person picks. The choice is returned, not written: a regular push records it
     in the manifest once the package is accepted (``records``), and any other deploy
     prints the line to add instead. Without a terminal, several organizations are
@@ -298,6 +300,8 @@ def _publisher(
         match: dict[str, Any] | None = next(
             (o for o in organizations if o["slug"] == declared), None
         )
+        if match is None and declared and not pushing:
+            return declared, False
         if match is None:
             yours: str = (
                 f"Your organizations: {slugs}."

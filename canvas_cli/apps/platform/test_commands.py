@@ -470,15 +470,30 @@ def test_snapshot_deploy_with_several_orgs_does_not_write_the_manifest(
     assert 'Add "publisher": "big-leap" to CANVAS_MANIFEST.json and commit it' in result.output
 
 
-def test_a_forged_manifest_publisher_is_refused_for_every_deploy_mode(
+@pytest.mark.parametrize("mode", [["--no-push"], ["--ref", "abc123"]])
+def test_a_deploy_that_pushes_nothing_leaves_the_publisher_to_platform(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None, mode: list[str]
+) -> None:
+    """A Canvas employee deploys a customer's plugin without belonging to its org, so Platform decides."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "globex"}))
+
+    result = runner.invoke(app, ["deploy", str(package), *mode, "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        _requests_to(api, "POST", "/deployments")[0].json()["plugins"][0]["publisher"] == "globex"
+    )
+
+
+def test_an_empty_manifest_publisher_is_refused_for_a_deploy_that_pushes_nothing(
     api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
 ) -> None:
-    """The membership check runs for --no-push too, since the deployment entry names the org."""
-    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": "globex"}))
+    """An empty string names no organization, so it is refused even when Platform would decide."""
+    package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": ""}))
 
     result = runner.invoke(app, ["deploy", str(package), "--no-push", "--instance", "acme-staging"])
 
-    assert result.exit_code == 2
+    assert result.exit_code == 2, result.output
     assert not _requests_to(api, "POST", "/deployments")
 
 
@@ -2529,10 +2544,10 @@ def test_deploy_with_no_deployable_instance_says_to_name_one(
     assert not _requests_to(api, "POST", "/deployments")
 
 
-def test_staff_cannot_deploy_under_an_org_they_do_not_belong_to(
+def test_staff_cannot_push_under_an_org_they_do_not_belong_to(
     requests_mock: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
 ) -> None:
-    """Staff reach other orgs through Platform, not through a publisher the CLI cannot verify."""
+    """Staff hold no push_plugin_code outside their own orgs, so a push names one they belong to."""
     directory = tmp_path / "intake"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(
@@ -2540,9 +2555,7 @@ def test_staff_cannot_deploy_under_an_org_they_do_not_belong_to(
     )
     requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
 
-    result = runner.invoke(
-        app, ["deploy", str(directory), "--no-push", "--instance", "other-staging"]
-    )
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "other-staging"])
 
     assert result.exit_code == 2
     assert "which is not an organization you belong to" in result.output
@@ -3429,13 +3442,14 @@ def test_an_empty_manifest_publisher_is_refused_as_naming_no_org(
     assert not _requests_to(api, "POST", "/deployments")
 
 
-def test_a_null_manifest_publisher_counts_as_absent(
+def test_a_null_manifest_publisher_is_refused(
     api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
 ) -> None:
-    """Q5: `null` is the same as no `publisher`, so the one org publishes."""
+    """Platform and Studio refuse a pushed `"publisher": null`, so the CLI refuses it before committing."""
     package = _plain_package(tmp_path, json.dumps({"name": "intake", "publisher": None}))
 
     result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
 
-    assert result.exit_code == 0, result.output
-    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"][0]["publisher"] == "acme"
+    assert result.exit_code == 2, result.output
+    assert '"publisher" that is not a string' in result.output
+    assert not _requests_to(api, "POST", "/deployments")
