@@ -258,6 +258,47 @@ def test_platform_instances_error_is_shown(
     assert _calls_to(requests_mock, LOGS_URL) == 0
 
 
+def test_platform_without_log_token_route_names_the_way_back(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A Platform that does not serve the log token route answers a bare 404, and the CLI says how to sign out."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, status_code=404, json={"detail": "Not Found"})
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "Canvas Platform does not issue log tokens yet" in result.output
+    assert "canvas logout" in result.output
+    assert "unset CANVAS_PLATFORM_TOKEN" in result.output
+    credentials_token.assert_not_called()
+    assert _calls_to(requests_mock, LOGS_URL) == 0
+
+
+def test_platform_404_with_a_code_is_shown_as_is(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+) -> None:
+    """A 404 carrying a ``code`` is Platform's own refusal, shown unchanged."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        status_code=404,
+        json={"error": "No such instance.", "code": "not_found"},
+    )
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+
+    assert result.exit_code == 1
+    assert "No such instance." in result.output
+    assert "does not issue log tokens yet" not in result.output
+
+
 def test_reissues_after_401(
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
@@ -481,7 +522,6 @@ def test_minted_token_is_not_cached_with_instance_tokens(
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
-    credentials_token: Mock,
 ) -> None:
     """The short-lived token never lands in the credentials.ini token cache."""
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
@@ -489,8 +529,10 @@ def test_minted_token_is_not_cached_with_instance_tokens(
     _answer_logs_for(requests_mock, "plat-tok")
 
     with patch("canvas_cli.apps.auth.utils.set_token") as set_token:
-        cli_runner.invoke(app, "logs --host acme-prod --no-follow")
+        result = cli_runner.invoke(app, "logs --host acme-prod --no-follow")
 
+    assert result.exit_code == 0, result.output
+    assert _calls_to(requests_mock, LOG_TOKEN_URL) == 1
     set_token.assert_not_called()
 
 
@@ -507,14 +549,24 @@ def test_instance_slug(host: str, slug: str | None) -> None:
     assert instance_slug(host) == slug
 
 
+# What Console sends once it accepts the token, and the refusal it sends before closing with
+# 1000 when it does not. Both come after websocket-client fires ``on_open`` at the upgrade.
+CONNECTED: list[str] = ["Connecting to log stream...", "Log stream connected."]
+REFUSED: list[str] = [
+    '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
+    '"message": "Token authorization failed."}'
+]
+
+
 class _FakeStream:
     """A ``WebSocketApp`` stand-in that replays one scripted connection per instance.
 
-    Each script entry is ``(opens, close_code)``: whether the stream opens before it closes,
-    and the close code Console sends. Every instance records the URL it was built with.
+    Each script entry is ``(messages, close_code)``: the messages Console sends after the
+    upgrade, and the close code it sends. Every connection fires ``on_open`` first, as
+    websocket-client does at the HTTP upgrade. Every instance records the URL it was built with.
     """
 
-    script: list[tuple[bool, int | None]] = []
+    script: list[tuple[list[str], int | None]] = []
     urls: list[str] = []
 
     def __init__(self, url: str, **callbacks: Any) -> None:
@@ -524,9 +576,10 @@ class _FakeStream:
         _FakeStream.urls.append(url)
 
     def run_forever(self) -> bool:
-        opens, close_code = _FakeStream.script.pop(0)
-        if opens:
-            self.on_open(self)
+        messages, close_code = _FakeStream.script.pop(0)
+        self.on_open(self)
+        for message in messages:
+            self.callbacks["on_message"](self, message)
         self.callbacks["on_close"](self, close_code, "")
         return False
 
@@ -557,7 +610,7 @@ def test_stream_reconnects_with_fresh_token_after_4401(
         LOG_TOKEN_URL,
         [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
     )
-    fake_stream.script = [(True, 4401), (True, 1000)]
+    fake_stream.script = [(CONNECTED, 4401), (CONNECTED, 1000)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
@@ -580,7 +633,7 @@ def test_stream_ends_when_platform_refuses_the_new_token(
         LOG_TOKEN_URL,
         [{"json": MINTED}, {"status_code": 403, "json": FORBIDDEN}],
     )
-    fake_stream.script = [(True, 4401)]
+    fake_stream.script = [(CONNECTED, 4401)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
@@ -596,16 +649,39 @@ def test_stream_refused_on_fresh_token_ends(
     credentials_token: Mock,
     fake_stream: type[_FakeStream],
 ) -> None:
-    """A 4401 before the stream ever opened ends the run instead of reconnecting in a loop."""
+    """Console refusing a fresh token (refusal message, then close 1000) ends the run with the way off Platform."""
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    fake_stream.script = [(False, 4401)]
+    fake_stream.script = [(REFUSED, 1000)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
     assert result.exit_code == 1
     assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert "canvas logout" in result.output
     assert len(fake_stream.urls) == 1
+
+
+def test_stream_refused_after_reconnect_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A re-minted token Console refuses ends the run instead of reconnecting in a loop."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
+    )
+    fake_stream.script = [(CONNECTED, 4401), (REFUSED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
 
 
 @pytest.mark.parametrize("close_code", [1000, 1011, None], ids=["normal", "error", "interrupt"])
@@ -620,7 +696,7 @@ def test_stream_other_closes_end_the_run(
     """Only 4401 reconnects; any other close, or Ctrl-C (no code), ends the stream."""
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    fake_stream.script = [(True, close_code)]
+    fake_stream.script = [(CONNECTED, close_code)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
@@ -635,7 +711,7 @@ def test_credentials_ini_stream_does_not_reconnect_on_4401(
     fake_stream: type[_FakeStream],
 ) -> None:
     """credentials.ini streams keep check-at-connect: a 4401 ends them as any close does."""
-    fake_stream.script = [(True, 4401)]
+    fake_stream.script = [(CONNECTED, 4401)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
