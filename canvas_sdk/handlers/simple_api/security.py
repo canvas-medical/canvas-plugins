@@ -183,6 +183,8 @@ class PortalAccess:
     @cached_property
     def actor(self) -> CanvasUser | None:
         """The login acting on the chart: acting_user_id's, or on a patient's own chart, theirs."""
+        if self.grant:
+            return self.grant.user
         if self.acting_user_id:
             return CanvasUser.objects.filter(dbid=self.acting_user_id).first()
         return self.patient.user if self.patient else None
@@ -194,15 +196,15 @@ class PortalAccess:
         It's read from the database, while level() and allows() use the levels sent with the
         request, so the two can disagree for a moment after staff change a level.
         """
-        if not self.acting_user_id:
+        if not self.acting_user_id or not self.patient or not self.patient.active:
             return None
-        return PortalAccessGrant.objects.filter(
-            user__dbid=self.acting_user_id,
-            patient__id=self._patient_id,
-            revoked_at__isnull=True,
-            flagged_at__isnull=True,
-            patient__active=True,
-        ).first()
+        return (
+            self.patient.portal_grants.select_related("user")
+            .filter(
+                user__dbid=self.acting_user_id, revoked_at__isnull=True, flagged_at__isnull=True
+            )
+            .first()
+        )
 
 
 def validate_portal_access(
