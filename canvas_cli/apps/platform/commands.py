@@ -124,8 +124,10 @@ def manifest_publisher(plugin_dir: Path) -> str | None:
 def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     """Record ``slug`` as the manifest's ``publisher``, right after ``name``.
 
-    The manifest keeps its indent and its trailing newline. An existing ``publisher``
-    is replaced in place.
+    The deploy commits the manifest, so only the ``publisher`` line changes: an existing
+    top-level value is replaced where it stands, or a line is added after the top-level
+    ``name`` line. A manifest whose top level does not sit one key per line (a one-line
+    manifest, say) is written out again with its indent and its trailing newline.
 
     Args:
         plugin_dir (Path): The plugin package directory.
@@ -137,6 +139,12 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     manifest, text, data = _read_manifest(plugin_dir)
     indent_match: re.Match[str] | None = re.search(r"^( +|\t)\S", text, flags=re.MULTILINE)
     indent: str | int = indent_match.group(1) if indent_match else 4
+    expected: dict[str, Any] = {**data, "publisher": slug}
+    if indent_match:
+        edited: str | None = _edit_publisher_line(text, indent_match.group(1), slug)
+        if edited is not None and json.loads(edited) == expected:
+            manifest.write_text(edited, encoding="utf-8")
+            return
     rebuilt: dict[str, Any] = {}
     if "publisher" in data:
         rebuilt = {**data, "publisher": slug}
@@ -150,6 +158,41 @@ def write_manifest_publisher(plugin_dir: Path, slug: str) -> None:
     if text.endswith("\n"):
         output += "\n"
     manifest.write_text(output, encoding="utf-8")
+
+
+_JSON_STRING = r'"(?:[^"\\]|\\.)*"'
+
+
+def _edit_publisher_line(text: str, indent: str, slug: str) -> str | None:
+    """``text`` with its top-level ``publisher`` set to ``slug``, changing that line alone.
+
+    A top-level key is one whose line starts with exactly one ``indent``. The caller
+    checks the result parses to the expected manifest, so a layout this misreads is
+    written out again instead.
+
+    Args:
+        text (str): The manifest text.
+        indent (str): The manifest's indent unit, as found on its first indented line.
+        slug (str): The publisher slug to record.
+
+    Returns:
+        str | None: The edited text, or None when the top level has no ``name`` line to
+            add the publisher after.
+    """
+    value: str = json.dumps(slug, ensure_ascii=False)
+    key: str = rf"^{re.escape(indent)}(?=\S)"
+    existing: re.Pattern[str] = re.compile(
+        rf'({key}"publisher"\s*:\s*){_JSON_STRING}', flags=re.MULTILINE
+    )
+    if existing.search(text):
+        return existing.sub(lambda m: m.group(1) + value, text, count=1)
+    name_line: re.Pattern[str] = re.compile(
+        rf'{key}"name"\s*:\s*{_JSON_STRING}\s*,[ \t]*\n', flags=re.MULTILINE
+    )
+    found: re.Match[str] | None = name_line.search(text)
+    if found is None:
+        return None
+    return f'{text[: found.end()]}{indent}"publisher": {value},\n{text[found.end() :]}'
 
 
 def require_valid_name(name: str) -> None:
@@ -184,11 +227,12 @@ def require_folder_matches_name(plugin_dir: Path, name: str) -> None:
     )
 
 
-def _no_push_role(organization: dict[str, Any]) -> typer.BadParameter:
-    """The refusal for an organization whose roles do not include pushing plugin code."""
+def _no_push_role(*organizations: dict[str, Any]) -> typer.BadParameter:
+    """The refusal for organizations whose roles do not include pushing plugin code."""
+    names: str = ", ".join(str(o.get("name") or o["slug"]) for o in organizations)
     return typer.BadParameter(
-        f"Your roles in {organization.get('name') or organization['slug']} do not include "
-        "pushing plugin code. Ask an organization admin for the Plugin developer role."
+        f"Your roles in {names} do not include pushing plugin code. Ask an organization "
+        "admin for the Plugin developer role."
     )
 
 
@@ -245,7 +289,7 @@ def _publisher(
     ]
     if not eligible:
         if organizations:
-            raise _no_push_role(organizations[0])
+            raise _no_push_role(*organizations)
         raise typer.BadParameter("You do not belong to any organization on Canvas Platform.")
     if len(eligible) == 1:
         only: str = str(eligible[0]["slug"])

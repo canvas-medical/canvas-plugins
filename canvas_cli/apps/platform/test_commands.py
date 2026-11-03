@@ -339,6 +339,42 @@ def test_deploy_without_push_role_anywhere_names_the_missing_role(
     assert "Plugin developer" in result.output
 
 
+def test_deploy_without_push_role_names_every_organization(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """Each organization the person belongs to lacks the role, so the refusal names them all."""
+    reader = {**ACME, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(
+        f"{API}/me",
+        json={
+            **ME,
+            "organizations": [reader, {**BIG_LEAP, "capabilities": reader["capabilities"]}],
+        },
+    )
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "Acme" in result.output
+    assert "Big Leap" in result.output
+    assert "Plugin developer" in result.output
+
+
+def test_deploy_without_any_organization_says_so(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """With no organization there is no publisher to deploy as, so nothing is registered."""
+    api.get(f"{API}/me", json={**ME, "organizations": []})
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 2
+    assert "You do not belong to any organization on Canvas Platform." in result.output
+    assert not _requests_to(api, "POST", "/plugins")
+
+
 def test_deploy_with_one_org_leaves_the_manifest_alone(
     api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
 ) -> None:
@@ -1817,6 +1853,43 @@ def test_config_on_a_plain_name_is_refused_for_an_instance_platform_does_not_man
     mock_update.assert_not_called()
 
 
+@patch("canvas_cli.apps.platform.commands.get_default_host")
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_without_a_target_is_refused_when_the_default_host_is_an_instance(
+    mock_update: Mock,
+    mock_default_host: Mock,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform does not have the plugin and credentials.ini's default is a Canvas instance."""
+    mock_default_host.return_value = "https://legacy.canvasmedical.com"
+    requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
+
+    result = runner.invoke(app, ["config", "unset", "intake", "A"])
+
+    assert result.exit_code == 1
+    assert "Canvas Platform does not manage intake." in result.output
+    mock_update.assert_not_called()
+
+
+@patch("canvas_cli.apps.platform.commands.get_default_host")
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_without_a_target_uses_a_local_default_host(
+    mock_update: Mock,
+    mock_default_host: Mock,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform does not have the plugin and the default is localhost, which Platform never manages."""
+    mock_default_host.return_value = "http://localhost:8000"
+    requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
+
+    result = runner.invoke(app, ["config", "unset", "intake", "A"])
+
+    assert result.exit_code == 0, result.output
+    assert mock_update.call_args.kwargs["host"] == "http://localhost:8000"
+
+
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
 def test_config_on_a_host_that_is_not_a_canvas_instance_never_asks_platform(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
@@ -2217,6 +2290,22 @@ def test_manifest_publisher_is_none_without_the_field(tmp_path: Path) -> None:
     assert commands.manifest_publisher(tmp_path) is None
 
 
+def test_manifest_publisher_refuses_a_value_that_is_not_a_string(tmp_path: Path) -> None:
+    """A non-string publisher names no organization, so it fails closed rather than counting as none."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake", "publisher": 3}))
+
+    with pytest.raises(typer.BadParameter, match='"publisher" that is not a string'):
+        commands.manifest_publisher(tmp_path)
+
+
+def test_manifest_name_refuses_a_manifest_that_is_not_an_object(tmp_path: Path) -> None:
+    """A manifest that parses to a list is unreadable as a manifest."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps(["intake"]))
+
+    with pytest.raises(typer.BadParameter, match="it is not a JSON object"):
+        commands.manifest_name(tmp_path)
+
+
 def test_manifest_publisher_reports_an_unreadable_manifest(tmp_path: Path) -> None:
     """An unreadable manifest fails closed rather than counting as no publisher."""
     (tmp_path / "CANVAS_MANIFEST.json").write_text("{not json")
@@ -2248,6 +2337,51 @@ def test_write_manifest_publisher_keeps_the_manifests_formatting(
         ensure_ascii=False,
     )
     assert manifest.read_text(encoding="utf-8") == expected + ("\n" if trailing_newline else "")
+
+
+def test_write_manifest_publisher_changes_only_the_publisher_line(tmp_path: Path) -> None:
+    """The deploy commits the manifest, so its own layout (inline arrays, spacing) is kept."""
+    text = (
+        "{\n"
+        '    "sdk_version": "0.1.4",\n'
+        '    "name": "intake",\n'
+        '    "secrets": ["api-key"],\n'
+        '    "components": {"handlers": [{"name": "Handler", "class": "intake.h:H"}]}\n'
+        "}\n"
+    )
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text(text)
+
+    commands.write_manifest_publisher(tmp_path, "big-leap")
+
+    assert manifest.read_text() == text.replace(
+        '    "name": "intake",\n', '    "name": "intake",\n    "publisher": "big-leap",\n'
+    )
+
+
+def test_write_manifest_publisher_replaces_only_the_existing_value(tmp_path: Path) -> None:
+    """An existing top-level publisher takes the new slug; a nested `publisher` is untouched."""
+    text = '{\n  "name": "intake",\n  "publisher":"old",\n  "catalog": {"publisher": "keep"}\n}\n'
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text(text)
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    assert manifest.read_text() == text.replace('"publisher":"old"', '"publisher":"acme"')
+
+
+def test_write_manifest_publisher_replaces_a_null_publisher_rather_than_adding_a_second(
+    tmp_path: Path,
+) -> None:
+    """A null publisher after `name` is replaced; a second key would leave the manifest null."""
+    manifest = tmp_path / "CANVAS_MANIFEST.json"
+    manifest.write_text('{\n    "name": "intake",\n    "publisher": null\n}\n')
+
+    commands.write_manifest_publisher(tmp_path, "acme")
+
+    text: str = manifest.read_text()
+    assert json.loads(text) == {"name": "intake", "publisher": "acme"}
+    assert text.count('"publisher"') == 1
 
 
 def test_write_manifest_publisher_replaces_an_existing_publisher_in_place(tmp_path: Path) -> None:
