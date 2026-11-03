@@ -726,24 +726,34 @@ CREDENTIALS_INI_NOTICE = (
 )
 
 
-@pytest.mark.parametrize("host", ["acme-prod", "localhost"])
 def test_credentials_ini_run_prints_deprecation_notice(
-    host: str,
     requests_mock: requests_mock_module.Mocker,
     credentials_token: Mock,
 ) -> None:
-    """Every credentials.ini run warns on stderr, leaving stdout to the logs."""
+    """A credentials.ini run on a Canvas instance warns on stderr, leaving stdout to the logs."""
     requests_mock.get(LOGS_URL, json={"hits": [HIT], "next": {}})
-    requests_mock.get(
-        plugin_url("http://localhost:8000", "/logs"), json={"hits": [HIT], "next": {}}
-    )
 
-    result = CliRunner(mix_stderr=False).invoke(app, f"logs --host {host} --no-follow")
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod --no-follow")
 
     assert result.exit_code == 0, result.output
     assert CREDENTIALS_INI_NOTICE in result.stderr
     assert "canvas-plugins#migrating-from-credentialsini-to-canvas-platform" in result.stderr
     assert "deprecated" not in result.stdout
+
+
+def test_localhost_run_prints_no_deprecation_notice(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+) -> None:
+    """`canvas login` cannot serve localhost, so a local run is not told to switch to it."""
+    requests_mock.get(
+        plugin_url("http://localhost:8000", "/logs"), json={"hits": [HIT], "next": {}}
+    )
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host localhost --no-follow")
+
+    assert result.exit_code == 0, result.output
+    assert "deprecated" not in result.stderr
 
 
 def test_platform_run_prints_no_deprecation_notice(

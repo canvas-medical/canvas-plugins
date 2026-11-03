@@ -1,8 +1,9 @@
 """Tests for the commands that route through Canvas Platform per target.
 
-`canvas list`, `canvas namespace *` and `canvas logs` route per instance (a managed instance goes
-through Platform, any other through credentials.ini). `canvas enable`, `canvas disable` and
-`canvas config list` route per plugin. HTTP is mocked with requests-mock, with the bodies the
+`canvas list`, `canvas namespace *` and `canvas logs` route per instance: signed in, a managed
+instance goes through Platform and any other Canvas instance is refused; signed out, or for
+localhost, credentials.ini serves. `canvas enable`, `canvas disable`, `canvas config *` and
+`canvas uninstall` route per plugin the same way. HTTP is mocked with requests-mock, with the bodies the
 Platform and home-app contracts document.
 """
 
@@ -12,7 +13,9 @@ from collections.abc import Iterator
 from typing import Any
 from unittest.mock import Mock, patch
 
+import click
 import pytest
+import requests
 import requests_mock as requests_mock_module
 from typer.testing import CliRunner
 
@@ -126,7 +129,7 @@ def test_managed_instance_is_none_when_signed_out(
     requests_mock: requests_mock_module.Mocker,
 ) -> None:
     """Without a Platform session there is nothing to ask, so credentials.ini serves."""
-    assert managed_instance(HOST) is None
+    assert managed_instance(HOST, "list") is None
     assert not requests_mock.called
 
 
@@ -134,21 +137,52 @@ def test_managed_instance_is_none_for_localhost(
     requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
     """A host outside canvasmedical.com has no slug, so Platform cannot manage it."""
-    assert managed_instance("http://localhost:8000") is None
+    assert managed_instance("http://localhost:8000", "list") is None
     assert not requests_mock.called
 
 
 def test_managed_instance_returns_client_and_slug(instances: None) -> None:
     """A managed instance in the person's list yields the client and its slug."""
-    found = managed_instance(HOST)
+    found = managed_instance(HOST, "list")
 
     assert found is not None
     assert found[1] == "acme"
 
 
-def test_managed_instance_is_none_for_an_unmanaged_instance(instances: None) -> None:
-    """An instance Platform lists as unmanaged is reached with credentials.ini."""
-    assert managed_instance("https://legacy.canvasmedical.com") is None
+@pytest.mark.parametrize(
+    ("host", "cause"),
+    [
+        ("https://legacy.canvasmedical.com", "Canvas Platform does not manage legacy."),
+        (
+            "https://other.canvasmedical.com",
+            "other is not one of your instances on Canvas Platform.",
+        ),
+    ],
+    ids=["unmanaged", "not-listed"],
+)
+def test_managed_instance_refuses_what_platform_does_not_manage(
+    host: str, cause: str, instances: None
+) -> None:
+    """Signed in, a Canvas instance Platform does not manage is refused, never left to credentials.ini."""
+    with pytest.raises(click.ClickException) as raised:
+        managed_instance(host, "list")
+
+    assert cause in raised.value.message
+    assert "sign out with `canvas logout`" in raised.value.message
+
+
+def test_managed_instance_refusal_under_service_token_names_the_variable(
+    requests_mock: requests_mock_module.Mocker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``canvas logout`` leaves CANVAS_PLATFORM_TOKEN in force, so the way out is unsetting it."""
+    monkeypatch.setenv(auth.SERVICE_TOKEN_ENV, "cnvs_sa_ci")
+    requests_mock.get(f"{API}/instances", json={"instances": [_instance("legacy", managed=False)]})
+
+    with pytest.raises(click.ClickException) as raised:
+        managed_instance("https://legacy.canvasmedical.com", "list")
+
+    assert "unset CANVAS_PLATFORM_TOKEN" in raised.value.message
+    assert "canvas logout" not in raised.value.message
 
 
 def test_a_failed_instance_lookup_raises_instead_of_reading_as_unmanaged(
@@ -257,20 +291,31 @@ def test_list_shows_platforms_not_found_sentence(
     ini_token.assert_not_called()
 
 
-def test_list_of_an_unmanaged_instance_uses_credentials_ini(
-    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
+@pytest.mark.parametrize(
+    "command",
+    [
+        ["list"],
+        ["namespace", "list"],
+        ["namespace", "inspect", NS],
+        ["namespace", "reset", NS],
+        ["namespace", "drop", NS],
+    ],
+    ids=" ".join,
+)
+def test_instance_command_refuses_an_unmanaged_instance_while_signed_in(
+    command: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    instances: None,
+    ini_token: Mock,
 ) -> None:
-    """An unmanaged instance is listed from the instance, and Platform's plugin route is not used."""
-    requests_mock.get(
-        "https://legacy.canvasmedical.com/plugin-io/plugins/",
-        json={"results": [{"name": "old", "version": "0.1", "is_enabled": False}]},
-    )
+    """Signed in, an instance Platform does not manage is refused with the way to sign out."""
+    result = runner.invoke(app, [*command, "--host", "legacy"])
 
-    result = runner.invoke(app, ["list", "--host", "legacy"])
-
-    assert result.exit_code == 0, result.output
-    assert result.stdout.splitlines() == ["old@0.1\tdisabled"]
-    assert not _calls(requests_mock, "GET", f"{API}/instances/legacy/plugins")
+    assert result.exit_code == 1
+    assert "Canvas Platform does not manage legacy." in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    ini_token.assert_not_called()
+    assert not _calls(requests_mock, "GET", "https://legacy.canvasmedical.com")
 
 
 def test_list_before_platform_serves_the_route_says_how_to_use_credentials_ini(
@@ -700,22 +745,6 @@ def test_namespace_drop_refused_for_pending_consent(
     ini_token.assert_not_called()
 
 
-def test_namespace_of_an_unmanaged_instance_uses_credentials_ini(
-    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
-) -> None:
-    """An unmanaged instance's namespaces are read from the instance."""
-    requests_mock.get(
-        "https://legacy.canvasmedical.com/plugin-io/namespaces/",
-        json={"namespaces": [{"name": NS, "table_count": 1, "custom_table_count": 0}]},
-    )
-
-    result = runner.invoke(app, ["namespace", "list", "--host", "legacy"])
-
-    assert result.exit_code == 0, result.output
-    assert NS in result.stdout
-    assert not _calls(requests_mock, "GET", f"{API}/instances/legacy/namespaces")
-
-
 # -- scenarios across Platform and the CLI -----------------------------------
 
 
@@ -801,3 +830,210 @@ def test_namespace_commands_before_platform_serves_them_say_how_to_use_credentia
     assert "canvas logout" in output
     assert "credentials.ini" in output
     ini_token.assert_not_called()
+
+
+# -- credentials.ini while signed in, and its deprecation notice --------------
+
+# Each per-plugin command, the instance function its credentials.ini path calls, and its
+# arguments after the plugin name.
+PLUGIN_COMMANDS: list[tuple[list[str], str, list[str]]] = [
+    (["enable"], "enable", []),
+    (["disable"], "disable", []),
+    (["config", "list"], "list_secrets", []),
+    (["config", "set"], "update", ["A=1"]),
+    (["config", "unset"], "update", ["A"]),
+    (["uninstall"], "uninstall", []),
+]
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+@pytest.mark.parametrize("name", [NAME, "intake"], ids=["prefixed", "unprefixed"])
+def test_plugin_command_refuses_an_unmanaged_plugin_on_an_instance_while_signed_in(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    name: str,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Signed in, a plugin Platform does not have is refused for a Canvas instance target."""
+    requests_mock.get(f"{API}/plugins/{NAME}", status_code=404, json={"error": "Not found."})
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, name, *extra, "--instance", "legacy"])
+
+    assert result.exit_code == 1
+    assert f"Canvas Platform does not manage {name}." in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_plugin_command_on_localhost_keeps_credentials_ini_while_signed_in(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform can never manage localhost, so a signed-in local run keeps credentials.ini."""
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, "intake", *extra, "--host", "localhost"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert mock.call_args.kwargs["host"] == "http://localhost:8000"
+    assert not requests_mock.called
+
+
+def _notice(command: str) -> str:
+    return (
+        f"`canvas {command}` with credentials.ini is deprecated in favor of `canvas login`, "
+        "and is no longer supported as of December 14, 2026."
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_plugin_command_on_credentials_ini_prints_its_notice(
+    command: list[str], direct: str, extra: list[str]
+) -> None:
+    """Every credentials.ini run names its own command in the deprecation notice."""
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}"):
+        result = runner.invoke(app, [*command, NAME, *extra, "--host", "legacy"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _notice(" ".join(command)) in result.stderr
+
+
+def test_plugin_command_through_platform_prints_no_notice(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """The Platform path is the supported one, so it prints no credentials.ini notice."""
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    result = runner.invoke(app, ["enable", NAME, "--instance", "acme"])
+
+    assert result.exit_code == 0, result.output
+    assert "deprecated" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("command", "url"),
+    [
+        (["list"], "https://legacy.canvasmedical.com/plugin-io/plugins/"),
+        (["namespace", "list"], "https://legacy.canvasmedical.com/plugin-io/namespaces/"),
+    ],
+    ids=" ".join,
+)
+def test_instance_command_on_credentials_ini_prints_its_notice(
+    command: list[str],
+    url: str,
+    requests_mock: requests_mock_module.Mocker,
+    ini_token: Mock,
+) -> None:
+    """Signed out, an instance command reads the instance and prints its notice on stderr."""
+    requests_mock.get(url, json={"results": [], "namespaces": []})
+
+    result = runner.invoke(app, [*command, "--host", "legacy"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _notice(" ".join(command)) in result.stderr
+    assert "deprecated" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_managed_plugin_on_localhost_keeps_credentials_ini_while_signed_in(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+) -> None:
+    """A prefixed plugin Platform manages still goes to localhost directly: Platform cannot
+    reach a local instance, so it is never asked about the plugin.
+    """
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, NAME, *extra, "--host", "localhost"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert mock.call_args.kwargs["host"] == "http://localhost:8000"
+    assert not _calls(requests_mock, "GET", f"{API}/plugins/")
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_plugin_command_on_localhost_prints_no_notice(
+    command: list[str], direct: str, extra: list[str]
+) -> None:
+    """`canvas login` cannot serve localhost, so a local run is not told to switch to it."""
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}"):
+        result = runner.invoke(app, [*command, NAME, *extra, "--host", "localhost"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert "deprecated" not in result.stderr
+
+
+def test_instance_command_on_localhost_prints_no_notice(
+    requests_mock: requests_mock_module.Mocker, ini_token: Mock
+) -> None:
+    """A namespace run on localhost reads the local instance without the deprecation notice."""
+    requests_mock.get("http://localhost:8000/plugin-io/namespaces/", json={"namespaces": []})
+
+    result = runner.invoke(app, ["namespace", "list", "--host", "localhost"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert "deprecated" not in result.stderr
+
+
+def test_namespace_instance_outdated_names_the_way_back_to_credentials_ini(
+    requests_mock: requests_mock_module.Mocker, instances: None, ini_token: Mock
+) -> None:
+    """An instance too old for namespace routes is shown with how to use credentials.ini."""
+    sentence = "acme runs a Canvas release that cannot manage namespaces yet."
+    requests_mock.get(
+        NS_URL, status_code=409, json={"error": sentence, "code": "instance_outdated"}
+    )
+
+    result = runner.invoke(app, ["namespace", "inspect", NS, "--host", "acme"])
+
+    assert result.exit_code == 1
+    output = result.stdout + result.stderr
+    assert sentence in output
+    assert "until it updates" in output
+    assert "sign out with `canvas logout`" in output
+    assert "credentials.ini" in output
+    ini_token.assert_not_called()
+
+
+@pytest.mark.parametrize("verb", ["reset", "drop"])
+def test_namespace_real_run_waits_past_platforms_wait_and_reports_unknown_on_timeout(
+    verb: str, requests_mock: requests_mock_module.Mocker, instances: None
+) -> None:
+    """A real reset or drop can outlast a short read timeout while the instance finishes it,
+    so the CLI waits longer than Platform's 60 s and calls a timeout's outcome unknown.
+    """
+    requests_mock.post(
+        f"{NS_URL}/{verb}?dry_run=true",
+        json={"dry_run": True, "namespace": NS, "tables_to_drop": [], "tables_to_truncate": []},
+    )
+    requests_mock.post(f"{NS_URL}/{verb}?dry_run=false", exc=requests.exceptions.ReadTimeout)
+
+    result = runner.invoke(
+        app, ["namespace", verb, NS, "--host", "acme", "--execute"], input=f"{NS}\n"
+    )
+
+    assert result.exit_code == 1
+    real = _calls(requests_mock, "POST", f"{NS_URL}/{verb}")[1]
+    assert real.timeout > 60
+    output = result.stdout + result.stderr
+    assert "unknown" in output
+    assert f"canvas namespace inspect {NS} --host acme" in output
+    assert "Could not reach" not in output

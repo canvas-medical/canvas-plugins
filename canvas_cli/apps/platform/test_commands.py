@@ -1507,12 +1507,27 @@ def test_config_set_on_a_managed_plugin_refuses_host(managed_plugin: None) -> No
 
 
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
-def test_config_set_on_an_unmanaged_plugin_writes_each_instance_directly(
+def test_config_set_on_an_unmanaged_plugin_is_refused_while_signed_in(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """A plugin platform does not have is configured on each named instance directly."""
+    """Signed in, a plugin platform does not have is refused rather than written with credentials.ini."""
     requests_mock.get(f"{API}/plugins/{NAME}", status_code=404, json={"error": "Not found."})
 
+    result = runner.invoke(
+        app, ["config", "set", NAME, "A=1", "--instance", "one", "--instance", "two"]
+    )
+
+    assert result.exit_code == 1
+    assert f"Canvas Platform does not manage {NAME}." in result.output
+    assert "sign out with `canvas logout`" in result.output
+    mock_update.assert_not_called()
+
+
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_set_signed_out_writes_each_instance_directly(
+    mock_update: Mock, requests_mock: requests_mock_module.Mocker
+) -> None:
+    """Signed out, a plugin is configured on each named instance directly."""
     result = runner.invoke(
         app, ["config", "set", NAME, "A=1", "--instance", "one", "--instance", "two"]
     )
@@ -1523,6 +1538,7 @@ def test_config_set_on_an_unmanaged_plugin_writes_each_instance_directly(
         "https://two.canvasmedical.com",
     ]
     assert mock_update.call_args.kwargs["secrets"] == ["A=1"]
+    assert not requests_mock.called
 
 
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")

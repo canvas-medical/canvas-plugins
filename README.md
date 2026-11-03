@@ -14,7 +14,7 @@ The CLI authenticates in two ways, and which one a command uses depends on where
 | Signs in as | you, as a member of your Canvas Platform organizations, or a service account of one organization | an OAuth client (`client_id` / `client_secret`) registered on one instance |
 | Reaches | every instance your organizations can deploy to | the instance named by each section of the file |
 | Stored in | `~/.canvas/platform-credentials.json`, or the `CANVAS_PLATFORM_TOKEN` environment variable | `credentials.ini`, with instance tokens cached in `~/.canvas/tokens.json` |
-| Used by | `login`, `logout`, `init`, `deploy`, `clone`, `list`, `logs` and `namespace` for an instance Canvas Platform manages, and `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall` for a plugin Canvas Platform manages | `install`, `list`, `logs` and `namespace` for any other instance, and `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall` for a plugin Canvas Platform does not manage |
+| Used by | `login`, `logout`, `init`, `deploy`, `clone`, and while you are signed in `list`, `logs`, `namespace`, `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall` for every Canvas instance and plugin (one Canvas Platform does not manage is refused) | `install`, and while you are signed out or for localhost `list`, `logs`, `namespace`, `enable` / `disable` / `config list` / `config set` / `config unset` / `uninstall`, each printing a deprecation notice |
 
 A machine can hold both at once, and the CLI picks per command and per plugin as described in [Which plugins go through Canvas Platform](#which-plugins-go-through-canvas-platform), and per instance for `list`, `logs` and `namespace` as described in [Which instances go through Canvas Platform](#which-instances-go-through-canvas-platform).
 
@@ -53,14 +53,18 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 `canvas enable`, `canvas disable`, `canvas config list`, `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
-- A name without a prefix, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
-- Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
+- Signed out, the command goes straight to the instance with `credentials.ini`, as `canvas install` always has, and prints a deprecation notice on stderr.
+- Signed in, the CLI asks platform for a publisher-prefixed plugin, and the command goes through platform when platform has it. Any other plugin is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), unless every target is `localhost` or another host that is not a Canvas instance, which keeps `credentials.ini`.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
 
 #### Which instances go through Canvas Platform
 
-`canvas list`, `canvas namespace list` / `inspect` / `reset` / `drop` and `canvas logs` decide per instance. Signed in, with the instance in your list and managed by Canvas Platform, the command goes through platform; otherwise (signed out, `localhost`, an instance platform does not manage) it uses `credentials.ini`. A refusal from platform on a managed instance is shown as platform wrote it and is not retried with `credentials.ini`.
+`canvas list`, `canvas namespace list` / `inspect` / `reset` / `drop` and `canvas logs` decide per instance:
+
+- Signed in, a Canvas instance in your list and managed by Canvas Platform goes through platform. Any other Canvas instance is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`).
+- Signed out, or for `localhost` and other hosts that are not Canvas instances, the command uses `credentials.ini` and prints a deprecation notice on stderr.
+- A refusal from platform on a managed instance is shown as platform wrote it and is not retried with `credentials.ini`.
 
 `canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance; before platform has read the instance at all, the command says so and exits 1. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
 
