@@ -1234,7 +1234,7 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     return {
         "edit_staged_command": {"command_id": str(edited.id), "fields": {"sig": "2 daily"}},
         "delete_staged_command": {"command_id": str(deleted.id)},
-        "suggest_patient": {"mrn": patient.mrn},
+        "suggest_patient": {"mrn": patient.mrn, "birth_date": patient.birth_date.isoformat()},
         "categorize_document": {"document_type_key": document_type.key},
         "prefill_document_fields": {
             "template_type": "lab",
