@@ -166,7 +166,8 @@ norecursedirs = [
   "example-plugins",
   "node_modules",
   "static",
-  "static-files"
+  "static-files",
+  "tools/arf_loadtest"
 ]
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
