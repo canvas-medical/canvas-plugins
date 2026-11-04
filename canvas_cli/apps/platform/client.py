@@ -145,12 +145,16 @@ class PlatformClient:
         """``GET /api/v1/instances``: what the person may reach and do on each."""
         return self.get("/api/v1/instances").get("instances", [])
 
-    def plugin(self, name: str) -> dict[str, Any] | None:
-        """``GET /api/v1/plugins/<name>``, or None when platform has no such plugin
-        the person may see (platform answers 404 for both).
+    def plugin(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
+        """``GET /api/v1/plugins/<name>[?publisher=<slug>]``, or None when platform has no
+        such plugin the person may see (platform answers 404 for both). ``publisher``
+        selects between two publishers' plugins that share ``name``.
         """
+        path: str = f"/api/v1/plugins/{segment(name)}"
+        if publisher:
+            path += f"?publisher={segment(publisher)}"
         try:
-            return self.get(f"/api/v1/plugins/{segment(name)}")
+            return self.get(path)
         except PlatformError as error:
             if error.status == requests.codes.not_found:
                 return None
@@ -162,9 +166,14 @@ class PlatformClient:
         """
         return self.post(f"/api/v1/orgs/{segment(organization)}/plugins", {"name": name})
 
-    def git_credentials(self, name: str) -> dict[str, Any]:
-        """``POST /api/v1/plugins/<name>/git-credentials``: a one-hour git token."""
-        return self.post(f"/api/v1/plugins/{segment(name)}/git-credentials")
+    def git_credentials(self, name: str, publisher: str | None = None) -> dict[str, Any]:
+        """``POST /api/v1/plugins/<name>/git-credentials[?publisher=<slug>]``: a one-hour git
+        token for the named publisher's plugin.
+        """
+        path: str = f"/api/v1/plugins/{segment(name)}/git-credentials"
+        if publisher:
+            path += f"?publisher={segment(publisher)}"
+        return self.post(path)
 
     def log_token(self, slug: str) -> dict[str, Any]:
         """``POST /api/v1/instances/<slug>/log-token``: a 15-minute token for reading logs."""

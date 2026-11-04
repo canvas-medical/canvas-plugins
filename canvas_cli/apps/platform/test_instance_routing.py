@@ -927,7 +927,7 @@ def test_plugin_command_refuses_an_unmanaged_plugin_on_an_instance_while_signed_
     signed_in: None,
 ) -> None:
     """Signed in, a plugin Platform does not have is refused for a Canvas instance target."""
-    requests_mock.get(f"{API}/plugins/{NAME}", status_code=404, json={"error": "Not found."})
+    requests_mock.get(f"{API}/plugins/{name}", status_code=404, json={"error": "Not found."})
 
     with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
         result = runner.invoke(app, [*command, name, *extra, "--instance", "legacy"])

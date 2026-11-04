@@ -47,14 +47,14 @@ client_secret=localclientsecret
 
 Canvas Platform hosts a plugin's git repository and deploys it to the instances it manages. Sign in once per machine with `canvas login`, which opens your browser; the session is stored per platform in `~/.canvas/platform-credentials.json`, readable only by you, and refreshes itself. `canvas login --platform <url>` or `CANVAS_PLATFORM_URL` points the CLI at a platform other than https://platform.canvasmedical.com, and later commands keep using the platform you last signed in to.
 
-A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org prefix>__<package>` (for example `acme__intake`), used for the manifest `name`, the package folder and its imports. `canvas login` lists the prefix of each organization you belong to, and the prefix decides which organization publishes the plugin. `canvas install` and `canvas validate` accept names with or without a prefix.
+A plugin deployed through Canvas Platform has a plain package name (lowercase letters, digits and underscores, starting with a letter, at most 63 characters), used for the manifest `name`, the package folder and its imports. `canvas init` recommends the convention `<org prefix>__<package>` (for example `acme__intake`), and `canvas login` lists the prefix of each organization you belong to. The organization that publishes the plugin is the manifest `publisher` (an organization slug), else the only organization you can publish in, else the one you pick at a terminal, which a regular `canvas deploy` push records in the manifest.
 
 #### Which plugins go through Canvas Platform
 
 `canvas enable`, `canvas disable`, `canvas config list`, `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
 - Signed out, the command goes straight to the instance with `credentials.ini`, as `canvas install` always has, and prints a deprecation notice on stderr.
-- Signed in, the CLI asks platform for a publisher-prefixed plugin, and the command goes through platform when platform has it. Any other plugin is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), unless every target is `localhost` or another host that is not a Canvas instance, which keeps `credentials.ini`.
+- Signed in, the CLI asks platform for the plugin when a target is a Canvas instance or when no `--instance` or `--host` is given, and the command goes through platform when platform has it. Any other plugin is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), unless every target is `localhost` or another host that is not a Canvas instance, which keeps `credentials.ini`. When `--instance` or `--host` names only such hosts, platform is not asked.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
 
@@ -68,7 +68,7 @@ A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org p
 
 `canvas list` shows platform's last inventory of the instance, with when it was collected on stderr, so it can be hours behind the instance; before platform has read the instance at all, the command says so and exits 1. To read the instance itself, sign out with `canvas logout` (or unset `CANVAS_PLATFORM_TOKEN`) and use `credentials.ini`.
 
-git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
+git signs in to platform's git server through `canvas git-credential`, a hidden command `canvas deploy`, `canvas init` and `canvas clone` register as the repository's credential helper. It mints a one-hour git token for the plugin and publisher named in the repository path, and the repository's configuration keeps any other credential helper, such as macOS's keychain, from answering for that server.
 
 ```console
 $ canvas login
@@ -189,7 +189,7 @@ $ canvas whoami [OPTIONS]
 
 ## `canvas init`
 
-Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>`, registered with platform, and given a git repository whose `origin` is platform. Signed out, it is named from the project name alone, and `init` says that `canvas deploy` refuses such a plugin until you run `canvas login` and `canvas init` again.
+Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>` by convention, its manifest records the `publisher`, and it is registered with platform and given a git repository whose `origin` is platform. Signed out, it is named from the project name alone and scaffolded without registration or a git repository, and `init` says that `canvas login` then `canvas init` gives a registered plugin.
 
 **Usage**:
 
@@ -208,7 +208,7 @@ $ canvas init [OPTIONS] [PLUGIN_TYPE]
 
 ## `canvas deploy`
 
-Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed, and the package folder must have the same name, which deploy checks before committing or pushing. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline at a terminal; under `--yes` or without a terminal, deploy lists them with the deployment id and exits non-zero without answering them. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed unless `--yes` is passed.
+Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` is a plain package name, and the package folder must have the same name, which deploy checks before committing or pushing. The publisher is the manifest `publisher`, else the only organization you can publish in, else, at a terminal, the organization you pick, which a regular push writes into the manifest after checking the package, so the push commits it (with `--ref`, `--no-push` or `--snapshot` it prints the line to add instead); without a terminal, several organizations are refused with the manifest line that chooses one. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline at a terminal; under `--yes` or without a terminal, deploy lists them with the deployment id and exits non-zero without answering them. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed unless `--yes` is passed.
 
 **Usage**:
 
@@ -243,8 +243,13 @@ $ canvas clone [OPTIONS] NAME [DIRECTORY]
 
 **Arguments**:
 
-- `NAME`: Plugin name, e.g. `acme__intake` [required]
+- `NAME`: Plugin name, e.g. `intake` [required]
 - `DIRECTORY`: Where to clone it, a directory named after the plugin by default
+
+**Options**:
+
+- `--publisher <slug>`: Organization that publishes the plugin, when two publishers share the name
+- `--help`: Show this message and exit.
 
 ## `canvas install`
 
