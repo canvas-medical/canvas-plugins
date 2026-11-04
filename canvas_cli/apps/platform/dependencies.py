@@ -161,11 +161,6 @@ def write_lock(plugin_dir: Path, plugins: list[Resolved]) -> bool:
 # -- resolving ---------------------------------------------------------------
 
 
-def _repository(address: str) -> str:
-    """A git address in the form two spellings of one repository share."""
-    return address.strip().rstrip("/").removesuffix(".git").lower()
-
-
 def _tag_pattern(template: str) -> re.Pattern[str]:
     escaped = re.escape(template).replace(re.escape("{version}"), "(?P<version>.+)")
     return re.compile(f"^{escaped}$")
@@ -208,20 +203,20 @@ class Resolver:
     lock: dict[str, dict[str, Any]]
     workdir: Path
     plugins: dict[str, Resolved] = field(default_factory=dict)
-    # The repositories the deploying manifest and its lock file name, the only ones fetched.
-    trusted: set[str] = field(default_factory=set)
+    # The source the deploying manifest declares for each dependency, by name: the only
+    # sources a version is ever fetched from.
+    sources: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def resolve(self, manifest: dict[str, Any]) -> list[Resolved]:
         """Every dependency of ``manifest`` and of the plugins it fetches, depth first.
 
-        Only the repositories the deploying manifest or its lock file name are fetched
-        from. A fetched plugin's manifest is someone else's word, so a source it declares
-        in another repository is never cloned and pushed into the person's organization.
+        A dependency is fetched only from the source the deploying manifest declares for
+        that plugin, exactly as declared. A fetched plugin's manifest is someone else's
+        word, so a source it declares is never cloned and pushed into the person's
+        organization.
         """
-        declared = [d.get("source") for d in manifest.get("dependencies") or []]
-        declared += [entry.get("source") for entry in self.lock.values()]
-        self.trusted = {
-            _repository(s["git"]) for s in declared if isinstance(s, dict) and "git" in s
+        self.sources = {
+            d["name"]: d["source"] for d in manifest.get("dependencies") or [] if "source" in d
         }
         self._walk(manifest, (str(manifest.get("name")),))
         return list(self.plugins.values())
@@ -317,10 +312,8 @@ class Resolver:
             ):
                 best_held = candidate
 
-        source: dict[str, str] | None = dependency.get("source")
-        untrusted = source is not None and _repository(source["git"]) not in self.trusted
-        if untrusted:
-            source = None
+        source = self.sources.get(name)
+        untrusted = source is None and "source" in dependency
         exact = _version(specifier) is not None
         tag = None
         if source and publisher in self.pushable and (best_held is None or not exact):
@@ -351,9 +344,8 @@ class Resolver:
         )
         if untrusted:
             why = (
-                f"and its source, {dependency['source']['git']}, is a repository only {requirer} "
-                f"names. Add {name} with its source to your own manifest's dependencies to "
-                "fetch it from there"
+                f"and only {requirer} names a source for it. Add {name} with its source to "
+                "your own manifest's dependencies to fetch it from there"
             )
         elif not source:
             why = "and its dependency declares no source to fetch it from"

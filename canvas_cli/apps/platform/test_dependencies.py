@@ -607,7 +607,7 @@ def test_deploy_never_fetches_from_a_repository_only_a_fetched_plugin_names(
     result = runner.invoke(app, ["deploy", str(root), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "is a repository only kit names" in result.output
+    assert "only kit names a source for it" in result.output
     assert not _server(tmp_path, "other").exists()
     assert not _server(tmp_path, "kit").exists()
     assert _deployments(api) == []
@@ -633,6 +633,31 @@ def test_deploy_fetches_a_nested_dependency_from_a_repository_the_manifest_names
     assert result.exit_code == 0, result.output
     assert _server(tmp_path, "other").exists()
     assert set(_lock(root)["plugins"]) == {"kit", "other"}
+
+
+def test_deploy_fetches_from_the_source_the_manifest_declares_not_a_nested_one(
+    api: requests_mock_module.Mocker, source: Path, tmp_path: Path
+) -> None:
+    """A fetched plugin naming another address for a dependency the deploying manifest
+    declares is ignored: the clone comes from the declared source, exactly as written.
+    """
+    other = _other_repository(tmp_path)
+    _release(
+        source,
+        "0.1.0",
+        "v0.1.0",
+        folder="kit",
+        dependencies=[
+            {"name": "other", "version": ">=1", "source": {"git": other.replace("other", "OTHER")}}
+        ],
+    )
+    api.get(f"{API}/plugins/other/versions", status_code=404, json={"code": "not_found"})
+    root = _root(tmp_path, _kit(), {"name": "other", "version": ">=1", "source": {"git": other}})
+
+    result = runner.invoke(app, ["deploy", str(root), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _lock(root)["plugins"]["other"]["source"]["git"] == other
 
 
 def test_deploy_refuses_a_dependency_with_no_version_anywhere(
