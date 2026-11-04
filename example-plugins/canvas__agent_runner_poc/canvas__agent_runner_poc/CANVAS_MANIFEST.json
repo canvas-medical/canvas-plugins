@@ -1,8 +1,8 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.16",
+    "plugin_version": "0.0.17",
     "name": "canvas__agent_runner_poc",
-    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode.",
+    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode. DocumentIntake reads each incoming document and suggests its patient, type, and report values for staff to confirm.",
     "components": {
         "handlers": [
             {
@@ -16,6 +16,10 @@
             {
                 "class": "canvas__agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
                 "description": "HTTP API backing the claims chat UI"
+            },
+            {
+                "class": "canvas__agent_runner_poc.handlers.intake_trigger:DocumentIntakeTrigger",
+                "description": "Starts DocumentIntakeAgent on each document that arrives in the data integration queue"
             }
         ],
         "agents": [
@@ -51,6 +55,14 @@
                 "progress": "activity",
                 "tools": {
                     "allowed": ["@claims_reads", "@claims_writes"]
+                }
+            },
+            {
+                "class": "canvas__agent_runner_poc.agents.intake:DocumentIntakeAgent",
+                "description": "Reads an incoming document and suggests its patient, type, and report values on the review form",
+                "progress": "status",
+                "tools": {
+                    "allowed": ["@intake_reads", "@intake_writes"]
                 }
             }
         ],
