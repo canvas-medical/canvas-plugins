@@ -20,6 +20,9 @@ class StaffIdentityVerification(TimestampedModel):
     verified_at = models.DateTimeField()
     # The ID.me policy (assurance level) the proofing satisfied.
     policy_scope = models.CharField(max_length=255)
+    # True when the name ID.me verified differed from the staff record (the birth date
+    # matched, so the proofing stands). The staff record's name likely needs updating.
+    name_mismatch = models.BooleanField()
 
 
 __exports__ = ("StaffIdentityVerification",)

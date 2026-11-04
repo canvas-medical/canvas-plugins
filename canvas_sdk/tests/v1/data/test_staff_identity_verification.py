@@ -40,6 +40,15 @@ def test_verified_staff_can_be_filtered_from_staff() -> None:
     assert list(Staff.objects.filter(identity_verifications__isnull=False).distinct()) == [verified]
 
 
+@pytest.mark.django_db
+def test_verifications_with_a_name_mismatch_can_be_found() -> None:
+    """A proofing where ID.me's name differed from the staff record is flagged."""
+    mismatched = StaffIdentityVerificationFactory.create(name_mismatch=True)
+    StaffIdentityVerificationFactory.create()
+
+    assert list(StaffIdentityVerification.objects.filter(name_mismatch=True)) == [mismatched]
+
+
 def test_model_omits_idme_identity_attributes_and_notes() -> None:
     """The ID.me attribute payload, ID.me UUID, and mismatch notes are not on the model."""
     field_names = {field.name for field in StaffIdentityVerification._meta.get_fields()}
