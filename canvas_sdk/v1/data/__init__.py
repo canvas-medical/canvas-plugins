@@ -67,6 +67,7 @@ from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .django_content_type import ContentType
 from .dme import DmeOrder, DmeProduct, DmeProductCodeSystem
+from .document_history_event import DocumentHistoryEvent, DocumentHistoryEventType
 from .document_reference import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -196,6 +197,11 @@ from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
+from .portal_invitation import (
+    PortalInvitation,
+    PortalInvitationRejectionReason,
+    PortalInvitationStatus,
+)
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -356,6 +362,8 @@ __all__ = __exports__ = (
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
     "DocumentReferenceStatus",
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType",
     "DocumentReviewDelegation",
     "EducationalMaterial",
     "EligibilityRequest",
@@ -484,6 +492,9 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "Plan",
     "PluginCommand",
+    "PortalInvitation",
+    "PortalInvitationRejectionReason",
+    "PortalInvitationStatus",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",

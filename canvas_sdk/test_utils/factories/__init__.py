@@ -34,6 +34,7 @@ from .custom_command import CustomCommandFactory
 from .diagnostic_report import DiagnosticReportFactory
 from .django_content_type import ContentTypeFactory
 from .dme import DmeOrderFactory, DmeProductFactory
+from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .educational_material import EducationalMaterialFactory
 from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
@@ -122,6 +123,7 @@ from .payment_card import PaymentCardFactory
 from .payment_collection import PaymentCollectionFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
+from .portal_invitation import PortalInvitationFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
     PracticeLocationContactPointFactory,
@@ -211,6 +213,7 @@ __all__ = (
     "DmeOrderFactory",
     "DmeProductFactory",
     "DocumentCodingFactory",
+    "DocumentHistoryEventFactory",
     "DocumentReviewDelegationFactory",
     "EducationalMaterialFactory",
     "EligibilityRequestFactory",
@@ -286,6 +289,7 @@ __all__ = (
     "PatientPhotoFactory",
     "PlanFactory",
     "PluginCommandFactory",
+    "PortalInvitationFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",

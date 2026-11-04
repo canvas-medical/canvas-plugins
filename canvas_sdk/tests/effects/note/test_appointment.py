@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from django.utils import timezone
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -15,6 +16,8 @@ from canvas_sdk.effects.note.appointment import (
     Appointment,
     RemoveAppointmentLabel,
 )
+from canvas_sdk.test_utils.factories import NoteFactory, NoteTypeFactory
+from canvas_sdk.v1.data import Appointment as AppointmentDataModel
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.note import NoteType, NoteTypeCategories
 
@@ -34,6 +37,10 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_staff.filter.return_value.exists.return_value = True
         mock_patient.filter.return_value.exists.return_value = True
         mock_appointment.filter.return_value.exists.return_value = True
+        # The appointment's note is still an appointment note (not checked in).
+        mock_appointment.filter.return_value.values_list.return_value.first.return_value = (
+            NoteTypeCategories.APPOINTMENT
+        )
 
         # Note type default behavior
         mock_note_type.values_list.return_value.filter.return_value.get.return_value = (
@@ -450,6 +457,63 @@ def test_appointment_reschedule_nonexistent_appointment(
 
     errors = exc_info.value.errors()
     assert any("Appointment with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def _appointment_with_note_category(category: NoteTypeCategories) -> AppointmentDataModel:
+    """An appointment whose note carries a note type of ``category``."""
+    note = NoteFactory.create(note_type_version=NoteTypeFactory.create(category=category))
+    return AppointmentDataModel.objects.create(
+        patient=note.patient,
+        note=note,
+        provider=note.provider,
+        location=note.location,
+        start_time=timezone.now(),
+        duration_minutes=30,
+        status=AppointmentProgressStatus.CONFIRMED,
+        telehealth_instructions_sent=False,
+    )
+
+
+@pytest.mark.django_db
+def test_appointment_reschedule_allows_appointment_note() -> None:
+    """An appointment whose note is still an appointment note can be rescheduled."""
+    appointment = _appointment_with_note_category(NoteTypeCategories.APPOINTMENT)
+
+    effect = Appointment(
+        instance_id=str(appointment.id), start_time=datetime.datetime.now()
+    ).reschedule()
+
+    assert effect.type == EffectType.RESCHEDULE_APPOINTMENT
+
+
+@pytest.mark.django_db
+def test_appointment_reschedule_rejects_note_that_is_no_longer_an_appointment_note() -> None:
+    """Rescheduling is refused once the appointment's note is no longer an appointment note.
+
+    Checking in converts the note to an encounter note type, and Canvas cannot
+    reschedule it without reverting the note to Booked.
+    """
+    appointment = _appointment_with_note_category(NoteTypeCategories.ENCOUNTER)
+
+    with pytest.raises(ValidationError) as exc_info:
+        Appointment(
+            instance_id=str(appointment.id), start_time=datetime.datetime.now()
+        ).reschedule()
+
+    errors = exc_info.value.errors()
+    assert any("no longer an appointment note" in str(e) for e in errors)
+
+
+@pytest.mark.django_db
+def test_appointment_update_allows_note_that_is_no_longer_an_appointment_note() -> None:
+    """Updating in place is still allowed after the appointment's note is checked in."""
+    appointment = _appointment_with_note_category(NoteTypeCategories.ENCOUNTER)
+
+    effect = Appointment(
+        instance_id=str(appointment.id), meeting_link="https://new-link.com"
+    ).update()
+
+    assert effect.type == EffectType.UPDATE_APPOINTMENT
 
 
 def test_appointment_reschedule_with_multiple_fields(

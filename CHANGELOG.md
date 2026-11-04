@@ -1,6 +1,116 @@
 # CHANGELOG
 
 
+## v0.267.0 (2026-11-04)
+
+### Bug Fixes
+
+- Resolve CQM patients from billing line item and imaging report events
+  ([#1975](https://github.com/canvas-medical/canvas-plugins/pull/1975),
+  [`a157001`](https://github.com/canvas-medical/canvas-plugins/commit/a15700149607844807c3c409fbcd2f45179f1ca9))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add portal invitation model and events
+  ([#1959](https://github.com/canvas-medical/canvas-plugins/pull/1959),
+  [`81b9d98`](https://github.com/canvas-medical/canvas-plugins/commit/81b9d9866f237ed2c7fa5be3338e4788d3f2af78))
+
+
+## v0.266.2 (2026-11-03)
+
+### Bug Fixes
+
+- Resolve CQM patients from record events and interview/instruction/referral-report targets
+  ([#1962](https://github.com/canvas-medical/canvas-plugins/pull/1962),
+  [`4727da5`](https://github.com/canvas-medical/canvas-plugins/commit/4727da55d9403e480a92eda30c526d43d2f0b934))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+
+## v0.266.1 (2026-11-02)
+
+### Bug Fixes
+
+- Adds validation for rescheduling an appointment
+  ([#1968](https://github.com/canvas-medical/canvas-plugins/pull/1968),
+  [`fb671a0`](https://github.com/canvas-medical/canvas-plugins/commit/fb671a0a762274440de49812c48490a2df97f764))
+
+
+## v0.266.0 (2026-11-02)
+
+### Features
+
+- Add login email event and effect
+  ([#1950](https://github.com/canvas-medical/canvas-plugins/pull/1950),
+  [`c76ae08`](https://github.com/canvas-medical/canvas-plugins/commit/c76ae08fd06db46f02fa6b7b68d2f8bda5426615))
+
+
+## v0.265.0 (2026-11-02)
+
+### Bug Fixes
+
+- Update python version ([#1969](https://github.com/canvas-medical/canvas-plugins/pull/1969),
+  [`8389107`](https://github.com/canvas-medical/canvas-plugins/commit/8389107f8156e750408054592ffc0d12c2c7442a))
+
+### Features
+
+- Add appointment slots search ([#1952](https://github.com/canvas-medical/canvas-plugins/pull/1952),
+  [`6bf6dea`](https://github.com/canvas-medical/canvas-plugins/commit/6bf6dea90fed4c63f9e88e24d7a0e6023188b87e))
+
+
+## v0.264.1 (2026-10-30)
+
+### Bug Fixes
+
+- **data**: Line up coverage plan types with home-app
+  ([#1960](https://github.com/canvas-medical/canvas-plugins/pull/1960),
+  [`eda5218`](https://github.com/canvas-medical/canvas-plugins/commit/eda521843ca85430b9a507763e0e6a728da1d7a6))
+
+
+## v0.264.0 (2026-10-30)
+
+### Features
+
+- Add claim assignee effect and event to the sdk
+  ([#1796](https://github.com/canvas-medical/canvas-plugins/pull/1796),
+  [`58593a7`](https://github.com/canvas-medical/canvas-plugins/commit/58593a7315a402630d083326e5213cb8c1f56616))
+
+
+## v0.263.0 (2026-10-30)
+
+### Documentation
+
+- Link the credentials.ini migration section to the upgrade guide
+  ([#1958](https://github.com/canvas-medical/canvas-plugins/pull/1958),
+  [`8a56867`](https://github.com/canvas-medical/canvas-plugins/commit/8a568670ab86830ff53f532d806b5d794972f920))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add DocumentHistoryEvent data model and document hand-off events
+  ([#1914](https://github.com/canvas-medical/canvas-plugins/pull/1914),
+  [`b5883cf`](https://github.com/canvas-medical/canvas-plugins/commit/b5883cf91ab5b34d5bd19ee03e3b9be65038e689))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+- **cli**: Count a snapshot-baseline tag on main as the last snapshot (KOALA-8035)
+  ([#1961](https://github.com/canvas-medical/canvas-plugins/pull/1961),
+  [`d3e54ba`](https://github.com/canvas-medical/canvas-plugins/commit/d3e54ba6d0494255c702a70664268832fa8dd86a))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- **cli**: End canvas login on Canvas Platform's own page, and say what deploy --push-only did
+  ([#1938](https://github.com/canvas-medical/canvas-plugins/pull/1938),
+  [`0e4256f`](https://github.com/canvas-medical/canvas-plugins/commit/0e4256ffc0a9793c1bb9b5b092fedb3a46d9a22d))
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+
 ## v0.262.0 (2026-10-29)
 
 ### Features

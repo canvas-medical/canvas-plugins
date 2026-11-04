@@ -1,10 +1,9 @@
-import functools
 import os
 from typing import Any, Literal
 
 import requests
 
-from canvas_sdk.utils.http import JsonOnlyResponse, ServiceClient
+from canvas_sdk.utils.http import ServiceClient
 from logger.logger import current_plugin_name
 
 
@@ -89,12 +88,7 @@ class PatientPortalHttp(ServiceClient):
         headers = {"X-Canvas-Plugin-Name": plugin_name} if plugin_name else None
 
         try:
-            response = JsonOnlyResponse(
-                self._send(
-                    "/patient-portal/login-url/",
-                    functools.partial(self._http_client.post, json=payload, headers=headers),
-                )
-            )
+            response = self._post_json("/patient-portal/login-url/", payload, headers=headers)
         except requests.RequestException:
             response = None
 

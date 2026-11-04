@@ -828,6 +828,9 @@
   "canvas_sdk.effects.patient_portal.form_result": [
     "FormResult"
   ],
+  "canvas_sdk.effects.patient_portal.login_email": [
+    "LoginEmailContent"
+  ],
   "canvas_sdk.effects.patient_portal.theme": [
     "PatientPortalTheme"
   ],
@@ -1148,6 +1151,11 @@
     "batch_post",
     "batch_put"
   ],
+  "canvas_sdk.utils.appointment_slots": [
+    "Slot",
+    "SlotSearchError",
+    "appointment_slots_http"
+  ],
   "canvas_sdk.utils.db": [
     "thread_cleanup"
   ],
@@ -1251,6 +1259,8 @@
     "DmeProduct",
     "DmeProductCodeSystem",
     "DocumentCoding",
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType",
     "DocumentReference",
     "DocumentReferenceCategory",
     "DocumentReferenceCoding",
@@ -1383,6 +1393,9 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PortalInvitation",
+    "PortalInvitationRejectionReason",
+    "PortalInvitationStatus",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
@@ -1652,6 +1665,10 @@
     "DmeProduct",
     "DmeProductCodeSystem"
   ],
+  "canvas_sdk.v1.data.document_history_event": [
+    "DocumentHistoryEvent",
+    "DocumentHistoryEventType"
+  ],
   "canvas_sdk.v1.data.document_reference": [
     "DocumentReference",
     "DocumentReferenceCategory",
@@ -1879,6 +1896,11 @@
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
+  ],
+  "canvas_sdk.v1.data.portal_invitation": [
+    "PortalInvitation",
+    "PortalInvitationRejectionReason",
+    "PortalInvitationStatus"
   ],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",

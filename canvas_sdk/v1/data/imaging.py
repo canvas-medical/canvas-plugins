@@ -21,6 +21,7 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
+from canvas_sdk.v1.data.document_review_delegation import DelegatedDocumentMixin
 from canvas_sdk.v1.data.report import Report
 from canvas_sdk.v1.data.report_template_base import (
     BaseReportTemplate,
@@ -116,7 +117,7 @@ class ImagingReportQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """QuerySet that supports ValueSet-based lookups via the codings reverse relation."""
 
 
-class ImagingReport(TimestampedModel, IdentifiableModel, Report):
+class ImagingReport(TimestampedModel, IdentifiableModel, DelegatedDocumentMixin, Report):
     """Model to read ImagingReport data."""
 
     class ImagingReportSource(models.TextChoices):
