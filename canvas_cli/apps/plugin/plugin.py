@@ -267,8 +267,8 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
 def scaffold(plugin_type: str, prefix: str = "") -> Path:
     """Create a new plugin from the template for ``plugin_type`` and return its directory.
 
-    A ``prefix`` names the package ``<prefix>__<package>``, the publisher-prefixed
-    name Canvas Platform requires.
+    A ``prefix`` names the package ``<prefix>__<package>``, the prefix `canvas init`
+    recommends.
     """
     template = get_base_plugin_template_path(plugin_type)
     extra_context = {"__plugin_prefix": prefix} if prefix else None
