@@ -166,7 +166,12 @@ def _platform_action(
     _confirm_destructive_action(namespace, confirm_as, instance.slug, instance.production)
     try:
         result = _through_platform(namespace, lambda: preview(False))
-    except PlatformTimeout as error:
+    except PlatformError as error:
+        # A load balancer's 502 or 504 carries no Platform code and can arrive while the
+        # instance is still finishing the write, so it is as unknown as a timeout.
+        gateway = error.status in (502, 504) and not error.code
+        if not isinstance(error, PlatformTimeout) and not gateway:
+            raise
         raise click.ClickException(
             f"{error.message} Whether namespace '{namespace}' was changed is unknown: the "
             f"instance may still finish. Check with `canvas namespace inspect {namespace} "

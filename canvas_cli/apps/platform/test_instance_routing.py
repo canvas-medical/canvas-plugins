@@ -1105,3 +1105,57 @@ def test_namespace_real_run_waits_past_platforms_wait_and_reports_unknown_on_tim
     assert "unknown" in output
     assert f"canvas namespace inspect {NS} --host acme" in output
     assert "Could not reach" not in output
+
+
+@pytest.mark.parametrize("status", [502, 504])
+@pytest.mark.parametrize("verb", ["reset", "drop"])
+def test_namespace_real_run_answered_by_a_gateway_reports_unknown(
+    verb: str, status: int, requests_mock: requests_mock_module.Mocker, instances: None
+) -> None:
+    """A load balancer's code-less 502 or 504 can come back while the instance finishes the
+    write, so a real reset or drop it answers is reported as an unknown outcome.
+    """
+    requests_mock.post(
+        f"{NS_URL}/{verb}?dry_run=true",
+        json={"dry_run": True, "namespace": NS, "tables_to_drop": [], "tables_to_truncate": []},
+    )
+    requests_mock.post(
+        f"{NS_URL}/{verb}?dry_run=false",
+        status_code=status,
+        text="<html><body>504 Gateway Time-out</body></html>",
+        headers={"Content-Type": "text/html"},
+    )
+
+    result = runner.invoke(
+        app, ["namespace", verb, NS, "--host", "acme", "--execute"], input=f"{NS}\n"
+    )
+
+    assert result.exit_code == 1
+    output = result.stdout + result.stderr
+    assert "unknown" in output
+    assert f"canvas namespace inspect {NS} --host acme" in output
+
+
+def test_namespace_real_run_refused_by_platform_shows_platforms_sentence(
+    requests_mock: requests_mock_module.Mocker, instances: None
+) -> None:
+    """A 502 that carries Platform's own code is Platform's answer, shown as it wrote it."""
+    sentence = "Canvas Platform could not reach acme; try again shortly."
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=true",
+        json={"dry_run": True, "namespace": NS, "tables_to_drop": [], "tables_to_truncate": []},
+    )
+    requests_mock.post(
+        f"{NS_URL}/drop?dry_run=false",
+        status_code=502,
+        json={"error": sentence, "code": "instance_unavailable"},
+    )
+
+    result = runner.invoke(
+        app, ["namespace", "drop", NS, "--host", "acme", "--execute"], input=f"{NS}\n"
+    )
+
+    assert result.exit_code == 1
+    output = result.stdout + result.stderr
+    assert sentence in output
+    assert "unknown" not in output
