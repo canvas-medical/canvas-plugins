@@ -1,3 +1,6 @@
+# Keys a bundle may not carry: it is made of other plugins and has no code of its own.
+BUNDLE_FORBIDDEN_KEYS = ("components", "custom_data", "variables", "secrets")
+
 manifest_schema = {
     "type": "object",
     "properties": {
@@ -68,20 +71,80 @@ manifest_schema = {
         "readme": {"type": ["boolean", "string"]},
         "custom_data": {"$ref": "#/$defs/custom_data"},
         "catalog": {"$ref": "#/$defs/catalog"},
+        "bundle": {
+            "description": (
+                "A bundle carries no code of its own: it names the plugins it is made of in "
+                "'dependencies', and Canvas Platform deploys them together under the bundle's "
+                "catalog listing."
+            ),
+            "type": "boolean",
+            "default": False,
+        },
+        "dependencies": {"$ref": "#/$defs/dependencies"},
     },
     "required": [
         "sdk_version",
         "plugin_version",
         "name",
         "description",
-        "components",
         "tags",
         "license",
         "readme",
     ],
     "additionalProperties": False,
-    "allOf": [{"not": {"required": ["url_permissions", "origins"]}}],
+    "allOf": [
+        {"not": {"required": ["url_permissions", "origins"]}},
+        {
+            "if": {"properties": {"bundle": {"const": True}}, "required": ["bundle"]},
+            "then": {
+                "required": ["dependencies"],
+                "properties": {
+                    "dependencies": {"minItems": 1},
+                    **dict.fromkeys(BUNDLE_FORBIDDEN_KEYS, False),
+                },
+            },
+            "else": {"required": ["components"]},
+        },
+    ],
     "$defs": {
+        "dependencies": {
+            "description": (
+                "Plugins that must be installed alongside this one, each resolved by Canvas "
+                "Platform from the revisions its publisher has pushed. 'version' is an exact "
+                "version, such as '1.16.0', or a PEP 440 specifier set, such as '>=0.1.1,<0.2'. "
+                "'publisher' is needed only when more than one publisher has a plugin by that name. "
+                "'source' is where `canvas deploy` fetches a version Canvas Platform does not hold "
+                "yet."
+            ),
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 63},
+                    "publisher": {"type": "string", "minLength": 1},
+                    "version": {"type": "string", "minLength": 1},
+                    "source": {"$ref": "#/$defs/dependency_source"},
+                },
+                "required": ["name", "version"],
+                "additionalProperties": False,
+            },
+        },
+        "dependency_source": {
+            "description": (
+                "A git repository holding the plugin. 'path' is the plugin's folder inside the "
+                "repository, when it is not the root. 'tag' names a release's tag, with "
+                "'{version}' standing for the version; without it, a release is tagged "
+                "'<name>-v<version>' or 'v<version>'."
+            ),
+            "type": "object",
+            "properties": {
+                "git": {"type": "string", "minLength": 1},
+                "path": {"type": "string", "minLength": 1},
+                "tag": {"type": "string", "pattern": r"\{version\}"},
+            },
+            "required": ["git"],
+            "additionalProperties": False,
+        },
         "origins": {
             "type": "object",
             "properties": {

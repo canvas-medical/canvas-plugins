@@ -300,3 +300,132 @@ def test_manifest_rejects_malformed_catalog_listing(
     handler_manifest_example["catalog"] = catalog
     with pytest.raises(ValidationError):
         validate_manifest_file(handler_manifest_example)
+
+
+SOURCE = {"git": "https://github.com/canvas-medical/scribe", "path": "plugins/scribe_core"}
+
+
+def _bundle_manifest(**overrides: Any) -> dict:
+    """Return a valid bundle manifest, with any top-level key overridden."""
+    return {
+        "sdk_version": "0.260.0",
+        "plugin_version": "2.0.0",
+        "name": "scribe",
+        "description": "A bundle of plugins deployed together.",
+        "bundle": True,
+        "dependencies": [
+            {"name": "scribe_core", "version": "1.16.0", "source": SOURCE},
+            {
+                "name": "commands_kit",
+                "publisher": "canvas-medical",
+                "version": ">=0.1.1,<0.2",
+                "source": {"git": "git@github.com:canvas-medical/commands-kit.git"},
+            },
+            {
+                "name": "scribe_admin",
+                "version": "1.4.0",
+                "source": {
+                    "git": "ssh://git.example.com/scribe.git",
+                    "path": "plugins/scribe_admin",
+                    "tag": "release-{version}",
+                },
+            },
+        ],
+        "tags": {},
+        "license": "",
+        "readme": "README.md",
+        **overrides,
+    }
+
+
+def test_manifest_accepts_bundle() -> None:
+    """A bundle with dependencies and no components validates."""
+    validate_manifest_file(_bundle_manifest())
+
+
+def test_manifest_accepts_dependencies_on_a_plugin_with_code(
+    handler_manifest_example: dict,
+) -> None:
+    """A plugin that is not a bundle may still declare dependencies."""
+    handler_manifest_example["dependencies"] = [{"name": "commands_kit", "version": "~=0.1"}]
+    validate_manifest_file(handler_manifest_example)
+
+
+def test_manifest_requires_components_unless_bundle(handler_manifest_example: dict) -> None:
+    """A plugin that is not a bundle still needs components."""
+    del handler_manifest_example["components"]
+    with pytest.raises(ValidationError):
+        validate_manifest_file(handler_manifest_example)
+
+
+BUNDLE_REFUSED: dict[str, dict] = {
+    "no-dependencies": _bundle_manifest(dependencies=[]),
+    "dependencies-missing": {
+        key: value for key, value in _bundle_manifest().items() if key != "dependencies"
+    },
+    "components": _bundle_manifest(
+        components={"handlers": [{"class": "scribe.handlers:Handler", "description": "x"}]}
+    ),
+    "custom-data": _bundle_manifest(custom_data={"namespace": "a__b", "access": "read"}),
+    "variables": _bundle_manifest(variables=[{"name": "API_KEY"}]),
+    "secrets": _bundle_manifest(secrets=["API_KEY"]),
+    "dependency-without-version": _bundle_manifest(dependencies=[{"name": "scribe_core"}]),
+    "dependency-bad-name": _bundle_manifest(
+        dependencies=[{"name": "Scribe-Core", "version": "1.0.0"}]
+    ),
+    "dependency-extra-field": _bundle_manifest(
+        dependencies=[{"name": "scribe_core", "version": "1.0.0", "url": "https://x"}]
+    ),
+    "dependency-bad-version": _bundle_manifest(
+        dependencies=[{"name": "scribe_core", "version": "latest"}]
+    ),
+    "dependency-repeated": _bundle_manifest(
+        dependencies=[
+            {"name": "scribe_core", "version": "1.0.0"},
+            {"name": "scribe_core", "version": "1.1.0"},
+        ]
+    ),
+    "dependency-on-itself": _bundle_manifest(dependencies=[{"name": "scribe", "version": "1.0.0"}]),
+    "source-without-git": _bundle_manifest(
+        dependencies=[{"name": "scribe_core", "version": "1.0.0", "source": {"path": "plugins"}}]
+    ),
+    "source-extra-field": _bundle_manifest(
+        dependencies=[
+            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "ref": "main"}}
+        ]
+    ),
+    "source-local-path": _bundle_manifest(
+        dependencies=[{"name": "scribe_core", "version": "1.0.0", "source": {"git": "../scribe"}}]
+    ),
+    "source-plain-http": _bundle_manifest(
+        dependencies=[
+            {
+                "name": "scribe_core",
+                "version": "1.0.0",
+                "source": {"git": "http://github.com/canvas-medical/scribe"},
+            }
+        ]
+    ),
+    "source-path-leaves-repository": _bundle_manifest(
+        dependencies=[
+            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "path": "../other"}}
+        ]
+    ),
+    "source-absolute-path": _bundle_manifest(
+        dependencies=[
+            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "path": "/etc"}}
+        ]
+    ),
+    "source-tag-without-version": _bundle_manifest(
+        dependencies=[
+            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "tag": "latest"}}
+        ]
+    ),
+}
+
+
+@pytest.mark.parametrize("manifest", BUNDLE_REFUSED.values(), ids=BUNDLE_REFUSED.keys())
+def test_manifest_rejects_malformed_bundle(manifest: dict) -> None:
+    """A bundle that carries code, or whose dependencies are malformed, fails validation."""
+    with pytest.raises(ValidationError):
+        validate_manifest_file(manifest)
