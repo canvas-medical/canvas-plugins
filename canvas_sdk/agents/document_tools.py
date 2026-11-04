@@ -115,16 +115,30 @@ def _annotations(
 
 
 def _match_confidence(matched_on: list[str]) -> str:
-    """High when three identifiers agree, such as last name, birth date, and first name."""
-    return "high" if len(matched_on) >= 3 else "medium"
+    """High when three of Canvas's own identifiers agree, such as last name, birth date,
+    and first name. Another organization's MRN never counts toward it.
+    """
+    return "high" if len([m for m in matched_on if m != "sending_mrn"]) >= 3 else "medium"
+
+
+def _sending_mrns(today: date) -> Q:
+    """Patients with a current medical record number an outside organization keeps."""
+    return Q(
+        Q(external_identifiers__identifier_type="MR")
+        | Q(external_identifiers__system__icontains="mrn"),
+        Q(external_identifiers__expiration_date__isnull=True)
+        | Q(external_identifiers__expiration_date__gte=today),
+        external_identifiers__issued_date__lte=today,
+    )
 
 
 def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str]]:
     """The patients the document's identifiers match, and what they matched on.
 
-    An MRN is Canvas's or one an outside organization keeps for the patient, such as the
-    sending lab's, and counts only with the last name or birth date agreeing with it, so
-    an MRN alone never names a patient. Without one, the last name and birth date are required. The
+    An MRN is Canvas's, or a current medical record number an outside organization keeps
+    for the patient, such as the sending lab's. Canvas's counts only with the last name or
+    birth date agreeing; another organization's only with both, and it is reported as
+    ``sending_mrn``. An MRN alone never names a patient. Without one, the last name and birth date are required. The
     first name, when given, must be the patient's first name or nickname. Names compare
     without case or surrounding space.
     """
@@ -144,7 +158,11 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str]]
     patients = Patient.objects.all()
     matched_on = []
     if mrn:
-        patients = patients.filter(Q(mrn=mrn) | Q(external_identifiers__value=mrn))
+        canvas_mrn = Q(mrn=mrn)
+        if last and birth_date:
+            today = date.today()
+            canvas_mrn |= Q(_sending_mrns(today), external_identifiers__value=mrn)
+        patients = patients.filter(canvas_mrn)
         matched_on.append("mrn")
     if last:
         patients = patients.filter(last_name__iexact=last)
@@ -155,7 +173,9 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str]]
     if first:
         patients = patients.filter(Q(first_name__iexact=first) | Q(nickname__iexact=first))
         matched_on.append("first_name")
-    found = list(patients.only("id").distinct()[:2])
+    found = list(patients.only("id", "mrn").distinct()[:2])
+    if mrn and len(found) == 1 and found[0].mrn != mrn:
+        matched_on[0] = "sending_mrn"
     return found, matched_on
 
 
