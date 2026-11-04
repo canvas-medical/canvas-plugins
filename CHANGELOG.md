@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.267.0 (2026-11-04)
+
+### Bug Fixes
+
+- Resolve CQM patients from billing line item and imaging report events
+  ([#1975](https://github.com/canvas-medical/canvas-plugins/pull/1975),
+  [`a157001`](https://github.com/canvas-medical/canvas-plugins/commit/a15700149607844807c3c409fbcd2f45179f1ca9))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add portal invitation model and events
+  ([#1959](https://github.com/canvas-medical/canvas-plugins/pull/1959),
+  [`81b9d98`](https://github.com/canvas-medical/canvas-plugins/commit/81b9d9866f237ed2c7fa5be3338e4788d3f2af78))
+
+
 ## v0.266.2 (2026-11-03)
 
 ### Bug Fixes
