@@ -20,6 +20,10 @@ class CanvasUser(Model):
     last_invite_date_time = models.DateTimeField(null=True, blank=True)
     is_portal_registered = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+    # Patients only; null for staff. Set each time a portal session starts, which includes
+    # opening an invite or notification link before a password is set. `is_portal_registered`
+    # is the signal that a patient activated their account.
+    last_login = models.DateTimeField(null=True, blank=True)
 
     @cached_property
     def person_subclass(self) -> "Staff | Patient":
