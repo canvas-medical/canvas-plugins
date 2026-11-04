@@ -17,6 +17,7 @@ from canvas_sdk.test_utils.factories import (
     StaffFactory,
     TeamFactory,
 )
+from canvas_sdk.v1.data import PatientExternalIdentifier
 from canvas_sdk.v1.data.integration_task import IntegrationTaskStatus
 
 BIRTH = date(1980, 4, 2)
@@ -96,6 +97,7 @@ def test_one_matching_patient_is_named(document: Any) -> None:
 
     assert result["match"]["patient_id"] == str(patient.id)
     assert result["matched_on"] == "last_name, birth_date, first_name"
+    assert result["confidence"] == "high"
 
 
 @pytest.mark.django_db
@@ -134,7 +136,11 @@ def test_an_mrn_must_agree_with_the_rest(document: Any) -> None:
     agreeing, _ = _run("match_patient", document, mrn=patient.mrn, last_name="doe")
     disagreeing, _ = _run("match_patient", document, mrn=patient.mrn, birth_date="1999-09-09")
 
-    assert agreeing == {"match": {"patient_id": str(patient.id)}, "matched_on": "mrn, last_name"}
+    assert agreeing == {
+        "match": {"patient_id": str(patient.id)},
+        "matched_on": "mrn, last_name",
+        "confidence": "medium",
+    }
     assert disagreeing["match"] is None
 
 
@@ -169,7 +175,11 @@ def test_the_suggested_patient_is_the_one_code_matched(document: Any) -> None:
         {
             "document_id": str(document.id),
             "patient_key": str(patient.id),
-            "annotations": [{"text": "From fax", "color": document_tools.SUGGESTION_COLOR}],
+            "annotations": [
+                {"text": "AI suggested", "color": document_tools.SOURCE_COLOR},
+                {"text": "Match: medium", "color": document_tools.CONFIDENCE_COLORS["medium"]},
+                {"text": "From fax", "color": document_tools.SOURCE_COLOR},
+            ],
         },
     )
 
@@ -329,3 +339,75 @@ def test_an_inactive_reviewer_is_refused(document: Any) -> None:
 
     with pytest.raises(ValueError, match="No active staff member"):
         _run("assign_document_reviewer", document, staff_id=str(staff.id))
+
+
+def _sending_mrn(patient: Any, value: str) -> None:
+    """The MRN the sending organization keeps for ``patient``."""
+    PatientExternalIdentifier.objects.create(
+        patient=patient,
+        use="usual",
+        identifier_type="MR",
+        system="https://valley-lab.example/mrn",
+        value=value,
+        issued_date=date(2020, 1, 1),
+        expiration_date=date(2099, 1, 1),
+    )
+
+
+@pytest.mark.django_db
+def test_the_sending_organizations_mrn_matches(document: Any) -> None:
+    """A fax carries the lab's MRN for the patient, kept as an external identifier."""
+    patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
+    _sending_mrn(patient, "VL-4471")
+
+    result, _ = _run(
+        "match_patient", document, mrn="VL-4471", first_name="Jane", birth_date="1980-04-02"
+    )
+
+    assert result == {
+        "match": {"patient_id": str(patient.id)},
+        "matched_on": "mrn, birth_date, first_name",
+        "confidence": "high",
+    }
+
+
+@pytest.mark.django_db
+def test_the_sending_organizations_mrn_must_agree_too(document: Any) -> None:
+    """Another organization's MRN alone, or disagreeing with the birth date, names no one."""
+    patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
+    _sending_mrn(patient, "VL-4471")
+
+    disagreeing, _ = _run("match_patient", document, mrn="VL-4471", birth_date="1999-09-09")
+
+    assert disagreeing["match"] is None
+    with pytest.raises(ValueError, match="last name or birth date with the MRN"):
+        _run("match_patient", document, mrn="VL-4471")
+
+
+@pytest.mark.django_db
+def test_type_and_values_carry_the_models_confidence(document: Any) -> None:
+    """The reviewer sees how sure the model was, colored by level."""
+    lab = DocumentTypeFactory.create(name="Lab Report", report_type="CLINICAL")
+    template = LabReportTemplateFactory.create(name="Lipid Panel")
+    LabReportTemplateFieldFactory.create(report_template=template, code="2093-3")
+
+    _, (categorized,) = _run(
+        "categorize_document", document, document_type_key=lab.key, confidence="high"
+    )
+    _, (prefilled,) = _run(
+        "prefill_document_fields",
+        document,
+        template_type="lab",
+        template_id=template.dbid,
+        fields={"2093-3": {"value": "212"}},
+        confidence="low",
+    )
+
+    assert _sent(categorized)[1]["annotations"] == [
+        {"text": "AI suggested", "color": document_tools.SOURCE_COLOR},
+        {"text": "AI: high", "color": document_tools.CONFIDENCE_COLORS["high"]},
+    ]
+    assert _sent(prefilled)[1]["annotations"][1] == {
+        "text": "AI: low",
+        "color": document_tools.CONFIDENCE_COLORS["low"],
+    }

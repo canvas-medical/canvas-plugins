@@ -42,8 +42,11 @@ from canvas_sdk.v1.data.integration_task import IntegrationTaskStatus
 QUEUE_PERMISSION = "api.access_dataintegration"
 # The most templates one search returns; past this the model should narrow its words.
 MAX_TEMPLATE_CANDIDATES = 10
-# How a suggestion this tool made is labeled on the review form.
-SUGGESTION_COLOR = "#2196F3"
+# How a suggestion is labeled on the review form: its source, how sure it is, and an
+# optional note.
+SOURCE_LABEL = "AI suggested"
+SOURCE_COLOR = "#2196F3"
+CONFIDENCE_COLORS = {"high": "#4CAF50", "medium": "#FF9800", "low": "#F44336"}
 MAX_LABEL_CHARS = 40
 
 TEMPLATE_MODELS: dict[str, Any] = {
@@ -59,6 +62,13 @@ _LABEL_PROPERTY = {
         f"{MAX_LABEL_CHARS} characters, e.g. 'From fax header'."
     ),
 }
+_CONFIDENCE_PROPERTY = {
+    "type": "string",
+    "enum": list(CONFIDENCE_COLORS),
+    "description": (
+        "How sure you are, shown to the reviewer: high only when the document states it plainly."
+    ),
+}
 _PATIENT_PROPERTIES = {
     "first_name": {"type": "string", "description": "First name as the document gives it."},
     "last_name": {"type": "string", "description": "Last name as the document gives it."},
@@ -67,7 +77,12 @@ _PATIENT_PROPERTIES = {
         "format": "date",
         "description": "Birth date as the document gives it, YYYY-MM-DD.",
     },
-    "mrn": {"type": "string", "description": "The Canvas MRN, if the document shows one."},
+    "mrn": {
+        "type": "string",
+        "description": (
+            "The MRN the document shows, whether Canvas's or the sending organization's."
+        ),
+    },
 }
 
 
@@ -85,16 +100,31 @@ def require_document_id(ctx: dict[str, Any]) -> str:
     return document_id
 
 
-def _annotations(arguments: dict[str, Any]) -> list[AnnotationItem] | None:
-    label = str(arguments.get("label") or "").strip()[:MAX_LABEL_CHARS]
-    return [{"text": label, "color": SUGGESTION_COLOR}] if label else None
+def _annotations(
+    arguments: dict[str, Any], *, confidence: str | None, prefix: str
+) -> list[AnnotationItem]:
+    """The suggestion's source, its confidence (``f"{prefix}: {level}"``), and any label."""
+    annotations: list[AnnotationItem] = [{"text": SOURCE_LABEL, "color": SOURCE_COLOR}]
+    if confidence in CONFIDENCE_COLORS:
+        annotations.append(
+            {"text": f"{prefix}: {confidence}", "color": CONFIDENCE_COLORS[confidence]}
+        )
+    if label := str(arguments.get("label") or "").strip()[:MAX_LABEL_CHARS]:
+        annotations.append({"text": label, "color": SOURCE_COLOR})
+    return annotations
 
 
-def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
+def _match_confidence(matched_on: list[str]) -> str:
+    """High when three identifiers agree, such as last name, birth date, and first name."""
+    return "high" if len(matched_on) >= 3 else "medium"
+
+
+def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str]]:
     """The patients the document's identifiers match, and what they matched on.
 
-    An MRN counts only with the last name or birth date agreeing with it, so an MRN alone
-    never names a patient. Without one, the last name and birth date are required. The
+    An MRN is Canvas's or one an outside organization keeps for the patient, such as the
+    sending lab's, and counts only with the last name or birth date agreeing with it, so
+    an MRN alone never names a patient. Without one, the last name and birth date are required. The
     first name, when given, must be the patient's first name or nickname. Names compare
     without case or surrounding space.
     """
@@ -114,7 +144,7 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
     patients = Patient.objects.all()
     matched_on = []
     if mrn:
-        patients = patients.filter(mrn=mrn)
+        patients = patients.filter(Q(mrn=mrn) | Q(external_identifiers__value=mrn))
         matched_on.append("mrn")
     if last:
         patients = patients.filter(last_name__iexact=last)
@@ -125,8 +155,8 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], str]:
     if first:
         patients = patients.filter(Q(first_name__iexact=first) | Q(nickname__iexact=first))
         matched_on.append("first_name")
-    found = list(patients.only("id")[:2])
-    return found, ", ".join(matched_on)
+    found = list(patients.only("id").distinct()[:2])
+    return found, matched_on
 
 
 def _no_match(found: list[Any]) -> dict[str, Any]:
@@ -206,7 +236,8 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
     categories=("intake_reads",),
     required_permissions=(QUEUE_PERMISSION,),
     returns_description=(
-        "`{match: {patient_id}, matched_on}` when exactly one patient matches, else "
+        "`{match: {patient_id}, matched_on, confidence}` when exactly one patient matches "
+        "(`confidence` is high when three identifiers agree, else medium), else "
         "`{match: null, reason}`."
     ),
     progress_label="Matching the patient",
@@ -217,7 +248,11 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     found, matched_on = _matching_patients(arguments)
     if len(found) != 1:
         return _no_match(found)
-    return {"match": {"patient_id": str(found[0].id)}, "matched_on": matched_on}
+    return {
+        "match": {"patient_id": str(found[0].id)},
+        "matched_on": ", ".join(matched_on),
+        "confidence": _match_confidence(matched_on),
+    }
 
 
 @standard_tools.tool(
@@ -339,7 +374,8 @@ def _find_report_templates(
     required_permissions=(QUEUE_PERMISSION,),
     effect_types=("LINK_DOCUMENT_TO_PATIENT",),
     returns_description=(
-        "`{ok: true, patient_id, matched_on}` when one patient matched and was suggested, "
+        "`{ok: true, patient_id, matched_on, confidence}` when one patient matched and was "
+        "suggested, "
         "else `{ok: false, reason}`."
     ),
     progress_label="Suggesting the patient",
@@ -351,14 +387,20 @@ def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[
     if len(found) != 1:
         return {"ok": False, **_no_match(found)}
     patient = found[0]
+    confidence = _match_confidence(matched_on)
     ctx["effects"].append(
         LinkDocumentToPatient(
             document_id=document_id,
             patient_key=str(patient.id),
-            annotations=_annotations(arguments),
+            annotations=_annotations(arguments, confidence=confidence, prefix="Match"),
         ).apply()
     )
-    return {"ok": True, "patient_id": str(patient.id), "matched_on": matched_on}
+    return {
+        "ok": True,
+        "patient_id": str(patient.id),
+        "matched_on": ", ".join(matched_on),
+        "confidence": confidence,
+    }
 
 
 @standard_tools.tool(
@@ -372,6 +414,7 @@ def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[
         "type": "object",
         "properties": {
             "document_type_key": {"type": "string", "description": "From find_document_types."},
+            "confidence": _CONFIDENCE_PROPERTY,
             "label": _LABEL_PROPERTY,
         },
         "required": ["document_type_key"],
@@ -402,7 +445,9 @@ def _categorize_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> d
                     else None
                 ),
             },
-            annotations=_annotations(arguments),
+            annotations=_annotations(
+                arguments, confidence=arguments.get("confidence"), prefix="AI"
+            ),
         ).apply()
     )
     return {
@@ -445,6 +490,7 @@ def _categorize_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> d
                     "required": ["value"],
                 },
             },
+            "confidence": _CONFIDENCE_PROPERTY,
             "label": _LABEL_PROPERTY,
         },
         "required": ["template_type", "template_id", "fields"],
@@ -502,7 +548,9 @@ def _prefill_document_fields(arguments: dict[str, Any], *, ctx: dict[str, Any]) 
             templates=[
                 {"template_id": template.dbid, "template_name": template.name, "fields": filled}
             ],
-            annotations=_annotations(arguments),
+            annotations=_annotations(
+                arguments, confidence=arguments.get("confidence"), prefix="AI"
+            ),
         ).apply()
     )
     return {
@@ -549,7 +597,7 @@ def _assign_document_reviewer(arguments: dict[str, Any], *, ctx: dict[str, Any])
             document_id=document_id,
             reviewer_id=staff_id,
             team_id=team_id,
-            annotations=_annotations(arguments),
+            annotations=_annotations(arguments, confidence=None, prefix="AI"),
         ).apply()
     )
     return {"ok": True, "staff_id": staff_id, "team_id": team_id}
