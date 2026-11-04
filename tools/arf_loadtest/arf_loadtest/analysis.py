@@ -136,14 +136,17 @@ def check_all_succeeded(runs: list[dict[str, Any]], expected: int) -> Check:
     )
 
 
-def check_serialized(records: list[dict[str, Any]], counter: int) -> Check:
+def check_serialized(records: list[dict[str, Any]], counter: int, expected: int) -> Check:
     """Runs on one key ran one at a time and lost no update.
 
     Each run read the key's counter and wrote it one higher. Run one at a time, K runs
     read 0 to K-1 once each and leave the counter at K; two runs that overlapped read
-    the same value, and the counter ends short.
+    the same value, and the counter ends short. All ``expected`` runs must have
+    recorded, so runs that never reached ``save_state`` cannot pass.
     """
     problems = []
+    if len(records) != expected:
+        problems.append(f"{len(records)} of {expected} runs recorded")
     seen = Counter(record["saw"] for record in records)
     if duplicates := sorted(value for value, n in seen.items() if n > 1):
         problems.append(f"runs read the same counter value: {duplicates[:10]}")
@@ -165,11 +168,11 @@ def check_serialized(records: list[dict[str, Any]], counter: int) -> Check:
     )
 
 
-def check_chat_order(records: list[dict[str, Any]]) -> Check:
+def check_chat_order(records: list[dict[str, Any]], expected: int) -> Check:
     """Each chat turn ran after the one sent before it: turn n saw turn n-1.
 
     The first turn is not checked, since the conversation may hold an earlier
-    scenario's last turn.
+    scenario's last turn. All ``expected`` turns must have recorded.
     """
     ordered = sorted(records, key=lambda record: record["seq"])
     out_of_order = [
@@ -177,11 +180,12 @@ def check_chat_order(records: list[dict[str, Any]]) -> Check:
         for before, after in zip(ordered, ordered[1:], strict=False)
         if after["saw"] != before["seq"]
     ]
+    missing = [f"{len(ordered)} of {expected} turns recorded"] if len(ordered) != expected else []
     return Check(
         "chat turns ran in the order sent",
-        not out_of_order,
+        not out_of_order and not missing,
         f"{len(ordered)} turns, {len(out_of_order)} out of order",
-        out_of_order[:10],
+        missing + out_of_order[:10],
     )
 
 
