@@ -160,6 +160,7 @@ from .staff import (
     StaffPhotoFactory,
     StaffRoleFactory,
 )
+from .staff_identity_verification import StaffIdentityVerificationFactory
 from .task import (
     NoteTaskFactory,
     TaskCommentFactory,
@@ -319,6 +320,7 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffContactPointFactory",
     "StaffAddressFactory",
+    "StaffIdentityVerificationFactory",
     "NoteTaskFactory",
     "TaskCommentFactory",
     "TaskFactory",

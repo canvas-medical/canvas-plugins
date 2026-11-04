@@ -266,6 +266,7 @@ from .staff import (
     StaffPhoto,
     StaffRole,
 )
+from .staff_identity_verification import StaffIdentityVerification
 from .stop_medication_event import StopMedicationEvent
 from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
@@ -538,6 +539,7 @@ __all__ = __exports__ = (
     "StaffAddress",
     "StaffContactPoint",
     "StaffExternalIdentifier",
+    "StaffIdentityVerification",
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
