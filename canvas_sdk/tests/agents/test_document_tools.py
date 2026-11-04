@@ -341,16 +341,23 @@ def test_an_inactive_reviewer_is_refused(document: Any) -> None:
         _run("assign_document_reviewer", document, staff_id=str(staff.id))
 
 
-def _sending_mrn(patient: Any, value: str) -> None:
-    """The MRN the sending organization keeps for ``patient``."""
+def _sending_mrn(
+    patient: Any,
+    value: str,
+    *,
+    identifier_type: str = "MR",
+    system: str = "https://valley-lab.example/mrn",
+    expires: date = date(2099, 1, 1),
+) -> None:
+    """An identifier an outside organization keeps for ``patient``, by default its MRN."""
     PatientExternalIdentifier.objects.create(
         patient=patient,
         use="usual",
-        identifier_type="MR",
-        system="https://valley-lab.example/mrn",
+        identifier_type=identifier_type,
+        system=system,
         value=value,
         issued_date=date(2020, 1, 1),
-        expiration_date=date(2099, 1, 1),
+        expiration_date=expires,
     )
 
 
@@ -360,26 +367,38 @@ def test_the_sending_organizations_mrn_matches(document: Any) -> None:
     patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
     _sending_mrn(patient, "VL-4471")
 
-    result, _ = _run(
-        "match_patient", document, mrn="VL-4471", first_name="Jane", birth_date="1980-04-02"
+    full, _ = _run(
+        "match_patient",
+        document,
+        mrn="VL-4471",
+        first_name="Jane",
+        last_name="Doe",
+        birth_date="1980-04-02",
+    )
+    names_only, _ = _run(
+        "match_patient", document, mrn="VL-4471", last_name="Doe", birth_date="1980-04-02"
     )
 
-    assert result == {
+    assert full == {
         "match": {"patient_id": str(patient.id)},
-        "matched_on": "mrn, birth_date, first_name",
+        "matched_on": "sending_mrn, last_name, birth_date, first_name",
         "confidence": "high",
     }
+    # Another organization's MRN never raises the confidence on its own.
+    assert names_only["confidence"] == "medium"
 
 
 @pytest.mark.django_db
 def test_the_sending_organizations_mrn_must_agree_too(document: Any) -> None:
-    """Another organization's MRN alone, or disagreeing with the birth date, names no one."""
+    """Another organization's MRN counts only with both last name and birth date agreeing."""
     patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
     _sending_mrn(patient, "VL-4471")
 
     disagreeing, _ = _run("match_patient", document, mrn="VL-4471", birth_date="1999-09-09")
+    one_agreeing, _ = _run("match_patient", document, mrn="VL-4471", birth_date="1980-04-02")
 
     assert disagreeing["match"] is None
+    assert one_agreeing["match"] is None
     with pytest.raises(ValueError, match="last name or birth date with the MRN"):
         _run("match_patient", document, mrn="VL-4471")
 
@@ -411,3 +430,25 @@ def test_type_and_values_carry_the_models_confidence(document: Any) -> None:
         "text": "AI: low",
         "color": document_tools.CONFIDENCE_COLORS["low"],
     }
+
+
+@pytest.mark.parametrize(
+    "identifier",
+    [
+        {"identifier_type": "MB", "system": "https://payer.example/member"},
+        {"expires": date(2021, 1, 1)},
+    ],
+    ids=["not a medical record number", "expired"],
+)
+@pytest.mark.django_db
+def test_only_a_current_medical_record_number_counts(document: Any, identifier: Any) -> None:
+    """An insurance member id or an expired MRN with the same value is not an MRN match."""
+    patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
+    PatientFactory.create(last_name="Doe", birth_date=BIRTH)
+    _sending_mrn(patient, "VL-4471", **identifier)
+
+    result, _ = _run(
+        "match_patient", document, mrn="VL-4471", last_name="Doe", birth_date="1980-04-02"
+    )
+
+    assert result["match"] is None
