@@ -238,7 +238,7 @@ def chat_order(driver: Driver) -> Result:
         {"chat": summarize(runs)},
         [
             check_all_succeeded(runs, len(chat_ids)),
-            check_chat_order(records),
+            check_chat_order(records, len(chat_ids)),
             check_capped(summarize(runs), 1, "turns of one conversation"),
         ],
     )
@@ -257,7 +257,7 @@ def contention(driver: Driver) -> Result:
         {"shared": summary},
         [
             check_all_succeeded(runs, total),
-            check_serialized(records, counter),
+            check_serialized(records, counter, total),
             check_capped(summary, 1, "runs on one key"),
         ],
     )
