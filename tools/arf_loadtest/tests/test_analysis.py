@@ -109,14 +109,14 @@ def test_all_succeeded_counts_runs_without_a_record() -> None:
 def test_serialized_runs_pass() -> None:
     """Runs one after another on a key read 0 to K-1 and leave the counter at K."""
     records = [record(n, n, n, n + 0.5) for n in range(3)]
-    assert check_serialized(records, 3).passed
+    assert check_serialized(records, 3, 3).passed
 
 
 def test_overlapping_runs_on_one_key_fail() -> None:
     """Two runs that read the same count overlapped and lost an update."""
     records = [record(0, 0, 0, 2), record(1, 0, 1, 3), record(2, 1, 3, 4)]
 
-    check = check_serialized(records, 2)
+    check = check_serialized(records, 2, 3)
 
     assert not check.passed
     assert any("same counter value" in problem for problem in check.problems)
@@ -125,8 +125,8 @@ def test_overlapping_runs_on_one_key_fail() -> None:
 
 def test_chat_order_ignores_the_first_turn_and_catches_a_swap() -> None:
     """Turn n must see turn n-1; the first turn may see an earlier scenario's."""
-    assert check_chat_order([record(1, 9, 0, 1), record(2, 1, 1, 2), record(3, 2, 2, 3)]).passed
-    swapped = check_chat_order([record(1, 0, 0, 1), record(2, 3, 2, 3), record(3, 1, 1, 2)])
+    assert check_chat_order([record(1, 9, 0, 1), record(2, 1, 1, 2), record(3, 2, 2, 3)], 3).passed
+    swapped = check_chat_order([record(1, 0, 0, 1), record(2, 3, 2, 3), record(3, 1, 1, 2)], 3)
     assert not swapped.passed
     assert swapped.problems[0] == "turn 2 saw turn 3, expected 1"
 
@@ -137,3 +137,10 @@ def test_prioritized_compares_the_chat_tail_to_the_batch_median() -> None:
     assert check_prioritized(summarize([run(0, 1, 2)]), batch).passed
     assert not check_prioritized(summarize([run(0, 30, 31)]), batch).passed
     assert not check_prioritized(summarize([]), batch).passed
+
+
+def test_checks_fail_when_probes_recorded_nothing() -> None:
+    """Runs that never reached save_state leave no records, which proves nothing."""
+    assert not check_chat_order([], expected=5).passed
+    assert not check_serialized([], 0, expected=5).passed
+    assert not check_chat_order([record(1, 0, 0, 1)], expected=2).passed
