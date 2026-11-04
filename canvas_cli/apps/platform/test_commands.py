@@ -185,45 +185,121 @@ def _requests_to(mock: requests_mock_module.Mocker, method: str, suffix: str) ->
 
 
 @patch("subprocess.run")
-def test_deploy_refuses_an_unprefixed_name_before_any_git_or_network(
+def test_deploy_refuses_a_name_platform_would_not_accept_before_any_git_or_network(
     mock_run: Mock,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """An unprefixed manifest name is refused before git runs or platform is called."""
-    directory = tmp_path / "intake"
+    """A manifest name platform would refuse is refused before git runs or platform is called."""
+    directory = tmp_path / "Intake-Forms"
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake"}))
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "Intake-Forms"}))
 
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "publisher-prefixed name like `<your org prefix>__intake`" in result.output
+    assert "such as `intake_forms`" in result.output
     mock_run.assert_not_called()
     assert not requests_mock.called
 
 
+BETA: dict[str, Any] = {**ACME, "slug": "beta", "name": "Beta Care", "plugin_prefix": "beta"}
+
+
+def _unprefixed_package(tmp_path: Path, **manifest: Any) -> Path:
+    """A committed plugin package named ``intake``, without a publisher prefix."""
+    repo = tmp_path / "unprefixed"
+    directory = repo / "intake"
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake", **manifest}))
+    _git(repo, "init", "--initial-branch=main")
+    _git(repo, "add", "intake")
+    _git(repo, "commit", "-m", "first")
+    return directory
+
+
+def test_deploy_publishes_an_unprefixed_name_as_the_only_organization_that_can_push(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A name with no prefix is published by the person's only organization that can push."""
+    directory = _unprefixed_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/orgs/acme/plugins")[0].json() == {"name": "intake"}
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": _git(directory, "rev-parse", "HEAD")}
+    ]
+
+
 @patch("subprocess.run")
-def test_deploy_refuses_a_prefix_of_no_organization_the_person_belongs_to(
+def test_deploy_asks_for_a_publisher_when_several_organizations_could_publish(
     mock_run: Mock,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A well-formed name with someone else's prefix is refused, listing the person's prefixes."""
-    requests_mock.get(f"{API}/me", json=ME)
-    directory = tmp_path / "beta__intake"
+    """With no publisher in the manifest, no matching prefix and several organizations that
+    can push, deploy lists them and asks for `publisher` before any git runs.
+    """
+    requests_mock.get(f"{API}/me", json={**ME, "organizations": [ACME, BETA]})
+    directory = tmp_path / "gamma__intake"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(
-        json.dumps({**VALID_MANIFEST, "name": "beta__intake"})
+        json.dumps({**VALID_MANIFEST, "name": "gamma__intake"})
     )
 
     result = runner.invoke(app, ["deploy", str(directory)])
 
     assert result.exit_code == 2
-    assert "<your org prefix>__intake" in result.output
-    assert "acme" in result.output
+    assert "acme, beta" in result.output
+    assert '"publisher"' in result.output
+    mock_run.assert_not_called()
+
+
+def test_deploy_publishes_as_the_publisher_the_manifest_names(
+    api: requests_mock_module.Mocker, bare: Path, signed_in: None, tmp_path: Path
+) -> None:
+    """The manifest's `publisher` picks the organization, and the deployment names it."""
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BETA]})
+    api.post(
+        f"{API}/orgs/beta/plugins",
+        status_code=201,
+        json={"name": "intake", "publisher": "beta", "git_url": bare.as_uri()},
+    )
+    directory = _unprefixed_package(tmp_path, publisher="beta")
+
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": _git(directory, "rev-parse", "HEAD"), "publisher": "beta"}
+    ]
+
+
+@patch("subprocess.run")
+def test_deploy_refuses_a_manifest_publisher_the_person_does_not_belong_to(
+    mock_run: Mock,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A `publisher` naming someone else's organization is refused, listing the person's own."""
+    requests_mock.get(f"{API}/me", json=ME)
+    directory = tmp_path / "intake"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({"name": "intake", "publisher": "beta"})
+    )
+
+    result = runner.invoke(app, ["deploy", str(directory)])
+
+    assert result.exit_code == 2
+    assert "you do not belong to beta" in result.output
+    assert "Your organizations: acme" in result.output
     mock_run.assert_not_called()
 
 
@@ -2289,21 +2365,47 @@ def test_config_set_on_an_unmanaged_plugin_writes_each_instance_directly(
 
 
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
-def test_config_on_an_unprefixed_plugin_never_asks_platform(
+def test_config_on_a_name_platform_cannot_hold_never_asks_platform(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
     """A name platform could never hold goes straight to the instance."""
-    result = runner.invoke(app, ["config", "unset", "intake", "A", "--host", "https://x.example"])
+    result = runner.invoke(
+        app, ["config", "unset", "Intake-Forms", "A", "--host", "https://x.example"]
+    )
 
     assert result.exit_code == 0, result.output
     assert not requests_mock.called
     assert mock_update.call_args.kwargs == {
-        "name": "intake",
+        "name": "Intake-Forms",
         "package_path": None,
         "is_enabled": None,
         "secrets": ["A="],
         "host": "https://x.example",
     }
+
+
+def test_config_on_an_unprefixed_managed_plugin_goes_through_platform(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A plugin platform manages under a name with no prefix is configured through platform."""
+    requests_mock.get(
+        f"{API}/plugins/intake",
+        json={"name": "intake", "publisher": "acme", "installs": [{"instance": "acme-staging"}]},
+    )
+    requests_mock.get(
+        f"{API}/instances", json={"instances": [_instance("acme-staging", "configure_plugin")]}
+    )
+    requests_mock.put(f"{API}/instances/acme-staging/plugins/intake/variables/A", json={})
+    requests_mock.post(
+        f"{API}/deployments", status_code=202, json=_deployment("succeeded", action="configure")
+    )
+
+    result = runner.invoke(app, ["config", "set", "intake", "A=1"])
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(requests_mock, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake"}
+    ]
 
 
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
@@ -2954,10 +3056,12 @@ def test_init_application_registers_without_creating_a_repository(
 # -- init: signed out says so ------------------------------------------------
 
 
-def test_init_signed_out_says_the_plugin_cannot_be_deployed_yet(
+def test_init_signed_out_says_how_to_set_up_the_plugin_for_platform(
     requests_mock: requests_mock_module.Mocker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Signed out, init names the platform it checked and says how to get a deployable plugin."""
+    """Signed out, init names the platform it checked and says how to have it register the
+    plugin and set up its repository.
+    """
     monkeypatch.chdir(tmp_path)
 
     result = runner.invoke(app, ["init"], input="Intake Forms\n")

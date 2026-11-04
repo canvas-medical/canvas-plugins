@@ -7,6 +7,14 @@ manifest_schema = {
         "sdk_version": {"type": "string"},
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
+        "publisher": {
+            "description": (
+                "The slug of the Canvas Platform organization that publishes the plugin. "
+                "`canvas deploy` publishes it as that organization."
+            ),
+            "type": "string",
+            "minLength": 1,
+        },
         "description": {"type": "string"},
         "variables": {
             "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",

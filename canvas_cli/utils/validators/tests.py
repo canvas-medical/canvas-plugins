@@ -151,10 +151,19 @@ def test_manifest_accepts_an_ordinary_application() -> None:
 
 @pytest.mark.parametrize("name", ["intake", "acme__intake"])
 def test_manifest_name_needs_no_publisher_prefix(name: str) -> None:
-    """The schema accepts a name with or without a publisher prefix, so plugins installed with
-    `canvas install` keep validating; only `canvas deploy` requires the prefix.
-    """
+    """The schema accepts a name with or without a publisher prefix."""
     validate_manifest_file(_make_application_manifest("global") | {"name": name})
+
+
+def test_manifest_accepts_a_publisher() -> None:
+    """A manifest may name the organization that publishes it."""
+    validate_manifest_file(_make_application_manifest("global") | {"publisher": "acme"})
+
+
+def test_manifest_rejects_an_empty_publisher() -> None:
+    """A publisher, when given, names an organization."""
+    with pytest.raises(jsonschema.ValidationError):
+        validate_manifest_file(_make_application_manifest("global") | {"publisher": ""})
 
 
 LISTING: dict[str, Any] = {

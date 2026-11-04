@@ -295,6 +295,57 @@ def clone(git_url: str, destination: Path, platform: str) -> None:
         raise GitError(f"git clone failed:\n{result.stderr.strip() or 'unknown error'}")
 
 
+# -- fetching a dependency from its source repository ------------------------
+
+
+def ls_remote_tags(url: str) -> dict[str, str]:
+    """Each tag in the repository at ``url`` and the commit it points at.
+
+    It runs with the person's own git configuration and credentials. An annotated
+    tag is reported by the commit it points at rather than the tag object.
+    """
+    result = run(Path.cwd(), "ls-remote", "--tags", url)
+    if result.returncode != 0:
+        raise GitError(
+            f"Listing the tags of {url} failed:\n{result.stderr.strip() or 'unknown error'}"
+        )
+    tags: dict[str, str] = {}
+    peeled: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        sha, _, ref = line.partition("\t")
+        tag = ref.removeprefix("refs/tags/")
+        if tag.endswith("^{}"):
+            peeled[tag.removesuffix("^{}")] = sha
+        else:
+            tags[tag] = sha
+    return {**tags, **peeled}
+
+
+def clone_tag(url: str, tag: str, destination: Path) -> str:
+    """Clone only ``tag`` of the repository at ``url`` into ``destination``; returns its commit.
+
+    It runs with the person's own git configuration and credentials.
+    """
+    result = run(
+        Path.cwd(),
+        "-c",
+        "advice.detachedHead=false",
+        "clone",
+        "-q",
+        "--depth",
+        "1",
+        "--branch",
+        tag,
+        url,
+        str(destination),
+    )
+    if result.returncode != 0:
+        raise GitError(
+            f"Cloning {tag} of {url} failed:\n{result.stderr.strip() or 'unknown error'}"
+        )
+    return _output(destination, "rev-parse", "HEAD", what="git rev-parse").strip()
+
+
 # -- snapshots ---------------------------------------------------------------
 
 SOURCE_TRAILER = "Monorepo-Commit"
@@ -416,6 +467,7 @@ def push_snapshot(
     *,
     author: tuple[str, str],
     default_branch: str | None = None,
+    check_rollback: bool = True,
 ) -> str:
     """Commit the snapshot onto ``branch`` of the plugin's repository, push it, and return it.
 
@@ -435,6 +487,9 @@ def push_snapshot(
 
     ``author`` is the name and email the commit carries, set through the
     environment because a CI runner has no git identity of its own.
+    ``check_rollback`` off skips the check that the snapshot holds every change
+    ``branch`` was last deployed with, for a snapshot of a release chosen by its
+    version.
     """
     default_branch = default_branch or branch
     with tempfile.TemporaryDirectory(prefix="canvas-snapshot-") as scratch:
@@ -502,6 +557,7 @@ def push_snapshot(
                 root,
                 branch if target_tip else default_branch,
                 default_branch,
+                check_rollback,
             )
             print(_output(work, "diff", "--stat", tip, root, what="git diff").rstrip())
 
@@ -556,6 +612,7 @@ def _guard_platform_history(
     root: str,
     branch: str,
     default_branch: str,
+    check_rollback: bool,
 ) -> None:
     """Refuse a snapshot that would undo work on ``branch`` that it does not hold.
 
@@ -569,8 +626,8 @@ def _guard_platform_history(
     changed on HEAD's side too; a file HEAD left alone would go back to its older
     content, rolling the plugin back. A branch deployed and then squash- or
     rebase-merged passes, because HEAD carries its changes under another commit.
-    A commit that is only tagged names no source commit, so nothing is checked for
-    rolling back.
+    A commit that is only tagged names no source commit, and ``check_rollback``
+    off skips it, so nothing is checked for rolling back.
 
     Files in the package folder changed on ``branch`` since the last snapshot, such
     as by editing the catalog listing in Canvas Platform, or every file when no
@@ -598,7 +655,7 @@ def _guard_platform_history(
             if not source:
                 tag = refs.split(",")[0].strip().removeprefix("tag: ")
             break
-    if source:
+    if source and check_rollback:
         if run(snapshot.toplevel, "cat-file", "-e", f"{source}^{{commit}}").returncode != 0:
             print(
                 f"This checkout does not have {source[:12]}, the commit {branch} was last "

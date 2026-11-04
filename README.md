@@ -47,13 +47,13 @@ client_secret=localclientsecret
 
 Canvas Platform hosts a plugin's git repository and deploys it to the instances it manages. Sign in once per machine with `canvas login`, which opens your browser; the session is stored per platform in `~/.canvas/platform-credentials.json`, readable only by you, and refreshes itself. `canvas login --platform <url>` or `CANVAS_PLATFORM_URL` points the CLI at a platform other than https://platform.canvasmedical.com, and later commands keep using the platform you last signed in to.
 
-A plugin deployed through Canvas Platform has a publisher-prefixed name, `<org prefix>__<package>` (for example `acme__intake`), used for the manifest `name`, the package folder and its imports. `canvas login` lists the prefix of each organization you belong to, and the prefix decides which organization publishes the plugin. `canvas install` and `canvas validate` accept names with or without a prefix.
+A plugin's name is used for the manifest `name`, the package folder and its imports: a lowercase identifier of letters, digits and underscores, such as `intake`, optionally carrying an organization's prefix, `<org prefix>__<package>` (for example `acme__intake`). The organization that publishes a plugin is the one the manifest's optional `publisher` key names by slug, else the one whose prefix the name carries, else the only organization you can push plugin code in. `canvas login` lists the slug and prefix of each organization you belong to.
 
 #### Which plugins go through Canvas Platform
 
 `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
-- A name without a prefix, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
+- A name Canvas Platform cannot hold, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
 - Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
@@ -179,7 +179,7 @@ $ canvas whoami [OPTIONS]
 
 ## `canvas init`
 
-Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>`, registered with platform, and given a git repository whose `origin` is platform. Signed out, it is named from the project name alone, and `init` says that `canvas deploy` refuses such a plugin until you run `canvas login` and `canvas init` again.
+Create a new plugin. Signed in to Canvas Platform, the package is named `<org prefix>__<package>`, registered with platform, and given a git repository whose `origin` is platform. Signed out, it is named from the project name alone, without registration or a git repository, and `init` says to run `canvas login` and `canvas init` again to have them set up.
 
 **Usage**:
 
@@ -198,7 +198,7 @@ $ canvas init [OPTIONS] [PLUGIN_TYPE]
 
 ## `canvas deploy`
 
-Publish a plugin's code to Canvas Platform and deploy it. The manifest `name` must be publisher-prefixed, and the package folder must have the same name, which deploy checks before committing or pushing. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline at a terminal; under `--yes` or without a terminal, deploy lists them with the deployment id and exits non-zero without answering them. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed unless `--yes` is passed.
+Publish a plugin's code to Canvas Platform and deploy it. The package folder must have the same name as the manifest `name`, which deploy checks before committing or pushing. Deploy registers the plugin, points the repository's `origin` at platform with a credential helper, commits uncommitted changes after you confirm, pushes HEAD to `main`, deploys that commit and waits for each target's outcome. Consent requests for cross-plugin custom data access are answered inline at a terminal; under `--yes` or without a terminal, deploy lists them with the deployment id and exits non-zero without answering them. The repository is rooted at the directory containing the package. Without a terminal to confirm at, uncommitted changes are refused rather than committed unless `--yes` is passed.
 
 **Usage**:
 
@@ -218,8 +218,20 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--push-only`: Push HEAD to `main`, or to the `--branch` branch, without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
 - `--branch TEXT`: Push HEAD to this branch on Canvas Platform instead of `main`, and deploy that commit. Platform deploys a commit not on `main` only to your organization's test instances, and refuses other instances with a message naming them. Works with `--push-only` and `--snapshot`. Takes no `--ref` or `--no-push`, and refuses `main` and the plugin's default branch
 - `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, or on the `--branch` branch, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
-- `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
+- `-y, --yes`: Commit uncommitted changes and accept the dependency plan without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
+- `--update`: Resolve the dependencies again, ignoring `CANVAS_LOCK.json`, and rewrite it
 - `--help`: Show this message and exit.
+
+### Dependencies and bundles
+
+A manifest's `dependencies` name plugins that are deployed with it, each by an exact version or a PEP 440 specifier set, with an optional `publisher` and `source`. A plugin with `"bundle": true` is made only of its dependencies and its catalog listing; `canvas install` refuses one.
+
+- Each dependency resolves to the newest version meeting its requirement among the versions Canvas Platform holds and, when its publisher is one of your organizations and it has a `source`, its repository's release tags (`source.tag` with `{version}`, else `<name>-v<version>` or `v<version>`). A prerelease is taken only when pinned exactly.
+- A version only the repository holds is cloned with your own git credentials, refused unless its manifest names that plugin and version, validated as `canvas validate` does, and pushed to Canvas Platform's `main` as `--snapshot` pushes, registering the plugin when it is new. A cloned plugin's own dependencies are resolved the same way, and a cycle is refused.
+- A dependency another organization publishes has to be on Canvas Platform already.
+- Deploy prints the plan before pushing anything, and asks to continue at a terminal unless `--yes` is passed. It then pushes the plugin and creates one deployment naming the plugin and every dependency at its revision; each target's `wave` is shown when platform reports it.
+- What each dependency resolved to is written to `CANVAS_LOCK.json` beside the manifest, to commit with the plugin. Later deploys install exactly the locked revisions until `--update`, or until the manifest asks for a version the lock does not meet. A locked version Canvas Platform does not hold is fetched again from its locked tag, and refused when that tag now points at another commit.
+- With `--push-only`, the dependencies are pushed and locked, and nothing is deployed.
 
 ## `canvas clone`
 
