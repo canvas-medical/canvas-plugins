@@ -1,0 +1,54 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "canvas__arf_loadtest",
+    "description": "Probe agents for load testing the Agent Runner Framework against a fake inference gateway. Not for production instances: its API starts runs on demand.",
+    "components": {
+        "handlers": [
+            {
+                "class": "canvas__arf_loadtest.api.loadtest:LoadTestAPI",
+                "description": "Starts batch probe runs and reads back their records, authenticated by API key"
+            },
+            {
+                "class": "canvas__arf_loadtest.api.loadtest:LoadTestChatAPI",
+                "description": "Starts interactive chat probe runs as the logged-in staff member"
+            }
+        ],
+        "agents": [
+            {
+                "class": "canvas__arf_loadtest.agents.probe:ProbeAgent",
+                "description": "Runs a scripted tool loop and counts runs per scope key",
+                "tools": {"allowed": ["@config_reads"]}
+            },
+            {
+                "class": "canvas__arf_loadtest.agents.probe:ExtendedProbeAgent",
+                "description": "The probe, declared as an extended run",
+                "run_seconds": 1800,
+                "tools": {"allowed": ["@config_reads"]}
+            },
+            {
+                "class": "canvas__arf_loadtest.agents.probe:ChatProbeAgent",
+                "description": "A chat turn that records the turn before it",
+                "tools": {"allowed": ["@config_reads"]}
+            }
+        ],
+        "applications": [],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "custom_data": {
+        "namespace": "custom_data__arf_loadtest",
+        "access": "read_write"
+    },
+    "variables": [
+        {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true},
+        {"name": "simpleapi-api-key", "sensitive": true}
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
