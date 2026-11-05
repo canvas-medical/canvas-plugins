@@ -22,6 +22,7 @@ from requests_mock.response import _Context
 from typer.testing import CliRunner
 
 from canvas_cli.apps.platform import auth, commands, dependencies, git
+from canvas_cli.apps.platform.client import PlatformError
 from canvas_cli.main import app
 
 runner = CliRunner()
@@ -257,7 +258,7 @@ def test_best_tag_takes_the_newest_release_and_prefers_the_named_tag() -> None:
     """The newest satisfying release wins, a prerelease is skipped by a range, and of two tags
     naming one version `<name>-v<version>` wins.
     """
-    assert dependencies.best_tag("kit", ">=0.1", {"git": SOURCE}, TAGS) == (
+    assert dependencies.best_tag("kit", [">=0.1"], {"git": SOURCE}, TAGS) == (
         Version("0.2.0"),
         "kit-v0.2.0",
         "2" * 40,
@@ -266,7 +267,7 @@ def test_best_tag_takes_the_newest_release_and_prefers_the_named_tag() -> None:
 
 def test_best_tag_takes_a_prerelease_pinned_exactly() -> None:
     """A prerelease is taken when the requirement names it exactly."""
-    found = dependencies.best_tag("kit", "0.3.0rc1", {"git": SOURCE}, TAGS)
+    found = dependencies.best_tag("kit", ["0.3.0rc1"], {"git": SOURCE}, TAGS)
     assert found is not None
     assert found[1] == "v0.3.0rc1"
 
@@ -274,7 +275,7 @@ def test_best_tag_takes_a_prerelease_pinned_exactly() -> None:
 def test_best_tag_follows_the_source_tag_pattern() -> None:
     """A source `tag` pattern replaces the default tag names."""
     tags = {"release-1.2.0": "7" * 40, "v9.0.0": "8" * 40}
-    found = dependencies.best_tag("kit", ">=1", {"git": SOURCE, "tag": "release-{version}"}, tags)
+    found = dependencies.best_tag("kit", [">=1"], {"git": SOURCE, "tag": "release-{version}"}, tags)
     assert found is not None
     assert found[1:] == ("release-1.2.0", "7" * 40)
 
@@ -345,18 +346,54 @@ def test_resolve_records_a_repeated_requirement_once(tmp_path: Path) -> None:
     assert (kit.version, kit.required_by) == ("0.2.0", [ROOT])
 
 
-def test_resolve_refuses_conflicting_requirements(tmp_path: Path) -> None:
-    """A second requirement the version already resolved does not meet is refused."""
-    held = {"kit": {"publisher": "acme", "versions": [{"version": "0.2.0", "sha": "a" * 40}]}}
+def test_resolve_refuses_conflicting_requirements_naming_each(tmp_path: Path) -> None:
+    """Requirements no version meets together are refused, naming every one of them."""
+    held = {
+        "kit": {
+            "publisher": "acme",
+            "versions": [
+                {"version": "0.2.0", "sha": "a" * 40},
+                {"version": "1.0.0rc1", "sha": "b" * 40},
+            ],
+        }
+    }
     manifest = {
         "name": ROOT,
+        "plugin_version": "1.0.0",
         "dependencies": [
             {"name": "kit", "version": ">=0.1"},
             {"name": "kit", "version": ">=1"},
         ],
     }
-    with pytest.raises(typer.BadParameter, match="resolved it to 0.2.0"):
+    with pytest.raises(typer.BadParameter) as refused:
         _resolver(tmp_path, held).resolve(manifest)
+    assert str(refused.value) == (
+        f"No version of kit meets every requirement on it: {ROOT} 1.0.0 requires kit '>=0.1', "
+        f"{ROOT} 1.0.0 requires kit '>=1'. Canvas Platform holds none that you can see, and "
+        "its dependency declares no source to fetch it from."
+    )
+
+
+class _Refusing:
+    """A stand-in for PlatformClient whose versions route refuses with ``error``."""
+
+    def __init__(self, error: PlatformError) -> None:
+        self.error = error
+
+    def plugin_versions(self, name: str, publisher: str | None) -> dict[str, Any] | None:
+        raise self.error
+
+
+def test_resolve_passes_on_platform_refusals_other_than_ambiguous(tmp_path: Path) -> None:
+    """A refusal other than a shared name reaches the person unchanged."""
+    error = PlatformError("Something broke.", status=500, code="")
+    resolver = _resolver(tmp_path)
+    resolver.client = _Refusing(error)  # type: ignore[assignment]
+    manifest = {"name": ROOT, "dependencies": [{"name": "kit", "version": ">=0.1"}]}
+
+    with pytest.raises(PlatformError) as raised:
+        resolver.resolve(manifest)
+    assert raised.value is error
 
 
 def test_resolve_refuses_a_dependency_with_no_source(tmp_path: Path) -> None:
@@ -797,3 +834,215 @@ def test_deploy_stops_when_the_plan_is_declined_at_a_terminal(
     assert not _server(tmp_path, "kit").exists()
     assert not _server(tmp_path, ROOT).exists()
     assert not (root / "CANVAS_LOCK.json").exists()
+
+
+# -- picking a dependency again ------------------------------------------------
+
+PLUGINS = "https://git.example.com/acme/plugins.git"
+LIB_3 = "3" * 40
+LIB_2 = "2" * 40
+
+
+def _plugins_repository(tmp_path: Path, *releases: tuple[str, str, list[dict[str, Any]]]) -> Path:
+    """A repository standing in for ``PLUGINS``: each (name, version, dependencies) is
+    committed in a folder named after the plugin and tagged ``<name>-v<version>``, in order.
+    """
+    repo = tmp_path / "remotes" / "plugins.git"
+    repo.mkdir(parents=True)
+    _git(repo, "init", "--initial-branch=main")
+    for name, version, requirements in releases:
+        (repo / name).mkdir(exist_ok=True)
+        (repo / name / "CANVAS_MANIFEST.json").write_text(
+            json.dumps(_manifest(name, version, dependencies=requirements))
+        )
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-q", "-m", f"Release {name} {version}")
+        _git(repo, "tag", "-a", f"{name}-v{version}", "-m", f"{name} {version}")
+    return repo
+
+
+def _from_plugins(name: str, version: str = ">=1") -> dict[str, Any]:
+    return {"name": name, "version": version, "source": {"git": PLUGINS}}
+
+
+def _not_on_platform(mock: requests_mock_module.Mocker, *names: str) -> None:
+    for name in names:
+        mock.get(f"{API}/plugins/{name}/versions", status_code=404, json={"code": "not_found"})
+
+
+@pytest.fixture
+def clones(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The tags deploy clones, in order."""
+    cloned: list[str] = []
+    clone_tag = git.clone_tag
+
+    def record(url: str, tag: str, destination: Path) -> str:
+        cloned.append(tag)
+        return clone_tag(url, tag, destination)
+
+    monkeypatch.setattr(git, "clone_tag", record)
+    return cloned
+
+
+def _requests(mock: requests_mock_module.Mocker, path: str) -> int:
+    return len([r for r in mock.request_history if r.path == path])
+
+
+def test_deploy_picks_a_dependency_again_for_a_requirement_found_later(
+    api: requests_mock_module.Mocker, tmp_path: Path, clones: list[str]
+) -> None:
+    """The bundle needs `lib` (any) and `scribe_core`, and `scribe_core` needs `lib<3`. `lib`
+    is reached first at 3.2, and when `scribe_core` asks for `lib<3` it is picked again at 2.x
+    rather than the deploy being refused. Nothing is cloned or asked of platform twice.
+    """
+    _plugins_repository(tmp_path, ("scribe_core", "1.0.0", [{"name": "lib", "version": "<3"}]))
+    _versions(api, "lib", ("3.2.0", LIB_3), ("2.5.0", LIB_2))
+    _not_on_platform(api, "scribe_core")
+    root = _root(tmp_path, {"name": "lib", "version": ">=1"}, _from_plugins("scribe_core"))
+
+    result = runner.invoke(app, ["deploy", str(root), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert f"  lib 2.5.0 (acme): on Canvas Platform at {LIB_2[:12]}, required by {ROOT}, " in (
+        result.output
+    )
+    lock = _lock(root)["plugins"]
+    assert lock["lib"]["version"] == "2.5.0"
+    assert lock["lib"]["required_by"] == [ROOT, "scribe_core"]
+    plugins = {p["name"]: p["ref"] for p in _deployments(api)[0]["plugins"]}
+    assert plugins["lib"] == LIB_2
+    assert clones == ["scribe_core-v1.0.0"]
+    assert _requests(api, "/api/v1/plugins/lib/versions") == 1
+
+
+def test_deploy_clones_only_the_versions_it_picks(
+    api: requests_mock_module.Mocker, tmp_path: Path, clones: list[str]
+) -> None:
+    """With `lib` released only in the source, the version picked first is cloned to read its
+    own requirements, the version picked again is cloned once, a tag cloned already is reused,
+    and a version never picked is never cloned. Only the final picks are pushed.
+    """
+    _plugins_repository(
+        tmp_path,
+        ("lib", "1.0.0", []),
+        ("lib", "2.5.0", []),
+        ("lib", "3.2.0", []),
+        ("scribe_core", "1.0.0", [{"name": "lib", "version": "<3"}]),
+    )
+    _not_on_platform(api, "lib", "scribe_core")
+    root = _root(tmp_path, _from_plugins("lib"), _from_plugins("scribe_core"))
+
+    result = runner.invoke(app, ["deploy", str(root), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert clones == ["lib-v3.2.0", "scribe_core-v1.0.0", "lib-v2.5.0"]
+    assert _lock(root)["plugins"]["lib"]["source"]["tag"] == "lib-v2.5.0"
+    pushed = _git(_server(tmp_path, "lib"), "show", "main:lib/CANVAS_MANIFEST.json")
+    assert json.loads(pushed)["plugin_version"] == "2.5.0"
+
+
+def test_deploy_drops_a_requirement_learned_from_a_version_no_longer_picked(
+    api: requests_mock_module.Mocker, tmp_path: Path, clones: list[str]
+) -> None:
+    """`scribe_core` 2.0 needs `lib<3`, but `other` needs `scribe_core<2`, so `scribe_core` is
+    picked again at 1.0, which needs nothing of `lib`. The requirement learned from 2.0 is
+    dropped with it, and `lib` goes back to its newest version, 3.2.
+    """
+    _plugins_repository(
+        tmp_path,
+        ("scribe_core", "1.0.0", []),
+        ("scribe_core", "2.0.0", [{"name": "lib", "version": "<3"}]),
+        ("other", "1.0.0", [{"name": "scribe_core", "version": "<2"}]),
+    )
+    _versions(api, "lib", ("3.2.0", LIB_3), ("2.5.0", LIB_2))
+    _not_on_platform(api, "scribe_core", "other")
+    root = _root(
+        tmp_path,
+        {"name": "lib", "version": ">=1"},
+        _from_plugins("scribe_core"),
+        _from_plugins("other"),
+    )
+
+    result = runner.invoke(app, ["deploy", str(root), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    lock = _lock(root)["plugins"]
+    assert {name: entry["version"] for name, entry in lock.items()} == {
+        "lib": "3.2.0",
+        "scribe_core": "1.0.0",
+        "other": "1.0.0",
+    }
+    assert lock["lib"]["required_by"] == [ROOT]
+    assert lock["scribe_core"]["required_by"] == [ROOT, "other"]
+    assert clones == ["scribe_core-v2.0.0", "other-v1.0.0", "scribe_core-v1.0.0"]
+
+
+def test_deploy_refuses_requirements_no_version_meets_naming_each(
+    api: requests_mock_module.Mocker, tmp_path: Path
+) -> None:
+    """When no version meets every requirement, deploy is refused naming each one, and nothing
+    is pushed.
+    """
+    _plugins_repository(tmp_path, ("scribe_core", "1.0.0", [{"name": "lib", "version": "<3"}]))
+    _versions(api, "lib", ("3.2.0", LIB_3), ("2.5.0", LIB_2))
+    _not_on_platform(api, "scribe_core")
+    root = _root(tmp_path, {"name": "lib", "version": ">=3"}, _from_plugins("scribe_core"))
+
+    result = runner.invoke(app, ["deploy", str(root), "--instance", "acme-staging"])
+
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert (
+        f"No version of lib meets every requirement on it: {ROOT} 1.0.0 requires lib '>=3', "
+        "scribe_core 1.0.0 requires lib '<3'." in output
+    )
+    assert not _server(tmp_path, "scribe_core").exists()
+    assert not _deployments(api)
+
+
+def test_deploy_resolves_again_a_locked_dependency_a_later_requirement_rules_out(
+    api: requests_mock_module.Mocker, tmp_path: Path
+) -> None:
+    """A locked version wins only while it meets every known requirement: a plugin added
+    later that needs an older `lib` has `lib` resolved again and locked anew.
+    """
+    _plugins_repository(tmp_path, ("scribe_core", "1.0.0", [{"name": "lib", "version": "<3"}]))
+    _versions(api, "lib", ("3.2.0", LIB_3), ("2.5.0", LIB_2))
+    _not_on_platform(api, "scribe_core")
+    root = _root(tmp_path, {"name": "lib", "version": ">=1"})
+    assert runner.invoke(app, ["deploy", str(root), "--push-only"]).exit_code == 0
+    _commit_lock(root)
+    assert _lock(root)["plugins"]["lib"]["version"] == "3.2.0"
+    _require(root, {"name": "lib", "version": ">=1"}, _from_plugins("scribe_core"))
+
+    result = runner.invoke(app, ["deploy", str(root), "--push-only", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert ", as locked" not in result.output
+    assert _lock(root)["plugins"]["lib"]["revision"] == LIB_2
+
+
+def test_deploy_names_the_entry_to_add_a_publisher_to_for_a_shared_name(
+    api: requests_mock_module.Mocker, tmp_path: Path
+) -> None:
+    """A dependency whose name several publishers share stops the deploy with platform's
+    sentence and the dependency entry to add `publisher` to.
+    """
+    shared = (
+        "Acme Health and Beta Labs both publish lib. Name the publisher to choose one "
+        "(publisher acme or beta-labs)."
+    )
+    api.get(
+        f"{API}/plugins/lib/versions", status_code=409, json={"error": shared, "code": "ambiguous"}
+    )
+    root = _root(tmp_path, {"name": "lib", "version": ">=1"})
+
+    result = runner.invoke(app, ["deploy", str(root), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    output = " ".join(result.output.split())
+    assert (
+        f"{shared} lib is a dependency of {ROOT}: add `publisher` to the lib entry in the "
+        f"dependencies of {ROOT}." in output
+    )
+    assert not _deployments(api)
