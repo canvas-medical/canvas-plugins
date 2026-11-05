@@ -4,6 +4,7 @@ from canvas_sdk.agents import (
     document_tools,  # noqa: F401  (importing it registers the intake tools)
     history_tools,  # noqa: F401  (importing it registers the history tools)
     order_tools,  # noqa: F401  (importing it registers the imaging order and referral tools)
+    visit_tools,  # noqa: F401  (importing it registers the reason for visit and HPI tools)
 )
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability

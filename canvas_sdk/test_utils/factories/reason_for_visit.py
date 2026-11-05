@@ -1,6 +1,6 @@
 import factory
 
-from canvas_sdk.v1.data import ReasonForVisit, ReasonForVisitCoding
+from canvas_sdk.v1.data import ReasonForVisit, ReasonForVisitCoding, ReasonForVisitSettingCoding
 
 
 class ReasonForVisitFactory(factory.django.DjangoModelFactory[ReasonForVisit]):
@@ -27,3 +27,18 @@ class ReasonForVisitCodingFactory(factory.django.DjangoModelFactory[ReasonForVis
     system = factory.Faker("random_element", elements=["LOINC", "SNOMED", "CPT"])
     code = factory.Faker("bothify", text="#####-#")
     display = factory.Faker("text", max_nb_chars=200)
+
+
+class ReasonForVisitSettingCodingFactory(
+    factory.django.DjangoModelFactory[ReasonForVisitSettingCoding]
+):
+    """Factory for creating a ReasonForVisitSettingCoding, a reason the practice configured."""
+
+    class Meta:
+        model = ReasonForVisitSettingCoding
+
+    system = "INTERNAL"
+    code = factory.Sequence(lambda n: f"rfv-{n}")
+    display = factory.Faker("sentence", nb_words=3)
+    user_selected = True
+    duration: list = []
