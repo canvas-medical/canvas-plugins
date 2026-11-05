@@ -12,6 +12,7 @@ is never altered.
 """
 
 import re
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
@@ -123,10 +124,10 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
         return "The pages name different patients; a person files this document."
     printed = arguments.get("as_printed") or {}
     name = str(printed.get("name") or "").strip()
-    for field in ("first_name", "last_name"):
-        read = str(arguments.get(field) or "").strip()
+    for key in ("first_name", "last_name"):
+        read = str(arguments.get(key) or "").strip()
         if read and name and not _name_agrees(read, name):
-            return f"The {field.replace('_', ' ')} read is not the name as printed."
+            return f"The {key.replace('_', ' ')} read is not the name as printed."
     mrn = str(arguments.get("mrn") or "").strip()
     printed_mrn = str(printed.get("mrn") or "").strip()
     if mrn and printed_mrn and not _mrn_agrees(mrn, printed_mrn):
@@ -145,48 +146,63 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
     return None
 
 
-def _variants(value: str, repairs: dict[str, tuple[str, ...]]) -> list[str]:
-    """``value`` first, then readings with confusable characters swapped, capped."""
-    seen = {value}
+def _variants(value: str, repairs: dict[str, tuple[str, ...]]) -> tuple[list[str], bool]:
+    """``value`` first, then readings with confusable characters swapped, fewest swaps first.
+
+    Returns the readings and whether they are all of them: past ``MAX_VARIANTS_PER_FIELD``
+    the list is cut short, and the caller must not treat a match among them as the only one.
+    """
     found = [value]
+    seen = {value}
     frontier = [value]
-    while frontier and len(found) < MAX_VARIANTS_PER_FIELD:
+    while frontier:
         current = frontier.pop(0)
         for index, char in enumerate(current):
             for swap in repairs.get(char.lower(), ()):
                 candidate = current[:index] + swap + current[index + 1 :]
-                if candidate not in seen:
-                    seen.add(candidate)
-                    found.append(candidate)
-                    frontier.append(candidate)
-                    if len(found) >= MAX_VARIANTS_PER_FIELD:
-                        return found
-    return found
+                if candidate in seen:
+                    continue
+                if len(found) >= MAX_VARIANTS_PER_FIELD:
+                    return found, False
+                seen.add(candidate)
+                found.append(candidate)
+                frontier.append(candidate)
+    return found, True
 
 
-def repair_candidates(arguments: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+@dataclass(frozen=True)
+class Repairs:
+    """The readings to try, and whether they are every reading the misreads explain."""
+
+    candidates: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+    complete: bool = True
+
+
+def repair_candidates(arguments: dict[str, Any]) -> Repairs:
     """Readings of the identifiers a common misread or slip would explain, with why.
 
     For a document whose identifiers as read matched no one, and only when the model
     passed them as printed. Each candidate is ``(how, identifiers)``: ``fax_repair`` for
     a misread character or a middle name or initial dropped, ``name_swapped`` for first
     and last name the other way round (tried only when the printed name has no comma,
-    which would say which is which). The birth date is never changed.
+    which would say which is which). The birth date is never changed. ``complete`` is
+    False when there are more readings than the caps allow: a match among those tried
+    could then have a rival among those dropped, so it must not be taken as the only one.
     """
     printed = arguments.get("as_printed") or {}
     if not printed:
-        return []
+        return Repairs()
     base = {
         key: arguments[key]
         for key in ("first_name", "last_name", "birth_date", "mrn")
         if arguments.get(key)
     }
     first = str(base.get("first_name") or "")
-    lasts = _variants(str(base.get("last_name") or ""), _NAME_REPAIRS)
-    firsts = _variants(first, _NAME_REPAIRS)
+    lasts, lasts_complete = _variants(str(base.get("last_name") or ""), _NAME_REPAIRS)
+    firsts, firsts_complete = _variants(first, _NAME_REPAIRS)
     if len(first.split()) > 1:
         firsts.append(first.split()[0])
-    mrns = _variants(str(base.get("mrn") or ""), _MRN_REPAIRS)
+    mrns, mrns_complete = _variants(str(base.get("mrn") or ""), _MRN_REPAIRS)
 
     candidates: list[tuple[str, dict[str, Any]]] = []
     name = str(printed.get("name") or "")
@@ -201,12 +217,15 @@ def repair_candidates(arguments: dict[str, Any]) -> list[tuple[str, dict[str, An
                 identifiers = {key: value for key, value in identifiers.items() if value}
                 if identifiers != base:
                     repaired.append(identifiers)
-    # Fewest fields changed first, so the cap keeps every single repair.
+    # Fewest fields changed first.
     repaired.sort(
         key=lambda identifiers: sum(identifiers.get(k) != base.get(k) for k in identifiers)
     )
     candidates.extend((REPAIRED, identifiers) for identifiers in repaired)
-    return candidates[:MAX_CANDIDATES]
+    complete = (
+        lasts_complete and firsts_complete and mrns_complete and len(candidates) <= MAX_CANDIDATES
+    )
+    return Repairs(candidates=candidates[:MAX_CANDIDATES], complete=complete)
 
 
 __exports__ = ()
