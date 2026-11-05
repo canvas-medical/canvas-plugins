@@ -848,3 +848,40 @@ def test_a_tools_own_model_call_uses_the_loops_model() -> None:
     assert seen == ["claude-haiku-4-5"]
     assert client.requests[0]["model"] == "claude-haiku-4-5"
     assert ctx["gateway"] is run_gateway, "the caller's context keeps the run's gateway"
+
+
+def test_the_loop_hands_back_each_tool_calls_arguments_and_result() -> None:
+    """Code reads a form the model filled in, and a failed call is marked, without a ctx holder."""
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="record_identifiers",
+        description="Record what the document shows.",
+        input_schema={"type": "object", "properties": {"last_name": {"type": "string"}}},
+    )
+    def _record(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True}
+
+    @registry.tool(
+        name="flaky", description="Fails.", input_schema={"type": "object", "properties": {}}
+    )
+    def _flaky(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise ValueError("no")
+
+    client = FakeGateway(
+        reply(tool_use("record_identifiers", {"last_name": "Doe"}), tool_use("flaky")),
+        reply(tool_use("record_identifiers", {"last_name": "Roe"})),
+        reply(text("done")),
+    )
+
+    result = _run(client, tools=registry)
+
+    assert [(call.name, call.ok) for call in result.calls] == [
+        ("record_identifiers", True),
+        ("flaky", False),
+        ("record_identifiers", True),
+    ]
+    last = result.last_call("record_identifiers")
+    assert last is not None
+    assert (last.arguments, last.result) == ({"last_name": "Roe"}, {"ok": True})
+    assert result.last_call("flaky") is None

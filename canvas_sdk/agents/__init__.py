@@ -16,7 +16,7 @@ from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.state import AgentState
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent, run_subagents
 from canvas_sdk.agents.subject import RunRequester, RunSubject
-from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
+from canvas_sdk.agents.tool_loop import ToolCall, ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
     FilterSpec,
@@ -42,6 +42,7 @@ __all__ = __exports__ = (
     "RunRequester",
     "RunSubject",
     "SubAgentSpec",
+    "ToolCall",
     "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
