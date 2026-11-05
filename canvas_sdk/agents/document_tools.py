@@ -129,6 +129,11 @@ MATCH_LABELS = {
     REPAIRED: "Matched after fax misread fix",
     SWAPPED: "Matched with first/last name swapped",
 }
+# Why no patient is named when a fax misread could explain more readings than can be tried.
+TOO_MANY_READINGS = (
+    "The identifiers match no one as read, and a fax misread could explain more readings "
+    "than can be checked; a person files this document."
+)
 
 
 def require_document_id(ctx: dict[str, Any]) -> str:
@@ -146,14 +151,20 @@ def require_document_id(ctx: dict[str, Any]) -> str:
 
 
 def _annotations(
-    arguments: dict[str, Any], *, confidence: str | None, prefix: str
+    arguments: dict[str, Any], *, confidence: str | None, prefix: str, warning: str = ""
 ) -> list[AnnotationItem]:
-    """The suggestion's source, its confidence (``f"{prefix}: {level}"``), and any label."""
+    """The suggestion's source, its confidence (``f"{prefix}: {level}"``), any ``warning``
+    the code adds for the reviewer, and any label the model passed.
+
+    The warning is its own annotation, so a label the model passes never replaces it.
+    """
     annotations: list[AnnotationItem] = [{"text": SOURCE_LABEL, "color": SOURCE_COLOR}]
     if confidence in CONFIDENCE_COLORS:
         annotations.append(
             {"text": f"{prefix}: {confidence}", "color": CONFIDENCE_COLORS[confidence]}
         )
+    if warning:
+        annotations.append({"text": warning, "color": CONFIDENCE_COLORS["medium"]})
     if label := str(arguments.get("label") or "").strip()[:MAX_LABEL_CHARS]:
         annotations.append({"text": label, "color": SOURCE_COLOR})
     return annotations
@@ -240,8 +251,11 @@ def _document_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str],
     found, matched_on = _matching_patients(arguments)
     if found or not arguments.get("as_printed"):
         return found, matched_on, "", ""
+    repairs = repair_candidates(arguments)
+    if not repairs.complete:
+        return [], matched_on, "", TOO_MANY_READINGS
     hits: dict[str, tuple[list[Any], list[str], str]] = {}
-    for how, identifiers in repair_candidates(arguments):
+    for how, identifiers in repairs.candidates:
         try:
             repaired, repaired_on = _matching_patients(identifiers)
         except ValueError:
@@ -496,12 +510,16 @@ def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[
         return {"ok": False, **_no_match(found)}
     patient = found[0]
     confidence = "medium" if how else _match_confidence(matched_on)
-    labeled = {**arguments, "label": arguments.get("label") or MATCH_LABELS.get(how, "")}
     ctx["effects"].append(
         LinkDocumentToPatient(
             document_id=document_id,
             patient_key=str(patient.id),
-            annotations=_annotations(labeled, confidence=confidence, prefix="Match"),
+            annotations=_annotations(
+                arguments,
+                confidence=confidence,
+                prefix="Match",
+                warning=MATCH_LABELS.get(how, ""),
+            ),
         ).apply()
     )
     return {
