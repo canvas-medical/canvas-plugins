@@ -84,29 +84,43 @@ def test_a_reading_that_folds_a_fax_misread_still_agrees_with_the_print() -> Non
     assert check_printed(arguments) is None
 
 
-def test_repairs_never_change_the_birth_date_and_are_capped() -> None:
-    """Digits in names and confusable MRN characters are tried; the birth date is kept."""
-    candidates = repair_candidates(
+def test_repairs_never_change_the_birth_date() -> None:
+    """Digits in names are tried as letters; the birth date is kept as printed."""
+    repairs = repair_candidates(
         {
             "first_name": "J0HN",
             "last_name": "SM1TH",
-            "mrn": "1050815",
             "birth_date": "1971-03-09",
             "as_printed": {"name": "SM1TH, J0HN"},
         }
     )
 
-    assert 0 < len(candidates) <= MAX_CANDIDATES
-    assert {c["birth_date"] for _, c in candidates} == {"1971-03-09"}
-    assert {"SMlTH", "SMiTH"} <= {c["last_name"] for _, c in candidates}
+    assert repairs.complete
+    assert {c["birth_date"] for _, c in repairs.candidates} == {"1971-03-09"}
+    assert {"SMlTH", "SMiTH"} <= {c["last_name"] for _, c in repairs.candidates}
+
+
+def test_more_readings_than_the_caps_allow_are_reported_incomplete() -> None:
+    """An MRN full of confusable characters has more readings than can be checked."""
+    repairs = repair_candidates(
+        {
+            "last_name": "Smith",
+            "birth_date": "1971-03-09",
+            "mrn": "1050815",
+            "as_printed": {"mrn": "1050815"},
+        }
+    )
+
+    assert not repairs.complete
+    assert len(repairs.candidates) <= MAX_CANDIDATES
 
 
 def test_names_are_swapped_only_when_the_print_does_not_say_which_is_which() -> None:
     """'DOE, JOHN' puts the last name first; 'JOHN DOE' could be read either way."""
     base = {"first_name": "Doe", "last_name": "John", "birth_date": "1971-03-09"}
 
-    with_comma = repair_candidates({**base, "as_printed": {"name": "DOE, JOHN"}})
-    without = repair_candidates({**base, "as_printed": {"name": "JOHN DOE"}})
+    with_comma = repair_candidates({**base, "as_printed": {"name": "DOE, JOHN"}}).candidates
+    without = repair_candidates({**base, "as_printed": {"name": "JOHN DOE"}}).candidates
 
     assert "name_swapped" not in {how for how, _ in with_comma}
     assert ("name_swapped", "Doe") in {(how, c["last_name"]) for how, c in without}
@@ -205,3 +219,40 @@ def test_an_illegible_fax_names_no_patient_even_when_the_values_match() -> None:
 
     assert result["match"] is None
     assert "illegible" in result["reason"]
+
+
+@pytest.mark.django_db
+def test_a_match_among_cut_short_readings_is_not_taken_as_the_only_one() -> None:
+    """With readings dropped by the caps, a rival chart could be among them: no one is named."""
+    PatientFactory.create(last_name="Smith", birth_date=BIRTH, mrn="I050815")
+
+    result, effects = _run(
+        "suggest_patient",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        mrn="1050815",
+        as_printed={"mrn": "1050815", "birth_date": "03/09/1971"},
+        legibility="readable_with_artifacts",
+    )
+
+    assert result["ok"] is False
+    assert "more readings than can be checked" in result["reason"]
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_the_models_label_never_replaces_the_repair_warning() -> None:
+    """The reviewer always sees that the match needed a fix, beside whatever the model wrote."""
+    PatientFactory.create(first_name="John", last_name="Smith", birth_date=BIRTH)
+
+    _, (effect,) = _run(
+        "suggest_patient",
+        first_name="J0HN",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        as_printed={"name": "SMITH, J0HN"},
+        legibility="clear",
+        label="Exact match",
+    )
+
+    assert {"Matched after fax misread fix", "Exact match"} <= set(_labels(effect))
