@@ -35,6 +35,23 @@ _CUT_OFF = (
 )
 
 
+@dataclass(frozen=True)
+class ToolCall:
+    """One tool call a :func:`run_tool_loop` ran, for the agent's code to read.
+
+    Attributes:
+        name: The tool's name.
+        arguments: What the model passed.
+        result: What the tool returned; ``None`` when it failed.
+        ok: Whether the tool returned rather than raised.
+    """
+
+    name: str
+    arguments: dict[str, Any]
+    result: Any = None
+    ok: bool = True
+
+
 @dataclass
 class ToolLoopResult:
     """What a :func:`run_tool_loop` produced.
@@ -49,6 +66,10 @@ class ToolLoopResult:
             ``"unexpected"`` for any other stop reason.
         stop_reason: The model's stop reason on its last turn.
         effects: The ``effects`` list from ``ctx``, holding what the tools staged.
+        calls: Every tool call the loop ran, in order, with its arguments and result. A
+            tool that only takes what the model read, such as a form the model fills in,
+            hands its arguments to the agent's code this way, and code reads what a write
+            tool decided from its result rather than parsing the effect it staged.
     """
 
     text: str = ""
@@ -57,6 +78,11 @@ class ToolLoopResult:
     turns: int = 0
     stopped: Literal["end_turn", "max_turns", "call_limit", "unexpected"] = "max_turns"
     stop_reason: str | None = None
+    calls: list[ToolCall] = field(default_factory=list)
+
+    def last_call(self, name: str) -> ToolCall | None:
+        """The last call to the tool ``name`` that returned, or None when none did."""
+        return next((call for call in reversed(self.calls) if call.name == name and call.ok), None)
 
 
 # Whether this tool loop's reply text may be streamed to the person waiting on the run.
@@ -84,7 +110,9 @@ def _tool_result(tool_use_id: str, content: str, *, is_error: bool = False) -> d
     return result
 
 
-def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> dict[str, Any]:
+def _run_tool(
+    tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any], calls: list[ToolCall]
+) -> dict[str, Any]:
     """Run one tool call; a failure goes back to the model as an error so it can recover.
 
     A gateway error or the run's deadline, raised by a sub-agent the tool ran, ends
@@ -101,6 +129,7 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
     try:
         result = tools.execute(block.name, dict(block.input), ctx=ctx)
     except (anthropic.APIError, RunDeadlineExceeded):
+        calls.append(ToolCall(block.name, dict(block.input), None, ok=False))
         if recorder is not None:
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, "aborted", _elapsed_ms(started))
@@ -109,6 +138,7 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
         raise
     except Exception as exc:
         log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
+        calls.append(ToolCall(block.name, dict(block.input), None, ok=False))
         if recorder is not None:
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, type(exc).__name__, _elapsed_ms(started))
@@ -117,6 +147,7 @@ def _run_tool(tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any]) -> 
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
     finally:
         streams_reply.reset(quiet)
+    calls.append(ToolCall(block.name, dict(block.input), result))
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
         recorder.report_tool("tool_finished", label, ok=True)
@@ -290,7 +321,7 @@ def run_tool_loop(
             transcript.append(
                 {
                     "role": "user",
-                    "content": [_run_tool(tools, block, ctx) for block in complete]
+                    "content": [_run_tool(tools, block, ctx, result.calls) for block in complete]
                     + [_tool_result(block.id, _CUT_OFF, is_error=True) for block in cut_off],
                 }
             )
