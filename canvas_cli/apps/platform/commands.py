@@ -616,7 +616,8 @@ def deploy(
     The manifest `name` must be publisher-prefixed, `<your org prefix>__<package>`,
     and the prefix decides which of your organizations publishes the plugin.
 
-    Without --ref or --no-push, deploy registers the plugin, points the
+    Without --ref or --no-push, deploy first runs the same checks as `canvas
+    validate` and stops on a failure. It then registers the plugin, points the
     repository's `origin` at Canvas Platform with a credential helper, commits any
     uncommitted changes after you confirm, pushes HEAD to `main` and deploys that
     commit. A plugin that is not in a git repository yet is offered one.
@@ -670,6 +671,7 @@ def deploy(
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
+        instance_plugin.validate(plugin_dir)
 
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
