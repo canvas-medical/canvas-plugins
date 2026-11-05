@@ -218,22 +218,22 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 - `--push-only`: Push HEAD to `main`, or to the `--branch` branch, without deploying it to any instance, so the plugin's code and its catalog listing are updated on Canvas Platform and no instance is needed. Takes no `--instance`, `--ref` or `--no-push`
 - `--branch TEXT`: Push HEAD to this branch on Canvas Platform instead of `main`, and deploy that commit. Platform deploys a commit not on `main` only to your organization's test instances, and refuses other instances with a message naming them. Works with `--push-only` and `--snapshot`. Takes no `--ref` or `--no-push`, and refuses `main` and the plugin's default branch
 - `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, or on the `--branch` branch, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
-- `-y, --yes`: Commit uncommitted changes and accept the dependency plan without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
-- `--update`: Resolve the dependencies again, ignoring `CANVAS_LOCK.json`, and rewrite it
+- `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
 - `--help`: Show this message and exit.
 
 ### Dependencies and bundles
 
-A manifest's `dependencies` name plugins that are deployed with it, each by an exact version or a PEP 440 specifier set, with an optional `publisher` and `source`. A plugin with `"bundle": true` is made only of its dependencies and its catalog listing; `canvas install` refuses one.
+A manifest's `dependencies` name plugins that Canvas Platform installs with it. Each entry has exactly three keys, all required: `name`, `publisher` (the slug of the organization that publishes it), and `version`, one exact PEP 440 version such as `1.16.0` rather than a range. A plugin with `"bundle": true` is made only of its dependencies and its catalog listing, carries no `components`, `custom_data`, `variables` or `secrets`, and `canvas install` refuses one.
 
-- Each dependency resolves to the newest version meeting every requirement on it among the versions Canvas Platform holds and, when its publisher is one of your organizations and it has a `source`, its repository's release tags (`source.tag` with `{version}`, else `<name>-v<version>` or `v<version>`). A prerelease is taken only when pinned exactly.
-- When plugins ask for different versions of one dependency, it is picked again at the newest version meeting all of them, and a requirement from a version no longer picked stops counting. Deploy is refused only when no version meets every requirement, and the refusal names each one. A `409` from Canvas Platform for a name several publishers share names the dependency entry to add `publisher` to.
-- A dependency is fetched only from the `source` your own manifest declares for it, exactly as written. A source in a fetched plugin's manifest is never cloned or pushed; to fetch that dependency, add it with its source to your own manifest.
-- A version only the repository holds is cloned with your own git credentials, refused unless its manifest names that plugin and version, validated as `canvas validate` does, and pushed to Canvas Platform's `main` as `--snapshot` pushes, registering the plugin when it is new. A cloned plugin's own dependencies are resolved the same way, and a cycle is refused.
-- A dependency another organization publishes has to be on Canvas Platform already.
-- Deploy prints the plan before pushing anything, and asks to continue at a terminal unless `--yes` is passed. It then pushes the plugin and creates one deployment naming the plugin and every dependency at its revision; each target's `wave` is shown when platform reports it.
-- What each dependency resolved to is written to `CANVAS_LOCK.json` beside the manifest, to commit with the plugin. Later deploys install exactly the locked revisions until `--update`, or until a requirement asks for a version the lock does not meet, which resolves that dependency again. A locked version Canvas Platform does not hold is fetched again from its locked tag, and refused when that tag now points at another commit.
-- With `--push-only`, the dependencies are pushed and locked, and nothing is deployed.
+```json
+"dependencies": [
+  {"name": "scribe_core", "publisher": "canvas-medical", "version": "1.16.0"},
+  {"name": "commands_kit", "publisher": "canvas-medical", "version": "0.1.1"}
+]
+```
+
+- Each dependency must already be on Canvas Platform at that version. Its publisher pushes each release on its own, outside any bundle, with `canvas deploy <plugin> --push-only --snapshot`, which updates the plugin's code and catalog listing without deploying it anywhere.
+- Deploying a plugin or bundle with `dependencies` works like any other deploy: the CLI pushes the plugin and creates one deployment naming it, and Canvas Platform resolves the dependencies and installs them in order. Each target's `wave` is shown when platform reports it.
 
 ## `canvas clone`
 

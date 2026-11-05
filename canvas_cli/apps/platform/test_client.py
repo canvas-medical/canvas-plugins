@@ -213,20 +213,13 @@ def test_plugin_raises_for_errors_other_than_a_404(
     assert raised.value.status == 500
 
 
-def test_plugin_versions_names_the_publisher_and_reads_a_404_as_none(
+def test_plugin_names_the_publisher_when_given(
     requests_mock: requests_mock_module.Mocker,
 ) -> None:
-    """The versions route carries `?publisher=` when given, and a 404 means no such plugin."""
+    """A publisher is sent as `?publisher=`, picking one publisher's plugin of a shared name."""
     _sign_in()
-    body = {"plugin": "kit", "publisher": "acme", "versions": []}
-    requests_mock.get(f"{PLATFORM}/api/v1/plugins/kit/versions?publisher=acme", json=body)
-    requests_mock.get(
-        f"{PLATFORM}/api/v1/plugins/gone/versions",
-        status_code=404,
-        json={"error": "Not found.", "code": "not_found"},
-    )
-    client = PlatformClient(PLATFORM)
+    body = {"name": "intake", "publisher": "acme"}
+    requests_mock.get(f"{PLATFORM}/api/v1/plugins/intake?publisher=acme", json=body)
 
-    assert client.plugin_versions("kit", "acme") == body
+    assert PlatformClient(PLATFORM).plugin("intake", "acme") == body
     assert _last(requests_mock).qs == {"publisher": ["acme"]}
-    assert client.plugin_versions("gone") is None

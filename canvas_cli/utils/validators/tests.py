@@ -311,7 +311,14 @@ def test_manifest_rejects_malformed_catalog_listing(
         validate_manifest_file(handler_manifest_example)
 
 
-SOURCE = {"git": "https://github.com/canvas-medical/scribe", "path": "plugins/scribe_core"}
+def _dependency(name: str = "scribe_core", **overrides: Any) -> dict:
+    """Return a valid dependency entry, with any key overridden."""
+    return {"name": name, "publisher": "canvas-medical", "version": "1.16.0", **overrides}
+
+
+def _without(entry: dict, key: str) -> dict:
+    """Return ``entry`` without ``key``."""
+    return {k: v for k, v in entry.items() if k != key}
 
 
 def _bundle_manifest(**overrides: Any) -> dict:
@@ -323,22 +330,9 @@ def _bundle_manifest(**overrides: Any) -> dict:
         "description": "A bundle of plugins deployed together.",
         "bundle": True,
         "dependencies": [
-            {"name": "scribe_core", "version": "1.16.0", "source": SOURCE},
-            {
-                "name": "commands_kit",
-                "publisher": "canvas-medical",
-                "version": ">=0.1.1,<0.2",
-                "source": {"git": "git@github.com:canvas-medical/commands-kit.git"},
-            },
-            {
-                "name": "scribe_admin",
-                "version": "1.4.0",
-                "source": {
-                    "git": "ssh://git.example.com/scribe.git",
-                    "path": "plugins/scribe_admin",
-                    "tag": "release-{version}",
-                },
-            },
+            _dependency(),
+            _dependency("commands_kit", version="0.1.1"),
+            _dependency("scribe_admin", publisher="acme", version="1.4.0rc1"),
         ],
         "tags": {},
         "license": "",
@@ -348,7 +342,7 @@ def _bundle_manifest(**overrides: Any) -> dict:
 
 
 def test_manifest_accepts_bundle() -> None:
-    """A bundle with dependencies and no components validates."""
+    """A bundle naming each dependency by name, publisher and exact version validates."""
     validate_manifest_file(_bundle_manifest())
 
 
@@ -356,8 +350,15 @@ def test_manifest_accepts_dependencies_on_a_plugin_with_code(
     handler_manifest_example: dict,
 ) -> None:
     """A plugin that is not a bundle may still declare dependencies."""
-    handler_manifest_example["dependencies"] = [{"name": "commands_kit", "version": "~=0.1"}]
+    handler_manifest_example["dependencies"] = [_dependency("commands_kit")]
     validate_manifest_file(handler_manifest_example)
+
+
+def test_manifest_accepts_one_name_from_two_publishers() -> None:
+    """Two publishers' plugins of the same name are two dependencies."""
+    validate_manifest_file(
+        _bundle_manifest(dependencies=[_dependency(), _dependency(publisher="acme")])
+    )
 
 
 def test_manifest_requires_components_unless_bundle(handler_manifest_example: dict) -> None:
@@ -367,69 +368,49 @@ def test_manifest_requires_components_unless_bundle(handler_manifest_example: di
         validate_manifest_file(handler_manifest_example)
 
 
+def test_manifest_names_the_code_keys_a_bundle_carries() -> None:
+    """A bundle carrying code keys is refused with a message naming them."""
+    manifest = _bundle_manifest(
+        variables=[{"name": "API_KEY"}], custom_data={"namespace": "a__b", "access": "read"}
+    )
+    with pytest.raises(ValidationError, match="cannot declare custom_data, variables"):
+        validate_manifest_file(manifest)
+
+
+def test_manifest_refuses_a_version_range_with_a_clear_sentence() -> None:
+    """A specifier set is refused as not being an exact version."""
+    manifest = _bundle_manifest(dependencies=[_dependency(version=">=1,<2")])
+    with pytest.raises(ValidationError, match="'>=1,<2' is not an exact version"):
+        validate_manifest_file(manifest)
+
+
 BUNDLE_REFUSED: dict[str, dict] = {
     "no-dependencies": _bundle_manifest(dependencies=[]),
-    "dependencies-missing": {
-        key: value for key, value in _bundle_manifest().items() if key != "dependencies"
-    },
+    "dependencies-missing": _without(_bundle_manifest(), "dependencies"),
     "components": _bundle_manifest(
         components={"handlers": [{"class": "scribe.handlers:Handler", "description": "x"}]}
     ),
     "custom-data": _bundle_manifest(custom_data={"namespace": "a__b", "access": "read"}),
     "variables": _bundle_manifest(variables=[{"name": "API_KEY"}]),
     "secrets": _bundle_manifest(secrets=["API_KEY"]),
-    "dependency-without-version": _bundle_manifest(dependencies=[{"name": "scribe_core"}]),
-    "dependency-bad-name": _bundle_manifest(
-        dependencies=[{"name": "Scribe-Core", "version": "1.0.0"}]
+    "dependency-without-publisher": _bundle_manifest(
+        dependencies=[_without(_dependency(), "publisher")]
     ),
-    "dependency-extra-field": _bundle_manifest(
-        dependencies=[{"name": "scribe_core", "version": "1.0.0", "url": "https://x"}]
+    "dependency-empty-publisher": _bundle_manifest(dependencies=[_dependency(publisher="")]),
+    "dependency-without-version": _bundle_manifest(
+        dependencies=[_without(_dependency(), "version")]
     ),
-    "dependency-bad-version": _bundle_manifest(
-        dependencies=[{"name": "scribe_core", "version": "latest"}]
+    "dependency-bad-name": _bundle_manifest(dependencies=[_dependency("Scribe-Core")]),
+    "dependency-range": _bundle_manifest(dependencies=[_dependency(version=">=1,<2")]),
+    "dependency-compatible-release": _bundle_manifest(dependencies=[_dependency(version="~=0.1")]),
+    "dependency-bad-version": _bundle_manifest(dependencies=[_dependency(version="latest")]),
+    "dependency-source": _bundle_manifest(
+        dependencies=[_dependency(source={"git": "https://github.com/canvas-medical/scribe"})]
     ),
     "dependency-repeated": _bundle_manifest(
-        dependencies=[
-            {"name": "scribe_core", "version": "1.0.0"},
-            {"name": "scribe_core", "version": "1.1.0"},
-        ]
+        dependencies=[_dependency(), _dependency(version="1.17.0")]
     ),
-    "dependency-on-itself": _bundle_manifest(dependencies=[{"name": "scribe", "version": "1.0.0"}]),
-    "source-without-git": _bundle_manifest(
-        dependencies=[{"name": "scribe_core", "version": "1.0.0", "source": {"path": "plugins"}}]
-    ),
-    "source-extra-field": _bundle_manifest(
-        dependencies=[
-            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "ref": "main"}}
-        ]
-    ),
-    "source-local-path": _bundle_manifest(
-        dependencies=[{"name": "scribe_core", "version": "1.0.0", "source": {"git": "../scribe"}}]
-    ),
-    "source-plain-http": _bundle_manifest(
-        dependencies=[
-            {
-                "name": "scribe_core",
-                "version": "1.0.0",
-                "source": {"git": "http://github.com/canvas-medical/scribe"},
-            }
-        ]
-    ),
-    "source-path-leaves-repository": _bundle_manifest(
-        dependencies=[
-            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "path": "../other"}}
-        ]
-    ),
-    "source-absolute-path": _bundle_manifest(
-        dependencies=[
-            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "path": "/etc"}}
-        ]
-    ),
-    "source-tag-without-version": _bundle_manifest(
-        dependencies=[
-            {"name": "scribe_core", "version": "1.0.0", "source": {**SOURCE, "tag": "latest"}}
-        ]
-    ),
+    "dependency-on-itself": _bundle_manifest(dependencies=[_dependency("scribe")]),
 }
 
 

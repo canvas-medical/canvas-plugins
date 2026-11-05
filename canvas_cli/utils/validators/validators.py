@@ -1,16 +1,9 @@
-import re
-from pathlib import PurePosixPath
-
 from jsonschema import ValidationError, validators
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
 from canvas_cli.utils.validators.manifest_schema import BUNDLE_FORBIDDEN_KEYS, manifest_schema
-
-# A remote git repository: an https or ssh URL, or an scp-style address (git@host:path).
-GIT_REMOTE = re.compile(r"^(?:(?:https|ssh)://[^\s/]+/\S+|[\w.-]+@[\w.-]+:\S+)$")
 
 
 def get_default_host(host: str | None) -> str | None:
@@ -42,44 +35,29 @@ def _refuse_repeated_names(catalog: object) -> None:
 
 
 def _refuse_bad_dependencies(manifest_json: dict) -> None:
-    """Refuse a dependency with an unparsable version, named twice, or naming the plugin itself.
+    """Refuse a dependency whose version is not exact, named twice, or naming the plugin itself.
 
     JSON Schema checks each entry's shape; these rules span entries or need PEP 440 parsing.
     """
-    seen: set[tuple[str, str | None]] = set()
+    seen: set[tuple[str, str]] = set()
     for dependency in manifest_json.get("dependencies") or []:
-        name, version = dependency["name"], dependency["version"]
+        name, publisher, version = (
+            dependency["name"],
+            dependency["publisher"],
+            dependency["version"],
+        )
         try:
             Version(version)
         except InvalidVersion:
-            try:
-                SpecifierSet(version)
-            except InvalidSpecifier:
-                raise ValidationError(
-                    f"dependency {name!r}: {version!r} is neither a version nor a version specifier."
-                ) from None
+            raise ValidationError(
+                f"dependency {name!r}: {version!r} is not an exact version. A dependency names "
+                "one version, such as '1.16.0', rather than a range."
+            ) from None
         if name == manifest_json.get("name"):
             raise ValidationError(f"dependency {name!r} is the plugin itself.")
-        key = (name, dependency.get("publisher"))
-        if key in seen:
-            raise ValidationError(f"dependency {name!r} is named twice.")
-        seen.add(key)
-        if "source" in dependency:
-            _refuse_bad_source(name, dependency["source"])
-
-
-def _refuse_bad_source(name: str, source: dict) -> None:
-    """Refuse a source that is not a remote git repository, or whose path leaves it."""
-    if not GIT_REMOTE.match(source["git"]):
-        raise ValidationError(
-            f"dependency {name!r}: source git must be an https:// or ssh:// repository URL, "
-            "or an scp-style address such as git@github.com:org/repo."
-        )
-    path = PurePosixPath(source.get("path", "."))
-    if path.is_absolute() or ".." in path.parts:
-        raise ValidationError(
-            f"dependency {name!r}: source path must be a folder inside the repository."
-        )
+        if (name, publisher) in seen:
+            raise ValidationError(f"dependency {name!r} of {publisher!r} is named twice.")
+        seen.add((name, publisher))
 
 
 def validate_manifest_file(manifest_json: dict) -> None:

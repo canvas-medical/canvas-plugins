@@ -10,7 +10,7 @@ person signed in with ``canvas login``:
     ``<prefix>__<package>`` and registers it with platform.
   * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
     plugin inside a larger repository, to ``main`` or to the branch ``--branch``
-    names, then deploys it with its dependencies.
+    names, then deploys it.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
   * ``canvas config set`` / ``unset`` and ``canvas uninstall``: through platform
     for a plugin it manages, and directly against the instance otherwise.
@@ -19,9 +19,9 @@ person signed in with ``canvas login``:
 
 from __future__ import annotations
 
+import json
 import re
 import sys
-import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -31,7 +31,7 @@ import click
 import typer
 
 from canvas_cli.apps.auth.utils import get_default_host
-from canvas_cli.apps.platform import auth, dependencies, git
+from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.plugin import plugin as instance_plugin
 
@@ -55,9 +55,20 @@ _INSTANCE_HELP = "Instance slug to target (repeatable)"
 # -- names and publishers ----------------------------------------------------
 
 
+def read_manifest(plugin_dir: Path) -> dict[str, Any]:
+    """The parsed ``CANVAS_MANIFEST.json`` of the plugin package in ``plugin_dir``."""
+    manifest = plugin_dir / "CANVAS_MANIFEST.json"
+    if not manifest.exists():
+        raise typer.BadParameter(f"'{plugin_dir}' has no CANVAS_MANIFEST.json")
+    try:
+        return dict(json.loads(manifest.read_text()))
+    except (ValueError, OSError) as exc:
+        raise typer.BadParameter(f"Could not read {manifest}: {exc}") from exc
+
+
 def manifest_name(plugin_dir: Path) -> str:
     """The manifest ``name`` of the plugin package in ``plugin_dir``."""
-    name = dependencies.read_manifest(plugin_dir).get("name")
+    name = read_manifest(plugin_dir).get("name")
     if not name:
         raise typer.BadParameter(f'{plugin_dir / "CANVAS_MANIFEST.json"} is missing a "name"')
     return str(name)
@@ -126,23 +137,7 @@ def _matching_organization(me: dict[str, Any], name: str) -> dict[str, Any] | No
     return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
 
 
-def _pushable(me: dict[str, Any]) -> list[dict[str, Any]]:
-    """The person's organizations they may push plugin code in."""
-    return [
-        organization
-        for organization in me.get("organizations", [])
-        if "push_plugin_code" in organization.get("capabilities", [])
-    ]
-
-
-def _publisher(
-    client: PlatformClient,
-    me: dict[str, Any],
-    name: str,
-    declared: str | None,
-    *,
-    pushing: bool,
-) -> str:
+def _publisher(client: PlatformClient, name: str, declared: str | None, *, pushing: bool) -> str:
     """The slug of the organization that publishes ``name``.
 
     It is the organization the manifest's ``publisher`` names, else the person's
@@ -151,6 +146,7 @@ def _publisher(
     without belonging to it, may also deploy a plugin that already exists under
     another publisher.
     """
+    me = client.me()
     organizations = me.get("organizations", [])
     if declared:
         organization = next((o for o in organizations if o["slug"] == declared), None)
@@ -167,7 +163,7 @@ def _publisher(
     if organization is None:
         if me.get("canvas_employee") and (existing := client.plugin(name)):
             return str(existing["publisher"])
-        publishers = _pushable(me)
+        publishers = [o for o in organizations if "push_plugin_code" in o.get("capabilities", [])]
         if len(publishers) != 1:
             choices = (
                 f"Your organizations that can publish plugins: "
@@ -571,23 +567,6 @@ def _push_snapshot(
             file=sys.stderr,
             flush=True,
         )
-    return _publish_snapshot(client, snapshot, publisher, name, platform, branch=branch)
-
-
-def _publish_snapshot(
-    client: PlatformClient,
-    snapshot: git.Snapshot,
-    publisher: str,
-    name: str,
-    platform: str,
-    *,
-    branch: str | None = None,
-    check_rollback: bool = True,
-) -> str:
-    """Register the plugin and push ``snapshot`` to ``branch``, or to its default branch.
-
-    Returns the commit.
-    """
     registered = client.register_plugin(publisher, name)
     target, default = _target_and_default_branch(registered, branch)
     me = client.me()
@@ -599,62 +578,7 @@ def _publish_snapshot(
         platform,
         author=(me.get("name") or me["email"], me["email"]),
         default_branch=default,
-        check_rollback=check_rollback,
     )
-
-
-def _ensure_dependencies(
-    client: PlatformClient,
-    me: dict[str, Any],
-    plugin_dir: Path,
-    manifest: dict[str, Any],
-    publisher: str,
-    platform: str,
-    workdir: Path,
-    *,
-    update: bool,
-    assume_yes: bool,
-) -> list[dependencies.Resolved]:
-    """Resolve the plugin's dependencies, then validate and push those platform lacks.
-
-    The plan is printed first, and at a terminal without --yes the person confirms
-    it. Returns every dependency with the platform revision it deploys.
-    """
-    resolver = dependencies.Resolver(
-        client=client,
-        default_publisher=publisher,
-        pushable={o["slug"] for o in _pushable(me)},
-        lock={} if update else dependencies.read_lock(plugin_dir),
-        workdir=workdir,
-    )
-    plan = resolver.resolve(manifest)
-    print(f"Dependencies of {manifest['name']}:")
-    for resolved in plan:
-        print(resolved.describe())
-    if not assume_yes and git.interactive() and not typer.confirm("Continue?", default=True):
-        raise typer.Abort()
-
-    fetched = [(resolved, resolved.checkout) for resolved in plan if resolved.checkout]
-    for _, checkout in fetched:
-        instance_plugin.validate(checkout)
-    for resolved, checkout in fetched:
-        resolved.revision = _publish_snapshot(
-            client,
-            git.snapshot_source(checkout),
-            resolved.publisher,
-            resolved.name,
-            platform,
-            check_rollback=False,
-        )
-    return plan
-
-
-def _write_lock(plugin_dir: Path, plan: list[dependencies.Resolved]) -> None:
-    if plan and dependencies.write_lock(plugin_dir, plan):
-        print(
-            f"Wrote {plugin_dir / dependencies.LOCK_FILE}. Commit it, so later deploys install "
-            "the same dependencies."
-        )
 
 
 def _push(
@@ -725,17 +649,9 @@ def deploy(
         "--yes",
         "-y",
         help=(
-            "Commit uncommitted changes and accept the dependency plan without prompting, "
-            "with the default message. Does not approve consent requests: a deployment "
-            "that needs consent exits non-zero and lists them."
-        ),
-    ),
-    update: bool = typer.Option(
-        False,
-        "--update",
-        help=(
-            "Resolve the dependencies again, ignoring CANVAS_LOCK.json, and rewrite it with "
-            "what they resolve to."
+            "Commit uncommitted changes without prompting, with the default message. "
+            "Does not approve consent requests: a deployment that needs consent exits "
+            "non-zero and lists them."
         ),
     ),
 ) -> None:
@@ -780,17 +696,9 @@ def deploy(
     rolling back read that branch. Otherwise it builds on `main` and the checks read
     `main`.
 
-    A manifest with `dependencies`, such as a bundle, deploys them together with the
-    plugin. Each resolves to the newest version meeting its requirement among those
-    Canvas Platform holds and, for a dependency whose `source` your organization
-    publishes, its repository's release tags. A version only the repository holds is
-    cloned with your git credentials, validated and pushed to Canvas Platform; its
-    own dependencies are resolved the same way. The plan is printed before anything
-    is pushed, and confirmed at a terminal unless --yes is passed. What each
-    dependency resolved to is written to CANVAS_LOCK.json beside the manifest, and
-    later deploys install exactly that until --update, or until the manifest asks
-    for a version the lock does not meet. With --push-only, the dependencies are
-    pushed and locked, and nothing is deployed.
+    A manifest with `dependencies`, such as a bundle, deploys like any other
+    plugin: Canvas Platform resolves the dependencies, which their publishers have
+    already pushed, and installs them with it.
     """
     if push_only and (instance or ref is not None or no_push):
         raise typer.BadParameter(
@@ -810,7 +718,6 @@ def deploy(
         _require_branch_name(plugin_dir, branch)
     name = manifest_name(plugin_dir)
     require_platform_name(name)
-    manifest = dependencies.read_manifest(plugin_dir)
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
@@ -818,33 +725,24 @@ def deploy(
 
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
-    me = client.me()
-    declared = manifest.get("publisher")
-    publisher = _publisher(client, me, name, declared, pushing=pushing)
+    declared = read_manifest(plugin_dir).get("publisher")
+    publisher = _publisher(client, name, declared, pushing=pushing)
+    if push_only:
+        sha = _push(
+            client,
+            plugin_dir,
+            publisher,
+            name,
+            platform,
+            assume_yes=assume_yes,
+            snapshot=snapshot,
+            branch=branch,
+        )
+        print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
+        return
 
     # Resolved before pushing, so a deploy with no clear target moves nothing.
-    targets = (
-        []
-        if push_only
-        else _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
-    )
-    with tempfile.TemporaryDirectory(prefix="canvas-dependencies-") as scratch:
-        plan = (
-            _ensure_dependencies(
-                client,
-                me,
-                plugin_dir,
-                manifest,
-                publisher,
-                platform,
-                Path(scratch),
-                update=update,
-                assume_yes=assume_yes,
-            )
-            if manifest.get("dependencies")
-            else []
-        )
-
+    targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
     if pushing:
         deploy_ref = _push(
             client,
@@ -858,23 +756,13 @@ def deploy(
         )
     else:
         deploy_ref = ref or "main"
-    _write_lock(plugin_dir, plan)
-    if push_only:
-        print(
-            f"To install this commit on an instance: canvas deploy {plugin_dir} --ref "
-            f"{deploy_ref[:12]}"
-        )
-        return
 
     deploying = {"name": name, "ref": deploy_ref} | ({"publisher": declared} if declared else {})
     print(f"Deploying {name}@{deploy_ref[:12]} to {', '.join(targets)}…")
     _dispatch(
         client,
         "deploy",
-        [
-            deploying,
-            *({"name": d.name, "ref": str(d.revision), "publisher": d.publisher} for d in plan),
-        ],
+        [deploying],
         targets,
         what=f"Deploy of {name}",
         assume_yes=assume_yes,

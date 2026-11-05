@@ -2808,6 +2808,68 @@ def test_canvas_employee_deploys_a_plugin_under_its_existing_publisher(
     ]
 
 
+def test_canvas_employee_deploys_as_a_manifest_publisher_they_do_not_belong_to(
+    requests_mock: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A Canvas employee may deploy as the manifest's `publisher` when it already has the plugin."""
+    directory = tmp_path / "intake"
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({"name": "intake", "publisher": "other"})
+    )
+    requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
+    requests_mock.get(
+        f"{API}/plugins/intake?publisher=other", json={"name": "intake", "publisher": "other"}
+    )
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("succeeded"))
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--no-push", "--instance", "other-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(requests_mock, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": "main", "publisher": "other"}
+    ]
+
+
+@patch("subprocess.run")
+def test_deploy_of_a_bundle_names_only_the_bundle_and_shows_each_wave(
+    mock_run: Mock, api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """A bundle deploys like any plugin, leaving its dependencies for platform to resolve, and
+    each target's `wave` is shown.
+    """
+    directory = tmp_path / NAME
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps(
+            {
+                "name": NAME,
+                "bundle": True,
+                "dependencies": [{"name": "kit", "publisher": "acme", "version": "1.0.0"}],
+            }
+        )
+    )
+    targets = [
+        {"plugin": "kit", "instance": "acme-staging", "status": "succeeded", "wave": 0},
+        {"plugin": NAME, "instance": "acme-staging", "status": "succeeded", "wave": 1},
+    ]
+    api.get(f"{API}/deployments/6f1c", json=_deployment("succeeded", targets=targets))
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--no-push", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": "main"}
+    ]
+    assert "kit on acme-staging (wave 0): succeeded" in result.output
+    assert f"{NAME} on acme-staging (wave 1): succeeded" in result.output
+    mock_run.assert_not_called()
+
+
 def test_deploy_waits_through_consent_another_person_already_answered(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:

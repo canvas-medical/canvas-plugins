@@ -117,12 +117,10 @@ manifest_schema = {
     "$defs": {
         "dependencies": {
             "description": (
-                "Plugins that must be installed alongside this one, each resolved by Canvas "
-                "Platform from the revisions its publisher has pushed. 'version' is an exact "
-                "version, such as '1.16.0', or a PEP 440 specifier set, such as '>=0.1.1,<0.2'. "
-                "'publisher' is needed only when more than one publisher has a plugin by that name. "
-                "'source' is where `canvas deploy` fetches a version Canvas Platform does not hold "
-                "yet."
+                "Plugins that must be installed alongside this one, each named by its 'name', "
+                "the slug of the Canvas Platform organization that publishes it as 'publisher', "
+                "and an exact 'version', such as '1.16.0'. Each must already be on Canvas "
+                "Platform, which resolves and installs them."
             ),
             "type": "array",
             "items": {
@@ -131,27 +129,10 @@ manifest_schema = {
                     "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 63},
                     "publisher": {"type": "string", "minLength": 1},
                     "version": {"type": "string", "minLength": 1},
-                    "source": {"$ref": "#/$defs/dependency_source"},
                 },
-                "required": ["name", "version"],
+                "required": ["name", "publisher", "version"],
                 "additionalProperties": False,
             },
-        },
-        "dependency_source": {
-            "description": (
-                "A git repository holding the plugin. 'path' is the plugin's folder inside the "
-                "repository, when it is not the root. 'tag' names a release's tag, with "
-                "'{version}' standing for the version; without it, a release is tagged "
-                "'<name>-v<version>' or 'v<version>'."
-            ),
-            "type": "object",
-            "properties": {
-                "git": {"type": "string", "minLength": 1},
-                "path": {"type": "string", "minLength": 1},
-                "tag": {"type": "string", "pattern": r"\{version\}"},
-            },
-            "required": ["git"],
-            "additionalProperties": False,
         },
         "origins": {
             "type": "object",

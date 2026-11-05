@@ -47,11 +47,6 @@ def segment(value: str) -> str:
     return quote(value, safe="")
 
 
-def _publisher_query(publisher: str | None) -> str:
-    """The ``?publisher=<slug>`` that picks one publisher's plugin of a shared name."""
-    return f"?publisher={segment(publisher)}" if publisher else ""
-
-
 class PlatformClient:
     """Bearer-authenticated JSON calls against one platform origin."""
 
@@ -128,20 +123,12 @@ class PlatformClient:
 
     def plugin(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
         """``GET /api/v1/plugins/<name>``, or None when platform has no such plugin
-        the person may see (platform answers 404 for both).
+        the person may see (platform answers 404 for both). ``publisher`` picks one
+        publisher's plugin of a name several share.
         """
-        return self._found(f"/api/v1/plugins/{segment(name)}{_publisher_query(publisher)}")
-
-    def plugin_versions(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
-        """``GET /api/v1/plugins/<name>/versions``: the versions that reached ``main``,
-        newest first, or None when platform has no such plugin the person may see.
-        """
-        return self._found(f"/api/v1/plugins/{segment(name)}/versions{_publisher_query(publisher)}")
-
-    def _found(self, path: str) -> dict[str, Any] | None:
-        """GET ``path``, or None when platform answers 404."""
+        query = f"?publisher={segment(publisher)}" if publisher else ""
         try:
-            return self.get(path)
+            return self.get(f"/api/v1/plugins/{segment(name)}{query}")
         except PlatformError as error:
             if error.status == requests.codes.not_found:
                 return None
