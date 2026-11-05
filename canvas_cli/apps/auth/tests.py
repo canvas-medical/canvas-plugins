@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from canvas_cli.apps.auth import get_or_request_api_token
+from canvas_cli.apps.auth import get_or_request_api_token, utils
 
 
 @pytest.fixture
@@ -152,3 +153,23 @@ def test_get_or_request_api_token_raises_exception_if_expired_token(
         data="grant_type=client_credentials&scope=system/Plugins.*&client_id=id&client_secret=secret",
         timeout=30,
     )
+
+
+@pytest.mark.parametrize(
+    ("host", "section"),
+    [
+        ("https://acme-prod.canvasmedical.com", "acme-prod"),
+        ("http://localhost:8000", "localhost"),
+    ],
+)
+def test_get_api_client_credentials_reads_the_instance_section(
+    host: str, section: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A canvasmedical.com host reads its subdomain's section, and localhost its own."""
+    config_path = tmp_path / "credentials.ini"
+    config_path.write_text(f"[{section}]\nclient_id=id-{section}\nclient_secret=secret-{section}\n")
+    monkeypatch.setattr(utils, "CONFIG_PATH", config_path)
+
+    credentials = utils.get_api_client_credentials(host)
+
+    assert credentials == f"client_id=id-{section}&client_secret=secret-{section}"
