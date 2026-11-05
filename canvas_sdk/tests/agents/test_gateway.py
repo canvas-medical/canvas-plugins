@@ -5,7 +5,7 @@ import httpx2
 import pytest
 
 from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
-from canvas_sdk.agents.gateway import attempt_timeout, gateway_from_plugin_secrets
+from canvas_sdk.agents.gateway import agent_secrets, attempt_timeout, gateway_from_plugin_secrets
 from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
 
 GATEWAY_URL = "https://gateway.test"
@@ -132,3 +132,28 @@ def test_attempt_timeout_never_drops_below_a_second() -> None:
     """A run at its margin still gets a usable timeout; the tool loop stops it first."""
     assert attempt_timeout(0.5) == 1.0
     assert attempt_timeout(90, max_retries=2) == 30.0
+
+
+def test_with_model_keeps_the_url_key_and_attribution() -> None:
+    """A tier switch changes the default model and nothing a call is billed or routed by."""
+    gateway = LLMGateway(
+        base_url="https://gateway.test", api_key="k", attribution={"plugin": "p", "run-id": "r"}
+    )
+
+    cheap = gateway.with_model("claude-haiku-4-5")
+
+    assert (cheap.base_url, cheap.api_key, dict(cheap.attribution), cheap.model) == (
+        "https://gateway.test",
+        "k",
+        {"plugin": "p", "run-id": "r"},
+        "claude-haiku-4-5",
+    )
+    assert gateway.model == "claude-sonnet-4-6"
+    assert gateway.with_model(gateway.model) is gateway
+
+
+def test_agent_secrets_leave_out_the_gateway_key_and_the_handler_token() -> None:
+    """An agent sees its plugin's variables; the runner keeps the key it builds the gateway from."""
+    secrets = {"INFERENCE_GATEWAY_KEY": "k", "graphql_jwt": "t", "MODEL": "claude-haiku-4-5"}
+
+    assert agent_secrets(secrets) == {"MODEL": "claude-haiku-4-5"}
