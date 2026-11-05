@@ -142,7 +142,11 @@ from .prescription_change import (
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
-from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reason_for_visit import (
+    ReasonForVisitCodingFactory,
+    ReasonForVisitFactory,
+    ReasonForVisitSettingCodingFactory,
+)
 from .receipt import ReceiptFactory
 from .reference import ReferenceFactory
 from .referral import (
@@ -311,6 +315,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReasonForVisitSettingCodingFactory",
     "ReceiptFactory",
     "ReferenceFactory",
     "ReferralActionEventFactory",
