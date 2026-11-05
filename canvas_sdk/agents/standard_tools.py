@@ -38,6 +38,8 @@ from canvas_sdk.agents.tool_registry import (
     EffectField,
     FilterSpec,
     ToolRegistry,
+    command_type_active,
+    command_type_off_error,
     require_patient_id,
 )
 from canvas_sdk.commands import (
@@ -4150,6 +4152,9 @@ def _originate_review_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
                 "staff member started has one."
             ),
         }
+
+    if not command_type_active(PlanCommand.Meta.key):
+        return command_type_off_error(PlanCommand.Meta.key)
 
     narrative = (arguments.get("narrative") or "").strip()
     if not narrative:

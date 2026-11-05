@@ -4,6 +4,8 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
+from canvas_sdk.test_utils.agents import turn_on_command_types
+from canvas_sdk.test_utils.factories import CommandTypeSettingFactory
 
 
 def _passthrough(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
@@ -693,6 +695,50 @@ class _FakeCommand:
         )
 
 
+@pytest.fixture
+def fake_command_on(db: None) -> None:
+    """The instance has the fake command's type turned on."""
+    turn_on_command_types("fake_command")
+
+
+def _originate_fake(registry: ToolRegistry) -> tuple[dict[str, Any], list[Any]]:
+    registry.originate_command_tool(
+        name="originate_fake",
+        description="...",
+        command_class=_FakeCommand,
+        fields={"narrative": EffectField(type="string", description="...", required=True)},
+    )
+    effects: list[Any] = []
+    result = registry.execute(
+        "originate_fake",
+        {"narrative": "Recheck A1c."},
+        ctx={"note_id": "note-abc", "effects": effects},
+    )
+    return result, effects
+
+
+@pytest.mark.django_db
+def test_originate_command_tool_refuses_a_command_type_the_instance_turned_off() -> None:
+    """A draft the clinician could not add from the command menu is never staged."""
+    CommandTypeSettingFactory.create(schema_key="fake_command", active=False)
+
+    result, effects = _originate_fake(ToolRegistry())
+
+    assert result["ok"] is False
+    assert "fake_command command is turned off" in result["error"]
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_originate_command_tool_refuses_a_command_type_canvas_disabled() -> None:
+    """Canvas leaves a disabled command type out of the settings, so a missing one is off."""
+    result, effects = _originate_fake(ToolRegistry())
+
+    assert result["ok"] is False
+    assert effects == []
+
+
+@pytest.mark.usefixtures("fake_command_on")
 def test_originate_command_tool_builds_command_from_arguments() -> None:
     """The helper instantiates command_class with note_uuid + mapped arguments."""
     registry = ToolRegistry()
@@ -765,6 +811,7 @@ def test_originate_command_tool_synthesizes_schema_from_fields() -> None:
     assert definition["input_schema"]["required"] == ["narrative"]
 
 
+@pytest.mark.usefixtures("fake_command_on")
 def test_originate_command_tool_renames_via_command_field() -> None:
     """An EffectField with command_field=... maps the LLM-name to a different Command field."""
     registry = ToolRegistry()
@@ -820,6 +867,7 @@ def test_originate_command_tool_returns_structured_error_when_no_note() -> None:
     assert effects == [], "no effect should have been appended when the note lookup failed"
 
 
+@pytest.mark.usefixtures("fake_command_on")
 def test_originate_command_tool_custom_note_resolver() -> None:
     """A custom note_resolver is invoked instead of reading ctx['note_id']."""
     registry = ToolRegistry()
@@ -848,6 +896,7 @@ def test_originate_command_tool_custom_note_resolver() -> None:
     assert result["note_id"] == "note-from-patient-lookup"
 
 
+@pytest.mark.usefixtures("fake_command_on")
 def test_originate_command_tool_pre_build_hook_can_override_arguments() -> None:
     """The pre_build hook's return dict merges over the model's arguments."""
     registry = ToolRegistry()
@@ -894,6 +943,7 @@ def test_originate_command_tool_categories_kwarg_tags_the_tool() -> None:
     assert registry.resolve_allowed(["@clinical_writes"]) == frozenset({"originate_fake"})
 
 
+@pytest.mark.usefixtures("fake_command_on")
 def test_originate_command_tool_skips_missing_optional_arguments() -> None:
     """Optional fields the model didn't pass aren't passed to command_class either.
 

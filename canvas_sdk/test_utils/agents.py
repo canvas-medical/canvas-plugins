@@ -17,6 +17,11 @@ plugin-runner does::
 
     assert run.effects == []
     assert [call.name for call in run.tool_calls] == ["find_conditions"]
+
+A tool that stages a command refuses when the instance has its command type turned off,
+and a test database has no command type settings at all. Call
+:func:`turn_on_command_types` in a test (or an autouse fixture) that stages commands, as
+every command type is on in a new instance.
 """
 
 import copy
@@ -28,6 +33,7 @@ from uuid import uuid4
 
 from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 
+import canvas_sdk.commands  # noqa: F401  (importing it defines every SDK command)
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
@@ -35,7 +41,9 @@ from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
 from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects import Effect
+from canvas_sdk.v1.data import CommandTypeSetting
 
 
 def text(value: str) -> TextBlock:
@@ -137,6 +145,29 @@ class FakeGateway:
     def stream(self, **kwargs: Any) -> FakeStream:
         """Answer one streamed model call with the next queued reply."""
         return FakeStream(self.create(**kwargs))
+
+
+def _command_keys() -> list[str]:
+    """The schema key of every command the SDK defines."""
+    keys: set[str] = set()
+    pending = list(_BaseCommand.__subclasses__())
+    while pending:
+        command_class = pending.pop()
+        pending.extend(command_class.__subclasses__())
+        key = getattr(getattr(command_class, "Meta", None), "key", None)
+        if key:
+            keys.add(key)
+    return sorted(keys)
+
+
+def turn_on_command_types(*schema_keys: str) -> None:
+    """Turn on the named command types in the test database, or every SDK command type.
+
+    A new instance has every command type on, and the command-staging tools refuse a type
+    it has turned off, which is every type in a test database until this runs.
+    """
+    for key in schema_keys or _command_keys():
+        CommandTypeSetting.objects.update_or_create(schema_key=key, defaults={"active": True})
 
 
 def prepare_agent(
@@ -241,4 +272,5 @@ __exports__ = (
     "run_agent",
     "text",
     "tool_use",
+    "turn_on_command_types",
 )

@@ -9,6 +9,7 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL
+from canvas_sdk.v1.data.command_type_setting import CommandTypeSetting
 
 # The most of one tool's result the model is sent, unless the tool registers its own
 # limit. The history window cannot drop the current turn's results, so an uncapped
@@ -170,6 +171,26 @@ def require_patient_id(ctx: dict[str, Any]) -> str:
     if not patient_id:
         raise ValueError("This run is not about a patient, so patient tools are unavailable")
     return patient_id
+
+
+def command_type_active(schema_key: str) -> bool:
+    """Whether the instance has the command type with this schema key turned on.
+
+    Canvas leaves a command type it disabled out of the settings, so a type missing from
+    them is off, as it is in the chart's command menu.
+    """
+    return CommandTypeSetting.objects.filter(schema_key=schema_key, active=True).exists()
+
+
+def command_type_off_error(schema_key: str) -> dict[str, Any]:
+    """The result a tool returns for a command type the instance has turned off."""
+    return {
+        "ok": False,
+        "error": (
+            f"The {schema_key} command is turned off on this instance, so it cannot be "
+            "staged. Tell the clinician rather than trying another command in its place."
+        ),
+    }
 
 
 def _note_id_from_ctx(ctx: dict[str, Any]) -> str | None:
@@ -895,10 +916,18 @@ class ToolRegistry:
         }
         _refuse_fields_targeting(name, command_field_map, {"note_uuid"})
 
+        # Canvas Command classes carry a Meta inner class with a `key` (e.g., "plan",
+        # "prescribe"), the command type's schema key; fall back to the class name if
+        # Meta.key isn't set so non-Command effect classes work too.
+        meta_cls = getattr(command_class, "Meta", None)
+        command_key: str | None = getattr(meta_cls, "key", None) if meta_cls else None
+
         def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
             note_uuid = note_resolver(ctx)
             if not note_uuid:
                 return {"ok": False, "error": no_note_error}
+            if command_key and not command_type_active(command_key):
+                return command_type_off_error(command_key)
 
             # Build the Command's kwargs from the model's arguments, applying
             # any per-field rename via command_field. Falsy values (including
@@ -923,11 +952,6 @@ class ToolRegistry:
             command = command_class(**command_kwargs)
             effects.append(command.originate())
 
-            # Canvas Command classes carry a Meta inner class with a `key`
-            # (e.g., "plan", "prescribe"); fall back to the class name if
-            # Meta.key isn't set so non-Command effect classes work too.
-            meta_cls = getattr(command_class, "Meta", None)
-            command_key = getattr(meta_cls, "key", None) if meta_cls else None
             return {
                 "ok": True,
                 "note_id": note_uuid,

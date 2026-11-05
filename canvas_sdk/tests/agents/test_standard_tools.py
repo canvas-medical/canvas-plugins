@@ -1203,10 +1203,12 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         LabPartnerTestFactory,
         NoteTypeFactory,
         PracticeLocationFactory,
+        ServiceProviderFactory,
     )
     from canvas_sdk.v1.data import Condition
 
     task = TaskFactory.create(patient=patient)
+    specialist = ServiceProviderFactory.create()
     lab_test = LabPartnerTestFactory.create()
     note_type = NoteTypeFactory.create(category="review")
     practice_location = PracticeLocationFactory.create()
@@ -1282,6 +1284,8 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         "originate_vitals": {"pulse": 72},
         "originate_resolve_condition": {"condition_id": str(condition.id)},
         "originate_remove_allergy": {"allergy_id": str(allergy.id)},
+        "originate_imaging_order": {"image_code": "73721"},
+        "originate_refer": {"service_provider_id": str(specialist.id)},
     }
 
 
