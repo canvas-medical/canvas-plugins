@@ -137,7 +137,7 @@ class AgentPlugin(ABC):
         )
 
     def tool_context(
-        self, gateway: LLMGateway, extra: dict[str, Any] | None = None
+        self, gateway: LLMGateway | None = None, extra: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """The context every tool call of this run receives.
 
@@ -148,6 +148,9 @@ class AgentPlugin(ABC):
         tools hand to sub-agents. ``note_id`` is the subject's note, or for a run a
         staff member started, that staff member's open note on the patient.
         ``extra`` adds agent-specific keys and cannot replace any of these.
+
+        Without a ``gateway``, as in ``load_state`` reading through the agent's tools
+        before any model call, the tools that make model calls of their own refuse.
         """
         extra = extra or {}
         if reserved := sorted(TOOL_CONTEXT_KEYS & extra.keys()):
