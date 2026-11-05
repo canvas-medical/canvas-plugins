@@ -13,7 +13,7 @@ from canvas_sdk.test_utils.agents import (
     text,
     tool_use,
 )
-from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
+from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory, ProtocolCurrentFactory
 
 # The advisor's grant in CANVAS_MANIFEST.json.
 GRANT = ["@clinical_reads", "@clinical_alerts"]
@@ -64,3 +64,45 @@ def test_the_advisor_never_sends_the_patients_name() -> None:
 
     sent = json.dumps(gateway.requests[0]["messages"])
     assert "Zelda" not in sent and "Quartermaine" not in sent
+
+
+@pytest.mark.django_db
+def test_the_advisor_starts_from_its_own_cards_read_through_find_protocol_cards() -> None:
+    """The run is briefed with this plugin's cards, as the tool returns them, and no others."""
+    patient = PatientFactory.create()
+    ProtocolCurrentFactory.create(
+        patient=patient,
+        plugin_name="canvas__agent_runner_poc",
+        protocol_key="recheck-a1c",
+        title="Recheck A1c",
+    )
+    ProtocolCurrentFactory.create(patient=patient, plugin_name="another_plugin", title="Not ours")
+    ProtocolCurrentFactory.create(plugin_name="canvas__agent_runner_poc", title="Another patient's")
+    agent = prepare_agent(
+        LongitudinalCareAdvisor, allowed=GRANT, subject=RunSubject(patient_id=patient.id)
+    )
+
+    state = agent.load_state("patient")
+    gateway = FakeGateway(reply(text("Nothing new.")))
+    run_agent(agent, gateway)
+
+    assert [(card["protocol_key"], card["title"]) for card in state.data["cards"]] == [
+        ("recheck-a1c", "Recheck A1c")
+    ]
+    sent = gateway.requests[0]["messages"][0]["content"]
+    assert '"protocol_key": "recheck-a1c"' in sent
+    assert "Not ours" not in sent and "Another patient's" not in sent
+
+
+@pytest.mark.django_db
+def test_the_advisor_cannot_start_without_the_grant_that_reads_its_cards() -> None:
+    """Its state comes through find_protocol_cards, so a deployment that removes the grant fails loudly."""
+    patient = PatientFactory.create()
+    agent = prepare_agent(
+        LongitudinalCareAdvisor,
+        allowed=["@clinical_alerts"],
+        subject=RunSubject(patient_id=patient.id),
+    )
+
+    with pytest.raises(ValueError, match="find_protocol_cards"):
+        agent.load_state("patient")
