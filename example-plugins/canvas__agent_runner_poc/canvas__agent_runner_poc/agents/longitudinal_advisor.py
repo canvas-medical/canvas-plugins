@@ -1,12 +1,12 @@
+import json
 from typing import Any
 
 from canvas__agent_runner_poc.agents.longitudinal_advisor_tools import tools as _registered_tools
-from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
-from canvas_sdk.v1.data import ProtocolCurrent
+from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway, ToolRegistry
 from logger import log
 
-# Used both in find_protocol_cards filters and in the user-message preamble
-# so the agent has a clear handle on "these are mine vs. someone else's."
+# Scopes load_state's find_protocol_cards to this plugin's own cards: the other
+# plugins' cards are not this agent's to update.
 PLUGIN_NAME = "canvas__agent_runner_poc"
 
 SYSTEM_PROMPT = (
@@ -46,37 +46,25 @@ SYSTEM_PROMPT = (
 MAX_TURNS = 10
 
 
-def _format_protocol_card_context(patient_id: str) -> str:
-    """Build the human-readable preamble listing this plugin's existing cards.
+# The most of this plugin's cards a run reviews: find_protocol_cards' own ceiling.
+MAX_CARDS = 100
 
-    Includes every card staged by this plugin regardless of status — the agent
-    decides whether to leave each alone, mark it satisfied, or update its
-    narrative. Other plugins' cards are not surfaced (they're not ours to
-    modify).
-    """
-    cards = list(
-        ProtocolCurrent.objects.filter(
-            patient__id=patient_id,
-            plugin_name=PLUGIN_NAME,
-        ).order_by("-created")
+
+def _cards_message(cards: list[dict[str, Any]]) -> str:
+    """The user message: the task, and this plugin's cards from earlier visits."""
+    task = (
+        "The patient just had a visit complete (note locked). Review the chart for follow-up needs."
     )
-
     if not cards:
         return (
-            "No protocol cards from prior visits. Identify new follow-up needs from this encounter."
+            f"{task}\n\nNo protocol cards from prior visits. Identify new follow-up needs "
+            "from this encounter."
         )
-
-    lines: list[str] = [
-        "Protocol cards staged by this plugin on prior visits "
-        "(update via add_or_update_protocol_card with the same card_key):",
-    ]
-    for card in cards:
-        lines.append(
-            f"  - card_key={card.protocol_key!r} status={card.status!r} title={card.title!r}"
-        )
-        if card.narrative:
-            lines.append(f"    narrative: {card.narrative}")
-    return "\n".join(lines)
+    return (
+        f"{task}\n\nProtocol cards staged by this plugin on prior visits, as "
+        "find_protocol_cards returns them (update one via add_or_update_protocol_card "
+        f"with its protocol_key as card_key):\n{json.dumps(cards, indent=1)}"
+    )
 
 
 class LongitudinalCareAdvisor(AgentPlugin):
@@ -88,16 +76,27 @@ class LongitudinalCareAdvisor(AgentPlugin):
     identifier; status updates flow through the same effect. The clinician
     sees and interacts with the cards in the chart UI.
 
-    No durable state in AgentState — every cross-visit fact is queryable
-    via ProtocolCurrent.
+    Its state is the cards: ``load_state`` reads them, and the run's card effects are
+    the only writes, so ``save_state`` has nothing to keep.
     """
 
     # Platform-scoped to the manifest's tools.allowed before run() fires.
     tools = _registered_tools
 
     def load_state(self, scope_key: str) -> AgentState:
-        """No serialized state — durable state lives in ProtocolCurrent."""
-        return AgentState()
+        """The protocol cards this plugin staged on the patient on earlier visits.
+
+        Read through find_protocol_cards, the tool the model also has, so the cards come
+        from one query in one shape and within the run's patient and tool grant. Runs on
+        the patient happen one at a time, so the last run's cards are applied by now.
+        """
+        tools = self.tools or ToolRegistry()
+        cards = tools.execute(
+            "find_protocol_cards",
+            {"plugin_name": PLUGIN_NAME, "limit": MAX_CARDS},
+            ctx=self.tool_context(),
+        )
+        return AgentState(data={"cards": cards})
 
     def run(
         self,
@@ -105,19 +104,11 @@ class LongitudinalCareAdvisor(AgentPlugin):
         gateway: LLMGateway,
         trigger_payload: dict,
     ) -> AgentRunResult:
-        """Brief the model with existing cards + drive a tool-use loop."""
-        context_block = _format_protocol_card_context(self.subject.patient_id)
-
+        """Brief the model with this plugin's cards, then drive the tool loop."""
+        # No name or other identifiers: the tools are already scoped to the patient, so
+        # the model needs only the task and the cards.
         messages: list[dict[str, Any]] = [
-            {
-                "role": "user",
-                # No name or other identifiers: the tools are already scoped to
-                # the patient, so the model needs only the task and the cards.
-                "content": (
-                    "The patient just had a visit complete (note locked). Review "
-                    f"the chart for follow-up needs.\n\n{context_block}"
-                ),
-            }
+            {"role": "user", "content": _cards_message(state.data.get("cards") or [])}
         ]
         result = self.run_tool_loop(
             gateway, system=SYSTEM_PROMPT, messages=messages, max_turns=MAX_TURNS
@@ -130,5 +121,5 @@ class LongitudinalCareAdvisor(AgentPlugin):
         return AgentRunResult(state=state, effects=result.effects)
 
     def save_state(self, scope_key: str, state: AgentState) -> None:
-        """No-op — durable state lives in ProtocolCurrent, not AgentState."""
+        """Nothing to write: the cards change only through the run's effects."""
         return None
