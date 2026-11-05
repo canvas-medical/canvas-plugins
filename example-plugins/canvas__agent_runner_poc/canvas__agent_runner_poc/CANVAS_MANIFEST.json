@@ -19,7 +19,7 @@
             },
             {
                 "class": "canvas__agent_runner_poc.handlers.intake_trigger:DocumentIntakeTrigger",
-                "description": "Starts DocumentIntakeAgent on each document that arrives in the data integration queue"
+                "description": "Starts DocumentIntakeAgent on each document that arrives in the data integration queue, on the channels INTAKE_CHANNELS lists when it lists any"
             }
         ],
         "agents": [
@@ -92,7 +92,8 @@
         "access": "read_write"
     },
     "variables": [
-        {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true}
+        {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true},
+        {"name": "INTAKE_CHANNELS"}
     ],
     "tags": {},
     "references": [],

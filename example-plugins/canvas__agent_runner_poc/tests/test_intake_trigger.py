@@ -30,3 +30,35 @@ def test_a_received_document_starts_intake_on_it() -> None:
         str(document.id),
         None,
     )
+
+
+def _received(channel: str) -> Event:
+    document = IntegrationTaskFactory.create(patient=None)
+    return Event(
+        EventRequest(
+            type=EventType.DOCUMENT_RECEIVED,
+            target=str(document.id),
+            context=json.dumps({"document": {"id": str(document.id), "channel": channel}}),
+        )
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("channels", "channel", "runs"),
+    [
+        ("", "document_upload", 1),
+        ("fax", "fax", 1),
+        ("fax", "document_upload", 0),
+        (" Fax, lab ", "lab", 1),
+    ],
+)
+def test_intake_runs_only_on_the_channels_an_operator_lists(
+    channels: str, channel: str, runs: int
+) -> None:
+    """INTAKE_CHANNELS narrows intake, such as to faxes while another agent takes uploads."""
+    secrets = {"INTAKE_CHANNELS": channels} if channels else {}
+
+    effects = DocumentIntakeTrigger(_received(channel), secrets).compute()
+
+    assert len(effects) == runs
