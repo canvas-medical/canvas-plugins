@@ -11,6 +11,7 @@ from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
     AgentState,
+    LLMGateway,
     RunSubject,
     ToolRegistry,
     require_patient_id,
@@ -815,3 +816,35 @@ def test_a_model_loop_inside_a_tool_never_streams_its_text() -> None:
     assert feed is not None
     texts = [text for kind, text in _events(feed) if kind == "text"]
     assert texts == ["It covers the visit."]
+
+
+def test_a_tools_own_model_call_uses_the_loops_model() -> None:
+    """read_document and its kind call the model on ctx["gateway"], which follows the loop's model."""
+    seen: list[str] = []
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="read_file",
+        description="Reads a file with a model call of its own.",
+        input_schema={"type": "object", "properties": {}},
+    )
+    def _read_file(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        seen.append(ctx["gateway"].model)
+        return "read"
+
+    run_gateway = LLMGateway(base_url="https://gateway.test", api_key="k")
+    ctx: dict[str, Any] = {"gateway": run_gateway, "effects": []}
+    client = FakeGateway(reply(tool_use("read_file")), reply(text("done")))
+
+    run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=registry,
+        ctx=ctx,
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+        model="claude-haiku-4-5",
+    )
+
+    assert seen == ["claude-haiku-4-5"]
+    assert client.requests[0]["model"] == "claude-haiku-4-5"
+    assert ctx["gateway"] is run_gateway, "the caller's context keeps the run's gateway"

@@ -227,3 +227,20 @@ def test_a_subagent_cannot_widen_past_the_parents_grant() -> None:
     run_subagent(spec, "question", parent_tools=tools, parent_ctx={}, gateway=gateway)  # type: ignore[arg-type]
 
     assert [d["name"] for d in gateway.requests[0]["tools"]] == ["read_chart"]
+
+
+def test_a_subagent_calls_the_model_its_spec_names() -> None:
+    """A cheap extraction can run on a cheap model while the parent uses a stronger one."""
+    gateway = FakeGateway(reply(text("Two values.")))
+    spec = SubAgentSpec(name="extract", system_prompt="Extract.", model="claude-haiku-4-5")
+
+    answer = run_subagent(
+        spec,
+        "Read it.",
+        parent_tools=ToolRegistry(),
+        parent_ctx={"effects": []},
+        gateway=gateway,  # type: ignore[arg-type]
+    )
+
+    assert answer == "Two values."
+    assert gateway.requests[0]["model"] == "claude-haiku-4-5"

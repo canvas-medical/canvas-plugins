@@ -74,6 +74,7 @@ class EchoAgent(AgentPlugin):
                 ],
                 "run_id": self.run_id,
                 "gateway_model": gateway.model,
+                "secrets": dict(self.secrets),
             }
         )
         return AgentRunResult(

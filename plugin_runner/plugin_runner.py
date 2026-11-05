@@ -54,7 +54,7 @@ from canvas_sdk.agents import (
     RunRequester,
     RunSubject,
 )
-from canvas_sdk.agents.gateway import gateway_from_plugin_secrets
+from canvas_sdk.agents.gateway import agent_secrets, gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
@@ -766,6 +766,7 @@ class PluginRunner(PluginRunnerServicer):
                             agent, (plugin.get("handler") or {}).get("tools") or {}
                         )
                         agent.run_id = request.run_id
+                        agent.secrets = agent_secrets(plugin.get("secrets") or {})
                         # Lifecycle hooks: on_run_start before
                         # load_state, on_run_end after a successful save_state,
                         # on_run_error if anything in between raises. Hook

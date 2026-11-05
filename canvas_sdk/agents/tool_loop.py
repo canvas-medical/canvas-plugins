@@ -198,7 +198,9 @@ def run_tool_loop(
         messages: The conversation so far, ending with the turn to answer. Not modified.
         max_turns: The most model calls to make.
         max_tokens: ``max_tokens`` for each call.
-        model: The model to call; defaults to ``gateway.model``.
+        model: The model to call; defaults to ``gateway.model``. The tools that make
+            model calls of their own, such as ``read_document``, use it too: the loop
+            hands them ``ctx["gateway"]`` with this model as its default.
         history_chars: The size budget for the history sent each turn
             (:func:`window_messages`); ``None`` sends all of it. The full history is
             always returned in :attr:`ToolLoopResult.messages`.
@@ -214,6 +216,10 @@ def run_tool_loop(
         else system
     )
     result = ToolLoopResult(messages=transcript, effects=ctx.setdefault("effects", []))
+    ctx_gateway = ctx.get("gateway")
+    if model and isinstance(ctx_gateway, LLMGateway):
+        # A copy, so the caller's context keeps its gateway; the effects list is shared.
+        ctx = {**ctx, "gateway": ctx_gateway.with_model(model)}
 
     for turn in range(max_turns):
         if on_turn is not None:
