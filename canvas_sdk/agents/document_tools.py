@@ -18,6 +18,13 @@ from typing import Any
 
 from django.db.models import Q
 
+from canvas_sdk.agents.printed_identifiers import (
+    LEGIBILITY,
+    REPAIRED,
+    SWAPPED,
+    check_printed,
+    repair_candidates,
+)
 from canvas_sdk.agents.standard_tools import answer_from_file, standard_tools
 from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
@@ -83,6 +90,44 @@ _PATIENT_PROPERTIES = {
             "The MRN the document shows, whether Canvas's or the sending organization's."
         ),
     },
+}
+
+
+_PRINTED_PROPERTIES = {
+    "as_printed": {
+        "type": "object",
+        "description": (
+            "For a scanned or faxed document: each identifier exactly as printed, "
+            "character for character, misprints and all (for example 'DOE, J0HN' or "
+            "'DOB: 03/O9/1971'). With it, the identifiers read are checked against the "
+            "print, and a common fax misread is tried when they match no one."
+        ),
+        "properties": {
+            "name": {"type": "string", "description": "The patient's name as printed."},
+            "birth_date": {"type": "string", "description": "The birth date as printed."},
+            "mrn": {"type": "string", "description": "The MRN as printed."},
+        },
+    },
+    "legibility": {
+        "type": "string",
+        "enum": list(LEGIBILITY),
+        "description": (
+            "How readable the identifiers are: clear; readable_with_artifacts (scan noise, "
+            "but every character can be made out); illegible (any character is a guess)."
+        ),
+    },
+    "handwritten": {"type": "boolean", "description": "True when an identifier is handwritten."},
+    "pages_disagree": {
+        "type": "boolean",
+        "description": "True when pages show different patients' identifiers.",
+    },
+}
+
+# Shown with a patient matched only after a fax misread was repaired, or with the names
+# the other way round, so the reviewer checks it.
+MATCH_LABELS = {
+    REPAIRED: "Matched after fax misread fix",
+    SWAPPED: "Matched with first/last name swapped",
 }
 
 
@@ -179,6 +224,39 @@ def _matching_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str]]
     return found, matched_on
 
 
+def _document_patients(arguments: dict[str, Any]) -> tuple[list[Any], list[str], str, str]:
+    """The patients the document's identifiers match, what they matched on, how, and why not.
+
+    Returns ``(found, matched_on, how, refused)``. Identifiers passed with their printed
+    text are checked first (:func:`check_printed`), and ``refused`` says why when they
+    cannot be trusted. When the identifiers as read match no one, the readings a fax
+    misread or a name order slip would explain are tried (:func:`repair_candidates`), and
+    a patient is found only when every reading that matches names that one patient; ``how``
+    then says which (``fax_repair`` or ``name_swapped``). A reading that matches several
+    patients ends the search with no one.
+    """
+    if refused := check_printed(arguments):
+        return [], [], "", refused
+    found, matched_on = _matching_patients(arguments)
+    if found or not arguments.get("as_printed"):
+        return found, matched_on, "", ""
+    hits: dict[str, tuple[list[Any], list[str], str]] = {}
+    for how, identifiers in repair_candidates(arguments):
+        try:
+            repaired, repaired_on = _matching_patients(identifiers)
+        except ValueError:
+            continue
+        if len(repaired) > 1:
+            return repaired, repaired_on, how, ""
+        if repaired:
+            hits.setdefault(str(repaired[0].id), (repaired, repaired_on, how))
+    if len(hits) == 1:
+        return (*next(iter(hits.values())), "")
+    if hits:
+        return [found[0] for found, _, _ in hits.values()], matched_on, "", ""
+    return [], matched_on, "", ""
+
+
 def _no_match(found: list[Any]) -> dict[str, Any]:
     if not found:
         return {"match": None, "reason": "No patient matches; a person files this document."}
@@ -250,9 +328,14 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
         "name and MRN when the document gives them, exactly as the document shows them. "
         "Returns the patient's id only when exactly one matches; otherwise it says none "
         "or several did and names no one. Never guess or loosen identifiers to get a "
-        "match: a document no one patient matches is for a person to file."
+        "match: a document no one patient matches is for a person to file. On a scan or "
+        "fax, also pass each identifier `as_printed` and the `legibility`: the code checks "
+        "the values against the print and tries common fax misreads itself."
     ),
-    input_schema={"type": "object", "properties": _PATIENT_PROPERTIES},
+    input_schema={
+        "type": "object",
+        "properties": {**_PATIENT_PROPERTIES, **_PRINTED_PROPERTIES},
+    },
     categories=("intake_reads",),
     required_permissions=(QUEUE_PERMISSION,),
     returns_description=(
@@ -265,13 +348,15 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
 def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """The one patient the document's identifiers match, if exactly one does."""
     require_document_id(ctx)
-    found, matched_on = _matching_patients(arguments)
+    found, matched_on, how, refused = _document_patients(arguments)
+    if refused:
+        return {"match": None, "reason": refused}
     if len(found) != 1:
         return _no_match(found)
     return {
         "match": {"patient_id": str(found[0].id)},
-        "matched_on": ", ".join(matched_on),
-        "confidence": _match_confidence(matched_on),
+        "matched_on": ", ".join(matched_on + ([how] if how else [])),
+        "confidence": "medium" if how else _match_confidence(matched_on),
     }
 
 
@@ -384,11 +469,12 @@ def _find_report_templates(
         "Suggest, on the document's review form, the patient the document is for. Pass "
         "the identifiers exactly as the document shows them, as for `match_patient`: the "
         "patient is matched in code and suggested only when exactly one matches. Files "
-        "nothing; a person confirms the patient."
+        "nothing; a person confirms the patient. On a scan or fax, pass `as_printed` and "
+        "`legibility` as for `match_patient`."
     ),
     input_schema={
         "type": "object",
-        "properties": {**_PATIENT_PROPERTIES, "label": _LABEL_PROPERTY},
+        "properties": {**_PATIENT_PROPERTIES, **_PRINTED_PROPERTIES, "label": _LABEL_PROPERTY},
     },
     categories=("intake_writes",),
     required_permissions=(QUEUE_PERMISSION,),
@@ -403,22 +489,25 @@ def _find_report_templates(
 def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """Suggest the one patient the document's identifiers match."""
     document_id = require_document_id(ctx)
-    found, matched_on = _matching_patients(arguments)
+    found, matched_on, how, refused = _document_patients(arguments)
+    if refused:
+        return {"ok": False, "match": None, "reason": refused}
     if len(found) != 1:
         return {"ok": False, **_no_match(found)}
     patient = found[0]
-    confidence = _match_confidence(matched_on)
+    confidence = "medium" if how else _match_confidence(matched_on)
+    labeled = {**arguments, "label": arguments.get("label") or MATCH_LABELS.get(how, "")}
     ctx["effects"].append(
         LinkDocumentToPatient(
             document_id=document_id,
             patient_key=str(patient.id),
-            annotations=_annotations(arguments, confidence=confidence, prefix="Match"),
+            annotations=_annotations(labeled, confidence=confidence, prefix="Match"),
         ).apply()
     )
     return {
         "ok": True,
         "patient_id": str(patient.id),
-        "matched_on": ", ".join(matched_on),
+        "matched_on": ", ".join(matched_on + ([how] if how else [])),
         "confidence": confidence,
     }
 
