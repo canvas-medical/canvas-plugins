@@ -162,6 +162,20 @@ def _immunization_rows(query: str) -> list[dict[str, Any]]:
     ]
 
 
+def _imaging_study_rows(query: str) -> list[dict[str, Any]]:
+    """Imaging studies as the chart's Imaging Order command lists them."""
+    body = _get(
+        science_http,
+        f"/parse-templates/imaging-reports?format=json&limit={MAX_CODE_CANDIDATES}"
+        f"&query={quote(query, safe='')}",
+    )
+    return [
+        {"image_code": str(row["code"]), "display": str(row.get("name") or "")}
+        for row in _items(body)
+        if row.get("code")
+    ]
+
+
 CODE_SEARCHES = {
     "condition": _condition_rows,
     "medical_history": _medical_history_rows,
@@ -170,19 +184,21 @@ CODE_SEARCHES = {
     "family_history": _family_history_rows,
     "surgical_history": _surgical_history_rows,
     "immunization": _immunization_rows,
+    "imaging_study": _imaging_study_rows,
 }
 
 
 @standard_tools.tool(
     name="find_clinical_codes",
     description=(
-        "Look up the codes a history command needs, by name, from Canvas's own "
+        "Look up the codes a history or order command needs, by name, from Canvas's own "
         "vocabularies, as the chart's pickers do. `kind` is what to look up: "
         "`medical_history` (past conditions, for `originate_medical_history`), "
         "`condition` (ICD-10 diagnoses), `medication` (FDB, for "
         "`originate_medication_statement`), `allergen` (for `originate_allergy`), "
-        "`family_history` and `surgical_history` (SNOMED, for the history tools), or "
-        "`immunization` (CVX and CPT, for `originate_immunization_statement`). Use the "
+        "`family_history` and `surgical_history` (SNOMED, for the history tools), "
+        "`immunization` (CVX and CPT, for `originate_immunization_statement`), or "
+        "`imaging_study` (for `originate_imaging_order`). Use the "
         "codes it returns exactly; never write a code from memory. When several "
         "candidates fit, ask the clinician which one they mean."
     ),
@@ -202,7 +218,8 @@ CODE_SEARCHES = {
         "Array of up to 10 candidates, each with `display` and its codes: `icd10_code` "
         "(condition, medical_history), `snomed_code` (condition, family_history, "
         "surgical_history), `fdb_code` and `rxnorm_rxcui` (medication), `concept_id` and "
-        "`concept_type` (allergen), or `cvx_code` and `cpt_code` (immunization)."
+        "`concept_type` (allergen), `cvx_code` and `cpt_code` (immunization), or "
+        "`image_code` (imaging_study)."
     ),
     progress_label="Looking up codes",
 )

@@ -3,6 +3,7 @@ from canvas_sdk.agents import (
     command_edit_tools,  # noqa: F401  (importing it registers the draft edit tools)
     document_tools,  # noqa: F401  (importing it registers the intake tools)
     history_tools,  # noqa: F401  (importing it registers the history tools)
+    order_tools,  # noqa: F401  (importing it registers the imaging order and referral tools)
 )
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
