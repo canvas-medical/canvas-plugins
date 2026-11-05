@@ -286,6 +286,94 @@ def test_read_lock_refuses_an_unknown_lock_version(tmp_path: Path) -> None:
         dependencies.read_lock(tmp_path)
 
 
+def test_read_lock_refuses_an_unreadable_lock(tmp_path: Path) -> None:
+    """A lock that is not JSON is refused, naming the file."""
+    (tmp_path / "CANVAS_LOCK.json").write_text("{not json")
+    with pytest.raises(typer.BadParameter, match="Could not read"):
+        dependencies.read_lock(tmp_path)
+
+
+def test_read_manifest_refuses_a_manifest_that_is_not_an_object(tmp_path: Path) -> None:
+    """A manifest holding a JSON array rather than an object is refused."""
+    (tmp_path / "CANVAS_MANIFEST.json").write_text("[]")
+    with pytest.raises(typer.BadParameter, match="does not hold a JSON object"):
+        dependencies.read_manifest(tmp_path)
+
+
+class _Platform:
+    """A stand-in for PlatformClient answering ``plugin_versions`` from a fixed table."""
+
+    def __init__(self, held: dict[str, dict[str, Any]] | None = None) -> None:
+        self.held = held or {}
+
+    def plugin_versions(self, name: str, publisher: str | None) -> dict[str, Any] | None:
+        return self.held.get(name)
+
+
+def _resolver(
+    tmp_path: Path,
+    held: dict[str, dict[str, Any]] | None = None,
+    lock: dict[str, dict[str, Any]] | None = None,
+) -> dependencies.Resolver:
+    return dependencies.Resolver(
+        client=_Platform(held),  # type: ignore[arg-type]
+        default_publisher="acme",
+        pushable={"acme"},
+        lock=lock or {},
+        workdir=tmp_path,
+    )
+
+
+def test_resolve_refuses_a_requirement_that_is_not_a_specifier(tmp_path: Path) -> None:
+    """A version requirement that is neither a version nor a specifier set is refused."""
+    manifest = {"name": ROOT, "dependencies": [{"name": "kit", "version": "not a spec!"}]}
+    with pytest.raises(typer.BadParameter, match="neither a version nor a version specifier"):
+        _resolver(tmp_path).resolve(manifest)
+
+
+def test_resolve_records_a_repeated_requirement_once(tmp_path: Path) -> None:
+    """A plugin required twice by one manifest is resolved once and lists its requirer once."""
+    held = {"kit": {"publisher": "acme", "versions": [{"version": "0.2.0", "sha": "a" * 40}]}}
+    manifest = {
+        "name": ROOT,
+        "dependencies": [
+            {"name": "kit", "version": ">=0.1"},
+            {"name": "kit", "version": "0.2.0"},
+        ],
+    }
+    [kit] = _resolver(tmp_path, held).resolve(manifest)
+    assert (kit.version, kit.required_by) == ("0.2.0", [ROOT])
+
+
+def test_resolve_refuses_conflicting_requirements(tmp_path: Path) -> None:
+    """A second requirement the version already resolved does not meet is refused."""
+    held = {"kit": {"publisher": "acme", "versions": [{"version": "0.2.0", "sha": "a" * 40}]}}
+    manifest = {
+        "name": ROOT,
+        "dependencies": [
+            {"name": "kit", "version": ">=0.1"},
+            {"name": "kit", "version": ">=1"},
+        ],
+    }
+    with pytest.raises(typer.BadParameter, match="resolved it to 0.2.0"):
+        _resolver(tmp_path, held).resolve(manifest)
+
+
+def test_resolve_refuses_a_dependency_with_no_source(tmp_path: Path) -> None:
+    """A dependency platform lacks and that names no source cannot be resolved."""
+    manifest = {"name": ROOT, "dependencies": [{"name": "kit", "version": ">=0.1"}]}
+    with pytest.raises(typer.BadParameter, match="declares no source"):
+        _resolver(tmp_path).resolve(manifest)
+
+
+def test_resolve_refuses_a_locked_revision_platform_lacks_with_no_source(tmp_path: Path) -> None:
+    """A locked revision platform no longer holds, with no source to fetch it from, is refused."""
+    lock = {"kit": {"version": "0.2.0", "publisher": "acme", "revision": "a" * 40}}
+    manifest = {"name": ROOT, "dependencies": [{"name": "kit", "version": ">=0.1"}]}
+    with pytest.raises(typer.BadParameter, match="not fetched from a source you can push"):
+        _resolver(tmp_path, lock=lock).resolve(manifest)
+
+
 def test_ls_remote_tags_reports_the_commit_an_annotated_tag_points_at(source: Path) -> None:
     """Annotated and lightweight tags both map to their commit."""
     annotated = _release(source, "0.1.0", "v0.1.0")
