@@ -876,7 +876,7 @@ def test_deploy_branch_pushes_head_to_that_branch_and_deploys_the_pushed_commit(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
     assert f"Pushed {NAME} {head[:12]} to feature-x on Canvas Platform." in result.output
 
@@ -1014,7 +1014,7 @@ def test_deploy_branch_rerun_after_push_only_deploys_the_pushed_commit(
     assert _git(bare, "rev-parse", "ja/intake-forms") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -1063,7 +1063,7 @@ def test_deploy_branch_commits_a_dirty_tree_and_deploys_the_new_commit(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -1106,7 +1106,7 @@ def test_deploy_branch_from_a_checkout_behind_platform_main(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "rev-parse", "main") == edited
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -2048,7 +2048,7 @@ def test_deploy_snapshot_branch_rerun_after_push_only_deploys_the_branch_tip(
     assert "Pushed" not in result.output
     assert _git(bare, "rev-parse", "ja/intake-forms") == pushed
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
 
 
@@ -2177,7 +2177,7 @@ def test_deploy_snapshot_branch_while_platform_has_no_main(
     assert _git(bare, "rev-list", "--parents", "-n", "1", "feature-x") == first
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": first}
+        {"name": NAME, "ref": first, "publisher": "acme"}
     ]
     _commit_in(monorepo, "handler.py", "x = 1\n")
 
