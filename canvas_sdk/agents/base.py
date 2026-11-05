@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any
 
 from canvas_sdk.agents.capabilities import Capability
@@ -79,6 +80,11 @@ class AgentPlugin(ABC):
     # This run's id, the id of its canvas_sdk.v1.data.AgentRun record, set by the
     # platform with the subject. Plugin-owned audit rows can carry it to join that record.
     run_id: str = ""
+
+    # The plugin's variables (manifest ``variables``), set by the platform with the
+    # subject: model names, switches, and other settings an operator configures. The
+    # gateway key is left out, since the agent reaches a model only through its gateway.
+    secrets: Mapping[str, str] = {}  # noqa: RUF012  (replaced per run, never mutated)
 
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:

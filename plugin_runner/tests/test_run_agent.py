@@ -133,6 +133,26 @@ def test_run_agent_happy_path_returns_emitted_effect(
         "subject": ["p1", "s1", "n1", None, [], None],
         "run_id": "run-1",
         "gateway_model": "claude-sonnet-4-6",
+        "secrets": {},
+    }
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_agent_reads_its_plugins_variables_but_not_its_gateway_key(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """Operators configure an agent through its variables; the key stays with the runner."""
+    LOADED_PLUGINS[AGENT_KEY]["secrets"].update(
+        {"CLASSIFY_MODEL": "claude-haiku-4-5", "graphql_jwt": "handler-token"}
+    )
+
+    (response,) = plugin_runner.RunAgent(_make_request(), None)
+
+    assert json.loads(response.effects[0].payload)["secrets"] == {
+        "CLASSIFY_MODEL": "claude-haiku-4-5"
     }
 
 

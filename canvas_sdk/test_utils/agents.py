@@ -26,7 +26,7 @@ every command type is on in a new instance.
 
 import copy
 import re
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
@@ -36,6 +36,7 @@ from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 import canvas_sdk.commands  # noqa: F401  (importing it defines every SDK command)
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
+from canvas_sdk.agents.gateway import agent_secrets
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
@@ -180,6 +181,7 @@ def prepare_agent(
     requester: RunRequester | None = None,
     capabilities: Iterable[Capability] = (),
     run_id: str = "",
+    secrets: Mapping[str, str] | None = None,
 ) -> AgentPlugin:
     """An agent set up the way the platform sets one up before a run.
 
@@ -187,6 +189,8 @@ def prepare_agent(
     and ``@category`` references. ``requester`` carries the staff member and their
     permissions, and ``capabilities`` are what the platform would grant them; tools
     either rules out are hidden, as on the platform. ``run_id`` defaults to a fresh one.
+    ``secrets`` are the plugin's variables, which the platform gives the agent less its
+    gateway key.
     """
     agent = agent_class()
     agent.subject = subject or RunSubject()
@@ -196,6 +200,7 @@ def prepare_agent(
         agent, {"allowed": list(allowed), "denied": list(denied), "approve": list(approve)}
     )
     agent.run_id = run_id or str(uuid4())
+    agent.secrets = agent_secrets(secrets or {})
     return agent
 
 

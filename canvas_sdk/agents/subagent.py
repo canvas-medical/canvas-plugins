@@ -86,6 +86,10 @@ class SubAgentSpec:
             the persona genuinely needs multi-step reasoning.
         max_tokens: Anthropic max_tokens per turn. Default 2048 —
             sub-agents return summaries, not essays.
+        model: The model this sub-agent calls, and its tools' own model calls; the
+            gateway's default when unset. A cheap model suits a narrow extraction, a
+            stronger one a harder read. The gateway refuses a model the organization has
+            not enabled.
     """
 
     name: str
@@ -93,6 +97,7 @@ class SubAgentSpec:
     allowed_tool_names: frozenset[str] = field(default_factory=frozenset)
     max_turns: int = 4
     max_tokens: int = 2048
+    model: str | None = None
 
 
 def run_subagent(
@@ -138,6 +143,7 @@ def run_subagent(
             messages=[{"role": "user", "content": user_message}],
             max_turns=spec.max_turns,
             max_tokens=spec.max_tokens,
+            model=spec.model,
         )
     finally:
         streams_reply.reset(token)

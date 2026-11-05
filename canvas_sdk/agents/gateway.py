@@ -9,7 +9,7 @@ gateway with that key and the runner's attribution headers.
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
 
@@ -43,6 +43,10 @@ class LLMGateway:
     model: str = DEFAULT_MODEL
     attribution: Mapping[str, str] = field(default_factory=dict)
 
+    def with_model(self, model: str) -> "LLMGateway":
+        """This gateway with ``model`` as its default: same URL, key, and attribution."""
+        return self if model == self.model else replace(self, model=model)
+
     def client(self, *, max_retries: int = DEFAULT_MAX_RETRIES) -> Anthropic:
         """An Anthropic client pointed at the gateway, carrying the attribution headers.
 
@@ -74,6 +78,20 @@ def attempt_timeout(seconds_left: float, max_retries: int = DEFAULT_MAX_RETRIES)
 def _seconds_left() -> float | None:
     recorder = current_recorder.get()
     return recorder.seconds_left() if recorder is not None else None
+
+
+# Secrets the plugin runner keeps from an agent: its gateway key, which the runner turns
+# into the agent's gateway, and the GraphQL token handlers get.
+AGENT_WITHHELD_SECRETS = frozenset({GATEWAY_KEY_SECRET, "graphql_jwt"})
+
+
+def agent_secrets(secrets: Mapping[str, object]) -> dict[str, str]:
+    """The plugin's variables as an agent sees them, a copy with the withheld ones left out."""
+    return {
+        name: str(value)
+        for name, value in secrets.items()
+        if name not in AGENT_WITHHELD_SECRETS and value is not None
+    }
 
 
 def gateway_from_plugin_secrets(
