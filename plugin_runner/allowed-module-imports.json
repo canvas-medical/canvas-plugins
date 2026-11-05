@@ -12,6 +12,7 @@
     "RunRequester",
     "RunSubject",
     "SubAgentSpec",
+    "ToolCall",
     "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
