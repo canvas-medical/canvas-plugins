@@ -167,10 +167,12 @@ def _platform_action(
     try:
         result = _through_platform(namespace, lambda: preview(False))
     except PlatformError as error:
-        # A load balancer's 502 or 504 carries no Platform code and can arrive while the
-        # instance is still finishing the write, so it is as unknown as a timeout.
+        # A load balancer's 502 or 504 carries no Platform code, and a dropped connection
+        # carries no status at all; either can arrive while the instance is still finishing
+        # the write, so it is as unknown as a timeout.
         gateway = error.status in (502, 504) and not error.code
-        if not isinstance(error, PlatformTimeout) and not gateway:
+        dropped = error.status is None
+        if not isinstance(error, PlatformTimeout) and not gateway and not dropped:
             raise
         raise click.ClickException(
             f"{error.message} Whether namespace '{namespace}' was changed is unknown: the "
