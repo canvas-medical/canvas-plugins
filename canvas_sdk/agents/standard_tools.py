@@ -584,7 +584,7 @@ def _serialize_vital(observation: Any) -> dict[str, Any]:
     }
 
 
-def _tasks_queryset(args: dict[str, Any], pid: str) -> Any:
+def _tasks_queryset(args: dict[str, Any], pid: str | None) -> Any:
     """Tasks scoped to patient; status defaults to OPEN when not supplied.
 
     The `status` filter is consumed here entirely (no separate apply) so the
@@ -2233,6 +2233,7 @@ def _serialize_care_team_member(membership: Any) -> dict[str, Any]:
         "need."
     ),
     queryset_factory=lambda args, pid: NoteType.objects.all(),
+    patient_scoped=False,
     filters={
         "category": FilterSpec(
             type="string",
@@ -2298,6 +2299,7 @@ def _serialize_note_type(note_type: Any) -> dict[str, Any]:
         "into the UUID note-write tools need."
     ),
     queryset_factory=lambda args, pid: PracticeLocation.objects.all(),
+    patient_scoped=False,
     filters={
         "active_only": FilterSpec(
             type="boolean",
@@ -2346,6 +2348,7 @@ def _serialize_practice_location(loc: Any) -> dict[str, Any]:
         "discover the orderable tests for that partner."
     ),
     queryset_factory=lambda args, pid: LabPartner.objects.all(),
+    patient_scoped=False,
     filters={
         "name_contains": FilterSpec(
             type="string",
@@ -2390,7 +2393,7 @@ def _serialize_lab_partner(partner: Any) -> dict[str, Any]:
     }
 
 
-def _lab_partner_tests_queryset(args: dict[str, Any], pid: str) -> Any:
+def _lab_partner_tests_queryset(args: dict[str, Any], pid: str | None) -> Any:
     """Resolve lab_partner (UUID or name) and scope to its available tests.
 
     Without scoping by partner the result set is huge (every customer's
@@ -2424,6 +2427,7 @@ def _lab_partner_tests_queryset(args: dict[str, Any], pid: str) -> Any:
         "tests_order_codes=[<order_code>, ...])`."
     ),
     queryset_factory=_lab_partner_tests_queryset,
+    patient_scoped=False,
     filters={
         "lab_partner_id": FilterSpec(
             type="string",

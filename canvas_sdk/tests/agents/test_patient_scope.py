@@ -37,18 +37,25 @@ from canvas_sdk.test_utils.factories import (
 )
 from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
-# Customer-level configuration and scheduling (providers, open times), not any one
-# patient's records.
-UNSCOPED_CATEGORIES = {"config_reads", "scheduling_reads"}
 
-
-def _patient_read_tools() -> list[str]:
+def _filter_searches(*, patient_scoped: bool) -> list[str]:
     return sorted(
         definition["name"]
         for definition in standard_tools.definitions()
         if standard_tools.metadata_for(definition["name"]).get("kind") == "filter_search"
-        and not UNSCOPED_CATEGORIES & set(standard_tools.categories_for(definition["name"]))
+        and standard_tools.metadata_for(definition["name"])["patient_scoped"] == patient_scoped
     )
+
+
+def _patient_read_tools() -> list[str]:
+    return _filter_searches(patient_scoped=True)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("tool", _filter_searches(patient_scoped=False))
+def test_each_practice_search_runs_without_a_patient(tool: str) -> None:
+    """A search of the practice's configuration answers a run that is about no patient."""
+    assert isinstance(standard_tools.execute(tool, {}, ctx={}), list)
 
 
 def _row_queries(tool: str, sql: list[str]) -> list[str]:
