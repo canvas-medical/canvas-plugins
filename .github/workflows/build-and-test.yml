@@ -77,7 +77,11 @@ jobs:
   upload-coverage:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: always()
+    # Only upload when every SDK test shard produced its coverage artifact. When
+    # a shard's tests fail, its artifact upload is skipped, so this job would
+    # otherwise fail on missing XMLs (fail_ci_if_error) and post a partial,
+    # misleading report to Codecov.
+    if: ${{ !cancelled() && needs.build-and-test.result == 'success' }}
     steps:
       - uses: actions/checkout@v5
 
