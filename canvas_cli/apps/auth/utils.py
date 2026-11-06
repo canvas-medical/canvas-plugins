@@ -45,6 +45,18 @@ def read_config(host: str, property: str) -> str:
     return config.get(host, property)
 
 
+def configured_default_host() -> str | None:
+    """Return credentials.ini's default host, or None when the file names no host.
+
+    Returns:
+        str | None: The default host URL, or None when credentials.ini is missing or empty.
+    """
+    config: configparser.ConfigParser = configparser.ConfigParser()
+    if not config.read(CONFIG_PATH) or not config.sections():
+        return None
+    return get_default_host()
+
+
 CANVAS_DOMAIN = ".canvasmedical.com"
 
 

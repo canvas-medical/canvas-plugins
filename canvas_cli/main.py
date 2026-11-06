@@ -28,8 +28,8 @@ app.command(short_help="Publish a plugin to Canvas Platform and deploy it")(plat
 app.command(short_help="Clone a plugin's repository from Canvas Platform")(platform.clone)
 app.command(short_help="Install a plugin into a Canvas instance")(plugin.install)
 app.command(short_help="Uninstall a plugin")(platform.uninstall)
-app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
-app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
+app.command(short_help="Enable a plugin")(platform.enable)
+app.command(short_help="Disable a plugin")(platform.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
 app.command(short_help="Validate a plugin's manifest and that its handlers load in the sandbox.")(
@@ -56,9 +56,7 @@ config_app = typer.Typer(
     add_completion=False,
 )
 app.add_typer(config_app, name="config")
-config_app.command(name="list", short_help="List plugin variables on a Canvas instance.")(
-    plugin.list_secrets
-)
+config_app.command(name="list", short_help="List plugin variables.")(platform.list_variables)
 config_app.command(name="set", short_help="Set plugin variables.")(platform.set_variables)
 config_app.command(name="unset", short_help="Clear plugin variable values.")(
     platform.unset_variables

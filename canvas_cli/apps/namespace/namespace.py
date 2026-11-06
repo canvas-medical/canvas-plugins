@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import urljoin
 
+import click
 import requests
 import typer
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
+from canvas_cli.apps.platform.client import PlatformError, PlatformTimeout
+from canvas_cli.apps.platform.routing import ManagedInstance, managed_instance, platform_sign_out
 
 
 def namespace_url(host: str, *paths: str) -> str:
@@ -15,13 +20,166 @@ def namespace_url(host: str, *paths: str) -> str:
     return urljoin(host, join)
 
 
-def _confirm_destructive_action(namespace: str, action_description: str) -> None:
-    """Prompt the user to confirm a destructive action by typing the namespace name."""
-    print(f"\nThis will {action_description} namespace '{namespace}'. This cannot be undone.")
-    confirmation = input("Type the full namespace name to confirm: ")
-    if confirmation != namespace:
-        print("Confirmation did not match. Aborting.")
-        raise typer.Exit(1)
+def _confirm_destructive_action(
+    namespace: str,
+    action_description: str,
+    instance: str,
+    production: bool = False,
+) -> None:
+    """Prompt the user to confirm a destructive action by typing the namespace name.
+
+    A namespace has the same name on every instance a plugin runs on, so the prompt names the
+    instance, and on a production instance the instance slug must be typed as well.
+
+    Args:
+        namespace (str): The namespace acted on.
+        action_description (str): The action phrase, such as "reset".
+        instance (str): The instance the call goes to: its slug, or the credentials.ini host.
+        production (bool): Whether Canvas Platform marks the instance as production.
+
+    Raises:
+        typer.Exit: When a typed confirmation does not match.
+    """
+    target = f"{instance} (PRODUCTION)" if production else instance
+    print(
+        f"\nThis will {action_description} namespace '{namespace}' on {target}. "
+        "This cannot be undone."
+    )
+    confirmations: list[tuple[str, str]] = [
+        ("Type the full namespace name to confirm: ", namespace)
+    ]
+    if production:
+        confirmations.append(("Type the instance slug to confirm: ", instance))
+    for prompt, expected in confirmations:
+        if input(prompt) != expected:
+            print("Confirmation did not match. Aborting.")
+            raise typer.Exit(1)
+
+
+def _explain_missing_routes(error: PlatformError) -> None:
+    """Raise a usage error naming credentials.ini when Platform cannot serve namespaces.
+
+    A 404 with no ``code`` means this Platform does not serve the namespace routes, and
+    ``instance_outdated`` means the instance's release cannot manage namespaces yet. Any other
+    error returns without raising.
+
+    Args:
+        error (PlatformError): The refusal Platform returned.
+
+    Raises:
+        click.ClickException: When the 404 has no ``code``, or the instance is outdated.
+    """
+    if error.code == "instance_outdated":
+        raise click.ClickException(
+            f"{error.message} To use its namespaces until it updates, {platform_sign_out()} "
+            "and use credentials.ini."
+        ) from error
+    if error.status == requests.codes.not_found and not error.code:
+        raise click.ClickException(
+            "Canvas Platform does not manage namespaces yet. To use them on the instance, "
+            "sign out with `canvas logout` (or unset CANVAS_PLATFORM_TOKEN) and use "
+            "credentials.ini."
+        ) from error
+
+
+def _through_platform(namespace: str, call: Callable[[], Any]) -> Any:
+    """Run a Platform namespace call, showing a missing namespace as the instance path does.
+
+    A 404 with no ``code`` explains how to use credentials.ini. Any other refusal raises
+    ``PlatformError`` and is shown as Platform wrote it; it is never retried on credentials.ini,
+    because Platform's access and audit rules decide it.
+    """
+    try:
+        return call()
+    except PlatformError as error:
+        if error.status == requests.codes.not_found and error.code == "not_found":
+            print(f"Namespace '{namespace}' does not exist.")
+            raise typer.Exit(1) from None
+        _explain_missing_routes(error)
+        raise
+
+
+def _print_namespaces(namespaces: list[dict[str, Any]]) -> None:
+    """Print one line per namespace."""
+    if not namespaces:
+        print("No custom data namespaces found.")
+        return
+    for ns in namespaces:
+        print(f"{ns['name']}\ttables: {ns['table_count']}\tcustom: {ns['custom_table_count']}")
+
+
+def _print_inspection(data: dict[str, Any]) -> None:
+    """Print a namespace's system and custom tables."""
+    print(f"\nNamespace: {data['namespace']}")
+
+    if data["system_tables"]:
+        print("\nSystem tables:")
+        for table in data["system_tables"]:
+            print(f"  {table['name']}\t~{table['approx_rows']} rows")
+
+    if data["custom_tables"]:
+        print("\nCustom tables:")
+        for table in data["custom_tables"]:
+            print(f"  {table['name']}\t~{table['approx_rows']} rows")
+            for col in table.get("columns", []):
+                nullable = "nullable" if col["nullable"] else "not null"
+                print(f"    {col['name']}\t{col['type']}\t{nullable}")
+    elif not data["system_tables"]:
+        print("\nNo tables found in this namespace.")
+
+
+def _print_reset_result(namespace: str, data: dict[str, Any]) -> None:
+    """Print what a real reset did."""
+    print(f"\nNamespace '{namespace}' has been reset.")
+    if data.get("tables_dropped"):
+        print(f"  Dropped tables: {', '.join(data['tables_dropped'])}")
+    if data.get("tables_truncated"):
+        print(f"  Truncated tables: {', '.join(data['tables_truncated'])}")
+
+
+def _platform_action(
+    namespace: str,
+    instance: ManagedInstance,
+    execute: bool,
+    preview: Callable[[bool], dict[str, Any]],
+    print_preview: Callable[[dict[str, Any]], None],
+    confirm_as: str,
+    print_result: Callable[[dict[str, Any]], None],
+) -> None:
+    """The dry-run-then-confirm flow for a reset or drop through Platform.
+
+    Args:
+        namespace (str): The namespace acted on.
+        instance (ManagedInstance): The instance acted on, named in the confirmation and in the
+            command that checks a timed-out real run.
+        execute (bool): Whether ``--execute`` was given.
+        preview (Callable[[bool], dict[str, Any]]): Makes the call, given ``dry_run``.
+        print_preview (Callable[[dict[str, Any]], None]): Prints a dry-run body.
+        confirm_as (str): The action phrase for the typed confirmation.
+        print_result (Callable[[dict[str, Any]], None]): Prints a real-run body.
+    """
+    data = _through_platform(namespace, lambda: preview(True))
+    print_preview(data)
+    if not execute:
+        print("\nThis is a dry run. To execute, re-run with --execute")
+        return
+    _confirm_destructive_action(namespace, confirm_as, instance.slug, instance.production)
+    try:
+        result = _through_platform(namespace, lambda: preview(False))
+    except PlatformError as error:
+        # A load balancer's 502 or 504 carries no Platform code, and a dropped connection
+        # carries no status at all; either can arrive while the instance is still finishing
+        # the write, so it is as unknown as a timeout.
+        gateway = error.status in (502, 504) and not error.code
+        dropped = error.status is None
+        if not isinstance(error, PlatformTimeout) and not gateway and not dropped:
+            raise
+        raise click.ClickException(
+            f"{error.message} Whether namespace '{namespace}' was changed is unknown: the "
+            f"instance may still finish. Check with `canvas namespace inspect {namespace} "
+            f"--host {instance.slug}`."
+        ) from error
+    print_result(result)
 
 
 def list_namespaces(
@@ -34,6 +192,16 @@ def list_namespaces(
     """List all custom data namespaces."""
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    if (managed := managed_instance(host, "namespace list")) is not None:
+        client, slug = managed.client, managed.slug
+        try:
+            listing = client.namespaces(slug)
+        except PlatformError as error:
+            _explain_missing_routes(error)
+            raise
+        _print_namespaces(listing.get("namespaces", []))
+        return
 
     token = get_or_request_api_token(host)
     url = namespace_url(host)
@@ -71,6 +239,11 @@ def inspect(
     """Inspect tables and columns in a namespace."""
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    if (managed := managed_instance(host, "namespace inspect")) is not None:
+        client, slug = managed.client, managed.slug
+        _print_inspection(_through_platform(namespace, lambda: client.namespace(slug, namespace)))
+        return
 
     token = get_or_request_api_token(host)
     url = namespace_url(host, namespace)
@@ -128,6 +301,24 @@ def reset(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
+    if (managed := managed_instance(host, "namespace reset")) is not None:
+        client, slug = managed.client, managed.slug
+        _platform_action(
+            namespace,
+            managed,
+            execute,
+            lambda dry_run: client.reset_namespace(
+                slug,
+                namespace,
+                dry_run=dry_run,
+                confirm_production=managed.production and not dry_run,
+            ),
+            _print_reset_preview,
+            "reset",
+            lambda data: _print_reset_result(namespace, data),
+        )
+        return
+
     token = get_or_request_api_token(host)
     url = namespace_url(host, namespace, "reset")
 
@@ -149,7 +340,7 @@ def reset(
 
         data = r.json()
         _print_reset_preview(data)
-        _confirm_destructive_action(namespace, "reset")
+        _confirm_destructive_action(namespace, "reset", host)
 
         # Now execute
         try:
@@ -230,6 +421,24 @@ def drop(
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
+    if (managed := managed_instance(host, "namespace drop")) is not None:
+        client, slug = managed.client, managed.slug
+        _platform_action(
+            namespace,
+            managed,
+            execute,
+            lambda dry_run: client.drop_namespace(
+                slug,
+                namespace,
+                dry_run=dry_run,
+                confirm_production=managed.production and not dry_run,
+            ),
+            _print_drop_preview,
+            "permanently drop",
+            lambda data: print(f"\nNamespace '{namespace}' has been dropped."),
+        )
+        return
+
     token = get_or_request_api_token(host)
     url = namespace_url(host, namespace, "drop")
 
@@ -251,7 +460,7 @@ def drop(
 
         data = r.json()
         _print_drop_preview(data)
-        _confirm_destructive_action(namespace, "permanently drop")
+        _confirm_destructive_action(namespace, "permanently drop", host)
 
         # Now execute
         try:
