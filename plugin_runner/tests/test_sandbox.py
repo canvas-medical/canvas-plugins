@@ -2019,23 +2019,12 @@ def test_forbidden_assignment(code: str) -> None:
         sandbox.execute()
 
 
-GUARD_NAMES = (
-    "__metaclass__",
-    "_apply_",
-    "_getattr_",
-    "_getitem_",
-    "_getiter_",
-    "_inplacevar_",
-    "_iter_unpack_sequence_",
-    "_print_",
-    "_print",
-    "_unpack_sequence_",
-    "_write_",
-)
+GUARD_NAMES = tuple(sorted(PROTECTED_SCOPE_NAMES))
 
 # Each way Python binds a name, as a template over the name `N`.
 BINDING_FORMS = {
     "assignment": "N = None",
+    "tuple unpacking": "a, N = 1, 2",
     "annotated assignment": "N: object = None",
     "augmented assignment": "N += 1",
     "walrus": "(N := None)",
@@ -2046,12 +2035,17 @@ BINDING_FORMS = {
     "from import as": "from json import dumps as N",
     "except as": "try:\n    pass\nexcept Exception as N:\n    pass",
     "match capture": "match 1:\n    case N:\n        pass",
+    "match as": "match 1:\n    case 1 as N:\n        pass",
     "match star": "match []:\n    case [*N]:\n        pass",
     "match mapping rest": "match {}:\n    case {**N}:\n        pass",
     "def": "def N():\n    pass",
     "class": "class N:\n    pass",
     "global": "def f():\n    global N\n    N = None",
     "function argument": "def f(N):\n    pass",
+    "positional-only argument": "def f(v, N=0, /):\n    pass",
+    "keyword-only argument": "def f(*, N=0):\n    pass",
+    "star argument": "def f(*N):\n    pass",
+    "double-star argument": "def f(**N):\n    pass",
     "lambda argument": "f = lambda N: None",
 }
 
@@ -2068,11 +2062,31 @@ def test_plugin_code_cannot_bind_a_name_the_sandbox_provides(form: str, name: st
         sandbox.execute()
 
 
+@pytest.mark.parametrize("name", GUARD_NAMES)
+def test_plugin_code_cannot_read_a_name_the_sandbox_provides(name: str) -> None:
+    """Reading a guard would let plugin code call it with arguments of its choosing."""
+    sandbox = _sandbox_from_code(f"value = {name}")
+
+    assert sandbox.errors == (f'Line 1: "{name}" is a reserved name.',)
+
+
+@pytest.mark.parametrize(
+    "code",
+    ["_write_ = 1", "def f(_write_):\n    pass", "import json as _write_"],
+    ids=["assignment", "function argument", "import as"],
+)
+def test_binding_a_reserved_name_reports_it_once(code: str) -> None:
+    """The binding check alone reports a binding, so the error is not repeated."""
+    sandbox = _sandbox_from_code(code)
+
+    assert sandbox.errors == ('Line 1: "_write_" is a reserved name.',)
+
+
 DOUBLE_UNDERSCORE_BINDING_FORMS = {
     **{
         label: form
         for label, form in BINDING_FORMS.items()
-        if label not in ("assignment", "function argument", "lambda argument")
+        if not label.endswith("argument") and label != "assignment"
     },
     "def inside a method": "class Thing:\n    def f(self):\n        def N():\n            pass",
 }
@@ -2129,140 +2143,6 @@ def test_double_underscore_names_bind_as_methods_arguments_and_all() -> None:
         ["Thing", "double"],
         "plugin_name.handlers.handler",
     )
-
-
-@pytest.mark.parametrize(
-    "code",
-    params_from_dict(
-        {
-            "module_assignment": """
-                _getattr_ = None
-            """,
-            "positional_only_argument": """
-                def handler(value, _getattr_=None, /):
-                    return value
-            """,
-            "regular_argument": """
-                def handler(value, _getattr_=None):
-                    return value
-            """,
-            "keyword_only_argument": """
-                def handler(value, *, _getattr_=None):
-                    return value
-            """,
-            "lambda_positional_only_argument": """
-                handler = lambda value, _getattr_=None, /: value
-            """,
-            "vararg": """
-                def handler(*_getattr_):
-                    return _getattr_
-            """,
-            "kwarg": """
-                def handler(**_getattr_):
-                    return _getattr_
-            """,
-            "function_name": """
-                def _getattr_():
-                    return None
-            """,
-            "class_name": """
-                class _getattr_:
-                    pass
-            """,
-            "import_alias": """
-                import json as _getattr_
-            """,
-            "import_from_alias": """
-                from json import loads as _getattr_
-            """,
-            "for_target": """
-                for _getattr_ in []:
-                    pass
-            """,
-            "with_target": """
-                from contextlib import suppress
-
-                with suppress(Exception) as _getattr_:
-                    pass
-            """,
-            "except_target": """
-                try:
-                    pass
-                except Exception as _getattr_:
-                    pass
-            """,
-            "walrus": """
-                result = (_getattr_ := None)
-            """,
-            "tuple_unpacking": """
-                a, _getattr_ = 1, 2
-            """,
-            "comprehension_target": """
-                result = [_getattr_ for _getattr_ in []]
-            """,
-            # A bare name in a `case` is a capture pattern, so it always matches
-            # and assigns the subject. The name is a `str` field on the pattern
-            # node rather than an `ast.Name`, so it reaches none of the visitors
-            # the other forms go through. None of these four cases may mention
-            # the captured name in an expression, which would reach the check
-            # through `visit_Name` and pass whatever the match visitors do.
-            "match_capture": """
-                match 1:
-                    case _getattr_:
-                        pass
-            """,
-            "match_as": """
-                match 1:
-                    case 1 as _getattr_:
-                        pass
-            """,
-            "match_star": """
-                match [1]:
-                    case [*_getattr_]:
-                        pass
-            """,
-            "match_mapping_rest": """
-                match {"a": 1}:
-                    case {**_getattr_}:
-                        pass
-            """,
-        }
-    ),
-)
-def test_sandbox_denies_binding_a_reserved_name(code: str) -> None:
-    """Test that no syntax lets plugin code bind a name reserved for a policy hook.
-
-    A leading underscore is otherwise only a warning, so each binding form needs
-    its own case: the name check has to run for arguments, targets, aliases and
-    definitions alike.
-    """
-    sandbox = _sandbox_from_code(code)
-
-    with pytest.raises(RuntimeError, match="is a reserved name"):
-        sandbox.execute()
-
-
-@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
-def test_sandbox_denies_binding_every_protected_name(name: str) -> None:
-    """Test that every reserved name is rejected, not just the ones with cases above."""
-    sandbox = _sandbox_from_code(f"def handler(value, {name}=None, /):\n    return value\n")
-
-    with pytest.raises(RuntimeError, match="is a reserved name"):
-        sandbox.execute()
-
-
-@pytest.mark.parametrize("name", sorted(PROTECTED_SCOPE_NAMES))
-def test_sandbox_denies_capturing_every_protected_name_in_a_match(name: str) -> None:
-    """Test that a `case` capture pattern cannot bind a name reserved for a policy hook.
-
-    A capture pattern assigns the subject to the name, so binding one of the
-    guards replaces it in the scope the sandbox seeded, and every guarded
-    operation compiled into the module then routes through plugin code.
-    """
-    sandbox = _sandbox_from_code(f"match 1:\n    case {name}:\n        pass\n")
-
-    with pytest.raises(RuntimeError, match="is a reserved name"):
-        sandbox.execute()
 
 
 def test_sandbox_denies_a_match_capture_that_replaces_the_write_guard() -> None:
