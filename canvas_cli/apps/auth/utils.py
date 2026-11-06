@@ -45,6 +45,24 @@ def read_config(host: str, property: str) -> str:
     return config.get(host, property)
 
 
+CANVAS_DOMAIN = ".canvasmedical.com"
+
+
+def instance_slug(host: str) -> str | None:
+    """Return the Canvas Platform instance slug for ``host``.
+
+    Args:
+        host (str): A Canvas instance URL such as ``https://acme.canvasmedical.com``.
+
+    Returns:
+        str | None: The subdomain, or None for localhost and hosts outside canvasmedical.com.
+    """
+    hostname = urlparse(host).hostname
+    if not hostname or not hostname.endswith(CANVAS_DOMAIN):
+        return None
+    return hostname.removesuffix(CANVAS_DOMAIN)
+
+
 def get_api_client_credentials(host: str) -> str:
     """Either return the given api_key, or fetch it from the token storage."""
     hostname = urlparse(host).hostname
@@ -52,7 +70,7 @@ def get_api_client_credentials(host: str) -> str:
     if not hostname:
         raise ValueError("Could not parse hostname from URL")
 
-    instance = hostname.removesuffix(".canvasmedical.com")
+    instance = instance_slug(host) or hostname
 
     client_id = read_config(instance, "client_id")
     client_secret = read_config(instance, "client_secret")
