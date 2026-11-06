@@ -35,7 +35,9 @@ class Assessment(AuditedModel, IdentifiableModel):
     condition = models.ForeignKey(
         "v1.Condition", on_delete=models.CASCADE, related_name="assessments", null=True
     )
-    interview = models.ForeignKey("v1.Interview", on_delete=models.DO_NOTHING, null=True)
+    interview = models.ForeignKey(
+        "v1.Interview", on_delete=models.DO_NOTHING, null=True, related_name="assessments"
+    )
     status = models.CharField(choices=AssessmentStatus.choices, max_length=20)
     narrative = models.CharField(max_length=2048)
     background = models.CharField(max_length=2048)

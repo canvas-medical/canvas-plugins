@@ -14,6 +14,7 @@ from canvas_sdk.v1.data import (
     ImagingOrder,
     Immunization,
     Instruction,
+    Interview,
     LabOrder,
     Note,
     NoteTask,
@@ -36,6 +37,7 @@ ASSESSMENT_LINKED_MODELS = (
     ImagingOrder,
     Immunization,
     Instruction,
+    Interview,
     LabOrder,
     NoteTask,
     Plan,
@@ -113,3 +115,42 @@ def test_an_unlinked_command_is_valid(patient: Patient, note: Note) -> None:
     )
 
     assert Instruction.objects.get(dbid=instruction.dbid).assessment is None
+
+
+def test_a_structured_assessment_tells_its_link_from_the_assessments_it_produced(
+    patient: Patient, note: Note
+) -> None:
+    """An Interview links to one Assess, and separately lists the assessments it produced."""
+    linked = Assessment.objects.create(
+        patient=patient,
+        note=note,
+        status="stable",
+        narrative="",
+        background="",
+        care_team="",
+    )
+    interview = Interview.objects.create(
+        patient=patient,
+        deleted=False,
+        status="AC",
+        name="",
+        language_id=1,
+        use_case_in_charting="SA",
+        note_id=note.dbid,
+        appointment_id=0,
+        progress_status="F",
+        assessment=linked,
+    )
+    produced = Assessment.objects.create(
+        patient=patient,
+        note=note,
+        interview=interview,
+        status="",
+        narrative="",
+        background="",
+        care_team="",
+    )
+
+    assert interview.assessment == linked
+    assert list(interview.assessments.all()) == [produced]
+    assert list(linked.linked_interviews.all()) == [interview]

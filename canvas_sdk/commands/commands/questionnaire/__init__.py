@@ -76,16 +76,22 @@ class QuestionnaireCommand(_BaseCommand):
                     command_data = Command.objects.values_list("data", flat=True).get(
                         id=command_uuid
                     )
-                    if questionnaire_dbid := command_data.get("questionnaire", {}).get("value"):
+                    # A command created before its questionnaire is picked holds
+                    # `questionnaire: None`.
+                    if questionnaire_dbid := (command_data.get("questionnaire") or {}).get("value"):
                         questionnaire = Questionnaire.objects.get(dbid=questionnaire_dbid)
-                        self.questionnaire_id = str(questionnaire.id)
+                        # Written to the instance dict rather than assigned: a validated
+                        # assignment replaces that dict, which would drop `questions` while it
+                        # is being computed, and with it the responses set on those questions.
+                        self.__dict__["questionnaire_id"] = str(questionnaire.id)
                         return questionnaire
                 except (Command.DoesNotExist, Questionnaire.DoesNotExist):
                     return None
-            else:
-                return None
 
-        return Questionnaire.objects.get(id=self.questionnaire_id)  # type: ignore[misc]
+            # No questionnaire given, and none picked on the command yet.
+            return None
+
+        return Questionnaire.objects.get(id=self.questionnaire_id)
 
     @cached_property
     def questions(self) -> list[BaseQuestion]:
