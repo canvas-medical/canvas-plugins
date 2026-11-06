@@ -1,21 +1,55 @@
-from typing import Any
+from typing import Any, Self
 
 from django.db import models
+from django.db.models.query_utils import DeferredAttribute
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.portal_access_level import PortalAccessLevel
 
 _PORTAL_ACCESS_LEVEL_CHOICES = [(level.value, level.name.title()) for level in PortalAccessLevel]
 
 
+def _as_level(value: Any) -> PortalAccessLevel | None:
+    """A stored or assigned level as a PortalAccessLevel; one it doesn't recognize counts as none."""
+    # None when an outer join finds no grant, e.g. values("portal_grants__clinical").
+    if value is None:
+        return None
+    try:
+        return PortalAccessLevel(value)
+    except ValueError:
+        return PortalAccessLevel.NONE
+
+
+class _PortalAccessLevelAttribute(DeferredAttribute):
+    """Holds a level as a PortalAccessLevel however it was set, from the database or in code."""
+
+    def __set__(self, instance: models.Model, value: Any) -> None:
+        instance.__dict__[self.field.attname] = _as_level(value)
+
+
 class _PortalAccessLevelField(models.CharField):
-    """A level loaded as a PortalAccessLevel, so it compares by how much it allows."""
+    """A level read and assigned as a PortalAccessLevel, so it compares by how much it allows."""
+
+    descriptor_class = _PortalAccessLevelAttribute
 
     def from_db_value(
         self, value: str | None, expression: Any, connection: Any
     ) -> PortalAccessLevel | None:
-        # None when an outer join finds no grant, e.g. values("portal_grants__clinical").
-        return None if value is None else PortalAccessLevel(value)
+        return _as_level(value)
+
+    def to_python(self, value: Any) -> PortalAccessLevel | None:
+        return _as_level(value)
+
+
+class PortalAccessGrantQuerySet(BaseQuerySet):
+    """A queryset for portal access grants."""
+
+    def giving_access(self) -> Self:
+        """Grants that still give their login the chart: not revoked or flagged, on an active patient."""
+        return self.filter(revoked_at__isnull=True, flagged_at__isnull=True, patient__active=True)
+
+
+PortalAccessGrantManager = models.Manager.from_queryset(PortalAccessGrantQuerySet)
 
 
 class PortalAccessGrant(TimestampedModel, IdentifiableModel):
@@ -26,11 +60,13 @@ class PortalAccessGrant(TimestampedModel, IdentifiableModel):
     messaging, clinical and billing, is "none" (hide the area), "view" (show it read-only) or "act"
     (allow its actions too), read as a PortalAccessLevel so it compares by how much it allows.
     Revoked and flagged grants stay as history: only a grant that is neither, on an active
-    patient, gives the login the chart.
+    patient, gives the login the chart, and objects.giving_access() returns just those.
     """
 
     class Meta:
         db_table = "canvas_sdk_data_api_portalaccessgrant_001"
+
+    objects = PortalAccessGrantManager()
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="portal_grants"

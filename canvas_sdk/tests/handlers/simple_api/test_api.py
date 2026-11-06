@@ -1190,7 +1190,9 @@ def create_task() -> list[Response | Effect]:
 
 
 def acting_headers(
-    acting_user_id: str, patient_id: str = "abc123", **levels: str
+    acting_user_id: str,
+    patient_id: str = "abc123",
+    **levels: str,
 ) -> dict[str, str]:
     """Session headers for another login acting on a patient's chart, with its access by area."""
     return {
@@ -1384,8 +1386,8 @@ def test_portal_access_counts_a_missing_or_unknown_level_as_none() -> None:
 
 @pytest.mark.parametrize(
     argnames="acting_user_id",
-    argvalues=["parent", "4.2", "²"],
-    ids=["a name", "a decimal", "a superscript digit"],
+    argvalues=["parent", "4.2", "²", "４２"],
+    ids=["a name", "a decimal", "a superscript digit", "fullwidth digits"],
 )
 def test_an_acting_login_named_by_anything_but_digits_may_do_nothing(acting_user_id: str) -> None:
     """A login acting on a patient's chart that Canvas names by anything but digits has no
@@ -1394,6 +1396,7 @@ def test_an_acting_login_named_by_anything_but_digits_may_do_nothing(acting_user
     access = portal_access(acting_headers(acting_user_id, **FULL_ACCESS))
 
     assert access.acting_user_id is None
+    assert access.is_acting
     assert not any(access.allows(area, PortalAccessLevel.VIEW) for area in PortalAccess.AREAS)
     assert access.actor is None
     assert access.grant is None
@@ -1452,9 +1455,12 @@ def test_on_a_patients_own_chart_the_patient_is_the_actor() -> None:
 
     access = portal_access(session_headers(patient.id, "Patient"))
 
-    assert access.patient == patient
-    assert access.actor == patient.user
-    assert access.grant is None
+    with CaptureQueriesContext(connection) as ctx:
+        assert access.patient == patient
+        assert access.actor == patient.user
+        assert access.grant is None
+    assert not access.is_acting
+    assert len(ctx.captured_queries) == 1
 
 
 @pytest.mark.django_db

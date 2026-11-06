@@ -6,6 +6,7 @@ from functools import cached_property
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
+from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
 from canvas_sdk.v1.portal_access_level import PortalAccessLevel
 from logger import log
 from plugin_runner.exceptions import PluginError
@@ -18,8 +19,6 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
-
     from .api import Request
     from .tools import CaseInsensitiveMultiDict
 
@@ -151,15 +150,18 @@ class PortalAccess:
         self._patient_id = headers.get("canvas-logged-in-user-id") if patient_session else None
 
         acting = headers.get("canvas-logged-in-acting-user-id") if patient_session else None
-        # Whether another login acts on the patient's chart, named by digits or not.
-        self._acting = bool(acting)
+        # Whether another login acts on the patient's chart, named by digits or not. A login whose
+        # acting_user_id is None but is_acting is True isn't the patient on their own chart.
+        self.is_acting: bool = bool(acting)
 
         # The CanvasUser dbid of the login acting on the patient's chart, when it isn't theirs.
-        self.acting_user_id: str | None = acting if acting and acting.isdecimal() else None
+        self.acting_user_id: str | None = (
+            acting if acting and acting.isascii() and acting.isdigit() else None
+        )
 
         self._levels: dict[str, PortalAccessLevel] = {}
         for area in _PORTAL_AREAS:
-            if patient_session and not self._acting:
+            if patient_session and not self.is_acting:
                 level = PortalAccessLevel.ACT
             elif not self.acting_user_id:
                 level = PortalAccessLevel.NONE
@@ -183,20 +185,18 @@ class PortalAccess:
     @cached_property
     def patient(self) -> Patient | None:
         """The patient whose chart the request acts on, or None without a patient session."""
-        from canvas_sdk.v1.data import Patient
-
-        return Patient.objects.filter(id=self._patient_id).first() if self._patient_id else None
+        if not self._patient_id:
+            return None
+        return Patient.objects.select_related("user").filter(id=self._patient_id).first()
 
     @cached_property
     def actor(self) -> CanvasUser | None:
         """The login acting on the chart: acting_user_id's, or on a patient's own chart, theirs."""
-        from canvas_sdk.v1.data import CanvasUser
-
         if self.grant:
             return self.grant.user
         if self.acting_user_id:
             return CanvasUser.objects.filter(dbid=self.acting_user_id).first()
-        return self.patient.user if not self._acting and self.patient else None
+        return self.patient.user if not self.is_acting and self.patient else None
 
     @cached_property
     def grant(self) -> PortalAccessGrant | None:
@@ -205,13 +205,12 @@ class PortalAccess:
         It's read from the database, while level() and allows() use the levels sent with the
         request, so the two can disagree for a moment after staff change a level.
         """
-        if not self.acting_user_id or not self.patient or not self.patient.active:
+        if not self.acting_user_id or not self.patient:
             return None
         return (
-            self.patient.portal_grants.select_related("user")
-            .filter(
-                user__dbid=self.acting_user_id, revoked_at__isnull=True, flagged_at__isnull=True
-            )
+            self.patient.portal_grants.giving_access()
+            .select_related("user")
+            .filter(user__dbid=self.acting_user_id)
             .first()
         )
 
@@ -253,7 +252,7 @@ def admits_portal_access(
     handler declared the access it requires, even an empty one. Anyone else is left to the
     handler's authenticate method.
     """
-    if not portal_access._acting:
+    if not portal_access.is_acting:
         return True
 
     if not portal_access.acting_user_id or required is None:
