@@ -87,7 +87,23 @@ def managed_instance(host: str, command: str) -> ManagedInstance | None:
     if auth.stored_tokens(platform) is None:
         print_credentials_ini_deprecation(command)
         return None
-    client = PlatformClient(platform)
+    return require_managed(PlatformClient(platform), slug)
+
+
+def require_managed(client: PlatformClient, slug: str) -> ManagedInstance:
+    """The instance ``slug`` from the person's Platform instance list, refused unless managed.
+
+    Args:
+        client (PlatformClient): The signed-in Platform client.
+        slug (str): The instance slug.
+
+    Returns:
+        ManagedInstance: The client, slug and production flag.
+
+    Raises:
+        click.ClickException: The instance is not in the person's list, or Platform does not
+            manage it.
+    """
     row = next((r for r in client.instances() if r.get("slug") == slug), None)
     if row is None:
         raise refuse_unmanaged(f"{slug} is not one of your instances on Canvas Platform.", slug)

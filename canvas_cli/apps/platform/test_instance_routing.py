@@ -10,6 +10,7 @@ Platform and home-app contracts document.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -19,6 +20,7 @@ import requests
 import requests_mock as requests_mock_module
 from typer.testing import CliRunner
 
+from canvas_cli.apps.auth import utils as auth_utils
 from canvas_cli.apps.platform import auth
 from canvas_cli.apps.platform.commands import managed_instance
 from canvas_cli.main import app
@@ -496,6 +498,10 @@ def test_config_list_with_several_instances_heads_each(
         f"{API}/plugins/{NAME}",
         json={"name": NAME, "publisher": "acme", "installs": []},
     )
+    requests_mock.get(
+        f"{API}/instances",
+        json={"instances": [_instance("acme"), _instance("acme-prod", production=True)]},
+    )
     for slug, is_set in (("acme", True), ("acme-prod", False)):
         requests_mock.get(
             f"{API}/instances/{slug}/plugins/{NAME}/variables",
@@ -823,6 +829,10 @@ def test_a_managed_plugin_on_an_unmanaged_instance_shows_platforms_refusal(
     """Platform refuses a managed plugin's switch on an instance it does not manage. The CLI shows
     that and never retries on credentials.ini, which would switch it outside Platform's audit (D1).
     """
+    requests_mock.get(
+        f"{API}/instances",
+        json={"instances": [_instance("acme", "deploy_plugin"), _instance("legacy")]},
+    )
     requests_mock.post(
         f"{API}/deployments",
         status_code=400,
@@ -1035,18 +1045,77 @@ def test_managed_plugin_on_localhost_keeps_credentials_ini_while_signed_in(
     assert not _calls(requests_mock, "GET", f"{API}/plugins/")
 
 
+@pytest.fixture
+def default_localhost(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A credentials.ini whose default host is localhost."""
+    config = tmp_path / "credentials.ini"
+    config.write_text("[localhost]\nclient_id=id\nclient_secret=secret\nis_default=true\n")
+    monkeypatch.setattr(auth_utils, "CONFIG_PATH", config)
+
+
 @pytest.mark.parametrize(
     ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
 )
+@pytest.mark.parametrize(
+    "flags", [["--host", "localhost"], []], ids=["host-flag", "credentials-ini-default"]
+)
 def test_plugin_command_on_localhost_prints_no_notice(
-    command: list[str], direct: str, extra: list[str]
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    flags: list[str],
+    default_localhost: None,
 ) -> None:
-    """`canvas login` cannot serve localhost, so a local run is not told to switch to it."""
-    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}"):
-        result = runner.invoke(app, [*command, NAME, *extra, "--host", "localhost"])
+    """`canvas login` cannot serve localhost, so a local run is not told to switch to it,
+    whether localhost is named with --host or is credentials.ini's default host.
+    """
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, NAME, *extra, *flags])
 
     assert result.exit_code == 0, result.output + result.stderr
+    assert mock.call_args.kwargs["host"] == "http://localhost:8000"
     assert "deprecated" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+@pytest.mark.parametrize(
+    ("instance", "refusal"),
+    [
+        ("legacy", "Canvas Platform does not manage legacy."),
+        ("other", "other is not one of your instances on Canvas Platform."),
+    ],
+    ids=["unmanaged", "unlisted"],
+)
+def test_managed_plugin_refuses_an_explicit_instance_platform_does_not_manage(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    instance: str,
+    refusal: str,
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+) -> None:
+    """An explicit --instance gets the same refusal and way back as the instance commands,
+    before any deployment or variable call reaches Platform.
+    """
+    requests_mock.get(
+        f"{API}/instances",
+        json={
+            "instances": [_instance("acme", "deploy_plugin"), _instance("legacy", managed=False)]
+        },
+    )
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, NAME, *extra, "--instance", instance])
+
+    assert result.exit_code == 1
+    assert refusal in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+    assert not _calls(requests_mock, "GET", f"{API}/instances/{instance}/")
+    mock.assert_not_called()
 
 
 def test_instance_command_on_localhost_prints_no_notice(
@@ -1124,6 +1193,32 @@ def test_namespace_real_run_answered_by_a_gateway_reports_unknown(
         status_code=status,
         text="<html><body>504 Gateway Time-out</body></html>",
         headers={"Content-Type": "text/html"},
+    )
+
+    result = runner.invoke(
+        app, ["namespace", verb, NS, "--host", "acme", "--execute"], input=f"{NS}\n"
+    )
+
+    assert result.exit_code == 1
+    output = result.stdout + result.stderr
+    assert "unknown" in output
+    assert f"canvas namespace inspect {NS} --host acme" in output
+
+
+@pytest.mark.parametrize("verb", ["reset", "drop"])
+def test_namespace_real_run_whose_connection_drops_reports_unknown(
+    verb: str, requests_mock: requests_mock_module.Mocker, instances: None
+) -> None:
+    """A connection that drops after a confirmed real reset or drop was sent can leave the
+    instance finishing the write, so the outcome is reported as unknown, as for a timeout.
+    """
+    requests_mock.post(
+        f"{NS_URL}/{verb}?dry_run=true",
+        json={"dry_run": True, "namespace": NS, "tables_to_drop": [], "tables_to_truncate": []},
+    )
+    requests_mock.post(
+        f"{NS_URL}/{verb}?dry_run=false",
+        exc=requests.exceptions.ConnectionError("Connection aborted: RemoteDisconnected"),
     )
 
     result = runner.invoke(

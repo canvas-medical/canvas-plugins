@@ -40,7 +40,7 @@ from canvas_cli.apps.auth.utils import get_default_host, instance_slug
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.platform.routing import managed_instance as managed_instance
-from canvas_cli.apps.platform.routing import refuse_unmanaged
+from canvas_cli.apps.platform.routing import refuse_unmanaged, require_managed
 from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
@@ -1130,10 +1130,11 @@ def _managed(
     which platform can never manage, the answer is None without asking platform, and no
     deprecation notice prints, since `canvas login` cannot serve those hosts. Otherwise,
     signed in, a plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform,
-    and any other plugin aimed at a Canvas instance is refused with the way to sign out;
-    with no ``--instance`` or ``--host``, platform is asked first. Signed out, the answer
-    is None: the caller uses credentials.ini, and the deprecation notice for ``command`` is
-    printed.
+    each ``--instance`` must be one platform manages for the person, and any other plugin
+    aimed at a Canvas instance is refused with the way to sign out; with no ``--instance``
+    or ``--host``, platform is asked first. Signed out, the answer is None: the caller uses
+    credentials.ini, and the deprecation notice for ``command`` is printed when the
+    credentials.ini target is a Canvas instance.
 
     Args:
         name (str): The plugin name.
@@ -1146,7 +1147,8 @@ def _managed(
             for credentials.ini.
 
     Raises:
-        click.ClickException: Signed in, and platform does not manage the plugin.
+        click.ClickException: Signed in, and platform does not manage the plugin or an
+            ``--instance``.
     """
     if (instances or host) and all(
         instance_slug(url) is None for url in _direct_hosts(instances, host)
@@ -1160,9 +1162,13 @@ def _managed(
         client = PlatformClient(platform)
         plugin = client.plugin(name)
         if plugin is not None:
+            for slug in dict.fromkeys(instances):
+                require_managed(client, slug)
             return client, plugin
         if any(instance_slug(url) is not None for url in _direct_hosts(instances, host)):
             raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
+    if all(instance_slug(url) is None for url in _direct_hosts(instances, host)):
+        return None
     print_credentials_ini_deprecation(command)
     return None
 
