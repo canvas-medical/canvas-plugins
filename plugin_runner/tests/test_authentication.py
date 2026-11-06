@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from unittest.mock import patch
 
 import jwt
@@ -32,3 +35,28 @@ def test_main_refuses_to_serve_without_a_signing_key() -> None:
         pytest.raises(ImproperlyConfigured, match="PLUGIN_RUNNER_SIGNING_KEY"),
     ):
         main()
+
+
+@pytest.mark.parametrize(
+    "env, expected",
+    [("production", ""), ("development", "insecure-signing-key-not-for-production")],
+)
+def test_only_a_non_production_runner_falls_back_to_the_public_signing_key(
+    env: str, expected: str
+) -> None:
+    """A production runner with no key gets none, so `main` refuses to serve."""
+    environment = {
+        key: value for key, value in os.environ.items() if key != "PLUGIN_RUNNER_SIGNING_KEY"
+    }
+    environment["ENV"] = env
+
+    loaded = subprocess.run(
+        [sys.executable, "-c", "import settings; print(settings.PLUGIN_RUNNER_SIGNING_KEY)"],
+        capture_output=True,
+        text=True,
+        env=environment,
+        cwd=settings.BASE_DIR,
+        check=True,
+    )
+
+    assert loaded.stdout.strip() == expected
