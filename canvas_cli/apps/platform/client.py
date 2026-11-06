@@ -22,10 +22,20 @@ TIMEOUT_SECONDS = 30
 class PlatformError(click.ClickException):
     """A refusal or transport failure from Canvas Platform."""
 
-    def __init__(self, message: str, *, status: int | None = None, code: str = "") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int | None = None,
+        code: str = "",
+        together: list[dict[str, str]] | None = None,
+    ) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
+        # The plugins a `dependency_conflict` says to deploy in one deployment, each as
+        # {publisher, name, version}; None when the refusal names none.
+        self.together = together
 
     @classmethod
     def from_response(cls, response: requests.Response) -> PlatformError:
@@ -39,7 +49,19 @@ class PlatformError(click.ClickException):
         message = body.get("error") or f"Canvas Platform answered {response.status_code}."
         if field := body.get("field"):
             message = f"{message} (field: {field})"
-        return cls(str(message), status=response.status_code, code=str(body.get("code") or ""))
+        together = body.get("together")
+        if not (
+            isinstance(together, list)
+            and together
+            and all(isinstance(entry, dict) for entry in together)
+        ):
+            together = None
+        return cls(
+            str(message),
+            status=response.status_code,
+            code=str(body.get("code") or ""),
+            together=together,
+        )
 
 
 def segment(value: str) -> str:

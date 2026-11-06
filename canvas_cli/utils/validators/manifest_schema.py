@@ -119,7 +119,8 @@ manifest_schema = {
             "description": (
                 "Plugins that must be installed alongside this one, each named by its 'name', "
                 "the slug of the Canvas Platform organization that publishes it as 'publisher', "
-                "and an exact 'version', such as '1.16.0'. Each must already be on Canvas "
+                "and a 'version': one exact version, such as '1.16.0', or a compatible release, "
+                "such as '~=1.16' (1.16 or later, below 2.0). Each must already be on Canvas "
                 "Platform, which resolves and installs them."
             ),
             "type": "array",

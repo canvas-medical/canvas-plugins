@@ -377,11 +377,42 @@ def test_manifest_names_the_code_keys_a_bundle_carries() -> None:
         validate_manifest_file(manifest)
 
 
-def test_manifest_refuses_a_version_range_with_a_clear_sentence() -> None:
-    """A specifier set is refused as not being an exact version."""
-    manifest = _bundle_manifest(dependencies=[_dependency(version=">=1,<2")])
-    with pytest.raises(ValidationError, match="'>=1,<2' is not an exact version"):
+@pytest.mark.parametrize("version", ["~=1.16", "~=0.1.1", "~=1.16.0", "~=2.0rc1"])
+def test_manifest_accepts_a_compatible_release_pin(version: str) -> None:
+    """A `~=` pin with at least two release components is accepted alongside exact versions."""
+    validate_manifest_file(_bundle_manifest(dependencies=[_dependency(version=version)]))
+
+
+@pytest.mark.parametrize(
+    "version",
+    [
+        ">=1.16",
+        "<2",
+        "==1.16.0",
+        "!=1.16.0",
+        "===1.16.0",
+        ">=1,<2",
+        "~=1.16,<1.18",
+        "1.*",
+        "==1.*",
+        "~=1",
+        "~=1.*",
+        "~= 1.16",
+        "latest",
+    ],
+)
+def test_manifest_refuses_any_other_version_specifier_with_a_clear_sentence(version: str) -> None:
+    """Anything but an exact version or a `~=X.Y` pin is refused with a sentence naming both
+    accepted forms and what `~=` allows.
+    """
+    manifest = _bundle_manifest(dependencies=[_dependency(version=version)])
+    with pytest.raises(ValidationError) as error:
         validate_manifest_file(manifest)
+    assert error.value.message == (
+        f"dependency 'scribe_core': {version!r} is not a version a dependency accepts. "
+        "Name one exact version, such as '1.16.0', or a compatible release, such as "
+        "'~=1.16' (1.16 or later, below 2.0) or '~=0.1.1' (0.1.1 or later, below 0.2)."
+    )
 
 
 BUNDLE_REFUSED: dict[str, dict] = {
@@ -402,7 +433,9 @@ BUNDLE_REFUSED: dict[str, dict] = {
     ),
     "dependency-bad-name": _bundle_manifest(dependencies=[_dependency("Scribe-Core")]),
     "dependency-range": _bundle_manifest(dependencies=[_dependency(version=">=1,<2")]),
-    "dependency-compatible-release": _bundle_manifest(dependencies=[_dependency(version="~=0.1")]),
+    "dependency-compatible-release-one-component": _bundle_manifest(
+        dependencies=[_dependency(version="~=1")]
+    ),
     "dependency-bad-version": _bundle_manifest(dependencies=[_dependency(version="latest")]),
     "dependency-source": _bundle_manifest(
         dependencies=[_dependency(source={"git": "https://github.com/canvas-medical/scribe"})]

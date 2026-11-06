@@ -1,4 +1,5 @@
 from jsonschema import ValidationError, validators
+from packaging.specifiers import InvalidSpecifier, Specifier
 from packaging.version import InvalidVersion, Version
 
 from canvas_cli.utils.context import context
@@ -34,8 +35,26 @@ def _refuse_repeated_names(catalog: object) -> None:
             raise ValidationError(f"catalog {key} names a {what} twice.")
 
 
+def is_dependency_version(version: str) -> bool:
+    """Whether ``version`` is a pin a dependency accepts.
+
+    That is one exact PEP 440 version, such as ``1.16.0``, or a compatible release
+    with at least two release components, such as ``~=1.16`` or ``~=0.1.1``.
+    """
+    try:
+        Version(version)
+        return True
+    except InvalidVersion:
+        pass
+    try:
+        specifier = Specifier(version)
+    except InvalidSpecifier:
+        return False
+    return specifier.operator == "~=" and str(specifier) == version
+
+
 def _refuse_bad_dependencies(manifest_json: dict) -> None:
-    """Refuse a dependency whose version is not exact, named twice, or naming the plugin itself.
+    """Refuse a dependency whose version is not a pin, named twice, or naming the plugin itself.
 
     JSON Schema checks each entry's shape; these rules span entries or need PEP 440 parsing.
     """
@@ -46,13 +65,12 @@ def _refuse_bad_dependencies(manifest_json: dict) -> None:
             dependency["publisher"],
             dependency["version"],
         )
-        try:
-            Version(version)
-        except InvalidVersion:
+        if not is_dependency_version(version):
             raise ValidationError(
-                f"dependency {name!r}: {version!r} is not an exact version. A dependency names "
-                "one version, such as '1.16.0', rather than a range."
-            ) from None
+                f"dependency {name!r}: {version!r} is not a version a dependency accepts. "
+                "Name one exact version, such as '1.16.0', or a compatible release, such as "
+                "'~=1.16' (1.16 or later, below 2.0) or '~=0.1.1' (0.1.1 or later, below 0.2)."
+            )
         if name == manifest_json.get("name"):
             raise ValidationError(f"dependency {name!r} is the plugin itself.")
         if (name, publisher) in seen:

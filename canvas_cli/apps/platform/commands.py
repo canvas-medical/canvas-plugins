@@ -10,7 +10,8 @@ person signed in with ``canvas login``:
     ``<prefix>__<package>`` and registers it with platform.
   * ``canvas deploy``: commits and pushes the working tree, or pushes a snapshot of a
     plugin inside a larger repository, to ``main`` or to the branch ``--branch``
-    names, then deploys it.
+    names, then deploys it. With ``--plugin``, deploys released versions of several
+    plugins together in one deployment, pushing nothing.
   * ``canvas clone``: checks out a plugin's repository, ready to push.
   * ``canvas config set`` / ``unset`` and ``canvas uninstall``: through platform
     for a plugin it manages, and directly against the instance otherwise.
@@ -29,6 +30,7 @@ from typing import Any, TextIO
 
 import click
 import typer
+from packaging.version import InvalidVersion, Version
 
 from canvas_cli.apps.auth.utils import get_default_host
 from canvas_cli.apps.platform import auth, git
@@ -334,8 +336,33 @@ def _dispatch(
     what: str,
     assume_yes: bool = False,
 ) -> None:
-    """Create a deployment, walk its consent requests, and wait for it to settle."""
-    deployment = client.create_deployment(action, plugins, instances)
+    """Create a deployment, walk its consent requests, and wait for it to settle.
+
+    A deploy refused because plugins left running pin another version of a shared
+    plugin can go out together with releases of those plugins that fit. Canvas
+    Platform names them; a person at a terminal decides, since it deploys plugins
+    the command did not name. Under ``--yes`` or without a TTY the refusal stands.
+    """
+    try:
+        deployment = client.create_deployment(action, plugins, instances)
+    except PlatformError as refusal:
+        if action != "deploy" or refusal.code != "dependency_conflict" or not refusal.together:
+            raise
+        print(refusal.message)
+        if assume_yes or not git.interactive():
+            raise typer.Exit(1) from None
+        if not typer.confirm("Deploy them together?", default=False):
+            raise typer.Exit(1) from None
+        together = [
+            {"name": entry["name"], "version": entry["version"]}
+            | ({"publisher": entry["publisher"]} if entry.get("publisher") else {})
+            for entry in refusal.together
+        ]
+        what = "Deploy of " + ", ".join(
+            f"{e['publisher'] + '/' if 'publisher' in e else ''}{e['name']}@{e['version']}"
+            for e in together
+        )
+        deployment = client.create_deployment(action, together, instances)
     print(f"Deployment {deployment['id']} created.")
     if deployment.get("status") == "pending_consent":
         _walk_consent(client, deployment, assume_yes=assume_yes)
@@ -611,8 +638,64 @@ def _push(
     return sha
 
 
+_PLUGIN_EXAMPLE = "canvas-medical/scribe_core@2.0.0"
+
+
+def _parse_released_plugin(value: str) -> dict[str, str]:
+    """The deployment entry for one ``--plugin [<publisher>/]<name>@<version>``."""
+    spec, at, version = value.rpartition("@")
+    if not at:
+        raise typer.BadParameter(
+            f"--plugin '{value}' names no version. Write [<publisher>/]<name>@<version>, "
+            f"such as {_PLUGIN_EXAMPLE}."
+        )
+    publisher, slash, name = spec.rpartition("/")
+    if not PLATFORM_NAME_PATTERN.match(name) or (slash and (not publisher or "/" in publisher)):
+        raise typer.BadParameter(
+            f"--plugin '{value}' does not name a plugin. Write [<publisher>/]<name>@<version>, "
+            f"such as {_PLUGIN_EXAMPLE}, where the name starts with a lowercase letter and holds "
+            "only lowercase letters, digits and underscores."
+        )
+    try:
+        Version(version)
+    except InvalidVersion:
+        raise typer.BadParameter(
+            f"--plugin '{value}': '{version}' is not an exact version. --plugin deploys one "
+            f"released version, such as {_PLUGIN_EXAMPLE}, rather than a range."
+        ) from None
+    return {"name": name, "version": version} | ({"publisher": publisher} if publisher else {})
+
+
+def _deploy_released(plugins: list[str], instance: list[str], *, assume_yes: bool) -> None:
+    """Deploy released versions of several plugins together, in one deployment."""
+    entries = [_parse_released_plugin(value) for value in plugins]
+    client = PlatformClient(auth.resolve_platform_url())
+    targets = _resolve_instances(client, instance, "deploy_plugin", verb="deploy plugins to")
+    print(f"Deploying {', '.join(plugins)} to {', '.join(targets)}…")
+    _dispatch(
+        client,
+        "deploy",
+        entries,
+        targets,
+        what=f"Deploy of {', '.join(plugins)}",
+        assume_yes=assume_yes,
+    )
+
+
 def deploy(
-    plugin_dir: Path = typer.Argument(..., help="Path to the plugin package to deploy"),
+    plugin_dir: Path | None = typer.Argument(
+        None,
+        help="Path to the plugin package to deploy. Omit it when naming plugins with --plugin.",
+    ),
+    plugin: list[str] = typer.Option(
+        [],
+        "--plugin",
+        help=(
+            "Deploy this released plugin, written [<publisher>/]<name>@<version> with an exact "
+            "version, without a plugin folder or a push (repeatable). Every --plugin goes out "
+            "in one deployment."
+        ),
+    ),
     instance: list[str] = typer.Option([], "--instance", help=_INSTANCE_HELP),
     ref: str | None = typer.Option(
         None,
@@ -699,7 +782,40 @@ def deploy(
     A manifest with `dependencies`, such as a bundle, deploys like any other
     plugin: Canvas Platform resolves the dependencies, which their publishers have
     already pushed, and installs them with it.
+
+    With --plugin, given once per plugin as `[<publisher>/]<name>@<version>` in
+    place of a plugin folder, deploy pushes nothing and creates one deployment of
+    those released versions, so plugins that have to move together, such as two
+    products moving to a new major version of a dependency they share, install
+    together. Each version is exact. Without a publisher, Canvas Platform finds the
+    plugin by name. --plugin takes no plugin folder, --ref, --no-push, --push-only,
+    --snapshot or --branch.
     """
+    if plugin:
+        given = [
+            option
+            for option, used in (
+                ("a plugin folder", plugin_dir is not None),
+                ("--ref", ref is not None),
+                ("--no-push", no_push),
+                ("--push-only", push_only),
+                ("--snapshot", snapshot),
+                ("--branch", branch is not None),
+            )
+            if used
+        ]
+        if given:
+            raise typer.BadParameter(
+                "--plugin deploys released versions without pushing, so it takes no "
+                f"{' or '.join(given)}."
+            )
+        _deploy_released(plugin, instance, assume_yes=assume_yes)
+        return
+    if plugin_dir is None:
+        raise typer.BadParameter(
+            "Name the plugin folder to deploy, or name released plugins with "
+            f"--plugin, such as --plugin {_PLUGIN_EXAMPLE}."
+        )
     if push_only and (instance or ref is not None or no_push):
         raise typer.BadParameter(
             "--push-only pushes without deploying, so it takes no --instance, --ref or --no-push."

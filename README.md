@@ -204,14 +204,16 @@ Publish a plugin's code to Canvas Platform and deploy it. The package folder mus
 
 ```console
 $ canvas deploy [OPTIONS] PLUGIN_DIR
+$ canvas deploy --plugin [PUBLISHER/]NAME@VERSION [--plugin ...] [OPTIONS]
 ```
 
 **Arguments**:
 
-- `PLUGIN_DIR`: Path to the plugin package [required]
+- `PLUGIN_DIR`: Path to the plugin package. Omitted with `--plugin`
 
 **Options**:
 
+- `--plugin TEXT`: Deploy a released plugin, written `[<publisher>/]<name>@<version>` with an exact version, without a plugin folder or a push. Repeatable; every `--plugin` goes out in one deployment. Without a publisher, Canvas Platform finds the plugin by name. Takes no `PLUGIN_DIR`, `--ref`, `--no-push`, `--push-only`, `--snapshot` or `--branch`. See [Dependencies and bundles](#dependencies-and-bundles)
 - `--instance TEXT`: Instance to deploy to, repeatable. Without it, deploy targets the only instance you can deploy to and otherwise lists the choices
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
@@ -223,17 +225,27 @@ $ canvas deploy [OPTIONS] PLUGIN_DIR
 
 ### Dependencies and bundles
 
-A manifest's `dependencies` name plugins that Canvas Platform installs with it. Each entry has exactly three keys, all required: `name`, `publisher` (the slug of the organization that publishes it), and `version`, one exact PEP 440 version such as `1.16.0` rather than a range. A plugin with `"bundle": true` is made only of its dependencies and its catalog listing, carries no `components`, `custom_data`, `variables` or `secrets`, and `canvas install` refuses one.
+A manifest's `dependencies` name plugins that Canvas Platform installs with it. Each entry has exactly three keys, all required: `name`, `publisher` (the slug of the organization that publishes it), and `version`, a pin in one of two forms. A plugin with `"bundle": true` is made only of its dependencies and its catalog listing, carries no `components`, `custom_data`, `variables` or `secrets`, and `canvas install` refuses one.
 
 ```json
 "dependencies": [
   {"name": "scribe_core", "publisher": "canvas-medical", "version": "1.16.0"},
-  {"name": "commands_kit", "publisher": "canvas-medical", "version": "0.1.1"}
+  {"name": "commands_kit", "publisher": "canvas-medical", "version": "~=0.1.1"}
 ]
 ```
 
-- Each dependency must already be on Canvas Platform at that version. Its publisher pushes each release on its own, outside any bundle, with `canvas deploy <plugin> --push-only --snapshot`, which updates the plugin's code and catalog listing without deploying it anywhere.
+- An exact PEP 440 version, such as `1.16.0`, installs that version.
+- A compatible release, `~=` followed by at least two version components, accepts any version in its range: `~=1.16` is 1.16 or later below 2.0, and `~=0.1.1` is 0.1.1 or later below 0.2. Other specifiers (`>=`, `<`, `==`, `!=`, `===`, comma-separated sets, wildcards, `~=1`) are refused.
+- Each dependency must already be on Canvas Platform at a version its pin accepts. Its publisher pushes each release on its own, outside any bundle, with `canvas deploy <plugin> --push-only --snapshot`, which updates the plugin's code and catalog listing without deploying it anywhere.
 - Deploying a plugin or bundle with `dependencies` works like any other deploy: the CLI pushes the plugin and creates one deployment naming it, and Canvas Platform resolves the dependencies and installs them in order. Each target's `wave` is shown when platform reports it.
+
+Versions follow semantic versioning: a compatible pin moves within one major version, and a release that changes the major version is one no existing compatible pin reaches. When two plugins share a dependency, such as two products built on the same core plugin, moving that dependency to a new major means every plugin pinning it moves to a release pinning the new major in the same deployment. `canvas deploy --plugin` does that without a plugin folder or a push, deploying released versions of several plugins in one deployment:
+
+```console
+$ canvas deploy --plugin canvas-medical/scribe@2.0.0 --plugin acme/intake@3.0.0 --instance acme-staging
+```
+
+Each `--plugin` names an exact version, which Canvas Platform resolves to the newest revision on `main` carrying it. When a deployment would leave installed plugins disagreeing about a dependency, Canvas Platform refuses it with a sentence naming the plugins. When each plugin in the way has a release that fits, the sentence ends with the `canvas deploy --plugin ...` command that moves them together, and at a terminal `canvas deploy` asks whether to deploy them together and, on yes, sends that one deployment. Under `--yes` or without a terminal it prints the refusal and deploys nothing.
 
 ## `canvas clone`
 

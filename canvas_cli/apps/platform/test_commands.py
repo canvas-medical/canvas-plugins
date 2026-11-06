@@ -2870,6 +2870,310 @@ def test_deploy_of_a_bundle_names_only_the_bundle_and_shows_each_wave(
     mock_run.assert_not_called()
 
 
+# -- deploy: released plugins by name -----------------------------------------
+
+
+@patch("subprocess.run")
+def test_deploy_plugins_by_name_sends_one_deployment_of_both(
+    mock_run: Mock, api: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Each --plugin becomes one entry of a single deployment, carrying its publisher only when
+    one is written, and nothing is pushed.
+    """
+    targets = [
+        {"plugin": "scribe_core", "instance": "acme-staging", "status": "succeeded", "wave": 0},
+        {"plugin": "scribe", "instance": "acme-staging", "status": "succeeded", "wave": 1},
+        {"plugin": "intake", "instance": "acme-staging", "status": "succeeded", "wave": 1},
+    ]
+    api.get(f"{API}/deployments/6f1c", json=_deployment("succeeded", targets=targets))
+
+    result = runner.invoke(
+        app,
+        [
+            "deploy",
+            "--plugin",
+            "canvas-medical/scribe@2.0.0",
+            "--plugin",
+            "intake@1.4.0rc1",
+            "--instance",
+            "acme-staging",
+            "--instance",
+            "acme-test",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    dispatched = _requests_to(api, "POST", "/deployments")
+    assert len(dispatched) == 1
+    assert dispatched[0].json() == {
+        "action": "deploy",
+        "plugins": [
+            {"name": "scribe", "publisher": "canvas-medical", "version": "2.0.0"},
+            {"name": "intake", "version": "1.4.0rc1"},
+        ],
+        "instances": ["acme-staging", "acme-test"],
+    }
+    assert (
+        "Deploying canvas-medical/scribe@2.0.0, intake@1.4.0rc1 to acme-staging, acme-test…"
+        in result.output
+    )
+    assert "scribe_core on acme-staging (wave 0): succeeded" in result.output
+    assert "Deploy of canvas-medical/scribe@2.0.0, intake@1.4.0rc1 succeeded." in result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert not _requests_to(api, "GET", "/me")
+    mock_run.assert_not_called()
+
+
+def test_deploy_plugins_by_name_targets_the_only_instance_the_person_can_deploy_to(
+    api: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Without --instance, --plugin targets the only deployable instance, like any deploy."""
+    result = runner.invoke(app, ["deploy", "--plugin", "acme/kit@1.0.0"])
+
+    assert result.exit_code == 0, result.output
+    assert "Targeting acme-staging, the only instance you can deploy plugins to." in result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["instances"] == ["acme-staging"]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("acme/kit", "names no version"),
+        ("acme/kit@~=2.0", "is not an exact version"),
+        ("acme/kit@>=2.0", "is not an exact version"),
+        ("acme/kit@==2.0.0", "is not an exact version"),
+        ("acme/kit@2.*", "is not an exact version"),
+        ("acme/kit@", "is not an exact version"),
+        ("acme/Kit@2.0.0", "does not name a plugin"),
+        ("/kit@2.0.0", "does not name a plugin"),
+        ("acme/team/kit@2.0.0", "does not name a plugin"),
+        ("@2.0.0", "does not name a plugin"),
+    ],
+)
+def test_deploy_plugins_by_name_refuses_what_is_not_a_name_and_exact_version(
+    value: str, expected: str, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A --plugin without `@<version>`, with a range, or with a malformed name is refused
+    before platform is called.
+    """
+    result = runner.invoke(app, ["deploy", "--plugin", value, "--instance", "acme-staging"])
+
+    assert result.exit_code == 2
+    assert expected in " ".join(result.output.split())
+    assert not requests_mock.called
+
+
+@pytest.mark.parametrize(
+    ("extra", "named"),
+    [
+        (["PLUGIN_DIR"], "a plugin folder"),
+        (["--ref", "v1.2.0"], "--ref"),
+        (["--no-push"], "--no-push"),
+        (["--push-only"], "--push-only"),
+        (["--snapshot"], "--snapshot"),
+        (["--branch", "preview"], "--branch"),
+    ],
+)
+def test_deploy_plugins_by_name_refuses_the_options_that_push_or_name_a_folder(
+    extra: list[str],
+    named: str,
+    requests_mock: requests_mock_module.Mocker,
+    package: Path,
+    signed_in: None,
+) -> None:
+    """--plugin with a plugin folder or a push option is refused before platform is called."""
+    extra = [str(package) if item == "PLUGIN_DIR" else item for item in extra]
+
+    result = runner.invoke(app, ["deploy", *extra, "--plugin", "acme/kit@1.0.0"])
+
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert "--plugin deploys released versions without pushing" in output
+    assert named in output
+    assert not requests_mock.called
+
+
+def test_deploy_without_a_folder_or_plugin_says_to_name_one(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Neither a plugin folder nor --plugin is refused, naming both ways to say what to deploy."""
+    result = runner.invoke(app, ["deploy", "--instance", "acme-staging"])
+
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert "Name the plugin folder to deploy, or name released plugins with --plugin" in output
+    assert not requests_mock.called
+
+
+def test_deploy_plugins_by_name_shows_platforms_refusal_and_its_hint_as_is(
+    api: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Platform's refusal sentence, including a closing hint, is printed unchanged."""
+    sentence = (
+        "scribe 2.0.0 needs scribe_core ~=2.0, but intake on acme-staging needs scribe_core "
+        "~=1.16. Deploy them together: canvas deploy --plugin canvas-medical/scribe@2.0.0 "
+        "--plugin acme/intake@2.0.0 --instance acme-staging"
+    )
+    api.post(
+        f"{API}/deployments",
+        status_code=400,
+        json={"error": sentence, "code": "dependency_conflict"},
+    )
+
+    result = split_runner.invoke(
+        app,
+        ["deploy", "--plugin", "canvas-medical/scribe@2.0.0", "--instance", "acme-staging"],
+    )
+
+    assert result.exit_code == 1
+    assert f"Error: {sentence}" in result.stderr
+
+
+TOGETHER_SENTENCE = (
+    "acme__a 2.0.0 needs acme/acme__kit ~=2.0, and acme-staging runs acme__b 1.0.0, which needs "
+    "acme/acme__kit ~=1.0. An instance runs one version of each plugin. Deploy them together: "
+    "canvas deploy --plugin acme/acme__a@2.0.0 --plugin acme/acme__b@2.0.0 --instance acme-staging"
+)
+TOGETHER = [
+    {"publisher": "acme", "name": "acme__a", "version": "2.0.0"},
+    {"publisher": "acme", "name": "acme__b", "version": "2.0.0"},
+]
+
+
+def _refused_then_deployed(api: requests_mock_module.Mocker) -> None:
+    """Platform refuses the first deployment naming what to deploy together, then takes the second."""
+    api.post(
+        f"{API}/deployments",
+        [
+            {
+                "status_code": 400,
+                "json": {
+                    "error": TOGETHER_SENTENCE,
+                    "code": "dependency_conflict",
+                    "together": TOGETHER,
+                },
+            },
+            {"status_code": 202, "json": _deployment("succeeded")},
+        ],
+    )
+
+
+def test_deploy_offers_to_deploy_the_plugins_platform_names_together(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At a terminal, yes sends one deployment naming every plugin Platform listed, by version."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    _refused_then_deployed(api)
+
+    result = runner.invoke(
+        app, ["deploy", "--plugin", "acme/acme__a@2.0.0", "--instance", "acme-staging"], input="y\n"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert TOGETHER_SENTENCE in result.output
+    posts = _requests_to(api, "POST", "/deployments")
+    assert len(posts) == 2
+    assert posts[1].json() == {
+        "action": "deploy",
+        "plugins": [
+            {"name": "acme__a", "version": "2.0.0", "publisher": "acme"},
+            {"name": "acme__b", "version": "2.0.0", "publisher": "acme"},
+        ],
+        "instances": ["acme-staging"],
+    }
+    assert "Deploy of acme/acme__a@2.0.0, acme/acme__b@2.0.0 succeeded." in result.output
+
+
+def test_deploy_declined_together_deploys_nothing(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Answering no leaves the refusal standing and sends no second deployment."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    _refused_then_deployed(api)
+
+    result = runner.invoke(
+        app, ["deploy", "--plugin", "acme/acme__a@2.0.0", "--instance", "acme-staging"], input="n\n"
+    )
+
+    assert result.exit_code == 1
+    assert len(_requests_to(api, "POST", "/deployments")) == 1
+
+
+@pytest.mark.parametrize("interactive,flags", [(True, ["--yes"]), (False, [])])
+def test_deploy_together_is_never_answered_without_a_person(
+    api: requests_mock_module.Mocker,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+    interactive: bool,
+    flags: list[str],
+) -> None:
+    """Under --yes or without a terminal, the refusal and its command are printed, nothing more."""
+    monkeypatch.setattr(git, "interactive", lambda: interactive)
+    _refused_then_deployed(api)
+
+    result = runner.invoke(
+        app,
+        ["deploy", "--plugin", "acme/acme__a@2.0.0", "--instance", "acme-staging", *flags],
+    )
+
+    assert result.exit_code == 1
+    assert TOGETHER_SENTENCE in result.output
+    assert len(_requests_to(api, "POST", "/deployments")) == 1
+
+
+def test_deploy_plugins_by_name_surfaces_a_version_platform_does_not_have(
+    api: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A `version_not_found` refusal prints platform's sentence."""
+    api.post(
+        f"{API}/deployments",
+        status_code=400,
+        json={"error": "acme/kit has no version 9.0.0 on main.", "code": "version_not_found"},
+    )
+
+    result = runner.invoke(
+        app, ["deploy", "--plugin", "acme/kit@9.0.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 1
+    assert "acme/kit has no version 9.0.0 on main." in result.output
+
+
+def test_deploy_plugins_by_name_with_yes_lists_consent_and_answers_none(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """--yes leaves consent unanswered for --plugin as for any deploy."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
+
+    result = runner.invoke(
+        app, ["deploy", "--plugin", "acme/kit@1.0.0", "--instance", "acme-staging", "--yes"]
+    )
+
+    assert result.exit_code == 1
+    assert "--yes does not answer" in " ".join(result.output.split())
+    assert _consent_answers(api) == []
+
+
+def test_deploy_plugins_by_name_approves_consent_interactively(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At a terminal, --plugin walks consent and follows the deployment like any deploy."""
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.post(f"{API}/deployments", status_code=202, json=_pending_consent())
+    api.post(f"{API}/consent-requests/41/approve", json={})
+
+    result = runner.invoke(
+        app,
+        ["deploy", "--plugin", "acme/kit@1.0.0", "--instance", "acme-staging"],
+        input="y\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/consent-requests/41/approve")
+    assert "Deploy of acme/kit@1.0.0 succeeded." in result.output
+
+
 def test_deploy_waits_through_consent_another_person_already_answered(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:
