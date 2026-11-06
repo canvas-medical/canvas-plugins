@@ -33,6 +33,7 @@ def _active_providers() -> Any:
         "config, not patient-scoped. When several fit, ask the clinician which one."
     ),
     queryset_factory=lambda args, pid: _active_providers(),
+    patient_scoped=False,
     filters={
         "specialty_contains": FilterSpec(
             type="string",

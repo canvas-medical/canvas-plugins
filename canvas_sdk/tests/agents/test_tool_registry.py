@@ -355,7 +355,7 @@ def test_filter_search_tool_passes_patient_id_to_factory() -> None:
     registry = ToolRegistry()
     seen: dict[str, Any] = {}
 
-    def factory(arguments: dict[str, Any], patient_id: str) -> _FakeQuerySet:
+    def factory(arguments: dict[str, Any], patient_id: str | None) -> _FakeQuerySet:
         seen["patient_id"] = patient_id
         seen["arguments"] = arguments
         return _FakeQuerySet(rows=[])
@@ -372,6 +372,44 @@ def test_filter_search_tool_passes_patient_id_to_factory() -> None:
 
     assert seen["patient_id"] == "p-42"
     assert seen["arguments"] == {"name_contains": "x"}
+
+
+def test_filter_search_tool_refuses_a_patientless_run() -> None:
+    """A patient-scoped search with no patient fails rather than reading an empty chart."""
+    registry = ToolRegistry()
+
+    @registry.filter_search_tool(
+        name="t",
+        description="t",
+        queryset_factory=lambda args, pid: _FakeQuerySet(rows=[]),
+    )
+    def _serialize(row: Any) -> dict[str, Any]:
+        return {}
+
+    with pytest.raises(ValueError, match="not about a patient"):
+        registry.execute("t", {}, ctx={})
+
+
+def test_filter_search_tool_practice_search_runs_without_a_patient() -> None:
+    """A search of practice config (patient_scoped=False) needs no patient on ctx."""
+    registry = ToolRegistry()
+    seen: dict[str, Any] = {}
+
+    def factory(arguments: dict[str, Any], patient_id: str | None) -> _FakeQuerySet:
+        seen["patient_id"] = patient_id
+        return _FakeQuerySet(rows=["row"])
+
+    @registry.filter_search_tool(
+        name="t",
+        description="t",
+        queryset_factory=factory,
+        patient_scoped=False,
+    )
+    def _serialize(row: Any) -> dict[str, Any]:
+        return {"row": row}
+
+    assert registry.execute("t", {}, ctx={}) == [{"row": "row"}]
+    assert seen["patient_id"] is None
 
 
 def test_filter_search_tool_applies_filters_only_when_truthy() -> None:

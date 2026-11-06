@@ -29,6 +29,7 @@ def _offered_reasons() -> Any:
         "patient-scoped. Use a configured reason when one matches what the visit is for."
     ),
     queryset_factory=lambda args, pid: _offered_reasons(),
+    patient_scoped=False,
     filters={
         "display_contains": FilterSpec(
             type="string",

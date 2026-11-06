@@ -112,6 +112,7 @@ def _find_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str
         "primary location. Practice-level config, not patient-scoped."
     ),
     queryset_factory=lambda args, pid: Staff.objects.filter(active=True),
+    patient_scoped=False,
     filters={
         "name_contains": FilterSpec(
             type="string",
