@@ -44,6 +44,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
 )
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
+from canvas_sdk.handlers.simple_api.api import SimpleAPIBase
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
@@ -340,15 +341,23 @@ class PluginRunner(PluginRunnerServicer):
                             namespace_config["access_level"] if namespace_config else "read"
                         )
 
+                        timing_tags = {"plugin": base_plugin_name, "event": event_name}
+
+                        # Every SimpleAPI handler's compute() is the base class's, so its
+                        # routes are told apart by the route template they matched. Read
+                        # through the base class, so a plugin overriding matched_route
+                        # cannot put a per-request value into the tag.
+                        if isinstance(handler, SimpleAPIBase) and (
+                            route := SimpleAPIBase.matched_route.__get__(handler)
+                        ):
+                            timing_tags["route"] = " ".join(route)
+
                         with (
                             metrics.measure(
                                 name=handler_name,
                                 track_queries=True,
                                 track_memory_usage=True,
-                                extra_tags={
-                                    "plugin": base_plugin_name,
-                                    "event": event_name,
-                                },
+                                extra_tags=timing_tags,
                             ),
                             plugin_database_context(
                                 base_plugin_name,
