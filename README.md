@@ -47,14 +47,14 @@ client_secret=localclientsecret
 
 Canvas Platform hosts a plugin's git repository and deploys it to the instances it manages. Sign in once per machine with `canvas login`, which opens your browser; the session is stored per platform in `~/.canvas/platform-credentials.json`, readable only by you, and refreshes itself. `canvas login --platform <url>` or `CANVAS_PLATFORM_URL` points the CLI at a platform other than https://platform.canvasmedical.com, and later commands keep using the platform you last signed in to.
 
-A plugin's name is used for the manifest `name`, the package folder and its imports: a lowercase identifier of letters, digits and underscores, such as `intake`, optionally carrying an organization's prefix, `<org prefix>__<package>` (for example `acme__intake`). The organization that publishes a plugin is the one the manifest's optional `publisher` key names by slug, else the one whose prefix the name carries, else the only organization you can push plugin code in. `canvas login` lists the slug and prefix of each organization you belong to.
+A plugin's name is used for the manifest `name`, the package folder and its imports: a lowercase identifier of letters, digits and underscores, such as `intake`, optionally carrying an organization's prefix, `<org prefix>__<package>` (for example `acme__intake`). The organization that publishes a plugin is the one the manifest's optional `publisher` key names by slug, else the one whose prefix the name carries. Otherwise, when `canvas deploy` pushes, it is the one organization you can push plugin code in that already publishes the name, else the only organization you can push in; when it deploys without pushing (`--ref`, `--no-push`), it is the one organization you can deploy from that publishes the name, else the publisher of the one plugin of that name Canvas Platform shows you. When that leaves a choice, deploy asks for `publisher` in the manifest. The deployment always names the publisher it settled on. `canvas login` lists the slug and prefix of each organization you belong to.
 
 #### Which plugins go through Canvas Platform
 
 `canvas config set`, `canvas config unset` and `canvas uninstall` work for plugins Canvas Platform manages and for plugins installed straight onto an instance, and each decides per plugin:
 
 - A name Canvas Platform cannot hold, or a machine that is not signed in, goes straight to the instance, as `canvas install` always has.
-- Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform; if not, it goes to the instance.
+- Otherwise the CLI asks platform for the plugin. If platform has it, the command goes through platform, naming the plugin's publisher; if not, it goes to the instance. A name without a prefix goes through platform only when one of your organizations publishes it, since an instance can hold a plugin of that name installed with `canvas install` while another organization publishes one on platform.
 
 `--host` names an instance for a plugin platform does not manage, and is refused for one it does. When an instance refuses `canvas install` because platform manages that plugin, the message names `canvas deploy`.
 
@@ -213,7 +213,7 @@ $ canvas deploy --plugin [PUBLISHER/]NAME@VERSION [--plugin ...] [OPTIONS]
 
 **Options**:
 
-- `--plugin TEXT`: Deploy a released plugin, written `[<publisher>/]<name>@<version>` with an exact version, without a plugin folder or a push. Repeatable; every `--plugin` goes out in one deployment. Without a publisher, Canvas Platform finds the plugin by name. Takes no `PLUGIN_DIR`, `--ref`, `--no-push`, `--push-only`, `--snapshot` or `--branch`. See [Dependencies and bundles](#dependencies-and-bundles)
+- `--plugin TEXT`: Deploy a released plugin, written `[<publisher>/]<name>@<version>` with an exact version in its normal form, without a plugin folder or a push. Repeatable; every `--plugin` goes out in one deployment. Without a publisher, Canvas Platform finds the plugin by name. Takes no `PLUGIN_DIR`, `--ref`, `--no-push`, `--push-only`, `--snapshot` or `--branch`. See [Dependencies and bundles](#dependencies-and-bundles)
 - `--instance TEXT`: Instance to deploy to, repeatable. Without it, deploy targets the only instance you can deploy to and otherwise lists the choices
 - `--ref TEXT`: Deploy a pushed branch, tag or commit as-is, without pushing
 - `--no-push`: Deploy the pushed `main` as-is, without pushing
@@ -234,7 +234,7 @@ A manifest's `dependencies` name plugins that Canvas Platform installs with it. 
 ]
 ```
 
-- An exact PEP 440 version, such as `1.16.0`, installs that version.
+- An exact PEP 440 version in its normal form, such as `1.16.0`, installs that version. A version written another way, such as `v1.16.0`, is refused with its normal form as the suggestion.
 - A compatible release, `~=` followed by at least two version components, accepts any version in its range: `~=1.16` is 1.16 or later below 2.0, and `~=0.1.1` is 0.1.1 or later below 0.2. Other specifiers (`>=`, `<`, `==`, `!=`, `===`, comma-separated sets, wildcards, `~=1`) are refused.
 - Each dependency must already be on Canvas Platform at a version its pin accepts. Its publisher pushes each release on its own, outside any bundle, with `canvas deploy <plugin> --push-only --snapshot`, which updates the plugin's code and catalog listing without deploying it anywhere.
 - Deploying a plugin or bundle with `dependencies` works like any other deploy: the CLI pushes the plugin and creates one deployment naming it, and Canvas Platform resolves the dependencies and installs them in order. Each target's `wave` is shown when platform reports it.
@@ -245,7 +245,7 @@ Versions follow semantic versioning: a compatible pin moves within one major ver
 $ canvas deploy --plugin canvas-medical/scribe@2.0.0 --plugin acme/intake@3.0.0 --instance acme-staging
 ```
 
-Each `--plugin` names an exact version, which Canvas Platform resolves to the newest revision on `main` carrying it. When a deployment would leave installed plugins disagreeing about a dependency, Canvas Platform refuses it with a sentence naming the plugins. When each plugin in the way has a release that fits, the sentence ends with the `canvas deploy --plugin ...` command that moves them together, and at a terminal `canvas deploy` asks whether to deploy them together and, on yes, sends that one deployment. Under `--yes` or without a terminal it prints the refusal and deploys nothing.
+Each `--plugin` names an exact version, which Canvas Platform resolves to the newest revision on `main` carrying it. When a deployment would leave installed plugins disagreeing about a dependency, Canvas Platform refuses it with a sentence naming the plugins. When each plugin in the way has a release that fits, the sentence ends with the `canvas deploy --plugin ...` command that moves them together, and `canvas deploy` prints it as an error. At a terminal it then asks whether to deploy them together and, on yes, resends the deployment as it was, each plugin at the ref or version it named, with the plugins in the way added at their releases, and names everything it deploys. Under `--yes` or without a terminal it deploys nothing.
 
 ## `canvas clone`
 

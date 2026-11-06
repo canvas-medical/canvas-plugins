@@ -19,6 +19,17 @@ from canvas_cli.apps.platform import auth
 TIMEOUT_SECONDS = 30
 
 
+def _is_release(entry: object) -> bool:
+    """Whether ``entry`` names one released plugin: a name and a version as non-empty strings,
+    and a publisher, when there is one, as a string.
+    """
+    return (
+        isinstance(entry, dict)
+        and all(isinstance(entry.get(key), str) and entry[key] for key in ("name", "version"))
+        and isinstance(entry.get("publisher") or "", str)
+    )
+
+
 class PlatformError(click.ClickException):
     """A refusal or transport failure from Canvas Platform."""
 
@@ -50,11 +61,7 @@ class PlatformError(click.ClickException):
         if field := body.get("field"):
             message = f"{message} (field: {field})"
         together = body.get("together")
-        if not (
-            isinstance(together, list)
-            and together
-            and all(isinstance(entry, dict) for entry in together)
-        ):
+        if not (isinstance(together, list) and together and all(map(_is_release, together))):
             together = None
         return cls(
             str(message),

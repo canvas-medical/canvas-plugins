@@ -452,3 +452,32 @@ def test_manifest_rejects_malformed_bundle(manifest: dict) -> None:
     """A bundle that carries code, or whose dependencies are malformed, fails validation."""
     with pytest.raises(ValidationError):
         validate_manifest_file(manifest)
+
+
+@pytest.mark.parametrize(
+    ("version", "normalized"),
+    [("v1.16.0", "1.16.0"), (" 1.16.0", "1.16.0"), ("1.16.0 ", "1.16.0"), ("V2", "2")],
+)
+def test_manifest_refuses_an_exact_version_not_written_in_normal_form(
+    version: str, normalized: str
+) -> None:
+    """An exact version PEP 440 parses but writes differently is refused, naming its normal form."""
+    manifest = _bundle_manifest(dependencies=[_dependency(version=version)])
+    with pytest.raises(ValidationError) as error:
+        validate_manifest_file(manifest)
+    assert f"write it as {normalized!r}" in error.value.message
+
+
+def test_manifest_accepts_a_dependency_sharing_its_name_from_another_publisher() -> None:
+    """A plugin of the same name from a different publisher is another plugin, not itself."""
+    validate_manifest_file(_bundle_manifest(publisher="acme", dependencies=[_dependency("scribe")]))
+
+
+@pytest.mark.parametrize("publisher", [None, "canvas-medical"])
+def test_manifest_refuses_a_dependency_on_itself(publisher: str | None) -> None:
+    """A dependency of the plugin's own name is itself unless another publisher is named."""
+    overrides: dict[str, Any] = {"dependencies": [_dependency("scribe")]}
+    if publisher:
+        overrides["publisher"] = publisher
+    with pytest.raises(ValidationError, match="is the plugin itself"):
+        validate_manifest_file(_bundle_manifest(**overrides))

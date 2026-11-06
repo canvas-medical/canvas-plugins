@@ -232,7 +232,7 @@ def test_deploy_publishes_an_unprefixed_name_as_the_only_organization_that_can_p
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/orgs/acme/plugins")[0].json() == {"name": "intake"}
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": "intake", "ref": _git(directory, "rev-parse", "HEAD")}
+        {"name": "intake", "ref": _git(directory, "rev-parse", "HEAD"), "publisher": "acme"}
     ]
 
 
@@ -244,9 +244,11 @@ def test_deploy_asks_for_a_publisher_when_several_organizations_could_publish(
     tmp_path: Path,
 ) -> None:
     """With no publisher in the manifest, no matching prefix and several organizations that
-    can push, deploy lists them and asks for `publisher` before any git runs.
+    can push, none of which publishes the name, deploy lists them and asks for `publisher`
+    before any git runs.
     """
     requests_mock.get(f"{API}/me", json={**ME, "organizations": [ACME, BETA]})
+    _plugin_under(requests_mock, "gamma__intake")
     directory = tmp_path / "gamma__intake"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(
@@ -416,7 +418,7 @@ def test_deploy_ref_does_not_validate_the_local_package(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "v1.2.0"}
+        {"name": NAME, "ref": "v1.2.0", "publisher": "acme"}
     ]
 
 
@@ -448,7 +450,7 @@ def test_deploy_registers_pushes_and_deploys_the_pushed_commit(
     deployment = _requests_to(api, "POST", "/deployments")[0].json()
     assert deployment == {
         "action": "deploy",
-        "plugins": [{"name": NAME, "ref": head}],
+        "plugins": [{"name": NAME, "ref": head, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -517,7 +519,7 @@ def test_deploy_no_push_deploys_main_without_git(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "main"}
+        {"name": NAME, "ref": "main", "publisher": "acme"}
     ]
     mock_run.assert_not_called()
 
@@ -533,7 +535,7 @@ def test_deploy_ref_deploys_that_ref(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "v1.2.0"}
+        {"name": NAME, "ref": "v1.2.0", "publisher": "acme"}
     ]
     mock_run.assert_not_called()
 
@@ -672,7 +674,7 @@ def test_deploy_branch_pushes_head_to_that_branch_and_deploys_the_pushed_commit(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
     assert f"Pushed {NAME} {head[:12]} to feature-x on Canvas Platform." in result.output
 
@@ -810,7 +812,7 @@ def test_deploy_branch_rerun_after_push_only_deploys_the_pushed_commit(
     assert _git(bare, "rev-parse", "ja/intake-forms") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -859,7 +861,7 @@ def test_deploy_branch_commits_a_dirty_tree_and_deploys_the_new_commit(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -902,7 +904,7 @@ def test_deploy_branch_from_a_checkout_behind_platform_main(
     assert _git(bare, "rev-parse", "feature-x") == head
     assert _git(bare, "rev-parse", "main") == edited
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": head}
+        {"name": NAME, "ref": head, "publisher": "acme"}
     ]
 
 
@@ -984,7 +986,7 @@ def test_deploy_snapshot_pushes_only_the_package_and_leaves_the_monorepo_alone(
     assert trailers == f"Monorepo-Commit: {head}\nMonorepo-Path: plugins/{NAME}"
     _git(bare, "fsck", "--strict")
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
     assert (root / ".git" / "config").read_text() == config
     assert _git(root, "status", "--porcelain") == ""
@@ -1024,7 +1026,7 @@ def test_deploy_snapshot_keeps_platform_files_beside_the_package_and_skips_an_un
     assert "Pushed" not in again.output
     assert _git(bare, "rev-parse", "main") == pushed
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
 
 
@@ -1844,7 +1846,7 @@ def test_deploy_snapshot_branch_rerun_after_push_only_deploys_the_branch_tip(
     assert "Pushed" not in result.output
     assert _git(bare, "rev-parse", "ja/intake-forms") == pushed
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": pushed}
+        {"name": NAME, "ref": pushed, "publisher": "acme"}
     ]
 
 
@@ -1973,7 +1975,7 @@ def test_deploy_snapshot_branch_while_platform_has_no_main(
     assert _git(bare, "rev-list", "--parents", "-n", "1", "feature-x") == first
     assert _git(bare, "for-each-ref", "refs/heads/main") == ""
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": first}
+        {"name": NAME, "ref": first, "publisher": "acme"}
     ]
     _commit_in(monorepo, "handler.py", "x = 1\n")
 
@@ -2303,7 +2305,7 @@ def test_config_set_on_a_managed_plugin_stores_values_then_configures(
     }
     assert _requests_to(requests_mock, "POST", "/deployments")[0].json() == {
         "action": "configure",
-        "plugins": [{"name": NAME}],
+        "plugins": [{"name": NAME, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -2389,7 +2391,10 @@ def test_config_on_a_name_platform_cannot_hold_never_asks_platform(
 def test_config_on_an_unprefixed_managed_plugin_goes_through_platform(
     requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """A plugin platform manages under a name with no prefix is configured through platform."""
+    """A plugin one of the person's organizations publishes under a name with no prefix is
+    configured through platform, naming its publisher.
+    """
+    requests_mock.get(f"{API}/me", json=ME)
     requests_mock.get(
         f"{API}/plugins/intake",
         json={"name": "intake", "publisher": "acme", "installs": [{"instance": "acme-staging"}]},
@@ -2406,7 +2411,7 @@ def test_config_on_an_unprefixed_managed_plugin_goes_through_platform(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(requests_mock, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": "intake"}
+        {"name": "intake", "publisher": "acme"}
     ]
 
 
@@ -2443,7 +2448,7 @@ def test_uninstall_of_a_managed_plugin_dispatches_an_uninstall(
     assert result.exit_code == 0, result.output
     assert _requests_to(requests_mock, "POST", "/deployments")[0].json() == {
         "action": "uninstall",
-        "plugins": [{"name": NAME}],
+        "plugins": [{"name": NAME, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -2865,7 +2870,7 @@ def test_deploy_of_a_bundle_names_only_the_bundle_and_shows_each_wave(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "main"}
+        {"name": NAME, "ref": "main", "publisher": "acme"}
     ]
     assert "kit on acme-staging (wave 0): succeeded" in result.output
     assert f"{NAME} on acme-staging (wave 1): succeeded" in result.output
@@ -3612,3 +3617,243 @@ def test_whoami_platform_option_suggests_logging_in_there(
     assert result.exit_code == 1
     assert f"Platform: {PLATFORM} (from --platform)" in result.output
     assert f"Run `canvas login --platform {PLATFORM}`." in result.output
+
+
+# -- review findings: publishers, managed plugins, deploying together ---------
+
+
+def test_deploy_sends_the_publisher_the_name_prefix_resolves_to(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """A folder deploy names the publisher it resolved from the prefix, though the manifest names
+    none, so Platform never resolves the name on its own.
+    """
+    result = runner.invoke(app, ["deploy", str(package), "--no-push", "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": "main", "publisher": "acme"}
+    ]
+
+
+DEPLOYER: dict[str, Any] = {
+    **ACME,
+    "slug": "beta",
+    "name": "Beta Care",
+    "plugin_prefix": "beta",
+    "capabilities": ["view_org_assets", "deploy_plugin"],
+}
+
+
+def _plugin_under(
+    mock: requests_mock_module.Mocker,
+    name: str,
+    *publishers: str,
+    by_name: dict[str, Any] | None = None,
+) -> None:
+    """Platform has ``name`` under each of ``publishers``, and under no other organization asked.
+    Asked by name alone, it answers ``by_name``, or 404 without one.
+    """
+    if by_name is None:
+        mock.get(f"{API}/plugins/{name}", status_code=404, json={"error": "Not found."})
+    else:
+        mock.get(f"{API}/plugins/{name}", json=by_name)
+    for slug in ("acme", "beta", "gamma"):
+        if slug in publishers:
+            mock.get(
+                f"{API}/plugins/{name}?publisher={slug}", json={"name": name, "publisher": slug}
+            )
+        else:
+            mock.get(
+                f"{API}/plugins/{name}?publisher={slug}",
+                status_code=404,
+                json={"error": "Not found."},
+            )
+
+
+def test_deploy_without_pushing_picks_the_organization_that_has_the_plugin(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """Without a push, an unprefixed name is deployed from the organization the person may deploy
+    in that has the plugin, whether or not they may push there.
+    """
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, DEPLOYER]})
+    _plugin_under(api, "intake", "beta")
+    directory = _unprefixed_package(tmp_path)
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--no-push", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": "main", "publisher": "beta"}
+    ]
+
+
+def test_deploy_without_pushing_takes_the_one_plugin_of_the_name_platform_shows(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """When none of the person's organizations publishes the name, the one plugin Platform shows
+    by that name, such as one granted to them, is deployed as its publisher.
+    """
+    _plugin_under(api, "intake", by_name={"name": "intake", "publisher": "canvas-medical"})
+    directory = _unprefixed_package(tmp_path)
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--ref", "v1.0.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": "v1.0.0", "publisher": "canvas-medical"}
+    ]
+
+
+def test_deploy_without_pushing_asks_for_a_publisher_when_several_have_the_plugin(
+    api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
+) -> None:
+    """Two of the person's organizations publishing the name leaves deploy asking for `publisher`."""
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BETA]})
+    _plugin_under(api, "intake", "acme", "beta")
+    directory = _unprefixed_package(tmp_path)
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--no-push", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert "acme, beta" in output
+    assert '"publisher"' in output
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+def test_deploy_pushes_as_the_organization_that_already_publishes_the_name(
+    api: requests_mock_module.Mocker, bare: Path, signed_in: None, tmp_path: Path
+) -> None:
+    """With several organizations that can push, the one already publishing the name is picked
+    rather than registering the name anew.
+    """
+    api.get(f"{API}/me", json={**ME, "organizations": [ACME, BETA]})
+    api.post(
+        f"{API}/orgs/beta/plugins",
+        json={"name": "intake", "publisher": "beta", "git_url": bare.as_uri()},
+    )
+    _plugin_under(api, "intake", "beta")
+    directory = _unprefixed_package(tmp_path)
+
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert not _requests_to(api, "POST", "/orgs/acme/plugins")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": _git(directory, "rev-parse", "HEAD"), "publisher": "beta"}
+    ]
+
+
+@patch("canvas_cli.apps.platform.commands.instance_plugin.update")
+def test_config_on_an_unprefixed_plugin_another_organization_publishes_goes_to_the_instance(
+    mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A name Platform shows only as another organization's plugin is not one Platform manages
+    for the person, so --host writes the instance directly.
+    """
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.get(f"{API}/plugins/intake", json={"name": "intake", "publisher": "other"})
+
+    result = runner.invoke(app, ["config", "set", "intake", "A=1", "--host", "https://x.example"])
+
+    assert result.exit_code == 0, result.output
+    assert mock_update.call_args.kwargs["host"] == "https://x.example"
+    assert not _requests_to(requests_mock, "POST", "/deployments")
+
+
+@patch("canvas_cli.apps.platform.commands.instance_plugin.uninstall")
+def test_uninstall_of_an_unprefixed_plugin_another_organization_publishes_goes_to_the_instance(
+    mock_uninstall: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Uninstall treats another organization's plugin of the same name as not Platform's to manage."""
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.get(f"{API}/plugins/intake", json={"name": "intake", "publisher": "other"})
+
+    result = runner.invoke(app, ["uninstall", "intake", "--host", "https://x.example"])
+
+    assert result.exit_code == 0, result.output
+    mock_uninstall.assert_called_once_with(name="intake", force=False, host="https://x.example")
+
+
+def test_deploy_together_keeps_the_pushed_ref_and_adds_only_the_other_plugins(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Yes resends the folder deploy's own entry, ref and all, plus the plugins Platform named
+    that the request did not hold, and the output names what is deployed.
+    """
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    api.post(
+        f"{API}/deployments",
+        [
+            {
+                "status_code": 400,
+                "json": {
+                    "error": "Conflict.",
+                    "code": "dependency_conflict",
+                    "together": [
+                        {"publisher": "acme", "name": NAME, "version": "2.0.0"},
+                        {"publisher": "acme", "name": "acme__b", "version": "2.0.0"},
+                    ],
+                },
+            },
+            {"status_code": 202, "json": _deployment("succeeded")},
+        ],
+    )
+    directory = Path(NAME)
+
+    with runner.isolated_filesystem():
+        directory.mkdir()
+        (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
+        result = runner.invoke(
+            app,
+            ["deploy", str(directory), "--ref", "3f2a9c", "--instance", "acme-staging"],
+            input="y\n",
+        )
+
+    assert result.exit_code == 0, result.output
+    posts = _requests_to(api, "POST", "/deployments")
+    assert posts[1].json()["plugins"] == [
+        {"name": NAME, "ref": "3f2a9c", "publisher": "acme"},
+        {"name": "acme__b", "version": "2.0.0", "publisher": "acme"},
+    ]
+    assert f"Deploy of acme/{NAME}@3f2a9c, acme/acme__b@2.0.0 succeeded." in result.output
+
+
+def test_deploy_together_refusal_goes_to_stderr_like_any_other(
+    api: requests_mock_module.Mocker, signed_in: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The refusal that names plugins to deploy together is an `Error:` on stderr."""
+    monkeypatch.setattr(git, "interactive", lambda: False)
+    _refused_then_deployed(api)
+
+    result = split_runner.invoke(
+        app, ["deploy", "--plugin", "acme/acme__a@2.0.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 1
+    assert f"Error: {TOGETHER_SENTENCE}" in result.stderr
+    assert TOGETHER_SENTENCE not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("version", "normalized"), [("v2.0.0", "2.0.0"), ("V2", "2"), ("2.0.0 ", "2.0.0")]
+)
+def test_deploy_plugins_by_name_refuses_a_version_not_in_normal_form(
+    version: str, normalized: str, requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A --plugin version PEP 440 parses but writes differently is refused, naming its normal form."""
+    result = runner.invoke(
+        app, ["deploy", "--plugin", f"acme/kit@{version}", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 2
+    assert f"write it as '{normalized}'" in " ".join(result.output.split())
+    assert not requests_mock.called

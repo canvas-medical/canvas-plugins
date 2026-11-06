@@ -223,3 +223,51 @@ def test_plugin_names_the_publisher_when_given(
 
     assert PlatformClient(PLATFORM).plugin("intake", "acme") == body
     assert _last(requests_mock).qs == {"publisher": ["acme"]}
+
+
+@pytest.mark.parametrize(
+    "together",
+    [
+        [{"name": "acme__b"}],
+        [{"version": "2.0.0"}],
+        [{"name": "", "version": "2.0.0"}],
+        [{"name": "acme__b", "version": ""}],
+        [{"name": "acme__b", "version": 2}],
+        [{"name": "acme__b", "version": "2.0.0", "publisher": 7}],
+        [{"name": "acme__b", "version": "2.0.0"}, "acme__c"],
+    ],
+)
+def test_a_malformed_together_reads_as_absent(
+    requests_mock: requests_mock_module.Mocker, together: list
+) -> None:
+    """An entry without a name and version as non-empty strings, or with a publisher that is not
+    a string, leaves the refusal without `together`.
+    """
+    _sign_in()
+    requests_mock.post(
+        f"{PLATFORM}/api/v1/deployments",
+        status_code=400,
+        json={"error": "Conflict.", "code": "dependency_conflict", "together": together},
+    )
+
+    with pytest.raises(PlatformError) as raised:
+        PlatformClient(PLATFORM).create_deployment("deploy", [], ["acme-staging"])
+    assert raised.value.together is None
+
+
+def test_a_well_formed_together_is_kept(requests_mock: requests_mock_module.Mocker) -> None:
+    """Entries naming a name and version, with or without a publisher, are kept as sent."""
+    _sign_in()
+    together = [
+        {"publisher": "acme", "name": "acme__a", "version": "2.0.0"},
+        {"name": "acme__b", "version": "2.0.0"},
+    ]
+    requests_mock.post(
+        f"{PLATFORM}/api/v1/deployments",
+        status_code=400,
+        json={"error": "Conflict.", "code": "dependency_conflict", "together": together},
+    )
+
+    with pytest.raises(PlatformError) as raised:
+        PlatformClient(PLATFORM).create_deployment("deploy", [], ["acme-staging"])
+    assert raised.value.together == together

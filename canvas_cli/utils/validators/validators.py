@@ -35,17 +35,27 @@ def _refuse_repeated_names(catalog: object) -> None:
             raise ValidationError(f"catalog {key} names a {what} twice.")
 
 
+def normalized_version(version: str) -> str | None:
+    """The PEP 440 normal form of ``version`` as one exact version, or None when it is not one.
+
+    ``1.16.0`` is its own normal form, while ``v1.16.0`` and `` 1.16.0`` parse to ``1.16.0``
+    without being written that way.
+    """
+    try:
+        return str(Version(version))
+    except InvalidVersion:
+        return None
+
+
 def is_dependency_version(version: str) -> bool:
     """Whether ``version`` is a pin a dependency accepts.
 
-    That is one exact PEP 440 version, such as ``1.16.0``, or a compatible release
-    with at least two release components, such as ``~=1.16`` or ``~=0.1.1``.
+    That is one exact PEP 440 version in its normal form, such as ``1.16.0``, or a
+    compatible release with at least two release components, such as ``~=1.16`` or
+    ``~=0.1.1``.
     """
-    try:
-        Version(version)
-        return True
-    except InvalidVersion:
-        pass
+    if (normalized := normalized_version(version)) is not None:
+        return normalized == version
     try:
         specifier = Specifier(version)
     except InvalidSpecifier:
@@ -56,6 +66,10 @@ def is_dependency_version(version: str) -> bool:
 def _refuse_bad_dependencies(manifest_json: dict) -> None:
     """Refuse a dependency whose version is not a pin, named twice, or naming the plugin itself.
 
+    A dependency is the plugin itself when it carries the plugin's name and the manifest
+    names no ``publisher`` or the same one; the same name from another publisher is
+    another plugin.
+
     JSON Schema checks each entry's shape; these rules span entries or need PEP 440 parsing.
     """
     seen: set[tuple[str, str]] = set()
@@ -65,13 +79,22 @@ def _refuse_bad_dependencies(manifest_json: dict) -> None:
             dependency["publisher"],
             dependency["version"],
         )
+        normalized = normalized_version(version)
+        if normalized is not None and normalized != version:
+            raise ValidationError(
+                f"dependency {name!r}: {version!r} is not written as an exact version; "
+                f"write it as {normalized!r}."
+            )
         if not is_dependency_version(version):
             raise ValidationError(
                 f"dependency {name!r}: {version!r} is not a version a dependency accepts. "
                 "Name one exact version, such as '1.16.0', or a compatible release, such as "
                 "'~=1.16' (1.16 or later, below 2.0) or '~=0.1.1' (0.1.1 or later, below 0.2)."
             )
-        if name == manifest_json.get("name"):
+        if name == manifest_json.get("name") and manifest_json.get("publisher") in (
+            None,
+            publisher,
+        ):
             raise ValidationError(f"dependency {name!r} is the plugin itself.")
         if (name, publisher) in seen:
             raise ValidationError(f"dependency {name!r} of {publisher!r} is named twice.")

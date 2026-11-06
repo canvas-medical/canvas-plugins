@@ -30,12 +30,12 @@ from typing import Any, TextIO
 
 import click
 import typer
-from packaging.version import InvalidVersion, Version
 
 from canvas_cli.apps.auth.utils import get_default_host
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.plugin import plugin as instance_plugin
+from canvas_cli.utils.validators.validators import normalized_version
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 # What Canvas Platform accepts as a plugin name; a publisher prefix is optional.
@@ -139,14 +139,31 @@ def _matching_organization(me: dict[str, Any], name: str) -> dict[str, Any] | No
     return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
 
 
+def _visible(
+    client: PlatformClient, name: str, publisher: str | None = None
+) -> dict[str, Any] | None:
+    """Platform's plugin ``name``, of ``publisher`` when given; None when the person sees none,
+    or, by name alone, when several publishers' plugins share it.
+    """
+    try:
+        return client.plugin(name, publisher)
+    except PlatformError as error:
+        if error.code == "ambiguous":
+            return None
+        raise
+
+
 def _publisher(client: PlatformClient, name: str, declared: str | None, *, pushing: bool) -> str:
     """The slug of the organization that publishes ``name``.
 
     It is the organization the manifest's ``publisher`` names, else the person's
-    organization whose ``plugin_prefix`` the name carries, else the only one they
-    may push plugin code in. A Canvas employee, who reaches every organization
-    without belonging to it, may also deploy a plugin that already exists under
-    another publisher.
+    organization whose ``plugin_prefix`` the name carries. Otherwise, pushing, it is
+    the one organization the person may push plugin code in that already publishes
+    the name, else the only one they may push in at all; not pushing, it is the one
+    organization they may deploy in that publishes the name, else the publisher of
+    the one plugin of that name they can see. A Canvas employee, who reaches every
+    organization without belonging to it, may also deploy a plugin that already
+    exists under another publisher.
     """
     me = client.me()
     organizations = me.get("organizations", [])
@@ -163,27 +180,54 @@ def _publisher(client: PlatformClient, name: str, declared: str | None, *, pushi
     else:
         organization = _matching_organization(me, name)
     if organization is None:
-        if me.get("canvas_employee") and (existing := client.plugin(name)):
-            return str(existing["publisher"])
-        publishers = [o for o in organizations if "push_plugin_code" in o.get("capabilities", [])]
-        if len(publishers) != 1:
-            choices = (
-                f"Your organizations that can publish plugins: "
-                f"{', '.join(o['slug'] for o in publishers)}."
-                if publishers
-                else "None of your organizations on Canvas Platform lets you push plugin code."
-            )
-            raise typer.BadParameter(
-                f"There is no single organization to publish '{name}' as. {choices} Name "
-                'one as "publisher" in the manifest.'
-            )
-        organization = publishers[0]
+        return _unprefixed_publisher(client, me, name, pushing=pushing)
     if pushing and "push_plugin_code" not in organization.get("capabilities", []):
         raise typer.BadParameter(
             f"Your roles in {organization.get('name') or organization['slug']} do not include "
             "pushing plugin code. Ask an organization admin for the Plugin developer role."
         )
     return str(organization["slug"])
+
+
+def _unprefixed_publisher(
+    client: PlatformClient, me: dict[str, Any], name: str, *, pushing: bool
+) -> str:
+    """The publisher of a name neither the manifest nor a prefix settles; see ``_publisher``."""
+    employee = bool(me.get("canvas_employee"))
+    capability = "push_plugin_code" if pushing else "deploy_plugin"
+    able = [o for o in me.get("organizations", []) if capability in o.get("capabilities", [])]
+    if pushing and len(able) == 1 and not employee:
+        return str(able[0]["slug"])
+    publishing = [o for o in able if _visible(client, name, o["slug"]) is not None]
+    if len(publishing) == 1:
+        return str(publishing[0]["slug"])
+    if not publishing:
+        if (employee or not pushing) and (existing := _visible(client, name)):
+            return str(existing["publisher"])
+        if pushing and len(able) == 1:
+            return str(able[0]["slug"])
+    if pushing:
+        shown = publishing or able
+        choices = (
+            f"Your organizations that can publish plugins: {', '.join(o['slug'] for o in shown)}."
+            if shown
+            else "None of your organizations on Canvas Platform lets you push plugin code."
+        )
+        raise typer.BadParameter(
+            f"There is no single organization to publish '{name}' as. {choices} Name "
+            'one as "publisher" in the manifest.'
+        )
+    choices = (
+        f"Your organizations you can deploy from that publish it: "
+        f"{', '.join(o['slug'] for o in publishing)}."
+        if publishing
+        else "None of your organizations you can deploy from publishes it, and Canvas Platform "
+        "shows no single plugin of that name."
+    )
+    raise typer.BadParameter(
+        f"There is no single organization to deploy '{name}' from. {choices} Name its "
+        'publisher as "publisher" in the manifest.'
+    )
 
 
 # -- targets -----------------------------------------------------------------
@@ -327,6 +371,28 @@ def _report(deployment: dict[str, Any] | None, deployment_id: str, *, what: str)
     raise typer.Exit(1)
 
 
+def _describe(entry: dict[str, str]) -> str:
+    """One deploy entry as ``[<publisher>/]<name>@<version or ref>``."""
+    publisher = f"{entry['publisher']}/" if entry.get("publisher") else ""
+    at = entry["version"] if "version" in entry else entry["ref"][:12]
+    return f"{publisher}{entry['name']}@{at}"
+
+
+def _holds(entries: list[dict[str, str]], plugin: dict[str, str]) -> bool:
+    """Whether ``entries`` already name ``plugin``: the same name, and the same publisher
+    where both name one.
+    """
+    return any(
+        entry["name"] == plugin["name"]
+        and (
+            not entry.get("publisher")
+            or not plugin.get("publisher")
+            or entry["publisher"] == plugin["publisher"]
+        )
+        for entry in entries
+    )
+
+
 def _dispatch(
     client: PlatformClient,
     action: str,
@@ -341,28 +407,29 @@ def _dispatch(
     A deploy refused because plugins left running pin another version of a shared
     plugin can go out together with releases of those plugins that fit. Canvas
     Platform names them; a person at a terminal decides, since it deploys plugins
-    the command did not name. Under ``--yes`` or without a TTY the refusal stands.
+    the command did not name. The request is resent as it was, each entry keeping
+    its ref or version, with the named plugins it did not hold added by version.
+    Under ``--yes`` or without a TTY the refusal stands.
     """
     try:
         deployment = client.create_deployment(action, plugins, instances)
     except PlatformError as refusal:
         if action != "deploy" or refusal.code != "dependency_conflict" or not refusal.together:
             raise
-        print(refusal.message)
+        refusal.show()
         if assume_yes or not git.interactive():
             raise typer.Exit(1) from None
         if not typer.confirm("Deploy them together?", default=False):
             raise typer.Exit(1) from None
-        together = [
+        added = [
             {"name": entry["name"], "version": entry["version"]}
             | ({"publisher": entry["publisher"]} if entry.get("publisher") else {})
             for entry in refusal.together
+            if not _holds(plugins, entry)
         ]
-        what = "Deploy of " + ", ".join(
-            f"{e['publisher'] + '/' if 'publisher' in e else ''}{e['name']}@{e['version']}"
-            for e in together
-        )
-        deployment = client.create_deployment(action, together, instances)
+        plugins = [*plugins, *added]
+        what = "Deploy of " + ", ".join(_describe(entry) for entry in plugins)
+        deployment = client.create_deployment(action, plugins, instances)
     print(f"Deployment {deployment['id']} created.")
     if deployment.get("status") == "pending_consent":
         _walk_consent(client, deployment, assume_yes=assume_yes)
@@ -656,13 +723,17 @@ def _parse_released_plugin(value: str) -> dict[str, str]:
             f"such as {_PLUGIN_EXAMPLE}, where the name starts with a lowercase letter and holds "
             "only lowercase letters, digits and underscores."
         )
-    try:
-        Version(version)
-    except InvalidVersion:
+    normalized = normalized_version(version)
+    if normalized is None:
         raise typer.BadParameter(
             f"--plugin '{value}': '{version}' is not an exact version. --plugin deploys one "
             f"released version, such as {_PLUGIN_EXAMPLE}, rather than a range."
-        ) from None
+        )
+    if normalized != version:
+        raise typer.BadParameter(
+            f"--plugin '{value}': '{version}' is not written as an exact version; write it as "
+            f"'{normalized}'."
+        )
     return {"name": name, "version": version} | ({"publisher": publisher} if publisher else {})
 
 
@@ -742,8 +813,11 @@ def deploy(
 
     The plugin is published by the organization the manifest's `publisher` names,
     else by your organization whose prefix the name carries
-    (`<your org prefix>__<package>`), else by the only organization you can push
-    plugin code in. The name needs no prefix.
+    (`<your org prefix>__<package>`). Otherwise, pushing, it is the one organization
+    you can push plugin code in that already publishes the name, else the only one
+    you can push in; not pushing, it is the one organization you can deploy from
+    that publishes it, else the publisher of the one plugin of that name you can
+    see. The name needs no prefix, and the deployment names the publisher.
 
     Without --ref or --no-push, deploy first runs the same checks as `canvas
     validate` and stops on a failure. It then registers the plugin, points the
@@ -873,7 +947,7 @@ def deploy(
     else:
         deploy_ref = ref or "main"
 
-    deploying = {"name": name, "ref": deploy_ref} | ({"publisher": declared} if declared else {})
+    deploying = {"name": name, "ref": deploy_ref, "publisher": publisher}
     print(f"Deploying {name}@{deploy_ref[:12]} to {', '.join(targets)}…")
     _dispatch(
         client,
@@ -1010,9 +1084,13 @@ def _managed(name: str) -> tuple[PlatformClient, dict[str, Any]] | None:
     """Platform's record of ``name`` when platform manages it, else None.
 
     A plugin platform manages has a name platform accepts and answers
-    ``GET /api/v1/plugins/<name>``. Without a platform session there is no way
-    to ask, so the plugin is treated as one the instance manages; the instance
-    then refuses a write to a platform-managed plugin and says so.
+    ``GET /api/v1/plugins/<name>``. A name without a publisher prefix is one an
+    instance may hold from a direct ``canvas install`` while another organization
+    publishes a plugin of that name, so it counts only when one of the person's
+    organizations publishes it, which Platform prefers when several share the name.
+    Without a platform session there is no way to ask, so the plugin is treated as
+    one the instance manages; the instance then refuses a write to a
+    platform-managed plugin and says so.
     """
     if not PLATFORM_NAME_PATTERN.match(name):
         return None
@@ -1020,8 +1098,20 @@ def _managed(name: str) -> tuple[PlatformClient, dict[str, Any]] | None:
     if auth.stored_tokens(platform) is None:
         return None
     client = PlatformClient(platform)
-    plugin = client.plugin(name)
-    return (client, plugin) if plugin is not None else None
+    if PLUGIN_NAME_PATTERN.match(name):
+        plugin = client.plugin(name)
+        return (client, plugin) if plugin is not None else None
+    plugin = _visible(client, name)
+    if plugin is None or plugin.get("publisher") not in {
+        organization["slug"] for organization in client.me().get("organizations", [])
+    }:
+        return None
+    return client, plugin
+
+
+def _entry(name: str, plugin: dict[str, Any]) -> dict[str, str]:
+    """The deployment entry for a managed plugin, naming its publisher when platform gave one."""
+    return {"name": name} | ({"publisher": plugin["publisher"]} if plugin.get("publisher") else {})
 
 
 def _direct_hosts(instances: list[str], host: str | None) -> list[str]:
@@ -1115,7 +1205,7 @@ def set_variables(
     _dispatch(
         client,
         "configure",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Configuring {plugin_name}",
     )
@@ -1161,7 +1251,7 @@ def unset_variables(
     _dispatch(
         client,
         "configure",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Configuring {plugin_name}",
     )
@@ -1203,7 +1293,7 @@ def uninstall(
     _dispatch(
         client,
         "uninstall",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Uninstall of {plugin_name}",
     )
