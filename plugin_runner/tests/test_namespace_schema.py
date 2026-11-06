@@ -1199,3 +1199,17 @@ class TestMarkNamespaceReady:
         assert notify_call[0][1] == ("ns_ready_org__data", "my_plugin:abc123")
 
         mock_conn.commit.assert_called_once()
+
+
+def test_schema_version_has_a_primary_key_on_plugin_name() -> None:
+    """Logical replication needs a primary key on every table. The init SQL creates
+    schema_version with one on plugin_name, and adds it to a schema_version created with
+    only UNIQUE (plugin_name), guarded so a second run changes nothing.
+    """
+    init_sql = (Path(__file__).parents[1] / "init_namespace_schema.sql").read_text()
+    create = init_sql[init_sql.index("CREATE TABLE IF NOT EXISTS {namespace}.schema_version") :]
+    create = create[: create.index(");") + 2]
+
+    assert "PRIMARY KEY (plugin_name)" in create
+    assert "contype = 'p'" in init_sql
+    assert "ALTER TABLE {namespace}.schema_version ADD PRIMARY KEY (plugin_name);" in init_sql
