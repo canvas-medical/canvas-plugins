@@ -22,6 +22,7 @@ import requests_mock as requests_mock_module
 import typer
 from typer.testing import CliRunner
 
+from canvas_cli.apps.auth import utils as auth_utils
 from canvas_cli.apps.platform import auth, commands, git
 from canvas_cli.main import app
 
@@ -111,6 +112,12 @@ def _helpers(directory: Path) -> list[str]:
         check=True,
     ).stdout
     return output.removesuffix("\n").split("\n")
+
+
+@pytest.fixture(autouse=True)
+def _no_credentials_ini(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Keep every test away from the developer's real credentials.ini."""
+    monkeypatch.setattr(auth_utils, "CONFIG_PATH", tmp_path / "missing-credentials.ini")
 
 
 @pytest.fixture(autouse=True)

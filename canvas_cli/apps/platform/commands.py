@@ -36,7 +36,7 @@ from typing import Any, TextIO
 import click
 import typer
 
-from canvas_cli.apps.auth.utils import get_default_host, instance_slug
+from canvas_cli.apps.auth.utils import configured_default_host, get_default_host, instance_slug
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.platform.routing import managed_instance as managed_instance
@@ -1128,11 +1128,14 @@ def _managed(
 
     When every named target is localhost or another host that is not a Canvas instance,
     which platform can never manage, the answer is None without asking platform, and no
-    deprecation notice prints, since `canvas login` cannot serve those hosts. Otherwise,
-    signed in, a plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform,
-    each ``--instance`` must be one platform manages for the person, and any other plugin
+    deprecation notice prints, since `canvas login` cannot serve those hosts. With no
+    ``--instance`` or ``--host``, the target is credentials.ini's default host, so a
+    default that is not a Canvas instance gets the same answer. Otherwise, signed in, a
+    plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform, each
+    ``--instance`` must be one platform manages for the person, and any other plugin
     aimed at a Canvas instance is refused with the way to sign out; with no ``--instance``
-    or ``--host``, platform is asked first. Signed out, the answer is None: the caller uses
+    or ``--host`` and no credentials.ini default, or a default that is a Canvas instance,
+    platform is asked first. Signed out, the answer is None: the caller uses
     credentials.ini, and the deprecation notice for ``command`` is printed when the
     credentials.ini target is a Canvas instance.
 
@@ -1154,11 +1157,15 @@ def _managed(
         instance_slug(url) is None for url in _direct_hosts(instances, host)
     ):
         return None
+    if not (instances or host):
+        default: str | None = configured_default_host()
+        if default is not None and instance_slug(default) is None:
+            return None
     platform = auth.resolve_platform_url()
     if auth.stored_tokens(platform) is not None:
-        # With no --instance or --host, platform chooses the targets from the plugin's
-        # installs, so it is asked first; credentials.ini's default host decides only
-        # when platform does not have the plugin.
+        # With no --instance or --host and a credentials.ini default that is a Canvas
+        # instance (or none at all), platform chooses the targets from the plugin's
+        # installs, so it is asked first.
         client = PlatformClient(platform)
         plugin = client.plugin(name)
         if plugin is not None:
