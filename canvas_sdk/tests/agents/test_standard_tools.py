@@ -1201,15 +1201,31 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
 
     from canvas_sdk.test_utils.factories import (
         LabPartnerTestFactory,
+        NoteFactory,
         NoteTypeFactory,
         PracticeLocationFactory,
         ReasonForVisitSettingCodingFactory,
         ServiceProviderFactory,
     )
-    from canvas_sdk.v1.data import Condition
+    from canvas_sdk.v1.data import Appointment, Condition
 
     task = TaskFactory.create(patient=patient)
     specialist = ServiceProviderFactory.create()
+    provider = StaffFactory.create()
+    location = PracticeLocationFactory.create()
+    visit = NoteTypeFactory.create(category="encounter", is_scheduleable=True, is_active=True)
+    note = NoteFactory.create(patient=patient)
+    booked = Appointment.objects.create(
+        patient=patient,
+        note=note,
+        note_type=note.note_type_version,
+        provider=note.provider,
+        location=note.location,
+        start_time=datetime(2026, 11, 12, 9, 0, tzinfo=UTC),
+        duration_minutes=30,
+        status="confirmed",
+        telehealth_instructions_sent=False,
+    )
     reason = ReasonForVisitSettingCodingFactory.create()
     lab_test = LabPartnerTestFactory.create()
     note_type = NoteTypeFactory.create(category="review")
@@ -1290,6 +1306,18 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         "originate_refer": {"service_provider_id": str(specialist.id)},
         "originate_reason_for_visit": {"coding_id": str(reason.id)},
         "originate_hpi": {"narrative": "Two days of cough."},
+        "book_appointment": {
+            "provider_id": str(provider.id),
+            "practice_location_id": str(location.id),
+            "visit_type_id": str(visit.id),
+            "start_time": "2026-11-12T09:00:00+00:00",
+            "duration_minutes": 30,
+        },
+        "reschedule_appointment": {
+            "appointment_id": str(booked.id),
+            "start_time": "2026-11-13T09:00:00+00:00",
+        },
+        "cancel_appointment": {"appointment_id": str(booked.id)},
     }
 
 
@@ -1495,8 +1523,11 @@ def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
 
     The chart checks change_task to update or comment on a task, add_note to create a
     note, and access_dataintegration to work the data integration queue, which the intake
-    tools act in. Creating a task, drafting a message or command, and adding a banner or
-    protocol card need only access to the patient, which the platform checks before the run.
+    tools act in. Booking and rescheduling an appointment check add_appointment (rescheduling
+    books it again), and cancelling, a note state change, checks change_appointment and
+    add_notestatechangeevent. Creating a task, drafting a message or command, and adding a
+    banner or protocol card need only access to the patient, which the platform checks
+    before the run.
     """
     gated = {
         definition["name"]: standard_tools.required_permissions_for(definition["name"])
@@ -1508,6 +1539,9 @@ def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
         "update_task": frozenset({"api.change_task"}),
         "add_task_comment": frozenset({"api.change_task"}),
         "originate_review_note": frozenset({"api.add_note"}),
+        "book_appointment": frozenset({"api.add_appointment"}),
+        "reschedule_appointment": frozenset({"api.add_appointment"}),
+        "cancel_appointment": frozenset({"api.change_appointment", "api.add_notestatechangeevent"}),
         **{
             name: frozenset({"api.access_dataintegration"})
             for name in (
