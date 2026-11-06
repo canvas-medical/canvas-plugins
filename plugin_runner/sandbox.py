@@ -1400,13 +1400,15 @@ class Sandbox:
 
             A leading underscore is a warning rather than an error, so plugins
             can use private names. The names reserved for the sandbox's policy
-            hooks are the exception, and are rejected outright.
+            hooks are the exception: reading one is rejected here, and binding one
+            in `check_binding`, so each is reported once.
             """
             if name is None:
                 return
 
             if name in PROTECTED_SCOPE_NAMES:
-                self.error(node, f'"{name}" is a reserved name.')
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                    self.error(node, f'"{name}" is a reserved name.')
             elif (
                 name.startswith("_")
                 and name != "_"
@@ -1639,9 +1641,6 @@ class Sandbox:
                     statement=error.text.strip() if error.text else None,
                 )
             )
-            return CompileResult(None, tuple(errors), warnings, used_names), no_imports
-        except (TypeError, ValueError) as error:
-            errors.append(str(error))
             return CompileResult(None, tuple(errors), warnings, used_names), no_imports
 
         transformer = self.Transformer(errors, warnings, used_names)
