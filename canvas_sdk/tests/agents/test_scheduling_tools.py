@@ -70,7 +70,7 @@ def test_find_patient_names_only_the_one_patient_the_identifiers_match() -> None
 
 @pytest.mark.django_db
 def test_find_patient_needs_the_patient_search_capability() -> None:
-    """Without it, the run cannot look across the chart."""
+    """Without it, the run cannot search among every patient."""
     with pytest.raises(ToolNotAllowed):
         standard_tools.execute(
             "find_patient", {"last_name": "Lovelace", "birth_date": "1980-04-02"}, ctx=_ctx()

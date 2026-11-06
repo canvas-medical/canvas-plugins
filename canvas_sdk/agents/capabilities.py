@@ -13,8 +13,8 @@ class Capability(StrEnum):
     # Read and change claims across patients: the requester holds the Revenue access
     # permission, which the revenue pages require, and can see every patient.
     REVENUE = "revenue"
-    # Find a patient by their identifiers across the whole chart: the requester can see
-    # every patient, so a search shows them no one they could not find in Canvas.
+    # Find a patient by their identifiers among every patient: the requester can see every
+    # patient, so a search shows them no one they could not find in Canvas.
     PATIENT_SEARCH = "patient_search"
 
 
