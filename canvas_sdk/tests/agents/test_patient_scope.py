@@ -37,8 +37,9 @@ from canvas_sdk.test_utils.factories import (
 )
 from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
-# Customer-level configuration, not any one patient's records.
-UNSCOPED_CATEGORIES = {"config_reads"}
+# Customer-level configuration and scheduling (providers, open times), not any one
+# patient's records.
+UNSCOPED_CATEGORIES = {"config_reads", "scheduling_reads"}
 
 
 def _patient_read_tools() -> list[str]:
