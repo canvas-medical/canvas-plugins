@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "canvas__scheduling_mcp",
+    "description": "A Model Context Protocol (MCP) server for scheduling: an outside agent finds a patient, providers, and open times, reads the patient's appointments, and, when the operator allows it, books, reschedules, and cancels. It serves the Agent Runner Framework's standard tools over one SimpleAPI route, authenticated by a bearer key.",
+    "components": {
+        "handlers": [
+            {
+                "class": "canvas__scheduling_mcp.api.mcp:SchedulingMCP",
+                "description": "The MCP endpoint: JSON-RPC over HTTP POST at /mcp"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "variables": [
+        {"name": "MCP_API_KEY", "sensitive": true},
+        {"name": "MCP_TOOLS"}
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
