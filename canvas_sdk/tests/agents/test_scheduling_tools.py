@@ -233,6 +233,24 @@ def test_booking_needs_a_patient_run() -> None:
 
 
 @pytest.mark.django_db
+def test_a_reschedule_says_it_books_a_new_appointment() -> None:
+    """Canvas cancels the original and books a new one, so the old id is not the live one."""
+    patient = PatientFactory.create()
+    original = _appointment(patient)
+
+    result = standard_tools.execute(
+        "reschedule_appointment",
+        {"appointment_id": str(original.id), "start_time": "2026-11-13T10:00:00+00:00"},
+        ctx=_ctx(patient),
+    )
+
+    assert result["replaces_appointment_id"] == str(original.id)
+    assert "appointment_id" not in result
+    assert result["requested"] == {"start_time": "2026-11-13T10:00:00+00:00"}
+    assert "find_appointments" in result["note"]
+
+
+@pytest.mark.django_db
 def test_an_appointment_is_rescheduled_and_cancelled_only_for_the_runs_patient() -> None:
     """Another patient's appointment id is refused, as if it did not exist."""
     patient, other = PatientFactory.create(), PatientFactory.create()

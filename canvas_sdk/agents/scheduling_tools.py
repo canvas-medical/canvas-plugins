@@ -281,8 +281,10 @@ def _book_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
     description=(
         "Move one of this run's patient's appointments, from find_appointments, to a new "
         "time find_appointment_slots offered (pass reschedule_appointment_id there so the "
-        "current time shows as open). Takes effect when applied: confirm with the person "
-        "first. A patient already checked in cannot be rescheduled."
+        "current time shows as open). Canvas cancels the appointment and books a new one "
+        "with a new id, which find_appointments returns once applied. Takes effect when "
+        "applied: confirm with the person first. A patient already checked in cannot be "
+        "rescheduled."
     ),
     input_schema={
         "type": "object",
@@ -301,7 +303,10 @@ def _book_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
     categories=("scheduling_writes",),
     required_permissions=(ADD_APPOINTMENT,),
     effect_types=("RESCHEDULE_APPOINTMENT",),
-    returns_description="`{ok: true, appointment_id}`: applied after the run.",
+    returns_description=(
+        "`{ok: true, replaces_appointment_id, requested: {start_time}, note}`: applied after "
+        "the run, as a new appointment."
+    ),
     progress_label="Rescheduling the appointment",
 )
 def _reschedule_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
@@ -316,7 +321,15 @@ def _reschedule_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
             changes[key] = str(arguments[key])
     effect = AppointmentEffect(instance_id=str(appointment.id), **changes)
     ctx["effects"].append(effect.reschedule())
-    return {"ok": True, "appointment_id": str(appointment.id)}
+    return {
+        "ok": True,
+        "replaces_appointment_id": str(appointment.id),
+        "requested": {"start_time": changes["start_time"].isoformat()},
+        "note": (
+            "Applied after this run: Canvas cancels this appointment and books a new one "
+            "with a new id. Use find_appointments for the new appointment's id."
+        ),
+    }
 
 
 @standard_tools.tool(
