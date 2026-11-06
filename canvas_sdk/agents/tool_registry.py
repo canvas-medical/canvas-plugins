@@ -598,7 +598,7 @@ class ToolRegistry:
         *,
         name: str,
         description: str,
-        queryset_factory: Callable[[dict[str, Any], str], Any],
+        queryset_factory: Callable[[dict[str, Any], str | None], Any],
         filters: dict[str, FilterSpec] | None = None,
         ordering: tuple[str, ...] = (),
         prefetch_related: tuple[str, ...] = (),
@@ -612,8 +612,9 @@ class ToolRegistry:
         citable: bool = True,
         max_result_chars: int | None = None,
         progress_label: str | None = None,
+        patient_scoped: bool = True,
     ) -> Callable[[Callable[[Any], dict[str, Any]]], Callable[[Any], dict[str, Any]]]:
-        """Register a patient-scoped filter-spec read tool.
+        """Register a filter-spec read tool, patient-scoped unless ``patient_scoped=False``.
 
         The decorated function is the per-row serializer — it receives one
         model instance and returns a JSON-serializable dict. The helper
@@ -676,6 +677,10 @@ class ToolRegistry:
             max_result_chars: As in :meth:`register`. A lower ``limit_max`` is
                 usually the better way to keep a list's result small.
             progress_label: As in :meth:`register`.
+            patient_scoped: Whether the tool reads one patient's records. A
+                patient-scoped tool refuses a run with no patient; one that reads
+                the practice's configuration (``False``) runs without one, and its
+                ``queryset_factory`` receives ``None`` for the patient.
 
         Returns:
             A decorator. Apply it to a ``(row) -> dict`` function; the
@@ -756,7 +761,8 @@ class ToolRegistry:
             serializer: Callable[[Any], dict[str, Any]],
         ) -> Callable[[Any], dict[str, Any]]:
             def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
-                queryset = queryset_factory(arguments, require_patient_id(ctx))
+                patient_id = require_patient_id(ctx) if patient_scoped else None
+                queryset = queryset_factory(arguments, patient_id)
 
                 for filter_name, spec in filters_dict.items():
                     if spec.apply is None:
@@ -782,7 +788,11 @@ class ToolRegistry:
 
                 return [serializer(row) for row in queryset]
 
-            metadata: dict[str, Any] = {"kind": "filter_search", "serializer": serializer}
+            metadata: dict[str, Any] = {
+                "kind": "filter_search",
+                "serializer": serializer,
+                "patient_scoped": patient_scoped,
+            }
             if model is not None:
                 metadata["model"] = model
                 metadata["citable"] = citable
