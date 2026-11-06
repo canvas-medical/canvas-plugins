@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from base64 import b64decode
 from collections.abc import Mapping
-from enum import StrEnum
+from functools import cached_property
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
+from canvas_sdk.v1.data import CanvasUser, Patient, PortalAccessGrant
+from canvas_sdk.v1.portal_access_level import PortalAccessLevel
 from logger import log
 from plugin_runner.exceptions import PluginError
 
@@ -120,49 +122,10 @@ class APIKeyCredentials(Credentials):
         self.key = key
 
 
-class PortalAccessLevel(StrEnum):
-    """
-    How much a login may do in one area of the patient's chart.
-
-    Levels compare by how much they allow, NONE < VIEW < ACT, and NONE is falsy.
-    """
-
-    NONE = "none"
-    VIEW = "view"
-    ACT = "act"
-
-    def __lt__(self, other: object) -> bool:
-        return _rank(self) < _rank(other)
-
-    def __le__(self, other: object) -> bool:
-        return _rank(self) <= _rank(other)
-
-    def __gt__(self, other: object) -> bool:
-        return _rank(self) > _rank(other)
-
-    def __ge__(self, other: object) -> bool:
-        return _rank(self) >= _rank(other)
-
-    def __bool__(self) -> bool:
-        return _rank(self) > 0
-
-
-_PORTAL_ACCESS_RANKS = {
-    PortalAccessLevel.NONE: 0,
-    PortalAccessLevel.VIEW: 1,
-    PortalAccessLevel.ACT: 2,
-}
-
 _PORTAL_AREAS = ("appointments", "messaging", "clinical", "billing")
 
 # The least level, by area, that a login acting on a patient's chart needs there.
 PortalAccessRequirement: TypeAlias = Mapping[str, PortalAccessLevel | str]
-
-
-def _rank(level: object) -> int:
-    if not isinstance(level, str):
-        raise TypeError(f"Cannot compare a portal access level with {type(level).__name__}")
-    return _PORTAL_ACCESS_RANKS[PortalAccessLevel(level)]
 
 
 class PortalAccess:
@@ -171,8 +134,11 @@ class PortalAccess:
 
     When another login, such as a parent's, acts on a patient's chart, acting_user_id names it and
     each area is limited to the access it was given; an area Canvas didn't name, or a level it
-    doesn't recognize, counts as none. A patient on their own chart may do everything, and a
-    request without a patient session may do nothing.
+    doesn't recognize, counts as none. An acting login Canvas names by anything but digits may do
+    nothing, and has no acting_user_id, actor or grant. A patient on their own chart may do
+    everything, and a request without a patient session may do nothing. patient is the chart and
+    actor the login acting on it, the patient's own on their own chart; grant is the
+    PortalAccessGrant that gives another login its access there.
     """
 
     AREAS = _PORTAL_AREAS
@@ -181,18 +147,24 @@ class PortalAccess:
         patient_session = headers.get("canvas-logged-in-user-type") == "Patient" and bool(
             headers.get("canvas-logged-in-user-id")
         )
+        self._patient_id = headers.get("canvas-logged-in-user-id") if patient_session else None
+
+        acting = headers.get("canvas-logged-in-acting-user-id") if patient_session else None
+        # Whether another login acts on the patient's chart, named by digits or not. A login whose
+        # acting_user_id is None but is_acting is True isn't the patient on their own chart.
+        self.is_acting: bool = bool(acting)
 
         # The CanvasUser dbid of the login acting on the patient's chart, when it isn't theirs.
         self.acting_user_id: str | None = (
-            (headers.get("canvas-logged-in-acting-user-id") or None) if patient_session else None
+            acting if acting and acting.isascii() and acting.isdigit() else None
         )
 
         self._levels: dict[str, PortalAccessLevel] = {}
         for area in _PORTAL_AREAS:
-            if not patient_session:
-                level = PortalAccessLevel.NONE
-            elif not self.acting_user_id:
+            if patient_session and not self.is_acting:
                 level = PortalAccessLevel.ACT
+            elif not self.acting_user_id:
+                level = PortalAccessLevel.NONE
             else:
                 try:
                     level = PortalAccessLevel(headers.get(f"canvas-logged-in-access-{area}"))
@@ -209,6 +181,38 @@ class PortalAccess:
     def allows(self, area: str, level: PortalAccessLevel | str) -> bool:
         """Whether the login may do at least `level` in one area of the chart."""
         return self.level(area) >= PortalAccessLevel(level)
+
+    @cached_property
+    def patient(self) -> Patient | None:
+        """The patient whose chart the request acts on, or None without a patient session."""
+        if not self._patient_id:
+            return None
+        return Patient.objects.select_related("user").filter(id=self._patient_id).first()
+
+    @cached_property
+    def actor(self) -> CanvasUser | None:
+        """The login acting on the chart: acting_user_id's, or on a patient's own chart, theirs."""
+        if self.grant:
+            return self.grant.user
+        if self.acting_user_id:
+            return CanvasUser.objects.filter(dbid=self.acting_user_id).first()
+        return self.patient.user if not self.is_acting and self.patient else None
+
+    @cached_property
+    def grant(self) -> PortalAccessGrant | None:
+        """The grant that gives acting_user_id the chart, or None on a patient's own chart.
+
+        It's read from the database, while level() and allows() use the levels sent with the
+        request, so the two can disagree for a moment after staff change a level.
+        """
+        if not self.acting_user_id or not self.patient:
+            return None
+        return (
+            self.patient.portal_grants.giving_access()
+            .select_related("user")
+            .filter(user__dbid=self.acting_user_id)
+            .first()
+        )
 
 
 def validate_portal_access(
@@ -244,13 +248,14 @@ def admits_portal_access(
     """
     Whether a handler that requires `required` admits the login.
 
-    A login acting on someone else's chart is refused unless the handler declared the access it
-    requires, even an empty one. Anyone else is left to the handler's authenticate method.
+    A login acting on someone else's chart is refused unless acting_user_id names it and the
+    handler declared the access it requires, even an empty one. Anyone else is left to the
+    handler's authenticate method.
     """
-    if not portal_access.acting_user_id:
+    if not portal_access.is_acting:
         return True
 
-    if required is None:
+    if not portal_access.acting_user_id or required is None:
         return False
 
     return all(portal_access.allows(area, level) for area, level in required.items())

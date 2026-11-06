@@ -1,0 +1,123 @@
+import datetime
+
+import pytest
+from django.db import models
+
+from canvas_sdk.handlers.simple_api import PortalAccess, PortalAccessLevel
+from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
+    PatientFactory,
+    PortalAccessGrantFactory,
+)
+from canvas_sdk.v1.data import Patient, PortalAccessGrant
+
+
+@pytest.mark.django_db
+def test_a_login_reads_each_chart_it_was_given_and_its_access() -> None:
+    """A login's grants name the charts it was given, with the level it has in each area."""
+    representative = CanvasUserFactory.create()
+    maya = PatientFactory.create()
+    leo = PatientFactory.create()
+    to_maya = PortalAccessGrantFactory.create(
+        user=representative, patient=maya, clinical="none", billing="view"
+    )
+    to_leo = PortalAccessGrantFactory.create(user=representative, patient=leo)
+    PortalAccessGrantFactory.create(patient=maya)
+
+    assert set(representative.portal_grants.all()) == {to_maya, to_leo}
+
+    grant = PortalAccessGrant.objects.get(user=representative, patient=maya)
+    assert [grant.appointments, grant.messaging, grant.clinical, grant.billing] == [
+        "act",
+        "act",
+        "none",
+        "view",
+    ]
+    assert not grant.clinical
+    assert grant.clinical < grant.billing < grant.appointments
+
+
+@pytest.mark.django_db
+def test_a_chart_names_who_it_was_given_to_and_keeps_ended_access_as_history() -> None:
+    """A chart's grants include revoked and flagged ones, which no longer give the chart."""
+    maya = PatientFactory.create()
+    now = datetime.datetime.now(datetime.UTC)
+    giving = PortalAccessGrantFactory.create(patient=maya, contact_relationship="Father")
+    PortalAccessGrantFactory.create(patient=maya, revoked_at=now, revoke_reason="Custody changed")
+    PortalAccessGrantFactory.create(patient=maya, flagged_at=now)
+
+    assert maya.portal_grants.count() == 3
+    assert list(maya.portal_grants.filter(revoked_at__isnull=True, flagged_at__isnull=True)) == [
+        giving
+    ]
+    assert giving.contact_relationship == "Father"
+
+
+@pytest.mark.django_db
+def test_a_chart_given_to_no_one_reads_no_level_through_its_grants() -> None:
+    """A level read through a chart's grants is None when the chart wasn't given to anyone."""
+    maya = PatientFactory.create()
+
+    levels = Patient.objects.filter(id=maya.id).values_list("portal_grants__clinical", flat=True)
+
+    assert list(levels) == [None]
+
+
+def test_each_area_takes_a_portal_access_level_and_allows_act_unless_limited() -> None:
+    """Each area's level is one of PortalAccessLevel's values, act unless staff limited it."""
+    grant = PortalAccessGrant()
+
+    for area in PortalAccess.AREAS:
+        field = PortalAccessGrant._meta.get_field(area)
+        assert isinstance(field, models.CharField)
+        assert field.choices == [("none", "None"), ("view", "View"), ("act", "Act")]
+        assert getattr(grant, area) == PortalAccessLevel.ACT
+
+
+def test_reads_the_portal_access_grant_view() -> None:
+    """The model is backed by the versioned view over home-app's portal access grants."""
+    assert PortalAccessGrant._meta.db_table == "canvas_sdk_data_api_portalaccessgrant_001"
+
+
+def test_a_level_set_in_code_compares_like_one_read_from_the_database() -> None:
+    """A level assigned as a string, as in a plugin's tests, is a PortalAccessLevel too."""
+    grant = PortalAccessGrant(clinical="none", billing="view", appointments="act")
+
+    assert grant.clinical is PortalAccessLevel.NONE
+    assert not grant.clinical
+    assert grant.billing < grant.appointments
+
+
+@pytest.mark.django_db
+def test_a_stored_level_it_does_not_recognize_counts_as_none() -> None:
+    """An unrecognized stored level reads as none, as an unrecognized header level does."""
+    grant = PortalAccessGrantFactory.create()
+    PortalAccessGrant.objects.filter(dbid=grant.dbid).update(clinical="edit")
+
+    assert PortalAccessGrant.objects.get(dbid=grant.dbid).clinical is PortalAccessLevel.NONE
+    assert list(
+        PortalAccessGrant.objects.filter(dbid=grant.dbid).values_list("clinical", flat=True)
+    ) == [PortalAccessLevel.NONE]
+
+
+@pytest.mark.django_db
+def test_giving_access_leaves_out_revoked_flagged_and_inactive_patients_grants() -> None:
+    """Only a grant that is neither revoked nor flagged, on an active patient, gives the chart."""
+    now = datetime.datetime.now(datetime.UTC)
+    giving = PortalAccessGrantFactory.create()
+    PortalAccessGrantFactory.create(revoked_at=now)
+    PortalAccessGrantFactory.create(flagged_at=now)
+    PortalAccessGrantFactory.create(patient=PatientFactory.create(active=False))
+
+    assert list(PortalAccessGrant.objects.giving_access()) == [giving]
+    assert list(giving.patient.portal_grants.giving_access()) == [giving]
+
+
+@pytest.mark.django_db
+def test_the_factory_gives_a_grant_from_one_of_the_patients_contacts() -> None:
+    """A factory grant comes from a contact of the same patient, named as the contact is."""
+    grant = PortalAccessGrantFactory.create()
+
+    assert grant.contact is not None
+    assert grant.contact.patient == grant.patient
+    assert grant.contact_name == grant.contact.name

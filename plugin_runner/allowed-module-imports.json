@@ -1393,6 +1393,8 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PortalAccessGrant",
+    "PortalAccessLevel",
     "PortalInvitation",
     "PortalInvitationRejectionReason",
     "PortalInvitationStatus",
@@ -1896,6 +1898,10 @@
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
+  ],
+  "canvas_sdk.v1.data.portal_access_grant": [
+    "PortalAccessGrant",
+    "PortalAccessLevel"
   ],
   "canvas_sdk.v1.data.portal_invitation": [
     "PortalInvitation",
