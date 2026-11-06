@@ -11,6 +11,10 @@ from logstash_async.handler import AsynchronousLogstashHandler
 from logger.logstash import LogstashFormatterECS
 from logger.pubsub import PubSubLogHandler
 
+# Failed batches go back on the in-memory queue for retry; events older than this are dropped
+# so a long Logstash outage cannot grow the queue without bound.
+LOGSTASH_EVENT_TTL_SECONDS = 300
+
 _current_handler_name: ContextVar[str | None] = ContextVar("_current_handler_name", default=None)
 _current_plugin_name: ContextVar[str | None] = ContextVar("_current_plugin_name", default=None)
 
@@ -101,6 +105,7 @@ class PluginLogger:
                 port=settings.LOGSTASH_PORT,
                 database_path=None,
                 transport=settings.LOGSTASH_PROTOCOL,
+                event_ttl=LOGSTASH_EVENT_TTL_SECONDS,
             )
             logstash_handler.setFormatter(LogstashFormatterECS())
             self._logger.addHandler(logstash_handler)
