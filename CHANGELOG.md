@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v0.268.0 (2026-11-06)
+
+### Features
+
+- Link Structured Assessment to a same-note Assessment
+  ([#1970](https://github.com/canvas-medical/canvas-plugins/pull/1970),
+  [`a3b1bdd`](https://github.com/canvas-medical/canvas-plugins/commit/a3b1bddca195edc8bf40c21689a99af328b3a272))
+
+- **cli**: Canvas deploy --branch pushes and deploys a non-main branch (KOALA-8037)
+  ([#1963](https://github.com/canvas-medical/canvas-plugins/pull/1963),
+  [`0ac224c`](https://github.com/canvas-medical/canvas-plugins/commit/0ac224ca6c3ca0ccb42f4d0db03f07ce9464e14c))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- **cli**: Canvas deploy runs canvas validate before pushing
+  ([#1979](https://github.com/canvas-medical/canvas-plugins/pull/1979),
+  [`519ca1e`](https://github.com/canvas-medical/canvas-plugins/commit/519ca1e2b6fa212c0b7e7f2ed6f7152ba69f0eb1))
+
+- **cli**: Canvas logs reads with a Canvas Platform log token on managed instances (KOALA-7579)
+  ([#1965](https://github.com/canvas-medical/canvas-plugins/pull/1965),
+  [`9e07d5f`](https://github.com/canvas-medical/canvas-plugins/commit/9e07d5f895131502ae7f9b6e2f7ee7ad3fccfe0d))
+
+Co-authored-by: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+
 ## v0.267.0 (2026-11-04)
 
 ### Bug Fixes
