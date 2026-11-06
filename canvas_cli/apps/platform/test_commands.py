@@ -197,9 +197,9 @@ def _plain_package(tmp_path: Path, manifest: str | None = None, name: str = "int
     repo = tmp_path / "plain"
     directory = repo / name
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(
-        manifest if manifest is not None else json.dumps({"name": name})
-    )
+    # Deploy validates before pushing, so the manifest carries the rest of VALID_MANIFEST.
+    fields: dict[str, Any] = json.loads(manifest) if manifest is not None else {"name": name}
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({**VALID_MANIFEST, **fields}))
     _git(repo, "init", "--initial-branch=main")
     _git(repo, "add", name)
     _git(repo, "commit", "-m", "first")
@@ -430,7 +430,9 @@ def test_deploy_with_several_orgs_prompts_and_records_the_choice(
 
     assert result.exit_code == 0, result.output
     manifest: dict[str, Any] = json.loads((package / "CANVAS_MANIFEST.json").read_text())
-    assert list(manifest) == ["name", "publisher"]
+    keys: list[str] = list(manifest)
+    assert sorted(keys) == sorted([*VALID_MANIFEST, "publisher"])
+    assert keys[keys.index("name") + 1] == "publisher"
     assert manifest["publisher"] == "big-leap"
     assert "CANVAS_MANIFEST.json now names big-leap as the publisher." in result.output
     pushed = json.loads(_git(bare, "show", "main:intake/CANVAS_MANIFEST.json"))
@@ -620,7 +622,7 @@ def test_deploy_ref_does_not_validate_the_local_package(
 
     assert result.exit_code == 0, result.output
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": NAME, "ref": "v1.2.0"}
+        {"name": NAME, "ref": "v1.2.0", "publisher": "acme"}
     ]
 
 
@@ -3312,7 +3314,7 @@ def test_staff_cannot_push_under_an_org_they_do_not_belong_to(
     directory = tmp_path / "intake"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(
-        json.dumps({"name": "intake", "publisher": "globex"})
+        json.dumps({**VALID_MANIFEST, "name": "intake", "publisher": "globex"})
     )
     requests_mock.get(f"{API}/me", json={**ME, "canvas_employee": True})
 
@@ -4211,6 +4213,7 @@ def test_a_null_manifest_publisher_is_refused(
 
     result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
 
-    assert result.exit_code == 2, result.output
-    assert '"publisher" that is not a string' in result.output
+    # Deploy validates the manifest before reading the publisher, and the schema wants a string.
+    assert result.exit_code == 1, result.output
+    assert "None is not of type 'string'" in str(result.exception)
     assert not _requests_to(api, "POST", "/deployments")
