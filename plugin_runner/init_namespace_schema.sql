@@ -60,13 +60,27 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_s
 -- Migration readiness sentinel. The schema manager inserts a row per plugin
 -- after all DDL completes; non-schema-manager containers check the
 -- (plugin_name, models_hash) pair to verify the namespace is ready for the
--- current version of each plugin's models.
+-- current version of each plugin's models. plugin_name is the primary key:
+-- PostgreSQL logical replication, used to move an instance to a new
+-- PostgreSQL version, only replicates updates and deletes on tables with one.
 CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
     plugin_name VARCHAR(255) NOT NULL,
     models_hash VARCHAR(64),
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE (plugin_name)
+    PRIMARY KEY (plugin_name)
 );
+
+-- A schema_version created with only UNIQUE (plugin_name) gets the primary
+-- key here; plugin_name is already unique and non-null.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = '{namespace}.schema_version'::regclass AND contype = 'p'
+    ) THEN
+        ALTER TABLE {namespace}.schema_version ADD PRIMARY KEY (plugin_name);
+    END IF;
+END $$;
 
 GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;
 
