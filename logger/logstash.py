@@ -162,8 +162,9 @@ class LogstashFormatterV1(logging.Formatter):
             fields["message"] = msg
 
         if "exc_info" in fields:
-            if fields["exc_info"]:
-                exc_info = _figure_out_exc_info(fields["exc_info"])
+            exc_info = _figure_out_exc_info(fields["exc_info"]) if fields["exc_info"] else None
+            # log.exception() outside an except block records (None, None, None)
+            if exc_info and exc_info[0] is not None:
                 fields["exception_message"] = str(exc_info[1])
                 fields["exception_type"] = f"{exc_info[0].__module__}.{exc_info[0].__qualname__}"
                 fields["stack_trace"] = traceback.format_exception(*exc_info)
@@ -244,8 +245,9 @@ class LogstashFormatterECS(logging.Formatter):
             fields["message"] = msg
 
         if "exc_info" in fields:
-            if fields["exc_info"]:
-                exc_info = _figure_out_exc_info(fields["exc_info"])
+            exc_info = _figure_out_exc_info(fields["exc_info"]) if fields["exc_info"] else None
+            # log.exception() outside an except block records (None, None, None)
+            if exc_info and exc_info[0] is not None:
                 fields["exception_message"] = str(exc_info[1])
                 fields["exception_type"] = f"{exc_info[0].__module__}.{exc_info[0].__qualname__}"
                 fields["stack_trace"] = traceback.format_exception(*exc_info)
