@@ -244,6 +244,71 @@ def test_deploy_refuses_a_plugin_that_fails_validation_before_pushing(
     assert _git(bare, "branch", "--list", "main") == ""
 
 
+def test_deploy_refuses_a_manifest_the_schema_rejects_before_pushing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A manifest missing required fields stops deploy before it registers or pushes."""
+    (package / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    _git(package, "commit", "-am", "name only")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code != 0
+    assert not api.called
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+def test_deploy_refuses_a_handler_that_fails_to_load_in_the_sandbox(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A disallowed import stops deploy before it registers or pushes."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "__init__.py").write_text("")
+    (package / "handlers" / "h.py").write_text(
+        "import os\n"
+        "from canvas_sdk.handlers.base import BaseHandler\n\n\n"
+        "class H(BaseHandler):\n"
+        "    def compute(self):\n"
+        "        return []\n"
+    )
+    handler = {"class": f"{NAME}.handlers.h:H", "description": "h"}
+    (package / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({**VALID_MANIFEST, "components": {"handlers": [handler]}})
+    )
+    _git(package, "add", ".")
+    _git(package, "commit", "-m", "add a handler")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "failed to load in the sandbox" in result.output
+    assert not api.called
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["--instance", "acme-staging"], ["--snapshot", "--push-only"]],
+    ids=["tree", "snapshot"],
+)
+def test_deploy_refuses_python_files_git_ignores_before_pushing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None, args: list[str]
+) -> None:
+    """A gitignored module passes validation on disk but is left out of the push, so deploy stops."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "local.py").write_text("X = 1\n")
+    (package / ".gitignore").write_text("local.py\n")
+    _git(package, "add", ".gitignore")
+    _git(package, "commit", "-m", "ignore local.py")
+
+    result = runner.invoke(app, ["deploy", str(package), *args])
+
+    assert result.exit_code != 0
+    assert "handlers/local.py" in result.output
+    assert not [r for r in api.request_history if r.method == "POST"]
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
 def test_deploy_ref_does_not_validate_the_local_package(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:

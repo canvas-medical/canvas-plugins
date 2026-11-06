@@ -98,6 +98,30 @@ def require_folder_matches_name(plugin_dir: Path, name: str) -> None:
     )
 
 
+def require_no_ignored_python(plugin_dir: Path) -> None:
+    """Refuse a package holding Python files git ignores.
+
+    Validation reads the package on disk, but the push carries only what git tracks,
+    so an ignored module passes validation and is missing on the instance.
+    """
+    git.require_installed()
+    if not git.in_repo(plugin_dir):
+        return
+    result = git.run(
+        plugin_dir, "ls-files", "--others", "--ignored", "--exclude-standard", "--", "*.py"
+    )
+    if result.returncode != 0:
+        raise git.GitError(f"Listing git-ignored files failed: {result.stderr.strip()}")
+    ignored = result.stdout.split("\n")[:-1]
+    if not ignored:
+        return
+    raise typer.BadParameter(
+        f"Git ignores these Python files in '{plugin_dir}', so the push would leave them out: "
+        f"{', '.join(ignored)}. Stop ignoring them in .gitignore, or move them out of the "
+        "package, then try again."
+    )
+
+
 def _matching_organization(me: dict[str, Any], name: str) -> dict[str, Any] | None:
     """The organization whose prefix the name carries; the longest prefix wins."""
     matches = [
@@ -554,8 +578,10 @@ def _push(
     ``branch`` defaults to the plugin's default branch. Returns the pushed commit.
     """
     if snapshot:
+        require_no_ignored_python(plugin_dir)
         return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
     git.ensure_repo(plugin_dir)
+    require_no_ignored_python(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     registered = client.register_plugin(publisher, name)
     target, _ = _target_and_default_branch(registered, branch)
