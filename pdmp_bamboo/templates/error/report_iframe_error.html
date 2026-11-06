@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDMP Report Error</title>
+    <link rel="stylesheet" href="/plugin-io/static/pdmp_bamboo/css/pdmp-styles.css">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        margin: 0;
+        background-color: #f5f5f5;
+      }
+      .error-container {
+        max-width: 600px;
+        margin: 20px auto;
+      }
+      .error-title {
+        font-size: 24px;
+      }
+      .error-message {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .error-type {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        margin-top: 15px;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="error-container pdmp-error-box pdmp-card-padded-lg">
+      <h1 class="error-title pdmp-error-title pdmp-title-no-margin">X PDMP Report Error</h1>
+      <p class="error-message pdmp-text-muted">Failed to load the PDMP report:</p>
+      <p class="error-message pdmp-text-muted">{{ error_message }}</p>
+      <div class="error-type">Error Type: {{ error_type }}</div>
+    </div>
+  </body>
+</html>
