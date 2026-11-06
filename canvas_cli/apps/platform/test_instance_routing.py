@@ -57,9 +57,10 @@ def _calls(mock: requests_mock_module.Mocker, method: str, url: str) -> list[Any
 
 
 @pytest.fixture(autouse=True)
-def platform_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Point the CLI at the test platform."""
+def platform_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Point the CLI at the test platform, with no credentials.ini."""
     monkeypatch.setenv(auth.PLATFORM_URL_ENV, PLATFORM)
+    monkeypatch.setattr(auth_utils, "CONFIG_PATH", tmp_path / "missing-credentials.ini")
 
 
 @pytest.fixture
@@ -1075,6 +1076,29 @@ def test_plugin_command_on_localhost_prints_no_notice(
     assert result.exit_code == 0, result.output + result.stderr
     assert mock.call_args.kwargs["host"] == "http://localhost:8000"
     assert "deprecated" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_signed_in_local_default_host_wins_over_platform_installs(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+    default_localhost: None,
+) -> None:
+    """Signed in with no flags, a credentials.ini default of localhost targets localhost,
+    even for a plugin Platform has installed on a Canvas instance.
+    """
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, NAME, *extra])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert mock.call_args.kwargs["host"] == "http://localhost:8000"
+    assert not _calls(requests_mock, "GET", f"{API}/plugins/")
+    assert not _calls(requests_mock, "POST", f"{API}/")
 
 
 @pytest.mark.parametrize(
