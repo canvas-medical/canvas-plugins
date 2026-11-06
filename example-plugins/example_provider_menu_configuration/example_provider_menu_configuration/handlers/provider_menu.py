@@ -29,6 +29,7 @@ class HideScheduleMenuItem(BaseHandler):
                     Items.CAMPAIGNS,
                     Items.DATA_INTEGRATION,
                     Items.QUESTIONNAIRE_BUILDER,
+                    Items.IDENTITY_VERIFICATION,
                     Items.SETTINGS,
                     Items.MULTI_FACTOR_AUTHENTICATION,
                     Items.CHANGELOG,
