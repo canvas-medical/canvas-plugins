@@ -212,7 +212,9 @@ def _unprefixed_package(tmp_path: Path, **manifest: Any) -> Path:
     repo = tmp_path / "unprefixed"
     directory = repo / "intake"
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "intake", **manifest}))
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({**VALID_MANIFEST, "name": "intake", **manifest})
+    )
     _git(repo, "init", "--initial-branch=main")
     _git(repo, "add", "intake")
     _git(repo, "commit", "-m", "first")
@@ -292,7 +294,7 @@ def test_deploy_refuses_a_manifest_publisher_the_person_does_not_belong_to(
     directory = tmp_path / "intake"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(
-        json.dumps({"name": "intake", "publisher": "beta"})
+        json.dumps({**VALID_MANIFEST, "name": "intake", "publisher": "beta"})
     )
 
     result = runner.invoke(app, ["deploy", str(directory)])
