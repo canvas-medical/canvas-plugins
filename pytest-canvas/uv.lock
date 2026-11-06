@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 5
 requires-python = ">=3.11"
 
 [[package]]
@@ -880,7 +880,7 @@ wheels = [
 
 [[package]]
 name = "pytest-canvas"
-version = "0.1.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "canvas" },
@@ -891,7 +891,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "canvas" },
-    { name = "pytest", specifier = ">=8.4,<9" },
+    { name = "pytest", specifier = ">=8.4,<10" },
     { name = "pytest-django", specifier = ">=4.11,<5" },
 ]
 
