@@ -2163,3 +2163,19 @@ def test_a_failing_plugin_keeps_its_errors_when_the_allowlist_is_unreadable(
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert [type(r.error) for r in results] == [AttributeError]
+
+
+def test_sentry_release_is_the_runner_ref(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An image built from a private runner ref reports that ref, not the public pin."""
+    monkeypatch.setenv("CANVAS_PLUGINS_REPO_VERSION", "0.261.0")
+    monkeypatch.setenv("CANVAS_PLUGINS_RUNNER_REF", "embargoed-0.261.0-1")
+
+    assert plugin_runner_module.sentry_release() == "embargoed-0.261.0-1"
+
+
+def test_sentry_release_falls_back_to_the_public_pin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Images that don't export a runner ref report the public pin."""
+    monkeypatch.setenv("CANVAS_PLUGINS_REPO_VERSION", "0.261.0")
+    monkeypatch.delenv("CANVAS_PLUGINS_RUNNER_REF", raising=False)
+
+    assert plugin_runner_module.sentry_release() == "0.261.0"
