@@ -202,8 +202,19 @@ def _unprefixed_publisher(
     if len(publishing) == 1:
         return str(publishing[0]["slug"])
     if not publishing:
-        if (employee or not pushing) and (existing := _visible(client, name)):
-            return str(existing["publisher"])
+        existing = _visible(client, name) if (employee or not pushing) else None
+        if existing is not None:
+            # Another organization's plugin of this name is deployed only when someone
+            # names its publisher, so a shared name never quietly reaches a plugin the
+            # person did not mean. Canvas employees act across organizations.
+            mine = {str(o["slug"]) for o in me.get("organizations", [])}
+            if employee or str(existing["publisher"]) in mine:
+                return str(existing["publisher"])
+            raise typer.BadParameter(
+                f"The '{name}' Canvas Platform shows is published by {existing['publisher']}, "
+                "which is not one of your organizations. Deploy a released version of it by "
+                f"name, such as canvas deploy --plugin {existing['publisher']}/{name}@<version>."
+            )
         if pushing and len(able) == 1:
             return str(able[0]["slug"])
     if pushing:

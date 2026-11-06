@@ -3691,11 +3691,11 @@ def test_deploy_without_pushing_picks_the_organization_that_has_the_plugin(
     ]
 
 
-def test_deploy_without_pushing_takes_the_one_plugin_of_the_name_platform_shows(
+def test_deploy_without_pushing_refuses_another_organizations_plugin_it_was_not_told_about(
     api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
 ) -> None:
-    """When none of the person's organizations publishes the name, the one plugin Platform shows
-    by that name, such as one granted to them, is deployed as its publisher.
+    """When none of the person's organizations publishes the name, the plugin Platform shows by
+    that name belongs to someone else, so deploy refuses and points at deploying it by name.
     """
     _plugin_under(api, "intake", by_name={"name": "intake", "publisher": "canvas-medical"})
     directory = _unprefixed_package(tmp_path)
@@ -3704,10 +3704,11 @@ def test_deploy_without_pushing_takes_the_one_plugin_of_the_name_platform_shows(
         app, ["deploy", str(directory), "--ref", "v1.0.0", "--instance", "acme-staging"]
     )
 
-    assert result.exit_code == 0, result.output
-    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": "intake", "ref": "v1.0.0", "publisher": "canvas-medical"}
-    ]
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert "published by canvas-medical, which is not one of your organizations" in output
+    assert "canvas deploy --plugin canvas-medical/intake@<version>" in output
+    assert not _requests_to(api, "POST", "/deployments")
 
 
 def test_deploy_without_pushing_asks_for_a_publisher_when_several_have_the_plugin(
