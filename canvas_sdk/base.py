@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Iterable
 from datetime import date, datetime
 from enum import Enum
@@ -78,9 +79,11 @@ class TrackableFieldsModel(Model):
 
     _dirty_excluded_keys: list[str] = [
         "note_uuid",
+        "effect_id",
     ]
 
     _dirty_keys: set[str] = set()
+    effect_id: UUID | None = None
 
     def __init__(self, /, **data: Any) -> None:
         """Initialize the command and mark all provided keys as dirty."""
@@ -88,6 +91,9 @@ class TrackableFieldsModel(Model):
 
         # Initialize a set to track which fields have been modified.
         self._dirty_keys = set()
+
+        # Initialize the effect_id
+        self.effect_id = uuid.uuid4() if self.effect_id is None else self.effect_id
 
         # Explicitly mark all keys provided in the constructor as dirty.
         self._dirty_keys.update(data.keys())
@@ -131,6 +137,8 @@ class TrackableFieldsModel(Model):
             elif isinstance(value, UUID):
                 # If it's a UUID, use its string representation.
                 result[key] = str(value) if value else None
+            elif hasattr(value, "effect_id"):
+                result[key] = str(value.effect_id) if value.effect_id else None
             else:
                 # For strings, integers, or any other type, return as is.
                 result[key] = value
