@@ -309,6 +309,22 @@ def test_deploy_refuses_python_files_git_ignores_before_pushing(
     assert _git(bare, "branch", "--list", "main") == ""
 
 
+def test_deploy_pushes_past_a_gitignored_virtualenv(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """Validation and install skip dot-folders, so a gitignored .venv does not stop deploy."""
+    (package / ".venv" / "lib" / "pkg").mkdir(parents=True)
+    (package / ".venv" / "lib" / "pkg" / "mod.py").write_text("X = 1\n")
+    (package / ".gitignore").write_text(".venv/\n")
+    _git(package, "add", ".gitignore")
+    _git(package, "commit", "-m", "ignore .venv")
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "branch", "--list", "main") != ""
+
+
 def test_deploy_ref_does_not_validate_the_local_package(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:

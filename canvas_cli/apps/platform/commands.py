@@ -102,9 +102,15 @@ def require_no_ignored_python(plugin_dir: Path) -> None:
     """Refuse a package holding Python files git ignores.
 
     Validation reads the package on disk, but the push carries only what git tracks,
-    so an ignored module passes validation and is missing on the instance.
+    so an ignored module passes validation and is missing on the instance. Paths
+    under a dot-folder or ``node_modules`` are left out, since validation and
+    ``canvas install`` skip them too.
     """
-    ignored = git.ignored_python_files(plugin_dir)
+    ignored = [
+        path
+        for path in git.ignored_python_files(plugin_dir)
+        if not any(part.startswith(".") or part == "node_modules" for part in Path(path).parts)
+    ]
     if not ignored:
         return
     raise typer.BadParameter(
