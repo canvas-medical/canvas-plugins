@@ -472,6 +472,38 @@ def test_install_blocks_on_sandbox_violation(
     mock_post.assert_not_called()
 
 
+@patch("canvas_cli.apps.plugin.plugin.requests.post")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+def test_install_refuses_a_bundle(
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_post: Mock,
+    tmp_path: Path,
+) -> None:
+    """`canvas install` refuses a bundle before building or uploading anything."""
+    mock_get_token.return_value = "test-token"
+    plugin = tmp_path / "scribe"
+    plugin.mkdir()
+    (plugin / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({"name": "scribe", "bundle": True, "dependencies": []})
+    )
+
+    with pytest.raises(typer.BadParameter, match="canvas deploy"):
+        install(
+            plugin_name=plugin,
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host="https://example.canvasmedical.com",
+        )
+
+    mock_build.assert_not_called()
+    mock_post.assert_not_called()
+
+
 def test_lint_plugin_static_prints_warnings_without_raising(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

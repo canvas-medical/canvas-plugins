@@ -1,9 +1,20 @@
+# Keys a bundle may not carry: it is made of other plugins and has no code of its own.
+BUNDLE_FORBIDDEN_KEYS = ("components", "custom_data", "variables", "secrets")
+
 manifest_schema = {
     "type": "object",
     "properties": {
         "sdk_version": {"type": "string"},
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
+        "publisher": {
+            "description": (
+                "The slug of the Canvas Platform organization that publishes the plugin. "
+                "`canvas deploy` publishes it as that organization."
+            ),
+            "type": "string",
+            "minLength": 1,
+        },
         "description": {"type": "string"},
         "variables": {
             "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",
@@ -68,20 +79,62 @@ manifest_schema = {
         "readme": {"type": ["boolean", "string"]},
         "custom_data": {"$ref": "#/$defs/custom_data"},
         "catalog": {"$ref": "#/$defs/catalog"},
+        "bundle": {
+            "description": (
+                "A bundle carries no code of its own: it names the plugins it is made of in "
+                "'dependencies', and Canvas Platform deploys them together under the bundle's "
+                "catalog listing."
+            ),
+            "type": "boolean",
+            "default": False,
+        },
+        "dependencies": {"$ref": "#/$defs/dependencies"},
     },
     "required": [
         "sdk_version",
         "plugin_version",
         "name",
         "description",
-        "components",
         "tags",
         "license",
         "readme",
     ],
     "additionalProperties": False,
-    "allOf": [{"not": {"required": ["url_permissions", "origins"]}}],
+    "allOf": [
+        {"not": {"required": ["url_permissions", "origins"]}},
+        {
+            "if": {"properties": {"bundle": {"const": True}}, "required": ["bundle"]},
+            "then": {
+                "required": ["dependencies"],
+                "properties": {
+                    "dependencies": {"minItems": 1},
+                    **dict.fromkeys(BUNDLE_FORBIDDEN_KEYS, False),
+                },
+            },
+            "else": {"required": ["components"]},
+        },
+    ],
     "$defs": {
+        "dependencies": {
+            "description": (
+                "Plugins that must be installed alongside this one, each named by its 'name', "
+                "the slug of the Canvas Platform organization that publishes it as 'publisher', "
+                "and a 'version': one exact version, such as '1.16.0', or a compatible release, "
+                "such as '~=1.16' (1.16 or later, below 2.0). Each must already be on Canvas "
+                "Platform, which resolves and installs them."
+            ),
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 63},
+                    "publisher": {"type": "string", "minLength": 1},
+                    "version": {"type": "string", "minLength": 1},
+                },
+                "required": ["name", "publisher", "version"],
+                "additionalProperties": False,
+            },
+        },
         "origins": {
             "type": "object",
             "properties": {

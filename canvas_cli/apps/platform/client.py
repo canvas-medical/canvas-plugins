@@ -19,13 +19,34 @@ from canvas_cli.apps.platform import auth
 TIMEOUT_SECONDS = 30
 
 
+def _is_release(entry: object) -> bool:
+    """Whether ``entry`` names one released plugin: a name and a version as non-empty strings,
+    and a publisher, when there is one, as a string.
+    """
+    return (
+        isinstance(entry, dict)
+        and all(isinstance(entry.get(key), str) and entry[key] for key in ("name", "version"))
+        and isinstance(entry.get("publisher") or "", str)
+    )
+
+
 class PlatformError(click.ClickException):
     """A refusal or transport failure from Canvas Platform."""
 
-    def __init__(self, message: str, *, status: int | None = None, code: str = "") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int | None = None,
+        code: str = "",
+        together: list[dict[str, str]] | None = None,
+    ) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
+        # The plugins a `dependency_conflict` says to deploy in one deployment, each as
+        # {publisher, name, version}; None when the refusal names none.
+        self.together = together
 
     @classmethod
     def from_response(cls, response: requests.Response) -> PlatformError:
@@ -39,7 +60,15 @@ class PlatformError(click.ClickException):
         message = body.get("error") or f"Canvas Platform answered {response.status_code}."
         if field := body.get("field"):
             message = f"{message} (field: {field})"
-        return cls(str(message), status=response.status_code, code=str(body.get("code") or ""))
+        together = body.get("together")
+        if not (isinstance(together, list) and together and all(map(_is_release, together))):
+            together = None
+        return cls(
+            str(message),
+            status=response.status_code,
+            code=str(body.get("code") or ""),
+            together=together,
+        )
 
 
 def segment(value: str) -> str:
@@ -121,12 +150,14 @@ class PlatformClient:
         """``GET /api/v1/instances``: what the person may reach and do on each."""
         return self.get("/api/v1/instances").get("instances", [])
 
-    def plugin(self, name: str) -> dict[str, Any] | None:
+    def plugin(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
         """``GET /api/v1/plugins/<name>``, or None when platform has no such plugin
-        the person may see (platform answers 404 for both).
+        the person may see (platform answers 404 for both). ``publisher`` picks one
+        publisher's plugin of a name several share.
         """
+        query = f"?publisher={segment(publisher)}" if publisher else ""
         try:
-            return self.get(f"/api/v1/plugins/{segment(name)}")
+            return self.get(f"/api/v1/plugins/{segment(name)}{query}")
         except PlatformError as error:
             if error.status == requests.codes.not_found:
                 return None
