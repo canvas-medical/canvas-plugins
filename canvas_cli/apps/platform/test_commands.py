@@ -31,6 +31,18 @@ split_runner = CliRunner(mix_stderr=False)
 PLATFORM = "https://platform.example"
 API = f"{PLATFORM}/api/v1"
 NAME = "acme__intake"
+# The smallest manifest `canvas validate` accepts, since deploy validates before pushing.
+VALID_MANIFEST: dict[str, Any] = {
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": NAME,
+    "description": "Intake",
+    "components": {"handlers": []},
+    "tags": {},
+    "license": "",
+    "readme": "./README.md",
+}
+MANIFEST = json.dumps(VALID_MANIFEST)
 
 ACME: dict[str, Any] = {
     "slug": "acme",
@@ -135,7 +147,7 @@ def package(tmp_path: Path) -> Path:
     repo = tmp_path / "work"
     directory = repo / NAME
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
     _git(repo, "init", "--initial-branch=main")
     _git(repo, "add", NAME)
     _git(repo, "commit", "-m", "first")
@@ -203,7 +215,9 @@ def test_deploy_refuses_a_prefix_of_no_organization_the_person_belongs_to(
     requests_mock.get(f"{API}/me", json=ME)
     directory = tmp_path / "beta__intake"
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": "beta__intake"}))
+    (directory / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({**VALID_MANIFEST, "name": "beta__intake"})
+    )
 
     result = runner.invoke(app, ["deploy", str(directory)])
 
@@ -211,6 +225,121 @@ def test_deploy_refuses_a_prefix_of_no_organization_the_person_belongs_to(
     assert "<your org prefix>__intake" in result.output
     assert "acme" in result.output
     mock_run.assert_not_called()
+
+
+def test_deploy_refuses_a_plugin_that_fails_validation_before_pushing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A sandbox-rejected construct stops deploy before it registers, pushes or deploys."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "h.py").write_text("C = type('C', (object,), {})\n")
+    _git(package, "add", ".")
+    _git(package, "commit", "-m", "add a handler")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "type-blocked" in result.output
+    assert not api.called
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+def test_deploy_refuses_a_manifest_the_schema_rejects_before_pushing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A manifest missing required fields stops deploy before it registers or pushes."""
+    (package / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    _git(package, "commit", "-am", "name only")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code != 0
+    assert not api.called
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+def test_deploy_refuses_a_handler_that_fails_to_load_in_the_sandbox(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A disallowed import stops deploy before it registers or pushes."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "__init__.py").write_text("")
+    (package / "handlers" / "h.py").write_text(
+        "import os\n"
+        "from canvas_sdk.handlers.base import BaseHandler\n\n\n"
+        "class H(BaseHandler):\n"
+        "    def compute(self):\n"
+        "        return []\n"
+    )
+    handler = {"class": f"{NAME}.handlers.h:H", "description": "h"}
+    (package / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({**VALID_MANIFEST, "components": {"handlers": [handler]}})
+    )
+    _git(package, "add", ".")
+    _git(package, "commit", "-m", "add a handler")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "failed to load in the sandbox" in result.output
+    assert not api.called
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["--instance", "acme-staging"], ["--snapshot", "--push-only"]],
+    ids=["tree", "snapshot"],
+)
+def test_deploy_refuses_python_files_git_ignores_before_pushing(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None, args: list[str]
+) -> None:
+    """A gitignored module passes validation on disk but is left out of the push, so deploy stops."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "local.py").write_text("X = 1\n")
+    (package / ".gitignore").write_text("local.py\n")
+    _git(package, "add", ".gitignore")
+    _git(package, "commit", "-m", "ignore local.py")
+
+    result = runner.invoke(app, ["deploy", str(package), *args])
+
+    assert result.exit_code != 0
+    assert "handlers/local.py" in result.output
+    assert not [r for r in api.request_history if r.method == "POST"]
+    assert _git(bare, "branch", "--list", "main") == ""
+
+
+def test_deploy_pushes_past_a_gitignored_virtualenv(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """Validation and install skip dot-folders, so a gitignored .venv does not stop deploy."""
+    (package / ".venv" / "lib" / "pkg").mkdir(parents=True)
+    (package / ".venv" / "lib" / "pkg" / "mod.py").write_text("X = 1\n")
+    (package / ".gitignore").write_text(".venv/\n")
+    _git(package, "add", ".gitignore")
+    _git(package, "commit", "-m", "ignore .venv")
+
+    result = runner.invoke(app, ["deploy", str(package), "--push-only"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "branch", "--list", "main") != ""
+
+
+def test_deploy_ref_does_not_validate_the_local_package(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """--ref deploys a commit already pushed, so the local package's state does not matter."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "h.py").write_text("C = type('C', (object,), {})\n")
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "v1.2.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": "v1.2.0"}
+    ]
 
 
 def test_deploy_needs_a_session(package: Path) -> None:
@@ -438,7 +567,7 @@ def test_deploy_refuses_a_package_nested_deeper_in_a_repository(
     monorepo = tmp_path / "monorepo"
     directory = monorepo / "plugins" / NAME
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
     _git(monorepo, "init")
 
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
@@ -710,7 +839,7 @@ def monorepo(tmp_path: Path) -> Path:
     root = tmp_path / "monorepo"
     directory = root / "plugins" / NAME
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
     (root / "plugins" / "acme__other").mkdir()
     (root / "plugins" / "acme__other" / "CANVAS_MANIFEST.json").write_text("{}")
     (root / "services").mkdir()
@@ -723,7 +852,12 @@ def monorepo(tmp_path: Path) -> Path:
 
 
 # The manifest as platform's catalog listing editor leaves it.
-EDITED_MANIFEST = json.dumps({"name": NAME, "catalog": {"tagline": "Intake forms"}})
+EDITED_MANIFEST = json.dumps(
+    {
+        **VALID_MANIFEST,
+        "catalog": {"title": "Intake forms", "category": "Operations", "surfaces": ["Note"]},
+    }
+)
 
 
 def _commit_in(directory: Path, path: str, content: str) -> None:
@@ -1001,7 +1135,7 @@ def test_deploy_snapshot_needs_a_repository(
     """A package in no git repository has no commits to snapshot."""
     directory = tmp_path / NAME
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
 
     result = runner.invoke(app, ["deploy", str(directory), "--snapshot", "--push-only"])
 
@@ -2514,7 +2648,7 @@ def test_manifest_name_requires_a_name(tmp_path: Path) -> None:
 
 def test_package_dir_is_the_project_when_the_manifest_sits_at_its_root(tmp_path: Path) -> None:
     """A template that puts the manifest at the project root has the project as its package."""
-    (tmp_path / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (tmp_path / "CANVAS_MANIFEST.json").write_text(MANIFEST)
 
     assert commands._package_dir(tmp_path) == tmp_path
 
@@ -2849,7 +2983,7 @@ def test_deploy_refuses_a_folder_not_named_after_the_plugin_before_any_git_or_ne
     """
     directory = tmp_path / "project" / "intake"
     directory.mkdir(parents=True)
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
 
     result = runner.invoke(app, ["deploy", str(directory), "--push-only"])
 
@@ -2882,7 +3016,7 @@ def test_deploy_ref_skips_the_folder_check(
     """Deploying a ref that is already pushed reads only the manifest name, not the folder."""
     directory = tmp_path / "checkout"
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": NAME}))
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
 
     result = runner.invoke(
         app, ["deploy", str(directory), "--ref", "v1.0.0", "--instance", "acme-staging"]

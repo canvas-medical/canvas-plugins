@@ -98,6 +98,28 @@ def require_folder_matches_name(plugin_dir: Path, name: str) -> None:
     )
 
 
+def require_no_ignored_python(plugin_dir: Path) -> None:
+    """Refuse a package holding Python files git ignores.
+
+    Validation reads the package on disk, but the push carries only what git tracks,
+    so an ignored module passes validation and is missing on the instance. Paths
+    under a dot-folder or ``node_modules`` are left out, since validation and
+    ``canvas install`` skip them too.
+    """
+    ignored = [
+        path
+        for path in git.ignored_python_files(plugin_dir)
+        if not any(part.startswith(".") or part == "node_modules" for part in Path(path).parts)
+    ]
+    if not ignored:
+        return
+    raise typer.BadParameter(
+        f"Git ignores these Python files in '{plugin_dir}', so the push would leave them out: "
+        f"{', '.join(ignored)}. Stop ignoring them in .gitignore, or move them out of the "
+        "package, then try again."
+    )
+
+
 def _matching_organization(me: dict[str, Any], name: str) -> dict[str, Any] | None:
     """The organization whose prefix the name carries; the longest prefix wins."""
     matches = [
@@ -517,6 +539,7 @@ def _push_snapshot(
     Returns the commit on ``branch``, or on the default branch when ``branch`` is None.
     """
     snapshot = git.snapshot_source(plugin_dir)
+    require_no_ignored_python(plugin_dir)
     if not git.on_a_remote(plugin_dir):
         print(
             f"Warning: {snapshot.commit[:12]} is not on any remote branch of the repository "
@@ -556,6 +579,7 @@ def _push(
     if snapshot:
         return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
     git.ensure_repo(plugin_dir)
+    require_no_ignored_python(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     registered = client.register_plugin(publisher, name)
     target, _ = _target_and_default_branch(registered, branch)
@@ -616,7 +640,8 @@ def deploy(
     The manifest `name` must be publisher-prefixed, `<your org prefix>__<package>`,
     and the prefix decides which of your organizations publishes the plugin.
 
-    Without --ref or --no-push, deploy registers the plugin, points the
+    Without --ref or --no-push, deploy first runs the same checks as `canvas
+    validate` and stops on a failure. It then registers the plugin, points the
     repository's `origin` at Canvas Platform with a credential helper, commits any
     uncommitted changes after you confirm, pushes HEAD to `main` and deploys that
     commit. A plugin that is not in a git repository yet is offered one.
@@ -670,6 +695,7 @@ def deploy(
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
+        instance_plugin.validate(plugin_dir)
 
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
