@@ -248,6 +248,21 @@ def head_sha(plugin_dir: Path) -> str:
     return result.stdout.strip()
 
 
+def ignored_python_files(plugin_dir: Path) -> list[str]:
+    """The Python files under ``plugin_dir`` that git ignores, relative to it."""
+    listing = _output(
+        plugin_dir,
+        "ls-files",
+        "--others",
+        "--ignored",
+        "--exclude-standard",
+        "--",
+        "*.py",
+        what="git ls-files",
+    )
+    return listing.splitlines()
+
+
 def push_head(plugin_dir: Path, branch: str) -> None:
     """Push HEAD to ``branch`` on ``origin``, with global and system config ignored."""
     result = run(plugin_dir, "push", REMOTE, f"HEAD:refs/heads/{branch}", isolate_config=True)

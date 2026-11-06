@@ -104,15 +104,7 @@ def require_no_ignored_python(plugin_dir: Path) -> None:
     Validation reads the package on disk, but the push carries only what git tracks,
     so an ignored module passes validation and is missing on the instance.
     """
-    git.require_installed()
-    if not git.in_repo(plugin_dir):
-        return
-    result = git.run(
-        plugin_dir, "ls-files", "--others", "--ignored", "--exclude-standard", "--", "*.py"
-    )
-    if result.returncode != 0:
-        raise git.GitError(f"Listing git-ignored files failed: {result.stderr.strip()}")
-    ignored = result.stdout.split("\n")[:-1]
+    ignored = git.ignored_python_files(plugin_dir)
     if not ignored:
         return
     raise typer.BadParameter(
@@ -541,6 +533,7 @@ def _push_snapshot(
     Returns the commit on ``branch``, or on the default branch when ``branch`` is None.
     """
     snapshot = git.snapshot_source(plugin_dir)
+    require_no_ignored_python(plugin_dir)
     if not git.on_a_remote(plugin_dir):
         print(
             f"Warning: {snapshot.commit[:12]} is not on any remote branch of the repository "
@@ -578,7 +571,6 @@ def _push(
     ``branch`` defaults to the plugin's default branch. Returns the pushed commit.
     """
     if snapshot:
-        require_no_ignored_python(plugin_dir)
         return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
     git.ensure_repo(plugin_dir)
     require_no_ignored_python(plugin_dir)
