@@ -112,8 +112,10 @@ jobs:
         run: |
           # The SDK data uses absolute paths, which match this checkout. Tests
           # also run code they write under /tmp, so report on the checkout only.
+          # Some tests exec generated source under a module name with no file
+          # behind it; --ignore-errors skips those, as pytest-cov's own reports do.
           uvx --from "coverage==$COVERAGE_VERSION" coverage combine --keep coverage-data/*.data
-          uvx --from "coverage==$COVERAGE_VERSION" coverage xml --include "$GITHUB_WORKSPACE/*" -o coverage.xml
+          uvx --from "coverage==$COVERAGE_VERSION" coverage xml --ignore-errors --include "$GITHUB_WORKSPACE/*" -o coverage.xml
 
       - name: Keep the report as a baseline
         if: github.event_name == 'push'
