@@ -70,18 +70,6 @@ CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
     PRIMARY KEY (plugin_name)
 );
 
--- A schema_version created with only UNIQUE (plugin_name) gets the primary
--- key here; plugin_name is already unique and non-null.
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conrelid = '{namespace}.schema_version'::regclass AND contype = 'p'
-    ) THEN
-        ALTER TABLE {namespace}.schema_version ADD PRIMARY KEY (plugin_name);
-    END IF;
-END $$;
-
 GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;
 
 -- Grant read access to the reporting role (used by customers connecting to
