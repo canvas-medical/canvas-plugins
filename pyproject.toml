@@ -73,6 +73,23 @@ test-utils = ["pytest-canvas"]
 [project.scripts]
 canvas = "canvas_cli.main:app"
 
+# Code that never runs under the tests (CLI templates, generated code) and the
+# tests themselves stay out of coverage reports, and so out of CI's
+# changed-line coverage check.
+[tool.coverage.report]
+omit = [
+  "**/conftest.py",
+  "**/test_*.py",
+  "**/tests.py",
+  "canvas_cli/templates/**",
+  "canvas_generated/**",
+  "canvas_sdk/tests/**",
+  "example-plugins/**/tests/**",
+  "import_tracing/**",
+  "protobufs/**",
+  "settings.py"
+]
+
 [tool.django-stubs]
 django_settings_module = "settings"
 
