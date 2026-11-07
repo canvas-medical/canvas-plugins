@@ -1,4 +1,5 @@
 import builtins
+import copy
 import importlib
 import logging
 import re
@@ -16,6 +17,8 @@ import requests
 from django.db import models as django_models
 
 import plugin_runner.sandbox as sandbox_module
+from canvas_sdk.agents import standard_tools
+from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.utils.http import ontologies_http
 from canvas_sdk.v1.data.base import (
@@ -678,6 +681,22 @@ def test_statistics_median_is_importable() -> None:
     )
 
     assert sandbox.execute()["result"] == 2
+
+
+def test_plugin_code_cannot_reach_the_run_recorder() -> None:
+    """Agent code could otherwise falsify the platform's record of its own runs."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.run_record import current_recorder")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_plugin_code_cannot_reach_the_tool_grant() -> None:
+    """Agent code could otherwise widen its own grant or keep effects the grant drops."""
+    sandbox = _sandbox_from_code("from canvas_sdk.agents.grant import apply_tool_grant")
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
 
 
 def test_other_statistics_names_are_refused() -> None:
@@ -1583,6 +1602,68 @@ def test_coalesce_function_import() -> None:
     scope = sandbox.execute()
     assert scope["result"] == "Coalesce import successful", (
         "Coalesce import should work from django.db.models.functions."
+    )
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "from anthropic import Anthropic",
+        "from anthropic import AsyncAnthropic",
+        "from anthropic import APIStatusError",
+        "from anthropic.types import ToolUseBlock",
+        "import anthropic",
+    ],
+)
+def test_plugin_code_cannot_import_anthropic(statement: str) -> None:
+    """An agent reaches a model only through gateway.client(), which the SDK builds.
+
+    A plugin with its own Anthropic client would send chart data around the inference
+    gateway, its key, its ledger, and the run's attribution.
+    """
+    sandbox = _sandbox_from_code(statement)
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_plugin_code_cannot_import_the_gateway_factory() -> None:
+    """Only the runner builds and attributes a gateway; the factory is not exported."""
+    sandbox = _sandbox_from_code(
+        "from canvas_sdk.agents.gateway import gateway_from_plugin_secrets"
+    )
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+def test_canvas_sdk_agents_importable_in_sandbox() -> None:
+    """All four agent SDK exports are reachable from plugin code in the sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
+            result = (AgentPlugin, AgentRunResult, AgentState, LLMGateway)
+        """
+    )
+
+    scope = sandbox.execute()
+    assert all(cls is not None for cls in scope["result"]), (
+        "AgentPlugin/AgentRunResult/AgentState/LLMGateway should all import inside the sandbox."
+    )
+
+
+def test_run_agent_effect_importable_in_sandbox() -> None:
+    """RunAgentEffect — the plugin-facing trigger effect — is reachable from the sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.effects.agent import RunAgentEffect
+            result = RunAgentEffect
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, (
+        "RunAgentEffect should import from canvas_sdk.effects.agent."
     )
 
 
@@ -4388,3 +4469,85 @@ def test_a_class_namespace_from_outside_the_plugin_has_no_private_names(expressi
     )
 
     assert sandbox.execute()["result"] == []
+
+
+@pytest.mark.parametrize(
+    "statement",
+    params_from_dict(
+        {
+            "register": 'standard_tools.register({"name": "planted", "input_schema": {}}, run)',
+            "tool": 'standard_tools.tool(name="planted", description="", input_schema={})(run)',
+            "extend": "standard_tools.extend(ToolRegistry())",
+            "labels": 'standard_tools.set_progress_labels({"find_conditions": "Planted"})',
+        }
+    ),
+)
+def test_plugin_code_cannot_add_to_the_shared_standard_tools(statement: str) -> None:
+    """Every plugin's agents adopt standard_tools, so one plugin's tool would run in another's."""
+    sandbox = _sandbox_from_code(
+        f"""
+            from canvas_sdk.agents import ToolRegistry, standard_tools
+
+            def run(arguments, *, ctx):
+                return ctx
+
+            {statement}
+        """
+    )
+
+    with pytest.raises(RuntimeError, match="read-only"):
+        sandbox.execute()
+
+    assert "planted" not in {d["name"] for d in standard_tools.definitions()}
+    assert standard_tools.progress_label_for("find_conditions") != "Planted"
+
+
+def test_plugin_code_cannot_edit_the_shared_standard_tool_definitions() -> None:
+    """A definition a plugin reads is its own copy, so it cannot rewrite what other agents see."""
+    before = copy.deepcopy(standard_tools.definitions())
+    sandbox = _sandbox_from_code(
+        """
+            from canvas_sdk.agents import standard_tools
+
+            definition = standard_tools.definitions()[0]
+            definition["description"] = "Planted instructions."
+            definition["input_schema"]["properties"].clear()
+        """
+    )
+
+    sandbox.execute()
+
+    assert standard_tools.definitions() == before
+
+
+@pytest.mark.parametrize(
+    "statement",
+    params_from_dict(
+        {
+            "attribute": 'spec.command_field = "fdb_code"',
+            "list": 'severity.enum.append("planted")',
+        }
+    ),
+)
+def test_plugin_code_cannot_change_what_the_shared_draft_edits_allow(statement: str) -> None:
+    """The fields an edit may set are checked for every plugin, so no plugin can widen them."""
+    sig = DRAFT_KINDS["medicationStatement"].editable["sig"]
+    severities = list(DRAFT_KINDS["allergy"].editable["severity"].enum or [])
+    sandbox = _sandbox_from_code(
+        f"""
+            from canvas_sdk.agents import standard_tools
+
+            spec = standard_tools.metadata_for("originate_medication_statement")["editable_fields"]["sig"]
+            severity = standard_tools.metadata_for("originate_allergy")["editable_fields"]["severity"]
+            try:
+                {statement}
+            except Exception:
+                pass
+        """
+    )
+
+    sandbox.execute()
+
+    assert DRAFT_KINDS["medicationStatement"].editable["sig"] is sig
+    assert sig.command_field is None
+    assert DRAFT_KINDS["allergy"].editable["severity"].enum == severities

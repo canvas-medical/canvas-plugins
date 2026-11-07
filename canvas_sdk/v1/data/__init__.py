@@ -1,3 +1,11 @@
+from .agent_run import (
+    AgentRun,
+    AgentRunProposal,
+    AgentRunProposalStatus,
+    AgentRunStatus,
+    AgentRunSubject,
+    AgentRunToolCall,
+)
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .application import Application
 from .appointment import (
@@ -75,6 +83,7 @@ from .document_reference import (
     DocumentReferenceStatus,
 )
 from .document_review_delegation import DocumentReviewDelegation
+from .document_type import DocumentType
 from .educational_material import EducationalMaterial
 from .eligibility_response import (
     EligibilityRequest,
@@ -284,6 +293,12 @@ from .visual_exam_finding import VisualExamFinding
 from .vitals import VitalSign, VitalSignReading
 
 __all__ = __exports__ = (
+    "AgentRun",
+    "AgentRunProposal",
+    "AgentRunProposalStatus",
+    "AgentRunStatus",
+    "AgentRunSubject",
+    "AgentRunToolCall",
     "Application",
     "Appointment",
     "AppointmentMetadata",
@@ -365,6 +380,7 @@ __all__ = __exports__ = (
     "DocumentHistoryEvent",
     "DocumentHistoryEventType",
     "DocumentReviewDelegation",
+    "DocumentType",
     "EducationalMaterial",
     "EligibilityRequest",
     "EligibilityResponse",

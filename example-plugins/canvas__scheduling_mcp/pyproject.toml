@@ -1,0 +1,18 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "A Model Context Protocol server over the Agent Runner Framework's scheduling tools"
+license = "MIT"
+name = "canvas__scheduling_mcp"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
+
+[tool.uv.sources]
+canvas = {editable = true, path = "../../"}

@@ -728,3 +728,67 @@ class TestAccessLevelThreadIsolation:
         assert results["read_thread"]["is_write_allowed"] is False
         assert results["write_thread"]["access_level"] == "read_write"
         assert results["write_thread"]["is_write_allowed"] is True
+
+
+def _plugin_settings(mock_cursor: MagicMock) -> list[str]:
+    """The plugin names set on the connection, in order, from the statements executed."""
+    return [
+        call.args[1][0]
+        for call in mock_cursor.execute.call_args_list
+        if "canvas.plugin_name" in call.args[0]
+    ]
+
+
+@patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
+def test_the_connection_names_the_plugin_whose_queries_run_inside(mock_is_pg: MagicMock) -> None:
+    """home-app's views over agent run records keep the rows of the plugin named here.
+
+    It is set with or without a Custom Data namespace, and cleared on the way out, so a
+    pooled connection never carries one plugin's name into another's queries.
+    """
+    with patch("django.db.connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        with (
+            plugin_database_context("outer_plugin"),
+            plugin_database_context("inner_plugin", namespace="org__shared"),
+        ):
+            pass
+
+        assert _plugin_settings(mock_cursor) == [
+            "outer_plugin",
+            "inner_plugin",
+            "outer_plugin",
+            "",
+        ]
+
+
+@patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
+def test_a_connection_that_cannot_be_reset_is_discarded_not_reused(mock_is_pg: MagicMock) -> None:
+    """A plugin can leave its transaction aborted, so the reset on the way out fails.
+
+    The connection still names the plugin, so it is closed rather than returned to the
+    pool, the thread forgets the plugin, and the plugin's own exception is the one raised.
+    """
+    with patch("django.db.connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        raw = mock_conn.connection
+
+        def aborted_after_entry(sql: str, params: list[str]) -> None:
+            if params == [""]:
+                raise RuntimeError("current transaction is aborted")
+
+        mock_cursor.execute.side_effect = aborted_after_entry
+
+        with (
+            pytest.raises(ValueError, match="the plugin's own error"),
+            plugin_database_context("my_plugin"),
+        ):
+            raise ValueError("the plugin's own error")
+
+        raw.close.assert_called_once()
+        assert get_current_plugin() is None

@@ -6,6 +6,7 @@ Supports both plugin-specific schemas and shared data namespaces.
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -13,6 +14,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from django.db.backends.base.base import BaseDatabaseWrapper
+
+log = logging.getLogger("plugin_runner_logger")
 
 # Thread-local storage for plugin context
 _plugin_context = threading.local()
@@ -70,6 +73,31 @@ def _set_search_path(schema: str) -> None:
 
     with connection.cursor() as cursor:
         cursor.execute("SET search_path = %s, public", [schema])
+
+
+def _set_connection_plugin(plugin_name: str) -> None:
+    """Name the plugin whose queries the connection runs. No-op on SQLite.
+
+    home-app's views over agent run records keep only that plugin's rows, so a plugin never
+    reads another's runs or proposals; an empty name reads none.
+    """
+    if not _is_postgres():
+        return
+
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT set_config('canvas.plugin_name', %s, false)", [plugin_name])
+
+
+def _discard_connection() -> None:
+    """Close the thread's connection so the pool never hands it out again."""
+    from django.db import connection
+
+    raw = connection.connection
+    if raw is not None:
+        raw.close()
+    connection.close()
 
 
 def _reset_search_path() -> None:
@@ -142,6 +170,7 @@ def plugin_database_context(
     # Only change search_path if a namespace is declared
     if namespace:
         _set_search_path(namespace)
+    _set_connection_plugin(plugin_name)
 
     # In SQLite mode, the default connection is read-only. Swap to the
     # writable connection for plugins that have read_write access so that
@@ -157,22 +186,32 @@ def plugin_database_context(
         if original_connection is not None:
             _restore_connection(original_connection)
 
-        # Restore previous context
+        # Restore the thread's previous context before touching the database, so a
+        # failed reset below never leaves this thread naming the plugin.
         if old_plugin:
             _plugin_context.plugin_name = old_plugin
             _plugin_context.schema = old_schema
             _plugin_context.access_level = old_access_level
+        else:
+            for attr in ("plugin_name", "schema", "access_level"):
+                if hasattr(_plugin_context, attr):
+                    delattr(_plugin_context, attr)
+        try:
+            _set_connection_plugin(old_plugin or "")
             if old_schema:
                 _set_search_path(old_schema)
             elif namespace:
                 _reset_search_path()
-        else:
-            # Clear context entirely
-            for attr in ("plugin_name", "schema", "access_level"):
-                if hasattr(_plugin_context, attr):
-                    delattr(_plugin_context, attr)
-            if namespace:
-                _reset_search_path()
+        except Exception:
+            # The plugin may have left its transaction aborted. The connection still
+            # carries its name and schema, so it is closed rather than pooled for reuse;
+            # the plugin's own exception, if any, is the one that propagates.
+            log.warning(
+                "plugin_database_context: could not reset the connection after %s; closing it",
+                plugin_name,
+                exc_info=True,
+            )
+            _discard_connection()
 
 
 __exports__ = (

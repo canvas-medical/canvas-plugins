@@ -1,0 +1,116 @@
+"""How the platform applies an agent's manifest tool grant.
+
+The plugin-runner and :mod:`canvas_sdk.test_utils.agents` both call these, so a test
+sees exactly the tools and effects a real run would. Not importable from the plugin
+sandbox.
+"""
+
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
+from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.agents.approval import (
+    DECISION_EFFECT_TYPE,
+    PROPOSAL_EFFECT_TYPE,
+    proposed_effect_types,
+)
+from canvas_sdk.agents.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from canvas_sdk.agents.base import AgentPlugin
+    from canvas_sdk.effects import Effect
+
+
+@dataclass(frozen=True)
+class EffectGrant:
+    """What a run's granted tools let its agent return.
+
+    ``direct`` are the effect types a tool that needs no approval stages. ``proposable``
+    are the types a tool that needs approval stages, which the agent may return only
+    wrapped in a proposal, so a change listed for approval cannot be returned bare.
+    """
+
+    direct: frozenset[str]
+    proposable: frozenset[str]
+
+    def allows(self, effect: "Effect") -> bool:
+        """Whether the agent may return ``effect``.
+
+        Never a decision on a proposal, which only the requester makes, and never a
+        proposal of one. A proposal must carry at least one change, and every change it
+        carries must be one an approval-listed tool stages.
+        """
+        name = EffectType.Name(effect.type)
+        if name == DECISION_EFFECT_TYPE:
+            return False
+        if name == PROPOSAL_EFFECT_TYPE:
+            try:
+                proposed = proposed_effect_types(effect)
+            except (ValueError, KeyError, TypeError):
+                # A payload the platform cannot read is dropped like any effect it
+                # cannot allow, rather than failing a run whose state is already saved.
+                return False
+            return bool(proposed) and all(
+                each in self.proposable and each not in (PROPOSAL_EFFECT_TYPE, DECISION_EFFECT_TYPE)
+                for each in proposed
+            )
+        return name in self.direct
+
+
+def _approval_closure(tools: ToolRegistry, approve: frozenset[str]) -> frozenset[str]:
+    """``approve`` and every tool that stages an effect type an approving tool stages.
+
+    The grant check sees effect types, not which tool staged an effect, so a change one
+    tool may only propose cannot also be one another granted tool makes directly.
+    """
+    names = [definition["name"] for definition in tools.definitions()]
+    closed = set(approve)
+    while True:
+        proposable = frozenset().union(*(tools.effect_types_for(name) for name in closed))
+        widened = {name for name in names if tools.effect_types_for(name) & proposable}
+        if widened <= closed:
+            return frozenset(closed)
+        closed |= widened
+
+
+def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGrant:
+    """Scope ``agent.tools`` to what the run may use; return what the agent may return.
+
+    That is the manifest's ``tools`` grant less the tools the run's requester could not
+    use: those needing a permission ``agent.requester`` lacks or a capability
+    ``agent.capabilities`` lacks, so set both first. ``allowed`` holds tool names and
+    ``@category`` references, ``denied`` is subtracted after expansion, and a grant
+    with nothing allowed gives the agent no tools. Tools ``approve`` names, in the same
+    shape, propose their changes for the requester to approve, and so does any granted
+    tool that stages an effect type one of them stages. Sets
+    ``agent.tools_allowed`` and replaces ``agent.tools`` with the scoped view.
+    """
+    registry = agent.tools or ToolRegistry()
+    granted = registry.scope(
+        registry.resolve_allowed(grant.get("allowed") or (), denied=grant.get("denied"))
+    )
+    usable = granted.usable_by(agent.requester.permissions, agent.capabilities)
+    agent.tools = usable.with_approval(
+        _approval_closure(usable, usable.resolve_allowed(grant.get("approve") or ()))
+    )
+    agent.tools_allowed = frozenset(d["name"] for d in agent.tools.definitions())
+    return EffectGrant(
+        direct=agent.tools.direct_effect_types(),
+        proposable=agent.tools.proposable_effect_types(),
+    )
+
+
+def split_granted_effects(
+    effects: Iterable["Effect"], grant: EffectGrant
+) -> tuple[list["Effect"], list["Effect"]]:
+    """Split returned effects into those the grant allows and those it drops."""
+    kept: list[Effect] = []
+    dropped: list[Effect] = []
+    for effect in effects:
+        (kept if grant.allows(effect) else dropped).append(effect)
+    return kept, dropped
+
+
+# Nothing here is importable from the plugin sandbox.
+__exports__ = ()

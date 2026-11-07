@@ -36,6 +36,7 @@ from .django_content_type import ContentTypeFactory
 from .dme import DmeOrderFactory, DmeProductFactory
 from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
+from .document_type import DocumentTypeFactory
 from .educational_material import EducationalMaterialFactory
 from .eligibility_response import EligibilityRequestFactory, EligibilityResponseFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
@@ -139,7 +140,11 @@ from .prescription_change import (
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
-from .reason_for_visit import ReasonForVisitCodingFactory, ReasonForVisitFactory
+from .reason_for_visit import (
+    ReasonForVisitCodingFactory,
+    ReasonForVisitFactory,
+    ReasonForVisitSettingCodingFactory,
+)
 from .receipt import ReceiptFactory
 from .reference import ReferenceFactory
 from .referral import (
@@ -215,6 +220,7 @@ __all__ = (
     "DocumentCodingFactory",
     "DocumentHistoryEventFactory",
     "DocumentReviewDelegationFactory",
+    "DocumentTypeFactory",
     "EducationalMaterialFactory",
     "EligibilityRequestFactory",
     "EligibilityResponseFactory",
@@ -304,6 +310,7 @@ __all__ = (
     "ProtocolOverrideFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
+    "ReasonForVisitSettingCodingFactory",
     "ReceiptFactory",
     "ReferenceFactory",
     "ReferralActionEventFactory",
