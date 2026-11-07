@@ -238,7 +238,11 @@ def _edit_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> d
     },
     categories=("clinical_writes",),
     effect_types=_effect_types("DELETE"),
-    returns_description="`{ok: true, command_id: <uuid>, command: '<command_key>', deleted: true}`.",
+    returns_description=(
+        "`{ok: true, command_id: <uuid>, command: '<command_key>', deleted: true}`; "
+        "`command` is null for a draft this run staged, which is dropped before it reaches "
+        "the note."
+    ),
     progress_label="Removing a draft",
 )
 def _delete_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:

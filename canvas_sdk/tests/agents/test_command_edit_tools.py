@@ -180,7 +180,7 @@ def test_a_draft_this_run_staged_is_deleted_before_it_reaches_the_note() -> None
         "delete_staged_command", {"command_id": staged["command_id"]}, ctx=ctx
     )
 
-    assert result["deleted"] is True
+    assert (result["deleted"], result["command"]) == (True, None)
     assert effects == []
 
 
