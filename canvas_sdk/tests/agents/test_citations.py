@@ -163,3 +163,45 @@ def test_every_citable_standard_tool_has_a_card() -> None:
     }
 
     assert citable_models - set(CARD_FIELDS) == {"BannerAlert", "ProtocolCurrent"}
+
+
+def _two_table_tools() -> ToolRegistry:
+    """A plugin with two Custom Data tables, each a citable read tool."""
+
+    class SleepLog:
+        pass
+
+    class MoodLog:
+        pass
+
+    tools = ToolRegistry()
+    for name, model in (("find_sleep_logs", SleepLog), ("find_mood_logs", MoodLog)):
+        tools.filter_search_tool(
+            name=name, description="x", queryset_factory=lambda args, pid: [], model=model
+        )(lambda row: row)
+    return tools
+
+
+def test_an_id_two_record_types_share_names_no_record() -> None:
+    """Two tables' rows with dbid 12 are different records, so a marker for 12 is dropped."""
+    sources = Sources(_two_table_tools()).add_all(
+        _exchange("find_sleep_logs", [{"id": "12", "quality": "restless"}], call_id="a")
+        + _exchange("find_mood_logs", [{"id": "12", "mood": "calm"}], call_id="b")
+    )
+
+    text, citations = cite("Slept badly [[cite:12]].", sources)
+
+    assert (text, citations) == ("Slept badly.", [])
+
+
+def test_a_uuid_two_tools_return_is_still_one_record() -> None:
+    """A UUID names one record wherever it appears, such as an order and its open loop."""
+    record_id = "a8850d4a-b118-4244-86eb-d91862e650ae"
+    sources = Sources(_two_table_tools()).add_all(
+        _exchange("find_sleep_logs", [{"id": record_id, "quality": "restless"}], call_id="a")
+        + _exchange("find_mood_logs", [{"id": record_id, "mood": "calm"}], call_id="b")
+    )
+
+    _, (citation,) = cite(f"[[cite:{record_id}]]", sources)
+
+    assert (citation.kind, citation.label) == ("Mood log", "calm")

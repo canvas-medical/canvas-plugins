@@ -10,12 +10,17 @@ SDK read from the chart, described from that row rather than from text the model
 A tool is citable when it was registered with a ``model`` (as
 :meth:`ToolRegistry.filter_search_tool` does) and not marked ``citable=False``, or with
 ``cites=<record type>`` (as :meth:`ToolRegistry.tool` takes).
+
+A UUID names one record wherever it appears. Any other id, such as a Custom Data row's
+``dbid``, can repeat across tables, so an id that rows of two record types share names no
+one record and is not citable.
 """
 
 import json
 import re
 from dataclasses import dataclass
 from typing import Any, NamedTuple
+from uuid import UUID
 
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
@@ -163,6 +168,7 @@ class Sources:
         self._tools = tools
         self._calls: dict[str, str] = {}
         self._rows: dict[str, Source] = {}
+        self._ambiguous: set[str] = set()
 
     def add(self, message: dict[str, Any]) -> None:
         """Take in one stored message: tool calls from the assistant, results from the user."""
@@ -185,7 +191,7 @@ class Sources:
 
     def get(self, record_id: str) -> Source | None:
         """The row with ``record_id``, if a citable tool returned one."""
-        return self._rows.get(record_id)
+        return None if record_id in self._ambiguous else self._rows.get(record_id)
 
     def _add_result(self, block: dict[str, Any]) -> None:
         tool = self._calls.get(str(block.get("tool_use_id")))
@@ -209,7 +215,18 @@ class Sources:
         for row in rows:
             if isinstance(row, dict) and row.get("id"):
                 record_id = str(row["id"])
+                earlier = self._rows.get(record_id)
+                if earlier and earlier.model != record_type and not _is_uuid(record_id):
+                    self._ambiguous.add(record_id)
                 self._rows[record_id] = Source(record_id, tool, record_type, row)
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
 
 
 def cite(text: str, sources: Sources) -> tuple[str, list[Citation]]:
