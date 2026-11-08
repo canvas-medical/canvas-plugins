@@ -2163,3 +2163,32 @@ def test_a_failing_plugin_keeps_its_errors_when_the_allowlist_is_unreadable(
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert [type(r.error) for r in results] == [AttributeError]
+
+
+def test_sentry_release_is_the_runner_ref(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An image built from its runner ref reports that ref, not the public pin."""
+    monkeypatch.setenv("CANVAS_PLUGINS_REPO_VERSION", "0.261.0")
+    monkeypatch.setenv("CANVAS_PLUGINS_RUNNER_REF", "runner-ref-1")
+    monkeypatch.setenv("CANVAS_PLUGINS_RUNNER_SOURCE", "private")
+
+    assert plugin_runner_module.sentry_release() == "runner-ref-1"
+
+
+def test_sentry_release_is_the_public_pin_for_a_public_build(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A public build runs the public pin, so it reports the pin even when a runner ref is set."""
+    monkeypatch.setenv("CANVAS_PLUGINS_REPO_VERSION", "0.261.0")
+    monkeypatch.setenv("CANVAS_PLUGINS_RUNNER_REF", "runner-ref-1")
+    monkeypatch.setenv("CANVAS_PLUGINS_RUNNER_SOURCE", "public")
+
+    assert plugin_runner_module.sentry_release() == "0.261.0"
+
+
+def test_sentry_release_falls_back_to_the_public_pin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Images that don't export a runner ref or source report the public pin."""
+    monkeypatch.setenv("CANVAS_PLUGINS_REPO_VERSION", "0.261.0")
+    monkeypatch.delenv("CANVAS_PLUGINS_RUNNER_REF", raising=False)
+    monkeypatch.delenv("CANVAS_PLUGINS_RUNNER_SOURCE", raising=False)
+
+    assert plugin_runner_module.sentry_release() == "0.261.0"
