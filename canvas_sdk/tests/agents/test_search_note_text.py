@@ -2,6 +2,7 @@
 
 import json
 import re
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,6 +12,9 @@ from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.citations import Sources, cite
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data.note import Note
+
+# `canvas_sdk.agents.standard_tools` names the registry, so reach the module itself here.
+STANDARD_TOOLS_MODULE = sys.modules["canvas_sdk.agents.standard_tools"]
 
 
 def _ctx(patient_id: object) -> dict[str, object]:
@@ -77,6 +81,50 @@ def test_words_in_the_stored_body_structure_do_not_match() -> None:
 
     assert _search(patient, text="value") == []
     assert _search(patient, text="type") == []
+
+
+@pytest.mark.django_db
+def test_a_word_found_only_in_the_body_structure_does_not_complete_a_match() -> None:
+    """The database matches "type" in every body; the typed text must hold every word itself."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Chest pain on exertion.")
+
+    assert _search(patient, text="pain type") == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("text", ['"chest pain"', "'chest pain'", "chest pain?", "(chest, pain)"])
+def test_punctuation_around_the_words_is_ignored(text: str) -> None:
+    """The model often quotes a phrase; quotes and trailing punctuation are not part of a word."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Chest pain resolved.")
+
+    assert [row["id"] for row in _search(patient, text=text)] == [str(note.id)]
+
+
+@pytest.mark.django_db
+def test_the_snippet_centers_on_the_phrase_rather_than_its_first_word() -> None:
+    """A note that says "chest" early and "chest pain" late shows the "chest pain" passage."""
+    patient = PatientFactory.create()
+    filler = "Unremarkable review of systems. " * 10
+    _note(patient, 1, f"Chest x-ray clear. {filler}Today reports chest pain at rest.")
+
+    snippet = _search(patient, text="chest pain")[0]["snippet"]
+
+    assert "reports chest pain at rest" in snippet
+    assert "Chest x-ray clear" not in snippet
+
+
+@pytest.mark.django_db
+def test_the_database_narrows_candidates_before_the_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Newer notes without the word never use up the candidates the text check reads."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    older = _note(patient, 1, "Headache since Monday.")
+    for day in (10, 11, 12):
+        _note(patient, day, "Knee exam unchanged.")
+
+    assert [row["id"] for row in _search(patient, text="headache")] == [str(older.id)]
 
 
 @pytest.mark.django_db
