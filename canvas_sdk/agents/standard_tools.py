@@ -1264,9 +1264,12 @@ def _search_words(text: str) -> list[str]:
 
 
 def _word_pattern(words: list[str]) -> re.Pattern[str]:
-    """Whole words in sequence, any case, so "ear" never matches inside "year"."""
-    joined = r"\W+".join(re.escape(word) for word in words)
-    return re.compile(rf"(?<!\w){joined}(?!\w)", re.IGNORECASE)
+    """The words in sequence, each at the start of a word, any case.
+
+    "ear" never matches inside "year", and "headache" still finds "headaches".
+    """
+    joined = r"\w*\W+".join(re.escape(word) for word in words)
+    return re.compile(rf"(?<!\w){joined}", re.IGNORECASE)
 
 
 def _match_snippet(text: str, words: list[str]) -> str:
@@ -1284,7 +1287,8 @@ def _match_snippet(text: str, words: list[str]) -> str:
     description=(
         "Find the patient's notes whose title or free text mentions the given words ('the note "
         "that mentions chest pain', 'when did we discuss sleep apnea'). Matches notes holding "
-        "every word as a whole word, in any order and any case, newest first, each with a "
+        "every word at the start of a word (so 'headache' also finds 'headaches', but 'ear' "
+        "never finds 'year'), in any order and any case, newest first, each with a "
         "snippet around the match; deleted notes are left out. Searches only the title and the "
         "narrative the clinician typed; structured commands are read with get_note_content. "
         "Use the row's `id` with get_note_content to read the whole note."
