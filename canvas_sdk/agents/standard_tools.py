@@ -23,6 +23,7 @@ is hand-registered via :meth:`ToolRegistry.tool`.
 import base64
 import json
 import re
+import string
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -1240,17 +1241,27 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
 
 
 # Notes search_note_text reads past the database match while checking the text itself,
-# since a body stored as JSON also matches words in its keys ("type", "value").
-SEARCH_NOTE_TEXT_MAX_CANDIDATES = 200
+# since a body stored as JSON also matches its keys, command names and ids.
+SEARCH_NOTE_TEXT_MAX_CANDIDATES = 1000
 # Characters of context kept on each side of the match in a snippet.
 SEARCH_NOTE_TEXT_SNIPPET_CONTEXT = 80
+# Stripped from each end of a search word, so `"chest pain"` and `chest pain?` match.
+SEARCH_NOTE_TEXT_PUNCTUATION = string.punctuation + "“”‘’«»…"
 
 
 def _note_text(note: Any) -> str:
-    """The free text a clinician typed in ``note``, its blocks joined in document order."""
+    """The free text a clinician typed in ``note``, its blocks joined and its whitespace collapsed."""
     return " ".join(
-        payload["value"].strip() for kind, payload in _walk_note_body(note.body) if kind == "text"
+        " ".join(payload["value"].split())
+        for kind, payload in _walk_note_body(note.body)
+        if kind == "text"
     )
+
+
+def _search_words(text: str) -> list[str]:
+    """The lowercased words of ``text``, with surrounding punctuation removed."""
+    words = (word.strip(SEARCH_NOTE_TEXT_PUNCTUATION) for word in text.lower().split())
+    return [word for word in words if word]
 
 
 def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
@@ -1304,9 +1315,13 @@ def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
     ),
 )
 def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
-    """The patient's notes whose typed text contains every word of ``text``, newest first."""
+    """The patient's notes whose typed text contains every word of ``text``, newest first.
+
+    Reads at most :data:`SEARCH_NOTE_TEXT_MAX_CANDIDATES` notes the database narrowing
+    matches, streaming them so a filled ``limit`` stops the read.
+    """
     patient_id = require_patient_id(ctx)
-    words = str(arguments.get("text") or "").lower().split()
+    words = _search_words(str(arguments.get("text") or ""))
     if not words:
         raise ValueError("search_note_text needs at least one word in `text`.")
     limit = min(max(int(arguments.get("limit") or 10), 1), 25)
@@ -1320,7 +1335,7 @@ def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list
     )
 
     rows: list[dict[str, Any]] = []
-    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES]:
+    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES].iterator(chunk_size=50):
         text = _note_text(note)
         if not all(word in text.lower() for word in words):
             continue
