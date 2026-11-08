@@ -1131,8 +1131,8 @@ def _walk_note_body(body: Any) -> list[tuple[str, dict[str, Any]]]:
             continue
         kind = item.get("type")
         if kind == "text":
-            value = item.get("value") or ""
-            if value.strip():
+            value = item.get("value")
+            if isinstance(value, str) and value.strip():
                 out.append(("text", {"value": value}))
         elif kind == "command":
             data = item.get("data") or {}
@@ -1247,45 +1247,47 @@ SEARCH_NOTE_TEXT_MAX_CANDIDATES = 1000
 SEARCH_NOTE_TEXT_SNIPPET_CONTEXT = 80
 # Stripped from each end of a search word, so `"chest pain"` and `chest pain?` match.
 SEARCH_NOTE_TEXT_PUNCTUATION = string.punctuation + "“”‘’«»…"
+# The most distinct words one search takes; each becomes a database filter.
+SEARCH_NOTE_TEXT_MAX_WORDS = 12
 
 
 def _note_text(note: Any) -> str:
-    """The free text a clinician typed in ``note``, its blocks joined and its whitespace collapsed."""
-    return " ".join(
-        " ".join(payload["value"].split())
-        for kind, payload in _walk_note_body(note.body)
-        if kind == "text"
-    )
+    """A note's title and the free text a clinician typed, whitespace collapsed."""
+    blocks = [payload["value"] for kind, payload in _walk_note_body(note.body) if kind == "text"]
+    return " ".join(" ".join(part.split()) for part in [note.title or "", *blocks] if part.strip())
 
 
 def _search_words(text: str) -> list[str]:
-    """The lowercased words of ``text``, with surrounding punctuation removed."""
+    """The distinct lowercased words of ``text``, in order, with surrounding punctuation removed."""
     words = (word.strip(SEARCH_NOTE_TEXT_PUNCTUATION) for word in text.lower().split())
-    return [word for word in words if word]
+    return list(dict.fromkeys(word for word in words if word))
 
 
-def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
-    """A short excerpt of ``text`` around ``phrase``, or around its first word when the phrase is split."""
-    lowered = text.lower()
-    start = lowered.find(phrase)
-    length = len(phrase)
-    if start < 0:
-        start = lowered.find(words[0])
-        length = len(words[0])
+def _word_pattern(words: list[str]) -> re.Pattern[str]:
+    """Whole words in sequence, any case, so "ear" never matches inside "year"."""
+    joined = r"\W+".join(re.escape(word) for word in words)
+    return re.compile(rf"(?<!\w){joined}(?!\w)", re.IGNORECASE)
+
+
+def _match_snippet(text: str, words: list[str]) -> str:
+    """A short excerpt of ``text`` around the words as a phrase, else around the first word."""
+    match = _word_pattern(words).search(text) or _word_pattern(words[:1]).search(text)
+    start, end_of_match = match.span() if match else (0, 0)
     begin = max(start - SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, 0)
-    end = min(start + length + SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, len(text))
-    snippet = " ".join(text[begin:end].split())
+    end = min(end_of_match + SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, len(text))
+    snippet = text[begin:end].strip()
     return f"{'…' if begin > 0 else ''}{snippet}{'…' if end < len(text) else ''}"
 
 
 @standard_tools.tool(
     name="search_note_text",
     description=(
-        "Find the patient's notes whose free text mentions the given words ('the note that "
-        "mentions chest pain', 'when did we discuss sleep apnea'). Matches notes containing "
-        "every word, in any order and any case, newest first, each with a snippet around the "
-        "match. Searches only the narrative the clinician typed; structured commands are read "
-        "with get_note_content. Use the row's `id` with get_note_content to read the whole note."
+        "Find the patient's notes whose title or free text mentions the given words ('the note "
+        "that mentions chest pain', 'when did we discuss sleep apnea'). Matches notes holding "
+        "every word as a whole word, in any order and any case, newest first, each with a "
+        "snippet around the match; deleted notes are left out. Searches only the title and the "
+        "narrative the clinician typed; structured commands are read with get_note_content. "
+        "Use the row's `id` with get_note_content to read the whole note."
     ),
     input_schema={
         "type": "object",
@@ -1294,7 +1296,7 @@ def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
                 "type": "string",
                 "description": (
                     "Words to find, such as 'chest pain'. A note matches when it contains "
-                    "every word."
+                    f"every word. At most {SEARCH_NOTE_TEXT_MAX_WORDS} distinct words."
                 ),
             },
             "limit": {
@@ -1315,31 +1317,36 @@ def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
     ),
 )
 def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
-    """The patient's notes whose typed text contains every word of ``text``, newest first.
+    """The patient's notes whose title or typed text holds every word of ``text``, newest first.
 
-    Reads at most :data:`SEARCH_NOTE_TEXT_MAX_CANDIDATES` notes the database narrowing
-    matches, streaming them so a filled ``limit`` stops the read.
+    Checks at most :data:`SEARCH_NOTE_TEXT_MAX_CANDIDATES` notes the database narrowing
+    matches.
     """
     patient_id = require_patient_id(ctx)
     words = _search_words(str(arguments.get("text") or ""))
     if not words:
         raise ValueError("search_note_text needs at least one word in `text`.")
+    if len(words) > SEARCH_NOTE_TEXT_MAX_WORDS:
+        raise ValueError(
+            f"search_note_text takes at most {SEARCH_NOTE_TEXT_MAX_WORDS} distinct words."
+        )
     limit = min(max(int(arguments.get("limit") or 10), 1), 25)
-    phrase = " ".join(words)
 
-    notes = Note.objects.filter(patient__id=patient_id)
+    notes = Note.objects.filter(patient__id=patient_id).exclude(
+        current_state__state=NoteStates.DELETED
+    )
     for word in words:
-        notes = notes.filter(body__icontains=word)
+        notes = notes.filter(Q(body__icontains=word) | Q(title__icontains=word))
     notes = notes.select_related("provider", "current_state", "note_type_version").order_by(
         "-datetime_of_service"
     )
 
     rows: list[dict[str, Any]] = []
-    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES].iterator(chunk_size=50):
+    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES]:
         text = _note_text(note)
-        if not all(word in text.lower() for word in words):
+        if not all(_word_pattern([word]).search(text) for word in words):
             continue
-        rows.append({**_serialize_note(note), "snippet": _match_snippet(text, phrase, words)})
+        rows.append({**_serialize_note(note), "snippet": _match_snippet(text, words)})
         if len(rows) == limit:
             break
     return rows

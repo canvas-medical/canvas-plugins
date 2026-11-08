@@ -11,7 +11,7 @@ import pytest
 from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.citations import Sources, cite
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
-from canvas_sdk.v1.data.note import Note
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
 # `canvas_sdk.agents.standard_tools` names the registry, so reach the module itself here.
 STANDARD_TOOLS_MODULE = sys.modules["canvas_sdk.agents.standard_tools"]
@@ -203,3 +203,72 @@ def test_a_reply_can_cite_a_found_note() -> None:
 
     assert text == "Wheezing was noted [1]."
     assert [(c.kind, c.note_dbid) for c in citations] == [("Note", note.dbid)]
+
+
+@pytest.mark.django_db
+def test_a_word_matches_only_as_a_whole_word() -> None:
+    """A short word is not found inside a longer one: "ear" is not in "year"."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Seen last year, heart clear.")
+    ear = _note(patient, 2, "Left ear pain.")
+
+    assert [row["id"] for row in _search(patient, text="ear")] == [str(ear.id)]
+
+
+@pytest.mark.django_db
+def test_the_note_title_is_searched() -> None:
+    """A note whose title alone holds the words is found, and its snippet shows the title."""
+    patient = PatientFactory.create()
+    note = NoteFactory.create(
+        patient=patient,
+        title="Sleep apnea follow-up",
+        datetime_of_service=datetime(2026, 1, 3, tzinfo=UTC),
+        _body=[{"type": "text", "value": "Doing well."}],
+    )
+
+    rows = _search(patient, text="apnea")
+
+    assert [row["id"] for row in rows] == [str(note.id)]
+    assert "Sleep apnea follow-up" in rows[0]["snippet"]
+
+
+@pytest.mark.django_db
+def test_deleted_notes_are_left_out() -> None:
+    """A deleted note is never returned, so it cannot be cited."""
+    patient = PatientFactory.create()
+    deleted = _note(patient, 2, "Chest pain.")
+    CurrentNoteStateEvent.objects.create(note=deleted, state=NoteStates.DELETED)
+    kept = _note(patient, 1, "Chest pain again.")
+
+    assert [row["id"] for row in _search(patient, text="chest pain")] == [str(kept.id)]
+
+
+@pytest.mark.django_db
+def test_a_text_block_that_is_not_text_does_not_break_the_search() -> None:
+    """A malformed block in one note is skipped rather than failing every search."""
+    patient = PatientFactory.create()
+    NoteFactory.create(
+        patient=patient,
+        datetime_of_service=datetime(2026, 1, 9, tzinfo=UTC),
+        _body=[{"type": "text", "value": 7}, {"type": "text", "value": "Cough for a week."}],
+    )
+
+    assert [row["snippet"] for row in _search(patient, text="cough")] == ["Cough for a week."]
+
+
+@pytest.mark.django_db
+def test_the_snippet_window_holds_the_match_when_lowercasing_changes_length() -> None:
+    """The window is placed on the original text, though "İ" lowercases to two characters."""
+    patient = PatientFactory.create()
+    _note(patient, 1, f"{'İ' * 120} Reports chest pain today.")
+
+    assert "chest pain" in _search(patient, text="chest pain")[0]["snippet"]
+
+
+def test_too_many_distinct_words_are_refused_and_repeats_count_once() -> None:
+    """Each distinct word is one database filter, so their number is capped."""
+    with pytest.raises(ValueError, match="at most 12 distinct words"):
+        standard_tools.execute(
+            "search_note_text", {"text": " ".join(f"w{i}" for i in range(13))}, ctx=_ctx("p1")
+        )
+    assert STANDARD_TOOLS_MODULE._search_words("Pain pain PAIN, chest") == ["pain", "chest"]
