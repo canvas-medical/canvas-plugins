@@ -272,3 +272,12 @@ def test_too_many_distinct_words_are_refused_and_repeats_count_once() -> None:
             "search_note_text", {"text": " ".join(f"w{i}" for i in range(13))}, ctx=_ctx("p1")
         )
     assert STANDARD_TOOLS_MODULE._search_words("Pain pain PAIN, chest") == ["pain", "chest"]
+
+
+@pytest.mark.django_db
+def test_a_word_also_finds_its_longer_forms() -> None:
+    """A word finds its longer forms: "headache" finds "headaches"."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Recurring headaches; wrist fractured last spring.")
+
+    assert [row["id"] for row in _search(patient, text="headache fracture")] == [str(note.id)]
