@@ -1239,6 +1239,97 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
     return {**_serialize_note(note), "content": content}
 
 
+# Notes search_note_text reads past the database match while checking the text itself,
+# since a body stored as JSON also matches words in its keys ("type", "value").
+SEARCH_NOTE_TEXT_MAX_CANDIDATES = 200
+# Characters of context kept on each side of the match in a snippet.
+SEARCH_NOTE_TEXT_SNIPPET_CONTEXT = 80
+
+
+def _note_text(note: Any) -> str:
+    """The free text a clinician typed in ``note``, its blocks joined in document order."""
+    return " ".join(
+        payload["value"].strip() for kind, payload in _walk_note_body(note.body) if kind == "text"
+    )
+
+
+def _match_snippet(text: str, phrase: str, words: list[str]) -> str:
+    """A short excerpt of ``text`` around ``phrase``, or around its first word when the phrase is split."""
+    lowered = text.lower()
+    start = lowered.find(phrase)
+    length = len(phrase)
+    if start < 0:
+        start = lowered.find(words[0])
+        length = len(words[0])
+    begin = max(start - SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, 0)
+    end = min(start + length + SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, len(text))
+    snippet = " ".join(text[begin:end].split())
+    return f"{'…' if begin > 0 else ''}{snippet}{'…' if end < len(text) else ''}"
+
+
+@standard_tools.tool(
+    name="search_note_text",
+    description=(
+        "Find the patient's notes whose free text mentions the given words ('the note that "
+        "mentions chest pain', 'when did we discuss sleep apnea'). Matches notes containing "
+        "every word, in any order and any case, newest first, each with a snippet around the "
+        "match. Searches only the narrative the clinician typed; structured commands are read "
+        "with get_note_content. Use the row's `id` with get_note_content to read the whole note."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": (
+                    "Words to find, such as 'chest pain'. A note matches when it contains "
+                    "every word."
+                ),
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 25,
+                "description": "Maximum notes to return. Defaults to 10.",
+            },
+        },
+        "required": ["text"],
+    },
+    categories=("clinical_reads",),
+    cites="Note",
+    returns_description=(
+        "Array of objects matching find_notes' row shape (`id`, `dbid`, `title`, `note_type`, "
+        "`note_type_name`, `state`, `datetime_of_service`, `provider_name`) plus `snippet`, "
+        "the note's text around the match. Empty when no note mentions every word."
+    ),
+)
+def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """The patient's notes whose typed text contains every word of ``text``, newest first."""
+    patient_id = require_patient_id(ctx)
+    words = str(arguments.get("text") or "").lower().split()
+    if not words:
+        raise ValueError("search_note_text needs at least one word in `text`.")
+    limit = min(max(int(arguments.get("limit") or 10), 1), 25)
+    phrase = " ".join(words)
+
+    notes = Note.objects.filter(patient__id=patient_id)
+    for word in words:
+        notes = notes.filter(body__icontains=word)
+    notes = notes.select_related("provider", "current_state", "note_type_version").order_by(
+        "-datetime_of_service"
+    )
+
+    rows: list[dict[str, Any]] = []
+    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES]:
+        text = _note_text(note)
+        if not all(word in text.lower() for word in words):
+            continue
+        rows.append({**_serialize_note(note), "snippet": _match_snippet(text, phrase, words)})
+        if len(rows) == limit:
+            break
+    return rows
+
+
 @standard_tools.filter_search_tool(
     name="find_goals",
     description=(
@@ -4488,6 +4579,7 @@ standard_tools.set_progress_labels(
         "find_notes": "Reading notes",
         "get_open_note": "Finding the open note",
         "get_note_content": "Reading a note",
+        "search_note_text": "Searching notes",
         "find_goals": "Reading goals",
         "find_imaging_reports": "Reading imaging reports",
         "find_referrals": "Reading referrals",
