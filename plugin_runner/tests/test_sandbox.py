@@ -2082,6 +2082,63 @@ def test_binding_a_reserved_name_reports_it_once(code: str) -> None:
     assert sandbox.errors == ('Line 1: "_write_" is a reserved name.',)
 
 
+TYPE_PARAMETER_FORMS = {
+    "type alias": ("type N = int", "TypeAlias"),
+    "type alias parameter": ("type A[N] = list[N]", "TypeAlias"),
+    "function type parameter": ("def f[N]():\n    pass", "TypeVar"),
+    "class type parameter": ("class C[N]:\n    pass", "TypeVar"),
+    "param spec": ("class C[**N]:\n    pass", "ParamSpec"),
+    "type var tuple": ("def f[*N]():\n    pass", "TypeVarTuple"),
+}
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 syntax needs Python 3.12")
+@pytest.mark.parametrize("name", GUARD_NAMES)
+@pytest.mark.parametrize(
+    ("form", "node"), TYPE_PARAMETER_FORMS.values(), ids=TYPE_PARAMETER_FORMS.keys()
+)
+def test_plugin_code_cannot_bind_a_name_as_a_type_parameter(
+    form: str, node: str, name: str
+) -> None:
+    """The sandbox refuses type parameters and `type` aliases outright, so neither can
+    bind a reserved name. A type parameter's name is a string, not a `Name` node, so
+    `check_binding` would not see it if RestrictedPython began allowing them.
+    """
+    sandbox = _sandbox_from_code(form.replace("N", name))
+
+    assert sandbox.errors == (f"Line 1: {node} statements are not allowed.",)
+
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
+def test_a_module_that_does_not_parse_reports_the_line_and_statement() -> None:
+    """A syntax error names its line, type, message and statement."""
+    sandbox = _sandbox_from_code("value = (")
+
+    assert sandbox.errors == (
+        "Line 1: SyntaxError: '(' was never closed at statement: 'value = ('",
+    )
+
+
+def test_the_sandbox_imports_no_private_restrictedpython_module_at_runtime() -> None:
+    """Any 8.x RestrictedPython may reorganize its private modules, and `canvas_cli`
+    imports the sandbox under whichever 8.x the plugin author has installed.
+    """
+    tree = ast.parse(Path(sandbox_module.__file__).read_text())
+
+    runtime_imports = [
+        node.module for node in tree.body if isinstance(node, ast.ImportFrom) and node.module
+    ]
+
+    assert [
+        module
+        for module in runtime_imports
+        if module.startswith("RestrictedPython.")
+        and any(part.startswith("_") for part in module.split("."))
+    ] == []
+
+
 DOUBLE_UNDERSCORE_BINDING_FORMS = {
     **{
         label: form

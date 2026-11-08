@@ -32,9 +32,14 @@ def test_main_refuses_to_serve_without_a_signing_key() -> None:
     """Test that the runner fails at startup rather than on every event."""
     with (
         patch.object(settings, "PLUGIN_RUNNER_SIGNING_KEY", ""),
-        pytest.raises(ImproperlyConfigured, match="PLUGIN_RUNNER_SIGNING_KEY"),
+        pytest.raises(ImproperlyConfigured) as raised,
     ):
         main()
+
+    assert str(raised.value) == (
+        "PLUGIN_RUNNER_SIGNING_KEY is not set. Deployed runners need it to sign each "
+        "plugin's GraphQL token; with ENV other than production a development key is used."
+    )
 
 
 @pytest.mark.parametrize(

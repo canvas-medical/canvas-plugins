@@ -28,8 +28,6 @@ from RestrictedPython import (
     safe_builtins,
     utility_builtins,
 )
-from RestrictedPython._types import T_pos_ast
-from RestrictedPython.compile import syntax_error_template
 from RestrictedPython.Guards import (
     guarded_iter_unpack_sequence,
     guarded_unpack_sequence,
@@ -66,6 +64,7 @@ EvaluatedModules = dict[str, "bool | types.ModuleType"]
 
 
 if TYPE_CHECKING:
+    from RestrictedPython._types import T_pos_ast
 
     class ImportedNames(TypedDict):
         """
@@ -206,6 +205,9 @@ _logged_missing_attributes: dict[str, set[str]] = {}
 #: How many missing names are logged per plugin, and how much of each name.
 _MAX_LOGGED_MISSING_ATTRIBUTES = 200
 _MAX_MISSING_ATTRIBUTE_LABEL_LENGTH = 100
+
+#: How a plugin module that does not parse is reported, in RestrictedPython's wording.
+_SYNTAX_ERROR_TEMPLATE = "Line {lineno}: {type}: {msg} at statement: {statement!r}"
 
 
 @contextmanager
@@ -1634,7 +1636,7 @@ class Sandbox:
             parsed = ast.parse(self.source_code, self.source_code_path, "exec")
         except SyntaxError as error:
             errors.append(
-                syntax_error_template.format(
+                _SYNTAX_ERROR_TEMPLATE.format(
                     lineno=error.lineno,
                     type=error.__class__.__name__,
                     msg=error.msg,

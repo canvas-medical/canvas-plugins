@@ -1507,9 +1507,9 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server and the synchronize_plugins loop."""
     if not settings.PLUGIN_RUNNER_SIGNING_KEY:
         raise ImproperlyConfigured(
-            "PLUGIN_RUNNER_SIGNING_KEY is not set. Every event hands each plugin a "
-            "signed token for GraphQL access, and an empty key signs one that anyone "
-            "can forge."
+            "PLUGIN_RUNNER_SIGNING_KEY is not set. Deployed runners need it to sign each "
+            "plugin's GraphQL token; with ENV other than production a development key "
+            "is used."
         )
 
     port = "50051"
