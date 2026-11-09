@@ -1217,7 +1217,9 @@ def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
     a name's prefix to a publisher, so the record counts only when one of the person's
     organizations publishes it, which Platform prefers when several share the name, or when
     the name carries its publisher's prefix (the slug lowercased, ``-`` to ``_``, then
-    ``__``). A 409 ``ambiguous`` (several publishers, none the person's) counts as unmanaged.
+    ``__``). A Canvas employee reaches every organization, so for one the record always
+    counts, and Platform's capability check on each request decides what the command may do.
+    A 409 ``ambiguous`` (several publishers, none the person's) counts as unmanaged.
 
     Args:
         client (PlatformClient): The signed-in platform client.
@@ -1238,7 +1240,10 @@ def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
     publisher: str = str(plugin.get("publisher") or "")
     if publisher and name.startswith(f"{publisher.lower().replace('-', '_')}__"):
         return plugin
-    yours: set[str] = {str(o["slug"]) for o in client.me().get("organizations", [])}
+    me: dict[str, Any] = client.me()
+    if me.get("canvas_employee"):
+        return plugin
+    yours: set[str] = {str(o["slug"]) for o in me.get("organizations", [])}
     return plugin if publisher in yours else None
 
 

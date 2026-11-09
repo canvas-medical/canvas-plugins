@@ -1082,6 +1082,56 @@ def test_prefixed_plugin_its_publisher_owns_goes_through_platform_for_an_employe
     ]
 
 
+EMPLOYEE_ME: dict[str, Any] = {"organizations": [{"slug": "canvas"}], "canvas_employee": True}
+CUSTOMER_INTAKE: dict[str, Any] = {
+    "name": "intake",
+    "publisher": "acme",
+    "installs": [{"instance": "acme"}],
+}
+
+
+def test_unprefixed_customer_plugin_goes_through_platform_for_an_employee(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """A Canvas employee, none of whose organizations publishes acme's ``intake``, goes
+    through Platform for it, which then checks the command's capability.
+    """
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.get(f"{API}/plugins/intake", json=CUSTOMER_INTAKE)
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    with patch("canvas_cli.apps.platform.commands.instance_plugin.enable") as mock:
+        result = runner.invoke(app, ["enable", "intake", "--instance", "acme"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "publisher": "acme"}
+    ]
+    mock.assert_not_called()
+
+
+def test_employee_uninstall_of_a_customer_plugin_stops_at_platforms_capability_check(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """Platform's grants decide what a Canvas employee may do on a customer's plugin, so an
+    uninstall Platform refuses stops with Platform's sentence and never reaches the instance.
+    """
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.get(f"{API}/plugins/intake", json=CUSTOMER_INTAKE)
+    refusal = "You do not hold uninstall_plugin in Acme, which acme belongs to."
+    requests_mock.post(
+        f"{API}/deployments", status_code=403, json={"error": refusal, "code": "forbidden"}
+    )
+
+    with patch("canvas_cli.apps.platform.commands.instance_plugin.uninstall") as mock:
+        result = runner.invoke(app, ["uninstall", "intake", "--instance", "acme", "--force"])
+
+    assert result.exit_code == 1
+    assert refusal in result.stderr
+    assert "does not manage" not in result.stderr
+    mock.assert_not_called()
+
+
 def test_unprefixed_plugin_your_organization_publishes_goes_through_platform(
     requests_mock: requests_mock_module.Mocker, managed_plugin: None
 ) -> None:
