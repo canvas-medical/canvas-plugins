@@ -53,6 +53,18 @@ def _note_and_plan(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     return {"ok": True}
 
 
+@tools.tool(
+    name="commit_plan",
+    description="x",
+    input_schema={"type": "object"},
+    categories=("commits",),
+    effect_types=("COMMIT_PLAN_COMMAND",),
+)
+def _commit_plan(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    ctx["effects"].append(Effect(type=EffectType.COMMIT_PLAN_COMMAND, payload='{"command": "c1"}'))
+    return {"ok": True}
+
+
 class _Agent(AgentPlugin):
     tools = tools
 
@@ -261,3 +273,23 @@ def test_a_malformed_proposal_is_dropped_rather_than_crashing_the_run() -> None:
     ]
 
     assert split_granted_effects(malformed, grant) == ([], malformed)
+
+
+def test_a_commit_is_proposed_even_when_its_tool_is_not_approval_listed() -> None:
+    """The platform accepts a commit only through the user's approval, so it is never bare.
+
+    A tool staging one is approval-listed whatever the manifest says, so the run and its
+    tests see a proposal rather than a commit the platform would refuse.
+    """
+    agent = _Agent()
+    grant = apply_tool_grant(agent, {"allowed": ["commit_plan"]})
+    assert agent.tools is not None
+    ctx: dict[str, Any] = {"effects": []}
+
+    result = agent.tools.execute("commit_plan", {}, ctx=ctx)
+
+    assert agent.tools.requires_approval("commit_plan")
+    assert result["status"] == "awaiting_approval"
+    assert [EffectType.Name(e.type) for e in ctx["effects"]] == ["PROPOSE_AGENT_ACTION"]
+    bare = Effect(type=EffectType.COMMIT_PLAN_COMMAND, payload="{}")
+    assert split_granted_effects([bare, *ctx["effects"]], grant) == (ctx["effects"], [bare])

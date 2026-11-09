@@ -58,14 +58,34 @@ class EffectGrant:
         return name in self.direct
 
 
+# Changes the platform accepts only through the requester's approval: a commit is the user
+# attesting to the command, a lab report puts results in the chart with no draft, and these
+# originates commit what they draft.
+_APPROVAL_ONLY_EFFECT_TYPES = frozenset(
+    name
+    for name in EffectType.DESCRIPTOR.values_by_name
+    if name.startswith("COMMIT_") and name.endswith("_COMMAND")
+) | {
+    "CREATE_LAB_REPORT",
+    "ATTACH_LAB_REPORT_RESULTS",
+    "ORIGINATE_CUSTOM_COMMAND_COMMAND",
+    "ORIGINATE_CHART_SECTION_REVIEW_COMMAND",
+}
+
+
 def _approval_closure(tools: ToolRegistry, approve: frozenset[str]) -> frozenset[str]:
-    """``approve`` and every tool that stages an effect type an approving tool stages.
+    """``approve``, every tool staging an approval-only change, and every tool that stages
+    an effect type one of those stages.
 
     The grant check sees effect types, not which tool staged an effect, so a change one
-    tool may only propose cannot also be one another granted tool makes directly.
+    tool may only propose cannot also be one another granted tool makes directly. A
+    change the platform accepts only through approval is proposed whatever the manifest
+    lists, so it never reaches the platform bare.
     """
     names = [definition["name"] for definition in tools.definitions()]
-    closed = set(approve)
+    closed = set(approve) | {
+        name for name in names if tools.effect_types_for(name) & _APPROVAL_ONLY_EFFECT_TYPES
+    }
     while True:
         proposable = frozenset().union(*(tools.effect_types_for(name) for name in closed))
         widened = {name for name in names if tools.effect_types_for(name) & proposable}
