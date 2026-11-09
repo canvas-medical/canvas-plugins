@@ -77,7 +77,7 @@ def test_find_patient_needs_the_first_name() -> None:
     """A last name and birth date alone can name another person in the family."""
     PatientFactory.create(first_name="John", last_name="Doe", birth_date=date(1980, 4, 2))
 
-    with pytest.raises(ValueError, match="first name"):
+    with pytest.raises(ValueError, match="first_name"):
         standard_tools.execute(
             "find_patient",
             {"last_name": "Doe", "birth_date": "1980-04-02"},

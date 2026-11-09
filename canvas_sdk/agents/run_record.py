@@ -79,6 +79,14 @@ class RunRecorder:
     progress: ProgressFeed | None = None
     _lock: Lock = field(default_factory=Lock, repr=False)
 
+    # Set when the run ends, so a client its code kept makes no more calls.
+    closed: bool = False
+
+    def close(self) -> None:
+        """End the run's accounting: no model call is counted, or made, after this."""
+        with self._lock:
+            self.closed = True
+
     def reserve_model_call(self) -> bool:
         """Count a model call about to be made, or return False when the run's ceiling is reached."""
         with self._lock:

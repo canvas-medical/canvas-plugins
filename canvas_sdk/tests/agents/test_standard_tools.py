@@ -788,7 +788,8 @@ def test_a_card_button_is_only_a_command_the_tool_offers(command_type: str) -> N
     """A type outside the offered drafts, such as one that commits or refills, is refused."""
     effects: list[Any] = []
 
-    with pytest.raises(ValueError, match="cannot be a card's button"):
+    # The schema's enum refuses it first; the tool refuses it too, for a direct call.
+    with pytest.raises(ValueError, match="is not one of|cannot be a card's button"):
         standard_tools.execute(
             "add_or_update_protocol_card",
             {
@@ -1172,7 +1173,7 @@ def test_filter_search_tool_respects_supplied_filters_against_empty_db(
         if type_ == "string" and prop_schema.get("format") == "date":
             arguments[prop_name] = "2024-01-01"
         elif type_ == "string":
-            arguments[prop_name] = "test"
+            arguments[prop_name] = (prop_schema.get("enum") or ["test"])[0]
         elif type_ == "boolean":
             arguments[prop_name] = True
         elif type_ == "integer":

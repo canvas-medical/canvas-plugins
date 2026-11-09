@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import date
 from typing import Any
 
 import anthropic
@@ -27,6 +28,7 @@ from canvas_sdk.agents.run_record import (
 )
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent
 from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
+from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
 
@@ -885,3 +887,42 @@ def test_the_loop_hands_back_each_tool_calls_arguments_and_result() -> None:
     assert last is not None
     assert (last.arguments, last.result) == ({"last_name": "Roe"}, {"ok": True})
     assert result.last_call("flaky") is None
+
+
+def test_a_result_that_cannot_be_serialized_takes_back_the_calls_effects() -> None:
+    """The model is told the call failed, so the change it staged is not applied either."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="stage_and_return_dates", description="x", input_schema={"type": "object"})
+    def _stage(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[Any, Any]:
+        ctx["effects"].append(Effect(type=EffectType.CREATE_TASK, payload="{}"))
+        return {date(2026, 1, 1): "a key json cannot write"}
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("stage_and_return_dates", "t1")),
+        _response("end_turn", _text("sorry")),
+    )
+
+    result = _run(client, tools=tools)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert result.effects == []
+
+
+def test_a_tool_input_that_is_not_an_object_goes_back_as_an_error() -> None:
+    """The run continues; the model hears its call was malformed."""
+    # The API's types require an object; a reply that bypassed them is modeled here.
+    block = ToolUseBlock.model_construct(
+        id="t1",
+        name="read_chart",
+        input=[1, 2],  # type: ignore[arg-type]
+        type="tool_use",
+    )
+    client = FakeGateway(_response("tool_use", block), _response("end_turn", _text("ok")))
+
+    result = _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert result.stopped == "end_turn"

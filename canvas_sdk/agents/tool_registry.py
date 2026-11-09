@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
+from jsonschema import Draft202012Validator, FormatChecker
+
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import PROPOSAL_EFFECT_TYPE, proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
@@ -379,6 +381,8 @@ class ToolRegistry:
         self._progress_labels: dict[str, str] = {}
         # Tools a run a patient started may use; every other tool is for staff.
         self._for_patients: set[str] = set()
+        # tool name → the validator its arguments are checked with before it runs.
+        self._validators: dict[str, Any] = {}
         # Tools whose staged effects become proposals for the requester to approve, set
         # by the platform from the manifest's tools.approve; see with_approval.
         self._approval: frozenset[str] = frozenset()
@@ -475,6 +479,8 @@ class ToolRegistry:
             )
         self._definitions.append(copy.deepcopy(definition))
         self._executors[name] = executor
+        schema = definition.get("input_schema") or {"type": "object"}
+        self._validators[name] = Draft202012Validator(schema, format_checker=FormatChecker())
         for category in categories:
             self._categories.setdefault(category, set()).add(name)
         if metadata:
@@ -831,10 +837,10 @@ class ToolRegistry:
             if spec.enum is not None:
                 prop["enum"] = list(spec.enum)
             properties[filter_name] = prop
+        # No schema maximum: a larger limit is clamped to limit_max rather than refused.
         properties["limit"] = {
             "type": "integer",
             "minimum": 1,
-            "maximum": limit_max,
             "description": (
                 limit_description
                 or f"Max results. Defaults to {limit_default}; capped at {limit_max}."
@@ -1452,6 +1458,13 @@ class ToolRegistry:
             raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
         if ctx.get("patient_run") and name not in self._for_patients:
             raise ToolNotAllowed(f"Tool {name!r} is for staff, and a run a patient started")
+        # The schema's bounds hold in code: an enum, a range, an item cap, or a format the
+        # model was told about is refused here rather than trusted.
+        if problems := sorted(
+            self._validators[name].iter_errors(arguments), key=lambda error: list(error.path)
+        ):
+            where = ".".join(str(part) for part in problems[0].path) or "arguments"
+            raise ValueError(f"Invalid arguments for {name!r}: {where}: {problems[0].message}")
         if name not in self._approval:
             if "effects" not in ctx:
                 # Nothing to stage into, as in a direct call to a read tool.
