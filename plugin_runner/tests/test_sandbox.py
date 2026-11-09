@@ -1,3 +1,6 @@
+import __future__
+
+import ast
 import builtins
 import importlib
 import logging
@@ -14,10 +17,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from django.db import models as django_models
+from RestrictedPython import compile_restricted_exec
 
 import plugin_runner.sandbox as sandbox_module
 from canvas_sdk.tests.shared import params_from_dict
-from canvas_sdk.utils.http import ontologies_http
+from canvas_sdk.utils.http import Http, ontologies_http
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
     BulkOperationTooLarge,
@@ -29,6 +33,7 @@ from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
+    PROTECTED_SCOPE_NAMES,
     EvaluatedModules,
     Sandbox,
     SandboxMode,
@@ -2014,22 +2019,12 @@ def test_forbidden_assignment(code: str) -> None:
         sandbox.execute()
 
 
-GUARD_NAMES = (
-    "_apply_",
-    "_getattr_",
-    "_getitem_",
-    "_getiter_",
-    "_inplacevar_",
-    "_iter_unpack_sequence_",
-    "_print_",
-    "_print",
-    "_unpack_sequence_",
-    "_write_",
-)
+GUARD_NAMES = tuple(sorted(PROTECTED_SCOPE_NAMES))
 
 # Each way Python binds a name, as a template over the name `N`.
 BINDING_FORMS = {
     "assignment": "N = None",
+    "tuple unpacking": "a, N = 1, 2",
     "annotated assignment": "N: object = None",
     "augmented assignment": "N += 1",
     "walrus": "(N := None)",
@@ -2040,12 +2035,17 @@ BINDING_FORMS = {
     "from import as": "from json import dumps as N",
     "except as": "try:\n    pass\nexcept Exception as N:\n    pass",
     "match capture": "match 1:\n    case N:\n        pass",
+    "match as": "match 1:\n    case 1 as N:\n        pass",
     "match star": "match []:\n    case [*N]:\n        pass",
     "match mapping rest": "match {}:\n    case {**N}:\n        pass",
     "def": "def N():\n    pass",
     "class": "class N:\n    pass",
     "global": "def f():\n    global N\n    N = None",
     "function argument": "def f(N):\n    pass",
+    "positional-only argument": "def f(v, N=0, /):\n    pass",
+    "keyword-only argument": "def f(*, N=0):\n    pass",
+    "star argument": "def f(*N):\n    pass",
+    "double-star argument": "def f(**N):\n    pass",
     "lambda argument": "f = lambda N: None",
 }
 
@@ -2062,11 +2062,88 @@ def test_plugin_code_cannot_bind_a_name_the_sandbox_provides(form: str, name: st
         sandbox.execute()
 
 
+@pytest.mark.parametrize("name", GUARD_NAMES)
+def test_plugin_code_cannot_read_a_name_the_sandbox_provides(name: str) -> None:
+    """Reading a guard would let plugin code call it with arguments of its choosing."""
+    sandbox = _sandbox_from_code(f"value = {name}")
+
+    assert sandbox.errors == (f'Line 1: "{name}" is a reserved name.',)
+
+
+@pytest.mark.parametrize(
+    "code",
+    ["_write_ = 1", "def f(_write_):\n    pass", "import json as _write_"],
+    ids=["assignment", "function argument", "import as"],
+)
+def test_binding_a_reserved_name_reports_it_once(code: str) -> None:
+    """The binding check alone reports a binding, so the error is not repeated."""
+    sandbox = _sandbox_from_code(code)
+
+    assert sandbox.errors == ('Line 1: "_write_" is a reserved name.',)
+
+
+TYPE_PARAMETER_FORMS = {
+    "type alias": ("type N = int", "TypeAlias"),
+    "type alias parameter": ("type A[N] = list[N]", "TypeAlias"),
+    "function type parameter": ("def f[N]():\n    pass", "TypeVar"),
+    "class type parameter": ("class C[N]:\n    pass", "TypeVar"),
+    "param spec": ("class C[**N]:\n    pass", "ParamSpec"),
+    "type var tuple": ("def f[*N]():\n    pass", "TypeVarTuple"),
+}
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="PEP 695 syntax needs Python 3.12")
+@pytest.mark.parametrize("name", GUARD_NAMES)
+@pytest.mark.parametrize(
+    ("form", "node"), TYPE_PARAMETER_FORMS.values(), ids=TYPE_PARAMETER_FORMS.keys()
+)
+def test_plugin_code_cannot_bind_a_name_as_a_type_parameter(
+    form: str, node: str, name: str
+) -> None:
+    """The sandbox refuses type parameters and `type` aliases outright, so neither can
+    bind a reserved name. A type parameter's name is a string, not a `Name` node, so
+    `check_binding` would not see it if RestrictedPython began allowing them.
+    """
+    sandbox = _sandbox_from_code(form.replace("N", name))
+
+    assert sandbox.errors == (f"Line 1: {node} statements are not allowed.",)
+
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
+def test_a_module_that_does_not_parse_reports_the_line_and_statement() -> None:
+    """A syntax error names its line, type, message and statement."""
+    sandbox = _sandbox_from_code("value = (")
+
+    assert sandbox.errors == (
+        "Line 1: SyntaxError: '(' was never closed at statement: 'value = ('",
+    )
+
+
+def test_the_sandbox_imports_no_private_restrictedpython_module_at_runtime() -> None:
+    """Any 8.x RestrictedPython may reorganize its private modules, and `canvas_cli`
+    imports the sandbox under whichever 8.x the plugin author has installed.
+    """
+    tree = ast.parse(Path(sandbox_module.__file__).read_text())
+
+    runtime_imports = [
+        node.module for node in tree.body if isinstance(node, ast.ImportFrom) and node.module
+    ]
+
+    assert [
+        module
+        for module in runtime_imports
+        if module.startswith("RestrictedPython.")
+        and any(part.startswith("_") for part in module.split("."))
+    ] == []
+
+
 DOUBLE_UNDERSCORE_BINDING_FORMS = {
     **{
         label: form
         for label, form in BINDING_FORMS.items()
-        if label not in ("assignment", "function argument", "lambda argument")
+        if not label.endswith("argument") and label != "assignment"
     },
     "def inside a method": "class Thing:\n    def f(self):\n        def N():\n            pass",
 }
@@ -2122,6 +2199,114 @@ def test_double_underscore_names_bind_as_methods_arguments_and_all() -> None:
         4,
         ["Thing", "double"],
         "plugin_name.handlers.handler",
+    )
+
+
+def test_sandbox_denies_a_match_capture_that_replaces_the_write_guard() -> None:
+    """Test that a capture pattern cannot turn a guarded write into an unguarded one.
+
+    `_write_(ob, name, attr)` is a call the transformer inserts and resolves by
+    name at runtime, and module-level code executes with one dict as both
+    globals and locals, so a capture that binds `_write_` to a function
+    returning its first argument leaves every write in the module unguarded.
+    The attribute would land on a class shared by every plugin in the process.
+    """
+    sandbox = _sandbox_from_code(
+        dedent(
+            """
+            from canvas_sdk.utils import Http
+
+            def identity(ob, *args, **kwargs):
+                return ob
+
+            match identity:
+                case _write_:
+                    pass
+
+            Http.pwned = "yes"
+            """
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="is a reserved name"):
+        sandbox.execute()
+
+    assert not hasattr(Http, "pwned"), (
+        "the sandbox let a plugin write an attribute onto a shared SDK class"
+    )
+
+
+def test_sandbox_denies_a_lazy_import() -> None:
+    """Test that a lazy import is rejected.
+
+    PEP 810's `lazy import` resolves through the `__lazy_import__` builtin at
+    first use rather than the `__import__` the sandbox replaces with
+    `_safe_import`, so the module policy would never be consulted. Python 3.15
+    is the first interpreter that parses the syntax, so the flag the parser
+    would set is set directly here.
+    """
+    errors: list[str] = []
+    tree = ast.parse("import json")
+    tree.body[0].is_lazy = 1  # type: ignore[attr-defined]
+
+    Sandbox.Transformer(errors, [], {}).visit(tree)
+
+    assert any("Lazy import" in error for error in errors), errors
+
+
+def test_protected_scope_names_covers_every_injected_guard() -> None:
+    """Test that every guard the sandbox injects is a name plugins cannot bind.
+
+    Guards are named `_like_this_`; the remaining underscore-prefixed entries in
+    the scope (`__builtins__`, `__name__`, ...) are readable by plugin code.
+    """
+    sandbox = _sandbox_from_code("result = 1")
+
+    injected_guards = {
+        name
+        for name in sandbox.scope
+        if name.startswith("_") and name.endswith("_") and not name.startswith("__")
+    }
+
+    assert injected_guards
+    assert injected_guards <= PROTECTED_SCOPE_NAMES
+
+
+def test_plugin_annotations_are_not_stringified() -> None:
+    """Test that annotations in plugin code evaluate to objects rather than strings.
+
+    Plugin code is compiled with `dont_inherit=True` so it does not pick up the
+    `from __future__ import annotations` of the module that calls `compile()`.
+    Without that, `dataclass` and anything else reading `__annotations__` at
+    runtime sees strings.
+    """
+    sandbox = _sandbox_from_code(
+        """
+            class Annotated:
+                name: str
+                count: int
+
+            result = Annotated.__annotations__
+        """
+    )
+
+    assert sandbox.execute()["result"] == {"name": str, "count": int}
+
+
+def test_restricted_python_leaks_its_future_flags() -> None:
+    """Test that `compile_restricted_exec` still compiles with inherited `__future__` flags.
+
+    `Sandbox._compiled` compiles plugin code itself instead of calling
+    `compile_restricted_exec` only because that wrapper hardcodes
+    `dont_inherit`, so plugin code picks up the `from __future__ import
+    annotations` of RestrictedPython's own `compile` module.
+    """
+    compiled = compile_restricted_exec("x = 1")
+
+    assert compiled.code is not None
+    assert compiled.code.co_flags & __future__.annotations.compiler_flag, (
+        "compile_restricted_exec no longer leaks its __future__ flags; replace "
+        "the local compile in plugin_runner.sandbox.Sandbox._compiled with it."
     )
 
 
@@ -2768,7 +2953,7 @@ def test_type_of_an_sdk_object_exposes_only_its_name() -> None:
                 client = Http()
 
                 name = "_" + "_session"
-                pvt = _getattr_(client, name)
+                pvt = getattr(client, name)
             """,
             "private_attr_session": """
                 from canvas_sdk.utils import Http
