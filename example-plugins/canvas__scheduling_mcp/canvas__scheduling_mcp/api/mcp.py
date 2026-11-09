@@ -57,6 +57,11 @@ PATIENT_ARGUMENT = {
         "about a patient."
     ),
 }
+# A practice tool that opens up a patient's own appointment time needs that patient.
+RESCHEDULE_PATIENT = {
+    "type": "string",
+    "description": "With reschedule_appointment_id, the appointment's patient, from find_patient.",
+}
 
 # JSON-RPC error codes.
 PARSE_ERROR = -32700
@@ -101,6 +106,8 @@ def _tool_list(registry: ToolRegistry) -> list[dict[str, Any]]:
         if _about_a_patient(definition["name"]):
             schema["properties"] = {**schema.get("properties", {}), "patient_id": PATIENT_ARGUMENT}
             schema["required"] = [*schema.get("required", []), "patient_id"]
+        elif "reschedule_appointment_id" in schema.get("properties", {}):
+            schema["properties"] = {**schema["properties"], "patient_id": RESCHEDULE_PATIENT}
         tools.append(
             {
                 "name": definition["name"],

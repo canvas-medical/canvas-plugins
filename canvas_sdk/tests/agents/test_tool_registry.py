@@ -4,6 +4,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
+from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS
 from canvas_sdk.test_utils.agents import turn_on_command_types
 from canvas_sdk.test_utils.factories import CommandTypeSettingFactory
 
@@ -339,7 +340,11 @@ def test_filter_search_tool_synthesizes_schema_from_filters() -> None:
     props = definition["input_schema"]["properties"]
 
     assert set(props.keys()) == {"name_contains", "active_only", "started_on_or_after", "limit"}
-    assert props["name_contains"] == {"type": "string", "description": "match on name"}
+    assert props["name_contains"] == {
+        "type": "string",
+        "description": "match on name",
+        "maxLength": MAX_TEXT_CHARS,
+    }
     assert props["active_only"] == {"type": "boolean", "description": "active only"}
     assert props["started_on_or_after"]["format"] == "date"
     # No schema maximum: a larger limit is clamped, as the description says.
@@ -833,7 +838,11 @@ def test_originate_command_tool_synthesizes_schema_from_fields() -> None:
     definition = next(d for d in registry.definitions() if d["name"] == "originate_fake")
     props = definition["input_schema"]["properties"]
 
-    assert props["narrative"] == {"type": "string", "description": "The narrative."}
+    assert props["narrative"] == {
+        "type": "string",
+        "description": "The narrative.",
+        "maxLength": MAX_TEXT_CHARS,
+    }
     assert props["optional_count"] == {
         "type": "integer",
         "description": "A count.",
@@ -843,7 +852,7 @@ def test_originate_command_tool_synthesizes_schema_from_fields() -> None:
     assert props["tags"] == {
         "type": "array",
         "description": "Tags.",
-        "items": {"type": "string"},
+        "items": {"type": "string", "maxLength": MAX_TEXT_CHARS},
         "maxItems": 3,
     }
     assert definition["input_schema"]["required"] == ["narrative"]
@@ -1092,7 +1101,11 @@ def test_add_effect_tool_synthesizes_schema_from_fields() -> None:
     definition = next(d for d in registry.definitions() if d["name"] == "stage_fake")
     props = definition["input_schema"]["properties"]
 
-    assert props["title"] == {"type": "string", "description": "A title."}
+    assert props["title"] == {
+        "type": "string",
+        "description": "A title.",
+        "maxLength": MAX_TEXT_CHARS,
+    }
     assert props["count"] == {
         "type": "integer",
         "description": "A count.",
@@ -1102,7 +1115,7 @@ def test_add_effect_tool_synthesizes_schema_from_fields() -> None:
     assert props["tags"] == {
         "type": "array",
         "description": "Tags.",
-        "items": {"type": "string"},
+        "items": {"type": "string", "maxLength": MAX_TEXT_CHARS},
         "minItems": 1,
         "maxItems": 4,
     }
@@ -1701,7 +1714,9 @@ def test_definitions_returned_are_copies() -> None:
     returned["input_schema"]["properties"].clear()
 
     assert registry.definitions()[0]["description"] == "echo"
-    assert registry.definitions()[0]["input_schema"]["properties"] == {"q": {"type": "string"}}
+    assert registry.definitions()[0]["input_schema"]["properties"] == {
+        "q": {"type": "string", "maxLength": MAX_TEXT_CHARS}
+    }
 
 
 def test_registered_definitions_do_not_share_state_with_their_source() -> None:
@@ -1848,3 +1863,32 @@ def test_a_call_outside_its_schema_is_refused_before_the_tool_runs(arguments: di
 def test_a_call_inside_its_schema_runs() -> None:
     """The check passes a call the schema allows."""
     assert _bounded_tool().execute("book", {"minutes": 30, "kind": "call"}, ctx={}) == {"ok": True}
+
+
+def test_a_schema_cannot_make_the_runner_fetch_a_reference(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A plugin's schema is validated outside the sandbox, so a remote $ref resolves nothing."""
+    fetched: list[str] = []
+    monkeypatch.setattr("urllib.request.urlopen", lambda url, *a, **k: fetched.append(str(url)))
+    registry = ToolRegistry()
+    registry.register(
+        {
+            "name": "t",
+            "description": "x",
+            "input_schema": {"$ref": "https://metadata.internal.invalid/schema.json"},
+        },
+        lambda arguments, *, ctx: {},
+    )
+
+    with pytest.raises(Exception):  # noqa: B017 - the resolver's own error type
+        registry.execute("t", {}, ctx={})
+
+    assert fetched == []
+
+
+def test_an_invalid_schema_is_refused_at_registration() -> None:
+    """A schema that is not a valid JSON Schema fails when the tool registers."""
+    with pytest.raises(Exception, match="is not valid"):  # noqa: B017
+        ToolRegistry().register(
+            {"name": "t", "description": "x", "input_schema": {"type": "no-such-type"}},
+            lambda arguments, *, ctx: {},
+        )

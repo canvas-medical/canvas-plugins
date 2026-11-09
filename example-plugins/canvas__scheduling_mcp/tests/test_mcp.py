@@ -131,6 +131,8 @@ def test_patient_tools_take_a_patient_id_and_practice_tools_do_not() -> None:
     assert "patient_id" in schemas["find_appointments"]["required"]
     assert "patient_id" not in schemas["find_providers"].get("properties", {})
     assert "patient_id" not in schemas["find_patient"].get("properties", {})
+    slots = schemas["find_appointment_slots"]
+    assert "patient_id" in slots["properties"] and "patient_id" not in slots["required"]
 
 
 @pytest.mark.django_db
@@ -226,6 +228,41 @@ def test_a_listed_write_returns_its_effect_with_the_answer() -> None:
     assert result["isError"] is False
     (effect,) = effects
     assert json.loads(effect.payload)["data"]["instance_id"] == str(appointment.id)
+
+
+@pytest.mark.django_db
+def test_a_slot_search_opens_only_the_named_patients_appointment() -> None:
+    """Rescheduling's slot search takes the appointment's patient, and refuses another's."""
+    patient = PatientFactory.create()
+    note = NoteFactory.create(patient=patient)
+    appointment = Appointment.objects.create(
+        patient=patient,
+        note=note,
+        note_type=note.note_type_version,
+        provider=note.provider,
+        location=note.location,
+        start_time="2026-11-12T09:00:00+00:00",
+        duration_minutes=30,
+        status="confirmed",
+        telehealth_instructions_sent=False,
+    )
+    window: dict[str, Any] = {
+        "practice_location_id": "loc-1",
+        "start": "2026-11-12T08:00:00+00:00",
+        "end": "2026-11-13T08:00:00+00:00",
+        "duration_minutes": 30,
+        "reschedule_appointment_id": str(appointment.id),
+    }
+
+    with patch(
+        "canvas_sdk.agents.scheduling_tools.AppointmentSlotsHttp.search_slots", return_value=[]
+    ) as search:
+        mine, _ = _call("find_appointment_slots", patient_id=patient.id, **window)
+        theirs, _ = _call("find_appointment_slots", patient_id=PatientFactory.create().id, **window)
+
+    assert mine["isError"] is False
+    assert search.call_args.kwargs["exclude_appointment_id"] == str(appointment.id)
+    assert theirs["isError"] is True and "No appointment" in theirs["content"][0]["text"]
 
 
 def test_an_unknown_method_and_a_malformed_message_are_json_rpc_errors() -> None:

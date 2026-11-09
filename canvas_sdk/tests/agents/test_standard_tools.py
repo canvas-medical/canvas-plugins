@@ -14,7 +14,7 @@ Two layers:
 import inspect
 import json
 import re
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -23,6 +23,7 @@ from django.utils import timezone
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import Capability, history_tools, standard_tools
 from canvas_sdk.agents.standard_tools import _walk_note_body, _wrap_recommendation_command
+from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     ClaimFactory,
@@ -52,6 +53,7 @@ from canvas_sdk.v1.data import (
     Condition,
     Observation,
 )
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, NoteStates
 
 EXPECTED_TOOLS = (
     "find_medications",
@@ -302,6 +304,61 @@ def test_find_lab_partner_tests_advertises_expected_filters() -> None:
     properties = definition["input_schema"]["properties"]
     for key in ("lab_partner_id", "lab_partner_name", "search", "cpt_contains", "limit"):
         assert key in properties, f"find_lab_partner_tests missing filter {key!r}"
+
+
+def _review_note(**changes: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Run originate_review_note with valid arguments, changed by ``changes``."""
+    arguments = {
+        "narrative": "Labs reviewed.",
+        "note_type_id": str(NoteTypeFactory.create(category="review").id),
+        "practice_location_id": str(PracticeLocationFactory.create().id),
+    } | changes
+    ctx: dict[str, Any] = {
+        "patient_id": PatientFactory.create().id,
+        "staff_id": StaffFactory.create().id,
+        "effects": [],
+    }
+    return standard_tools.execute("originate_review_note", arguments, ctx=ctx), ctx
+
+
+@pytest.mark.django_db
+def test_a_review_note_is_drafted_on_an_active_review_type() -> None:
+    """A review note type and an aware date in the last 30 days stage the note."""
+    when = (datetime.now(UTC) - timedelta(days=2)).isoformat()
+
+    result, ctx = _review_note(datetime_of_service=when)
+
+    assert result["ok"] is True
+    assert len(ctx["effects"]) == 2
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        (lambda: {"note_type_id": str(NoteTypeFactory.create(category="encounter").id)}, "review"),
+        (
+            lambda: {
+                "note_type_id": str(NoteTypeFactory.create(category="review", is_active=False).id)
+            },
+            "review",
+        ),
+        (lambda: {"note_type_id": "not-a-uuid"}, "review"),
+        (
+            lambda: {"practice_location_id": str(PracticeLocationFactory.create(active=False).id)},
+            "active location",
+        ),
+        (lambda: {"datetime_of_service": "2026-11-01T09:00:00"}, "time zone"),
+        (lambda: {"datetime_of_service": "2199-12-31T09:00:00+00:00"}, "future"),
+        (lambda: {"datetime_of_service": "1900-01-01T09:00:00+00:00"}, "last 30 days"),
+    ],
+)
+def test_a_review_note_off_type_or_out_of_dates_is_refused(changes: Any, message: str) -> None:
+    """An encounter or inactive type, an inactive location, or a naive, future, or old date."""
+    result, ctx = _review_note(**changes())
+
+    assert result["ok"] is False and message in result["error"]
+    assert ctx["effects"] == []
 
 
 def test_originate_review_note_schema_shape() -> None:
@@ -1316,12 +1373,12 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
             "provider_id": str(provider.id),
             "practice_location_id": str(location.id),
             "visit_type_id": str(visit.id),
-            "start_time": "2026-11-12T09:00:00+00:00",
+            "start_time": (datetime.now(UTC) + timedelta(days=3)).isoformat(),
             "duration_minutes": 30,
         },
         "reschedule_appointment": {
             "appointment_id": str(booked.id),
-            "start_time": "2026-11-13T09:00:00+00:00",
+            "start_time": (datetime.now(UTC) + timedelta(days=4)).isoformat(),
         },
         "cancel_appointment": {"appointment_id": str(booked.id)},
     }
@@ -1580,3 +1637,76 @@ def test_a_task_and_its_comment_are_authored_as_the_requester() -> None:
 
     authors = [json.loads(effect.payload)["data"]["author_id"] for effect in effects]
     assert authors == ["staff-key-1", "staff-key-1", None]
+
+
+@pytest.mark.parametrize(
+    ("href", "allowed"),
+    [
+        ("https://lab.example.com/result/1", True),
+        ("/patient/abc/notes", True),
+        ("javascript:alert(document.cookie)", False),
+        ("http://lab.example.com", False),
+        ("//elsewhere.example.com/x", False),
+        ("data:text/html,<script>", False),
+    ],
+)
+@pytest.mark.django_db
+def test_a_banner_or_card_link_is_https_or_a_canvas_path(href: str, allowed: bool) -> None:
+    """The model picks the link, and chart text can steer it, so only safe ones are staged."""
+    patient = PatientFactory.create()
+    banner = {"key": "k", "narrative": "n", "intent": "info", "placement": ["chart"], "href": href}
+    card = {
+        "title": "t",
+        "narrative": "n",
+        "recommendations": [{"title": "r", "button": "Open", "href": href}],
+    }
+
+    for tool, arguments in (("add_banner_alert", banner), ("add_or_update_protocol_card", card)):
+        effects: list[Any] = []
+        ctx = {"patient_id": patient.id, "effects": effects}
+        if allowed:
+            standard_tools.execute(tool, arguments, ctx=ctx)
+            assert len(effects) == 1, tool
+        else:
+            with pytest.raises(ValueError, match="does not match"):
+                standard_tools.execute(tool, arguments, ctx=ctx)
+            assert effects == [], tool
+
+
+def test_every_free_text_argument_has_a_length_limit() -> None:
+    """A draft's text is bounded, so a run cannot stage 20,000 characters into a command."""
+    unbounded = sorted(
+        f"{definition['name']}.{name}"
+        for definition in standard_tools.definitions()
+        for name, prop in (definition["input_schema"].get("properties") or {}).items()
+        if prop.get("type") == "string"
+        and not ({"enum", "format", "maxLength", "pattern"} & prop.keys())
+        and standard_tools.effect_types_for(definition["name"])
+    )
+
+    assert unbounded == []
+
+
+@pytest.mark.django_db
+def test_a_plan_narrative_past_the_limit_is_refused() -> None:
+    """The limit holds in code: a longer narrative stages nothing."""
+    ctx: dict[str, Any] = {"patient_id": PatientFactory.create().id, "note_id": None, "effects": []}
+
+    with pytest.raises(ValueError, match="is too long"):
+        standard_tools.execute("originate_plan", {"narrative": "x" * (MAX_TEXT_CHARS + 1)}, ctx=ctx)
+
+
+@pytest.mark.django_db
+def test_a_deleted_note_is_neither_listed_nor_read() -> None:
+    """A note is deleted when it should not be in the chart, such as one on the wrong patient."""
+    patient = PatientFactory.create()
+    kept, deleted = NoteFactory.create(patient=patient), NoteFactory.create(patient=patient)
+    CurrentNoteStateEvent.objects.create(note=kept, state=NoteStates.LOCKED)
+    CurrentNoteStateEvent.objects.create(note=deleted, state=NoteStates.DELETED)
+    ctx = {"patient_id": patient.id}
+
+    listed = {row["id"] for row in standard_tools.execute("find_notes", {}, ctx=ctx)}
+    read = standard_tools.execute("get_note_content", {"note_id": str(deleted.id)}, ctx=ctx)
+
+    assert listed == {str(kept.id)}
+    assert read is None

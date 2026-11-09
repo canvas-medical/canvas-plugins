@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents.approval import PROPOSAL_EFFECT_TYPE, proposal_id, propose
@@ -78,6 +79,8 @@ class EffectField:
             "enum": [...]}`` for arrays of enum values).
         min_items: For ``type="array"`` — minimum array length.
         max_items: For ``type="array"`` — maximum array length.
+        max_length: For ``type="string"`` — the longest value accepted.
+        pattern: For ``type="string"`` — a regular expression the value must match.
         command_field: When the LLM-facing argument name differs from the
             underlying Command/Effect field name, set this to the target
             field name. Defaults to the LLM-facing name (which is the
@@ -101,10 +104,15 @@ class EffectField:
     items: dict[str, Any] | None = None
     min_items: int | None = None
     max_items: int | None = None
+    max_length: int | None = None
+    pattern: str | None = None
     command_field: str | None = None
     pre_build_only: bool = False
     editable: bool = False
 
+
+# The longest free-text argument a tool accepts unless its field says otherwise.
+MAX_TEXT_CHARS = 10_000
 
 # Effect types an approval-listed tool stages bare: a usage record meters the call, and a
 # proposal inside it would pass the runner's usage gate, which checks bare effects only.
@@ -124,6 +132,27 @@ def remove_first(effects: Any, matches: Callable[[Any], bool]) -> Any | None:
             if matches(effect):
                 return effects.pop(index)
     return None
+
+
+def _bounded_strings(schema: dict[str, Any]) -> dict[str, Any]:
+    """``schema`` with ``MAX_TEXT_CHARS`` as the length limit of every free-text string.
+
+    A string with its own ``maxLength``, ``enum``, ``format``, or ``pattern`` keeps it; the
+    limit reaches strings inside object properties and array items too.
+    """
+    bounded = dict(schema)
+    if bounded.get("type") == "string" and not (
+        {"maxLength", "enum", "format", "pattern", "const"} & bounded.keys()
+    ):
+        bounded["maxLength"] = MAX_TEXT_CHARS
+    if isinstance(bounded.get("properties"), dict):
+        bounded["properties"] = {
+            key: _bounded_strings(value) if isinstance(value, dict) else value
+            for key, value in bounded["properties"].items()
+        }
+    if isinstance(bounded.get("items"), dict):
+        bounded["items"] = _bounded_strings(bounded["items"])
+    return bounded
 
 
 class _CallEffects:
@@ -477,10 +506,19 @@ class ToolRegistry:
                 f"Tool {name!r} sets max_result_chars={max_result_chars}; it must be "
                 f"between 1 and {MAX_TOOL_RESULT_CHARS}. Page a larger result instead."
             )
-        self._definitions.append(copy.deepcopy(definition))
+        definition = {
+            **copy.deepcopy(definition),
+            "input_schema": _bounded_strings(definition.get("input_schema") or {"type": "object"}),
+        }
+        self._definitions.append(definition)
         self._executors[name] = executor
-        schema = definition.get("input_schema") or {"type": "object"}
-        self._validators[name] = Draft202012Validator(schema, format_checker=FormatChecker())
+        schema = definition["input_schema"]
+        Draft202012Validator.check_schema(schema)
+        # An empty registry resolves no reference outside the schema, so a plugin's schema
+        # cannot make the runner fetch a URL or read a file.
+        self._validators[name] = Draft202012Validator(
+            schema, registry=Registry(), format_checker=FormatChecker()
+        )
         for category in categories:
             self._categories.setdefault(category, set()).add(name)
         if metadata:
@@ -1002,6 +1040,10 @@ class ToolRegistry:
                 prop["minItems"] = spec.min_items
             if spec.max_items is not None:
                 prop["maxItems"] = spec.max_items
+            if spec.max_length is not None:
+                prop["maxLength"] = spec.max_length
+            if spec.pattern is not None:
+                prop["pattern"] = spec.pattern
             properties[field_name] = prop
             if spec.required:
                 required.append(field_name)
@@ -1201,6 +1243,10 @@ class ToolRegistry:
                 prop["minItems"] = spec.min_items
             if spec.max_items is not None:
                 prop["maxItems"] = spec.max_items
+            if spec.max_length is not None:
+                prop["maxLength"] = spec.max_length
+            if spec.pattern is not None:
+                prop["pattern"] = spec.pattern
             properties[field_name] = prop
             if spec.required:
                 required.append(field_name)

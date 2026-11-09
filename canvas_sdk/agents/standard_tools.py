@@ -26,7 +26,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import anthropic
 import requests
@@ -114,6 +114,11 @@ from canvas_sdk.v1.data.common import OrderStatus, ReviewStatus
 from canvas_sdk.v1.data.encounter import EncounterState
 from canvas_sdk.v1.data.goal import GoalAchievementStatus, GoalLifecycleStatus, GoalPriority
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
+
+# A link a banner or a card's button opens: an https URL, or a path in Canvas. The model
+# chooses it, and chart text it read can steer it, so no javascript:, data:, http:, or
+# protocol-relative (//host) link is staged.
+SAFE_HREF = r"^(https://[^\s/]+(/\S*)?|/(?!/)\S*)$"
 
 standard_tools = ToolRegistry()
 
@@ -914,7 +919,10 @@ def _provider_name(note: Any) -> str | None:
         "by `note_type` to scope to a category, or by `since` to look at "
         "recent history only. Defaults to most-recent-first."
     ),
-    queryset_factory=lambda args, pid: Note.objects.filter(patient__id=pid),
+    # A deleted note is out of the chart, often because it was on the wrong patient.
+    queryset_factory=lambda args, pid: Note.objects.filter(patient__id=pid).exclude(
+        current_state__state=NoteStates.DELETED
+    ),
     filters={
         "state": FilterSpec(
             type="string",
@@ -923,10 +931,10 @@ def _provider_name(note: Any) -> str | None:
                 "Three-letter NoteStates code — pick from the enum. "
                 "Filters on the canonical current state, not the note's "
                 "initial state. Common values: 'NEW' (created/open), "
-                "'LKD' (locked), 'ULK' (unlocked), 'SGN' (signed), "
-                "'DLT' (deleted)."
+                "'LKD' (locked), 'ULK' (unlocked), 'SGN' (signed). Deleted notes "
+                "are never listed."
             ),
-            enum=_NOTE_STATE_VALUES,
+            enum=[value for value in _NOTE_STATE_VALUES if value != NoteStates.DELETED],
             apply=lambda qs, v: qs.filter(current_state__state=v),
         ),
         "note_type": FilterSpec(
@@ -1133,6 +1141,7 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
 
     note = (
         Note.objects.filter(id=note_id, patient__id=patient_id)
+        .exclude(current_state__state=NoteStates.DELETED)
         .select_related("provider", "current_state")
         .first()
     )
@@ -2784,10 +2793,20 @@ def _refill_requests(patient_id: str, limit: int) -> list[dict[str, Any]]:
     requests_ = list(
         RefillRequest.objects.filter(patient__id=patient_id).order_by("-created")[:limit]
     )
+    references = [
+        str((request.content or {}).get("rx_reference_number"))
+        for request in requests_
+        if (request.content or {}).get("rx_reference_number")
+    ]
     answers: dict[str, Any] = {}
+    # Only answers to the requests listed, by the request or its Rx reference number.
     for answer in (
         Prescription.objects.committed()
         .filter(patient__id=patient_id, refill_request__isnull=False)
+        .filter(
+            Q(refill_request__in=requests_)
+            | Q(refill_request__content__rx_reference_number__in=references)
+        )
         .exclude(status=PrescriptionStatus.ERROR)
         .select_related("refill_request")
         .order_by("written_date")
@@ -3319,9 +3338,10 @@ standard_tools.add_effect_tool(
         "href": EffectField(
             type="string",
             description=(
-                "Optional URL the banner links to. Use for deep-links to "
-                "supporting context (e.g., the lab result page)."
+                "Optional link the banner opens: an https:// URL or a path in Canvas "
+                "starting with /, such as the lab result page."
             ),
+            pattern=SAFE_HREF,
         ),
     },
     pre_build=lambda arguments, ctx: {
@@ -3643,7 +3663,11 @@ standard_tools.add_effect_tool(
                 "properties": {
                     "title": {"type": "string"},
                     "button": {"type": "string"},
-                    "href": {"type": "string"},
+                    "href": {
+                        "type": "string",
+                        "description": "An https:// URL or a path in Canvas starting with /.",
+                        "pattern": SAFE_HREF,
+                    },
                     "commands": {
                         "type": "array",
                         "items": {
@@ -4138,6 +4162,58 @@ standard_tools.add_effect_tool(
 )
 
 
+# How far back a review note's date of service may go.
+MAX_REVIEW_BACKDATE_DAYS = 30
+
+
+def _review_note_date(note_type_id: str, practice_location_id: str, dt_arg: Any) -> datetime:
+    """A review note's date of service, after checking its type and location are usable."""
+    if (
+        not _is_uuid(note_type_id)
+        or not NoteType.objects.filter(
+            id=note_type_id, category=NoteTypeCategories.REVIEW, is_active=True
+        ).exists()
+    ):
+        raise ValueError(
+            f"note_type_id {note_type_id!r} is not an active review note type; call "
+            "find_note_types(category='review')."
+        )
+    if (
+        not _is_uuid(practice_location_id)
+        or not PracticeLocation.objects.filter(id=practice_location_id, active=True).exists()
+    ):
+        raise ValueError(
+            f"practice_location_id {practice_location_id!r} is not an active location; call "
+            "find_practice_locations."
+        )
+    now = datetime.now(UTC)
+    if not dt_arg:
+        return now
+    try:
+        dt_of_service = datetime.fromisoformat(str(dt_arg))
+    except ValueError:
+        raise ValueError(f"datetime_of_service {dt_arg!r} is not a valid ISO 8601 string") from None
+    if dt_of_service.tzinfo is None:
+        raise ValueError(
+            "datetime_of_service must carry a time zone, such as 2026-11-09T09:00:00-05:00"
+        )
+    if dt_of_service > now:
+        raise ValueError("datetime_of_service cannot be in the future")
+    if dt_of_service < now - timedelta(days=MAX_REVIEW_BACKDATE_DAYS):
+        raise ValueError(
+            f"datetime_of_service must be within the last {MAX_REVIEW_BACKDATE_DAYS} days"
+        )
+    return dt_of_service
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _originate_review_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """Create a fresh review-category note and originate a Plan command on it.
 
@@ -4195,17 +4271,12 @@ def _originate_review_note(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
         }
 
     title = (arguments.get("title") or "").strip() or None
-    dt_arg = arguments.get("datetime_of_service")
-    if dt_arg:
-        try:
-            dt_of_service = datetime.fromisoformat(dt_arg)
-        except ValueError:
-            return {
-                "ok": False,
-                "error": f"datetime_of_service {dt_arg!r} is not a valid ISO 8601 string",
-            }
-    else:
-        dt_of_service = datetime.now(UTC)
+    try:
+        dt_of_service = _review_note_date(
+            str(note_type_id), str(practice_location_id), arguments.get("datetime_of_service")
+        )
+    except ValueError as error:
+        return {"ok": False, "error": str(error)}
 
     new_note_uuid = str(uuid4())
 
@@ -4262,7 +4333,7 @@ standard_tools.register(
                 "note_type_id": {
                     "type": "string",
                     "description": (
-                        "UUID of a NoteType row with category='review' — get from "
+                        "UUID of an active NoteType with category='review' — get from "
                         "`find_note_types(category='review')`. The customer's review "
                         "note type IDs vary; don't guess."
                     ),
@@ -4286,8 +4357,9 @@ standard_tools.register(
                     "type": "string",
                     "format": "date-time",
                     "description": (
-                        "Optional ISO 8601 datetime. Defaults to now if omitted. "
-                        "Use for back-dated reviews."
+                        "Optional ISO 8601 datetime with a time zone, when the review "
+                        f"happened: now or within the last {MAX_REVIEW_BACKDATE_DAYS} days. "
+                        "Defaults to now."
                     ),
                 },
             },
