@@ -28,6 +28,8 @@ from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
 from canvas_cli.utils.validators import validate_manifest_file
+from canvas_sdk.agents import ToolRegistry
+from canvas_sdk.agents.grant import grant_problems
 from plugin_runner.plugin_runner import sandbox_plugin_handlers
 from plugin_runner.sandbox import collect_missing_attribute_reads
 
@@ -844,13 +846,24 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     with collect_missing_attribute_reads() as missing:
         results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
 
-    failures = [r for r in results if r.error is not None]
-
+    agent_entries = [id(entry) for entry in components.get("agents", [])]
+    failures = []
     for r in results:
         label = r.handler.get("class", "<unknown>")
+        problems = []
+        if r.error is None and id(r.handler) in agent_entries and r.scope and r.handler_class:
+            # The run fails on a grant the runner cannot apply; say so before deploy.
+            registry = getattr(r.scope[r.handler_class], "tools", None) or ToolRegistry()
+            problems = grant_problems(registry, r.handler.get("tools") or {})
         if r.error is not None:
+            failures.append(r)
             print(f"  ✗ {label}")
             print(f"      {type(r.error).__name__}: {r.error}")
+        elif problems:
+            failures.append(r)
+            print(f"  ✗ {label}")
+            for problem in problems:
+                print(f"      {problem}")
         else:
             print(f"  ✓ {label}")
 
