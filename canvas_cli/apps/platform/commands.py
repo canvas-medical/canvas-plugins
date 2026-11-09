@@ -48,6 +48,8 @@ PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 # A plugin name is a Python package and a Postgres identifier (see PG_NAMEDATALEN in
 # plugin_runner/namespace.py).
 PLUGIN_NAME_MAX_LENGTH = 63
+# A name that carries an organization prefix, `<org prefix>__<package>`.
+PREFIXED_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -287,6 +289,26 @@ def _no_push_role(*organizations: dict[str, Any]) -> typer.BadParameter:
     )
 
 
+def _matching_organization(organizations: list[dict[str, Any]], name: str) -> dict[str, Any] | None:
+    """The person's organization whose ``plugin_prefix`` ``name`` carries; the longest wins.
+
+    Args:
+        organizations (list[dict[str, Any]]): The person's organizations from ``/me``.
+        name (str): The plugin name.
+
+    Returns:
+        dict[str, Any] | None: The organization, or None when the name carries no prefix of
+            the person's organizations.
+    """
+    matches: list[dict[str, Any]] = [
+        organization
+        for organization in organizations
+        if organization.get("plugin_prefix")
+        and name.startswith(f"{organization['plugin_prefix']}__")
+    ]
+    return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
+
+
 def _publisher(
     client: PlatformClient, plugin_dir: Path, name: str, *, pushing: bool, records: bool
 ) -> tuple[str, bool]:
@@ -295,11 +317,12 @@ def _publisher(
     It is the manifest's ``publisher`` when it names an organization the person belongs
     to, or any ``publisher`` for a deploy that pushes nothing, whose deployment Canvas
     Platform authorizes on its own (a Canvas employee deploys in every organization
-    without belonging to it); else the only organization the person can publish in; else, at a terminal, the
-    one the person picks. The choice is returned, not written: a regular push records it
-    in the manifest once the package is accepted (``records``), and any other deploy
-    prints the line to add instead. Without a terminal, several organizations are
-    refused with the manifest line that chooses one.
+    without belonging to it); else the person's organization whose ``plugin_prefix`` the
+    name carries; else the only organization the person can publish in; else, at a
+    terminal, the one the person picks. The choice is returned, not written: a regular
+    push records it in the manifest once the package is accepted (``records``), and any
+    other deploy prints the line to add instead. Without a terminal, several
+    organizations are refused with the manifest line that chooses one.
 
     Args:
         client (PlatformClient): The signed-in platform client.
@@ -338,6 +361,13 @@ def _publisher(
         if pushing and "push_plugin_code" not in match.get("capabilities", []):
             raise _no_push_role(match)
         return declared, False
+
+    prefixed: dict[str, Any] | None = _matching_organization(organizations, name)
+    if prefixed is not None:
+        if pushing and "push_plugin_code" not in prefixed.get("capabilities", []):
+            raise _no_push_role(prefixed)
+        print(f"Publishing as {prefixed['slug']}, whose prefix the name carries.")
+        return str(prefixed["slug"]), False
 
     eligible: list[dict[str, Any]] = [
         o for o in organizations if not pushing or "push_plugin_code" in o.get("capabilities", [])
@@ -865,8 +895,8 @@ def deploy(
 
     The manifest `name` is a plain package name: lowercase, at most 63 characters,
     with an org prefix recommended. The publisher is the manifest `publisher`, else
-    the only organization you can publish in, else, at a terminal, the organization
-    you pick. A regular push records the pick in the manifest once the package is
+    your organization whose prefix the name carries, else the only organization you
+    can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
     accepted, so the push commits it; --ref, --no-push and --snapshot print the
     manifest line to add instead.
 
@@ -1131,7 +1161,7 @@ def _managed(
     deprecation notice prints, since `canvas login` cannot serve those hosts. With no
     ``--instance`` or ``--host``, the target is credentials.ini's default host, so a
     default that is not a Canvas instance gets the same answer. Otherwise, signed in, a
-    plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform, each
+    plugin platform manages for the person (see ``_managed_record``) goes through platform, each
     ``--instance`` must be one platform manages for the person, and any other plugin
     aimed at a Canvas instance, or named with no ``--instance``, ``--host`` or
     credentials.ini default, is refused with the way to sign out; with no ``--instance``
@@ -1168,7 +1198,7 @@ def _managed(
         # instance (or none at all), platform chooses the targets from the plugin's
         # installs, so it is asked first.
         client = PlatformClient(platform)
-        plugin = client.plugin(name)
+        plugin = _managed_record(client, name)
         if plugin is not None:
             for slug in dict.fromkeys(instances):
                 require_managed(client, slug)
@@ -1179,6 +1209,43 @@ def _managed(
             raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
     print_credentials_ini_deprecation(command)
     return None
+
+
+def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
+    """Platform's record of ``name`` when Platform manages it for the person, else None.
+
+    A prefixed name is looked up by name alone. A name without a prefix can be a plugin an
+    instance holds from a direct ``canvas install`` while another organization publishes one
+    of that name on Platform, so it counts only when one of the person's organizations
+    publishes it, which Platform prefers when several share the name; a 409 ``ambiguous``
+    (several publishers, none the person's) counts as unmanaged.
+
+    Args:
+        client (PlatformClient): The signed-in platform client.
+        name (str): The plugin name.
+
+    Returns:
+        dict[str, Any] | None: The plugin record, or None when Platform does not manage it
+            for the person.
+    """
+    if PREFIXED_NAME_PATTERN.match(name):
+        return client.plugin(name)
+    try:
+        plugin: dict[str, Any] | None = client.plugin(name)
+    except PlatformError as error:
+        if error.code == "ambiguous":
+            return None
+        raise
+    if plugin is None:
+        return None
+    yours: set[str] = {str(o["slug"]) for o in client.me().get("organizations", [])}
+    return plugin if plugin.get("publisher") in yours else None
+
+
+def _entry(name: str, plugin: dict[str, Any]) -> dict[str, str]:
+    """The deployment entry for a managed plugin, naming its publisher when Platform gave one."""
+    publisher: Any = plugin.get("publisher")
+    return {"name": name} | ({"publisher": str(publisher)} if publisher else {})
 
 
 def _direct_hosts(instances: list[str], host: str | None) -> list[str]:
@@ -1272,7 +1339,7 @@ def set_variables(
     _dispatch(
         client,
         "configure",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Configuring {plugin_name}",
     )
@@ -1318,7 +1385,7 @@ def unset_variables(
     _dispatch(
         client,
         "configure",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Configuring {plugin_name}",
     )
@@ -1354,7 +1421,7 @@ def _switch(plugin_name: str, instance: list[str], host: str | None, *, action: 
     _dispatch(
         client,
         action,
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"{verb} {plugin_name}",
     )
@@ -1467,7 +1534,7 @@ def uninstall(
     _dispatch(
         client,
         "uninstall",
-        [{"name": plugin_name}],
+        [_entry(plugin_name, plugin)],
         targets,
         what=f"Uninstall of {plugin_name}",
     )

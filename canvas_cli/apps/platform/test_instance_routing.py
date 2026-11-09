@@ -375,7 +375,7 @@ def test_enable_and_disable_dispatch_a_deployment_for_a_managed_plugin(
     assert result.exit_code == 0, result.output
     assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json() == {
         "action": verb,
-        "plugins": [{"name": NAME}],
+        "plugins": [{"name": NAME, "publisher": "acme"}],
         "instances": ["acme"],
     }
 
@@ -971,6 +971,67 @@ def test_signed_in_unknown_plugin_without_credentials_ini_is_refused(
     assert "Canvas Platform does not manage intake." in result.stderr
     assert "sign out with `canvas logout`" in result.stderr
     mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"json": {"name": "intake", "publisher": "other", "installs": [{"instance": "acme"}]}},
+        {
+            "status_code": 409,
+            "json": {"error": "Two publishers have a plugin named 'intake'.", "code": "ambiguous"},
+        },
+    ],
+    ids=["another-organizations-plugin", "ambiguous"],
+)
+def test_unprefixed_plugin_none_of_your_organizations_publishes_is_not_managed(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    answer: dict[str, Any],
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+) -> None:
+    """An unprefixed name Platform shows only as another organization's plugin, or as several
+    publishers' plugins, is not one Platform manages for the person, so it is refused rather
+    than changed through Platform.
+    """
+    requests_mock.get(f"{API}/me", json={"organizations": [{"slug": "acme"}]})
+    requests_mock.get(f"{API}/plugins/intake", **answer)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, "intake", *extra, "--instance", "acme"])
+
+    assert result.exit_code == 1
+    assert "Canvas Platform does not manage intake." in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/")
+    assert not _calls(requests_mock, "PUT", f"{API}/")
+    mock.assert_not_called()
+
+
+def test_unprefixed_plugin_your_organization_publishes_goes_through_platform(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """An unprefixed name one of the person's organizations publishes goes through Platform,
+    and the deployment names that publisher.
+    """
+    requests_mock.get(f"{API}/me", json={"organizations": [{"slug": "acme"}]})
+    requests_mock.get(
+        f"{API}/plugins/intake",
+        json={"name": "intake", "publisher": "acme", "installs": [{"instance": "acme"}]},
+    )
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    result = runner.invoke(app, ["enable", "intake", "--instance", "acme"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "publisher": "acme"}
+    ]
 
 
 @pytest.mark.parametrize(

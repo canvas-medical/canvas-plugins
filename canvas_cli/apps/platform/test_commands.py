@@ -2544,7 +2544,7 @@ def test_config_set_on_a_managed_plugin_stores_values_then_configures(
     }
     assert _requests_to(requests_mock, "POST", "/deployments")[0].json() == {
         "action": "configure",
-        "plugins": [{"name": NAME}],
+        "plugins": [{"name": NAME, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -2728,7 +2728,7 @@ def test_uninstall_of_a_managed_plugin_dispatches_an_uninstall(
     assert result.exit_code == 0, result.output
     assert _requests_to(requests_mock, "POST", "/deployments")[0].json() == {
         "action": "uninstall",
-        "plugins": [{"name": NAME}],
+        "plugins": [{"name": NAME, "publisher": "acme"}],
         "instances": ["acme-staging"],
     }
 
@@ -4087,8 +4087,8 @@ def test_a_platform_that_still_requires_a_prefix_stops_the_deploy_before_git(
 def test_config_on_a_name_two_publishers_share_fails_closed(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """S7: an ambiguous name is refused with Platform's sentence rather than written through
-    credentials.ini, which would change an instance behind Platform's back.
+    """S7: an ambiguous name is not one Platform manages for the person, and is refused rather
+    than written through credentials.ini, which would change an instance behind Platform's back.
     """
     sentence = "Two publishers have a plugin named 'intake': acme, big-leap. Pass ?publisher=."
     requests_mock.get(
@@ -4098,7 +4098,7 @@ def test_config_on_a_name_two_publishers_share_fails_closed(
     result = runner.invoke(app, ["config", "set", "intake", "A=1", "--instance", "acme-staging"])
 
     assert result.exit_code == 1, result.output
-    assert sentence in result.output
+    assert "Canvas Platform does not manage intake." in result.output
     assert not [r for r in requests_mock.request_history if r.method == "PUT"]
     mock_update.assert_not_called()
 
@@ -4158,11 +4158,11 @@ def test_an_org_without_the_push_role_is_not_offered_for_a_push(
     assert (package / "CANVAS_MANIFEST.json").read_bytes() == before
 
 
-def test_a_prefixed_name_without_a_publisher_does_not_pick_the_org_from_its_prefix(
+def test_a_prefixed_name_without_a_publisher_is_published_by_the_org_of_its_prefix(
     api: requests_mock_module.Mocker, package: Path, signed_in: None
 ) -> None:
-    """Q2: the prefix is a naming convention only, so a member of several orgs without a
-    terminal is asked to name the publisher even for `acme__intake`.
+    """With no manifest publisher, `acme__intake` is published by acme, the person's
+    organization whose prefix the name carries, without asking a member of several orgs.
     """
     api.get(f"{API}/me", json=TWO_ORGS)
 
@@ -4170,9 +4170,47 @@ def test_a_prefixed_name_without_a_publisher_does_not_pick_the_org_from_its_pref
         app, ["deploy", str(package), "--ref", "main", "--instance", "acme-staging"]
     )
 
+    assert result.exit_code == 0, result.output
+    assert "Publishing as acme, whose prefix the name carries." in result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": NAME, "ref": "main", "publisher": "acme"}
+    ]
+
+
+def test_a_push_of_a_prefixed_name_needs_the_push_role_in_the_org_of_its_prefix(
+    api: requests_mock_module.Mocker, package: Path, signed_in: None
+) -> None:
+    """The prefix settles the publisher, so a push is refused when the person cannot push code
+    there, rather than published by another organization.
+    """
+    reader = {**ACME, "capabilities": ["view_org_assets", "deploy_plugin"]}
+    api.get(f"{API}/me", json={**ME, "organizations": [reader, BIG_LEAP]})
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
     assert result.exit_code == 2, result.output
-    assert "You can publish in several organizations: acme, big-leap." in result.output
-    assert not _requests_to(api, "POST", "/deployments")
+    assert "do not include pushing plugin code" in " ".join(result.output.split())
+    assert not any("/orgs/" in r.url for r in api.request_history if r.method == "POST")
+
+
+def test_a_deploy_never_picks_another_organizations_plugin_of_the_same_name(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """With no manifest publisher and no prefix, the publisher is the person's own organization,
+    even when Platform shows another organization's plugin of that name: a deploy reaches
+    another organization's plugin only when the manifest names it.
+    """
+    api.get(f"{API}/plugins/intake", json={"name": "intake", "publisher": "other"})
+    package = _plain_package(tmp_path)
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "v1.0.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": "intake", "ref": "v1.0.0", "publisher": "acme"}
+    ]
 
 
 def test_a_deploy_of_a_pushed_ref_uses_the_choice_without_writing_the_manifest(
