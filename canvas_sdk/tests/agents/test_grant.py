@@ -151,3 +151,39 @@ def test_the_registry_refuses_a_tool_the_runs_permissions_do_not_cover() -> None
         tools.execute("update_task", {}, ctx={"permissions": frozenset(), "effects": []})
 
     assert tools.execute("update_task", {}, ctx={"permissions": None, "effects": []}) == {}
+
+
+@pytest.mark.parametrize(
+    "grant, problem",
+    [
+        ({"allowed": ["@writes"], "approve": ["@write"]}, "tools.approve names no tool: '@write'"),
+        (
+            {"allowed": ["@writes"], "approve": ["write_tsk"]},
+            "tools.approve names no tool: 'write_tsk'",
+        ),
+        (
+            {"allowed": ["@writes"], "denied": ["write_tsk"]},
+            "tools.denied names no tool: 'write_tsk'",
+        ),
+        (
+            {"allowed": ["@writes"], "approve": "@writes"},
+            "tools.approve must be a list of tool names and @category groups",
+        ),
+        ({"allowed": "@reads"}, "tools.allowed must be a list of tool names and @category groups"),
+    ],
+)
+def test_a_grant_that_names_nothing_to_approve_or_deny_fails_the_run(
+    grant: dict[str, Any], problem: str
+) -> None:
+    """A misspelled approval or denial would otherwise remove a gate without a word."""
+    with pytest.raises(ValueError, match=problem):
+        apply_tool_grant(_Agent(), grant)
+
+
+def test_an_allowed_name_the_registry_lacks_is_skipped() -> None:
+    """An allowlist only adds, so a stale name grants nothing rather than failing."""
+    agent = _Agent()
+
+    apply_tool_grant(agent, {"allowed": ["read_a", "read_gone"]})
+
+    assert _names(agent) == {"read_a"}

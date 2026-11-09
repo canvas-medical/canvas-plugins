@@ -74,6 +74,31 @@ def _approval_closure(tools: ToolRegistry, approve: frozenset[str]) -> frozenset
         closed |= widened
 
 
+def grant_problems(tools: ToolRegistry, grant: Mapping[str, Any]) -> list[str]:
+    """What is wrong with a manifest ``tools`` grant for an agent whose registry is ``tools``.
+
+    Each key must be a list of tool names and ``@category`` groups. An ``approve`` or
+    ``denied`` entry that names no tool on the registry is a problem, since a misspelling
+    would silently lift an approval or a denial; an ``allowed`` entry only adds tools, so
+    a name the registry lacks grants nothing and is no problem.
+    """
+    problems = []
+    for key in ("allowed", "approve", "denied"):
+        entries = grant.get(key)
+        if entries is None:
+            continue
+        if not isinstance(entries, list) or not all(isinstance(e, str) for e in entries):
+            problems.append(f"tools.{key} must be a list of tool names and @category groups")
+            continue
+        if key != "allowed":
+            problems.extend(
+                f"tools.{key} names no tool: {entry!r}"
+                for entry in entries
+                if not tools.resolve_allowed([entry])
+            )
+    return problems
+
+
 def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGrant:
     """Scope ``agent.tools`` to what the run may use; return what the agent may return.
 
@@ -84,9 +109,13 @@ def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGr
     with nothing allowed gives the agent no tools. Tools ``approve`` names, in the same
     shape, propose their changes for the requester to approve, and so does any granted
     tool that stages an effect type one of them stages. Sets
-    ``agent.tools_allowed`` and replaces ``agent.tools`` with the scoped view.
+    ``agent.tools_allowed`` and replaces ``agent.tools`` with the scoped view. A grant
+    :func:`grant_problems` faults raises ``ValueError``, so the run fails rather than
+    running with a gate lifted.
     """
     registry = agent.tools or ToolRegistry()
+    if problems := grant_problems(registry, grant):
+        raise ValueError(f"The agent's tools grant is invalid: {'; '.join(problems)}")
     granted = registry.scope(
         registry.resolve_allowed(grant.get("allowed") or (), denied=grant.get("denied"))
     )
