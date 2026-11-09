@@ -22,6 +22,7 @@ import time
 from hmac import compare_digest
 from http import HTTPStatus
 from typing import Any
+from uuid import uuid4
 
 from canvas_sdk.agents import Capability, ToolNotAllowed, ToolRegistry, standard_tools
 from canvas_sdk.caching.plugins import get_cache
@@ -72,16 +73,20 @@ def _granted(secrets: dict[str, str]) -> ToolRegistry:
 
 
 def _over_search_limit() -> bool:
-    """Count one patient search this minute; whether the key is past its limit.
+    """Claim one of this minute's patient-search slots; whether none was left.
 
-    The count is best-effort, as the cache has no atomic increment, which still bounds a
-    key to about the limit.
+    Each slot is claimed by storing this request's own token through ``get_or_set``, which
+    the cache backend writes only when the slot is empty, so two concurrent requests never
+    claim the same slot and the limit holds under a burst.
     """
     cache = get_cache()
-    key = f"mcp-patient-searches-{int(time.time() // 60)}"
-    count = int(cache.get(key) or 0) + 1
-    cache.set(key, count, timeout_seconds=120)
-    return count > PATIENT_SEARCHES_PER_MINUTE
+    window = int(time.time() // 60)
+    token = str(uuid4())
+    for slot in range(PATIENT_SEARCHES_PER_MINUTE):
+        key = f"mcp-patient-search-{window}-{slot}"
+        if cache.get_or_set(key, token, timeout_seconds=120) == token:
+            return False
+    return True
 
 
 def _about_a_patient(name: str) -> bool:
