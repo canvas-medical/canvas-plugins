@@ -377,6 +377,8 @@ class ToolRegistry:
         # tool name → what the person waiting on a run sees while the tool runs, such
         # as "Reading lab results"; a tool without one shows DEFAULT_PROGRESS_LABEL.
         self._progress_labels: dict[str, str] = {}
+        # Tools a run a patient started may use; every other tool is for staff.
+        self._for_patients: set[str] = set()
         # Tools whose staged effects become proposals for the requester to approve, set
         # by the platform from the manifest's tools.approve; see with_approval.
         self._approval: frozenset[str] = frozenset()
@@ -409,6 +411,7 @@ class ToolRegistry:
         required_capabilities: Iterable[Capability] = (),
         max_result_chars: int | None = None,
         progress_label: str | None = None,
+        for_patients: bool = False,
     ) -> None:
         """Register a tool by passing the definition and executor directly.
 
@@ -444,6 +447,9 @@ class ToolRegistry:
                 for an agent whose manifest sets ``"progress": "activity"``, such as
                 ``"Reading lab results"``. Name what the tool does, never its arguments.
                 Defaults to :data:`DEFAULT_PROGRESS_LABEL`.
+            for_patients: Whether a run a patient started, such as from the portal, may
+                use the tool. Such a run is offered only tools that say so, since every
+                other tool reads or changes clinician work; no standard tool does.
 
         Raises:
             ValueError: If ``definition`` is missing a ``"name"`` key, if a
@@ -483,6 +489,12 @@ class ToolRegistry:
             self._max_result_chars[name] = max_result_chars
         if progress_label:
             self._progress_labels[name] = progress_label
+        if for_patients:
+            self._for_patients.add(name)
+
+    def for_patients(self, name: str) -> bool:
+        """Whether a run a patient started may use ``name``."""
+        return name in self._for_patients
 
     def progress_label_for(self, name: str) -> str:
         """What the person waiting on a run sees while ``name`` runs."""
@@ -548,18 +560,25 @@ class ToolRegistry:
         return missing
 
     def usable_by(
-        self, permissions: frozenset[str] | None, capabilities: frozenset[Capability]
+        self,
+        permissions: frozenset[str] | None,
+        capabilities: frozenset[Capability],
+        *,
+        patient_run: bool = False,
     ) -> "ToolRegistry":
         """Return a new registry of the tools a run with these grants may use.
 
         ``permissions`` are the requester's platform permissions, or None when model
-        permissions do not limit the run (Canvas Bot is behind it, or a superuser is). The
-        platform uses this to hide tools the requester could not use.
+        permissions do not limit the run (Canvas Bot is behind it, or a superuser is).
+        ``patient_run`` says a patient started the run, which keeps only the tools
+        registered ``for_patients``. The platform uses this to hide tools the requester
+        could not use.
         """
         return self.scope(
             definition["name"]
             for definition in self._definitions
             if not self._missing_requirements(definition["name"], permissions, capabilities)
+            and (not patient_run or definition["name"] in self._for_patients)
         )
 
     def with_approval(self, names: Iterable[str]) -> "ToolRegistry":
@@ -623,6 +642,7 @@ class ToolRegistry:
         cites: str | None = None,
         max_result_chars: int | None = None,
         progress_label: str | None = None,
+        for_patients: bool = False,
     ) -> Callable[[ToolExecutor], ToolExecutor]:
         """Decorator form for registering a tool inline with its executor.
 
@@ -630,8 +650,8 @@ class ToolRegistry:
         :meth:`resolve_allowed`. ``returns_description`` is an optional
         free-text summary of the tool's return shape, consumed by the docs
         generator. ``effect_types``, ``required_permissions``,
-        ``required_capabilities``, ``max_result_chars``, and ``progress_label`` are
-        as in :meth:`register`. ``cites`` names the
+        ``required_capabilities``, ``max_result_chars``, ``progress_label``, and
+        ``for_patients`` are as in :meth:`register`. ``cites`` names the
         record type of the rows the tool returns, which makes them citable (see
         :mod:`canvas_sdk.agents.citations`), keyed by each row's ``id``.
         """
@@ -653,6 +673,7 @@ class ToolRegistry:
                 required_capabilities=required_capabilities,
                 max_result_chars=max_result_chars,
                 progress_label=progress_label,
+                for_patients=for_patients,
             )
             return fn
 
@@ -1266,6 +1287,7 @@ class ToolRegistry:
                 required_capabilities=other.required_capabilities_for(name),
                 max_result_chars=other._max_result_chars.get(name),
                 progress_label=other._progress_labels.get(name),
+                for_patients=name in other._for_patients,
             )
         self._approval |= other._approval
 
@@ -1307,6 +1329,7 @@ class ToolRegistry:
                     required_capabilities=self.required_capabilities_for(name),
                     max_result_chars=self._max_result_chars.get(name),
                     progress_label=self._progress_labels.get(name),
+                    for_patients=name in self._for_patients,
                 )
         scoped._approval = self._approval & allowed_set
         return scoped
@@ -1427,6 +1450,8 @@ class ToolRegistry:
             frozenset(granted) if isinstance(granted, set | frozenset) else frozenset(),
         ):
             raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
+        if ctx.get("patient_run") and name not in self._for_patients:
+            raise ToolNotAllowed(f"Tool {name!r} is for staff, and a run a patient started")
         if name not in self._approval:
             if "effects" not in ctx:
                 # Nothing to stage into, as in a direct call to a read tool.

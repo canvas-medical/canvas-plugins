@@ -166,6 +166,8 @@ def test_run_agent_leaves_absent_subject_fields_unset(
     """A run with no requester, such as one a system event started, has no staff_id."""
     request = _make_request()
     request.requester.staff_id = ""
+    # Canvas Bot is behind such a run, which permissions do not limit.
+    request.requester.all_permissions = True
 
     (response,) = plugin_runner.RunAgent(request, None)
 

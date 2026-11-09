@@ -10,6 +10,7 @@ from canvas_sdk.agents import (
     RunRequester,
     ToolNotAllowed,
     ToolRegistry,
+    standard_tools,
 )
 from canvas_sdk.agents.grant import apply_tool_grant
 
@@ -187,3 +188,64 @@ def test_an_allowed_name_the_registry_lacks_is_skipped() -> None:
     apply_tool_grant(agent, {"allowed": ["read_a", "read_gone"]})
 
     assert _names(agent) == {"read_a"}
+
+
+_patient_tools = ToolRegistry()
+for _name, _for_patients in (("patient_read", True), ("chart_read", False)):
+    _patient_tools.register(
+        {"name": _name, "description": "x", "input_schema": {"type": "object"}},
+        _noop,
+        categories=("reads",),
+        for_patients=_for_patients,
+    )
+
+
+class _PatientAgent(_Agent):
+    tools = _patient_tools
+
+
+def test_a_run_a_patient_started_is_offered_only_tools_for_patients() -> None:
+    """A portal user's run never reaches clinician work through a tool meant for staff."""
+    agent = _PatientAgent()
+    agent.requester = RunRequester(staff_id=None, permissions=frozenset())
+
+    apply_tool_grant(agent, {"allowed": ["@reads"]})
+
+    assert _names(agent) == {"patient_read"}
+
+
+@pytest.mark.parametrize(
+    "requester",
+    [
+        RunRequester(staff_id="s1", permissions=frozenset()),
+        RunRequester(staff_id=None, permissions=None),
+    ],
+    ids=["staff", "canvas_bot"],
+)
+def test_staff_and_canvas_bot_runs_are_offered_every_granted_tool(requester: RunRequester) -> None:
+    """Only a patient's run is narrowed; staff and Canvas Bot runs keep the staff tools."""
+    agent = _PatientAgent()
+    agent.requester = requester
+
+    apply_tool_grant(agent, {"allowed": ["@reads"]})
+
+    assert _names(agent) == {"patient_read", "chart_read"}
+
+
+def test_the_registry_refuses_a_staff_tool_in_a_patients_run() -> None:
+    """Calling a tool the run was not offered fails, as it does for a missing permission."""
+    with pytest.raises(ToolNotAllowed, match="a run a patient started"):
+        _patient_tools.execute("chart_read", {}, ctx={"patient_run": True})
+
+    assert _patient_tools.execute("patient_read", {}, ctx={"patient_run": True}) == {}
+
+
+def test_no_standard_tool_is_offered_to_a_patients_run() -> None:
+    """Each one reads or changes clinician work; a patient-facing tool opts in by itself."""
+    agent = _Agent()
+    agent.tools = standard_tools
+    agent.requester = RunRequester(staff_id=None, permissions=frozenset())
+
+    apply_tool_grant(agent, {"allowed": [d["name"] for d in standard_tools.definitions()]})
+
+    assert _names(agent) == set()
