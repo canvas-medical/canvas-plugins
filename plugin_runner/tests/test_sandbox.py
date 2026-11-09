@@ -23,6 +23,7 @@ from RestrictedPython import compile_restricted_exec
 import plugin_runner.sandbox as sandbox_module
 from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
+from canvas_sdk.agents.gateway import build_gateway
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.utils.http import Http, ontologies_http
 from canvas_sdk.v1.data.base import (
@@ -1624,7 +1625,8 @@ def test_plugin_code_cannot_import_anthropic(statement: str) -> None:
     """An agent reaches a model only through gateway.client(), which the SDK builds.
 
     A plugin with its own Anthropic client would send chart data around the inference
-    gateway, its key, its ledger, and the run's attribution.
+    gateway, its key, its ledger, and the run's attribution. The gateway's key and host
+    are private and its client offers model calls only, which the tests below pin.
     """
     sandbox = _sandbox_from_code(statement)
 
@@ -1632,11 +1634,42 @@ def test_plugin_code_cannot_import_anthropic(statement: str) -> None:
         sandbox.execute()
 
 
-def test_plugin_code_cannot_import_the_gateway_factory() -> None:
-    """Only the runner builds and attributes a gateway; the factory is not exported."""
+@pytest.mark.parametrize("attribute", ["_api_key", "_base_url", "_attribution"])
+def test_plugin_code_cannot_read_a_gateways_key_or_host(attribute: str) -> None:
+    """They are private, and the sandbox refuses an underscored name on an SDK object."""
+    scope = _sandbox_from_code(f"def read(gateway):\n    return gateway.{attribute}").execute()
+    gateway = build_gateway(base_url="https://gateway.test", api_key="cnvs_sk_secret")
+
+    with pytest.raises(AttributeError, match="invalid attribute name"):
+        scope["read"](gateway)
+
+
+def test_plugin_code_cannot_reach_the_gateway_clients_anthropic_client() -> None:
+    """The client wraps the Anthropic client privately; only model calls are offered."""
+    scope = _sandbox_from_code("def inner(client):\n    return client._client").execute()
+    client = build_gateway(base_url="https://gateway.test", api_key="k").client()
+
+    with pytest.raises(AttributeError, match="invalid attribute name"):
+        scope["inner"](client)
+
+
+def test_plugin_code_cannot_build_a_gateway() -> None:
+    """The constructor takes a seal plugin code cannot name, so it cannot point one elsewhere."""
     sandbox = _sandbox_from_code(
-        "from canvas_sdk.agents.gateway import gateway_from_plugin_secrets"
+        """
+            from canvas_sdk.agents import LLMGateway
+            LLMGateway(seal=None, base_url="https://elsewhere.invalid", api_key="k")
+        """
     )
+
+    with pytest.raises(TypeError, match="Only the platform builds a gateway"):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("factory", ["gateway_from_plugin_secrets", "build_gateway"])
+def test_plugin_code_cannot_import_the_gateway_factory(factory: str) -> None:
+    """Only the runner builds and attributes a gateway; the factories are not exported."""
+    sandbox = _sandbox_from_code(f"from canvas_sdk.agents.gateway import {factory}")
 
     with pytest.raises(ImportError):
         sandbox.execute()

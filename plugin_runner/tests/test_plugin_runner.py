@@ -2192,3 +2192,29 @@ def test_sentry_release_falls_back_to_the_public_pin(monkeypatch: pytest.MonkeyP
     monkeypatch.delenv("CANVAS_PLUGINS_RUNNER_SOURCE", raising=False)
 
     assert plugin_runner_module.sentry_release() == "0.261.0"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_a_handler_never_receives_the_plugins_gateway_key(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """Only the runner builds the gateway from the key, for the plugin's agents."""
+    handler_key = next(key for key in LOADED_PLUGINS if key.startswith("example_plugin:"))
+    LOADED_PLUGINS[handler_key]["secrets"] = {"INFERENCE_GATEWAY_KEY": "k", "OTHER": "v"}
+    handler_class = LOADED_PLUGINS[handler_key]["class"]
+    seen: list[dict] = []
+    original_init = handler_class.__init__
+
+    def _init(self: Any, event: Any, secrets: Any = None, environment: Any = None) -> None:
+        seen.append(dict(secrets or {}))
+        original_init(self, event, secrets, environment)
+
+    with patch.object(handler_class, "__init__", _init):
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    assert seen and "INFERENCE_GATEWAY_KEY" not in seen[0]
+    assert seen[0]["OTHER"] == "v"
+    assert LOADED_PLUGINS[handler_key]["secrets"] == {"INFERENCE_GATEWAY_KEY": "k", "OTHER": "v"}

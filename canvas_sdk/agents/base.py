@@ -11,6 +11,9 @@ from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.agents.tool_loop import ToolLoopResult, run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 
+# The most model calls the platform lets any run make, whatever its agent sets.
+MAX_MODEL_CALLS = 100
+
 # The tool context keys AgentPlugin.tool_context sets from the run.
 TOOL_CONTEXT_KEYS = frozenset(
     {
@@ -62,8 +65,9 @@ class AgentPlugin(ABC):
     # manifest grants none.
     tools_allowed: frozenset[str] = frozenset()
 
-    # The most model calls one run may make, sub-agents included. run_tool_loop stops
-    # with stopped="call_limit" when a run reaches it. Override on the subclass.
+    # The most model calls one run may make, sub-agents included, counted on every call
+    # through the gateway's client. run_tool_loop stops with stopped="call_limit" when a
+    # run reaches it. Override on the subclass, up to MAX_MODEL_CALLS.
     max_model_calls: int = 40
 
     # What this run is about, validated by the platform and set on the agent

@@ -8,6 +8,7 @@ import pytest
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents
+from canvas_sdk.agents.gateway import count_model_call
 from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 from canvas_sdk.agents.subagent import MAX_PARALLEL
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text, tool_use
@@ -26,6 +27,7 @@ class _FakeMessages:
         self.calls = 0
 
     def create(self, **kwargs: Any) -> SimpleNamespace:
+        count_model_call(kwargs)
         self.calls = self.calls + 1
         if self.calls == 1:
             return SimpleNamespace(

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
-from canvas_sdk.agents.gateway import LLMGateway, attempt_timeout
+from canvas_sdk.agents.gateway import LLMGateway, ModelCallLimitReached, attempt_timeout
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.run_record import (
     RunDeadlineExceeded,
@@ -263,12 +263,6 @@ def run_tool_loop(
         request_options: dict[str, Any] = {}
         if recorder is not None:
             recorder.check_deadline()
-            if not recorder.reserve_model_call():
-                log.warning(
-                    f"Tool loop stopped at the run's {recorder.max_model_calls} model calls"
-                )
-                result.stopped = "call_limit"
-                return _stopped(result)
             if (left := recorder.seconds_left()) is not None:
                 request_options["timeout"] = attempt_timeout(left)
             recorder.phase = "thinking"
@@ -282,16 +276,22 @@ def run_tool_loop(
             "messages": cast(Any, sent),
             **request_options,
         }
-        if recorder is not None and recorder.streams_reply and streams_reply.get():
-            # The same call, streamed so the person waiting reads the reply as it is
-            # written; the final message is what the unstreamed call would return.
-            recorder.report_turn()
-            with client.messages.stream(**request) as stream:
-                for text in stream.text_stream:
-                    recorder.report_text(text)
-                response = stream.get_final_message()
-        else:
-            response = client.messages.create(**request)
+        try:
+            if recorder is not None and recorder.streams_reply and streams_reply.get():
+                # The same call, streamed so the person waiting reads the reply as it is
+                # written; the final message is what the unstreamed call would return.
+                recorder.report_turn()
+                with client.messages.stream(**request) as stream:
+                    for text in stream.text_stream:
+                        recorder.report_text(text)
+                    response = stream.get_final_message()
+            else:
+                response = client.messages.create(**request)
+        except ModelCallLimitReached as exc:
+            # The client counts every model call, the run's own and any its code makes.
+            log.warning(f"Tool loop stopped: {exc}")
+            result.stopped = "call_limit"
+            return _stopped(result)
         result.turns = turn + 1
         result.stop_reason = response.stop_reason
         log.info(

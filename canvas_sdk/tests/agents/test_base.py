@@ -10,6 +10,7 @@ from canvas_sdk.agents import (
     RunSubject,
     ToolRegistry,
 )
+from canvas_sdk.agents.gateway import build_gateway
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory, StaffFactory
 from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
@@ -84,7 +85,7 @@ def test_concrete_subclass_instantiates_and_drives_lifecycle() -> None:
     """A subclass implementing all three methods runs end-to-end."""
     agent = _MinimalAgent()
     state = agent.load_state("scope:1")
-    gateway = LLMGateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
+    gateway = build_gateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
     result = agent.run(state, gateway, {"hello": "world"})
     agent.save_state("scope:1", result.state)
 
@@ -107,7 +108,7 @@ def test_lifecycle_hooks_default_to_no_op() -> None:
     agent.on_run_error(RuntimeError("boom"))
 
 
-_GATEWAY = LLMGateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
+_GATEWAY = build_gateway(base_url="https://gateway.test", api_key="cnvs_sk_test")
 
 
 def test_tool_context_carries_the_run_subject() -> None:

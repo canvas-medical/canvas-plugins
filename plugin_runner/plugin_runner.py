@@ -55,7 +55,8 @@ from canvas_sdk.agents import (
     RunRequester,
     RunSubject,
 )
-from canvas_sdk.agents.gateway import agent_secrets, gateway_from_plugin_secrets
+from canvas_sdk.agents.base import MAX_MODEL_CALLS
+from canvas_sdk.agents.gateway import GATEWAY_KEY_SECRET, agent_secrets, gateway_from_plugin_secrets
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
@@ -359,6 +360,29 @@ def _stream_progress(
     return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
 
 
+def _without_frame_locals(event: Any, hint: Any) -> Any:
+    """A Sentry event with every stack frame's local variables removed."""
+    for kind in ("exception", "threads"):
+        for value in (event.get(kind) or {}).get("values") or []:
+            for frame in (value.get("stacktrace") or {}).get("frames") or []:
+                frame.pop("vars", None)
+    return event
+
+
+def _report_agent_exception(message: str, exc: BaseException) -> None:
+    """Log and report an agent run's exception, its frames' local variables left out.
+
+    An agent's frames hold the conversation, tool results, and document text, which are
+    patient data; the error, its type, and where it happened are what diagnosis needs, and
+    the run record already holds the run. The logged exception reaches Sentry too, so both
+    go through a scope that strips the locals.
+    """
+    with sentry_sdk.new_scope() as scope:
+        scope.add_event_processor(_without_frame_locals)
+        log.exception(message)
+        sentry_sdk.capture_exception(exc)
+
+
 def _agent_run_summary(
     recorder: RunRecorder,
     *,
@@ -480,10 +504,15 @@ class PluginRunner(PluginRunnerServicer):
 
                     namespace_config = plugin.get("namespace_config")
 
-                    secrets = plugin.get("secrets", {})
-
-                    secrets.update(
-                        {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
+                    # A handler never gets the plugin's gateway key: only the runner builds
+                    # the gateway from it, for the plugin's agents.
+                    secrets = {
+                        name: value
+                        for name, value in (plugin.get("secrets") or {}).items()
+                        if name != GATEWAY_KEY_SECRET
+                    }
+                    secrets["graphql_jwt"] = token_for_plugin(
+                        plugin_name=plugin_name, audience="home"
                     )
 
                     try:
@@ -743,7 +772,7 @@ class PluginRunner(PluginRunnerServicer):
                         ),
                     ):
                         agent = agent_class()
-                        recorder.max_model_calls = agent.max_model_calls
+                        recorder.max_model_calls = min(agent.max_model_calls, MAX_MODEL_CALLS)
                         # home-app validated the subject and decided the requester's
                         # permissions and capabilities before enqueuing the run. A
                         # capability this SDK does not know names nothing its tools
@@ -822,8 +851,7 @@ class PluginRunner(PluginRunnerServicer):
                         success=False, effects=[], agent_run=_agent_run_summary(recorder)
                     )
                 except Exception as exc:
-                    log.exception(f"RunAgent: agent {request.agent_id} raised")
-                    sentry_sdk.capture_exception(exc)
+                    _report_agent_exception(f"RunAgent: agent {request.agent_id} raised", exc)
                     outcome.failure = EventResponse(
                         success=False, effects=[], agent_run=_agent_run_summary(recorder)
                     )

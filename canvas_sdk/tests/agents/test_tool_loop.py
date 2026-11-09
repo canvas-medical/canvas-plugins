@@ -11,13 +11,13 @@ from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
     AgentState,
-    LLMGateway,
     RunSubject,
     ToolRegistry,
     require_patient_id,
     run_tool_loop,
     standard_tools,
 )
+from canvas_sdk.agents.gateway import build_gateway
 from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, MAX_QUEUED_EVENTS, ProgressFeed
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
@@ -832,7 +832,7 @@ def test_a_tools_own_model_call_uses_the_loops_model() -> None:
         seen.append(ctx["gateway"].model)
         return "read"
 
-    run_gateway = LLMGateway(base_url="https://gateway.test", api_key="k")
+    run_gateway = build_gateway(base_url="https://gateway.test", api_key="k")
     ctx: dict[str, Any] = {"gateway": run_gateway, "effects": []}
     client = FakeGateway(reply(tool_use("read_file")), reply(text("done")))
 

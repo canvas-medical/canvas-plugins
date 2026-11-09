@@ -5,7 +5,14 @@ import httpx2
 import pytest
 
 from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
-from canvas_sdk.agents.gateway import agent_secrets, attempt_timeout, gateway_from_plugin_secrets
+from canvas_sdk.agents.gateway import (
+    GatewayMessages,
+    ModelCallLimitReached,
+    agent_secrets,
+    attempt_timeout,
+    build_gateway,
+    gateway_from_plugin_secrets,
+)
 from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
 
 GATEWAY_URL = "https://gateway.test"
@@ -25,7 +32,7 @@ MESSAGE: dict[str, Any] = {
 
 def gateway() -> LLMGateway:
     """A gateway attributed the way the runner attributes one."""
-    return LLMGateway(
+    return build_gateway(
         base_url=GATEWAY_URL,
         api_key=KEY,
         attribution={
@@ -45,11 +52,12 @@ def test_a_call_goes_to_the_gateway_with_the_plugins_key_and_attribution() -> No
         sent.append(request)
         return httpx2.Response(200, json=MESSAGE)
 
-    client = (
-        gateway()
-        .client()
-        .with_options(http_client=httpx2.Client(transport=httpx2.MockTransport(handler)))
+    client = gateway().client()
+    # A test reaches the wrapped Anthropic client; plugin code cannot.
+    client._client = client._client.with_options(
+        http_client=httpx2.Client(transport=httpx2.MockTransport(handler))
     )
+    client.messages = GatewayMessages(client._client)
     client.messages.create(
         model="claude-sonnet-4-6", max_tokens=16, messages=[{"role": "user", "content": "hi"}]
     )
@@ -64,12 +72,12 @@ def test_a_call_goes_to_the_gateway_with_the_plugins_key_and_attribution() -> No
 
 def test_blank_attribution_values_are_not_sent() -> None:
     """An empty attribution value sends no header at all."""
-    client = LLMGateway(
+    client = build_gateway(
         base_url=GATEWAY_URL, api_key=KEY, attribution={"plugin": "p", "run-id": ""}
     ).client()
 
-    assert client.default_headers.get("x-canvas-plugin") == "p"
-    assert "x-canvas-run-id" not in client.default_headers
+    assert client._client.default_headers.get("x-canvas-plugin") == "p"
+    assert "x-canvas-run-id" not in client._client.default_headers
 
 
 def test_repr_leaves_out_the_key() -> None:
@@ -87,11 +95,11 @@ def test_gateway_from_plugin_secrets_reads_the_url_and_the_plugins_key() -> None
         environ={"INFERENCE_GATEWAY_URL": GATEWAY_URL},
     )
 
-    assert gw.base_url == GATEWAY_URL
-    assert gw.api_key == KEY
+    assert gw._base_url == GATEWAY_URL
+    assert gw._api_key == KEY
     assert gw.model == "claude-sonnet-4-6"
-    assert gw.attribution["plugin"] == "p"
-    assert gw.attribution["run-id"] == "run-1"
+    assert gw._attribution["plugin"] == "p"
+    assert gw._attribution["run-id"] == "run-1"
 
 
 @pytest.mark.parametrize(
@@ -124,8 +132,8 @@ def test_in_a_run_the_client_timeout_splits_the_time_left_across_attempts() -> N
     finally:
         current_recorder.reset(token)
 
-    assert 19 < client.timeout <= 20  # type: ignore[operator]
-    assert client.max_retries == 2
+    assert 19 < client._client.timeout <= 20  # type: ignore[operator]
+    assert client._client.max_retries == 2
 
 
 def test_attempt_timeout_never_drops_below_a_second() -> None:
@@ -136,13 +144,13 @@ def test_attempt_timeout_never_drops_below_a_second() -> None:
 
 def test_with_model_keeps_the_url_key_and_attribution() -> None:
     """A tier switch changes the default model and nothing a call is billed or routed by."""
-    gateway = LLMGateway(
+    gateway = build_gateway(
         base_url="https://gateway.test", api_key="k", attribution={"plugin": "p", "run-id": "r"}
     )
 
     cheap = gateway.with_model("claude-haiku-4-5")
 
-    assert (cheap.base_url, cheap.api_key, dict(cheap.attribution), cheap.model) == (
+    assert (cheap._base_url, cheap._api_key, cheap._attribution, cheap.model) == (
         "https://gateway.test",
         "k",
         {"plugin": "p", "run-id": "r"},
@@ -157,3 +165,45 @@ def test_agent_secrets_leave_out_the_gateway_key_and_the_handler_token() -> None
     secrets = {"INFERENCE_GATEWAY_KEY": "k", "graphql_jwt": "t", "MODEL": "claude-haiku-4-5"}
 
     assert agent_secrets(secrets) == {"MODEL": "claude-haiku-4-5"}
+
+
+def test_the_client_offers_model_calls_only() -> None:
+    """No way to change the host, the key, or the attribution from the client."""
+    client = gateway().client()
+
+    assert not hasattr(client, "with_options")
+    assert not hasattr(client, "default_headers")
+    assert not hasattr(client.messages, "with_raw_response")
+    for option in ("extra_headers", "extra_query"):
+        with pytest.raises(ValueError, match="gateway sets its own"):
+            client.messages.create(model="m", max_tokens=1, messages=[], **{option: {}})
+
+
+def test_plugin_code_cannot_build_a_gateway() -> None:
+    """Without the seal only the runner's builder holds, a gateway pointed elsewhere fails."""
+    with pytest.raises(TypeError, match="Only the platform builds a gateway"):
+        LLMGateway(seal=object(), base_url="https://elsewhere.invalid", api_key=KEY)
+
+
+def test_every_call_through_the_client_counts_toward_the_runs_ceiling() -> None:
+    """A direct call, outside run_tool_loop, is counted and capped like the loop's own."""
+    made: list[dict] = []
+
+    class _Inner:
+        class messages:  # noqa: N801
+            @staticmethod
+            def create(**request: Any) -> str:
+                made.append(request)
+                return "reply"
+
+    recorder = RunRecorder(max_model_calls=1)
+    token = current_recorder.set(recorder)
+    try:
+        messages = GatewayMessages(_Inner())  # type: ignore[arg-type]
+        messages.create(model="m", max_tokens=1, messages=[])
+        with pytest.raises(ModelCallLimitReached):
+            messages.create(model="m", max_tokens=1, messages=[])
+    finally:
+        current_recorder.reset(token)
+
+    assert (recorder.model_calls, len(made)) == (1, 1)

@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 import anthropic
 import httpx2
 import pytest
+import sentry_sdk
+import sentry_sdk.transport
 
 import plugin_runner.plugin_runner as runner_module
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -17,6 +19,7 @@ from canvas_generated.messages.plugins_pb2 import (
     RunAgentSubject,
 )
 from canvas_sdk.agents import AgentRunResult, ToolRegistry
+from canvas_sdk.agents.base import MAX_MODEL_CALLS
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
     RUN_TOOL_RESULT_CHARS,
@@ -382,9 +385,9 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
     assert response.success is True
-    assert seen[0].api_key == "cnvs_sk_test_plugin"
-    assert seen[0].base_url == "https://gateway.test"
-    attribution = seen[0].attribution
+    assert seen[0]._api_key == "cnvs_sk_test_plugin"
+    assert seen[0]._base_url == "https://gateway.test"
+    attribution = seen[0]._attribution
     assert attribution["plugin"] == "test_agent_plugin"
     assert attribution["agent"] == AGENT_ID
     assert attribution["run-id"] == "run-1"
@@ -933,6 +936,33 @@ def test_run_agent_gives_the_tool_loop_the_calls_deadline_and_the_agents_ceiling
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_agents_model_call_ceiling_is_clamped(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A subclass can lower its ceiling, never raise it past the platform's."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    monkeypatch.setattr(agent_cls, "max_model_calls", 10_000)
+    seen: list[int | None] = []
+    original_run = agent_cls.run
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        recorder = current_recorder.get()
+        assert recorder is not None
+        seen.append(recorder.max_model_calls)
+        return original_run(self, state, gateway, payload)
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+
+    next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert seen == [MAX_MODEL_CALLS]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_run_agent_stopped_by_its_deadline_saves_nothing_and_skips_sentry(
     install_test_plugin: Path,
     load_test_plugins: None,
@@ -960,6 +990,54 @@ def test_run_agent_stopped_by_its_deadline_saves_nothing_and_skips_sentry(
     assert list(response.effects) == []
     assert saved == []
     captured.assert_not_called()
+
+
+class _CapturedEnvelopes(sentry_sdk.transport.Transport):
+    """A Sentry transport that keeps what it would send."""
+
+    def __init__(self, options: Any = None) -> None:
+        super().__init__(options)
+        self.sent: list[str] = []
+
+    def capture_envelope(self, envelope: Any) -> None:
+        self.sent.append(envelope.serialize().decode())
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_agents_exception_reaches_sentry_without_its_frames_locals(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An agent's frames hold the conversation, tool results, and document text.
+
+    The error and where it happened are reported; the frames' local variables are not, in
+    the captured exception or the logged one.
+    """
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+
+    def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        # Built at run time, so it can reach an event only as a local, not as source text.
+        messages = [{"role": "user", "content": "-".join(["MARKER", "CHART", "CONTENT"])}]
+        raise ValueError(f"boom after {len(messages)} message")
+
+    monkeypatch.setattr(agent_cls, "run", _run)
+    transport = _CapturedEnvelopes()
+    sentry_sdk.init(
+        dsn="https://key@sentry.invalid/1", transport=transport, include_local_variables=True
+    )
+    try:
+        response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+        sentry_sdk.flush()
+    finally:
+        sentry_sdk.init()
+
+    assert response.success is False
+    assert transport.sent, "the exception was reported"
+    assert all("MARKER-CHART-CONTENT" not in envelope for envelope in transport.sent)
+    assert any("boom after 1 message" in envelope for envelope in transport.sent)
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)

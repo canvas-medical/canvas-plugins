@@ -3,13 +3,19 @@
 The plugin runner builds an :class:`LLMGateway` from the instance's
 ``INFERENCE_GATEWAY_URL`` and the agent plugin's own ``INFERENCE_GATEWAY_KEY`` secret,
 which the plugin declares in its manifest ``variables`` with ``sensitive: true``.
-:meth:`LLMGateway.client` returns an ``anthropic.Anthropic`` client pointed at the
-gateway with that key and the runner's attribution headers.
+:meth:`LLMGateway.client` returns a :class:`GatewayClient`, which calls the gateway with
+that key and the runner's attribution headers.
+
+Plugin code gets the gateway in ``run()`` and cannot build one, read its key or host, or
+change where a call goes or what it is attributed to: the key, host, and attribution are
+private, the constructor takes a seal only :func:`build_gateway` holds, and the client
+offers ``messages.create`` and ``messages.stream`` only. Every call through the client
+counts toward the run's model-call ceiling.
 """
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass, field, replace
+from typing import Any
 
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
 
@@ -25,30 +31,106 @@ GATEWAY_KEY_SECRET = "INFERENCE_GATEWAY_KEY"
 
 ATTRIBUTION_PREFIX = "x-canvas-"
 
+# Request options that would change where a call goes or what it is attributed to.
+_REFUSED_OPTIONS = frozenset({"extra_headers", "extra_query"})
+
+# Held by build_gateway only; plugin code cannot name a module's underscored values.
+_SEAL = object()
+
 
 class LLMGatewayConfigurationError(RuntimeError):
     """The gateway URL or the plugin's gateway key is not set."""
 
 
-@dataclass(frozen=True)
+class ModelCallLimitReached(RuntimeError):
+    """The run has made as many model calls as its ceiling allows."""
+
+
+class GatewayMessages:
+    """``messages.create`` and ``messages.stream``, each counted against the run's ceiling."""
+
+    def __init__(self, client: Anthropic) -> None:
+        self._client = client
+
+    def create(self, **request: Any) -> Any:
+        """Make one model call through the gateway; see ``anthropic`` ``messages.create``."""
+        count_model_call(request)
+        return self._client.messages.create(**request)
+
+    def stream(self, **request: Any) -> Any:
+        """Stream one model call through the gateway; see ``anthropic`` ``messages.stream``."""
+        count_model_call(request)
+        return self._client.messages.stream(**request)
+
+
+class GatewayClient:
+    """A client for the inference gateway, offering only model calls.
+
+    Its host, key, and attribution headers are fixed by the gateway that built it.
+    """
+
+    def __init__(self, client: Anthropic) -> None:
+        self._client = client
+        self.messages = GatewayMessages(client)
+
+
+def count_model_call(request: Mapping[str, Any]) -> None:
+    """Count a model call against the run's ceiling, refusing options the gateway owns.
+
+    Raises :class:`ModelCallLimitReached` at the ceiling. Not exported to plugin code.
+    """
+    if refused := sorted(_REFUSED_OPTIONS & request.keys()):
+        raise ValueError(f"The gateway sets its own {', '.join(refused)}; leave them out.")
+    recorder = current_recorder.get()
+    if recorder is not None and not recorder.reserve_model_call():
+        raise ModelCallLimitReached(f"The run has made its {recorder.max_model_calls} model calls.")
+
+
 class LLMGateway:
     """LLM access handed to :meth:`AgentPlugin.run`.
 
     ``model`` is a default for agents that do not choose their own; the gateway
-    refuses a model the organization has not enabled.
+    refuses a model the organization has not enabled. Only the platform builds one.
     """
 
-    base_url: str
-    api_key: str = field(repr=False)
-    model: str = DEFAULT_MODEL
-    attribution: Mapping[str, str] = field(default_factory=dict)
+    def __init__(
+        self,
+        *,
+        seal: object,
+        base_url: str,
+        api_key: str,
+        model: str = DEFAULT_MODEL,
+        attribution: Mapping[str, str] | None = None,
+    ) -> None:
+        if seal is not _SEAL:
+            raise TypeError("Only the platform builds a gateway; an agent receives one in run().")
+        self._base_url = base_url
+        self._api_key = api_key
+        self._attribution = dict(attribution or {})
+        self._model = model
+
+    @property
+    def model(self) -> str:
+        """The default model for calls that name none."""
+        return self._model
+
+    def __repr__(self) -> str:
+        return f"LLMGateway(model={self._model!r})"
 
     def with_model(self, model: str) -> "LLMGateway":
         """This gateway with ``model`` as its default: same URL, key, and attribution."""
-        return self if model == self.model else replace(self, model=model)
+        if model == self._model:
+            return self
+        return LLMGateway(
+            seal=_SEAL,
+            base_url=self._base_url,
+            api_key=self._api_key,
+            model=model,
+            attribution=self._attribution,
+        )
 
-    def client(self, *, max_retries: int = DEFAULT_MAX_RETRIES) -> Anthropic:
-        """An Anthropic client pointed at the gateway, carrying the attribution headers.
+    def client(self, *, max_retries: int = DEFAULT_MAX_RETRIES) -> GatewayClient:
+        """A client for the gateway, carrying the attribution headers.
 
         In a platform run, each attempt's timeout is the time left before the run's
         deadline split across the attempts, so retries cannot carry a call past it.
@@ -57,17 +139,32 @@ class LLMGateway:
         timeout: float | NotGiven = (
             NOT_GIVEN if left is None else attempt_timeout(left, max_retries)
         )
-        return Anthropic(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            max_retries=max_retries,
-            timeout=timeout,
-            default_headers={
-                f"{ATTRIBUTION_PREFIX}{name}": value
-                for name, value in self.attribution.items()
-                if value
-            },
+        return GatewayClient(
+            Anthropic(
+                api_key=self._api_key,
+                base_url=self._base_url,
+                max_retries=max_retries,
+                timeout=timeout,
+                default_headers={
+                    f"{ATTRIBUTION_PREFIX}{name}": value
+                    for name, value in self._attribution.items()
+                    if value
+                },
+            )
         )
+
+
+def build_gateway(
+    *,
+    base_url: str,
+    api_key: str,
+    model: str = DEFAULT_MODEL,
+    attribution: Mapping[str, str] | None = None,
+) -> LLMGateway:
+    """Build a gateway; the runner's and tests' way in, not exported to plugin code."""
+    return LLMGateway(
+        seal=_SEAL, base_url=base_url, api_key=api_key, model=model, attribution=attribution
+    )
 
 
 def attempt_timeout(seconds_left: float, max_retries: int = DEFAULT_MAX_RETRIES) -> float:
@@ -121,7 +218,7 @@ def gateway_from_plugin_secrets(
         raise LLMGatewayConfigurationError(
             f"Agent LLM access is not configured: {' and '.join(missing)} unset."
         )
-    return LLMGateway(
+    return build_gateway(
         base_url=base_url,
         api_key=key,
         model=model,
@@ -129,4 +226,9 @@ def gateway_from_plugin_secrets(
     )
 
 
-__exports__ = ("LLMGateway", "LLMGatewayConfigurationError")
+__exports__ = (
+    "GatewayClient",
+    "LLMGateway",
+    "LLMGatewayConfigurationError",
+    "ModelCallLimitReached",
+)
