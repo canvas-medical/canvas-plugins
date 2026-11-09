@@ -29,6 +29,7 @@ from http import HTTPStatus
 
 from canvas__agent_runner_poc.agents.claims_chat import load_claims_conversation
 from canvas__agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
+from canvas__agent_runner_poc.applications import checks
 from canvas__agent_runner_poc.applications.chart_chat import _ui_messages
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
@@ -58,14 +59,20 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
     """HTTP surface for the claims chat UI."""
 
     def _claim_id(self) -> str:
-        return self.request.query_params.get("claim", "")
+        """The claim in the query string, or ``""`` for the queues."""
+        claim_id = self.request.query_params.get("claim") or ""
+        return checks.uuid(claim_id, "claim") if claim_id else ""
 
     @api.get("/claims-chat-ui")
     def claims_chat_ui(self) -> list[Response | Effect]:
         """Render the chat page for the queues, or for the claim in the query string."""
+        try:
+            claim_id = self._claim_id()
+        except checks.BadRequest as error:
+            return [error.response()]
         return [
             HTMLResponse(
-                render_to_string("templates/claims_chat.html", {"claim_id": self._claim_id()}),
+                render_to_string("templates/claims_chat.html", {"claim_id": claim_id}),
                 status_code=HTTPStatus.OK,
             )
         ]
@@ -73,8 +80,12 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/claims-chat-history")
     def claims_chat_history(self) -> list[Response | Effect]:
         """Return the logged-in staff member's conversation for the claim, or the queues."""
+        try:
+            claim_id = self._claim_id()
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
-        messages = load_claims_conversation(staff_id, self._claim_id() or None)
+        messages = load_claims_conversation(staff_id, claim_id or None)
         return [
             JSONResponse(
                 {"messages": _ui_messages(messages, claims_chat_tools)}, status_code=HTTPStatus.OK
@@ -84,9 +95,15 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/claims-chat-message")
     def claims_chat_message(self) -> list[Response | Effect]:
         """Enqueue the agent run in claim or queue mode; return 202 and the run's id."""
-        body = self.request.json()
-        claim_id = body.get("claim_id") or None
-        trigger_payload = {"user_message": body["message"]}
+        try:
+            body = checks.body(self.request)
+            claim_id = body.get("claim_id") or None
+            if claim_id is not None:
+                claim_id = checks.uuid(claim_id, "claim_id")
+            message = checks.text(body.get("message"), "message", checks.MAX_MESSAGE_CHARS)
+        except checks.BadRequest as error:
+            return [error.response()]
+        trigger_payload = {"user_message": message}
         if claim_id:
             run = RunAgentEffect(
                 agent_id=CLAIMS_CHAT_AGENT_ID,
@@ -115,9 +132,13 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
         A refused run carries the platform's reason, such as a missing revenue
         capability, which the UI shows as is.
         """
+        try:
+            run_id = checks.query_uuid(self.request, "run_id")
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         run = AgentRun.objects.filter(
-            id=self.request.query_params["run_id"],
+            id=run_id,
             plugin_name="canvas__agent_runner_poc",
             agent_id=CLAIMS_CHAT_AGENT_ID,
             staff__id=staff_id,
@@ -137,9 +158,13 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/claims-chat-proposals")
     def claims_chat_proposals(self) -> list[Response | Effect]:
         """Return the changes one of the staff member's runs proposed, for approval cards."""
+        try:
+            run_id = checks.query_uuid(self.request, "run_id")
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         proposals = AgentRunProposal.objects.filter(
-            run__id=self.request.query_params["run_id"],
+            run__id=run_id,
             plugin_name="canvas__agent_runner_poc",
             agent_id=CLAIMS_CHAT_AGENT_ID,
             staff__id=staff_id,
@@ -170,12 +195,11 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
         proposal is pending, and applies exactly the proposed change. The agent records the
         outcome in the conversation at the start of its next run.
         """
-        body = self.request.json()
-        decision = DecideAgentProposal(
-            proposal_id=body["proposal_id"],
-            decision=body["decision"],
-            reason=body.get("reason") or "",
-        )
+        try:
+            proposal_id, choice, reason = checks.decision(checks.body(self.request))
+        except checks.BadRequest as error:
+            return [error.response()]
+        decision = DecideAgentProposal(proposal_id=proposal_id, decision=choice, reason=reason)
         return [
             JSONResponse({"status": "decided"}, status_code=HTTPStatus.ACCEPTED),
             decision.apply(),
