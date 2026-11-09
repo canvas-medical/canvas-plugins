@@ -1,3 +1,4 @@
+import json
 from enum import StrEnum
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID, uuid4
@@ -9,6 +10,9 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 # The run subject's fields. They reach the agent as ``self.subject`` after the
 # platform validates them, so they never travel in ``trigger_payload``.
 SUBJECT_FIELDS = frozenset({"patient_id", "staff_id", "note_id", "claim_id", "document_id"})
+# The largest ``trigger_payload``, as UTF-8 JSON. It travels in the effect, the queued
+# task, and the request to the plugin runner, so it holds a message, not a document.
+MAX_TRIGGER_PAYLOAD_BYTES = 64 * 1024
 
 
 class RunAgentEffect(_BaseEffect):
@@ -42,7 +46,8 @@ class RunAgentEffect(_BaseEffect):
             on, such as ``f"appointment:{appointment_id}"``. It decides only which runs wait
             on each other and gives the agent's tools nothing.
         trigger_payload: Small dict of trigger-shaped data the agent needs in
-            ``run``, such as a chat message. The subject's fields
+            ``run``, such as a chat message: JSON, at most
+            ``MAX_TRIGGER_PAYLOAD_BYTES`` serialized. The subject's fields
             (``patient_id``, ``staff_id``, ``note_id``, ``claim_id``, ``document_id``) are
             not allowed here.
 
@@ -138,6 +143,15 @@ class RunAgentEffect(_BaseEffect):
             raise ValueError(
                 f"trigger_payload cannot carry {subject_keys}; the agent reads the run's "
                 "subject from self.subject"
+            )
+        try:
+            size = len(json.dumps(self.trigger_payload, ensure_ascii=False).encode())
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"trigger_payload must be JSON: {error}") from None
+        if size > MAX_TRIGGER_PAYLOAD_BYTES:
+            raise ValueError(
+                f"trigger_payload is {size} bytes as JSON; the most is "
+                f"{MAX_TRIGGER_PAYLOAD_BYTES}. Pass a record's id rather than its contents."
             )
         return self
 

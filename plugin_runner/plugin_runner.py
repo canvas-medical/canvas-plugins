@@ -646,18 +646,19 @@ class PluginRunner(PluginRunnerServicer):
         Gateway refusals and outages come back as
         ``LLM_REFUSED`` and ``LLM_UNAVAILABLE`` so home-app retries only the latter.
         """
+        module_path, _, class_name = request.agent_id.partition(":")
+        base_plugin_name = module_path.split(".", 1)[0]
+        registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
+        # The plugin chooses the id, so one no plugin loaded is not a metric series of its own.
+        metric_agent_id = request.agent_id if registry_key in LOADED_PLUGINS else "unknown"
         with metrics.measure(
             metrics.get_qualified_name(self.RunAgent),
-            extra_tags={"agent_id": request.agent_id},
+            extra_tags={"agent_id": metric_agent_id},
         ):
-            module_path, _, class_name = request.agent_id.partition(":")
             if not module_path or not class_name:
                 log.error(f"RunAgent: invalid agent_id={request.agent_id!r}")
                 yield EventResponse(success=False, effects=[])
                 return
-
-            base_plugin_name = module_path.split(".", 1)[0]
-            registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
 
             # `plugin_name` is the plugin whose handler emitted the RunAgentEffect,
             # stamped by this runner when the handler ran. An agent runs with its own
