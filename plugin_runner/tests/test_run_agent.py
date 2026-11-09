@@ -108,6 +108,37 @@ def test_agents_do_not_appear_in_event_handler_map(
         )
 
 
+# Metrics -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+@pytest.mark.parametrize(
+    ("agent_id", "tagged"),
+    [
+        (AGENT_ID, AGENT_ID),
+        ("test_agent_plugin.agents.made_up_9f3a:Nope", "unknown"),
+        ("garbage", "unknown"),
+    ],
+)
+def test_a_run_is_timed_under_its_agent_only_when_a_plugin_loaded_it(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    agent_id: str,
+    tagged: str,
+) -> None:
+    """A plugin chooses the agent id, so made-up ids share one series rather than each adding one."""
+    measure = MagicMock(wraps=runner_module.metrics.measure)
+    monkeypatch.setattr(runner_module.metrics, "measure", measure)
+
+    list(plugin_runner.RunAgent(_make_request(agent_id=agent_id), None))
+
+    (call,) = [c for c in measure.call_args_list if str(c.args[0]).endswith("RunAgent")]
+    assert call.kwargs["extra_tags"] == {"agent_id": tagged}
+
+
 # RunAgent happy path -----------------------------------------------------------
 
 

@@ -10,7 +10,7 @@ from canvas_generated.messages.plugins_pb2 import (
     RunAgentRequester,
     RunAgentSubject,
 )
-from canvas_sdk.effects.agent import RunAgentEffect
+from canvas_sdk.effects.agent import MAX_TRIGGER_PAYLOAD_BYTES, RunAgentEffect
 
 
 def test_run_agent_effect_type_is_run_agent() -> None:
@@ -189,6 +189,35 @@ def test_the_subject_cannot_travel_in_the_trigger_payload(key: str) -> None:
             agent_id="any",
             scope=RunAgentEffect.Scope.AGENT,
             trigger_payload={key: "x", "message": "hi"},
+        )
+
+
+def test_a_trigger_payload_up_to_the_limit_is_accepted() -> None:
+    """The limit counts the payload's UTF-8 JSON, quotes and key included."""
+    overhead = len(json.dumps({"m": ""}))
+    payload = {"m": "x" * (MAX_TRIGGER_PAYLOAD_BYTES - overhead)}
+
+    RunAgentEffect(agent_id="a:B", scope=RunAgentEffect.Scope.AGENT, trigger_payload=payload)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"m": "x" * MAX_TRIGGER_PAYLOAD_BYTES},
+        {"m": "é" * (MAX_TRIGGER_PAYLOAD_BYTES // 2)},
+    ],
+)
+def test_a_trigger_payload_past_the_limit_is_refused(payload: dict[str, str]) -> None:
+    """A large payload is refused, counting multibyte characters by their bytes."""
+    with pytest.raises(ValidationError, match="trigger_payload is"):
+        RunAgentEffect(agent_id="a:B", scope=RunAgentEffect.Scope.AGENT, trigger_payload=payload)
+
+
+def test_a_trigger_payload_must_be_json() -> None:
+    """A value JSON cannot carry is refused when the effect is built."""
+    with pytest.raises(ValidationError, match="trigger_payload must be JSON"):
+        RunAgentEffect(
+            agent_id="a:B", scope=RunAgentEffect.Scope.AGENT, trigger_payload={"m": {1, 2}}
         )
 
 
