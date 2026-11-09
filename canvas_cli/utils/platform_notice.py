@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+from canvas_cli.apps.auth.utils import instance_slug
+
 MIGRATION_URL = "https://github.com/canvas-medical/canvas-plugins#migrating-from-credentialsini-to-canvas-platform"
 CACHE_FILENAME = "platform_notice.json"
 NOTICE_INTERVAL_SECONDS = 24 * 60 * 60
@@ -17,8 +19,19 @@ def _notice_label() -> str:
     return "\033[1;33m[notice]\033[0m" if sys.stderr.isatty() else "[notice]"
 
 
-def print_install_deprecation() -> None:
-    """Warn that installing straight onto an instance is deprecated."""
+def print_install_deprecation(host: str) -> None:
+    """Warn that installing straight onto a customer instance is deprecated.
+
+    Localhost, hosts outside canvasmedical.com, and preview environments keep
+    accepting `canvas install`, so they get no warning.
+
+    Args:
+        host (str): The Canvas instance URL the plugin is being installed onto.
+    """
+    slug = instance_slug(host)
+    if slug is None or slug.endswith(".preview"):
+        return
+
     print(
         f"{_notice_label()} Installing plugins straight onto an instance with credentials.ini "
         "is deprecated in favor of `canvas login` and `canvas deploy`, and is no longer "
