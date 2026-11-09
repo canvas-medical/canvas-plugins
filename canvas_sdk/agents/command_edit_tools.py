@@ -18,7 +18,7 @@ from uuid import UUID
 
 from canvas_sdk.agents import history_tools  # noqa: F401  (its originate tools register first)
 from canvas_sdk.agents.standard_tools import standard_tools
-from canvas_sdk.agents.tool_registry import EffectField, require_patient_id
+from canvas_sdk.agents.tool_registry import EffectField, remove_first, require_patient_id
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.v1.data import Command
 
@@ -65,15 +65,17 @@ def _effect_types(action: str) -> tuple[str, ...]:
     )
 
 
-def _run_staged(command_id: str, ctx: dict[str, Any]) -> int | None:
-    """The index in ``ctx["effects"]`` of this run's originate effect for ``command_id``."""
-    for index, effect in enumerate(ctx.get("effects") or []):
-        if not effect.payload:
-            continue
-        payload = json.loads(effect.payload)
-        if isinstance(payload, dict) and payload.get("command") == command_id and "note" in payload:
-            return index
-    return None
+def _is_run_originate(effect: Any, command_id: str) -> bool:
+    """Whether ``effect`` is this run's originate effect for ``command_id``."""
+    if not effect.payload:
+        return False
+    payload = json.loads(effect.payload)
+    return isinstance(payload, dict) and payload.get("command") == command_id and "note" in payload
+
+
+def _run_staged(command_id: str, ctx: dict[str, Any]) -> bool:
+    """Whether this run staged the originate effect for ``command_id``."""
+    return any(_is_run_originate(effect, command_id) for effect in ctx.get("effects") or [])
 
 
 def _require_grant(key: str, tool: str, ctx: dict[str, Any]) -> None:
@@ -202,7 +204,7 @@ _KINDS_DESCRIPTION = "; ".join(
 def _edit_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """An edit of a staged draft's editable fields."""
     command_id = str(arguments.get("command_id") or "")
-    if _run_staged(command_id, ctx) is not None:
+    if _run_staged(command_id, ctx):
         raise ValueError(
             "This run staged that draft, so it cannot be edited yet; delete it with "
             "delete_staged_command and stage it again with the right values."
@@ -249,9 +251,8 @@ def _delete_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
     """A delete of a staged draft, or of this run's own draft before it is staged."""
     command_id = str(arguments.get("command_id") or "")
     effects: list[Any] = ctx["effects"]
-    if (index := _run_staged(command_id, ctx)) is not None:
-        # The draft has not reached the note yet, so it is simply not staged.
-        effects.pop(index)
+    # The draft has not reached the note yet, so it is simply not staged.
+    if remove_first(effects, lambda effect: _is_run_originate(effect, command_id)) is not None:
         return {"ok": True, "command_id": command_id, "command": None, "deleted": True}
     key, kind = _staged_draft(command_id, "delete_staged_command", ctx)
     effects.append(kind.command_class(command_uuid=command_id).delete())

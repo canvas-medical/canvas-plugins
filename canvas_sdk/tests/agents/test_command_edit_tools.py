@@ -230,3 +230,18 @@ def test_a_run_without_its_granted_tools_changes_nothing() -> None:
             {"command_id": str(command.id)},
             ctx={"patient_id": patient.id, "note_id": NOTE, "effects": []},
         )
+
+
+@pytest.mark.django_db
+def test_an_approval_listed_delete_finds_a_draft_this_run_staged() -> None:
+    """Listing the delete for approval still lets it see, and drop, this run's own draft."""
+    patient = PatientFactory.create()
+    tools = standard_tools.with_approval(["delete_staged_command"])
+    effects: list[Any] = []
+    ctx = {"patient_id": patient.id, "note_id": NOTE, "effects": effects, "parent_tools": tools}
+    staged = tools.execute("originate_plan", {"narrative": "Recheck"}, ctx=ctx)
+
+    result = tools.execute("delete_staged_command", {"command_id": staged["command_id"]}, ctx=ctx)
+
+    assert (result["deleted"], result["command"]) == (True, None)
+    assert effects == []
