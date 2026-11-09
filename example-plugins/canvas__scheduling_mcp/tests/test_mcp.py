@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date
 from types import SimpleNamespace
 from typing import Any
@@ -295,3 +296,15 @@ def test_patient_searches_are_limited_per_minute() -> None:
     assert not any(result["isError"] for result in results[:-1])
     assert results[-1]["isError"] is True
     assert "limit" in results[-1]["content"][0]["text"]
+
+
+@pytest.mark.django_db
+def test_a_search_slot_another_request_claimed_is_not_taken_again() -> None:
+    """Each slot holds one request's token, so concurrent searches cannot share one."""
+    window = int(time.time() // 60)
+    for slot in range(PATIENT_SEARCHES_PER_MINUTE):
+        caches["plugins"].set(f"canvas__scheduling_mcp:mcp-patient-search-{window}-{slot}", "x")
+
+    result, _ = _call("find_patient", PATIENT_TOOLS, last_name="Lovelace", birth_date="1980-04-02")
+
+    assert result["isError"] is True
