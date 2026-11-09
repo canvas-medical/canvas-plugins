@@ -110,6 +110,7 @@ from .organization import (
 from .organizational_entity import OrganizationalEntityFactory
 from .patient import (
     PatientAddressFactory,
+    PatientContactPersonFactory,
     PatientFacilityAddressFactory,
     PatientFactory,
     PatientPhotoFactory,
@@ -123,6 +124,7 @@ from .payment_card import PaymentCardFactory
 from .payment_collection import PaymentCollectionFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
+from .portal_access_grant import PortalAccessGrantFactory
 from .portal_invitation import PortalInvitationFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -286,9 +288,11 @@ __all__ = (
     "PatientGroupMemberFactory",
     "PaymentCardFactory",
     "PaymentCollectionFactory",
+    "PatientContactPersonFactory",
     "PatientPhotoFactory",
     "PlanFactory",
     "PluginCommandFactory",
+    "PortalAccessGrantFactory",
     "PortalInvitationFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
