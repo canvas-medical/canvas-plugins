@@ -36,7 +36,7 @@ from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 import canvas_sdk.commands  # noqa: F401  (importing it defines every SDK command)
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
-from canvas_sdk.agents.gateway import agent_secrets
+from canvas_sdk.agents.gateway import agent_secrets, count_model_call
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
@@ -132,7 +132,8 @@ class FakeGateway:
         return self
 
     def create(self, **kwargs: Any) -> ModelReply:
-        """Answer one model call with the next queued reply."""
+        """Answer one model call with the next queued reply, counted as the gateway counts it."""
+        count_model_call(kwargs)
         self.requests.append(copy.deepcopy(kwargs))
         if not self._replies:
             raise AssertionError(

@@ -9,7 +9,12 @@ from canvas_sdk.agents import (
 )
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
-from canvas_sdk.agents.gateway import LLMGateway, LLMGatewayConfigurationError
+from canvas_sdk.agents.gateway import (
+    GatewayClient,
+    LLMGateway,
+    LLMGatewayConfigurationError,
+    ModelCallLimitReached,
+)
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.note_helpers import find_open_note, find_open_note_uuid_from_ctx
 from canvas_sdk.agents.result import AgentRunResult
@@ -40,6 +45,8 @@ __all__ = __exports__ = (
     "FilterSpec",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "ModelCallLimitReached",
+    "GatewayClient",
     "RunRequester",
     "RunSubject",
     "SubAgentSpec",

@@ -7,8 +7,10 @@
     "DEFAULT_HISTORY_CHARS",
     "EffectField",
     "FilterSpec",
+    "GatewayClient",
     "LLMGateway",
     "LLMGatewayConfigurationError",
+    "ModelCallLimitReached",
     "RunRequester",
     "RunSubject",
     "SubAgentSpec",
@@ -38,8 +40,10 @@
     "cite"
   ],
   "canvas_sdk.agents.gateway": [
+    "GatewayClient",
     "LLMGateway",
-    "LLMGatewayConfigurationError"
+    "LLMGatewayConfigurationError",
+    "ModelCallLimitReached"
   ],
   "canvas_sdk.agents.history": [
     "DEFAULT_HISTORY_CHARS",
