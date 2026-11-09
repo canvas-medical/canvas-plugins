@@ -673,11 +673,13 @@ class PluginRunner(PluginRunnerServicer):
                 return
 
             if registry_key not in LOADED_PLUGINS:
+                # Also a runner still loading its plugins after a restart, which home-app
+                # retries.
                 log.error(
                     f"RunAgent: agent class not loaded — "
                     f"agent_id={request.agent_id} registry_key={registry_key}"
                 )
-                yield EventResponse(success=False, effects=[])
+                yield EventResponse(success=False, effects=[], error_kind="AGENT_NOT_LOADED")
                 return
 
             plugin = LOADED_PLUGINS[registry_key]
