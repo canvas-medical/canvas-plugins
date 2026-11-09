@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v0.269.0 (2026-11-09)
+
+### Bug Fixes
+
+- Floor certifi at 2026.10.23 to drop emSign C1 and C3
+  ([#1978](https://github.com/canvas-medical/canvas-plugins/pull/1978),
+  [`51f7099`](https://github.com/canvas-medical/canvas-plugins/commit/51f7099957b86840264a40e6631231c4c25bb3d7))
+
+### Features
+
+- Report the plugin runner ref to Sentry, and dispatch canvas's plugin mirror on release
+  ([#1953](https://github.com/canvas-medical/canvas-plugins/pull/1953),
+  [`a903516`](https://github.com/canvas-medical/canvas-plugins/commit/a903516b3d93d7a518cc39e3c721751d4f6daffa))
+
+- **data**: Expose portal access grants and the login acting on a portal chart
+  ([#1971](https://github.com/canvas-medical/canvas-plugins/pull/1971),
+  [`e1471cc`](https://github.com/canvas-medical/canvas-plugins/commit/e1471cc287a3274c3d4b6d31dd84fdae2501ca80))
+
+Co-authored-by: canvas-investigator[bot]
+  <266436363+canvas-investigator[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.268.0 (2026-11-06)
 
 ### Features
