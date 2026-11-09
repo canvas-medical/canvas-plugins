@@ -104,6 +104,10 @@ class EffectField:
     editable: bool = False
 
 
+# Effect types an approval-listed tool stages bare: a usage record meters the call, and a
+# proposal inside it would pass the runner's usage gate, which checks bare effects only.
+NEVER_PROPOSED = frozenset({"RECORD_USAGE"})
+
 # Serializes removals from a run's effects list. Sub-agent threads append to the same
 # list, which only adds to its end, so a removal's index stays valid while it holds this.
 _RUN_EFFECTS_LOCK = threading.RLock()
@@ -584,15 +588,25 @@ class ToolRegistry:
         return frozenset().union(*self._effect_types.values())
 
     def direct_effect_types(self) -> frozenset[str]:
-        """The effect types a tool that needs no approval stages, which an agent may return."""
+        """The effect types an agent may return bare.
+
+        Those a tool that needs no approval stages, and usage records from any tool: usage
+        is metering rather than a change to approve, so it is never proposed.
+        """
         return frozenset().union(
-            *(types for name, types in self._effect_types.items() if name not in self._approval)
+            *(
+                types if name not in self._approval else types & NEVER_PROPOSED
+                for name, types in self._effect_types.items()
+            )
         )
 
     def proposable_effect_types(self) -> frozenset[str]:
         """The effect types a tool that needs approval stages, which an agent may only propose."""
-        return frozenset().union(
-            *(types for name, types in self._effect_types.items() if name in self._approval)
+        return (
+            frozenset().union(
+                *(types for name, types in self._effect_types.items() if name in self._approval)
+            )
+            - NEVER_PROPOSED
         )
 
     def tool(

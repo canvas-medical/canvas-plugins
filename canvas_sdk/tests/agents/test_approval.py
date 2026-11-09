@@ -65,6 +65,19 @@ def _commit_plan(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str,
     return {"ok": True}
 
 
+@tools.tool(
+    name="metered_task",
+    description="x",
+    input_schema={"type": "object"},
+    categories=("writes",),
+    effect_types=("CREATE_TASK", "RECORD_USAGE"),
+)
+def _metered_task(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    ctx["effects"].append(Effect(type=EffectType.CREATE_TASK, payload='{"data": {"title": "x"}}'))
+    ctx["effects"].append(Effect(type=EffectType.RECORD_USAGE, payload='{"data": {}}'))
+    return {"ok": True}
+
+
 class _Agent(AgentPlugin):
     tools = tools
 
@@ -172,7 +185,8 @@ def test_categories_resolve_in_the_approve_list() -> None:
     assert agent.tools.requires_approval("refuse")
     assert not agent.tools.requires_approval("read")
     assert grant.proposable == frozenset({"CREATE_TASK"})
-    assert grant.direct == frozenset()
+    # A usage record from an approval-listed tool is never proposed.
+    assert grant.direct == frozenset({"RECORD_USAGE"})
 
 
 def test_a_change_listed_for_approval_cannot_be_returned_bare() -> None:
@@ -332,3 +346,20 @@ def test_a_composition_tool_does_not_wrap_a_change_no_approval_covers() -> None:
     assert result == {"ok": True}
     assert [EffectType.Name(e.type) for e in effects] == ["CREATE_TASK"]
     assert split_granted_effects(effects, grant) == (effects, [])
+
+
+def test_a_usage_record_is_never_proposed() -> None:
+    """Usage is metering, not a change to approve, so it stays bare for the usage gate.
+
+    Inside a proposal it would pass the runner's gate, which checks bare effects only.
+    """
+    agent = _Agent()
+    grant = apply_tool_grant(agent, {"allowed": ["metered_task"], "approve": ["metered_task"]})
+    assert agent.tools is not None
+    effects: list[Effect] = []
+
+    agent.tools.execute("metered_task", {}, ctx={"effects": effects})
+
+    assert [EffectType.Name(e.type) for e in effects] == ["RECORD_USAGE", "PROPOSE_AGENT_ACTION"]
+    wrapped = propose([Effect(type=EffectType.RECORD_USAGE, payload="{}")], "metered_task", {})
+    assert split_granted_effects([wrapped], grant) == ([], [wrapped])
