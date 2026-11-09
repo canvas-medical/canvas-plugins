@@ -107,7 +107,14 @@ def test_each_claims_tool_refuses_without_the_revenue_capability(
     with pytest.raises(ToolNotAllowed, match="'revenue' capability"):
         standard_tools.execute(
             tool,
-            {"queue": "x", "labels": ["x"], "comment": "x", "key": "x", "narrative": "x"},
+            {
+                "queue": "x",
+                "labels": ["x"],
+                "comment": "x",
+                "key": "x",
+                "narrative": "x",
+                "intent": "info",
+            },
             ctx=ctx,
         )
 
@@ -452,7 +459,14 @@ def test_each_write_refuses_a_missing_claim_and_stages_nothing(tool: str) -> Non
     with pytest.raises(ValueError, match="not found"):
         standard_tools.execute(
             tool,
-            {"queue": "x", "labels": ["x"], "comment": "x", "key": "x", "narrative": "x"},
+            {
+                "queue": "x",
+                "labels": ["x"],
+                "comment": "x",
+                "key": "x",
+                "narrative": "x",
+                "intent": "info",
+            },
             ctx=ctx,
         )
 

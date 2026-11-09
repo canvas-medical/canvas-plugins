@@ -3,7 +3,7 @@
 import json
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -19,7 +19,7 @@ from canvas_sdk.agents.run_record import (
     ToolCallRecord,
     current_recorder,
 )
-from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.agents.tool_registry import ToolRegistry, _CallEffects
 
 if TYPE_CHECKING:
     from canvas_sdk.effects import Effect
@@ -126,10 +126,18 @@ def _run_tool(
     # What a tool's own model calls write is the tool's working material, and can be
     # drawn from untrusted content such as a document, so none of it streams.
     quiet = streams_reply.set(False)
+    # Read once, and refused when not an object, so no handler below can raise on it.
+    arguments: dict[str, Any] = dict(block.input) if isinstance(block.input, Mapping) else {}
+    # The call's effects, so a failure after the tool returns, such as a result that cannot
+    # be written as JSON, takes them back as a failure inside the tool does.
+    call_effects = _CallEffects(ctx.setdefault("effects", []))
     try:
-        result = tools.execute(block.name, dict(block.input), ctx=ctx)
+        if not isinstance(block.input, Mapping):
+            raise ValueError("The tool's input must be an object of its arguments.")
+        result = tools.execute(block.name, arguments, ctx={**ctx, "effects": call_effects})
+        content = json.dumps(result, default=str)
     except (anthropic.APIError, RunDeadlineExceeded):
-        calls.append(ToolCall(block.name, dict(block.input), None, ok=False))
+        calls.append(ToolCall(block.name, arguments, None, ok=False))
         if recorder is not None:
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, "aborted", _elapsed_ms(started))
@@ -137,8 +145,9 @@ def _run_tool(
             recorder.report_tool("tool_finished", label, ok=False)
         raise
     except Exception as exc:
+        call_effects.take_back()
         log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
-        calls.append(ToolCall(block.name, dict(block.input), None, ok=False))
+        calls.append(ToolCall(block.name, arguments, None, ok=False))
         if recorder is not None:
             recorder.record_tool_call(
                 ToolCallRecord(block.name, False, type(exc).__name__, _elapsed_ms(started))
@@ -147,11 +156,10 @@ def _run_tool(
         return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
     finally:
         streams_reply.reset(quiet)
-    calls.append(ToolCall(block.name, dict(block.input), result))
+    calls.append(ToolCall(block.name, arguments, result))
     if recorder is not None:
         recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
         recorder.report_tool("tool_finished", label, ok=True)
-    content = json.dumps(result, default=str)
     return _tool_result(
         block.id, _capped(content, tools.max_result_chars_for(block.name), recorder)
     )

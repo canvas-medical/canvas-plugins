@@ -857,6 +857,8 @@ class PluginRunner(PluginRunnerServicer):
                     )
                 finally:
                     current_recorder.reset(recorder_token)
+                    # A client the agent's code kept makes no model call after its run.
+                    recorder.close()
                     # Released before anything is yielded, so the slot frees as soon as
                     # the agent finishes rather than when the caller drains the stream.
                     if extended:

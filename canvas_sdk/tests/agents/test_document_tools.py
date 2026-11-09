@@ -79,7 +79,9 @@ def test_a_junked_document_is_not_read(document: Any) -> None:
 def test_a_run_about_no_document_has_no_intake_tools(tool: str) -> None:
     """The document comes from the run, never from the model."""
     with pytest.raises(ValueError, match="not about an incoming document"):
-        standard_tools.execute(tool, {"question": "x", "mrn": "1"}, ctx={"effects": []})
+        standard_tools.execute(
+            tool, {"question": "x", "mrn": "1", "document_type_key": "x"}, ctx={"effects": []}
+        )
 
 
 # Matching the patient -------------------------------------------------------------------

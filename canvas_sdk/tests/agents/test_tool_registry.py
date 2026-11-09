@@ -342,10 +342,10 @@ def test_filter_search_tool_synthesizes_schema_from_filters() -> None:
     assert props["name_contains"] == {"type": "string", "description": "match on name"}
     assert props["active_only"] == {"type": "boolean", "description": "active only"}
     assert props["started_on_or_after"]["format"] == "date"
+    # No schema maximum: a larger limit is clamped, as the description says.
     assert props["limit"] == {
         "type": "integer",
         "minimum": 1,
-        "maximum": 100,
         "description": "Max results. Defaults to 25; capped at 100.",
     }
 
@@ -1797,3 +1797,54 @@ def test_a_tool_sees_and_removes_the_runs_earlier_drafts() -> None:
 
     assert registry.execute("drop_draft", {}, ctx={"effects": run_effects}) == ["draft", "other"]
     assert run_effects == ["other"]
+
+
+def _bounded_tool() -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register(
+        {
+            "name": "book",
+            "description": "x",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "minutes": {"type": "integer", "minimum": 5, "maximum": 480},
+                    "kind": {"type": "string", "enum": ["visit", "call"]},
+                    "items": {"type": "array", "maxItems": 2},
+                },
+                "required": ["minutes"],
+            },
+        },
+        lambda arguments, *, ctx: {"ok": True},
+    )
+    return registry
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"minutes": -30},
+        {"minutes": 100_000},
+        {"minutes": 30, "kind": "anything"},
+        {"minutes": 30, "items": [1, 2, 3]},
+        {"minutes": "thirty"},
+        {},
+    ],
+    ids=[
+        "below-minimum",
+        "above-maximum",
+        "outside-enum",
+        "too-many-items",
+        "wrong-type",
+        "missing",
+    ],
+)
+def test_a_call_outside_its_schema_is_refused_before_the_tool_runs(arguments: dict) -> None:
+    """A schema's bounds hold in code, not only as advice to the model."""
+    with pytest.raises(ValueError, match="Invalid arguments for 'book'"):
+        _bounded_tool().execute("book", arguments, ctx={})
+
+
+def test_a_call_inside_its_schema_runs() -> None:
+    """The check passes a call the schema allows."""
+    assert _bounded_tool().execute("book", {"minutes": 30, "kind": "call"}, ctx={}) == {"ok": True}

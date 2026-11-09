@@ -19,7 +19,7 @@ from typing import Any
 
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
 
-from canvas_sdk.agents.run_record import current_recorder
+from canvas_sdk.agents.run_record import RunRecorder, current_recorder
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -47,19 +47,23 @@ class ModelCallLimitReached(RuntimeError):
 
 
 class GatewayMessages:
-    """``messages.create`` and ``messages.stream``, each counted against the run's ceiling."""
+    """``messages.create`` and ``messages.stream``, each counted against the run's ceiling.
 
-    def __init__(self, client: Anthropic) -> None:
+    The run is the one the client was built in, whatever thread later makes the call.
+    """
+
+    def __init__(self, client: Anthropic, recorder: RunRecorder | None = None) -> None:
         self._client = client
+        self._recorder = recorder
 
     def create(self, **request: Any) -> Any:
         """Make one model call through the gateway; see ``anthropic`` ``messages.create``."""
-        count_model_call(request)
+        count_model_call(request, self._recorder)
         return self._client.messages.create(**request)
 
     def stream(self, **request: Any) -> Any:
         """Stream one model call through the gateway; see ``anthropic`` ``messages.stream``."""
-        count_model_call(request)
+        count_model_call(request, self._recorder)
         return self._client.messages.stream(**request)
 
 
@@ -69,19 +73,23 @@ class GatewayClient:
     Its host, key, and attribution headers are fixed by the gateway that built it.
     """
 
-    def __init__(self, client: Anthropic) -> None:
+    def __init__(self, client: Anthropic, recorder: RunRecorder | None = None) -> None:
         self._client = client
-        self.messages = GatewayMessages(client)
+        self.messages = GatewayMessages(client, recorder)
 
 
-def count_model_call(request: Mapping[str, Any]) -> None:
+def count_model_call(request: Mapping[str, Any], recorder: RunRecorder | None = None) -> None:
     """Count a model call against the run's ceiling, refusing options the gateway owns.
 
-    Raises :class:`ModelCallLimitReached` at the ceiling. Not exported to plugin code.
+    ``recorder`` is the run the client was built in, or the current one. Raises
+    :class:`ModelCallLimitReached` at the ceiling and once that run has ended. Not exported
+    to plugin code.
     """
     if refused := sorted(_REFUSED_OPTIONS & request.keys()):
         raise ValueError(f"The gateway sets its own {', '.join(refused)}; leave them out.")
-    recorder = current_recorder.get()
+    recorder = recorder or current_recorder.get()
+    if recorder is not None and recorder.closed:
+        raise ModelCallLimitReached("The run has ended; it makes no more model calls.")
     if recorder is not None and not recorder.reserve_model_call():
         raise ModelCallLimitReached(f"The run has made its {recorder.max_model_calls} model calls.")
 
@@ -150,7 +158,8 @@ class LLMGateway:
                     for name, value in self._attribution.items()
                     if value
                 },
-            )
+            ),
+            current_recorder.get(),
         )
 
 

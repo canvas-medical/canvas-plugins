@@ -1,3 +1,4 @@
+import threading
 import time
 from typing import Any
 
@@ -207,3 +208,52 @@ def test_every_call_through_the_client_counts_toward_the_runs_ceiling() -> None:
         current_recorder.reset(token)
 
     assert (recorder.model_calls, len(made)) == (1, 1)
+
+
+def test_a_client_counts_against_the_run_it_was_built_in_from_any_thread() -> None:
+    """Another thread, without the run's context, cannot make uncounted calls."""
+    made: list[dict] = []
+
+    class _Anthropic:
+        class messages:  # noqa: N801
+            @staticmethod
+            def create(**request: Any) -> str:
+                made.append(request)
+                return "reply"
+
+    recorder = RunRecorder(max_model_calls=1)
+    token = current_recorder.set(recorder)
+    try:
+        client = gateway().client()
+    finally:
+        current_recorder.reset(token)
+    client.messages._client = _Anthropic()  # type: ignore[assignment]
+    outcome: list[BaseException | str] = []
+
+    def call() -> None:
+        try:
+            outcome.append(client.messages.create(model="m", max_tokens=1, messages=[]))
+        except ModelCallLimitReached as exc:
+            outcome.append(exc)
+
+    for _ in range(2):
+        thread = threading.Thread(target=call)
+        thread.start()
+        thread.join()
+
+    assert outcome[0] == "reply" and isinstance(outcome[1], ModelCallLimitReached)
+    assert recorder.model_calls == 1
+
+
+def test_a_client_kept_past_its_run_is_refused() -> None:
+    """Once the run ends, a client its code kept makes no more calls."""
+    recorder = RunRecorder()
+    token = current_recorder.set(recorder)
+    try:
+        client = gateway().client()
+    finally:
+        current_recorder.reset(token)
+    recorder.close()
+
+    with pytest.raises(ModelCallLimitReached, match="has ended"):
+        client.messages.create(model="m", max_tokens=1, messages=[])
