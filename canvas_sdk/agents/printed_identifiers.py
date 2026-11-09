@@ -12,6 +12,7 @@ is never altered.
 """
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -109,6 +110,67 @@ def parse_printed_date(printed: str) -> date | None:
         return None
 
 
+def _printed_name_words(name: str) -> list[str]:
+    """The words of a printed name, initials left out, folded for fax misreads."""
+    return [word for word in _tokens(name, folded=True) if len(word) > 1]
+
+
+def _whole_name_read(arguments: dict[str, Any], name: str) -> str | None:
+    """Why the name read leaves out part of the printed name, or None when it does not.
+
+    A name read in part matches the wrong patient: "ANN SMITH-JONES" read as last name
+    "Smith" finds Ann Smith, and a first name left out finds whoever shares the last name.
+    """
+    if not str(arguments.get("last_name") or "").strip():
+        return "The name is printed; pass the last name read."
+    words = _printed_name_words(name)
+    if len(words) > 1 and not str(arguments.get("first_name") or "").strip():
+        return "The first name is printed; pass the first name read."
+    read = set(
+        _tokens(
+            f"{arguments.get('first_name') or ''} {arguments.get('last_name') or ''}", folded=True
+        )
+    )
+    if any(word not in read for word in words):
+        return "Part of the name as printed was not read; pass the whole name as printed."
+    return None
+
+
+def confirm_against_print(
+    patient: Any, arguments: dict[str, Any], outside_mrns: Iterable[str] = ()
+) -> tuple[str, int]:
+    """Whether the matched ``patient``'s own record agrees with the print, and how far.
+
+    Compares, in code and without the model's readings, the patient's last name and first
+    name (or nickname) with the printed name, their birth date with the printed date, and
+    their MRN, or one of ``outside_mrns`` (the current numbers other organizations keep for
+    them), with the printed MRN. Returns ``(refused, confirmed)``: why the patient is not the one printed,
+    or empty, and how many printed identifiers the patient's record confirms.
+    """
+    printed = arguments.get("as_printed") or {}
+    confirmed = 0
+    if name := str(printed.get("name") or "").strip():
+        shown = set(_tokens(name, folded=True))
+        given = {
+            str(value) for value in (patient.first_name, getattr(patient, "nickname", "")) if value
+        }
+        if not set(_tokens(patient.last_name or "", folded=True)) <= shown:
+            return "The matched patient's last name does not match the print.", 0
+        if not any(set(_tokens(value, folded=True)) <= shown for value in given):
+            return "The matched patient's first name does not match the print.", 0
+        confirmed += 2
+    if printed_date := str(printed.get("birth_date") or "").strip():
+        if parse_printed_date(printed_date) != patient.birth_date:
+            return "The matched patient's birth date does not match the print.", 0
+        confirmed += 1
+    if printed_mrn := str(printed.get("mrn") or "").strip():
+        numbers = [patient.mrn or "", *outside_mrns]
+        if not any(number and _mrn_agrees(number, printed_mrn) for number in numbers):
+            return "The matched patient's MRN does not match the print.", 0
+        confirmed += 1
+    return "", confirmed
+
+
 def check_printed(arguments: dict[str, Any]) -> str | None:
     """Why the identifiers cannot be trusted, or None when they can.
 
@@ -128,12 +190,18 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
         read = str(arguments.get(key) or "").strip()
         if read and name and not _name_agrees(read, name):
             return f"The {key.replace('_', ' ')} read is not the name as printed."
+    if name and (refused := _whole_name_read(arguments, name)):
+        return refused
     mrn = str(arguments.get("mrn") or "").strip()
     printed_mrn = str(printed.get("mrn") or "").strip()
+    if printed_mrn and not mrn:
+        return "The MRN is printed; pass the MRN read."
     if mrn and printed_mrn and not _mrn_agrees(mrn, printed_mrn):
         return "The MRN read is not the MRN as printed."
     birth_date = str(arguments.get("birth_date") or "").strip()
     printed_date = str(printed.get("birth_date") or "").strip()
+    if printed_date and not birth_date:
+        return "The birth date is printed; pass the birth date read."
     if birth_date and printed_date:
         shown = parse_printed_date(printed_date)
         if shown is None:

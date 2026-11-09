@@ -140,7 +140,13 @@ def test_a_tool_runs_for_the_patient_the_call_names() -> None:
         first_name="Ada", last_name="Lovelace", birth_date=date(1980, 4, 2)
     )
 
-    found, _ = _call("find_patient", PATIENT_TOOLS, last_name="Lovelace", birth_date="1980-04-02")
+    found, _ = _call(
+        "find_patient",
+        PATIENT_TOOLS,
+        first_name="Ada",
+        last_name="Lovelace",
+        birth_date="1980-04-02",
+    )
     demographics, _ = _call("get_patient_demographics", PATIENT_TOOLS, patient_id=patient.id)
 
     assert found["isError"] is False
@@ -287,9 +293,15 @@ def test_patient_search_is_granted_only_with_find_patient() -> None:
 @pytest.mark.django_db
 def test_patient_searches_are_limited_per_minute() -> None:
     """Last name and birth date are guessable, so a key cannot try birth dates at speed."""
-    PatientFactory.create(last_name="Lovelace", birth_date=date(1980, 4, 2))
+    PatientFactory.create(first_name="Ada", last_name="Lovelace", birth_date=date(1980, 4, 2))
     results = [
-        _call("find_patient", PATIENT_TOOLS, last_name="Lovelace", birth_date="1980-04-02")[0]
+        _call(
+            "find_patient",
+            PATIENT_TOOLS,
+            first_name="Ada",
+            last_name="Lovelace",
+            birth_date="1980-04-02",
+        )[0]
         for _ in range(PATIENT_SEARCHES_PER_MINUTE + 1)
     ]
 
@@ -305,6 +317,12 @@ def test_a_search_slot_another_request_claimed_is_not_taken_again() -> None:
     for slot in range(PATIENT_SEARCHES_PER_MINUTE):
         caches["plugins"].set(f"canvas__scheduling_mcp:mcp-patient-search-{window}-{slot}", "x")
 
-    result, _ = _call("find_patient", PATIENT_TOOLS, last_name="Lovelace", birth_date="1980-04-02")
+    result, _ = _call(
+        "find_patient",
+        PATIENT_TOOLS,
+        first_name="Ada",
+        last_name="Lovelace",
+        birth_date="1980-04-02",
+    )
 
     assert result["isError"] is True

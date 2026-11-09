@@ -58,14 +58,31 @@ def test_find_patient_names_only_the_one_patient_the_identifiers_match() -> None
     run = _ctx(capabilities=frozenset({Capability.PATIENT_SEARCH}))
 
     one = standard_tools.execute(
-        "find_patient", {"last_name": "Lovelace", "birth_date": "1980-04-02"}, ctx=run
+        "find_patient",
+        {"first_name": "Ada", "last_name": "Lovelace", "birth_date": "1980-04-02"},
+        ctx=run,
     )
     several = standard_tools.execute(
-        "find_patient", {"last_name": "Byron", "birth_date": "1980-04-02"}, ctx=run
+        "find_patient",
+        {"first_name": "Ann", "last_name": "Byron", "birth_date": "1980-04-02"},
+        ctx=run,
     )
 
     assert one["match"] == {"patient_id": patient.id}
     assert several["match"] is None and "More than one" in several["reason"]
+
+
+@pytest.mark.django_db
+def test_find_patient_needs_the_first_name() -> None:
+    """A last name and birth date alone can name another person in the family."""
+    PatientFactory.create(first_name="John", last_name="Doe", birth_date=date(1980, 4, 2))
+
+    with pytest.raises(ValueError, match="first name"):
+        standard_tools.execute(
+            "find_patient",
+            {"last_name": "Doe", "birth_date": "1980-04-02"},
+            ctx=_ctx(capabilities=frozenset({Capability.PATIENT_SEARCH})),
+        )
 
 
 @pytest.mark.django_db

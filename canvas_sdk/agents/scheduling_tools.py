@@ -70,8 +70,8 @@ def _patients_appointment(appointment_id: str, patient_id: str) -> Appointment:
 @standard_tools.tool(
     name="find_patient",
     description=(
-        "Find the one patient a person means, from the identifiers they give: the last "
-        "name and birth date, plus the first name and MRN when known. Returns the "
+        "Find the one patient a person means, from the identifiers they give: the first "
+        "name, last name, and birth date, plus the MRN when known. Returns the "
         "patient's id only when exactly one patient matches; otherwise it says none or "
         "several did and names no one. Never loosen or guess identifiers to get a match: "
         "ask the person instead. The other tools still act on this run's patient, not the "
@@ -85,6 +85,7 @@ def _patients_appointment(appointment_id: str, patient_id: str) -> Appointment:
             "birth_date": {"type": "string", "format": "date", "description": "YYYY-MM-DD."},
             "mrn": {"type": "string", "description": "The patient's MRN, when known."},
         },
+        "required": ["first_name", "last_name", "birth_date"],
     },
     categories=("patient_search",),
     required_capabilities=(Capability.PATIENT_SEARCH,),
@@ -95,7 +96,13 @@ def _patients_appointment(appointment_id: str, patient_id: str) -> Appointment:
     progress_label="Finding the patient",
 )
 def _find_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
-    """The one patient the identifiers match, if exactly one does."""
+    """The one patient the identifiers match, if exactly one does.
+
+    The first name is required: a last name and birth date alone can name another person
+    in the same family.
+    """
+    if not str(arguments.get("first_name") or "").strip():
+        raise ValueError("Pass the patient's first name too; ask the person for it.")
     found, matched_on = _matching_patients(arguments)
     if len(found) != 1:
         reason = "No patient matches." if not found else "More than one patient matches; ask which."

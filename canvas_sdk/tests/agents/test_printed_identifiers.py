@@ -11,6 +11,7 @@ from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.printed_identifiers import (
     MAX_CANDIDATES,
     check_printed,
+    confirm_against_print,
     parse_printed_date,
     repair_candidates,
 )
@@ -256,3 +257,125 @@ def test_the_models_label_never_replaces_the_repair_warning() -> None:
     )
 
     assert {"Matched after fax misread fix", "Exact match"} <= set(_labels(effect))
+
+
+# What was printed decides -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("arguments", "refused"),
+    [
+        (
+            {
+                "first_name": "Ann",
+                "last_name": "Smith",
+                "birth_date": "1971-03-09",
+                "as_printed": {"name": "ANN SMITH", "birth_date": "03/09/1971", "mrn": "B-1"},
+            },
+            "MRN is printed",
+        ),
+        (
+            {
+                "first_name": "Ann",
+                "last_name": "Smith",
+                "as_printed": {"name": "ANN SMITH", "birth_date": "03/09/1971"},
+            },
+            "birth date is printed",
+        ),
+        (
+            {
+                "first_name": "Ann",
+                "last_name": "Smith",
+                "birth_date": "1971-03-09",
+                "as_printed": {"name": "ANN SMITH-JONES", "birth_date": "03/09/1971"},
+            },
+            "name as printed",
+        ),
+        (
+            {
+                "last_name": "Doe",
+                "birth_date": "1971-03-09",
+                "as_printed": {"name": "DOE, JANE", "birth_date": "03/09/1971"},
+            },
+            "first name is printed",
+        ),
+    ],
+    ids=["mrn-unread", "birth-date-unread", "name-part-unread", "first-name-unread"],
+)
+def test_every_printed_identifier_must_be_read_and_agree(
+    arguments: dict[str, Any], refused: str
+) -> None:
+    """A value the model left out, or read only in part, cannot quietly drop out of the match."""
+    assert refused in str(check_printed(arguments))
+
+
+@pytest.mark.django_db
+def test_another_patients_printed_mrn_names_no_one() -> None:
+    """Ann Smith matches by name and birth date, but the print carries patient B's MRN."""
+    PatientFactory.create(first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="A-1")
+
+    result, effects = _run(
+        "suggest_patient",
+        first_name="Ann",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        mrn="B-1",
+        as_printed={"name": "ANN SMITH", "birth_date": "03/09/1971", "mrn": "MRN: B-1"},
+        legibility="clear",
+    )
+
+    assert result["ok"] is False
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_the_matched_patient_must_agree_with_the_print_in_code() -> None:
+    """The patient found is compared with the print itself, not only with what was read."""
+    PatientFactory.create(first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="A-1")
+
+    result, effects = _run(
+        "suggest_patient",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        mrn="A-1",
+        as_printed={"name": "SMITH", "birth_date": "03/09/1971", "mrn": "MRN: A-2"},
+        legibility="clear",
+    )
+
+    assert result["ok"] is False
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_confidence_counts_the_identifiers_printed_and_confirmed() -> None:
+    """Three printed identifiers the patient agrees with are high confidence; one is medium."""
+    patient = PatientFactory.create(first_name="Ann", last_name="Smith", birth_date=BIRTH)
+    printed = {"name": "SMITH, ANN", "birth_date": "03/09/1971"}
+    read = {"first_name": "Ann", "last_name": "Smith", "birth_date": "1971-03-09"}
+
+    full, _ = _run("suggest_patient", **read, as_printed=printed, legibility="clear")
+    # The print shows no name: names the model passes anyway are not printed evidence.
+    partial, _ = _run(
+        "suggest_patient", **read, as_printed={"birth_date": "03/09/1971"}, legibility="clear"
+    )
+
+    assert (full["patient_id"], full["confidence"]) == (patient.id, "high")
+    assert (partial["patient_id"], partial["confidence"]) == (patient.id, "medium")
+
+
+@pytest.mark.django_db
+def test_the_matched_patients_own_record_is_compared_with_the_print() -> None:
+    """Whatever was read, the patient found must be the one the print describes."""
+    patient = PatientFactory.create(
+        first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="A-1"
+    )
+    printed = {"name": "SMITH, ANN", "birth_date": "03/09/1971", "mrn": "A-1"}
+
+    assert confirm_against_print(patient, {"as_printed": printed}) == ("", 4)
+    for other in (
+        {**printed, "name": "SMITH, JANE"},
+        {**printed, "birth_date": "03/10/1971"},
+        {**printed, "mrn": "A-2"},
+    ):
+        reason, _ = confirm_against_print(patient, {"as_printed": other})
+        assert "does not match the print" in reason

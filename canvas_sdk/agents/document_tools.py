@@ -23,6 +23,7 @@ from canvas_sdk.agents.printed_identifiers import (
     REPAIRED,
     SWAPPED,
     check_printed,
+    confirm_against_print,
     repair_candidates,
 )
 from canvas_sdk.agents.standard_tools import answer_from_file, standard_tools
@@ -100,7 +101,9 @@ _PRINTED_PROPERTIES = {
             "For a scanned or faxed document: each identifier exactly as printed, "
             "character for character, misprints and all (for example 'DOE, J0HN' or "
             "'DOB: 03/O9/1971'). With it, the identifiers read are checked against the "
-            "print, and a common fax misread is tried when they match no one."
+            "print, and a common fax misread is tried when they match no one. Read every "
+            "identifier the print shows, the whole name included: one printed but not "
+            "passed, or read only in part, names no patient."
         ),
         "properties": {
             "name": {"type": "string", "description": "The patient's name as printed."},
@@ -168,6 +171,31 @@ def _annotations(
     if label := str(arguments.get("label") or "").strip()[:MAX_LABEL_CHARS]:
         annotations.append({"text": label, "color": SOURCE_COLOR})
     return annotations
+
+
+def _confirmed_confidence(
+    patient: Any, arguments: dict[str, Any], matched_on: list[str], how: str
+) -> tuple[str, str]:
+    """Why the one patient found is not the one printed, or the match's confidence.
+
+    Returns ``(refused, confidence)``. With the print passed, the patient's own record is
+    compared with it in code, and confidence counts the printed identifiers the record
+    confirms rather than the fields the model passed: high for three. A repaired or
+    swapped reading is medium.
+    """
+    if arguments.get("as_printed"):
+        outside = (
+            Patient.objects.filter(_sending_mrns(date.today()), id=patient.id)
+            .values_list("external_identifiers__value", flat=True)
+            .distinct()
+        )
+        refused, confirmed = confirm_against_print(
+            patient, arguments, [str(value) for value in outside if value]
+        )
+        if refused:
+            return f"{refused} A person files this document.", ""
+        return "", "medium" if how or confirmed < 3 else "high"
+    return "", "medium" if how else _match_confidence(matched_on)
 
 
 def _match_confidence(matched_on: list[str]) -> str:
@@ -367,10 +395,13 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
         return {"match": None, "reason": refused}
     if len(found) != 1:
         return _no_match(found)
+    refused, confidence = _confirmed_confidence(found[0], arguments, matched_on, how)
+    if refused:
+        return {"match": None, "reason": refused}
     return {
         "match": {"patient_id": str(found[0].id)},
         "matched_on": ", ".join(matched_on + ([how] if how else [])),
-        "confidence": "medium" if how else _match_confidence(matched_on),
+        "confidence": confidence,
     }
 
 
@@ -509,7 +540,9 @@ def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[
     if len(found) != 1:
         return {"ok": False, **_no_match(found)}
     patient = found[0]
-    confidence = "medium" if how else _match_confidence(matched_on)
+    refused, confidence = _confirmed_confidence(patient, arguments, matched_on, how)
+    if refused:
+        return {"ok": False, "match": None, "reason": refused}
     ctx["effects"].append(
         LinkDocumentToPatient(
             document_id=document_id,
