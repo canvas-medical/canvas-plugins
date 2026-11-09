@@ -1,6 +1,6 @@
 # canvas__scheduling_mcp
 
-A Model Context Protocol server for scheduling, over the Agent Runner Framework standard tools. An outside agent finds a patient, providers, and open times, reads the patient's appointments, and, when the operator allows it, books, reschedules, and cancels.
+A Model Context Protocol server for scheduling, over the Agent Runner Framework standard tools. An outside agent finds providers and open times, and, when the operator allows it, finds a patient, reads their appointments, and books, reschedules, and cancels.
 
 ## Setup
 
@@ -9,9 +9,11 @@ A Model Context Protocol server for scheduling, over the Agent Runner Framework 
 
 ## What the key may do
 
-`MCP_TOOLS` is a comma-separated list of tool names and `@category` groups. Unset, the key gets reads only: `find_patient`, `get_patient_demographics`, `find_appointments`, `@scheduling_reads`, `find_practice_locations`, `find_note_types`, and `find_reason_for_visit_codes`. To let it book, add the writes, for example `MCP_TOOLS=find_patient, find_appointments, @scheduling_reads, @scheduling_writes`.
+`MCP_TOOLS` is a comma-separated list of tool names and `@category` groups. Unset, the key reads the practice only: `@scheduling_reads` (providers and open times), `find_practice_locations`, `find_note_types`, and `find_reason_for_visit_codes`.
 
-Calls act as Canvas Bot, so the key is practice-level trust: it can find any patient. Tools about a patient take a required `patient_id` from `find_patient`.
+Patient tools are opt-in. Listing them, for example `MCP_TOOLS=find_patient, get_patient_demographics, find_appointments, @scheduling_reads`, lets the key search every patient and read the one it finds, and that patient data goes to the outside MCP client and its model. Calls act as Canvas Bot, so the key is practice-level trust: only a client under a business associate agreement should hold it, and a deployment that sends patient data needs Canvas's security and compliance review first. A key makes at most 20 patient searches a minute. Tools about a patient take a required `patient_id` from `find_patient`.
+
+To let the key book, reschedule, and cancel, add `@scheduling_writes`.
 
 ## Try it
 

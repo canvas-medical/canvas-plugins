@@ -7,7 +7,9 @@ never streams). The server is stateless: no session id, no server-to-client requ
 An outside agent authenticates with ``Authorization: Bearer <MCP_API_KEY>``. The key is
 practice-level trust, like any SimpleAPI key: calls act as Canvas Bot. What the key may
 do is the ``MCP_TOOLS`` variable, a comma-separated list of tool names and ``@category``
-groups, reads only unless the operator lists a write.
+groups: the practice's providers, open times, and configuration unless the operator lists
+the patient tools, which search every patient, or a write. Patient searches are limited to
+``PATIENT_SEARCHES_PER_MINUTE``.
 
 A tool acts on one patient, the one the call names in ``patient_id``; this plugin checks
 the patient exists and sets it as the call's patient, so a tool never takes a patient
@@ -16,11 +18,13 @@ are applied by Canvas like any SimpleAPI request's.
 """
 
 import json
+import time
 from hmac import compare_digest
 from http import HTTPStatus
 from typing import Any
 
-from canvas_sdk.agents import Capability, ToolRegistry, standard_tools
+from canvas_sdk.agents import Capability, ToolNotAllowed, ToolRegistry, standard_tools
+from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import BearerCredentials, SimpleAPI, api
@@ -31,16 +35,18 @@ PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26")
 SERVER_INFO = {"name": "canvas-scheduling", "version": "0.0.1"}
 KEY_VARIABLE = "MCP_API_KEY"
 TOOLS_VARIABLE = "MCP_TOOLS"
-# What a key may do unless the operator says otherwise: find the patient and read.
+# What a key may do unless the operator says otherwise: read the practice's providers,
+# open times, and configuration. A key reaches patients only when MCP_TOOLS lists the
+# patient tools, since find_patient searches every patient.
 DEFAULT_TOOLS = (
-    "find_patient",
-    "get_patient_demographics",
-    "find_appointments",
     "@scheduling_reads",
     "find_practice_locations",
     "find_note_types",
     "find_reason_for_visit_codes",
 )
+# The most patient searches a key makes a minute: identifiers such as a birth date can be
+# guessed, so a key cannot try them at speed.
+PATIENT_SEARCHES_PER_MINUTE = 20
 # Tools about the practice rather than one patient: they take no patient_id.
 PRACTICE_CATEGORIES = frozenset({"config_reads", "scheduling_reads", "patient_search"})
 PATIENT_ARGUMENT = {
@@ -63,6 +69,19 @@ def _granted(secrets: dict[str, str]) -> ToolRegistry:
     listed = [name.strip() for name in str(secrets.get(TOOLS_VARIABLE) or "").split(",")]
     allowed = [name for name in listed if name] or list(DEFAULT_TOOLS)
     return standard_tools.scope(standard_tools.resolve_allowed(allowed))
+
+
+def _over_search_limit() -> bool:
+    """Count one patient search this minute; whether the key is past its limit.
+
+    The count is best-effort, as the cache has no atomic increment, which still bounds a
+    key to about the limit.
+    """
+    cache = get_cache()
+    key = f"mcp-patient-searches-{int(time.time() // 60)}"
+    count = int(cache.get(key) or 0) + 1
+    cache.set(key, count, timeout_seconds=120)
+    return count > PATIENT_SEARCHES_PER_MINUTE
 
 
 def _about_a_patient(name: str) -> bool:
@@ -124,6 +143,8 @@ class SchedulingMCP(SimpleAPI):
             return [Response(status_code=HTTPStatus.ACCEPTED)]
         request_id = message["id"]
         params = message.get("params") or {}
+        if not isinstance(params, dict):
+            return [JSONResponse(_error(request_id, INVALID_PARAMS, "params must be an object"))]
         if method == "initialize":
             return [JSONResponse(_result(request_id, self._initialize(params)))]
         if method == "ping":
@@ -148,16 +169,20 @@ class SchedulingMCP(SimpleAPI):
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": SERVER_INFO,
             "instructions": (
-                "Canvas scheduling. Find the patient with find_patient, then pass its "
-                "patient_id to the tools about a patient. Book only a time "
-                "find_appointment_slots offered, and confirm it with the person first."
+                "Canvas scheduling. Where the key may search patients, find the patient "
+                "with find_patient, then pass its patient_id to the tools about a patient. "
+                "Book only a time find_appointment_slots offered, and confirm it with the "
+                "person first."
             ),
         }
 
     def _call(self, request_id: Any, params: dict[str, Any]) -> list[Response | Effect]:
         """Run one tool for the patient the call names; its effects go back with the answer."""
         name = str(params.get("name") or "")
-        arguments = dict(params.get("arguments") or {})
+        arguments = params.get("arguments") or {}
+        if not isinstance(arguments, dict):
+            return [JSONResponse(_error(request_id, INVALID_PARAMS, "arguments must be an object"))]
+        arguments = dict(arguments)
         registry = _granted(self.secrets)
         schemas = {
             definition["name"]: definition["input_schema"] for definition in registry.definitions()
@@ -176,18 +201,37 @@ class SchedulingMCP(SimpleAPI):
                 "Pass the patient_id of a patient find_patient found.", is_error=True
             )
             return [JSONResponse(_result(request_id, answer))]
+        if "patient_search" in standard_tools.categories_for(name) and _over_search_limit():
+            answer = _tool_text(
+                f"This key has reached its limit of {PATIENT_SEARCHES_PER_MINUTE} patient "
+                "searches a minute; try again in a minute.",
+                is_error=True,
+            )
+            return [JSONResponse(_result(request_id, answer))]
+        # Patient search is the operator's grant: it is on only for a key MCP_TOOLS lets
+        # call find_patient.
+        searches = any(
+            "patient_search" in standard_tools.categories_for(definition["name"])
+            for definition in registry.definitions()
+        )
         ctx: dict[str, Any] = {
             "patient_id": patient_id,
-            "capabilities": frozenset({Capability.PATIENT_SEARCH}),
+            "capabilities": frozenset({Capability.PATIENT_SEARCH}) if searches else frozenset(),
             "effects": [],
             "parent_tools": registry,
         }
         try:
             outcome = registry.execute(name, arguments, ctx=ctx)
-        except Exception as exc:
-            # As in the agent loop: a tool's failure is its result, for the client's model.
+        except (ValueError, ToolNotAllowed) as exc:
+            # The tool saying what to pass differently, which the client's model needs.
             log.info(f"mcp tool={name} ok=0 reason={type(exc).__name__}")
             answer = _tool_text(f"Tool execution failed: {exc!s}", is_error=True)
+            return [JSONResponse(_result(request_id, answer))]
+        except Exception as exc:
+            # Any other failure, such as a database error, stays on the server: its text
+            # can describe the instance.
+            log.info(f"mcp tool={name} ok=0 reason={type(exc).__name__}")
+            answer = _tool_text("Tool execution failed.", is_error=True)
             return [JSONResponse(_result(request_id, answer))]
         effects: list[Effect] = list(ctx["effects"])
         log.info(f"mcp tool={name} ok=1 effects={len(effects)}")
