@@ -1037,6 +1037,46 @@ def test_unprefixed_plugin_your_organization_publishes_goes_through_platform(
 @pytest.mark.parametrize(
     ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
 )
+@pytest.mark.parametrize(
+    ("answer", "error"),
+    [
+        (
+            {"exc": requests.exceptions.ConnectionError("Connection refused")},
+            f"Could not reach Canvas Platform at {PLATFORM}: Connection refused",
+        ),
+        ({"status_code": 500, "json": {"error": "Platform is down."}}, "Platform is down."),
+    ],
+    ids=["unreachable", "server-error"],
+)
+def test_plugin_command_stops_when_platform_fails_the_plugin_lookup(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    answer: dict[str, Any],
+    error: str,
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+) -> None:
+    """A Platform that cannot be reached, or answers an error, on the plugin lookup stops the
+    command with that error rather than reading the plugin as unmanaged and writing to the
+    instance.
+    """
+    requests_mock.get(f"{API}/plugins/intake", **answer)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, "intake", *extra, "--instance", "acme"])
+
+    assert result.exit_code == 1
+    assert f"Error: {error}" in result.stderr
+    assert "does not manage" not in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/")
+    assert not _calls(requests_mock, "PUT", f"{API}/")
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
 def test_plugin_command_on_localhost_keeps_credentials_ini_while_signed_in(
     command: list[str],
     direct: str,
