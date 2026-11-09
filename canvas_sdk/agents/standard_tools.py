@@ -3561,6 +3561,13 @@ def _build_protocol_recommendation(raw: dict[str, Any], ctx: dict[str, Any]) -> 
     stage a command against another chart's record.
     """
     for command in raw.get("commands") or []:
+        # The button applies on a click, not through the agent's checks, so it may only
+        # draft one of the commands offered here, never one that commits or refills.
+        if command.get("type") not in _RECOMMENDATION_COMMAND_TYPES:
+            raise ValueError(
+                f"{command.get('type')!r} cannot be a card's button; use one of "
+                f"{', '.join(_RECOMMENDATION_COMMAND_TYPES)}."
+            )
         context = command.get("context") or {}
         for key, model, label in _RECOMMENDATION_RECORD_IDS:
             if context.get(key):

@@ -773,6 +773,27 @@ def test_add_or_update_protocol_card_wraps_recommendation_commands_into_envelope
     assert cmd["context"]["effect_type"] == "ORIGINATE_LAB_ORDER_COMMAND"
 
 
+@pytest.mark.parametrize("command_type", ["customCommand", "refill", "adjustPrescription"])
+def test_a_card_button_is_only_a_command_the_tool_offers(command_type: str) -> None:
+    """A type outside the offered drafts, such as one that commits or refills, is refused."""
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="cannot be a card's button"):
+        standard_tools.execute(
+            "add_or_update_protocol_card",
+            {
+                "title": "t",
+                "narrative": "n",
+                "recommendations": [
+                    {"title": "r", "button": "Go", "commands": [{"type": command_type}]}
+                ],
+            },
+            ctx={"patient_id": "pat-abc", "effects": effects},
+        )
+
+    assert effects == []
+
+
 def test_recommendation_command_constantization_handles_single_word_types() -> None:
     """Single-word types (e.g., 'plan') get constantized as 'PLAN'."""
     from canvas_sdk.agents.standard_tools import _wrap_recommendation_command
