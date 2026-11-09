@@ -2657,16 +2657,18 @@ def test_config_without_a_target_is_refused_when_the_default_host_is_an_instance
     mock_update.assert_not_called()
 
 
-@patch("canvas_cli.apps.platform.commands.get_default_host")
 @patch("canvas_cli.apps.platform.commands.instance_plugin.update")
 def test_config_without_a_target_uses_a_local_default_host(
     mock_update: Mock,
-    mock_default_host: Mock,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Platform does not have the plugin and the default is localhost, which Platform never manages."""
-    mock_default_host.return_value = "http://localhost:8000"
+    config = tmp_path / "credentials.ini"
+    config.write_text("[localhost]\nclient_id=id\nclient_secret=secret\nis_default=true\n")
+    monkeypatch.setattr(auth_utils, "CONFIG_PATH", config)
     requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
 
     result = runner.invoke(app, ["config", "unset", "intake", "A"])

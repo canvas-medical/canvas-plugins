@@ -952,6 +952,30 @@ def test_plugin_command_refuses_an_unmanaged_plugin_on_an_instance_while_signed_
 @pytest.mark.parametrize(
     ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
 )
+def test_signed_in_unknown_plugin_without_credentials_ini_is_refused(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Signed in with no flags and no credentials.ini, a plugin Platform does not have is
+    refused with the way to sign out rather than a request for credentials.ini.
+    """
+    requests_mock.get(f"{API}/plugins/intake", status_code=404, json={"error": "Not found."})
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, "intake", *extra])
+
+    assert result.exit_code == 1
+    assert "Canvas Platform does not manage intake." in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
 def test_plugin_command_on_localhost_keeps_credentials_ini_while_signed_in(
     command: list[str],
     direct: str,

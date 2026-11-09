@@ -1133,7 +1133,8 @@ def _managed(
     default that is not a Canvas instance gets the same answer. Otherwise, signed in, a
     plugin that answers ``GET /api/v1/plugins/<name>`` goes through platform, each
     ``--instance`` must be one platform manages for the person, and any other plugin
-    aimed at a Canvas instance is refused with the way to sign out; with no ``--instance``
+    aimed at a Canvas instance, or named with no ``--instance``, ``--host`` or
+    credentials.ini default, is refused with the way to sign out; with no ``--instance``
     or ``--host`` and no credentials.ini default, or a default that is a Canvas instance,
     platform is asked first. Signed out, the answer is None: the caller uses
     credentials.ini, and the deprecation notice for ``command`` is printed when the
@@ -1172,10 +1173,10 @@ def _managed(
             for slug in dict.fromkeys(instances):
                 require_managed(client, slug)
             return client, plugin
+        if not (instances or host) and configured_default_host() is None:
+            raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
         if any(instance_slug(url) is not None for url in _direct_hosts(instances, host)):
             raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
-    if all(instance_slug(url) is None for url in _direct_hosts(instances, host)):
-        return None
     print_credentials_ini_deprecation(command)
     return None
 
