@@ -7,8 +7,9 @@ get_patient_demographics) and the protocol-card lifecycle
 for cross-visit recommendation tracking.
 
 The trigger handler in ``longitudinal_trigger.py`` names the locked note
-as the run's note, so originate-on-note tools would resolve to it. Today
-the agent is read+ProtocolCard only.
+as the run's note, so originate-on-note tools would resolve to it. The
+manifest grants the agent the clinical reads and
+``add_or_update_protocol_card`` only.
 """
 
 from canvas_sdk.agents import ToolRegistry, standard_tools
