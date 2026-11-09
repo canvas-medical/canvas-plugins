@@ -141,7 +141,9 @@ def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGr
     granted = registry.scope(
         registry.resolve_allowed(grant.get("allowed") or (), denied=grant.get("denied"))
     )
-    usable = granted.usable_by(agent.requester.permissions, agent.capabilities)
+    usable = granted.usable_by(
+        agent.requester.permissions, agent.capabilities, patient_run=agent.requester.is_patient
+    )
     agent.tools = usable.with_approval(
         _approval_closure(usable, usable.resolve_allowed(grant.get("approve") or ()))
     )

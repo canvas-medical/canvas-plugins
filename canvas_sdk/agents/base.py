@@ -20,6 +20,7 @@ TOOL_CONTEXT_KEYS = frozenset(
         "claim_id",
         "document_id",
         "permissions",
+        "patient_run",
         "capabilities",
         "effects",
         "gateway",
@@ -149,7 +150,8 @@ class AgentPlugin(ABC):
 
         Holds the run's subject (``patient_id``, ``note_id``, ``claim_id``,
         ``document_id``), its
-        requester's ``staff_id`` and ``permissions``, its ``capabilities``, a fresh
+        requester's ``staff_id`` and ``permissions``, whether a patient started it
+        (``patient_run``), its ``capabilities``, a fresh
         ``effects`` list, and the ``gateway`` and ``parent_tools`` that composition
         tools hand to sub-agents. ``note_id`` is the subject's note, or for a run a
         staff member started, that staff member's open note on the patient.
@@ -177,6 +179,7 @@ class AgentPlugin(ABC):
             "claim_id": subject.claim_id,
             "document_id": subject.document_id,
             "permissions": self.requester.permissions,
+            "patient_run": self.requester.is_patient,
             "capabilities": frozenset(self.capabilities),
             "effects": [],
             "gateway": gateway,

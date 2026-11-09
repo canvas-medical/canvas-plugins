@@ -44,5 +44,14 @@ class RunRequester:
     staff_id: str | None = None
     permissions: frozenset[str] | None = None
 
+    @property
+    def is_patient(self) -> bool:
+        """Whether a patient started the run: no staff member, and permissions that limit it.
+
+        A staff login with no staff record reads the same way, which only narrows what it
+        is offered.
+        """
+        return self.staff_id is None and self.permissions is not None
+
 
 __exports__ = ("RunRequester", "RunSubject")

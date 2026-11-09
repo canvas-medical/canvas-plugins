@@ -127,11 +127,20 @@ def test_tool_context_carries_the_run_subject() -> None:
         "claim_id": None,
         "document_id": None,
         "permissions": frozenset({"api.change_task"}),
+        "patient_run": False,
         "capabilities": frozenset(),
         "effects": [],
         "gateway": _GATEWAY,
         "parent_tools": agent.tools,
     }
+
+
+def test_tool_context_marks_a_run_a_patient_started() -> None:
+    """The registry refuses staff tools in such a run, so the context says which it is."""
+    agent = _MinimalAgent()
+    agent.requester = RunRequester(staff_id=None, permissions=frozenset())
+
+    assert agent.tool_context(_GATEWAY)["patient_run"] is True
 
 
 def test_tool_context_carries_the_claim_and_capabilities() -> None:
