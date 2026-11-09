@@ -18,6 +18,7 @@ State follows the chart chat's snapshot pattern over :class:`ClaimConversation`.
 
 from typing import Any
 
+from canvas__agent_runner_poc.agents.decisions import record_decisions
 from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
 from canvas__agent_runner_poc.models.claim_conversation import ClaimConversation
 from canvas__agent_runner_poc.models.proxy import StaffProxy
@@ -45,13 +46,14 @@ SYSTEM_PROMPT = (
     "`find_claim_queues`, `find_claim_labels`, `find_claim_assignees`.\n"
     "- Writes: `move_claim_to_queue`, `assign_claim`, `unassign_claim`, "
     "`add_claim_labels`, `remove_claim_labels`, `add_claim_comment`, "
-    "`add_claim_banner`, `remove_claim_banner`. Each change applies when your reply "
-    "finishes.\n\n"
+    "`add_claim_banner`, `remove_claim_banner`. Each change is proposed: it waits for "
+    "the user to approve it on a card in the chat, and nothing changes until they do. "
+    "Say what is waiting for approval; never say a proposed change was made.\n\n"
     "Rules:\n"
     "- Answer questions with reads only. Make a change only when the user asks for it.\n"
     "- Before changing more than one claim, list the claims you would change and ask "
     "the user to confirm.\n"
-    "- After a change, say exactly what you changed on which claim.\n"
+    "- After proposing a change, say exactly what would change on which claim.\n"
     "- Do not choose or suggest procedure codes, diagnosis codes, or modifiers; that is "
     "for coders and clinicians. You may point out what looks inconsistent on a claim, "
     "such as a line item with no linked diagnosis or an inactive coverage.\n"
@@ -145,9 +147,13 @@ class ClaimsChatAgent(AgentPlugin):
         gateway: LLMGateway,
         trigger_payload: dict,
     ) -> AgentRunResult:
-        """Answer the staff member's message, or explain that they lack revenue access."""
+        """Answer the staff member's message, or explain that they lack revenue access.
+
+        Each run first records the decisions on the agent's earlier proposals, so the
+        model hears of them before the message.
+        """
         messages = [
-            *state.data["messages"],
+            *record_decisions(state.data["messages"], self.requester.staff_id, "staff member"),
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         if Capability.REVENUE not in self.capabilities:

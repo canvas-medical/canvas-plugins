@@ -4,7 +4,7 @@ A global application, so it opens on any page, the revenue pages included. It st
 in queue mode; a claim id in the agent's reply links to that claim's own conversation
 (``?claim=<id>``), and the page links back to the queue conversation.
 
-Backed by four SimpleAPI endpoints, in the chart chat's shape:
+Backed by six SimpleAPI endpoints, in the chart chat's shape:
 
 - ``GET /claims-chat-ui[?claim={id}]`` serves the chat HTML.
 - ``GET /claims-chat-history[?claim={id}]`` returns the logged-in staff member's
@@ -16,6 +16,10 @@ Backed by four SimpleAPI endpoints, in the chart chat's shape:
   ``Scope.STAFF``.
 - ``GET /claims-chat-run?run_id={id}`` returns where the run stands, with the
   platform's reason when it refused the run.
+- ``GET /claims-chat-proposals?run_id={id}`` returns the claim changes one of the staff
+  member's runs proposed, for approval cards.
+- ``POST /claims-chat-decide`` takes ``{proposal_id, decision, reason?}`` and hands the
+  staff member's decision to the platform.
 
 The plugin reads no claim data itself: every claim the staff member sees comes through
 the agent's tools, which the platform gates on the revenue capability.
@@ -27,13 +31,13 @@ from canvas__agent_runner_poc.agents.claims_chat import load_claims_conversation
 from canvas__agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
 from canvas__agent_runner_poc.applications.chart_chat import _ui_messages
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.agent import RunAgentEffect
+from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import AgentRun
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal
 
 CLAIMS_CHAT_AGENT_ID = "canvas__agent_runner_poc.agents.claims_chat:ClaimsChatAgent"
 
@@ -128,4 +132,51 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
                     "error": run.error if run.status == "refused" else "",
                 }
             )
+        ]
+
+    @api.get("/claims-chat-proposals")
+    def claims_chat_proposals(self) -> list[Response | Effect]:
+        """Return the changes one of the staff member's runs proposed, for approval cards."""
+        staff_id = self.request.headers["canvas-logged-in-user-id"]
+        proposals = AgentRunProposal.objects.filter(
+            run__id=self.request.query_params["run_id"],
+            plugin_name="canvas__agent_runner_poc",
+            agent_id=CLAIMS_CHAT_AGENT_ID,
+            staff__id=staff_id,
+        ).order_by("created_at")
+        return [
+            JSONResponse(
+                {
+                    "proposals": [
+                        {
+                            "id": str(proposal.id),
+                            "tool": proposal.tool,
+                            "arguments": proposal.arguments,
+                            "status": proposal.status,
+                            "reason": proposal.reason,
+                            "expires_at": proposal.expires_at.isoformat(),
+                        }
+                        for proposal in proposals
+                    ]
+                }
+            )
+        ]
+
+    @api.post("/claims-chat-decide")
+    def claims_chat_decide(self) -> list[Response | Effect]:
+        """Approve or deny a proposed claim change; the platform checks it is the requester's.
+
+        The platform accepts it only from the staff member the agent acted for, while the
+        proposal is pending, and applies exactly the proposed change. The agent records the
+        outcome in the conversation at the start of its next run.
+        """
+        body = self.request.json()
+        decision = DecideAgentProposal(
+            proposal_id=body["proposal_id"],
+            decision=body["decision"],
+            reason=body.get("reason") or "",
+        )
+        return [
+            JSONResponse({"status": "decided"}, status_code=HTTPStatus.ACCEPTED),
+            decision.apply(),
         ]

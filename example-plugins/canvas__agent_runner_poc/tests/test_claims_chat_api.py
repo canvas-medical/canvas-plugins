@@ -9,7 +9,7 @@ from canvas__agent_runner_poc.agents.claims_chat import _save_claims_conversatio
 from canvas__agent_runner_poc.applications.claims_chat import CLAIMS_CHAT_AGENT_ID, ClaimsChatAPI
 
 from canvas_sdk.test_utils.factories import StaffFactory
-from canvas_sdk.v1.data import AgentRun, AgentRunStatus
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
 
 
 def _api(staff_id: str, query: dict[str, str] | None = None, body: Any = None) -> ClaimsChatAPI:
@@ -88,3 +88,61 @@ def test_history_is_the_conversation_for_the_page_mode() -> None:
         {"role": "user", "text": "about the claim"}
     ]
     assert json.loads(queue_page.content)["messages"] == []
+
+
+def test_a_decision_goes_to_the_platform_as_the_staff_members() -> None:
+    """The plugin hands the decision over; the platform checks it is the requester's."""
+    proposal_id = str(uuid4())
+
+    response, decision = _api(
+        "s1", body={"proposal_id": proposal_id, "decision": "deny"}
+    ).claims_chat_decide()
+
+    assert response.status_code == 202
+    assert json.loads(decision.payload)["data"] == {
+        "proposal_id": proposal_id,
+        "decision": "deny",
+        "reason": "",
+    }
+
+
+@pytest.mark.django_db
+def test_a_run_shows_only_the_staff_members_own_proposals() -> None:
+    """Another staff member's proposal on the same run is not offered for approval."""
+    staff, other = StaffFactory.create(), StaffFactory.create()
+    run = AgentRun.objects.create(
+        id=uuid4(),
+        plugin_name="canvas__agent_runner_poc",
+        agent_id=CLAIMS_CHAT_AGENT_ID,
+        handler_name="canvas__agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+        scope="staff",
+        scope_key="",
+        staff=staff,
+        status=AgentRunStatus.SUCCEEDED,
+        error_kind="",
+        error="",
+        queued_at=datetime(2026, 10, 31, tzinfo=UTC),
+        attempts=0,
+        stop_reason="",
+        capabilities=[],
+    )
+    for owner, tool in ((staff, "move_claim_to_queue"), (other, "unassign_claim")):
+        AgentRunProposal.objects.create(
+            id=uuid4(),
+            run=run,
+            plugin_name="canvas__agent_runner_poc",
+            agent_id=CLAIMS_CHAT_AGENT_ID,
+            tool=tool,
+            arguments={"claim_id": "c1"},
+            effect_types=["MOVE_CLAIM_TO_QUEUE"],
+            staff=owner,
+            status=AgentRunProposalStatus.PENDING,
+            created_at=datetime(2026, 10, 31, tzinfo=UTC),
+            expires_at=datetime(2026, 10, 31, 1, tzinfo=UTC),
+            reason="",
+        )
+
+    (response,) = _api(staff.id, {"run_id": str(run.id)}).claims_chat_proposals()
+
+    (proposal,) = json.loads(response.content)["proposals"]
+    assert (proposal["tool"], proposal["status"]) == ("move_claim_to_queue", "pending")
