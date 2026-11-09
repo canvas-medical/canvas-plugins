@@ -10,17 +10,19 @@ from canvas_sdk.test_utils.factories import IntegrationTaskFactory
 
 @pytest.mark.django_db
 def test_a_received_document_starts_intake_on_it() -> None:
-    """Each incoming document gets its own run, keyed on the document."""
+    """Each incoming document on a listed channel gets its own run, keyed on the document."""
     document = IntegrationTaskFactory.create(patient=None)
     event = Event(
         EventRequest(
             type=EventType.DOCUMENT_RECEIVED,
             target=str(document.id),
-            context=json.dumps({"document": {"id": str(document.id)}, "patient": None}),
+            context=json.dumps(
+                {"document": {"id": str(document.id), "channel": "fax"}, "patient": None}
+            ),
         )
     )
 
-    [effect] = DocumentIntakeTrigger(event).compute()
+    [effect] = DocumentIntakeTrigger(event, {"INTAKE_CHANNELS": "fax"}).compute()
 
     assert effect.type == EffectType.RUN_AGENT
     data = json.loads(effect.payload)["data"]
@@ -47,7 +49,8 @@ def _received(channel: str) -> Event:
 @pytest.mark.parametrize(
     ("channels", "channel", "runs"),
     [
-        ("", "document_upload", 1),
+        ("", "document_upload", 0),
+        ("", "fax", 0),
         ("fax", "fax", 1),
         ("fax", "document_upload", 0),
         (" Fax, lab ", "lab", 1),
@@ -56,7 +59,11 @@ def _received(channel: str) -> Event:
 def test_intake_runs_only_on_the_channels_an_operator_lists(
     channels: str, channel: str, runs: int
 ) -> None:
-    """INTAKE_CHANNELS narrows intake, such as to faxes while another agent takes uploads."""
+    """Intake runs on the channels INTAKE_CHANNELS lists, and is off until it lists one.
+
+    Every run sends a document to the model, so a fresh install starts none: uploads and lab
+    feeds would otherwise each start one.
+    """
     secrets = {"INTAKE_CHANNELS": channels} if channels else {}
 
     effects = DocumentIntakeTrigger(_received(channel), secrets).compute()
