@@ -977,40 +977,109 @@ def test_signed_in_unknown_plugin_without_credentials_ini_is_refused(
     ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
 )
 @pytest.mark.parametrize(
-    "answer",
+    ("name", "answer"),
     [
-        {"json": {"name": "intake", "publisher": "other", "installs": [{"instance": "acme"}]}},
-        {
-            "status_code": 409,
-            "json": {"error": "Two publishers have a plugin named 'intake'.", "code": "ambiguous"},
-        },
+        (
+            "intake",
+            {"json": {"name": "intake", "publisher": "other", "installs": [{"instance": "acme"}]}},
+        ),
+        (
+            "intake",
+            {
+                "status_code": 409,
+                "json": {
+                    "error": "Two publishers have a plugin named 'intake'.",
+                    "code": "ambiguous",
+                },
+            },
+        ),
+        (
+            "acme__intake",
+            {
+                "json": {
+                    "name": "acme__intake",
+                    "publisher": "other",
+                    "installs": [{"instance": "acme"}],
+                }
+            },
+        ),
+        (
+            "vitals__chart",
+            {
+                "json": {
+                    "name": "vitals__chart",
+                    "publisher": "other",
+                    "installs": [{"instance": "acme"}],
+                }
+            },
+        ),
+        (
+            "acme__intake",
+            {
+                "status_code": 409,
+                "json": {
+                    "error": "Two publishers have a plugin named 'acme__intake'.",
+                    "code": "ambiguous",
+                },
+            },
+        ),
     ],
-    ids=["another-organizations-plugin", "ambiguous"],
+    ids=[
+        "another-organizations-plugin",
+        "ambiguous",
+        "your-prefix-another-publisher",
+        "unknown-prefix-another-publisher",
+        "prefixed-ambiguous",
+    ],
 )
-def test_unprefixed_plugin_none_of_your_organizations_publishes_is_not_managed(
+def test_plugin_none_of_your_organizations_publishes_is_not_managed(
     command: list[str],
     direct: str,
     extra: list[str],
+    name: str,
     answer: dict[str, Any],
     requests_mock: requests_mock_module.Mocker,
     managed_plugin: None,
 ) -> None:
-    """An unprefixed name Platform shows only as another organization's plugin, or as several
-    publishers' plugins, is not one Platform manages for the person, so it is refused rather
-    than changed through Platform.
+    """A plugin Platform shows only as another organization's plugin whose prefix the name
+    does not carry, or as several publishers' plugins, is not one Platform manages for the
+    person, with or without a prefix, so it is refused rather than changed through Platform.
     """
     requests_mock.get(f"{API}/me", json={"organizations": [{"slug": "acme"}]})
-    requests_mock.get(f"{API}/plugins/intake", **answer)
+    requests_mock.get(f"{API}/plugins/{name}", **answer)
 
     with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
-        result = runner.invoke(app, [*command, "intake", *extra, "--instance", "acme"])
+        result = runner.invoke(app, [*command, name, *extra, "--instance", "acme"])
 
     assert result.exit_code == 1
-    assert "Canvas Platform does not manage intake." in result.stderr
+    assert f"Canvas Platform does not manage {name}." in result.stderr
     assert "sign out with `canvas logout`" in result.stderr
     assert not _calls(requests_mock, "POST", f"{API}/")
     assert not _calls(requests_mock, "PUT", f"{API}/")
     mock.assert_not_called()
+
+
+def test_prefixed_plugin_its_publisher_owns_goes_through_platform_for_an_employee(
+    requests_mock: requests_mock_module.Mocker, managed_plugin: None
+) -> None:
+    """A Canvas employee, none of whose organizations publishes ``acme__intake``, still goes
+    through Platform for it, since the name carries its publisher acme's prefix.
+    """
+    requests_mock.get(
+        f"{API}/me", json={"organizations": [{"slug": "canvas"}], "canvas_employee": True}
+    )
+    requests_mock.get(
+        f"{API}/plugins/acme__intake",
+        json={"name": "acme__intake", "publisher": "acme", "installs": [{"instance": "acme"}]},
+    )
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    result = runner.invoke(app, ["enable", "acme__intake", "--instance", "acme"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
+        {"name": "acme__intake", "publisher": "acme"}
+    ]
 
 
 def test_unprefixed_plugin_your_organization_publishes_goes_through_platform(

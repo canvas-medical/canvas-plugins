@@ -48,8 +48,6 @@ PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 # A plugin name is a Python package and a Postgres identifier (see PG_NAMEDATALEN in
 # plugin_runner/namespace.py).
 PLUGIN_NAME_MAX_LENGTH = 63
-# A name that carries an organization prefix, `<org prefix>__<package>`.
-PREFIXED_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -1214,11 +1212,12 @@ def _managed(
 def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
     """Platform's record of ``name`` when Platform manages it for the person, else None.
 
-    A prefixed name is looked up by name alone. A name without a prefix can be a plugin an
-    instance holds from a direct ``canvas install`` while another organization publishes one
-    of that name on Platform, so it counts only when one of the person's organizations
-    publishes it, which Platform prefers when several share the name; a 409 ``ambiguous``
-    (several publishers, none the person's) counts as unmanaged.
+    An instance can hold a plugin of that name from a direct ``canvas install`` while
+    another organization publishes one of that name on Platform, and Platform does not tie
+    a name's prefix to a publisher, so the record counts only when one of the person's
+    organizations publishes it, which Platform prefers when several share the name, or when
+    the name carries its publisher's prefix (the slug lowercased, ``-`` to ``_``, then
+    ``__``). A 409 ``ambiguous`` (several publishers, none the person's) counts as unmanaged.
 
     Args:
         client (PlatformClient): The signed-in platform client.
@@ -1228,8 +1227,6 @@ def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
         dict[str, Any] | None: The plugin record, or None when Platform does not manage it
             for the person.
     """
-    if PREFIXED_NAME_PATTERN.match(name):
-        return client.plugin(name)
     try:
         plugin: dict[str, Any] | None = client.plugin(name)
     except PlatformError as error:
@@ -1238,8 +1235,11 @@ def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
         raise
     if plugin is None:
         return None
+    publisher: str = str(plugin.get("publisher") or "")
+    if publisher and name.startswith(f"{publisher.lower().replace('-', '_')}__"):
+        return plugin
     yours: set[str] = {str(o["slug"]) for o in client.me().get("organizations", [])}
-    return plugin if plugin.get("publisher") in yours else None
+    return plugin if publisher in yours else None
 
 
 def _entry(name: str, plugin: dict[str, Any]) -> dict[str, str]:
