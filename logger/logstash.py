@@ -12,6 +12,10 @@ from typing import Any
 import requests
 from django.conf import settings
 
+# (connect, read): a hung connection would otherwise hold the async worker, which also
+# expires queued events, until the OS gives up on it.
+LOGSTASH_TIMEOUT_SECONDS = (5, 30)
+
 
 class HttpTransport:
     """
@@ -27,24 +31,22 @@ class HttpTransport:
     def send(self, events: list[bytes], **kwargs: Any) -> None:
         """Send a batch of events to Logstash as one JSON array.
 
-        Logstash's json codec turns each array element into its own event, but a parse failure
-        turns the whole request body into one unparsed event, so an event that is not strict
-        JSON (NaN, Infinity) is sent on its own. Raising makes the async worker requeue the
-        batch, so network errors, 5xx, and 429 raise. Any other 4xx would fail identically on
-        every retry, so a rejected batch is resent one event at a time and each event Logstash
-        still rejects is reported and dropped.
+        Logstash's json codec turns each array element into its own event. Raising makes the
+        async worker requeue the batch, so network errors, 5xx, and 429 raise. A 401, 403, or
+        404 means the URL or credential is wrong for every event, so the batch is reported and
+        dropped. Any other 4xx (such as a 413 for an oversized batch) is resent one event at a
+        time and each event Logstash still rejects is reported and dropped; if one of those
+        resends raises, the events already delivered are resent with the requeued batch.
         """
-        batch = []
-        for event in events:
-            event = event.strip()
-            if _is_strict_json(event):
-                batch.append(event)
-            else:
-                self._send_one(event)
-
+        batch = [event.strip() for event in events]
         if len(batch) == 1:
             self._send_one(batch[0])
-        elif batch and self._post(b"[" + b",".join(batch) + b"]") >= 400:
+            return
+
+        status_code = self._post(b"[" + b",".join(batch) + b"]")
+        if status_code in (401, 403, 404):
+            print("Logstash rejected a batch of", len(batch), "events:", status_code)
+        elif status_code >= 400:
             for event in batch:
                 self._send_one(event)
 
@@ -55,7 +57,7 @@ class HttpTransport:
 
     def _post(self, body: bytes) -> int:
         """POST one request body and return the status code, raising on retryable failures."""
-        response = self.session.post(self.url, data=body)
+        response = self.session.post(self.url, data=body, timeout=LOGSTASH_TIMEOUT_SECONDS)
         if response.status_code == 429 or response.status_code >= 500:
             response.raise_for_status()
         return response.status_code
@@ -63,19 +65,6 @@ class HttpTransport:
     def close(self) -> None:
         """Close the transport."""
         pass
-
-
-def _reject_constant(constant: str) -> Any:
-    raise ValueError(constant)
-
-
-def _is_strict_json(event: bytes) -> bool:
-    """Whether Logstash can parse the event: Python's json emits NaN and Infinity, Logstash does not."""
-    try:
-        json.loads(event, parse_constant=_reject_constant)
-    except ValueError:
-        return False
-    return True
 
 
 ExcInfo = tuple[type[BaseException], BaseException, TracebackType | None]
@@ -295,6 +284,12 @@ class LogstashFormatterECS(logging.Formatter):
 
         now = datetime.datetime.now(datetime.UTC)
 
+        # The plugin log data streams map message as text, and Logstash cannot parse the NaN
+        # or Infinity json.dumps writes for a non-finite float, so ship anything else as JSON text.
+        message = fields.get("message", "")
+        if not isinstance(message, str):
+            message = json.dumps(message, default=_json_default)
+
         plugin_name = fields.get("plugin_name")
         handler_name = fields.get("handler_name")
 
@@ -307,7 +302,7 @@ class LogstashFormatterECS(logging.Formatter):
         log_record = {
             **self.defaults,
             "@timestamp": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-            "message": fields.get("message", ""),
+            "message": message,
             "log": {
                 "level": fields.get("levelname", ""),
             },
