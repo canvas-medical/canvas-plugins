@@ -13,7 +13,7 @@ on the run's patient: the patient a search names is for the agent to tell a pers
 start a run about, not one the other tools act on.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -23,7 +23,7 @@ from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_registry import FilterSpec, require_patient_id
 from canvas_sdk.effects.note.appointment import Appointment as AppointmentEffect
 from canvas_sdk.utils.appointment_slots import AppointmentSlotsHttp, SlotSearchError
-from canvas_sdk.v1.data import Appointment, Staff
+from canvas_sdk.v1.data import Appointment, PracticeLocation, Staff
 
 # The chart's permissions: booking and rescheduling (which books the appointment again)
 # check add_appointment; cancelling is a note state change, which checks both of the others.
@@ -33,6 +33,11 @@ CANCEL_PERMISSIONS = ("api.change_appointment", "api.add_notestatechangeevent")
 MAX_SLOTS = 50
 # The longest window one slot search covers, as the slot search allows.
 MAX_SLOT_SEARCH_DAYS = 31
+# How far ahead an appointment may be booked or moved.
+MAX_BOOKING_DAYS = 365
+# The shortest and longest visit, in minutes.
+MIN_DURATION_MINUTES = 5
+MAX_DURATION_MINUTES = 480
 
 
 def _aware(value: str, name: str) -> datetime:
@@ -46,12 +51,56 @@ def _aware(value: str, name: str) -> datetime:
     return parsed
 
 
+def _start_time(value: str) -> datetime:
+    """A booking's start: aware, not past, and within ``MAX_BOOKING_DAYS``."""
+    start = _aware(value, "start_time")
+    now = datetime.now(UTC)
+    if start < now:
+        raise ValueError("start_time is in the past; use a time find_appointment_slots offered")
+    if start > now + timedelta(days=MAX_BOOKING_DAYS):
+        raise ValueError(f"start_time is more than {MAX_BOOKING_DAYS} days ahead")
+    return start
+
+
+def _duration(value: Any) -> int:
+    """A visit length in minutes, within the bounds a booking allows."""
+    minutes = int(value)
+    if not MIN_DURATION_MINUTES <= minutes <= MAX_DURATION_MINUTES:
+        raise ValueError(
+            f"duration_minutes must be {MIN_DURATION_MINUTES} to {MAX_DURATION_MINUTES}"
+        )
+    return minutes
+
+
+def _active_provider(provider_id: str) -> str:
+    """``provider_id``, which must name active staff."""
+    if not _is_uuid(provider_id) or not Staff.objects.filter(id=provider_id, active=True).exists():
+        raise ValueError(f"No active provider {provider_id!r}; use find_providers.")
+    return provider_id
+
+
+def _active_location(location_id: str) -> str:
+    """``location_id``, which must name an active practice location."""
+    if (
+        not _is_uuid(location_id)
+        or not PracticeLocation.objects.filter(id=location_id, active=True).exists()
+    ):
+        raise ValueError(f"No active location {location_id!r}; use find_practice_locations.")
+    return location_id
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _patients_appointment(appointment_id: str, patient_id: str) -> Appointment:
     """The run's patient's appointment ``appointment_id``, refusing anyone else's."""
-    try:
-        UUID(str(appointment_id))
-    except ValueError:
-        raise ValueError(f"{appointment_id!r} is not an appointment id") from None
+    if not _is_uuid(appointment_id):
+        raise ValueError(f"{appointment_id!r} is not an appointment id")
     appointment = (
         Appointment.objects.filter(id=appointment_id, patient__id=patient_id)
         .only("id", "duration_minutes")
@@ -175,7 +224,11 @@ def _serialize_provider(staff: Any) -> dict[str, Any]:
                 "description": "Earliest start, ISO 8601 with a time zone.",
             },
             "end": {"type": "string", "description": "Latest start, ISO 8601 with a time zone."},
-            "duration_minutes": {"type": "integer", "minimum": 5, "maximum": 480},
+            "duration_minutes": {
+                "type": "integer",
+                "minimum": MIN_DURATION_MINUTES,
+                "maximum": MAX_DURATION_MINUTES,
+            },
             "provider_ids": {"type": "array", "items": {"type": "string"}},
             "visit_type_id": {
                 "type": "string",
@@ -183,7 +236,10 @@ def _serialize_provider(staff: Any) -> dict[str, Any]:
             },
             "reschedule_appointment_id": {
                 "type": "string",
-                "description": "When rescheduling, the appointment, so its own time shows as open.",
+                "description": (
+                    "When rescheduling, the patient's appointment, from find_appointments, "
+                    "so its own time shows as open."
+                ),
             },
         },
         "required": ["practice_location_id", "start", "end", "duration_minutes"],
@@ -202,15 +258,21 @@ def _find_appointment_slots(
     end = _aware(str(arguments["end"]), "end")
     if end <= start or end - start > timedelta(days=MAX_SLOT_SEARCH_DAYS):
         raise ValueError(f"end must be after start and within {MAX_SLOT_SEARCH_DAYS} days of it")
+    # Only the run's patient's own appointment opens up its time.
+    rescheduling = None
+    if reschedule_appointment_id := arguments.get("reschedule_appointment_id"):
+        rescheduling = str(
+            _patients_appointment(str(reschedule_appointment_id), require_patient_id(ctx)).id
+        )
     try:
         slots = AppointmentSlotsHttp().search_slots(
             location_id=str(arguments["practice_location_id"]),
             start=start,
             end=end,
-            duration=int(arguments["duration_minutes"]),
+            duration=_duration(arguments["duration_minutes"]),
             staff_ids=arguments.get("provider_ids") or None,
             visit_type_id=arguments.get("visit_type_id") or None,
-            exclude_appointment_id=arguments.get("reschedule_appointment_id") or None,
+            exclude_appointment_id=rescheduling,
         )
     except SlotSearchError as exc:
         raise ValueError(f"The slot search failed: {exc}") from exc
@@ -242,8 +304,15 @@ def _find_appointment_slots(
                 "type": "string",
                 "description": "A schedulable encounter note type, from find_note_types.",
             },
-            "start_time": {"type": "string", "description": "ISO 8601 with a time zone."},
-            "duration_minutes": {"type": "integer", "minimum": 5, "maximum": 480},
+            "start_time": {
+                "type": "string",
+                "description": "ISO 8601 with a time zone, at most a year ahead.",
+            },
+            "duration_minutes": {
+                "type": "integer",
+                "minimum": MIN_DURATION_MINUTES,
+                "maximum": MAX_DURATION_MINUTES,
+            },
         },
         "required": [
             "provider_id",
@@ -262,14 +331,14 @@ def _find_appointment_slots(
 def _book_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """Stage the booking for the run's patient."""
     patient_id = require_patient_id(ctx)
-    start_time = _aware(str(arguments["start_time"]), "start_time")
+    start_time = _start_time(str(arguments["start_time"]))
     effect = AppointmentEffect(
         patient_id=patient_id,
-        provider_id=str(arguments["provider_id"]),
-        practice_location_id=str(arguments["practice_location_id"]),
+        provider_id=_active_provider(str(arguments["provider_id"])),
+        practice_location_id=_active_location(str(arguments["practice_location_id"])),
         appointment_note_type_id=str(arguments["visit_type_id"]),
         start_time=start_time,
-        duration_minutes=int(arguments["duration_minutes"]),
+        duration_minutes=_duration(arguments["duration_minutes"]),
     )
     ctx["effects"].append(effect.create())
     return {
@@ -297,13 +366,20 @@ def _book_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
         "type": "object",
         "properties": {
             "appointment_id": {"type": "string", "description": "From find_appointments."},
-            "start_time": {"type": "string", "description": "ISO 8601 with a time zone."},
+            "start_time": {
+                "type": "string",
+                "description": "ISO 8601 with a time zone, at most a year ahead.",
+            },
             "provider_id": {"type": "string", "description": "A new provider, if changing."},
             "practice_location_id": {
                 "type": "string",
                 "description": "A new location, if changing.",
             },
-            "duration_minutes": {"type": "integer", "minimum": 5, "maximum": 480},
+            "duration_minutes": {
+                "type": "integer",
+                "minimum": MIN_DURATION_MINUTES,
+                "maximum": MAX_DURATION_MINUTES,
+            },
         },
         "required": ["appointment_id", "start_time"],
     },
@@ -320,12 +396,15 @@ def _reschedule_appointment(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
     """Stage the move of the run's patient's appointment."""
     appointment = _patients_appointment(str(arguments["appointment_id"]), require_patient_id(ctx))
     changes: dict[str, Any] = {
-        "start_time": _aware(str(arguments["start_time"]), "start_time"),
-        "duration_minutes": int(arguments.get("duration_minutes") or appointment.duration_minutes),
+        "start_time": _start_time(str(arguments["start_time"])),
+        "duration_minutes": _duration(
+            arguments.get("duration_minutes") or appointment.duration_minutes
+        ),
     }
-    for key in ("provider_id", "practice_location_id"):
-        if arguments.get(key):
-            changes[key] = str(arguments[key])
+    if arguments.get("provider_id"):
+        changes["provider_id"] = _active_provider(str(arguments["provider_id"]))
+    if arguments.get("practice_location_id"):
+        changes["practice_location_id"] = _active_location(str(arguments["practice_location_id"]))
     effect = AppointmentEffect(instance_id=str(appointment.id), **changes)
     ctx["effects"].append(effect.reschedule())
     return {

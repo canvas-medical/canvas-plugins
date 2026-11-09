@@ -405,6 +405,10 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     }
 
 
+# The most document types one search returns; narrow by name or report type for others.
+MAX_DOCUMENT_TYPES = 100
+
+
 @standard_tools.tool(
     name="find_document_types",
     description=(
@@ -426,7 +430,8 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
     required_permissions=(QUEUE_PERMISSION,),
     returns_description=(
         "Array of `{key, name, report_type, template_type}`; `template_type` is "
-        "LabReportTemplate, ImagingReportTemplate, SpecialtyReportTemplate, or null."
+        "LabReportTemplate, ImagingReportTemplate, SpecialtyReportTemplate, or null. "
+        f"At most {MAX_DOCUMENT_TYPES}, by name; narrow with `query` for others."
     ),
     progress_label="Looking up document types",
 )
@@ -444,7 +449,7 @@ def _find_document_types(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> l
             "report_type": t.report_type,
             "template_type": t.template_type,
         }
-        for t in types
+        for t in types[:MAX_DOCUMENT_TYPES]
     ]
 
 

@@ -8,6 +8,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import document_tools, standard_tools
+from canvas_sdk.agents.document_tools import MAX_DOCUMENT_TYPES
 from canvas_sdk.test_utils.factories import (
     DocumentTypeFactory,
     IntegrationTaskFactory,
@@ -195,6 +196,17 @@ def test_no_patient_is_suggested_without_one_match(document: Any) -> None:
 
 
 # Document types and templates ------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_document_types_are_capped(document: Any) -> None:
+    """One search returns at most MAX_DOCUMENT_TYPES, first by name."""
+    DocumentTypeFactory.create_batch(MAX_DOCUMENT_TYPES + 1)
+
+    listed, _ = _run("find_document_types", document)
+
+    assert len(listed) == MAX_DOCUMENT_TYPES
+    assert [t["name"] for t in listed] == sorted(t["name"] for t in listed)
 
 
 @pytest.mark.django_db
