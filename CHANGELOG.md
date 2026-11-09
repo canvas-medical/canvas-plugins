@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v0.269.1 (2026-11-09)
+
+### Bug Fixes
+
+- Give plugin namespaces' schema_version table a primary key
+  ([#1981](https://github.com/canvas-medical/canvas-plugins/pull/1981),
+  [`971ec1f`](https://github.com/canvas-medical/canvas-plugins/commit/971ec1f4ad46775fe7d63d9f5cccacd32342c3ce))
+
+- Show the canvas install notice only for customer instances
+  ([#1985](https://github.com/canvas-medical/canvas-plugins/pull/1985),
+  [`5db4428`](https://github.com/canvas-medical/canvas-plugins/commit/5db44283a26c848d209bd72dd523adc7f3c685f9))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- **sandbox**: Reserve the names the sandbox uses as policy hooks, and relax exact pins
+  ([#1875](https://github.com/canvas-medical/canvas-plugins/pull/1875),
+  [`03dd0c0`](https://github.com/canvas-medical/canvas-plugins/commit/03dd0c0ca5cacf9c6d2a21d9d105216cf2a71a19))
+
+Co-authored-by: Sisyphus <sisyphus@canvasmedical.com>
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Aaryan Shah <toaaryanshah@gmail.com>
+
+
 ## v0.269.0 (2026-11-09)
 
 ### Bug Fixes
