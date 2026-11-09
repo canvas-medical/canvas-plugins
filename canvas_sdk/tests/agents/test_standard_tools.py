@@ -12,6 +12,7 @@ Two layers:
 """
 
 import inspect
+import json
 import re
 from datetime import UTC, datetime
 from typing import Any
@@ -1577,3 +1578,23 @@ def test_standard_tools_require_the_permissions_the_chart_checks() -> None:
             )
         },
     }
+
+
+@pytest.mark.django_db
+def test_a_task_and_its_comment_are_authored_as_the_requester() -> None:
+    """The chart records the staff member who acts; an agent's task says who it acted for.
+
+    A run no staff member started leaves the author unset, which the platform records as
+    Canvas Bot.
+    """
+    patient = PatientFactory.create()
+    task = TaskFactory.create(patient=patient)
+    effects: list[Any] = []
+    ctx = {"patient_id": patient.id, "staff_id": "staff-key-1", "effects": effects}
+
+    standard_tools.execute("create_task", {"title": "Call"}, ctx=ctx)
+    standard_tools.execute("add_task_comment", {"task_id": str(task.id), "body": "Done"}, ctx=ctx)
+    standard_tools.execute("create_task", {"title": "Call"}, ctx={**ctx, "staff_id": None})
+
+    authors = [json.loads(effect.payload)["data"]["author_id"] for effect in effects]
+    assert authors == ["staff-key-1", "staff-key-1", None]
