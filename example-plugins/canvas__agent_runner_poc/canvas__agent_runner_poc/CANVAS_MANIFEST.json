@@ -27,7 +27,7 @@
                 "class": "canvas__agent_runner_poc.agents.longitudinal_advisor:LongitudinalCareAdvisor",
                 "description": "Reviews the locked encounter against prior visits' protocol cards; emits new cards for outstanding follow-up",
                 "tools": {
-                    "allowed": ["@clinical_reads", "@clinical_alerts"]
+                    "allowed": ["@clinical_reads", "add_or_update_protocol_card"]
                 }
             },
             {
@@ -46,7 +46,13 @@
                         "@composition",
                         "@document_reads"
                     ],
-                    "approve": ["@task_writes", "@clinical_alerts", "originate_review_note"]
+                    "approve": [
+                        "@task_writes",
+                        "@clinical_alerts",
+                        "originate_review_note",
+                        "edit_staged_command",
+                        "delete_staged_command"
+                    ]
                 }
             },
             {
