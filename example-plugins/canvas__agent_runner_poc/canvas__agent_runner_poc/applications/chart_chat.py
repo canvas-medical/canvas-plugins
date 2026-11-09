@@ -30,6 +30,7 @@ from canvas__agent_runner_poc.agents.chart_chat import load_conversation_message
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from canvas__agent_runner_poc.agents.decisions import is_decisions_note
 from canvas__agent_runner_poc.agents.suggestions import split_suggestions
+from canvas__agent_runner_poc.applications import checks
 from canvas_sdk.agents import ToolRegistry
 from canvas_sdk.agents.citations import Sources, cite
 from canvas_sdk.effects import Effect
@@ -63,7 +64,10 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/chart-chat-ui")
     def chart_chat_ui(self) -> list[Response | Effect]:
         """Render the chat UI HTML. Patient ID is read from the query string."""
-        context = {"patient_id": self.request.query_params["patient"]}
+        try:
+            context = {"patient_id": checks.query_uuid(self.request, "patient")}
+        except checks.BadRequest as error:
+            return [error.response()]
         return [
             HTMLResponse(
                 render_to_string("templates/chart_chat.html", context),
@@ -74,7 +78,10 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/chart-chat-history")
     def chart_chat_history(self) -> list[Response | Effect]:
         """Return the logged-in clinician's conversation so the UI can render and poll."""
-        patient_id = self.request.query_params["patient"]
+        try:
+            patient_id = checks.query_uuid(self.request, "patient")
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         messages = load_conversation_messages(patient_id, staff_id)
         return [
@@ -99,12 +106,17 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         and scopes the run to the patient and that clinician, so each clinician
         has their own conversation and the agent attributes drafts to them.
         """
-        body = self.request.json()
+        try:
+            body = checks.body(self.request)
+            patient_id = checks.uuid(body.get("patient_id"), "patient_id")
+            message = checks.text(body.get("message"), "message", checks.MAX_MESSAGE_CHARS)
+        except checks.BadRequest as error:
+            return [error.response()]
         run = RunAgentEffect(
             agent_id=CHART_CHAT_AGENT_ID,
             scope=RunAgentEffect.Scope.PATIENT_AND_STAFF,
-            patient_id=body["patient_id"],
-            trigger_payload={"user_message": body["message"]},
+            patient_id=patient_id,
+            trigger_payload={"user_message": message},
         )
 
         return [
@@ -122,9 +134,13 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         A run the record does not show yet reads as queued: the interpreter writes
         the record as it enqueues the run.
         """
+        try:
+            run_id = checks.query_uuid(self.request, "run_id")
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         run = AgentRun.objects.filter(
-            id=self.request.query_params["run_id"],
+            id=run_id,
             plugin_name="canvas__agent_runner_poc",
             staff__id=staff_id,
         ).first()
@@ -135,9 +151,13 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/chart-chat-proposals")
     def chart_chat_proposals(self) -> list[Response | Effect]:
         """Return the changes one of the logged-in clinician's runs proposed, for approval cards."""
+        try:
+            run_id = checks.query_uuid(self.request, "run_id")
+        except checks.BadRequest as error:
+            return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
         proposals = AgentRunProposal.objects.filter(
-            run__id=self.request.query_params["run_id"],
+            run__id=run_id,
             plugin_name="canvas__agent_runner_poc",
             staff__id=staff_id,
         ).order_by("created_at")
@@ -167,12 +187,11 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         while the proposal is pending, and applies exactly the proposed change. The agent
         records the outcome in the conversation at the start of its next run.
         """
-        body = self.request.json()
-        decision = DecideAgentProposal(
-            proposal_id=body["proposal_id"],
-            decision=body["decision"],
-            reason=body.get("reason") or "",
-        )
+        try:
+            proposal_id, choice, reason = checks.decision(checks.body(self.request))
+        except checks.BadRequest as error:
+            return [error.response()]
+        decision = DecideAgentProposal(proposal_id=proposal_id, decision=choice, reason=reason)
         return [
             JSONResponse({"status": "decided"}, status_code=HTTPStatus.ACCEPTED),
             decision.apply(),

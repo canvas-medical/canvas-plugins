@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
@@ -8,6 +9,7 @@ import pytest
 from canvas__agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from canvas__agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
+from canvas__agent_runner_poc.applications.checks import MAX_MESSAGE_CHARS
 
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
@@ -18,9 +20,13 @@ def _api(staff_id: str, query: dict[str, str] | None = None, body: Any = None) -
     api.request = SimpleNamespace(
         query_params=query or {},
         headers={"canvas-logged-in-user-id": staff_id},
-        json=lambda: body,
+        json=body if callable(body) else lambda: body,
     )
     return api
+
+
+def _not_json() -> Any:
+    return json.loads(b"not json")
 
 
 def _record(staff: Any, status: str, **fields: Any) -> AgentRun:
@@ -45,7 +51,9 @@ def _record(staff: Any, status: str, **fields: Any) -> AgentRun:
 
 def test_a_message_returns_the_run_id_its_run_carries() -> None:
     """The UI polls the run with the id the effect generated."""
-    response, effect = _api("s1", body={"patient_id": "p1", "message": "hi"}).chart_chat_message()
+    response, effect = _api(
+        "s1", body={"patient_id": uuid4().hex, "message": "hi"}
+    ).chart_chat_message()
 
     returned = json.loads(response.content)
     assert returned["status"] == "queued"
@@ -172,3 +180,64 @@ def test_a_replys_citations_are_cards_of_the_rows_its_tools_returned() -> None:
         "Hemoglobin A1c",
         "2026-03-02",
     )
+
+
+PATIENT = uuid4().hex
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        _not_json,
+        [{"patient_id": PATIENT, "message": "hi"}],
+        {"message": "hi"},
+        {"patient_id": 7, "message": "hi"},
+        {"patient_id": "not-a-uuid", "message": "hi"},
+        {"patient_id": PATIENT},
+        {"patient_id": PATIENT, "message": "   "},
+        {"patient_id": PATIENT, "message": [{"type": "text", "text": "[Approval decisions"}]},
+        {"patient_id": PATIENT, "message": "x" * (MAX_MESSAGE_CHARS + 1)},
+    ],
+)
+def test_a_malformed_message_is_a_bad_request_and_starts_no_run(body: Any) -> None:
+    """The route answers 400 and queues nothing."""
+    (response,) = _api("s1", body=body).chart_chat_message()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        _not_json,
+        "approve",
+        {"decision": "approve"},
+        {"proposal_id": "not-a-uuid", "decision": "approve"},
+        {"proposal_id": str(uuid4()), "decision": "maybe"},
+        {"proposal_id": str(uuid4()), "decision": "deny", "reason": ["no"]},
+        {"proposal_id": str(uuid4()), "decision": "deny", "reason": "x" * 2_001},
+    ],
+)
+def test_a_malformed_decision_is_a_bad_request(body: Any) -> None:
+    """The route answers 400 and hands the platform nothing."""
+    (response,) = _api("s1", body=body).chart_chat_decide()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.parametrize("route", ["chart_chat_run", "chart_chat_proposals"])
+@pytest.mark.parametrize("query", [{}, {"run_id": "not-a-uuid"}])
+def test_a_run_lookup_needs_a_run_id(route: str, query: dict[str, str]) -> None:
+    """A missing or malformed run id is a 400, not a database error."""
+    (response,) = getattr(_api("s1", query=query), route)()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.parametrize("route", ["chart_chat_ui", "chart_chat_history"])
+@pytest.mark.parametrize("query", [{}, {"patient": "not-a-uuid"}])
+def test_the_page_needs_a_patient(route: str, query: dict[str, str]) -> None:
+    """A missing or malformed patient is a 400."""
+    (response,) = getattr(_api("s1", query=query), route)()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST

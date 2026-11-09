@@ -1,11 +1,13 @@
 import json
 from datetime import UTC, datetime
+from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from canvas__agent_runner_poc.agents.claims_chat import _save_claims_conversation
+from canvas__agent_runner_poc.applications.checks import MAX_MESSAGE_CHARS
 from canvas__agent_runner_poc.applications.claims_chat import CLAIMS_CHAT_AGENT_ID, ClaimsChatAPI
 
 from canvas_sdk.test_utils.factories import StaffFactory
@@ -146,3 +148,43 @@ def test_a_run_shows_only_the_staff_members_own_proposals() -> None:
 
     (proposal,) = json.loads(response.content)["proposals"]
     assert (proposal["tool"], proposal["status"]) == ("move_claim_to_queue", "pending")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        ["hi"],
+        {"claim_id": "c1", "message": "hi"},
+        {"claim_id": 7, "message": "hi"},
+        {"message": {"text": "hi"}},
+        {"message": "x" * (MAX_MESSAGE_CHARS + 1)},
+    ],
+)
+def test_a_malformed_message_is_a_bad_request_and_starts_no_run(body: Any) -> None:
+    """The route answers 400 and queues nothing."""
+    (response,) = _api("s1", body=body).claims_chat_message()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_a_malformed_decision_is_a_bad_request() -> None:
+    """The route answers 400 and hands the platform nothing."""
+    (response,) = _api("s1", body={"proposal_id": "p1", "decision": "maybe"}).claims_chat_decide()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.parametrize(
+    ("route", "query"),
+    [
+        ("claims_chat_run", {}),
+        ("claims_chat_proposals", {"run_id": "not-a-uuid"}),
+        ("claims_chat_ui", {"claim": "not-a-uuid"}),
+        ("claims_chat_history", {"claim": "not-a-uuid"}),
+    ],
+)
+def test_a_malformed_query_is_a_bad_request(route: str, query: dict[str, str]) -> None:
+    """A missing or malformed id is a 400, not a database error."""
+    (response,) = getattr(_api("s1", query=query), route)()
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
