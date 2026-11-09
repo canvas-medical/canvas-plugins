@@ -12,6 +12,11 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+import django.db
+from django.conf import settings as django_settings
+
+import settings
+
 if TYPE_CHECKING:
     from django.db.backends.base.base import BaseDatabaseWrapper
 
@@ -59,9 +64,7 @@ def is_write_allowed() -> bool:
 
 def _is_postgres() -> bool:
     """Check if we're running on PostgreSQL (vs SQLite for tests)."""
-    from django.conf import settings
-
-    return "postgresql" in settings.DATABASES["default"]["ENGINE"]
+    return "postgresql" in django_settings.DATABASES["default"]["ENGINE"]
 
 
 def _set_search_path(schema: str) -> None:
@@ -69,9 +72,7 @@ def _set_search_path(schema: str) -> None:
     if not _is_postgres():
         return
 
-    from django.db import connection
-
-    with connection.cursor() as cursor:
+    with django.db.connection.cursor() as cursor:
         cursor.execute("SET search_path = %s, public", [schema])
 
 
@@ -84,20 +85,16 @@ def _set_connection_plugin(plugin_name: str) -> None:
     if not _is_postgres():
         return
 
-    from django.db import connection
-
-    with connection.cursor() as cursor:
+    with django.db.connection.cursor() as cursor:
         cursor.execute("SELECT set_config('canvas.plugin_name', %s, false)", [plugin_name])
 
 
 def _discard_connection() -> None:
     """Close the thread's connection so the pool never hands it out again."""
-    from django.db import connection
-
-    raw = connection.connection
+    raw = django.db.connection.connection
     if raw is not None:
         raw.close()
-    connection.close()
+    django.db.connection.close()
 
 
 def _reset_search_path() -> None:
@@ -105,9 +102,7 @@ def _reset_search_path() -> None:
     if not _is_postgres():
         return
 
-    from django.db import connection
-
-    with connection.cursor() as cursor:
+    with django.db.connection.cursor() as cursor:
         cursor.execute("SET search_path = public")
 
 
@@ -119,10 +114,6 @@ def _swap_to_writable_connection() -> BaseDatabaseWrapper | None:
     if _is_postgres():
         return None
 
-    import django.db
-
-    import settings
-
     original = django.db.connections["default"]
     temp_handler = django.db.utils.ConnectionHandler(
         {"default": settings.SQLITE_WRITE_MODE_DATABASE}
@@ -133,11 +124,44 @@ def _swap_to_writable_connection() -> BaseDatabaseWrapper | None:
 
 def _restore_connection(original: BaseDatabaseWrapper) -> None:
     """Restore the original default connection after a writable swap."""
-    import django.db
-
     temp_connection = django.db.connections["default"]
     django.db.connections["default"] = original
     temp_connection.close()
+
+
+def _restore_thread(plugin_name: str | None, schema: str | None, access_level: str | None) -> None:
+    """Put back the thread's plugin context as it was before a context was entered."""
+    if plugin_name:
+        _plugin_context.plugin_name = plugin_name
+        _plugin_context.schema = schema
+        _plugin_context.access_level = access_level
+    else:
+        for attr in ("plugin_name", "schema", "access_level"):
+            if hasattr(_plugin_context, attr):
+                delattr(_plugin_context, attr)
+
+
+def _reset_connection(
+    plugin_name: str, old_plugin: str | None, old_schema: str | None, namespace: str | None
+) -> None:
+    """Give the connection back the plugin name and schema it had before ``plugin_name``'s.
+
+    When that fails, such as on a transaction a plugin left aborted, the connection may
+    still carry the plugin's name and schema, so it is closed rather than pooled for reuse.
+    """
+    try:
+        _set_connection_plugin(old_plugin or "")
+        if old_schema:
+            _set_search_path(old_schema)
+        elif namespace:
+            _reset_search_path()
+    except Exception:
+        log.warning(
+            "plugin_database_context: could not reset the connection after %s; closing it",
+            plugin_name,
+            exc_info=True,
+        )
+        _discard_connection()
 
 
 @contextmanager
@@ -167,10 +191,17 @@ def plugin_database_context(
     _plugin_context.schema = namespace
     _plugin_context.access_level = access_level
 
-    # Only change search_path if a namespace is declared
-    if namespace:
-        _set_search_path(namespace)
-    _set_connection_plugin(plugin_name)
+    try:
+        # Only change search_path if a namespace is declared
+        if namespace:
+            _set_search_path(namespace)
+        _set_connection_plugin(plugin_name)
+    except Exception:
+        # A failed entry, such as a failover, leaves the thread and its connection naming
+        # what they named before, so no later exit restores this plugin's name and schema.
+        _restore_thread(old_plugin, old_schema, old_access_level)
+        _reset_connection(plugin_name, old_plugin, old_schema, namespace)
+        raise
 
     # In SQLite mode, the default connection is read-only. Swap to the
     # writable connection for plugins that have read_write access so that
@@ -188,30 +219,8 @@ def plugin_database_context(
 
         # Restore the thread's previous context before touching the database, so a
         # failed reset below never leaves this thread naming the plugin.
-        if old_plugin:
-            _plugin_context.plugin_name = old_plugin
-            _plugin_context.schema = old_schema
-            _plugin_context.access_level = old_access_level
-        else:
-            for attr in ("plugin_name", "schema", "access_level"):
-                if hasattr(_plugin_context, attr):
-                    delattr(_plugin_context, attr)
-        try:
-            _set_connection_plugin(old_plugin or "")
-            if old_schema:
-                _set_search_path(old_schema)
-            elif namespace:
-                _reset_search_path()
-        except Exception:
-            # The plugin may have left its transaction aborted. The connection still
-            # carries its name and schema, so it is closed rather than pooled for reuse;
-            # the plugin's own exception, if any, is the one that propagates.
-            log.warning(
-                "plugin_database_context: could not reset the connection after %s; closing it",
-                plugin_name,
-                exc_info=True,
-            )
-            _discard_connection()
+        _restore_thread(old_plugin, old_schema, old_access_level)
+        _reset_connection(plugin_name, old_plugin, old_schema, namespace)
 
 
 __exports__ = (

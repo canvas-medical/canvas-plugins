@@ -14,12 +14,15 @@ Two layers:
 import inspect
 import json
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import pytest
+from django.utils import timezone
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import Capability, history_tools, standard_tools
+from canvas_sdk.agents.standard_tools import _walk_note_body, _wrap_recommendation_command
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     ClaimFactory,
@@ -27,16 +30,28 @@ from canvas_sdk.test_utils.factories import (
     ClaimQueueFactory,
     DocumentTypeFactory,
     IntegrationTaskFactory,
+    LabPartnerTestFactory,
     LabReportTemplateFactory,
     LabReportTemplateFieldFactory,
     MedicationFactory,
+    NoteFactory,
+    NoteTypeFactory,
     PatientFactory,
+    PracticeLocationFactory,
+    ReasonForVisitSettingCodingFactory,
+    ServiceProviderFactory,
     StaffFactory,
     TaskFactory,
     TaskLabelFactory,
 )
 from canvas_sdk.tests.agents.test_command_edit_tools import staged_command
-from canvas_sdk.v1.data import Observation
+from canvas_sdk.v1.data import (
+    AllergyIntolerance,
+    AllergyIntoleranceCoding,
+    Appointment,
+    Condition,
+    Observation,
+)
 
 EXPECTED_TOOLS = (
     "find_medications",
@@ -344,8 +359,6 @@ def test_get_note_content_returns_null_for_unknown_note_id() -> None:
 
 def test_walk_note_body_preserves_text_and_command_order() -> None:
     """The body walker emits text + command items in their document order."""
-    from canvas_sdk.agents.standard_tools import _walk_note_body
-
     body = [
         {"type": "text", "value": "Pt reports persistent fatigue."},
         {
@@ -373,8 +386,6 @@ def test_walk_note_body_preserves_text_and_command_order() -> None:
 
 def test_walk_note_body_returns_empty_for_non_list_input() -> None:
     """Defensive: a malformed body (not a list) returns []."""
-    from canvas_sdk.agents.standard_tools import _walk_note_body
-
     assert _walk_note_body({}) == []
     assert _walk_note_body(None) == []
     assert _walk_note_body("oops") == []
@@ -738,8 +749,6 @@ def test_add_or_update_protocol_card_wraps_recommendation_commands_into_envelope
     what ``Recommendation(commands=[LabOrderCommand(...)])`` would produce
     — the ``{command: {type}, context: {..., effect_type}}`` envelope.
     """
-    import json as _json
-
     effects: list[Any] = []
     standard_tools.execute(
         "add_or_update_protocol_card",
@@ -762,7 +771,7 @@ def test_add_or_update_protocol_card_wraps_recommendation_commands_into_envelope
         ctx={"patient_id": "pat-abc", "effects": effects},
     )
 
-    payload = _json.loads(effects[0].payload)
+    payload = json.loads(effects[0].payload)
     rec = payload["data"]["recommendations"][0]
     assert rec["title"] == "Order A1c to assess glycemic control"
     assert rec["button"] == "Order A1c"
@@ -797,24 +806,18 @@ def test_a_card_button_is_only_a_command_the_tool_offers(command_type: str) -> N
 
 def test_recommendation_command_constantization_handles_single_word_types() -> None:
     """Single-word types (e.g., 'plan') get constantized as 'PLAN'."""
-    from canvas_sdk.agents.standard_tools import _wrap_recommendation_command
-
     wrapped = _wrap_recommendation_command({"type": "plan", "context": {}})
     assert wrapped["context"]["effect_type"] == "ORIGINATE_PLAN_COMMAND"
 
 
 def test_recommendation_command_constantization_handles_camelcase_types() -> None:
     """Camel-case types (e.g., 'followUp') get split on capitals to UPPER_SNAKE."""
-    from canvas_sdk.agents.standard_tools import _wrap_recommendation_command
-
     wrapped = _wrap_recommendation_command({"type": "followUp", "context": {}})
     assert wrapped["context"]["effect_type"] == "ORIGINATE_FOLLOW_UP_COMMAND"
 
 
 def test_recommendation_command_handles_empty_context() -> None:
     """Omitting context is fine — wrapper still stamps effect_type."""
-    from canvas_sdk.agents.standard_tools import _wrap_recommendation_command
-
     wrapped = _wrap_recommendation_command({"type": "labOrder"})
     assert wrapped["command"] == {"type": "labOrder"}
     assert wrapped["context"] == {"effect_type": "ORIGINATE_LAB_ORDER_COMMAND"}
@@ -842,8 +845,6 @@ def test_add_or_update_protocol_card_executor_flows_ui_control_fields_to_effect(
     back out to inspect the values that home-app's interpreter will read
     from the 'data' subdict (per ProtocolCard.effect_payload).
     """
-    import json as _json
-
     effects: list[Any] = []
     result = standard_tools.execute(
         "add_or_update_protocol_card",
@@ -859,7 +860,7 @@ def test_add_or_update_protocol_card_executor_flows_ui_control_fields_to_effect(
 
     assert result["ok"] is True
     assert len(effects) == 1
-    payload = _json.loads(effects[0].payload)
+    payload = json.loads(effects[0].payload)
     data = payload["data"]
     assert data["due_in"] == 90
     assert data["can_be_snoozed"] is True
@@ -1184,12 +1185,6 @@ def test_filter_search_tool_respects_supplied_filters_against_empty_db(
 
 def _allergy(patient: Any, concept_id: str = "777") -> Any:
     """An active allergy on ``patient``'s list, coded as the chart codes one."""
-    from datetime import date
-
-    from django.utils import timezone
-
-    from canvas_sdk.v1.data import AllergyIntolerance, AllergyIntoleranceCoding
-
     allergy = AllergyIntolerance.objects.create(
         patient=patient,
         deleted=False,
@@ -1219,18 +1214,6 @@ def _allergy(patient: Any, concept_id: str = "777") -> Any:
 
 def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     """Valid arguments for every standard write tool, against ``patient``'s records."""
-    from datetime import date
-
-    from canvas_sdk.test_utils.factories import (
-        LabPartnerTestFactory,
-        NoteFactory,
-        NoteTypeFactory,
-        PracticeLocationFactory,
-        ReasonForVisitSettingCodingFactory,
-        ServiceProviderFactory,
-    )
-    from canvas_sdk.v1.data import Appointment, Condition
-
     task = TaskFactory.create(patient=patient)
     specialist = ServiceProviderFactory.create()
     provider = StaffFactory.create()
@@ -1348,8 +1331,6 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The runner filters agent effects by declared types, so each declaration must be exact."""
-    from canvas_generated.messages.effects_pb2 import EffectType
-
     # The history tools check codes against Canvas's ontology services.
     monkeypatch.setattr(
         history_tools,
