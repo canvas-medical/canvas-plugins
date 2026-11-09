@@ -792,3 +792,42 @@ def test_a_connection_that_cannot_be_reset_is_discarded_not_reused(mock_is_pg: M
 
         raw.close.assert_called_once()
         assert get_current_plugin() is None
+
+
+@patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
+def test_a_failed_entry_leaves_the_thread_naming_what_it_named_before(
+    mock_is_pg: MagicMock,
+) -> None:
+    """A database failover at entry must not leave the thread naming the plugin it was entering.
+
+    Every later exit on the thread would otherwise restore that plugin's name and schema on
+    pooled connections.
+    """
+    with patch("django.db.connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        def failover(sql: str, params: list[str] | None = None) -> None:
+            if params == ["failing_plugin"]:
+                raise RuntimeError("server closed the connection unexpectedly")
+
+        mock_cursor.execute.side_effect = failover
+
+        with plugin_database_context("outer_plugin", namespace="org__outer"):
+            with (
+                pytest.raises(RuntimeError, match="closed the connection"),
+                plugin_database_context("failing_plugin", namespace="org__failing"),
+            ):
+                pass
+            assert (get_current_plugin(), get_current_schema()) == ("outer_plugin", "org__outer")
+            # The connection is given back the outer plugin's name, not left to name none.
+            assert _plugin_settings(mock_cursor)[-1] == "outer_plugin"
+
+        assert get_current_plugin() is None
+        with (
+            pytest.raises(RuntimeError, match="closed the connection"),
+            plugin_database_context("failing_plugin"),
+        ):
+            pass
+        assert get_current_plugin() is None
