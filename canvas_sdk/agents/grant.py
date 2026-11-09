@@ -15,7 +15,7 @@ from canvas_sdk.agents.approval import (
     PROPOSAL_EFFECT_TYPE,
     proposed_effect_types,
 )
-from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.agents.tool_registry import NEVER_PROPOSED, ToolRegistry
 
 if TYPE_CHECKING:
     from canvas_sdk.agents.base import AgentPlugin
@@ -87,7 +87,9 @@ def _approval_closure(tools: ToolRegistry, approve: frozenset[str]) -> frozenset
         name for name in names if tools.effect_types_for(name) & _APPROVAL_ONLY_EFFECT_TYPES
     }
     while True:
-        proposable = frozenset().union(*(tools.effect_types_for(name) for name in closed))
+        proposable = (
+            frozenset().union(*(tools.effect_types_for(name) for name in closed)) - NEVER_PROPOSED
+        )
         widened = {name for name in names if tools.effect_types_for(name) & proposable}
         if widened <= closed:
             return frozenset(closed)
