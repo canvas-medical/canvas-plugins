@@ -293,3 +293,42 @@ def test_a_commit_is_proposed_even_when_its_tool_is_not_approval_listed() -> Non
     assert [EffectType.Name(e.type) for e in ctx["effects"]] == ["PROPOSE_AGENT_ACTION"]
     bare = Effect(type=EffectType.COMMIT_PLAN_COMMAND, payload="{}")
     assert split_granted_effects([bare, *ctx["effects"]], grant) == (ctx["effects"], [bare])
+
+
+@tools.tool(name="brief", description="x", input_schema={"type": "object"})
+def _brief(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    """A composition tool: its sub-agent calls create_task into this call's effects."""
+    ctx["parent_tools"].execute("create_task", {}, ctx=ctx)
+    return {"ok": True}
+
+
+def test_a_composition_tool_passes_its_sub_agents_proposal_through() -> None:
+    """A proposal a sub-agent's tool made is kept as it is, never wrapped in another."""
+    agent = _Agent()
+    grant = apply_tool_grant(
+        agent, {"allowed": ["brief", "create_task"], "approve": ["brief", "create_task"]}
+    )
+    assert agent.tools is not None
+    effects: list[Effect] = []
+
+    agent.tools.execute("brief", {}, ctx={"effects": effects, "parent_tools": agent.tools})
+
+    assert [EffectType.Name(e.type) for e in effects] == ["PROPOSE_AGENT_ACTION"]
+    assert split_granted_effects(effects, grant) == (effects, [])
+
+
+def test_a_composition_tool_does_not_wrap_a_change_no_approval_covers() -> None:
+    """Approval covers changes, so one no approval-listed tool stages is made as it would be.
+
+    Wrapping it would tell the model an approval waits that the grant then drops.
+    """
+    agent = _Agent()
+    grant = apply_tool_grant(agent, {"allowed": ["brief", "create_task"], "approve": ["brief"]})
+    assert agent.tools is not None
+    effects: list[Effect] = []
+
+    result = agent.tools.execute("brief", {}, ctx={"effects": effects, "parent_tools": agent.tools})
+
+    assert result == {"ok": True}
+    assert [EffectType.Name(e.type) for e in effects] == ["CREATE_TASK"]
+    assert split_granted_effects(effects, grant) == (effects, [])

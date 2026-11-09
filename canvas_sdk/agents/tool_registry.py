@@ -6,7 +6,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.agents.approval import proposal_id, propose
+from canvas_sdk.agents.approval import PROPOSAL_EFFECT_TYPE, proposal_id, propose
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL
 from canvas_sdk.v1.data.command_type_setting import CommandTypeSetting
@@ -109,6 +109,17 @@ class EffectField:
 _RUN_EFFECTS_LOCK = threading.RLock()
 
 
+def remove_first(effects: Any, matches: Callable[[Any], bool]) -> Any | None:
+    """Remove and return the first of ``effects`` that ``matches`` accepts, or None."""
+    if isinstance(effects, _CallEffects):
+        return effects.remove_first(matches)
+    with _RUN_EFFECTS_LOCK:
+        for index, effect in enumerate(effects):
+            if matches(effect):
+                return effects.pop(index)
+    return None
+
+
 class _CallEffects:
     """A run's effects list as one tool call sees it.
 
@@ -134,6 +145,16 @@ class _CallEffects:
         with _RUN_EFFECTS_LOCK:
             return self._run_effects.pop(index)
 
+    def remove_first(self, matches: Callable[[Any], bool]) -> Any | None:
+        """Remove and return the first effect ``matches`` accepts, or None.
+
+        The search and the removal hold the lock together, so a concurrent sub-agent's
+        append cannot shift what is removed, as it can between finding an index and a
+        ``pop``.
+        """
+        with _RUN_EFFECTS_LOCK:
+            return remove_first(self._run_effects, matches)
+
     def __iter__(self) -> Any:
         return iter(list(self._run_effects))
 
@@ -158,6 +179,36 @@ class _CallEffects:
             if staged is effect:
                 del self._run_effects[index]
                 return
+
+
+class _ProposedEffects(_CallEffects):
+    """The run's effects as one call of an approval-listed tool sees them.
+
+    Reads and removals see the run's list, so the tool finds drafts earlier calls staged,
+    but what the call stages is held here rather than added to the run, for the registry
+    to wrap in a proposal.
+    """
+
+    def append(self, effect: Any) -> None:
+        self._appended.append(effect)
+
+    def staged(self) -> list[Any]:
+        """What the call staged, in order."""
+        return list(self._appended)
+
+    def remove_first(self, matches: Callable[[Any], bool]) -> Any | None:
+        """Remove the first match, among what this call staged or else the run's list."""
+        found = remove_first(self._appended, matches)
+        return found if found is not None else super().remove_first(matches)
+
+    def __iter__(self) -> Any:
+        return iter([*self._run_effects, *self._appended])
+
+    def __len__(self) -> int:
+        return len(self._run_effects) + len(self._appended)
+
+    def __getitem__(self, index: Any) -> Any:
+        return [*self._run_effects, *self._appended][index]
 
 
 def require_patient_id(ctx: dict[str, Any]) -> str:
@@ -1374,12 +1425,22 @@ class ToolRegistry:
             except Exception:
                 call_effects.take_back()
                 raise
-        staged: list[Any] = []
-        result = executor(arguments, ctx={**ctx, "effects": staged})
-        if not staged:
+        call_effects = _ProposedEffects(ctx["effects"])
+        result = executor(arguments, ctx={**ctx, "effects": call_effects})
+        # Approval covers changes, not this tool's name: a proposal a sub-agent's tool made
+        # stays as it is, and a change no approval-listed tool stages is made as any granted
+        # tool would make it, so the model is never told an approval waits that the grant
+        # would drop.
+        proposable = self.proposable_effect_types() - {PROPOSAL_EFFECT_TYPE}
+        wrapped: list[Any] = []
+        passed: list[Any] = []
+        for effect in call_effects.staged():
+            (wrapped if EffectType.Name(effect.type) in proposable else passed).append(effect)
+        ctx["effects"].extend(passed)
+        if not wrapped:
             return result
         # One proposal for the whole call, so its changes are decided and applied together.
-        proposal = propose(staged, name, arguments)
+        proposal = propose(wrapped, name, arguments)
         ctx["effects"].append(proposal)
         return {
             "status": "awaiting_approval",
