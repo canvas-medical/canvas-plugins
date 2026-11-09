@@ -27,10 +27,10 @@ note, which :meth:`AgentPlugin.run_tool_loop` finds for a run a staff
 member started.
 """
 
-import json
 from typing import Any
 
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
+from canvas__agent_runner_poc.agents.decisions import note_prefix, record_decisions
 from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
 from canvas__agent_runner_poc.models.conversation import Conversation
 from canvas__agent_runner_poc.models.proxy import PatientProxy, StaffProxy
@@ -43,7 +43,6 @@ from canvas_sdk.agents import (
     window_messages,
 )
 from canvas_sdk.agents.citations import CITATION_GUIDANCE
-from canvas_sdk.v1.data import AgentRunProposal, AgentRunProposalStatus
 from logger import log
 
 SYSTEM_PROMPT = (
@@ -246,14 +245,7 @@ MAX_TURNS = 8
 
 # Starts the note recording what became of the changes the agent proposed, so the model
 # knows on its next call and the chat leaves the note out of what the clinician sees.
-DECISIONS_NOTE_PREFIX = "[Approval decisions, recorded by the chat, not from the clinician]"
-
-DECISION_TEXT = {
-    AgentRunProposalStatus.APPROVED: "approved by the clinician and applied",
-    AgentRunProposalStatus.DENIED: "denied by the clinician; nothing changed",
-    AgentRunProposalStatus.FAILED: "approved, but could not be applied; nothing changed",
-    AgentRunProposalStatus.EXPIRED: "expired without a decision; nothing changed",
-}
+DECISIONS_NOTE_PREFIX = note_prefix("clinician")
 
 # The most history a conversation keeps: twice what one model call sends, so the
 # clinician can scroll back past the model's window without the row growing forever.
@@ -284,69 +276,6 @@ def _save_conversation_messages(
     else:
         conversation.messages = messages
         conversation.save()
-
-
-def is_decisions_note(message: dict[str, Any]) -> bool:
-    """Whether ``message`` is the chat's note of proposal decisions rather than a clinician's."""
-    content = message.get("content")
-    return (
-        message.get("role") == "user"
-        and isinstance(content, list)
-        and len(content) == 1
-        and isinstance(content[0], dict)
-        and str(content[0].get("text", "")).startswith(DECISIONS_NOTE_PREFIX)
-    )
-
-
-def _proposed_ids(messages: list[dict[str, Any]]) -> list[str]:
-    """The proposal ids the tool results in ``messages`` told the model are awaiting approval."""
-    ids: list[str] = []
-    for message in messages:
-        content = message.get("content")
-        if message.get("role") != "user" or not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict) or block.get("type") != "tool_result":
-                continue
-            try:
-                result = json.loads(block.get("content") or "")
-            except ValueError:
-                continue
-            if isinstance(result, dict) and result.get("status") == "awaiting_approval":
-                ids.extend(str(proposal_id) for proposal_id in result.get("proposal_ids") or [])
-    return ids
-
-
-def record_decisions(messages: list[dict[str, Any]], staff_id: str) -> list[dict[str, Any]]:
-    """Return ``messages`` with a note of the proposals decided since the model last heard.
-
-    A proposal the conversation is still waiting on, and that the clinician has approved,
-    denied, or let expire, goes into one note, so the model never treats a decided change
-    as pending or a denied one as made.
-    """
-    recorded = "\n".join(
-        str(message["content"][0]["text"]) for message in messages if is_decisions_note(message)
-    )
-    waiting = [
-        proposal_id for proposal_id in _proposed_ids(messages) if proposal_id not in recorded
-    ]
-    if not waiting:
-        return messages
-    decided = (
-        AgentRunProposal.objects.filter(id__in=waiting, staff__id=staff_id)
-        .exclude(status=AgentRunProposalStatus.PENDING)
-        .order_by("created_at")
-    )
-    lines = []
-    for proposal in decided:
-        line = f"- proposal {proposal.id} ({proposal.tool}): {DECISION_TEXT[proposal.status]}"
-        if proposal.reason:
-            line += f". Reason: {proposal.reason}"
-        lines.append(line)
-    if not lines:
-        return messages
-    note = "\n".join([DECISIONS_NOTE_PREFIX, *lines])
-    return [*messages, {"role": "user", "content": [{"type": "text", "text": note}]}]
 
 
 class ChartChatAgent(AgentPlugin):
@@ -383,7 +312,7 @@ class ChartChatAgent(AgentPlugin):
         model hears of them before the clinician's message.
         """
         messages = [
-            *record_decisions(state.data["messages"], self.requester.staff_id),
+            *record_decisions(state.data["messages"], self.requester.staff_id, "clinician"),
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         result = self.run_tool_loop(

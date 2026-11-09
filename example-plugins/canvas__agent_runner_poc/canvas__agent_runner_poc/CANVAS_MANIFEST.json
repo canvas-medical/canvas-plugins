@@ -60,7 +60,8 @@
                 "description": "Claims chat for billing staff; reads and works claims with the SDK's claims tools",
                 "progress": "activity",
                 "tools": {
-                    "allowed": ["@claims_reads", "@claims_writes"]
+                    "allowed": ["@claims_reads", "@claims_writes"],
+                    "approve": ["@claims_writes"]
                 }
             },
             {

@@ -26,8 +26,9 @@ for the LLM round-trip).
 from http import HTTPStatus
 from typing import Any
 
-from canvas__agent_runner_poc.agents.chart_chat import is_decisions_note, load_conversation_messages
+from canvas__agent_runner_poc.agents.chart_chat import load_conversation_messages
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
+from canvas__agent_runner_poc.agents.decisions import is_decisions_note
 from canvas__agent_runner_poc.agents.suggestions import split_suggestions
 from canvas_sdk.agents import ToolRegistry
 from canvas_sdk.agents.citations import Sources, cite

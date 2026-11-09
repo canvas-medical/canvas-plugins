@@ -5,15 +5,18 @@ from pathlib import Path
 from typing import Any
 
 from canvas__agent_runner_poc.agents.chart_chat import SYSTEM_PROMPT, ChartChatAgent
+from canvas__agent_runner_poc.agents.claims_chat import ClaimsChatAgent
 from canvas__agent_runner_poc.agents.longitudinal_advisor import LongitudinalCareAdvisor
 
-from canvas_sdk.agents import AgentPlugin
+from canvas_sdk.agents import AgentPlugin, Capability
 from canvas_sdk.test_utils.agents import prepare_agent
 
 MANIFEST = Path(__file__).parents[1] / "canvas__agent_runner_poc" / "CANVAS_MANIFEST.json"
 
 
-def _granted(agent_class: type[AgentPlugin]) -> AgentPlugin:
+def _granted(
+    agent_class: type[AgentPlugin], capabilities: tuple[Capability, ...] = ()
+) -> AgentPlugin:
     """The agent with its manifest grant applied, for a requester holding every permission."""
     entry: dict[str, Any] = next(
         agent
@@ -26,6 +29,7 @@ def _granted(agent_class: type[AgentPlugin]) -> AgentPlugin:
         allowed=tools.get("allowed", ()),
         denied=tools.get("denied", ()),
         approve=tools.get("approve", ()),
+        capabilities=capabilities,
     )
 
 
@@ -64,3 +68,14 @@ def test_the_longitudinal_advisor_reads_and_places_protocol_cards_only() -> None
     writes = sorted(name for name in agent.tools_allowed if agent.tools.effect_types_for(name))
 
     assert writes == ["add_or_update_protocol_card"]
+
+
+def test_every_claim_write_waits_for_the_staff_members_approval() -> None:
+    """A request, or text in a claim's comments, could otherwise move or relabel many claims."""
+    agent = _granted(ClaimsChatAgent, (Capability.REVENUE,))
+    assert agent.tools is not None
+
+    writes = [name for name in agent.tools_allowed if agent.tools.effect_types_for(name)]
+
+    assert writes
+    assert [name for name in writes if not agent.tools.requires_approval(name)] == []

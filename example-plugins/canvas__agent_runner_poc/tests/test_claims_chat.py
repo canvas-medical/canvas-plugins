@@ -1,4 +1,7 @@
 import json
+from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
 
 import pytest
 from canvas__agent_runner_poc.agents.claims_chat import (
@@ -6,6 +9,7 @@ from canvas__agent_runner_poc.agents.claims_chat import (
     ClaimsChatAgent,
     load_claims_conversation,
 )
+from canvas__agent_runner_poc.agents.decisions import note_prefix
 
 from canvas_sdk.agents import AgentPlugin, Capability, RunRequester, RunSubject
 from canvas_sdk.effects import EffectType
@@ -18,6 +22,7 @@ from canvas_sdk.test_utils.agents import (
     tool_use,
 )
 from canvas_sdk.test_utils.factories import ClaimFactory, ClaimQueueFactory, StaffFactory
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus, AgentRunStatus
 
 GRANT = ["@claims_reads", "@claims_writes"]
 
@@ -109,3 +114,74 @@ def test_the_queue_chat_finds_claims_across_patients() -> None:
     tool_result = gateway.requests[1]["messages"][-1]["content"][0]["content"]
     assert len(json.loads(tool_result)) == 2
     assert "claims queues" in gateway.requests[0]["system"][0]["text"]
+
+
+def _claims_proposal(staff: Any, status: str) -> AgentRunProposal:
+    """A claim move the claims chat proposed for ``staff``, decided as ``status``."""
+    run = AgentRun.objects.create(
+        id=uuid4(),
+        plugin_name="canvas__agent_runner_poc",
+        agent_id="canvas__agent_runner_poc.agents.claims_chat:ClaimsChatAgent",
+        handler_name="canvas__agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+        scope="staff",
+        scope_key="k",
+        staff=staff,
+        status=AgentRunStatus.SUCCEEDED,
+        error_kind="",
+        error="",
+        queued_at=datetime(2026, 10, 31, tzinfo=UTC),
+        attempts=0,
+        stop_reason="",
+        capabilities=["revenue"],
+    )
+    return AgentRunProposal.objects.create(
+        id=uuid4(),
+        run=run,
+        plugin_name="canvas__agent_runner_poc",
+        agent_id="canvas__agent_runner_poc.agents.claims_chat:ClaimsChatAgent",
+        tool="move_claim_to_queue",
+        arguments={"claim_id": "c1", "queue": "Coding review"},
+        effect_types=["MOVE_CLAIM_TO_QUEUE"],
+        staff=staff,
+        status=status,
+        created_at=datetime(2026, 10, 31, tzinfo=UTC),
+        expires_at=datetime(2026, 10, 31, 1, tzinfo=UTC),
+        reason="",
+    )
+
+
+@pytest.mark.django_db
+def test_a_claim_write_is_proposed_and_its_decision_heard_on_the_next_run() -> None:
+    """A move waits for the staff member, and the model learns what they decided."""
+    staff = StaffFactory.create()
+    agent = _agent(staff.id)
+    approved = _claims_proposal(staff, AgentRunProposalStatus.APPROVED)
+    awaiting = {"status": "awaiting_approval", "proposal_ids": [str(approved.id)]}
+    state = agent.load_state("staff")
+    state.data["messages"] = [
+        {"role": "user", "content": "Move it to coding review."},
+        {
+            "role": "assistant",
+            "content": [
+                {"type": "tool_use", "id": "t1", "name": "move_claim_to_queue", "input": {}}
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "tool_result", "tool_use_id": "t1", "content": json.dumps(awaiting)}
+            ],
+        },
+        {"role": "assistant", "content": [{"type": "text", "text": "It awaits your approval."}]},
+    ]
+    agent.save_state("staff", state)
+    gateway = FakeGateway(reply(text("Done.")))
+
+    run_agent(agent, gateway, {"user_message": "Anything else?"})
+
+    note = gateway.requests[0]["messages"][-2]
+    assert note["content"][0]["text"] == (
+        f"{note_prefix('staff member')}\n"
+        f"- proposal {approved.id} (move_claim_to_queue): approved by the staff member and "
+        "applied"
+    )
