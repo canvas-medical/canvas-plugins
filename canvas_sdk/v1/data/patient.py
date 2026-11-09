@@ -25,6 +25,28 @@ from canvas_sdk.v1.data.utils import create_key, generate_mrn, presigned_url
 DEFAULT_AVATAR_URL = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
 
 
+class ContactRelationship(TextChoices):
+    """The relationships the Contacts form offers for a patient contact.
+
+    A contact's relationship is free text, so a value outside these is kept and shown as stored.
+    Unlike a contact's categories, which are fixed codings such as MTH or PRN, the relationship
+    is what staff pick on the form, and family portal access shows it on each access row.
+    """
+
+    MOTHER = "Mother", "Mother"
+    FATHER = "Father", "Father"
+    PARENT = "Parent", "Parent"
+    STEPPARENT = "Stepparent", "Stepparent"
+    GRANDPARENT = "Grandparent", "Grandparent"
+    FOSTER_PARENT = "Foster parent", "Foster parent"
+    LEGAL_GUARDIAN = "Legal guardian", "Legal guardian"
+    SOCIAL_WORKER = "Social worker", "Social worker"
+    SPOUSE = "Spouse", "Spouse"
+    SIBLING = "Sibling", "Sibling"
+    ADULT_CHILD = "Adult child", "Adult child"
+    OTHER = "Other", "Other"
+
+
 class SexAtBirth(TextChoices):
     """SexAtBirth."""
 
@@ -362,6 +384,8 @@ class PatientContactPerson(TimestampedModel, IdentifiableModel):
     related_patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="related_contacts", null=True
     )
+    # Free text, usually one of ContactRelationship.
+    relationship = models.CharField(max_length=255, blank=True, default="")
 
     def __str__(self) -> str:
         return f"PatientContactPerson(id={self.id}, name={self.name})"
@@ -425,6 +449,7 @@ class PatientIdentificationCard(TimestampedModel):
 
 
 __exports__ = (
+    "ContactRelationship",
     "SexAtBirth",
     "PatientSettingConstants",
     "Patient",

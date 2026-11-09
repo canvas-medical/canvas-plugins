@@ -1855,6 +1855,7 @@
     "ContactCategory",
     "ContactPointState",
     "ContactPointSystem",
+    "ContactRelationship",
     "Patient",
     "PatientAddress",
     "PatientContactCategory",

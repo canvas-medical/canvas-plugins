@@ -25,6 +25,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointUse,
     PersonSex,
 )
+from canvas_sdk.v1.data.patient import ContactRelationship
 
 
 @pytest.fixture
@@ -915,3 +916,65 @@ def test_patient_create_accepts_a_uuid_object_contact_identifier(
 
     [contact] = json.loads(effect.payload)["data"]["contacts"]
     assert contact["contact_identifier"] == str(identifier)
+
+
+def test_patient_contact_to_dict_sends_a_relationship_only_when_set() -> None:
+    """A relationship is sent when set, "" clears it, and leaving it out keeps the stored one."""
+    assert PatientContact(name="Sam Rivera", relationship="Mother").to_dict() == {
+        "name": "Sam Rivera",
+        "relationship": "Mother",
+    }
+    assert PatientContact(name="Sam Rivera", relationship="").to_dict() == {
+        "name": "Sam Rivera",
+        "relationship": "",
+    }
+    assert "relationship" not in PatientContact(name="Sam Rivera").to_dict()
+
+
+def test_patient_update_sends_a_linked_contacts_relationship(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """A contact linked to a parent's chart carries the relationship to home-app."""
+    patient = Patient(
+        patient_id="123",
+        contacts=[
+            PatientContact(
+                related_patient=RELATED_PATIENT_UUID, relationship=ContactRelationship.MOTHER
+            )
+        ],
+    )
+
+    [contact] = json.loads(patient.update().payload)["data"]["contacts"]
+
+    assert contact == {"related_patient": RELATED_PATIENT_UUID, "relationship": "Mother"}
+
+
+def test_patient_update_rejects_a_relationship_longer_than_its_column(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """A relationship over 255 characters, the column's length, is rejected."""
+    patient = Patient(
+        patient_id="123",
+        contacts=[PatientContact(name="Sam Rivera", relationship="x" * 256)],
+    )
+
+    with pytest.raises(ValidationError, match="relationship"):
+        patient.update()
+
+
+def test_contact_relationships_match_the_contacts_form() -> None:
+    """The constants are the options the Contacts form offers, in its order."""
+    assert [choice.value for choice in ContactRelationship] == [
+        "Mother",
+        "Father",
+        "Parent",
+        "Stepparent",
+        "Grandparent",
+        "Foster parent",
+        "Legal guardian",
+        "Social worker",
+        "Spouse",
+        "Sibling",
+        "Adult child",
+        "Other",
+    ]

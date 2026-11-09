@@ -86,6 +86,9 @@ class PatientContact:
     related_patient: str | uuid.UUID | None = None
     # Set with `contact_identifier` to remove an existing contact rather than create or update one.
     inactive: bool | None = None
+    # How the contact is related to the patient, usually a ContactRelationship value such as
+    # "Mother"; other text is kept as given. Omit to keep the stored value, "" to clear it.
+    relationship: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the contact to a dictionary, omitting any field that was not set.
@@ -102,6 +105,7 @@ class PatientContact:
                 ("email", self.email),
                 ("comments", self.comments),
                 ("inactive", self.inactive),
+                ("relationship", self.relationship),
             )
             if value is not None
         }
@@ -344,6 +348,11 @@ class Patient(TrackableFieldsModel):
             ):
                 if value is not None and not _is_valid_uuid(value):
                     error(f"Contact '{field}' must be a UUID, got {value}.", value)
+            if contact.relationship is not None and len(contact.relationship) > 255:
+                error(
+                    "Contact 'relationship' must be at most 255 characters.",
+                    contact.relationship,
+                )
             # An empty string is how a builder clears a stored value, so only validate content.
             if contact.phone_number and not _CONTACT_PHONE_RE.match(contact.phone_number):
                 error(
