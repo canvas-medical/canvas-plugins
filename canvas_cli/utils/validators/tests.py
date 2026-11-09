@@ -217,6 +217,17 @@ ACCEPTED = {
     "free-unit": {**MINIMAL, "pricing": [{"unit": "visit", "price_per_unit": "0"}]},
     "token-markup": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": 1500}]},
     "token-markup-zero": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": 0}]},
+    "unlisted-unit": {
+        **MINIMAL,
+        "pricing": [
+            {"unit": "note", "price_per_unit": "0.60"},
+            {"unit": "provider", "price_per_unit": "99", "unlisted": True},
+        ],
+    },
+    "listed-flag-false": {
+        **MINIMAL,
+        "pricing": [{"unit": "visit", "price_per_unit": "1", "unlisted": False}],
+    },
     "canvas-managed-vendor": {
         **MINIMAL,
         "vendors": [{"name": "Nabla", "relationship": "canvas_managed", "additional_fees": False}],
@@ -287,6 +298,9 @@ REFUSED = {
     "markup-boolean": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": True}]},
     "markup-null": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": None}]},
     "markup-float": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": 1500.0}]},
+    "token-unlisted": {**MINIMAL, "pricing": [VISIT, {"unit": "token", "unlisted": True}]},
+    "only-unlisted": {**MINIMAL, "pricing": [{**VISIT, "unlisted": True}]},
+    "unlisted-not-boolean": {**MINIMAL, "pricing": [{**VISIT, "unlisted": "yes"}]},
     "empty-vendors": {**MINIMAL, "vendors": []},
     "null-vendors": {**MINIMAL, "vendors": None},
     "vendor-unknown-relationship": {**MINIMAL, "vendors": [{**VENDOR, "relationship": "partner"}]},
