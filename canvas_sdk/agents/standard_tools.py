@@ -3379,6 +3379,9 @@ standard_tools.add_effect_tool(
         "Returns the generated task_id so it can be referenced later."
     ),
     effect_class=AddTask,
+    # The task is the requester's, as the chart records the staff member who creates one; a
+    # run no staff member started leaves the author unset.
+    inject_ctx={"patient_id": "patient_id", "staff_id": "author_id"},
     fields={
         "title": EffectField(
             type="string",
@@ -3492,7 +3495,7 @@ standard_tools.add_effect_tool(
             required=True,
         ),
     },
-    inject_ctx={},
+    inject_ctx={"staff_id": "author_id"},
     pre_build=_patients_record_check(Task, "task_id", "task"),
     categories=("task_writes",),
     returns_description="`{ok: true}`.",
