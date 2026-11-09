@@ -1609,8 +1609,15 @@ def test_add_effect_tool_allows_a_field_once_its_kwarg_is_not_injected() -> None
     assert effects[0].kwargs == {"patient_id": "p9"}
 
 
-def test_originate_command_tool_refuses_a_field_that_targets_the_note() -> None:
-    """The model's argument would replace the clinician's open note."""
+@pytest.mark.parametrize("target", ["note_uuid", "command_uuid"])
+def test_originate_command_tool_refuses_a_field_that_targets_an_id_the_run_sets(
+    target: str,
+) -> None:
+    """The model's argument would replace the clinician's open note, or the draft's id.
+
+    A model-chosen command id would differ from the ``command_id`` the tool returns, so a
+    later edit or delete would name a draft that does not exist.
+    """
     registry = ToolRegistry()
 
     with pytest.raises(ValueError, match="which the run sets"):
@@ -1618,9 +1625,7 @@ def test_originate_command_tool_refuses_a_field_that_targets_the_note() -> None:
             name="originate_fake",
             description="...",
             command_class=_FakeCommand,
-            fields={
-                "note": EffectField(type="string", description="...", command_field="note_uuid")
-            },
+            fields={"id": EffectField(type="string", description="...", command_field=target)},
         )
 
 
