@@ -924,7 +924,7 @@ class ToolRegistry:
             for arg_name, spec in fields.items()
             if not spec.pre_build_only
         }
-        _refuse_fields_targeting(name, command_field_map, {"note_uuid"})
+        _refuse_fields_targeting(name, command_field_map, {"note_uuid", "command_uuid"})
 
         # Canvas Command classes carry a Meta inner class with a `key` (e.g., "plan",
         # "prescribe"), the command type's schema key; fall back to the class name if
