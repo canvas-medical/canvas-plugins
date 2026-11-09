@@ -87,6 +87,16 @@ jobs:
         run: |
           uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
 
+      # Run canvas's plugin mirror now so home-app can build the new tag without waiting for
+      # its 10-minute schedule. The schedule is the backstop, so a failed dispatch doesn't
+      # fail the release.
+      - name: Dispatch canvas's plugin mirror
+        if: ${{ !inputs.publish-tag && !inputs.dry-run && steps.release.outputs.released == 'true' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.CANVAS_REMOTE_WORKFLOW_DISPATCH_TOKEN }}
+        run: gh workflow run mirror-canvas-plugins.yml --repo canvas-medical/canvas --ref develop
+
       - name: Publish distributions to the GitHub Release (re-publish)
         if: ${{ inputs.publish-tag && !inputs.dry-run }}
         env:

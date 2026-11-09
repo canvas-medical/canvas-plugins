@@ -90,6 +90,18 @@ from settings import (
     SENTRY_DSN,
 )
 
+
+def sentry_release() -> str:
+    """
+    The runner version to report to Sentry: CANVAS_PLUGINS_RUNNER_REF, the ref home-app
+    built the runner from, when the image was built from that ref; else the public pin.
+    """
+    runner_ref = None
+    if os.getenv("CANVAS_PLUGINS_RUNNER_SOURCE") == "private":
+        runner_ref = os.getenv("CANVAS_PLUGINS_RUNNER_REF")
+    return runner_ref or os.getenv("CANVAS_PLUGINS_REPO_VERSION") or "unknown"
+
+
 if SENTRY_DSN:
     # Lazy import for faster reload time in dev
     from sentry_sdk.integrations.executing import ExecutingIntegration
@@ -102,7 +114,7 @@ if SENTRY_DSN:
             ExecutingIntegration(),
             PureEvalIntegration(),
         ],
-        release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
+        release=sentry_release(),
         send_default_pii=True,
         spotlight=False,
         traces_sample_rate=0.0,
