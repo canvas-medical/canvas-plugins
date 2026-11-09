@@ -139,6 +139,21 @@ def test_a_run_is_timed_under_its_agent_only_when_a_plugin_loaded_it(
     assert call.kwargs["extra_tags"] == {"agent_id": tagged}
 
 
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_an_agent_no_plugin_has_loaded_says_so(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+) -> None:
+    """A runner still loading its plugins answers in a way home-app can retry."""
+    (response,) = plugin_runner.RunAgent(
+        _make_request(agent_id="test_agent_plugin.agents.not_loaded_yet:Agent"), None
+    )
+
+    assert (response.success, response.error_kind) == (False, "AGENT_NOT_LOADED")
+
+
 # RunAgent happy path -----------------------------------------------------------
 
 
