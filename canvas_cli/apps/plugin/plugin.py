@@ -302,10 +302,10 @@ def install(
     ),
 ) -> None:
     """Install a plugin into a Canvas instance."""
-    print_install_deprecation()
-
     if not host:
         raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    print_install_deprecation(host)
 
     token = get_or_request_api_token(host)
 

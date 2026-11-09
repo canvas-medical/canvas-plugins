@@ -3,6 +3,7 @@
 import json
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import typer
@@ -83,17 +84,48 @@ def test_git_credential_does_not_show_the_notice() -> None:
     assert MIGRATION_URL not in result.stderr
 
 
-def test_install_warns_that_direct_installs_are_deprecated(
+def test_install_warns_customer_instances_that_direct_installs_are_deprecated(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`canvas install` prints the deprecation warning on every run."""
-    with pytest.raises(typer.BadParameter):
-        install(plugin_name=tmp_path, secrets=[], variables=[], is_enabled=True, host=None)
+    """`canvas install` against a customer instance prints the deprecation warning."""
+    with (
+        patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token", return_value="tok"),
+        pytest.raises(typer.BadParameter),
+    ):
+        install(
+            plugin_name=tmp_path / "missing",
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host="https://acme.canvasmedical.com",
+        )
 
     err = capsys.readouterr().err
     assert "deprecated" in err
     assert "no longer supported as of December 14, 2026" in err
     assert MIGRATION_URL in err
+
+
+@pytest.mark.parametrize(
+    "host", ["http://localhost:8000", "https://pull-x.preview.canvasmedical.com"]
+)
+def test_install_does_not_warn_local_or_preview_instances(
+    host: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Local dev and preview environments keep accepting `canvas install`, so no warning."""
+    with (
+        patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token", return_value="tok"),
+        pytest.raises(typer.BadParameter),
+    ):
+        install(
+            plugin_name=tmp_path / "missing",
+            secrets=[],
+            variables=[],
+            is_enabled=True,
+            host=host,
+        )
+
+    assert MIGRATION_URL not in capsys.readouterr().err
 
 
 def test_notice_prints_even_when_it_cannot_be_recorded(
