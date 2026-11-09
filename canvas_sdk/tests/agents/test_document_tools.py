@@ -452,3 +452,33 @@ def test_only_a_current_medical_record_number_counts(document: Any, identifier: 
     )
 
     assert result["match"] is None
+
+
+@pytest.mark.django_db
+def test_a_printed_sending_mrn_is_confirmed_against_the_patients_record(document: Any) -> None:
+    """The print's MRN can be the lab's, which the patient's current identifier confirms."""
+    patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
+    _sending_mrn(patient, "VL-4471")
+    _sending_mrn(patient, "VL-9999", expires=date(2000, 1, 1))
+    read = {"first_name": "Jane", "last_name": "Doe", "birth_date": "1980-04-02"}
+    printed = {"name": "DOE, JANE", "birth_date": "04/02/1980"}
+
+    current, _ = _run(
+        "match_patient",
+        document,
+        **read,
+        mrn="VL-4471",
+        as_printed={**printed, "mrn": "MRN VL-4471"},
+        legibility="clear",
+    )
+    expired, _ = _run(
+        "match_patient",
+        document,
+        **read,
+        mrn="VL-9999",
+        as_printed={**printed, "mrn": "MRN VL-9999"},
+        legibility="clear",
+    )
+
+    assert current["match"] == {"patient_id": str(patient.id)}
+    assert expired["match"] is None
