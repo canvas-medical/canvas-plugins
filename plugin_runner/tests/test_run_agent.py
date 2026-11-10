@@ -1,8 +1,9 @@
 import json
 import threading
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import anthropic
@@ -1086,6 +1087,10 @@ def test_an_agents_exception_reaches_sentry_without_its_frames_locals(
     assert any("boom after 1 message" in envelope for envelope in transport.sent)
 
 
+@pytest.mark.parametrize("run_seconds", [None, 1200], ids=["default", "extended"])
+@pytest.mark.parametrize(
+    "make_error", [lambda: RuntimeError("agent bug"), _connection_error], ids=["bug", "gateway"]
+)
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_a_run_that_raises_gives_its_slot_back(
     install_test_plugin: Path,
@@ -1093,13 +1098,23 @@ def test_a_run_that_raises_gives_its_slot_back(
     plugin_runner: PluginRunner,
     inference_gateway_env: None,
     monkeypatch: pytest.MonkeyPatch,
+    run_seconds: int | None,
+    make_error: Any,
 ) -> None:
-    """A failing agent must not hold its slot, or failures would starve later runs."""
+    """A failing agent must not hold its slots, or failures would starve later runs.
+
+    An extended run holds the only extended slot by default, so losing it would refuse
+    every later extended run.
+    """
     slots = threading.BoundedSemaphore(1)
+    extended_slots = threading.BoundedSemaphore(1)
     monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+    monkeypatch.setattr(runner_module, "EXTENDED_AGENT_RUN_SLOTS", extended_slots)
+    if run_seconds is not None:
+        _with_run_seconds(monkeypatch, run_seconds)
 
     def _boom(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
-        raise RuntimeError("agent bug")
+        raise make_error()
 
     monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _boom)
 
@@ -1107,6 +1122,7 @@ def test_a_run_that_raises_gives_its_slot_back(
 
     assert response.success is False
     assert slots.acquire(blocking=False), "a failed run must give its slot back"
+    assert extended_slots.acquire(blocking=False), "and its extended slot"
 
 
 def _with_run_seconds(monkeypatch: pytest.MonkeyPatch, run_seconds: int) -> None:
@@ -1430,3 +1446,48 @@ def test_run_agent_sets_the_document_from_the_request(
     (response,) = plugin_runner.RunAgent(request, None)
 
     assert json.loads(response.effects[0].payload)["subject"][-1] == "d1"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_that_outlives_its_call_frees_its_slot_and_is_reported(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run stuck outside a model call cannot hold its slot after home-app gave up on it."""
+    # Unbounded, so a second release would show as a second free slot.
+    slots = threading.Semaphore(1)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+    stuck = threading.Event()
+    unblock = threading.Event()
+    reported: list[str] = []
+    monkeypatch.setattr(
+        runner_module.sentry_sdk, "capture_message", lambda message, **_: reported.append(message)
+    )
+
+    def _hang(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        stuck.set()
+        unblock.wait(timeout=10)
+        raise RuntimeError("finished long after its call")
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _hang)
+    monkeypatch.setattr(runner_module, "HEARTBEAT_SECONDS", 0)
+
+    stream = cast(
+        Generator[Any, None, None],
+        plugin_runner.RunAgent(_make_request(stream_progress=True), None),
+    )
+    next(stream)
+    assert stuck.wait(timeout=5)
+    stream.close()  # home-app's call passed its deadline
+
+    assert slots.acquire(blocking=False), "the stuck run's slot is free for the next run"
+    slots.release()
+    assert reported and "still running after its call ended" in reported[0]
+    unblock.set()
+    time.sleep(0.2)
+    # The stuck thread finishing later does not free the slot a second time.
+    assert slots.acquire(blocking=False)
+    assert not slots.acquire(blocking=False)
