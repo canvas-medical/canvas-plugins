@@ -682,9 +682,10 @@ def stream_logs(host: str, token: LogToken) -> None:
     with ``STREAM_TOKEN_INACTIVE`` once the token is inactive. A Platform stream then mints a
     fresh token through Platform, which re-checks the person's access, and reconnects. Any
     other close ends the stream, as does a 4401 on a credentials.ini stream. A stream that
-    Console closes before starting it, as it does after "Token authorization failed." or "No
-    instance named ...", is refused, and the error quotes Console's notice; for a Platform
-    stream it also names the way off Platform.
+    Console closes before starting it ends the run. After a refusal notice, such as "Token
+    authorization failed." or "No instance named ...", the error quotes it, and for a Platform
+    stream also names the way off Platform. With no notice, as when checking the token raises
+    and Console closes with 1011, the error gives the close code.
 
     Args:
         host (str): The Canvas instance URL.
@@ -702,7 +703,12 @@ def stream_logs(host: str, token: LogToken) -> None:
         )
         if not result.opened and result.close_code is not None:
             # Also stops a re-minted token Console refuses from reconnecting in a loop.
-            answer: str = f"Console answered: {result.refusal} " if result.refusal else ""
+            if not result.refusal:
+                raise click.ClickException(
+                    f"Console closed the log stream for {token.slug} before starting it "
+                    f"(close code {result.close_code}). Run the command again."
+                )
+            answer: str = f"Console answered: {result.refusal} "
             if token.reissuable:
                 raise _refused_platform_token(token, answer)
             raise click.ClickException(

@@ -700,16 +700,25 @@ def test_stream_closed_before_start_without_a_notice_ends(
     credentials_token: Mock,
     fake_stream: type[_FakeStream],
 ) -> None:
-    """Console closing a Platform stream before starting it, with no refusal notice, still ends it."""
+    """Console failing before it starts a Platform stream ends the run without blaming the token.
+
+    Console sends no refusal when checking the token raises, such as when the instance is
+    unreachable; websockets then closes with 1011.
+    """
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    fake_stream.script = [([CHECKING], 1000)]
+    fake_stream.script = [([CHECKING], 1011)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
     assert result.exit_code == 1
-    assert "acme-prod refused the log token Canvas Platform issued." in result.output
-    assert "Console answered" not in result.output
+    assert (
+        "Console closed the log stream for acme-prod before starting it (close code 1011)."
+        in result.output
+    )
+    assert "refused" not in result.output
+    assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
 
 
 def test_stream_refused_after_reconnect_ends(
