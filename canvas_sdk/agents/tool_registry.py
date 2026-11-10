@@ -1,4 +1,5 @@
 import copy
+import re
 import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -22,6 +23,8 @@ DEFAULT_TOOL_RESULT_CHARS = 50_000
 # full set of outside records. A larger result costs tokens on every later call in the
 # run, so a tool that needs more should page its results instead.
 MAX_TOOL_RESULT_CHARS = 200_000
+# A tool name the Messages API accepts.
+TOOL_NAME = re.compile(r"[a-zA-Z0-9_-]{1,64}")
 
 
 def _effect_type_name(effect_class: type, effect_method: str) -> str:
@@ -488,7 +491,9 @@ class ToolRegistry:
                 other tool reads or changes clinician work; no standard tool does.
 
         Raises:
-            ValueError: If ``definition`` is missing a ``"name"`` key, if a
+            ValueError: If ``definition`` is missing a ``"name"`` key, if the name is not
+                1 to 64 letters, digits, ``_`` or ``-`` as the Messages API requires, if
+                a non-empty ``input_schema`` is not an object schema, if a
                 tool with that name is already registered, if an effect
                 type is not an ``EffectType`` name, or if ``max_result_chars`` is
                 not between 1 and :data:`MAX_TOOL_RESULT_CHARS`.
@@ -498,6 +503,19 @@ class ToolRegistry:
         name = definition.get("name")
         if not name:
             raise ValueError("Tool definition is missing a 'name' key")
+        if not isinstance(name, str) or not TOOL_NAME.fullmatch(name):
+            raise ValueError(
+                f"Tool name {name!r} must be 1 to 64 letters, digits, '_' or '-', "
+                "which the Messages API requires"
+            )
+        given_schema = definition.get("input_schema")
+        if given_schema and (
+            not isinstance(given_schema, dict) or given_schema.get("type") != "object"
+        ):
+            raise ValueError(
+                f"Tool {name!r} input_schema must be a JSON Schema with type 'object', "
+                "which the Messages API requires"
+            )
         if name in self._executors:
             raise ValueError(f"Tool {name!r} is already registered")
         declared = frozenset(effect_types)

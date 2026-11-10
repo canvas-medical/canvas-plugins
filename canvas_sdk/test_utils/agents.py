@@ -28,6 +28,7 @@ import copy
 import re
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from time import monotonic
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
@@ -40,12 +41,19 @@ from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import agent_secrets, count_model_call
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
-from canvas_sdk.agents.run_record import RunRecorder, ToolCallRecord, current_recorder
+from canvas_sdk.agents.run_record import (
+    DEFAULT_RUN_SECONDS,
+    RUN_TOOL_RESULT_CHARS,
+    RunRecorder,
+    ToolCallRecord,
+    current_recorder,
+)
 from canvas_sdk.agents.subject import RunRequester, RunSubject
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.v1.data import CommandTypeSetting
+from plugin_runner.usage import permitted_usage, unit_name
 
 
 def text(value: str) -> TextBlock:
@@ -197,7 +205,10 @@ def prepare_agent(
     ``allowed``, ``denied``, and ``approve`` are the manifest's ``tools`` grant: tool names
     and ``@category`` references. ``requester`` carries the staff member and their
     permissions, and ``capabilities`` are what the platform would grant them; tools
-    either rules out are hidden, as on the platform. ``run_id`` defaults to a fresh one.
+    either rules out are hidden, as on the platform. The default requester is Canvas Bot,
+    as behind a run a handler starts, whose permissions do not limit the run; pass a
+    ``RunRequester`` with ``staff_id`` and ``permissions`` to test a staff member's run.
+    ``run_id`` defaults to a fresh one.
     ``secrets`` are the plugin's variables, which the platform gives the agent less its
     gateway key.
     """
@@ -234,25 +245,47 @@ class AgentTestRun:
     stop_reason: str = ""
 
 
+def _permitted_usage(effects: list[Effect], units: Iterable[str], plugin_name: str) -> list[Effect]:
+    """``effects`` less the usage records the plugin runner drops; it rewrites those it keeps."""
+    allowed = frozenset(unit_name(unit) for unit in units)
+    kept = []
+    for effect in effects:
+        if effect.type == EffectType.RECORD_USAGE:
+            # The underlying message, which permitted_usage rewrites in place.
+            wire = effect.to_proto()
+            wire.plugin_name = plugin_name
+            if not permitted_usage([wire], allowed):
+                continue
+        kept.append(effect)
+    return kept
+
+
 def run_agent(
     agent: AgentPlugin,
     gateway: Any,
     trigger_payload: dict[str, Any] | None = None,
     *,
     scope_key: str = "test",
+    run_seconds: int = DEFAULT_RUN_SECONDS,
+    usage_units: Iterable[str] = (),
 ) -> AgentTestRun:
     """Run a prepared agent through its lifecycle as the plugin-runner does.
 
     Calls ``on_run_start``, ``load_state``, ``run``, ``save_state``, and ``on_run_end``,
-    or ``on_run_error`` when one raises, and records the run like the platform, holding
-    it to the agent's ``max_model_calls``. Unlike
-    the platform, an exception from the run or a hook propagates, so a test sees it.
+    or ``on_run_error`` when one raises, and records the run like the platform: held to
+    the agent's ``max_model_calls``, to a deadline ``run_seconds`` (the manifest entry's)
+    from now, and to :data:`RUN_TOOL_RESULT_CHARS` of tool results in all. Effects the
+    tool grant does not allow are dropped, and so are usage records in a unit other than
+    ``usage_units``, the units the manifest's ``catalog.pricing`` lists. Unlike the
+    platform, an exception from the run or a hook propagates, so a test sees it.
     """
     tools = agent.tools or ToolRegistry()
     effect_grant = EffectGrant(
         direct=tools.direct_effect_types(), proposable=tools.proposable_effect_types()
     )
     recorder = RunRecorder(max_model_calls=agent.max_model_calls)
+    recorder.deadline = monotonic() + run_seconds
+    recorder.max_tool_result_chars = RUN_TOOL_RESULT_CHARS
     token = current_recorder.set(recorder)
     try:
         agent.on_run_start(scope_key)
@@ -266,7 +299,9 @@ def run_agent(
         agent.on_run_end(result)
     finally:
         current_recorder.reset(token)
-    kept, dropped = split_granted_effects(result.effects, effect_grant)
+    granted, dropped = split_granted_effects(result.effects, effect_grant)
+    kept = _permitted_usage(granted, usage_units, type(agent).__module__.split(".")[0])
+    dropped += [effect for effect in granted if not any(effect is each for each in kept)]
     return AgentTestRun(
         result=result,
         effects=kept,

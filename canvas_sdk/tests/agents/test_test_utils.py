@@ -4,7 +4,10 @@ from typing import Any
 import pytest
 
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, RunSubject, ToolRegistry
+from canvas_sdk.agents.run_record import RUN_TOOL_RESULT_CHARS, RunDeadlineExceeded
+from canvas_sdk.agents.tool_registry import MAX_TOOL_RESULT_CHARS
 from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.usage import RecordUsage
 from canvas_sdk.test_utils.agents import (
     FakeGateway,
     prepare_agent,
@@ -153,3 +156,63 @@ def test_run_agent_holds_the_run_to_the_agents_model_call_ceiling() -> None:
     run = run_agent(prepare_agent(_Capped, allowed=["broken"]), gateway)
 
     assert (run.model_calls, run.stop_reason) == (1, "call_limit")
+
+
+@tools.tool(
+    name="record_visit",
+    description="x",
+    input_schema={"type": "object"},
+    effect_types=("RECORD_USAGE",),
+)
+def _record_visit(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    ctx["effects"].append(RecordUsage(unit="Visit", key="visit:1").apply())
+    return {"ok": True}
+
+
+@tools.tool(
+    name="read_everything",
+    description="x",
+    input_schema={"type": "object"},
+    max_result_chars=MAX_TOOL_RESULT_CHARS,
+)
+def _read_everything(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+    return "x" * MAX_TOOL_RESULT_CHARS
+
+
+@pytest.mark.parametrize(("units", "kept"), [(["visit"], 1), ([], 0)])
+def test_run_agent_keeps_usage_only_in_a_unit_the_manifest_prices(
+    units: list[str], kept: int
+) -> None:
+    """The plugin runner drops a usage record in a unit catalog.pricing does not list."""
+    agent = prepare_agent(_Agent, allowed=["record_visit"])
+    gateway = FakeGateway(reply(tool_use("record_visit")), reply(text("done")))
+
+    run = run_agent(agent, gateway, usage_units=units)
+
+    usage = [effect for effect in run.effects if effect.type == EffectType.RECORD_USAGE]
+    assert len(usage) == kept
+    assert len(run.dropped) == 2 - kept  # the banner no granted tool stages, and the usage
+
+
+def test_run_agent_stops_the_run_at_its_deadline() -> None:
+    """A run with no time left makes no model call, as on the platform."""
+    agent = prepare_agent(_Agent, allowed=["@demo"])
+    gateway = FakeGateway(reply(text("never sent")))
+
+    with pytest.raises(RunDeadlineExceeded):
+        run_agent(agent, gateway, run_seconds=0)
+
+    assert gateway.requests == []
+
+
+def test_run_agent_caps_the_tool_results_a_run_sends_in_all() -> None:
+    """The platform sends a run's model at most RUN_TOOL_RESULT_CHARS of tool results."""
+    agent = prepare_agent(_Agent, allowed=["read_everything"])
+    calls = [tool_use("read_everything", id=f"t{n}") for n in range(4)]
+    gateway = FakeGateway(reply(*calls), reply(text("done")))
+
+    run_agent(agent, gateway)
+
+    results = gateway.requests[1]["messages"][-1]["content"]
+    sent = sum(len(json.dumps(block["content"])) for block in results)
+    assert sent < RUN_TOOL_RESULT_CHARS + 4 * 1_000
