@@ -9,7 +9,7 @@ import time
 import zlib
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
-from typing import Any, TypedDict, cast
+from typing import Any, NamedTuple, TypedDict, cast
 from urllib.parse import urlparse
 
 import click
@@ -598,30 +598,47 @@ def _refused_platform_token(token: LogToken, answer: str = "") -> click.ClickExc
     )
 
 
-def _is_console_error(message: str) -> bool:
-    """Return whether ``message`` is one of Console's error notices.
+def _console_notice(message: str) -> dict[str, Any] | None:
+    """Return ``message`` as one of Console's notices, or None for anything else.
 
-    Console sends a refusal, such as "Token authorization failed.", as JSON with ``severity``
-    ``error`` before it closes the stream. Everything it sends once the token is accepted, from
-    "Connecting to log stream..." on, is a plain string or a log line.
+    Before it starts the stream, Console sends JSON notices with a ``severity``: "Connecting to
+    the log stream for '<slug>'..." (``info``) while it looks up the instance and checks the
+    token, then a refusal such as "No instance named '<slug>' was found." or "Token
+    authorization failed." (``error``) before it closes. Everything it sends once the token is
+    accepted, from "Connecting to log stream..." on, is a plain string or a log line.
 
     Args:
         message (str): A message Console sent on the stream.
 
     Returns:
-        bool: True for a JSON object whose ``severity`` is ``error``.
+        dict[str, Any] | None: The notice, for a JSON object carrying ``severity``.
     """
     try:
         body: Any = json.loads(message)
     except ValueError:
-        return False
-    return isinstance(body, dict) and body.get("severity") == "error"
+        return None
+    return body if isinstance(body, dict) and "severity" in body else None
 
 
-def _stream_once(url: str) -> tuple[bool, int | None]:
+class StreamResult(NamedTuple):
+    """How one Console log stream connection ended.
+
+    Attributes:
+        opened (bool): Whether Console accepted the token and started the stream.
+        close_code (int | None): The close code Console sent, None when the connection ended
+            without one, such as on Ctrl-C.
+        refusal (str): The last error notice Console sent before starting the stream, or "".
+    """
+
+    opened: bool
+    close_code: int | None
+    refusal: str
+
+
+def _stream_once(url: str) -> StreamResult:
     """Print one Console log stream connection until it closes.
 
-    The stream counts as opened once Console sends a message other than an error notice.
+    The stream counts as opened once Console sends a message other than one of its notices.
     websocket-client fires ``on_open`` at the HTTP upgrade, before Console checks the token, so
     a refused token also reaches ``on_open``.
 
@@ -629,16 +646,18 @@ def _stream_once(url: str) -> tuple[bool, int | None]:
         url (str): The stream URL, carrying the token.
 
     Returns:
-        tuple[bool, int | None]: Whether Console accepted the token and started the stream, and
-            the close code Console sent (None when the connection ended without one, such as on
-            Ctrl-C).
+        StreamResult: Whether the stream started, the close code, and Console's refusal.
     """
     opened: list[bool] = [False]
     close_code: list[int | None] = [None]
+    refusal: list[str] = [""]
 
     def on_message(ws: websocket.WebSocket, message: str) -> None:
-        if not _is_console_error(message):
+        notice: dict[str, Any] | None = _console_notice(message)
+        if notice is None:
             opened[0] = True
+        elif not opened[0] and notice.get("severity") == "error":
+            refusal[0] = str(notice.get("message", ""))
         _on_message(ws, message)
 
     def on_close(ws: websocket.WebSocket, close_status_code: int | None, close_msg: str) -> None:
@@ -653,7 +672,7 @@ def _stream_once(url: str) -> tuple[bool, int | None]:
     )
     ws.on_open = _on_open
     ws.run_forever()
-    return opened[0], close_code[0]
+    return StreamResult(opened[0], close_code[0], refusal[0])
 
 
 def stream_logs(host: str, token: LogToken) -> None:
@@ -663,8 +682,8 @@ def stream_logs(host: str, token: LogToken) -> None:
     with ``STREAM_TOKEN_INACTIVE`` once the token is inactive. A Platform stream then mints a
     fresh token through Platform, which re-checks the person's access, and reconnects. Any
     other close ends the stream, as does a 4401 on a credentials.ini stream. A Platform stream
-    that Console closes before starting it, as it does after "Token authorization failed.", is
-    a refused token.
+    that Console closes before starting it, as it does after "Token authorization failed." or
+    "No instance named ...", is a refused token, and the error quotes Console's notice.
 
     Args:
         host (str): The Canvas instance URL.
@@ -677,13 +696,14 @@ def stream_logs(host: str, token: LogToken) -> None:
     # 'example' from 'https://example.canvasmedical.com/')
     instance = instance_slug(host) or cast(str, urlparse(host).hostname)
     while True:
-        opened, close_code = _stream_once(
+        result: StreamResult = _stream_once(
             f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
         )
-        if token.reissuable and not opened and close_code is not None:
+        if token.reissuable and not result.opened and result.close_code is not None:
             # Also stops a re-minted token Console refuses from reconnecting in a loop.
-            raise _refused_platform_token(token)
-        if close_code != STREAM_TOKEN_INACTIVE or not token.reissuable:
+            answer: str = f"Console answered: {result.refusal} " if result.refusal else ""
+            raise _refused_platform_token(token, answer)
+        if result.close_code != STREAM_TOKEN_INACTIVE or not token.reissuable:
             return
         print("Reconnecting with a fresh log token from Canvas Platform.", file=sys.stderr)
         token.refresh()

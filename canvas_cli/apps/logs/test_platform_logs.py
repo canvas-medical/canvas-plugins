@@ -549,12 +549,23 @@ def test_instance_slug(host: str, slug: str | None) -> None:
     assert instance_slug(host) == slug
 
 
-# What Console sends once it accepts the token, and the refusal it sends before closing with
-# 1000 when it does not. Both come after websocket-client fires ``on_open`` at the upgrade.
-CONNECTED: list[str] = ["Connecting to log stream...", "Log stream connected."]
+# What Console sends, in order, after websocket-client fires ``on_open`` at the upgrade: a JSON
+# notice before it looks up the instance and checks the token, then either the plain strings
+# that start the stream or a JSON refusal followed by a close with 1000.
+CHECKING: str = (
+    '{"timestamp": "2026-11-02T10:00:00", "severity": "info", "message": '
+    "\"Connecting to the log stream for 'acme-prod'. This may take a few moments.\"}"
+)
+CONNECTED: list[str] = [CHECKING, "Connecting to log stream...", "Log stream connected."]
 REFUSED: list[str] = [
+    CHECKING,
     '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
-    '"message": "Token authorization failed."}'
+    '"message": "Token authorization failed."}',
+]
+NO_INSTANCE: list[str] = [
+    CHECKING,
+    '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
+    '"message": "No instance named \'acme-prod\' was found."}',
 ]
 
 
@@ -658,7 +669,27 @@ def test_stream_refused_on_fresh_token_ends(
 
     assert result.exit_code == 1
     assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert "Console answered: Token authorization failed." in result.output
     assert "canvas logout" in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_console_without_the_instance_ends_with_its_answer(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console not knowing a Platform-managed instance ends the run non-zero, quoting Console."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(NO_INSTANCE, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "Console answered: No instance named 'acme-prod' was found." in result.output
     assert len(fake_stream.urls) == 1
 
 
