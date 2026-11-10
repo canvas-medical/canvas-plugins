@@ -121,7 +121,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.269.1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },

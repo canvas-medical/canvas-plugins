@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.0.0 (2026-11-10)
+
+### Features
+
+- **cli**: List, enable, disable, config list and namespace through Canvas Platform (KOALA-7579,
+  KOALA-8032) ([#1966](https://github.com/canvas-medical/canvas-plugins/pull/1966),
+  [`c87a21d`](https://github.com/canvas-medical/canvas-plugins/commit/c87a21d4bc8a1ff9064cf0410ba47d09dce8d3aa))
+
+Co-authored-by: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Sisyphus <sisyphus@canvasmedical.com>
+
+
 ## v0.269.1 (2026-11-09)
 
 ### Bug Fixes
