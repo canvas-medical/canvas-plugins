@@ -41,4 +41,4 @@ class ReasonForVisitSettingCodingFactory(
     code = factory.Sequence(lambda n: f"rfv-{n}")
     display = factory.Faker("sentence", nb_words=3)
     user_selected = True
-    duration: list = []
+    duration = factory.LazyFunction(list)

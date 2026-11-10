@@ -13,4 +13,4 @@ class DocumentTypeFactory(factory.django.DjangoModelFactory[DocumentType]):
     name = factory.Sequence(lambda n: f"Document Type {n}")
     report_type = "ADMINISTRATIVE"
     template_type = None
-    template_fields: list[dict] = []
+    template_fields = factory.LazyFunction(list)

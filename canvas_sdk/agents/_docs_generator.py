@@ -132,15 +132,20 @@ def _format_tool_block(name: str) -> str:
         category_tags = " · ".join(f"`@{c}`" for c in categories)
         parts.append(f"**Category:** {category_tags}")
         parts.append("")
-    requirements = [
+    capabilities = [
         f"the `{capability.value}` capability"
         for capability in sorted(standard_tools.required_capabilities_for(name))
-    ] + [f"`{permission}`" for permission in sorted(standard_tools.required_permissions_for(name))]
-    if requirements:
-        parts.append(
-            f"**Offered only to runs with:** {', '.join(requirements)}. The platform hides "
-            "it from other runs."
-        )
+    ]
+    permissions = [
+        f"`{permission}`" for permission in sorted(standard_tools.required_permissions_for(name))
+    ]
+    # Capabilities are a staff member's alone; a run no user started, or a superuser's,
+    # holds every permission.
+    if capabilities:
+        parts.append(f"**Offered only to runs with:** {', '.join(capabilities)}.")
+        parts.append("")
+    if permissions:
+        parts.append(f"**Hidden from a user's run without:** {', '.join(permissions)}.")
         parts.append("")
     # Description: keep paragraphs together but normalize internal whitespace.
     description = " ".join(definition["description"].split())
@@ -247,6 +252,18 @@ def main() -> int:
         return 2
 
     original = target.read_text()
+    missing = [
+        name
+        for name in _SENTINEL_NAMES
+        if f"<!-- AUTOGEN:{name} START -->" not in original
+        or f"<!-- AUTOGEN:{name} END -->" not in original
+    ]
+    if missing:
+        print(
+            f"error: {target} has no AUTOGEN block for {', '.join(missing)}; is it tools.md?",
+            file=sys.stderr,
+        )
+        return 2
     blocks = _build_blocks()
     updated = _substitute(original, blocks)
 

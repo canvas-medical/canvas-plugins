@@ -354,6 +354,33 @@ def test_every_real_write_tool_appears_in_the_writes_block() -> None:
 # ---------------------------------------------------------------------------
 
 
+_ALL_BLOCKS_STALE = "".join(
+    f"<!-- AUTOGEN:{name} START -->\nstale\n<!-- AUTOGEN:{name} END -->\n"
+    for name in ("categories", "reads", "writes")
+)
+
+
+@pytest.mark.parametrize("mode", ["--check", "--write"])
+@pytest.mark.parametrize("kept", [(), ("categories", "reads")])
+def test_main_refuses_a_file_missing_a_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, kept: tuple[str, ...]
+) -> None:
+    """A target that lost its blocks, or the wrong file, is never reported up to date."""
+    target = tmp_path / "tools.md"
+    target.write_text(
+        "# Tools\n"
+        + "".join(
+            f"<!-- AUTOGEN:{name} START -->\nx\n<!-- AUTOGEN:{name} END -->\n" for name in kept
+        )
+    )
+    before = target.read_text()
+
+    monkeypatch.setattr("sys.argv", ["_docs_generator", mode, "--target", str(target)])
+
+    assert _docs_generator.main() == 2
+    assert target.read_text() == before
+
+
 def test_main_check_mode_passes_when_file_is_up_to_date(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -384,7 +411,7 @@ def test_main_check_mode_fails_when_file_is_stale(
 ) -> None:
     """--check exits 1 when the target's blocks don't match the freshly-rendered ones."""
     target = tmp_path / "tools.md"
-    target.write_text("<!-- AUTOGEN:categories START -->\nstale\n<!-- AUTOGEN:categories END -->\n")
+    target.write_text(_ALL_BLOCKS_STALE)
 
     monkeypatch.setattr("sys.argv", ["_docs_generator", "--check", "--target", str(target)])
     exit_code = _docs_generator.main()
@@ -397,9 +424,7 @@ def test_main_write_mode_updates_file_in_place(
 ) -> None:
     """--write rewrites the file with fresh block contents."""
     target = tmp_path / "tools.md"
-    target.write_text(
-        "Hand-written.\n<!-- AUTOGEN:categories START -->\nstale\n<!-- AUTOGEN:categories END -->\n"
-    )
+    target.write_text("Hand-written.\n" + _ALL_BLOCKS_STALE)
 
     monkeypatch.setattr("sys.argv", ["_docs_generator", "--write", "--target", str(target)])
     exit_code = _docs_generator.main()

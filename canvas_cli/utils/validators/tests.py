@@ -5,7 +5,7 @@ import pytest
 from jsonschema import ValidationError
 
 from canvas_cli.utils.validators import validate_manifest_file
-from canvas_sdk.agents.run_record import MAX_RUN_SECONDS
+from canvas_sdk.agents.run_record import DEFAULT_RUN_SECONDS, MAX_RUN_SECONDS
 
 
 @pytest.fixture
@@ -607,9 +607,18 @@ def test_manifest_accepts_run_seconds_up_to_the_ceiling() -> None:
     validate_manifest_file(_with_run_seconds(MAX_RUN_SECONDS))
 
 
-@pytest.mark.parametrize("run_seconds", [MAX_RUN_SECONDS + 1, 0, "900"])
+def test_manifest_accepts_run_seconds_at_the_default() -> None:
+    """The default is the least an agent may ask for."""
+    validate_manifest_file(_with_run_seconds(DEFAULT_RUN_SECONDS))
+
+
+@pytest.mark.parametrize(
+    "run_seconds", [MAX_RUN_SECONDS + 1, DEFAULT_RUN_SECONDS - 1, 20, 0, "900"]
+)
 def test_manifest_rejects_run_seconds_outside_the_ceiling(run_seconds: object) -> None:
-    """Asking for more than the ceiling, nothing, or a string fails validation."""
+    """More than the ceiling, less than the default (which leaves no model time past the
+    deadline margin), or a string fails validation.
+    """
     with pytest.raises(ValidationError):
         validate_manifest_file(_with_run_seconds(run_seconds))
 

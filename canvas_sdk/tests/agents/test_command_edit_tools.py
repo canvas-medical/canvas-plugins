@@ -139,7 +139,7 @@ def test_a_delete_names_the_draft() -> None:
             lambda patient: staged_command(patient, note=NoteFactory.create(patient=patient)),
             "No command with that id",
         ),
-        (lambda patient: staged_command(patient, "hpi"), "not one these tools change"),
+        (lambda patient: staged_command(patient, "questionnaire"), "not one these tools change"),
     ],
     ids=["committed", "another patient", "another note", "a kind no tool stages"],
 )
@@ -245,3 +245,15 @@ def test_an_approval_listed_delete_finds_a_draft_this_run_staged() -> None:
 
     assert (result["deleted"], result["command"]) == (True, None)
     assert effects == []
+
+
+def test_every_standard_originate_tools_kind_can_be_edited_and_deleted() -> None:
+    """Each draft a standard originate tool stages is one the draft tools change."""
+    staged = {
+        standard_tools.metadata_for(definition["name"])["command_class"].Meta.key
+        for definition in standard_tools.definitions()
+        if definition["name"].startswith("originate_")
+        and standard_tools.metadata_for(definition["name"]).get("command_class")
+    }
+
+    assert staged <= set(DRAFT_KINDS), sorted(staged - set(DRAFT_KINDS))

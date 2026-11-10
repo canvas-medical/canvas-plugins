@@ -1,5 +1,5 @@
 from canvas_sdk.agents.progress import PROGRESS_LEVELS
-from canvas_sdk.agents.run_record import MAX_RUN_SECONDS
+from canvas_sdk.agents.run_record import DEFAULT_RUN_SECONDS, MAX_RUN_SECONDS
 
 # A video's YouTube address: a watch link, a youtu.be link or an embed link, each naming
 # an 11-character id, never the embed words for a playlist or a live stream. No named
@@ -221,7 +221,7 @@ manifest_schema = {
                     "meta": {"type": "object"},
                     "run_seconds": {
                         "type": "integer",
-                        "minimum": 1,
+                        "minimum": DEFAULT_RUN_SECONDS,
                         "maximum": MAX_RUN_SECONDS,
                     },
                     "progress": {"type": "string", "enum": list(PROGRESS_LEVELS)},

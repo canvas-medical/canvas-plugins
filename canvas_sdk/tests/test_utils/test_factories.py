@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import pkgutil
+from datetime import timedelta
 
 import factory
 import pytest
@@ -49,3 +50,14 @@ def test_factory_is_instantiable() -> None:
             factory_class()
         except Exception as ex:
             raise Exception(f"Failed to instantiate factory '{factory_class.__name__}'") from ex
+
+
+def test_factory_built_types_and_reasons_do_not_share_a_list() -> None:
+    """A test that changes one instance's list leaves the next instance's alone."""
+    first, second = factories.DocumentTypeFactory.build(), factories.DocumentTypeFactory.build()
+    first.template_fields.append({"label": "LDL"})
+    reason = factories.ReasonForVisitSettingCodingFactory.build()
+    other = factories.ReasonForVisitSettingCodingFactory.build()
+    reason.duration.append(timedelta(minutes=30))
+
+    assert (second.template_fields, other.duration) == ([], [])

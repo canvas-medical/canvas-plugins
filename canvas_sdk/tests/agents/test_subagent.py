@@ -285,3 +285,36 @@ def test_each_subagent_worker_closes_its_database_connections(
 
     assert len(closed_on) == 2
     assert threading.current_thread().name not in closed_on
+
+
+def test_a_subagent_is_never_given_a_composition_tool() -> None:
+    """A sub-agent cannot run sub-agents of its own, so a run fans out one level."""
+    tools = ToolRegistry()
+
+    @tools.tool(
+        name="summarize",
+        description="x",
+        input_schema={"type": "object"},
+        categories=("composition",),
+    )
+    def _summarize(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    gateway = FakeGateway(reply(text("done")))
+    spec = SubAgentSpec(
+        name="labs", system_prompt="x", allowed_tool_names=frozenset({"summarize", "read_chart"})
+    )
+
+    run_subagent(
+        spec,
+        "question",
+        parent_tools=tools,
+        parent_ctx={},
+        gateway=gateway,  # type: ignore[arg-type]
+    )
+
+    assert [tool["name"] for tool in gateway.requests[0]["tools"]] == ["read_chart"]
