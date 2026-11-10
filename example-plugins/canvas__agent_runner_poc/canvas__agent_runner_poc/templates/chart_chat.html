@@ -319,10 +319,6 @@
         ] },
       ];
 
-      // Count of assistant turns already rendered. Polling uses this as the
-      // baseline to detect when the agent's reply has landed in Conversation.
-      let assistantCount = 0;
-
       // Navigation markers the agent embeds in its replies so the chat UI
       // can drive the parent chart timeline (scroll the user to a note).
       // Format: [[scroll-to-note:<integer_dbid>]]. Multiple markers are
@@ -553,7 +549,6 @@
           const data = await res.json();
           const messages = data.messages || [];
           messages.forEach(m => appendBubble(m.role, m.text, { citations: m.citations }));
-          assistantCount = messages.filter(m => m.role === 'assistant').length;
           showChips(chipsAfter(messages));
           if (!messages.length) {
             showStarters();
@@ -657,24 +652,22 @@
         log.scrollTop = log.scrollHeight;
       }
 
-      async function showLatestReply(baseline, placeholder) {
-        // The run succeeded, so its save_state has written the reply to the history.
+      async function showLatestReply(placeholder) {
+        // The run succeeded, so its save_state has written the reply to the history, after
+        // the message that started it.
         const res = await fetch(HISTORY_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('history fetch failed: ' + res.status);
-        const messages = (await res.json()).messages || [];
-        const assistants = messages.filter(m => m.role === 'assistant');
-        if (assistants.length <= baseline) {
+        const reply = (await res.json()).reply;
+        if (!reply) {
           placeholder.textContent = '(no response)';
           return;
         }
-        const reply = assistants[assistants.length - 1];
         showChips(reply.chips);
         const noteIds = renderAssistantBubble(placeholder, reply.text || '', reply.citations);
         if (!placeholder.childNodes.length) placeholder.textContent = '(no response)';
         // Fire navigation directives only for NEW replies, not when
         // appending history — re-opening a chat shouldn't auto-scroll.
         if (noteIds.length) fireNavigations(noteIds);
-        assistantCount = assistants.length;
       }
 
       // Show the run's progress in its placeholder until the reply replaces it. Returns a
@@ -762,7 +755,7 @@
         };
       }
 
-      async function pollRun(runId, baseline, placeholder) {
+      async function pollRun(runId, placeholder) {
         // Poll the platform's record of the run until it finishes, then show the
         // reply or what went wrong.
         const deadline = Date.now() + POLL_TIMEOUT_MS;
@@ -788,7 +781,7 @@
           console.debug('chart-chat poll: run ' + runId + ' ' + run.status);
           if (!FINISHED_STATUSES.includes(run.status)) continue;
           if (run.status === 'succeeded') {
-            await showLatestReply(baseline, placeholder);
+            await showLatestReply(placeholder);
             await refreshProposals(runId);
           } else {
             placeholder.classList.add('error');
@@ -808,7 +801,6 @@
         log.querySelectorAll('.starters').forEach(panel => panel.remove());
         appendBubble('user', text);
         const placeholder = appendBubble('assistant', '…');
-        const baseline = assistantCount;
         sendBtn.disabled = true;
         try {
           const res = await fetch(MESSAGE_URL, {
@@ -824,7 +816,7 @@
           }
           const stopWatching = watchProgress(data.run_id, placeholder);
           try {
-            await pollRun(data.run_id, baseline, placeholder);
+            await pollRun(data.run_id, placeholder);
           } finally {
             stopWatching();
           }
@@ -839,6 +831,8 @@
 
       composer.addEventListener('submit', (e) => {
         e.preventDefault();
+        // Enter submits the form even while the button is disabled; one run at a time.
+        if (sendBtn.disabled) return;
         const text = messageEl.value.trim();
         if (!text) return;
         messageEl.value = '';

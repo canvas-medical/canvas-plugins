@@ -92,6 +92,25 @@ def test_history_is_the_conversation_for_the_page_mode() -> None:
     assert json.loads(queue_page.content)["messages"] == []
 
 
+@pytest.mark.django_db
+def test_the_history_names_the_reply_to_the_newest_message() -> None:
+    """The page shows this reply, which a count of replies misses once old turns drop off."""
+    staff = StaffFactory.create()
+    _save_claims_conversation(
+        staff.id,
+        None,
+        [
+            {"role": "assistant", "content": "an older reply"},
+            {"role": "user", "content": "the new question"},
+            {"role": "assistant", "content": "the new reply"},
+        ],
+    )
+
+    (response,) = _api(staff.id).claims_chat_history()
+
+    assert json.loads(response.content)["reply"]["text"] == "the new reply"
+
+
 def test_a_decision_goes_to_the_platform_as_the_staff_members() -> None:
     """The plugin hands the decision over; the platform checks it is the requester's."""
     proposal_id = str(uuid4())

@@ -30,7 +30,7 @@ from http import HTTPStatus
 from canvas__agent_runner_poc.agents.claims_chat import load_claims_conversation
 from canvas__agent_runner_poc.agents.claims_chat import tools as claims_chat_tools
 from canvas__agent_runner_poc.applications import checks
-from canvas__agent_runner_poc.applications.chart_chat import _ui_messages
+from canvas__agent_runner_poc.applications.chart_chat import _ui_messages, latest_reply
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import DecideAgentProposal, RunAgentEffect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -85,10 +85,12 @@ class ClaimsChatAPI(StaffSessionAuthMixin, SimpleAPI):
         except checks.BadRequest as error:
             return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
-        messages = load_claims_conversation(staff_id, claim_id or None)
+        messages = _ui_messages(
+            load_claims_conversation(staff_id, claim_id or None), claims_chat_tools
+        )
         return [
             JSONResponse(
-                {"messages": _ui_messages(messages, claims_chat_tools)}, status_code=HTTPStatus.OK
+                {"messages": messages, "reply": latest_reply(messages)}, status_code=HTTPStatus.OK
             )
         ]
 

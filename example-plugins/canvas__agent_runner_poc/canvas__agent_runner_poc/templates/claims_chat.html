@@ -194,7 +194,6 @@
       const STARTER_CHIPS = CLAIM_ID
         ? ['What is holding this claim up?', 'Show its comments and banners', 'Check its coverage']
         : ['Summarize my queues', 'Claims assigned to me', 'Oldest claims with a balance'];
-      let assistantCount = 0;
 
       function renderMode() {
         const label = document.createElement('span');
@@ -276,17 +275,16 @@
         log.appendChild(div);
       }
 
-      async function fetchMessages() {
+      async function fetchHistory() {
         const res = await fetch(HISTORY_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('history fetch failed: ' + res.status);
-        return (await res.json()).messages || [];
+        return await res.json();
       }
 
       async function loadHistory() {
         try {
-          const messages = await fetchMessages();
+          const messages = (await fetchHistory()).messages || [];
           messages.forEach(m => appendBubble(m.role, m.text));
-          assistantCount = messages.filter(m => m.role === 'assistant').length;
           showChips(chipsAfter(messages));
           if (!messages.length) {
             appendMeta(CLAIM_ID
@@ -308,16 +306,15 @@
         return 'The agent hit an error before it answered.';
       }
 
-      async function showLatestReply(baseline, placeholder) {
-        const assistants = (await fetchMessages()).filter(m => m.role === 'assistant');
-        if (assistants.length <= baseline) {
+      async function showLatestReply(placeholder) {
+        // The history's reply is the one after the newest message, which is this run's.
+        const reply = (await fetchHistory()).reply;
+        if (!reply) {
           placeholder.textContent = '(no response)';
           return;
         }
-        const reply = assistants[assistants.length - 1];
         renderAssistantText(placeholder, reply.text || '');
         showChips(reply.chips);
-        assistantCount = assistants.length;
       }
 
       // Claim changes the agent proposed wait for the staff member: each gets a card to
@@ -403,7 +400,7 @@
         log.scrollTop = log.scrollHeight;
       }
 
-      async function pollRun(runId, baseline, placeholder) {
+      async function pollRun(runId, placeholder) {
         const deadline = Date.now() + POLL_TIMEOUT_MS;
         while (Date.now() < deadline) {
           await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
@@ -424,7 +421,7 @@
           }
           if (!FINISHED_STATUSES.includes(run.status)) continue;
           if (run.status === 'succeeded') {
-            await showLatestReply(baseline, placeholder);
+            await showLatestReply(placeholder);
             await refreshProposals(runId);
           } else {
             placeholder.classList.add('error');
@@ -440,7 +437,6 @@
         showChips([]);
         appendBubble('user', text);
         const placeholder = appendBubble('assistant', '…');
-        const baseline = assistantCount;
         sendBtn.disabled = true;
         try {
           const res = await fetch(MESSAGE_URL, {
@@ -454,7 +450,7 @@
             placeholder.textContent = data.error || ('Request failed: ' + res.status);
             return;
           }
-          await pollRun(data.run_id, baseline, placeholder);
+          await pollRun(data.run_id, placeholder);
         } catch (err) {
           placeholder.classList.add('error');
           placeholder.textContent = 'Request failed: ' + err.message;
@@ -466,6 +462,8 @@
 
       composer.addEventListener('submit', (e) => {
         e.preventDefault();
+        // Enter submits the form even while the button is disabled; one run at a time.
+        if (sendBtn.disabled) return;
         const text = messageEl.value.trim();
         if (!text) return;
         messageEl.value = '';

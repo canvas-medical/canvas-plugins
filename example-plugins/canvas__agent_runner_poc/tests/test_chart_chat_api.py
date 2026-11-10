@@ -6,7 +6,10 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from canvas__agent_runner_poc.agents.chart_chat import DECISIONS_NOTE_PREFIX
+from canvas__agent_runner_poc.agents.chart_chat import (
+    DECISIONS_NOTE_PREFIX,
+    _save_conversation_messages,
+)
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as chart_chat_tools
 from canvas__agent_runner_poc.applications.chart_chat import ChartChatAPI, _ui_messages
 from canvas__agent_runner_poc.applications.checks import MAX_MESSAGE_CHARS
@@ -241,3 +244,54 @@ def test_the_page_needs_a_patient(route: str, query: dict[str, str]) -> None:
     (response,) = getattr(_api("s1", query=query), route)()
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_the_history_names_the_reply_to_the_newest_message() -> None:
+    """The page shows this reply, which a count of replies misses once old turns drop off.
+
+    The stored window here holds as many replies as before the run, the oldest gone.
+    """
+    staff = StaffFactory.create()
+    patient = PatientFactory.create()
+    _save_conversation_messages(
+        patient.id,
+        staff.id,
+        [
+            {"role": "assistant", "content": "an older reply"},
+            {"role": "user", "content": "the new question"},
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_use", "id": "t1", "name": "find_vitals", "input": {}}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "[]"}],
+            },
+            {"role": "assistant", "content": "the new reply"},
+        ],
+    )
+
+    (response,) = _api(staff.id, {"patient": patient.id}).chart_chat_history()
+
+    assert json.loads(response.content)["reply"]["text"] == "the new reply"
+
+
+@pytest.mark.django_db
+def test_the_history_names_no_reply_when_the_newest_message_has_none() -> None:
+    """The page says there was no response instead of showing an older reply as this one's."""
+    staff = StaffFactory.create()
+    patient = PatientFactory.create()
+    _save_conversation_messages(
+        patient.id,
+        staff.id,
+        [
+            {"role": "user", "content": "the old question"},
+            {"role": "assistant", "content": "the old reply"},
+            {"role": "user", "content": "the new question"},
+        ],
+    )
+
+    (response,) = _api(staff.id, {"patient": patient.id}).chart_chat_history()
+
+    assert json.loads(response.content)["reply"] is None
