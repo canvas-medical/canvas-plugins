@@ -7,7 +7,7 @@ from pathlib import Path
 
 from canvas_cli.apps.auth.utils import instance_slug
 
-MIGRATION_URL = "https://github.com/canvas-medical/canvas-plugins#migrating-from-credentialsini-to-canvas-platform"
+MIGRATION_URL = "https://docs.canvasmedical.com/guides/upgrading-to-canvas-platform/"
 CACHE_FILENAME = "platform_notice.json"
 NOTICE_INTERVAL_SECONDS = 24 * 60 * 60
 # The date Canvas announces everywhere (docs, Slack) for the end of installing
