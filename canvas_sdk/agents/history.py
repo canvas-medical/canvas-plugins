@@ -9,8 +9,17 @@ DEFAULT_HISTORY_CHARS = 300_000
 
 
 def _is_question(message: dict[str, Any]) -> bool:
-    """A user turn of plain text, as opposed to one carrying tool results."""
-    return message.get("role") == "user" and isinstance(message.get("content"), str)
+    """A user turn that carries no tool results: text, or blocks such as an image or a
+    document with text.
+    """
+    if message.get("role") != "user":
+        return False
+    content = message.get("content")
+    if isinstance(content, str):
+        return True
+    return isinstance(content, list) and not any(
+        isinstance(block, dict) and block.get("type") == "tool_result" for block in content
+    )
 
 
 def window_messages(
@@ -22,7 +31,7 @@ def window_messages(
     A conversation that grows without bound eventually exceeds the model's context
     window, and every call after that is refused. This keeps the most recent turns
     whose serialized size fits the budget, then moves the start forward to the first
-    plain-text user turn, so the window never opens on a ``tool_result`` whose
+    user turn without tool results, so the window never opens on a ``tool_result`` whose
     ``tool_use`` was cut off. The latest question is always kept, even when it alone
     exceeds the budget.
 

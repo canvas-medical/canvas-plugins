@@ -71,3 +71,28 @@ def test_window_keeps_the_latest_question_even_over_budget() -> None:
     messages = [_question("q1"), _answer("a1"), _question("q2" + "y" * 500)]
 
     assert window_messages(messages, max_chars=10) == messages[2:]
+
+
+def _document_question(text: str) -> dict[str, Any]:
+    return {
+        "role": "user",
+        "content": [
+            {"type": "document", "source": {"type": "base64", "data": "JVBERi0="}},
+            {"type": "text", "text": text},
+        ],
+    }
+
+
+def test_a_question_sent_with_a_document_starts_the_window() -> None:
+    """A question in blocks, with an image or document, is a question all the same."""
+    messages = [
+        _document_question("what does page 2 say?"),
+        _tool_call("t1"),
+        _tool_result("t1", 2_000),
+        _answer("a1"),
+    ]
+    budget = _size(messages[1:]) - 1  # would start after the question
+
+    windowed = window_messages(messages, max_chars=budget)
+
+    assert windowed[0] == messages[0]
