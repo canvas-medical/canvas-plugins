@@ -281,6 +281,12 @@ def scaffold(plugin_type: str, prefix: str = "") -> Path:
     return Path(project_dir)
 
 
+def _is_bundle(plugin_name: Path) -> bool:
+    """Whether the plugin's manifest declares it a bundle of other plugins."""
+    manifest = plugin_name / "CANVAS_MANIFEST.json"
+    return manifest.is_file() and bool(json.loads(manifest.read_text()).get("bundle"))
+
+
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
     secrets: builtins.list[str] = typer.Option(
@@ -317,6 +323,11 @@ def install(
 
     if plugin_name.is_dir():
         validate_manifest(plugin_name)
+        if _is_bundle(plugin_name):
+            raise typer.BadParameter(
+                f"Plugin '{plugin_name}' is a bundle, which only Canvas Platform can deploy: "
+                "use `canvas deploy`."
+            )
         _lint_plugin_static(plugin_name)
         _validate_plugin_loads(plugin_name)
         built_package_path = _build_package(plugin_name)
