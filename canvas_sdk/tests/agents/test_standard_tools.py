@@ -31,6 +31,7 @@ from canvas_sdk.test_utils.factories import (
     ClaimQueueFactory,
     DocumentTypeFactory,
     IntegrationTaskFactory,
+    LabPartnerFactory,
     LabPartnerTestFactory,
     LabReportTemplateFactory,
     LabReportTemplateFieldFactory,
@@ -1710,3 +1711,29 @@ def test_a_deleted_note_is_neither_listed_nor_read() -> None:
 
     assert listed == {str(kept.id)}
     assert read is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("tool", "inactive"),
+    [
+        (
+            "find_note_types",
+            lambda: NoteTypeFactory.create(is_active=False, is_visible=True),
+        ),
+        ("find_practice_locations", lambda: PracticeLocationFactory.create(active=False)),
+        ("find_lab_partners", lambda: LabPartnerFactory.create(active=False)),
+    ],
+)
+def test_active_only_applies_its_default_when_the_model_leaves_it_out(
+    tool: str, inactive: Any
+) -> None:
+    """An inactive note type, closed location, or retired lab partner is left out by default."""
+    before = len(standard_tools.execute(tool, {"active_only": False}, ctx={}))
+    inactive()
+
+    assert len(standard_tools.execute(tool, {}, ctx={})) == len(
+        standard_tools.execute(tool, {"active_only": True}, ctx={})
+    )
+    assert len(standard_tools.execute(tool, {"active_only": False}, ctx={})) == before + 1
+    assert len(standard_tools.execute(tool, {}, ctx={})) == before

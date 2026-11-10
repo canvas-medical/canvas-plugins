@@ -205,7 +205,7 @@ def _patients_record_check(
 )
 def _serialize_medication(medication: Any) -> dict[str, Any]:
     """Per-row serializer for find_medications."""
-    coding = medication.codings.first()
+    coding = next(iter(medication.codings.all()), None)
     return {
         "id": str(medication.id),
         "name": coding.display if coding else "(unknown)",
@@ -277,7 +277,7 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
 )
 def _serialize_condition(condition: Any) -> dict[str, Any]:
     """Per-row serializer for find_conditions."""
-    coding = condition.codings.first()
+    coding = next(iter(condition.codings.all()), None)
     return {
         "id": str(condition.id),
         "code": coding.code if coding else None,
@@ -341,7 +341,7 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
 )
 def _serialize_lab_value(value: Any) -> dict[str, Any]:
     """Per-row serializer for find_lab_results."""
-    coding = value.codings.first()
+    coding = next(iter(value.codings.all()), None)
     report_date = value.report.original_date if value.report else None
     return {
         "id": str(value.id),
@@ -364,7 +364,7 @@ def _serialize_lab_value(value: Any) -> dict[str, Any]:
         "if any), and `date` (the source note's datetime_of_service, ISO 8601). "
         "Ordered most-recent first."
     ),
-    queryset_factory=lambda _args, pid: Assessment.objects.filter(patient__id=pid),
+    queryset_factory=lambda _args, pid: Assessment.objects.committed().filter(patient__id=pid),
     filters={},
     ordering=("-note__datetime_of_service",),
     select_related=("note", "condition"),
@@ -384,7 +384,7 @@ def _serialize_assessment(assessment: Any) -> dict[str, Any]:
     condition_display = ""
     condition = assessment.condition
     if condition is not None:
-        coding = condition.codings.first()
+        coding = next(iter(condition.codings.all()), None)
         if coding:
             condition_display = coding.display
     note_datetime = assessment.note.datetime_of_service if assessment.note else None
@@ -444,7 +444,7 @@ def _serialize_assessment(assessment: Any) -> dict[str, Any]:
 )
 def _serialize_allergy(allergy: Any) -> dict[str, Any]:
     """Per-row serializer for find_allergies."""
-    coding = allergy.codings.first()
+    coding = next(iter(allergy.codings.all()), None)
     return {
         "id": str(allergy.id),
         "display": coding.display if coding else "(unknown)",
@@ -465,10 +465,7 @@ def _serialize_allergy(allergy: Any) -> dict[str, Any]:
         "(e.g., 'administered', 'refused'), `manufacturer`, and `lot_number`. "
         "Patient scope is enforced. Ordered most-recent first."
     ),
-    # Immunization's QuerySet inherits CommittableQuerySetMixin but the model
-    # itself has no `committer` field — calling `.committed()` raises. Filter
-    # on `deleted=False` directly instead.
-    queryset_factory=lambda args, pid: Immunization.objects.filter(patient__id=pid, deleted=False),
+    queryset_factory=lambda args, pid: Immunization.objects.committed().filter(patient__id=pid),
     filters={
         "name_contains": FilterSpec(
             type="string",
@@ -501,7 +498,7 @@ def _serialize_allergy(allergy: Any) -> dict[str, Any]:
 )
 def _serialize_immunization(immunization: Any) -> dict[str, Any]:
     """Per-row serializer for find_immunizations."""
-    coding = immunization.codings.first()
+    coding = next(iter(immunization.codings.all()), None)
     return {
         "id": str(immunization.id),
         "display": coding.display if coding else "(unknown)",
@@ -576,7 +573,7 @@ def _filter_name_words(queryset: Any, value: str) -> Any:
 )
 def _serialize_vital(observation: Any) -> dict[str, Any]:
     """Per-row serializer for find_vitals."""
-    coding = observation.codings.first()
+    coding = next(iter(observation.codings.all()), None)
     return {
         "id": str(observation.id),
         "name": observation.name or "(unknown)",
@@ -691,8 +688,9 @@ def _person_role(canvas_user: Any) -> str | None:
         "to messages the recipient hasn't read yet; `since=YYYY-MM-DD` to "
         "look at a recent window."
     ),
+    # The sender's and recipient's names come from their staff or patient rows.
     queryset_factory=lambda args, pid: Message.objects.filter(note__patient__id=pid).select_related(
-        "sender", "recipient"
+        "sender__staff", "sender__patient", "recipient__staff", "recipient__patient"
     ),
     filters={
         "from_patient_only": FilterSpec(
@@ -1192,7 +1190,7 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
         "(ISO 8601 or null), and `progress` (free-text note). Defaults to "
         "active goals ordered by most-recent start_date."
     ),
-    queryset_factory=lambda args, pid: Goal.objects.filter(patient__id=pid),
+    queryset_factory=lambda args, pid: Goal.objects.committed().filter(patient__id=pid),
     filters={
         "statement_contains": FilterSpec(
             type="string",
@@ -1313,7 +1311,7 @@ def _serialize_imaging_report(report: Any) -> dict[str, Any]:
         "`date_referred` (ISO 8601), `service_provider_name`, and "
         "`forwarded` (bool). Ordered most-recent first."
     ),
-    queryset_factory=lambda args, pid: Referral.objects.filter(patient__id=pid),
+    queryset_factory=lambda args, pid: Referral.objects.committed().filter(patient__id=pid),
     filters={
         "question_contains": FilterSpec(
             type="string",
@@ -2270,6 +2268,7 @@ def _serialize_care_team_member(membership: Any) -> dict[str, Any]:
                 "hidden types."
             ),
             apply=lambda qs, v: qs.filter(is_active=True, is_visible=True) if v else qs,
+            default=True,
         ),
     },
     ordering=("rank", "name"),
@@ -2314,6 +2313,7 @@ def _serialize_note_type(note_type: Any) -> dict[str, Any]:
             type="boolean",
             description="When true (default), restrict to active locations.",
             apply=lambda qs, v: qs.filter(active=True) if v else qs,
+            default=True,
         ),
         "name_contains": FilterSpec(
             type="string",
@@ -2371,6 +2371,7 @@ def _serialize_practice_location(loc: Any) -> dict[str, Any]:
             type="boolean",
             description=("When true (default), restrict to active partners."),
             apply=lambda qs, v: qs.filter(active=True) if v else qs,
+            default=True,
         ),
         "electronic_ordering_only": FilterSpec(
             type="boolean",
@@ -2500,7 +2501,9 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
         "8601 or null), `dose_form`, `dose_route`, `dose_frequency_interval`, "
         "and `sig_original_input` (the patient's verbatim sig)."
     ),
-    queryset_factory=lambda args, pid: MedicationStatement.objects.filter(patient__id=pid),
+    queryset_factory=lambda args, pid: MedicationStatement.objects.committed().filter(
+        patient__id=pid
+    ),
     filters={
         "name_contains": FilterSpec(
             type="string",
@@ -2534,7 +2537,7 @@ def _serialize_medication_statement(statement: Any) -> dict[str, Any]:
     medication = statement.medication
     medication_name = ""
     if medication is not None:
-        coding = medication.codings.first()
+        coding = next(iter(medication.codings.all()), None)
         if coding is not None:
             medication_name = coding.display or ""
     return {
@@ -2662,7 +2665,7 @@ def _serialize_prescription(prescription: Any) -> dict[str, Any]:
     medication = prescription.medication
     medication_name = ""
     if medication is not None:
-        coding = medication.codings.first()
+        coding = next(iter(medication.codings.all()), None)
         if coding is not None:
             medication_name = coding.display or ""
     elif prescription.compound_medication is not None:
@@ -3049,8 +3052,8 @@ def _serialize_interview(interview: Any) -> dict[str, Any]:
         "for understanding why a medication is no longer active. Ordered "
         "most-recent first."
     ),
-    queryset_factory=lambda args, pid: StopMedicationEvent.objects.filter(
-        patient__id=pid, deleted=False
+    queryset_factory=lambda args, pid: StopMedicationEvent.objects.committed().filter(
+        patient__id=pid
     ),
     filters={
         "name_contains": FilterSpec(
@@ -3086,7 +3089,7 @@ def _serialize_stop_med_event(event: Any) -> dict[str, Any]:
     medication = event.medication
     medication_name = ""
     if medication is not None:
-        coding = medication.codings.first()
+        coding = next(iter(medication.codings.all()), None)
         if coding is not None:
             medication_name = coding.display or ""
     return {

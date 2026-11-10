@@ -318,9 +318,11 @@ class FilterSpec:
             guess from natural-language hints in the description.
         apply: Optional ``(queryset, value) -> queryset`` callable that
             applies the filter to the queryset. Invoked only when the
-            argument is supplied and truthy. When ``None``, the filter
+            argument, or its ``default``, is truthy. When ``None``, the filter
             is schema-only — the queryset factory is expected to read
             the argument and act on it itself.
+        default: The value used when the model leaves the filter out, advertised
+            as the schema's ``default``.
     """
 
     type: str
@@ -330,6 +332,7 @@ class FilterSpec:
     maximum: int | None = None
     enum: list[str] | None = None
     apply: Callable[[Any, Any], Any] | None = None
+    default: Any = None
 
 
 class ToolNotAllowed(LookupError):
@@ -848,7 +851,7 @@ class ToolRegistry:
                 prefetch_related=("codings",),
             )
             def _serialize_medication(medication):
-                coding = medication.codings.first()
+                coding = next(iter(medication.codings.all()), None)
                 return {
                     "name": coding.display if coding else "(unknown)",
                     "status": medication.status,
@@ -874,6 +877,8 @@ class ToolRegistry:
                 prop["maximum"] = spec.maximum
             if spec.enum is not None:
                 prop["enum"] = list(spec.enum)
+            if spec.default is not None:
+                prop["default"] = spec.default
             properties[filter_name] = prop
         # No schema maximum: a larger limit is clamped to limit_max rather than refused.
         properties["limit"] = {
@@ -897,7 +902,7 @@ class ToolRegistry:
                 for filter_name, spec in filters_dict.items():
                     if spec.apply is None:
                         continue
-                    value = arguments.get(filter_name)
+                    value = arguments.get(filter_name, spec.default)
                     # Skip falsy values — matches the truthy-check pattern the
                     # SDK's hand-written tools used before this helper existed.
                     # Filters that need to distinguish False from None should
