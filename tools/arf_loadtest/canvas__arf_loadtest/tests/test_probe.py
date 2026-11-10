@@ -1,7 +1,8 @@
 import json
+from pathlib import Path
 
 import pytest
-from canvas__arf_loadtest.agents.probe import ChatProbeAgent, ProbeAgent
+from canvas__arf_loadtest.agents.probe import ChatProbeAgent, ExtendedProbeAgent, ProbeAgent
 from canvas__arf_loadtest.models import Counter, ProbeRecord
 
 from canvas_sdk.agents import AgentPlugin, RunSubject
@@ -15,12 +16,31 @@ from canvas_sdk.test_utils.agents import (
 )
 from canvas_sdk.test_utils.factories import PatientFactory
 
+MANIFEST = Path(__file__).parents[1] / "canvas__arf_loadtest" / "CANVAS_MANIFEST.json"
 GRANT = ["@config_reads"]
+CHART_READS = [
+    "@clinical_reads",
+    "@task_reads",
+    "@message_reads",
+    "@document_reads",
+    "@claims_reads",
+    "@intake_reads",
+]
 SCRIPT = {"tools": [["find_note_types", {}]], "latency_ms": 0, "text": "done"}
 
 
 def _probe(agent_class: type[AgentPlugin] = ProbeAgent, **subject: str) -> AgentPlugin:
     return prepare_agent(agent_class, allowed=GRANT, subject=RunSubject(**subject))
+
+
+def _granted(agent_class: type[AgentPlugin]) -> AgentPlugin:
+    """The probe with the grant the manifest gives it."""
+    (entry,) = (
+        agent
+        for agent in json.loads(MANIFEST.read_text())["components"]["agents"]
+        if agent["class"].endswith(f":{agent_class.__name__}")
+    )
+    return prepare_agent(agent_class, allowed=entry["tools"]["allowed"])
 
 
 def _gateway() -> FakeGateway:
@@ -64,15 +84,15 @@ def test_probe_hands_the_gateway_its_script() -> None:
 
 
 @pytest.mark.django_db
-def test_probe_has_only_the_config_reads() -> None:
-    """The probes read configuration, never a chart."""
-    assert {d["name"] for d in _probe().tools.definitions()} == {
-        "find_clinical_codes",
-        "find_lab_partner_tests",
-        "find_lab_partners",
-        "find_note_types",
-        "find_practice_locations",
-    }
+@pytest.mark.parametrize("agent_class", [ProbeAgent, ExtendedProbeAgent, ChatProbeAgent])
+def test_probe_reads_configuration_never_a_chart(agent_class: type[AgentPlugin]) -> None:
+    """The manifest grants each probe configuration reads and no tool that reads a chart."""
+    agent = _granted(agent_class)
+    assert agent.tools is not None and agent_class.tools is not None
+    names = {d["name"] for d in agent.tools.definitions()}
+
+    assert "find_note_types" in names
+    assert sorted(names & agent_class.tools.resolve_allowed(CHART_READS)) == []
 
 
 @pytest.mark.django_db
