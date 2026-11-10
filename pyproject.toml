@@ -56,7 +56,9 @@ dependencies = [
   "snowflake-connector-python>=4.7.2,<5",
   "statsd>=4.0.1,<5",
   "stripe>=14.1.0",
-  "typer",
+  # typer 0.26 bundles its own click and only catches that copy's ClickException, so the
+  # CLI's click.ClickException errors would print as tracebacks instead of "Error: ..."
+  "typer>=0.19.2,<0.26",
   "typing-extensions>=4.14.1,<5",
   "websocket-client>=1.7.0,<2"
 ]

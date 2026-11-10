@@ -2,6 +2,7 @@
 
 import json
 import time
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -138,3 +139,17 @@ def test_notice_prints_even_when_it_cannot_be_recorded(
     show_platform_notice(str(not_a_directory))
 
     assert MIGRATION_URL in capsys.readouterr().err
+
+
+def test_credentials_ini_support_has_not_passed_its_end_date() -> None:
+    """Fails once credentials.ini support ends, so its removal cannot be forgotten."""
+    assert date.today() <= date(2026, 12, 14), (
+        "credentials.ini support for Canvas instances ended on December 14, 2026. Do "
+        "KOALA-8029: in canvas_cli/apps/logs/logs.py, canvas_cli/apps/plugin/plugin.py, "
+        "canvas_cli/apps/namespace/namespace.py and canvas_cli/apps/platform/commands.py, "
+        "refuse a --host under canvasmedical.com instead of reading its credentials.ini token, "
+        "keeping credentials.ini for localhost and other non-Canvas hosts, which Canvas "
+        "Platform cannot reach. Then stop `canvas install` from targeting Canvas instances, "
+        "delete the deprecation notices (print_credentials_ini_deprecation, "
+        "print_install_deprecation, show_platform_notice), and delete this test."
+    )

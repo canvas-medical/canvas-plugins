@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock as requests_mock_module
+import websocket
 from typer.testing import CliRunner
 
 from canvas_cli.apps.auth.utils import instance_slug
@@ -549,12 +550,23 @@ def test_instance_slug(host: str, slug: str | None) -> None:
     assert instance_slug(host) == slug
 
 
-# What Console sends once it accepts the token, and the refusal it sends before closing with
-# 1000 when it does not. Both come after websocket-client fires ``on_open`` at the upgrade.
-CONNECTED: list[str] = ["Connecting to log stream...", "Log stream connected."]
+# What Console sends, in order, after websocket-client fires ``on_open`` at the upgrade: a JSON
+# notice before it looks up the instance and checks the token, then either the plain strings
+# that start the stream or a JSON refusal followed by a close with 1000.
+CHECKING: str = (
+    '{"timestamp": "2026-11-02T10:00:00", "severity": "info", "message": '
+    "\"Connecting to the log stream for 'acme-prod'. This may take a few moments.\"}"
+)
+CONNECTED: list[str] = [CHECKING, "Connecting to log stream...", "Log stream connected."]
 REFUSED: list[str] = [
+    CHECKING,
     '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
-    '"message": "Token authorization failed."}'
+    '"message": "Token authorization failed."}',
+]
+NO_INSTANCE: list[str] = [
+    CHECKING,
+    '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
+    '"message": "No instance named \'acme-prod\' was found."}',
 ]
 
 
@@ -562,11 +574,14 @@ class _FakeStream:
     """A ``WebSocketApp`` stand-in that replays one scripted connection per instance.
 
     Each script entry is ``(messages, close_code)``: the messages Console sends after the
-    upgrade, and the close code it sends. Every connection fires ``on_open`` first, as
-    websocket-client does at the HTTP upgrade. Every instance records the URL it was built with.
+    upgrade, and the close code it sends. A connection fires ``on_open`` first, as
+    websocket-client does at the HTTP upgrade. An exception in place of the messages is a
+    connection that fails before the upgrade or is interrupted before any message:
+    websocket-client then fires ``on_error`` with it and ``on_close`` with no code. Every
+    instance records the URL it was built with.
     """
 
-    script: list[tuple[list[str], int | None]] = []
+    script: list[tuple[list[str] | BaseException, int | None]] = []
     urls: list[str] = []
 
     def __init__(self, url: str, **callbacks: Any) -> None:
@@ -577,6 +592,10 @@ class _FakeStream:
 
     def run_forever(self) -> bool:
         messages, close_code = _FakeStream.script.pop(0)
+        if isinstance(messages, BaseException):
+            self.callbacks["on_error"](self, messages)
+            self.callbacks["on_close"](self, None, None)
+            return True
         self.on_open(self)
         for message in messages:
             self.callbacks["on_message"](self, message)
@@ -658,7 +677,106 @@ def test_stream_refused_on_fresh_token_ends(
 
     assert result.exit_code == 1
     assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert "Console answered: Token authorization failed." in result.output
     assert "canvas logout" in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_console_without_the_instance_ends_with_its_answer(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console not knowing a Platform-managed instance ends the run non-zero, quoting Console.
+
+    The error does not blame the token or point at credentials.ini, whose stream asks Console
+    for the same instance name.
+    """
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(NO_INSTANCE, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "Console refused the log stream for acme-prod." in result.output
+    assert "Console answered: No instance named 'acme-prod' was found." in result.output
+    assert "log token" not in result.output
+    assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_closed_before_start_without_a_notice_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console failing before it starts a Platform stream ends the run without blaming the token.
+
+    Console sends no refusal when checking the token raises, such as when the instance is
+    unreachable; websockets then closes with 1011.
+    """
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [([CHECKING], 1011)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert (
+        "Console closed the log stream for acme-prod before starting it (close code 1011)."
+        in result.output
+    )
+    assert "refused" not in result.output
+    assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_that_cannot_reach_console_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A stream whose connection fails before Console starts it exits 1, naming the failure."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    refused_upgrade = websocket.WebSocketBadStatusException(
+        "Handshake status 503 Service Unavailable", 503
+    )
+    fake_stream.script = [(refused_upgrade, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert (
+        "Could not reach Console's log stream for acme-prod: Handshake status 503 Service "
+        "Unavailable" in result.output
+    )
+    assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_interrupted_before_start_ends_cleanly(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Ctrl-C while Console is still checking the token ends the run with exit 0."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(KeyboardInterrupt(), None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
     assert len(fake_stream.urls) == 1
 
 
@@ -720,30 +838,57 @@ def test_credentials_ini_stream_does_not_reconnect_on_4401(
     credentials_token.assert_called_once()
 
 
+def test_credentials_ini_stream_console_refuses_ends_with_its_answer(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A credentials.ini stream Console refuses before starting it exits 1, quoting Console."""
+    fake_stream.script = [(REFUSED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "Console refused the log stream for acme-prod." in result.output
+    assert "Console answered: Token authorization failed." in result.output
+    assert "canvas logout" not in result.output
+    assert fake_stream.urls == [_stream_url("ini-tok")]
+
+
 CREDENTIALS_INI_NOTICE = (
     "`canvas logs` with credentials.ini is deprecated in favor of `canvas login`, and is no "
     "longer supported as of December 14, 2026."
 )
 
 
-@pytest.mark.parametrize("host", ["acme-prod", "localhost"])
 def test_credentials_ini_run_prints_deprecation_notice(
-    host: str,
     requests_mock: requests_mock_module.Mocker,
     credentials_token: Mock,
 ) -> None:
-    """Every credentials.ini run warns on stderr, leaving stdout to the logs."""
+    """A credentials.ini run on a Canvas instance warns on stderr, leaving stdout to the logs."""
     requests_mock.get(LOGS_URL, json={"hits": [HIT], "next": {}})
-    requests_mock.get(
-        plugin_url("http://localhost:8000", "/logs"), json={"hits": [HIT], "next": {}}
-    )
 
-    result = CliRunner(mix_stderr=False).invoke(app, f"logs --host {host} --no-follow")
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod --no-follow")
 
     assert result.exit_code == 0, result.output
     assert CREDENTIALS_INI_NOTICE in result.stderr
     assert "canvas-plugins#migrating-from-credentialsini-to-canvas-platform" in result.stderr
     assert "deprecated" not in result.stdout
+
+
+def test_localhost_run_prints_no_deprecation_notice(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+) -> None:
+    """`canvas login` cannot serve localhost, so a local run is not told to switch to it."""
+    requests_mock.get(
+        plugin_url("http://localhost:8000", "/logs"), json={"hits": [HIT], "next": {}}
+    )
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host localhost --no-follow")
+
+    assert result.exit_code == 0, result.output
+    assert "deprecated" not in result.stderr
 
 
 def test_platform_run_prints_no_deprecation_notice(
