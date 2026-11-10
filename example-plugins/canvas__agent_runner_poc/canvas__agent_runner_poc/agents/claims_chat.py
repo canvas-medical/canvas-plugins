@@ -18,7 +18,7 @@ State follows the chart chat's snapshot pattern over :class:`ClaimConversation`.
 
 from typing import Any
 
-from canvas__agent_runner_poc.agents.decisions import record_decisions
+from canvas__agent_runner_poc.agents.decisions import record_decisions, record_unapplied
 from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
 from canvas__agent_runner_poc.models.claim_conversation import ClaimConversation
 from canvas__agent_runner_poc.models.proxy import StaffProxy
@@ -126,7 +126,7 @@ class ClaimsChatAgent(AgentPlugin):
     def load_state(self, scope_key: str) -> AgentState:
         """Read the staff member's conversation for this run's claim, or for the queues."""
         messages = load_claims_conversation(self._staff_id(), self.subject.claim_id)
-        return AgentState(data={"messages": messages})
+        return AgentState(data={"messages": messages, "scope_key": scope_key})
 
     def system_prompt(self) -> str:
         """The instructions, with the mode this run is in."""
@@ -146,7 +146,12 @@ class ClaimsChatAgent(AgentPlugin):
         model hears of them before the message.
         """
         messages = [
-            *record_decisions(state.data["messages"], self.requester.staff_id, "staff member"),
+            *record_unapplied(
+                record_decisions(state.data["messages"], self.requester.staff_id, "staff member"),
+                self,
+                state.data["scope_key"],
+                "staff member",
+            ),
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         if Capability.REVENUE not in self.capabilities:

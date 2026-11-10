@@ -27,7 +27,11 @@ The originate-command tools stage onto the clinician's open note, which
 from typing import Any
 
 from canvas__agent_runner_poc.agents.chart_chat_tools import tools as _registered_tools
-from canvas__agent_runner_poc.agents.decisions import note_prefix, record_decisions
+from canvas__agent_runner_poc.agents.decisions import (
+    note_prefix,
+    record_decisions,
+    record_unapplied,
+)
 from canvas__agent_runner_poc.agents.suggestions import suggestions_guidance
 from canvas__agent_runner_poc.models.conversation import Conversation
 from canvas__agent_runner_poc.models.proxy import PatientProxy, StaffProxy
@@ -290,7 +294,7 @@ class ChartChatAgent(AgentPlugin):
         which the platform sets on ``self.subject`` and ``self.requester``.
         """
         messages = load_conversation_messages(self.subject.patient_id, self.requester.staff_id)
-        return AgentState(data={"messages": messages})
+        return AgentState(data={"messages": messages, "scope_key": scope_key})
 
     def run(
         self,
@@ -304,7 +308,12 @@ class ChartChatAgent(AgentPlugin):
         model hears of them before the clinician's message.
         """
         messages = [
-            *record_decisions(state.data["messages"], self.requester.staff_id, "clinician"),
+            *record_unapplied(
+                record_decisions(state.data["messages"], self.requester.staff_id, "clinician"),
+                self,
+                state.data["scope_key"],
+                "clinician",
+            ),
             {"role": "user", "content": trigger_payload["user_message"]},
         ]
         result = self.run_tool_loop(
