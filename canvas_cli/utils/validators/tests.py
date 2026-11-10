@@ -285,6 +285,8 @@ REFUSED = {
     "markup-negative": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": -1}]},
     "markup-string": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": "1500"}]},
     "markup-boolean": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": True}]},
+    "markup-null": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": None}]},
+    "markup-float": {**MINIMAL, "pricing": [{"unit": "token", "markup_bps": 1500.0}]},
     "empty-vendors": {**MINIMAL, "vendors": []},
     "null-vendors": {**MINIMAL, "vendors": None},
     "vendor-unknown-relationship": {**MINIMAL, "vendors": [{**VENDOR, "relationship": "partner"}]},
