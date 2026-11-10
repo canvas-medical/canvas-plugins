@@ -38,6 +38,16 @@ def _body(api: SimpleAPI) -> dict[str, Any]:
     return dict(body) if isinstance(body, dict) else {}
 
 
+def _whole_number(body: dict[str, Any], name: str) -> int | None:
+    """``body[name]`` as an int, 0 when it is missing, or None when it is not a whole number."""
+    value = body.get(name)
+    if value is None:
+        return 0
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
 def _bad_request(message: str) -> list[Response | Effect]:
     return [JSONResponse({"error": message}, status_code=HTTPStatus.BAD_REQUEST)]
 
@@ -82,10 +92,12 @@ class LoadTestAPI(APIKeyAuthMixin, SimpleAPI):
         """
         body = _body(self)
         scenario = str(body.get("scenario") or "")
-        count = int(body.get("count") or 0)
-        start = int(body.get("start") or 0)
-        if not scenario or not 0 < count <= MAX_FANOUT:
+        count = _whole_number(body, "count")
+        start = _whole_number(body, "start")
+        if not scenario or count is None or not 0 < count <= MAX_FANOUT:
             return _bad_request(f"scenario is required and count must be 1 to {MAX_FANOUT}")
+        if start is None or start < 0:
+            return _bad_request("start must be a whole number, 0 or more")
         shared = bool(body.get("shared"))
         agent_id = EXTENDED_AGENT if body.get("extended") else PROBE_AGENT
         runs = [
@@ -159,13 +171,16 @@ class LoadTestChatAPI(StaffSessionAuthMixin, SimpleAPI):
         patient_id = str(body.get("patient_id") or "")
         if not scenario or not patient_id:
             return _bad_request("scenario and patient_id are required")
+        seq = _whole_number(body, "seq")
+        if seq is None:
+            return _bad_request("seq must be a whole number")
         run = RunAgentEffect(
             agent_id=CHAT_AGENT,
             scope=RunAgentEffect.Scope.PATIENT_AND_STAFF,
             patient_id=patient_id,
             trigger_payload={
                 "scenario": scenario,
-                "seq": int(body.get("seq") or 0),
+                "seq": seq,
                 "script": body.get("script") or {},
             },
         )
