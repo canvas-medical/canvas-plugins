@@ -83,10 +83,10 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
         except checks.BadRequest as error:
             return [error.response()]
         staff_id = self.request.headers["canvas-logged-in-user-id"]
-        messages = load_conversation_messages(patient_id, staff_id)
+        messages = _ui_messages(load_conversation_messages(patient_id, staff_id), chart_chat_tools)
         return [
             JSONResponse(
-                {"messages": _ui_messages(messages, chart_chat_tools)},
+                {"messages": messages, "reply": latest_reply(messages)},
                 status_code=HTTPStatus.OK,
             )
         ]
@@ -196,6 +196,18 @@ class ChartChatAPI(StaffSessionAuthMixin, SimpleAPI):
             JSONResponse({"status": "decided"}, status_code=HTTPStatus.ACCEPTED),
             decision.apply(),
         ]
+
+
+def latest_reply(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The newest assistant turn after the newest user turn, or None when it has none.
+
+    A succeeded run has saved its reply after the message that started it, so this is
+    that run's reply however many older turns the stored window has dropped.
+    """
+    reply = None
+    for message in messages:
+        reply = None if message["role"] == "user" else message
+    return reply
 
 
 def _ui_messages(stored: list[dict[str, Any]], tools: ToolRegistry) -> list[dict[str, Any]]:
