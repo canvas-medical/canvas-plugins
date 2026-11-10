@@ -188,3 +188,42 @@ def test_a_malformed_query_is_a_bad_request(route: str, query: dict[str, str]) -
     (response,) = getattr(_api("s1", query=query), route)()
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("claim", [None, str(uuid4())], ids=["queue mode", "claim mode"])
+def test_another_staff_members_conversation_is_not_shown(claim: str | None) -> None:
+    """Every biller's queue conversation has no claim, so the staff member is what keeps them apart."""
+    owner, colleague = StaffFactory.create(), StaffFactory.create()
+    _save_claims_conversation(
+        owner.id, claim, [{"role": "user", "content": "claim 4411 for J. Doe"}]
+    )
+
+    (response,) = _api(colleague.id, {"claim": claim} if claim else None).claims_chat_history()
+
+    assert json.loads(response.content)["messages"] == []
+
+
+@pytest.mark.django_db
+def test_another_staff_members_run_is_not_revealed() -> None:
+    """A run id from someone else's chat reads like a run not recorded yet."""
+    run = AgentRun.objects.create(
+        id=uuid4(),
+        plugin_name="canvas__agent_runner_poc",
+        agent_id=CLAIMS_CHAT_AGENT_ID,
+        handler_name="canvas__agent_runner_poc.applications.claims_chat:ClaimsChatAPI",
+        scope="staff",
+        scope_key="",
+        staff=StaffFactory.create(),
+        status=AgentRunStatus.REFUSED,
+        error_kind="",
+        error="Only a staff member with revenue access to every patient can start an agent run about a claim.",
+        queued_at=datetime(2026, 10, 31, tzinfo=UTC),
+        attempts=0,
+        stop_reason="",
+        capabilities=[],
+    )
+
+    (response,) = _api(StaffFactory.create().id, {"run_id": str(run.id)}).claims_chat_run()
+
+    assert json.loads(response.content) == {"status": "queued", "error_kind": "", "error": ""}

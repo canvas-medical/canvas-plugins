@@ -7,8 +7,10 @@ import pytest
 from canvas__agent_runner_poc.agents.chart_chat import (
     DECISIONS_NOTE_PREFIX,
     ChartChatAgent,
+    _save_conversation_messages,
     load_conversation_messages,
 )
+from canvas__agent_runner_poc.models.conversation import Conversation
 
 from canvas_sdk.agents import AgentPlugin, RunRequester, RunSubject
 from canvas_sdk.effects import EffectType
@@ -249,3 +251,15 @@ def test_another_clinicians_decision_is_not_recorded() -> None:
 
     assert gateway.requests[0]["messages"][-1] == {"role": "user", "content": "Anything else?"}
     assert gateway.requests[0]["messages"][-2]["role"] == "assistant"
+
+
+@pytest.mark.django_db
+def test_saving_a_conversation_again_updates_its_one_row() -> None:
+    """One conversation per patient and clinician, whatever the number of saves."""
+    patient, staff = PatientFactory.create(), StaffFactory.create()
+
+    _save_conversation_messages(patient.id, staff.id, [{"role": "user", "content": "first"}])
+    _save_conversation_messages(patient.id, staff.id, [{"role": "user", "content": "second"}])
+
+    (row,) = Conversation.objects.filter(patient__id=patient.id, staff__id=staff.id)
+    assert row.messages == [{"role": "user", "content": "second"}]

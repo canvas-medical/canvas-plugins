@@ -7,9 +7,11 @@ import pytest
 from canvas__agent_runner_poc.agents.claims_chat import (
     NO_REVENUE_ACCESS,
     ClaimsChatAgent,
+    _save_claims_conversation,
     load_claims_conversation,
 )
 from canvas__agent_runner_poc.agents.decisions import note_prefix
+from canvas__agent_runner_poc.models.claim_conversation import ClaimConversation
 
 from canvas_sdk.agents import AgentPlugin, Capability, RunRequester, RunSubject
 from canvas_sdk.effects import EffectType
@@ -185,3 +187,16 @@ def test_a_claim_write_is_proposed_and_its_decision_heard_on_the_next_run() -> N
         f"- proposal {approved.id} (move_claim_to_queue): approved by the staff member and "
         "applied"
     )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("claim", [None, str(uuid4())], ids=["queues", "claim"])
+def test_saving_a_claims_conversation_again_updates_its_one_row(claim: str | None) -> None:
+    """One conversation per staff member and claim, or about the queues."""
+    staff = StaffFactory.create()
+
+    _save_claims_conversation(staff.id, claim, [{"role": "user", "content": "first"}])
+    _save_claims_conversation(staff.id, claim, [{"role": "user", "content": "second"}])
+
+    (row,) = ClaimConversation.objects.filter(staff__id=staff.id, claim_id=claim or "")
+    assert row.messages == [{"role": "user", "content": "second"}]
