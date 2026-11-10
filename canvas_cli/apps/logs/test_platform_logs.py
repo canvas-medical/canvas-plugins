@@ -872,7 +872,7 @@ def test_credentials_ini_run_prints_deprecation_notice(
 
     assert result.exit_code == 0, result.output
     assert CREDENTIALS_INI_NOTICE in result.stderr
-    assert "canvas-plugins#migrating-from-credentialsini-to-canvas-platform" in result.stderr
+    assert "https://docs.canvasmedical.com/guides/upgrading-to-canvas-platform/" in result.stderr
     assert "deprecated" not in result.stdout
 
 
