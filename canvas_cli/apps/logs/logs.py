@@ -631,11 +631,14 @@ class StreamResult(NamedTuple):
         close_code (int | None): The close code Console sent, None when the connection ended
             without one, such as on Ctrl-C.
         refusal (str): The last error notice Console sent before starting the stream, or "".
+        error (str): The connection error websocket-client reported before the stream started,
+            such as a rejected upgrade, or "". Ctrl-C is not an error.
     """
 
     opened: bool
     close_code: int | None
     refusal: str
+    error: str
 
 
 def _stream_once(url: str) -> StreamResult:
@@ -654,6 +657,12 @@ def _stream_once(url: str) -> StreamResult:
     opened: list[bool] = [False]
     close_code: list[int | None] = [None]
     refusal: list[str] = [""]
+    error: list[str] = [""]
+
+    def on_error(ws: websocket.WebSocket, exc: BaseException) -> None:
+        if not opened[0] and isinstance(exc, Exception):
+            error[0] = str(exc)
+        _on_error(ws, str(exc))
 
     def on_message(ws: websocket.WebSocket, message: str) -> None:
         notice: dict[str, Any] | None = _console_notice(message)
@@ -670,12 +679,12 @@ def _stream_once(url: str) -> StreamResult:
     ws = websocket.WebSocketApp(
         url,
         on_message=on_message,
-        on_error=_on_error,
+        on_error=on_error,
         on_close=on_close,
     )
     ws.on_open = _on_open
     ws.run_forever()
-    return StreamResult(opened[0], close_code[0], refusal[0])
+    return StreamResult(opened[0], close_code[0], refusal[0], error[0])
 
 
 def stream_logs(host: str, token: LogToken) -> None:
@@ -687,15 +696,18 @@ def stream_logs(host: str, token: LogToken) -> None:
     other close ends the stream, as does a 4401 on a credentials.ini stream. A stream that
     Console closes before starting it ends the run. After a refusal notice, such as "Token
     authorization failed." or "No instance named ...", the error quotes it; a Platform token
-    Console refuses also names the way off Platform. With no notice, as when checking the token raises
-    and Console closes with 1011, the error gives the close code.
+    Console refuses also names the way off Platform. With no notice, as when checking the token
+    raises and Console closes with 1011, the error gives the close code. A connection that fails
+    before Console starts the stream, such as a rejected upgrade, ends the run with that failure;
+    Ctrl-C ends it cleanly.
 
     Args:
         host (str): The Canvas instance URL.
         token (LogToken): The token source.
 
     Raises:
-        click.ClickException: Console closed the stream before starting it.
+        click.ClickException: Console closed the stream before starting it, or the connection
+            failed before it started.
     """
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
@@ -704,8 +716,13 @@ def stream_logs(host: str, token: LogToken) -> None:
         result: StreamResult = _stream_once(
             f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
         )
-        if not result.opened and result.close_code is not None:
+        if not result.opened and (result.close_code is not None or result.error):
             # Also stops a re-minted token Console refuses from reconnecting in a loop.
+            if not result.refusal and result.close_code is None:
+                raise click.ClickException(
+                    f"Could not reach Console's log stream for {token.slug}: {result.error}. "
+                    "Run the command again."
+                )
             if not result.refusal:
                 raise click.ClickException(
                     f"Console closed the log stream for {token.slug} before starting it "

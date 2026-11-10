@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock as requests_mock_module
+import websocket
 from typer.testing import CliRunner
 
 from canvas_cli.apps.auth.utils import instance_slug
@@ -573,11 +574,14 @@ class _FakeStream:
     """A ``WebSocketApp`` stand-in that replays one scripted connection per instance.
 
     Each script entry is ``(messages, close_code)``: the messages Console sends after the
-    upgrade, and the close code it sends. Every connection fires ``on_open`` first, as
-    websocket-client does at the HTTP upgrade. Every instance records the URL it was built with.
+    upgrade, and the close code it sends. A connection fires ``on_open`` first, as
+    websocket-client does at the HTTP upgrade. An exception in place of the messages is a
+    connection that fails before the upgrade or is interrupted before any message:
+    websocket-client then fires ``on_error`` with it and ``on_close`` with no code. Every
+    instance records the URL it was built with.
     """
 
-    script: list[tuple[list[str], int | None]] = []
+    script: list[tuple[list[str] | BaseException, int | None]] = []
     urls: list[str] = []
 
     def __init__(self, url: str, **callbacks: Any) -> None:
@@ -588,6 +592,10 @@ class _FakeStream:
 
     def run_forever(self) -> bool:
         messages, close_code = _FakeStream.script.pop(0)
+        if isinstance(messages, BaseException):
+            self.callbacks["on_error"](self, messages)
+            self.callbacks["on_close"](self, None, None)
+            return True
         self.on_open(self)
         for message in messages:
             self.callbacks["on_message"](self, message)
@@ -725,6 +733,50 @@ def test_stream_closed_before_start_without_a_notice_ends(
     )
     assert "refused" not in result.output
     assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_that_cannot_reach_console_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A stream whose connection fails before Console starts it exits 1, naming the failure."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    refused_upgrade = websocket.WebSocketBadStatusException(
+        "Handshake status 503 Service Unavailable", 503
+    )
+    fake_stream.script = [(refused_upgrade, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert (
+        "Could not reach Console's log stream for acme-prod: Handshake status 503 Service "
+        "Unavailable" in result.output
+    )
+    assert "canvas logout" not in result.output
+    assert len(fake_stream.urls) == 1
+
+
+def test_stream_interrupted_before_start_ends_cleanly(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Ctrl-C while Console is still checking the token ends the run with exit 0."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(KeyboardInterrupt(), None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
     assert len(fake_stream.urls) == 1
 
 
