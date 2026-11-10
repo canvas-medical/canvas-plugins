@@ -309,15 +309,45 @@ class _AgentExecution:
     effect_grant: Any = None
 
 
+class _RunSlots:
+    """The agent-run slots one run holds, released once, by whichever side ends first.
+
+    Normally the agent's thread releases them when it finishes. Python cannot stop a
+    thread, so a run blocked outside a model call (CPU-bound plugin code, a hung I/O call)
+    would otherwise keep its slots after its call ended, and a few such runs would turn
+    every later run away as busy.
+    """
+
+    def __init__(self, extended: bool) -> None:
+        self.extended = extended
+        self._held = True
+        self._lock = threading.Lock()
+
+    def release(self) -> bool:
+        """Free the slots, unless they were freed already; whether this call freed them."""
+        with self._lock:
+            if not self._held:
+                return False
+            self._held = False
+        if self.extended:
+            EXTENDED_AGENT_RUN_SLOTS.release()
+        AGENT_RUN_SLOTS.release()
+        return True
+
+
 def _stream_progress(
-    recorder: RunRecorder, execute: Callable[[], _AgentExecution]
+    recorder: RunRecorder,
+    execute: Callable[[], _AgentExecution],
+    on_call_ended: Callable[[], None] = lambda: None,
 ) -> Generator[EventResponse, None, _AgentExecution]:
     """Run ``execute`` on its own thread, streaming the run's progress until it returns.
 
     The thread runs in a copy of this context and closes its database connections when
     it finishes. A heartbeat goes out whenever HEARTBEAT_SECONDS pass without another
     event, so the person waiting on the run can tell it is alive. Reply text that
-    arrives between polls goes out as one event.
+    arrives between polls goes out as one event. ``on_call_ended`` is called when the
+    stream is closed, as when the call passes its deadline, while ``execute`` is still
+    running.
     """
     feed = recorder.progress
     assert feed is not None
@@ -348,13 +378,17 @@ def _stream_progress(
             )
         )
 
-    while not finished.is_set():
-        if (event := feed.next(timeout=PROGRESS_POLL_SECONDS)) is not None:
-            yield progress(event)
-            last_sent = monotonic()
-        elif monotonic() - last_sent >= HEARTBEAT_SECONDS:
-            yield progress()
-            last_sent = monotonic()
+    try:
+        while not finished.is_set():
+            if (event := feed.next(timeout=PROGRESS_POLL_SECONDS)) is not None:
+                yield progress(event)
+                last_sent = monotonic()
+            elif monotonic() - last_sent >= HEARTBEAT_SECONDS:
+                yield progress()
+                last_sent = monotonic()
+    finally:
+        if not finished.is_set():
+            on_call_ended()
     while (event := feed.next(timeout=0)) is not None:
         yield progress(event)
     return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
@@ -747,6 +781,7 @@ class PluginRunner(PluginRunnerServicer):
                 sentry_sdk.set_tag("agent-id", None)
                 yield EventResponse(success=False, effects=[], error_kind="EXTENDED_RUNS_BUSY")
                 return
+            slots = _RunSlots(extended)
 
             # run_tool_loop records model and tool calls here for home-app's run record.
             recorder = RunRecorder()
@@ -864,9 +899,7 @@ class PluginRunner(PluginRunnerServicer):
                     recorder.close()
                     # Released before anything is yielded, so the slot frees as soon as
                     # the agent finishes rather than when the caller drains the stream.
-                    if extended:
-                        EXTENDED_AGENT_RUN_SLOTS.release()
-                    AGENT_RUN_SLOTS.release()
+                    slots.release()
                     sentry_sdk.set_tag("agent-id", None)
 
                 return outcome
@@ -874,7 +907,19 @@ class PluginRunner(PluginRunnerServicer):
             if request.stream_progress:
                 # The agent runs on its own thread while this call streams its progress.
                 recorder.progress = ProgressFeed(agent_progress_level(plugin.get("handler") or {}))
-                execution = yield from _stream_progress(recorder, execute)
+
+                def call_ended() -> None:
+                    # The call is over but the agent's thread is not: its slots stop
+                    # counting, and the stuck run is reported.
+                    if slots.release():
+                        message = (
+                            f"RunAgent: agent {request.agent_id} run {request.run_id} is still "
+                            "running after its call ended; its slot is freed"
+                        )
+                        log.error(message)
+                        sentry_sdk.capture_message(message, level="error")
+
+                execution = yield from _stream_progress(recorder, execute, call_ended)
             else:
                 execution = execute()
             sentry_sdk.set_tag("agent-id", None)
