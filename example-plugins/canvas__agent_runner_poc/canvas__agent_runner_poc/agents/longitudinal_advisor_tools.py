@@ -8,7 +8,7 @@ for cross-visit recommendation tracking.
 
 The trigger handler in ``longitudinal_trigger.py`` names the locked note
 as the run's note, so originate-on-note tools would resolve to it. The
-manifest grants the agent the clinical reads and
+manifest grants the agent the clinical and task reads and
 ``add_or_update_protocol_card`` only.
 """
 
