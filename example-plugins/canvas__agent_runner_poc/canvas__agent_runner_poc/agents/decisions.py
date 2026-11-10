@@ -2,17 +2,26 @@
 
 A change an approval-listed tool stages waits for the person the agent acted for. When they
 approve, deny, or let it expire, the next run adds one note to the conversation saying so,
-so the model never treats a decided change as pending or a denied one as made. The note
-is the chat's, not the person's, and the chat UIs leave it out of what they show.
+so the model never treats a decided change as pending or a denied one as made.
+
+A run's state is saved when the plugin returns, before Canvas applies its changes, and
+Canvas can refuse them, apply none after the run lost its scope, or stop at one that
+fails. So the next run also checks the platform's record of the run before it, and when
+fewer changes reached Canvas than the run returned, adds a note saying so.
+
+The notes are the chat's, not the person's, and the chat UIs leave them out of what they
+show.
 """
 
 import json
 from typing import Any
 
-from canvas_sdk.v1.data import AgentRunProposal, AgentRunProposalStatus
+from canvas_sdk.agents import AgentPlugin
+from canvas_sdk.v1.data import AgentRun, AgentRunProposal, AgentRunProposalStatus
 
-# Every chat's note starts with this, so a UI can tell it from a person's message.
+# Every chat's note starts with one of these, so a UI can tell it from a person's message.
 NOTE_START = "[Approval decisions, recorded by the chat"
+UNAPPLIED_START = "[Changes not applied, recorded by the chat"
 
 
 def note_prefix(who: str) -> str:
@@ -37,7 +46,7 @@ def is_decisions_note(message: dict[str, Any]) -> bool:
         and isinstance(content, list)
         and len(content) == 1
         and isinstance(content[0], dict)
-        and str(content[0].get("text", "")).startswith(NOTE_START)
+        and str(content[0].get("text", "")).startswith((NOTE_START, UNAPPLIED_START))
     )
 
 
@@ -90,4 +99,45 @@ def record_decisions(
     if not lines:
         return messages
     note = "\n".join([note_prefix(who), *lines])
+    return [*messages, {"role": "user", "content": [{"type": "text", "text": note}]}]
+
+
+def record_unapplied(
+    messages: list[dict[str, Any]], agent: AgentPlugin, scope_key: str, who: str
+) -> list[dict[str, Any]]:
+    """Return ``messages`` with a note when the previous run's changes did not all apply.
+
+    The previous run is the latest finished run of ``agent`` on ``scope_key``, the
+    conversation's, before this one, which ``who`` started. Canvas records how many effects it
+    returned, how many the grant dropped, and how many were applied; fewer applied than
+    kept means the saved conversation claims changes that were not made.
+    """
+    agent_id = f"{type(agent).__module__}:{type(agent).__name__}"
+    previous = (
+        AgentRun.objects.filter(
+            agent_id=agent_id,
+            scope_key=scope_key,
+            finished_at__isnull=False,
+            effects_returned__isnull=False,
+        )
+        .exclude(id=agent.run_id)
+        .order_by("-queued_at")
+        .first()
+    )
+    if previous is None:
+        return messages
+    kept = previous.effects_returned - (previous.effects_dropped or 0)
+    applied = previous.effects_applied or 0
+    recorded = "\n".join(
+        str(message["content"][0]["text"]) for message in messages if is_decisions_note(message)
+    )
+    if applied >= kept or str(previous.id) in recorded:
+        return messages
+    note = (
+        f"{UNAPPLIED_START}, not from the {who}]\n"
+        f"- run {previous.id}: {kept - applied} of the {kept} changes your last reply "
+        f"staged did not reach the chart ({previous.status}"
+        + (f": {previous.error}" if previous.error else "")
+        + "). Do not say they were made; check the chart before relying on them."
+    )
     return [*messages, {"role": "user", "content": [{"type": "text", "text": note}]}]
