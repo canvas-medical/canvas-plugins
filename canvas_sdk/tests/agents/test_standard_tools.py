@@ -26,6 +26,7 @@ from canvas_sdk.agents.standard_tools import _walk_note_body, _wrap_recommendati
 from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
+    ClaimBannerAlertFactory,
     ClaimFactory,
     ClaimLabelFactory,
     ClaimQueueFactory,
@@ -40,6 +41,7 @@ from canvas_sdk.test_utils.factories import (
     NoteTypeFactory,
     PatientFactory,
     PracticeLocationFactory,
+    ProtocolCurrentFactory,
     ReasonForVisitSettingCodingFactory,
     ServiceProviderFactory,
     StaffFactory,
@@ -51,6 +53,7 @@ from canvas_sdk.v1.data import (
     AllergyIntolerance,
     AllergyIntoleranceCoding,
     Appointment,
+    BannerAlert,
     Condition,
     Observation,
 )
@@ -97,6 +100,9 @@ EXPECTED_TOOLS = (
     "originate_follow_up",
     "originate_stop_medication",
 )
+
+# The plugin the tests' runs belong to.
+_PLUGIN = "test_plugin"
 
 
 def test_expected_tools_are_registered() -> None:
@@ -947,8 +953,13 @@ def test_add_or_update_protocol_card_executor_generates_key_when_omitted() -> No
     assert len(effects) == 1
 
 
+@pytest.mark.django_db
 def test_add_or_update_protocol_card_executor_preserves_supplied_card_key() -> None:
     """When card_key is supplied, it's used as-is (idempotent update path)."""
+    patient = PatientFactory.create()
+    ProtocolCurrentFactory.create(
+        patient=patient, protocol_key="stable-card-key-123", plugin_name=_PLUGIN
+    )
     effects: list[Any] = []
     result = standard_tools.execute(
         "add_or_update_protocol_card",
@@ -957,11 +968,28 @@ def test_add_or_update_protocol_card_executor_preserves_supplied_card_key() -> N
             "title": "Diabetes management",
             "narrative": "Updated narrative.",
         },
-        ctx={"patient_id": "pat-abc", "effects": effects},
+        ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects},
     )
 
     assert result == {"ok": True, "card_key": "stable-card-key-123"}
     assert len(effects) == 1
+
+
+@pytest.mark.django_db
+def test_add_or_update_protocol_card_refuses_another_plugins_card() -> None:
+    """Canvas keys a card by plugin and key, so the update would stage a second card."""
+    patient = PatientFactory.create()
+    ProtocolCurrentFactory.create(patient=patient, protocol_key="theirs", plugin_name="other")
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="belongs to another plugin"):
+        standard_tools.execute(
+            "add_or_update_protocol_card",
+            {"card_key": "theirs", "title": "Recheck A1c", "narrative": "Overdue."},
+            ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects},
+        )
+
+    assert effects == []
 
 
 _ORIGINATE_TOOLS = (
@@ -1086,17 +1114,53 @@ def test_remove_banner_alert_schema_requires_banner_key_only() -> None:
     assert definition["input_schema"].get("required") == ["banner_key"]
 
 
+@pytest.mark.django_db
 def test_remove_banner_alert_executor_stages_a_remove_banner_alert_effect() -> None:
     """remove_banner_alert renames banner_key→key and stages the Effect."""
+    patient = PatientFactory.create()
+    _banner(patient, "banner-uuid-123")
     effects: list[Any] = []
     result = standard_tools.execute(
         "remove_banner_alert",
         {"banner_key": "banner-uuid-123"},
-        ctx={"patient_id": "pat-abc", "effects": effects},
+        ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects},
     )
 
     assert result == {"ok": True}
     assert len(effects) == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("owner", "key"),
+    [("other", "banner-1"), (_PLUGIN, "no-such-banner")],
+    ids=["another plugin's", "no such banner"],
+)
+def test_remove_banner_alert_refuses_a_banner_this_plugin_did_not_add(owner: str, key: str) -> None:
+    """Canvas removes only a plugin's own banners, so this would report a removal that never happens."""
+    patient = PatientFactory.create()
+    _banner(patient, "banner-1", plugin_name=owner)
+    effects: list[Any] = []
+
+    with pytest.raises(ValueError, match="not an active banner this plugin added"):
+        standard_tools.execute(
+            "remove_banner_alert",
+            {"banner_key": key},
+            ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects},
+        )
+
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_find_banner_alerts_names_each_banners_plugin() -> None:
+    """The model can tell which banners its plugin may remove."""
+    patient = PatientFactory.create()
+    _banner(patient, "banner-1", plugin_name="other")
+
+    result = standard_tools.execute("find_banner_alerts", {}, ctx={"patient_id": patient.id})
+
+    assert [row["plugin_name"] for row in result] == ["other"]
 
 
 def test_add_banner_alert_rejects_narrative_over_90_chars_via_truncation() -> None:
@@ -1271,9 +1335,24 @@ def _allergy(patient: Any, concept_id: str = "777") -> Any:
     return allergy
 
 
+def _banner(patient: Any, key: str, plugin_name: str = _PLUGIN) -> BannerAlert:
+    """An active banner ``plugin_name`` put on ``patient``."""
+    return BannerAlert.objects.create(
+        patient=patient,
+        plugin_name=plugin_name,
+        key=key,
+        narrative="Overdue",
+        placement=["chart"],
+        intent="warning",
+        href="",
+        status="active",
+    )
+
+
 def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     """Valid arguments for every standard write tool, against ``patient``'s records."""
     task = TaskFactory.create(patient=patient)
+    _banner(patient, "banner-1")
     specialist = ServiceProviderFactory.create()
     provider = StaffFactory.create()
     location = PracticeLocationFactory.create()
@@ -1404,6 +1483,7 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares(
     ClaimQueueFactory.create(queue_sort_ordering=4, name="QueuedForSubmission")
     ClaimLabelFactory.create(claim=claim, label=TaskLabelFactory.create(name="Carried"))
     TaskLabelFactory.create(name="Urgent", modules=["claims"])
+    ClaimBannerAlertFactory.create(claim=claim, key="auth", plugin_name=_PLUGIN)
     arguments = {
         **_write_tool_arguments(patient),
         "move_claim_to_queue": {"queue": "QueuedForSubmission"},
@@ -1434,6 +1514,7 @@ def test_every_write_tool_emits_only_the_effect_types_it_declares(
                 "claim_id": str(claim.id),
                 "document_id": str(IntegrationTaskFactory.create(patient=None).id),
                 "capabilities": frozenset({Capability.REVENUE}),
+                "plugin_name": _PLUGIN,
                 "effects": effects,
                 "parent_tools": standard_tools,
             },

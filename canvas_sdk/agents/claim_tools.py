@@ -23,7 +23,7 @@ from django.db.models import Count, DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 
 from canvas_sdk.agents.capabilities import Capability
-from canvas_sdk.agents.standard_tools import standard_tools
+from canvas_sdk.agents.standard_tools import require_plugin_name, standard_tools
 from canvas_sdk.effects.claim import BannerAlertIntent, ClaimEffect, Label
 from canvas_sdk.v1.data import Claim, ClaimQueue, Staff, TaskLabel, Team
 from canvas_sdk.v1.data.claim import ClaimQueues
@@ -314,7 +314,12 @@ def _get_claim(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, A
             for item in line_items
         ],
         "banners": [
-            {"key": banner.key, "narrative": banner.narrative, "intent": banner.intent}
+            {
+                "key": banner.key,
+                "narrative": banner.narrative,
+                "intent": banner.intent,
+                "plugin_name": banner.plugin_name,
+            }
             for banner in claim.banner_alerts.filter(status=BannerAlertStatus.ACTIVE)
         ],
         "recent_comments": [
@@ -708,8 +713,9 @@ def _add_claim_banner(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
 @standard_tools.tool(
     name="remove_claim_banner",
     description=(
-        "Remove a claim banner by its `key`, from get_claim's `banners`. Requires the "
-        "run's revenue capability."
+        "Remove a claim banner this plugin added, by its `key` from get_claim's "
+        "`banners` where `plugin_name` is this plugin's; another plugin's banner is "
+        "refused. Requires the run's revenue capability."
     ),
     input_schema={
         "type": "object",
@@ -727,7 +733,17 @@ def _add_claim_banner(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
 def _remove_claim_banner(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
     """Stage removing a claim banner."""
     claim = _requesters_claim(arguments.get("claim_id"), ctx)
-    effect = ClaimEffect(claim_id=claim.id).remove_banner(arguments["key"])
+    key = arguments["key"]
+    # Canvas removes only the banners a plugin added, so another plugin's key would
+    # fail when the effect is applied.
+    if not claim.banner_alerts.filter(
+        key=key, plugin_name=require_plugin_name(ctx), status=BannerAlertStatus.ACTIVE
+    ).exists():
+        raise ValueError(
+            f"banner {key!r} is not an active banner this plugin added to this claim; "
+            "a plugin removes only its own banners"
+        )
+    effect = ClaimEffect(claim_id=claim.id).remove_banner(key)
     return _staged(ctx, effect, claim, key=arguments["key"])
 
 

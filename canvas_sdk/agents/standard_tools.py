@@ -135,6 +135,56 @@ def _require_patients_record(model: Any, record_id: str, ctx: dict[str, Any], la
         raise ValueError(f"{label} {record_id!r} not found for this patient")
 
 
+def require_plugin_name(ctx: dict[str, Any]) -> str:
+    """The run's plugin, which a tool that changes a plugin's own banners or cards needs."""
+    plugin_name = ctx.get("plugin_name")
+    if not isinstance(plugin_name, str) or not plugin_name:
+        raise ValueError("this tool needs the run's plugin_name in its context")
+    return plugin_name
+
+
+def _require_own_banner(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    """Refuse a key that names no active banner this plugin put on the run's patient.
+
+    Canvas removes only the banners a plugin added, so another plugin's key would be
+    reported as removed and stay on the chart.
+    """
+    key = arguments["banner_key"]
+    if not BannerAlert.objects.filter(
+        patient__id=require_patient_id(ctx),
+        key=key,
+        plugin_name=require_plugin_name(ctx),
+        status="active",
+    ).exists():
+        raise ValueError(
+            f"banner {key!r} is not an active banner this plugin added for this patient; "
+            "a plugin removes only its own banners"
+        )
+    return {}
+
+
+def _own_card_key(card_key: str | None, ctx: dict[str, Any]) -> str:
+    """The key to stage a card under: ``card_key``, or a new one when it is omitted.
+
+    Refuses a key another plugin's card on the run's patient carries: Canvas keys a
+    card by its plugin and key, so reusing that key stages a second card and leaves the
+    original as it was.
+    """
+    if not card_key:
+        return str(uuid4())
+    owners = set(
+        ProtocolCurrent.objects.filter(
+            patient__id=require_patient_id(ctx), protocol_key=card_key
+        ).values_list("plugin_name", flat=True)
+    )
+    if owners and require_plugin_name(ctx) not in owners:
+        raise ValueError(
+            f"card {card_key!r} belongs to another plugin; a plugin updates only its own "
+            "cards, so omit card_key to stage a new one"
+        )
+    return card_key
+
+
 def _patients_record_check(
     model: Any,
     argument: str,
@@ -3105,10 +3155,11 @@ def _serialize_stop_med_event(event: Any) -> dict[str, Any]:
     description=(
         "Search the patient's banner alerts (visual flags shown on the chart). "
         "Returns each banner's `key`, `narrative`, `intent` (info/warning/"
-        "alert), `placement` (list), `href` (or null), and `status` "
-        "(active/inactive). Use this to discover what's already flagged "
-        "before adding a duplicate, or to find a banner's key for "
-        "`remove_banner_alert`. Defaults to active banners only."
+        "alert), `placement` (list), `href` (or null), `status` "
+        "(active/inactive), and `plugin_name`, the plugin that added it. Use this "
+        "to discover what's already flagged before adding a duplicate, or to find "
+        "the key of a banner your plugin added for `remove_banner_alert`, which "
+        "removes only those. Defaults to active banners only."
     ),
     queryset_factory=lambda args, pid: (
         BannerAlert.objects.filter(patient__id=pid)
@@ -3147,7 +3198,7 @@ def _serialize_stop_med_event(event: Any) -> dict[str, Any]:
     model=BannerAlert,
     returns_description=(
         "Array of objects with `key`, `narrative`, `intent`, `placement` "
-        "(array of strings), `href`, `status`."
+        "(array of strings), `href`, `status`, `plugin_name`."
     ),
 )
 def _serialize_banner_alert(banner: Any) -> dict[str, Any]:
@@ -3159,6 +3210,7 @@ def _serialize_banner_alert(banner: Any) -> dict[str, Any]:
         "placement": list(banner.placement) if banner.placement else [],
         "href": banner.href or None,
         "status": banner.status,
+        "plugin_name": banner.plugin_name,
     }
 
 
@@ -3173,7 +3225,8 @@ def _serialize_banner_alert(banner: Any) -> dict[str, Any]:
         "identifying which plugin staged it. Use this to discover what's "
         "already flagged before adding a new card, to find prior cards "
         "your plugin staged that need a status update, or to inspect "
-        "cards staged by other plugins for context. Defaults to all "
+        "cards staged by other plugins for context; only your plugin's "
+        "cards can be updated. Defaults to all "
         "statuses; filter to active ones via `active_only=true`."
     ),
     queryset_factory=lambda args, pid: (
@@ -3365,10 +3418,11 @@ standard_tools.add_effect_tool(
 standard_tools.add_effect_tool(
     name="remove_banner_alert",
     description=(
-        "Remove a previously-staged banner alert from the patient's chart. "
+        "Remove a banner alert this plugin added to the patient's chart. "
         "Takes the banner's `key` — obtained either from a prior "
         "`add_banner_alert` call (returned as `banner_key` in the response) "
-        "or from `find_banner_alerts`. Use when the underlying clinical "
+        "or from `find_banner_alerts`, for a row whose `plugin_name` is this "
+        "plugin's; another plugin's banner is refused. Use when the underlying clinical "
         "issue has been addressed (e.g., the overdue screening was "
         "completed) and the banner should no longer display."
     ),
@@ -3385,6 +3439,7 @@ standard_tools.add_effect_tool(
             command_field="key",
         ),
     },
+    pre_build=_require_own_banner,
     categories=("clinical_alerts",),
     returns_description="`{ok: true}`.",
 )
@@ -3611,6 +3666,7 @@ standard_tools.add_effect_tool(
         "actions the clinician can take. Pass `card_key` to update an existing "
         "card (idempotent — call again to refresh narrative/status as the "
         "underlying clinical picture changes); omit to create a new one. "
+        "Only a card this plugin staged can be updated. "
         "Status drives visual treatment: 'due' (needs action), 'satisfied' "
         "(done), 'not_applicable' (doesn't apply to this patient), 'pending' "
         "(in progress), 'not_relevant' (dismissed). Title and narrative are "
@@ -3779,7 +3835,7 @@ standard_tools.add_effect_tool(
         ),
     },
     pre_build=lambda arguments, ctx: {
-        "key": arguments.get("card_key") or str(uuid4()),
+        "key": _own_card_key(arguments.get("card_key"), ctx),
         "title": arguments["title"].strip()[:200],
         "narrative": arguments["narrative"].strip()[:500],
         "status": ProtocolCard.Status(arguments.get("status", "due")),
