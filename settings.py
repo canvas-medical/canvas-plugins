@@ -107,6 +107,11 @@ def extended_agent_run_limit(requested: str | None, agent_runs: int) -> int:
 PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS = extended_agent_run_limit(
     os.getenv("PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS"), PLUGIN_RUNNER_MAX_AGENT_RUNS
 )
+
+# Seconds the plugin runner keeps answering calls after SIGTERM before it stops. The processes
+# that call it are stopped by the same signal and drain their in-flight work, which fires plugin
+# events; the default fits inside a 10 second container stop timeout.
+PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS = float(os.getenv("PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", 8))
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
 # How many sub-agents one run_subagents call runs at once, each on its own thread with its
