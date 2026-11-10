@@ -130,6 +130,7 @@ def test_tool_context_carries_the_run_subject() -> None:
         "permissions": frozenset({"api.change_task"}),
         "patient_run": False,
         "capabilities": frozenset(),
+        "plugin_name": "canvas_sdk",
         "effects": [],
         "gateway": _GATEWAY,
         "parent_tools": agent.tools,

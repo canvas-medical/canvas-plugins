@@ -45,6 +45,7 @@ def _ctx(claim: Claim | None = None, **overrides: Any) -> dict[str, Any]:
     return {
         "capabilities": frozenset({Capability.REVENUE}),
         "claim_id": str(claim.id) if claim else None,
+        "plugin_name": "test_plugin",
         "effects": [],
         **overrides,
     }
@@ -437,6 +438,7 @@ def test_add_and_remove_a_claim_banner() -> None:
         {"key": "auth", "narrative": "Prior auth pending", "intent": "warning"},
         claim,
     )
+    ClaimBannerAlertFactory.create(claim=claim, key="auth", plugin_name="test_plugin")
     _, removed = _write("remove_claim_banner", {"key": "auth"}, claim)
 
     assert (added["key"], added["narrative"], added["intent"]) == (
@@ -469,5 +471,23 @@ def test_each_write_refuses_a_missing_claim_and_stages_nothing(tool: str) -> Non
             },
             ctx=ctx,
         )
+
+    assert ctx["effects"] == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("owner", "key"),
+    [("other", "auth"), ("test_plugin", "no-such-banner")],
+    ids=["another plugin's", "no such banner"],
+)
+def test_remove_claim_banner_refuses_a_banner_this_plugin_did_not_add(owner: str, key: str) -> None:
+    """Canvas removes only a plugin's own banners, so the effect would fail when applied."""
+    claim = _claim()
+    ClaimBannerAlertFactory.create(claim=claim, key="auth", plugin_name=owner)
+    ctx = _ctx(claim)
+
+    with pytest.raises(ValueError, match="not an active banner this plugin added"):
+        standard_tools.execute("remove_claim_banner", {"key": key}, ctx=ctx)
 
     assert ctx["effects"] == []
