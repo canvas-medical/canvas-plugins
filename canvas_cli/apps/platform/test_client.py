@@ -75,14 +75,20 @@ def test_refusals_surface_the_server_sentence(requests_mock: requests_mock_modul
     requests_mock.post(
         f"{PLATFORM}/api/v1/orgs/acme/plugins",
         status_code=409,
-        json={"error": "Another publisher holds that name.", "code": "name_taken", "field": "name"},
+        json={
+            "error": "Another publisher's plugin with that name is installed on legacy.",
+            "code": "name_installed",
+            "field": "name",
+        },
     )
 
     with pytest.raises(PlatformError) as raised:
         PlatformClient(PLATFORM).register_plugin("acme", "acme__intake")
-    assert raised.value.message == "Another publisher holds that name. (field: name)"
+    assert raised.value.message == (
+        "Another publisher's plugin with that name is installed on legacy. (field: name)"
+    )
     assert raised.value.status == 409
-    assert raised.value.code == "name_taken"
+    assert raised.value.code == "name_installed"
 
 
 def test_a_refusal_without_json_still_names_the_status(
@@ -114,6 +120,36 @@ def test_plugin_answers_none_for_a_404(requests_mock: requests_mock_module.Mocke
     )
 
     assert PlatformClient(PLATFORM).plugin("acme__intake") is None
+
+
+def test_plugin_sends_the_publisher_when_given(requests_mock: requests_mock_module.Mocker) -> None:
+    """The publisher selects between two plugins that share a name; without it, none is sent."""
+    _sign_in()
+    requests_mock.get(f"{PLATFORM}/api/v1/plugins/intake", json={"name": "intake"})
+
+    PlatformClient(PLATFORM).plugin("intake", "acme")
+    assert _last(requests_mock).qs == {"publisher": ["acme"]}
+
+    PlatformClient(PLATFORM).plugin("intake")
+    # A bare name leaves the choice to Platform, which refuses an ambiguous one.
+    assert _last(requests_mock).qs == {}
+
+
+def test_git_credentials_sends_the_publisher_when_given(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """The token is scoped to the named publisher's plugin; without it, none is sent."""
+    _sign_in()
+    requests_mock.post(
+        f"{PLATFORM}/api/v1/plugins/intake/git-credentials", json={"password": "cnvs_git_1"}
+    )
+
+    PlatformClient(PLATFORM).git_credentials("intake", "acme")
+    assert _last(requests_mock).qs == {"publisher": ["acme"]}
+
+    PlatformClient(PLATFORM).git_credentials("intake")
+    # A bare name leaves the choice to Platform, which refuses an ambiguous one.
+    assert _last(requests_mock).qs == {}
 
 
 def test_set_variable_sends_sensitive_only_when_given(

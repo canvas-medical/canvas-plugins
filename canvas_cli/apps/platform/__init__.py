@@ -1,8 +1,11 @@
 from canvas_cli.apps.platform.commands import (
     clone,
     deploy,
+    disable,
+    enable,
     git_credential,
     init,
+    list_variables,
     login,
     logout,
     set_variables,
@@ -14,8 +17,11 @@ from canvas_cli.apps.platform.commands import (
 __all__ = (
     "clone",
     "deploy",
+    "disable",
+    "enable",
     "git_credential",
     "init",
+    "list_variables",
     "login",
     "logout",
     "set_variables",

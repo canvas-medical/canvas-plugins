@@ -17,6 +17,9 @@ import requests
 from canvas_cli.apps.platform import auth
 
 TIMEOUT_SECONDS = 30
+# Platform waits up to 60 s on the instance for a real namespace reset or drop, so the CLI
+# waits past that before calling the outcome unknown.
+NAMESPACE_ACTION_TIMEOUT_SECONDS = 90
 
 
 class PlatformError(click.ClickException):
@@ -42,6 +45,10 @@ class PlatformError(click.ClickException):
         return cls(str(message), status=response.status_code, code=str(body.get("code") or ""))
 
 
+class PlatformTimeout(PlatformError):
+    """Canvas Platform did not answer in time; the call may still have taken effect."""
+
+
 def segment(value: str) -> str:
     """A path segment with everything but unreserved characters escaped."""
     return quote(value, safe="")
@@ -54,7 +61,12 @@ class PlatformClient:
         self.platform = platform
 
     def _send(
-        self, method: str, path: str, access_token: str, body: dict[str, Any] | None
+        self,
+        method: str,
+        path: str,
+        access_token: str,
+        body: dict[str, Any] | None,
+        timeout: float,
     ) -> requests.Response:
         try:
             return requests.request(
@@ -65,17 +77,27 @@ class PlatformClient:
                     "Accept": "application/json",
                 },
                 json=body,
-                timeout=TIMEOUT_SECONDS,
+                timeout=timeout,
             )
+        except requests.Timeout as exc:
+            raise PlatformTimeout(
+                f"Canvas Platform at {self.platform} did not answer within {timeout:g} seconds."
+            ) from exc
         except requests.RequestException as exc:
             raise PlatformError(
                 f"Could not reach Canvas Platform at {self.platform}: {exc}"
             ) from exc
 
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+        timeout: float = TIMEOUT_SECONDS,
+    ) -> Any:
         """Send one call and return its parsed JSON body (None for an empty one)."""
         tokens = auth.valid_tokens(self.platform)
-        response = self._send(method, path, tokens["access_token"], body)
+        response = self._send(method, path, tokens["access_token"], body, timeout)
         if response.status_code == requests.codes.unauthorized and tokens.get("service"):
             raise auth.PlatformAuthError(
                 f"Canvas Platform at {self.platform} did not accept {auth.SERVICE_TOKEN_ENV}. "
@@ -83,7 +105,7 @@ class PlatformClient:
             )
         if response.status_code == requests.codes.unauthorized:
             tokens = auth.refresh(self.platform, tokens["refresh_token"])
-            response = self._send(method, path, tokens["access_token"], body)
+            response = self._send(method, path, tokens["access_token"], body, timeout)
             if response.status_code == requests.codes.unauthorized:
                 raise auth.PlatformAuthError(
                     f"Canvas Platform at {self.platform} did not accept your session. "
@@ -99,9 +121,11 @@ class PlatformClient:
         """GET ``path``."""
         return self.request("GET", path)
 
-    def post(self, path: str, body: dict[str, Any] | None = None) -> Any:
+    def post(
+        self, path: str, body: dict[str, Any] | None = None, timeout: float = TIMEOUT_SECONDS
+    ) -> Any:
         """POST ``body`` to ``path``."""
-        return self.request("POST", path, body)
+        return self.request("POST", path, body, timeout)
 
     def put(self, path: str, body: dict[str, Any]) -> Any:
         """PUT ``body`` to ``path``."""
@@ -121,12 +145,16 @@ class PlatformClient:
         """``GET /api/v1/instances``: what the person may reach and do on each."""
         return self.get("/api/v1/instances").get("instances", [])
 
-    def plugin(self, name: str) -> dict[str, Any] | None:
-        """``GET /api/v1/plugins/<name>``, or None when platform has no such plugin
-        the person may see (platform answers 404 for both).
+    def plugin(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
+        """``GET /api/v1/plugins/<name>[?publisher=<slug>]``, or None when platform has no
+        such plugin the person may see (platform answers 404 for both). ``publisher``
+        selects between two publishers' plugins that share ``name``.
         """
+        path: str = f"/api/v1/plugins/{segment(name)}"
+        if publisher:
+            path += f"?publisher={segment(publisher)}"
         try:
-            return self.get(f"/api/v1/plugins/{segment(name)}")
+            return self.get(path)
         except PlatformError as error:
             if error.status == requests.codes.not_found:
                 return None
@@ -138,13 +166,77 @@ class PlatformClient:
         """
         return self.post(f"/api/v1/orgs/{segment(organization)}/plugins", {"name": name})
 
-    def git_credentials(self, name: str) -> dict[str, Any]:
-        """``POST /api/v1/plugins/<name>/git-credentials``: a one-hour git token."""
-        return self.post(f"/api/v1/plugins/{segment(name)}/git-credentials")
+    def git_credentials(self, name: str, publisher: str | None = None) -> dict[str, Any]:
+        """``POST /api/v1/plugins/<name>/git-credentials[?publisher=<slug>]``: a one-hour git
+        token for the named publisher's plugin.
+        """
+        path: str = f"/api/v1/plugins/{segment(name)}/git-credentials"
+        if publisher:
+            path += f"?publisher={segment(publisher)}"
+        return self.post(path)
 
     def log_token(self, slug: str) -> dict[str, Any]:
         """``POST /api/v1/instances/<slug>/log-token``: a 15-minute token for reading logs."""
         return self.post(f"/api/v1/instances/{segment(slug)}/log-token")
+
+    def installed_plugins(self, slug: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/plugins``: Platform's inventory of the instance."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/plugins")
+
+    def variables(self, slug: str, name: str) -> list[dict[str, Any]]:
+        """``GET /api/v1/instances/<slug>/plugins/<name>/variables``: each variable's state."""
+        body = self.get(f"/api/v1/instances/{segment(slug)}/plugins/{segment(name)}/variables")
+        return body.get("variables", [])
+
+    def namespaces(self, slug: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/namespaces``: the instance's custom data namespaces."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/namespaces")
+
+    def namespace(self, slug: str, namespace: str) -> dict[str, Any]:
+        """``GET /api/v1/instances/<slug>/namespaces/<ns>``: a namespace's tables."""
+        return self.get(f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}")
+
+    def reset_namespace(
+        self, slug: str, namespace: str, *, dry_run: bool, confirm_production: bool = False
+    ) -> dict[str, Any]:
+        """``POST .../namespaces/<ns>/reset``: preview or perform a reset."""
+        return self._namespace_action(slug, namespace, "reset", dry_run, confirm_production)
+
+    def drop_namespace(
+        self, slug: str, namespace: str, *, dry_run: bool, confirm_production: bool = False
+    ) -> dict[str, Any]:
+        """``POST .../namespaces/<ns>/drop``: preview or perform a drop."""
+        return self._namespace_action(slug, namespace, "drop", dry_run, confirm_production)
+
+    def _namespace_action(
+        self,
+        slug: str,
+        namespace: str,
+        action: str,
+        dry_run: bool,
+        confirm_production: bool,
+    ) -> dict[str, Any]:
+        """POST a namespace reset or drop.
+
+        Args:
+            slug (str): The instance.
+            namespace (str): The namespace.
+            action (str): ``reset`` or ``drop``.
+            dry_run (bool): Whether to preview rather than perform it.
+            confirm_production (bool): Whether to name the instance with
+                ``confirm_production=<slug>``, which Platform requires for a real run on a
+                production instance.
+
+        Returns:
+            dict[str, Any]: Platform's body.
+        """
+        query = f"dry_run={'true' if dry_run else 'false'}"
+        if confirm_production:
+            query += f"&confirm_production={quote(slug, safe='')}"
+        return self.post(
+            f"/api/v1/instances/{segment(slug)}/namespaces/{segment(namespace)}/{action}?{query}",
+            timeout=TIMEOUT_SECONDS if dry_run else NAMESPACE_ACTION_TIMEOUT_SECONDS,
+        )
 
     def set_variable(
         self, instance: str, name: str, key: str, value: str, sensitive: bool | None
