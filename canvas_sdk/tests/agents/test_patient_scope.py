@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 from django.db import connection
+from django.db.models import Model
 from django.test.utils import CaptureQueriesContext
 
 from canvas_sdk.agents import standard_tools
@@ -35,6 +36,7 @@ from canvas_sdk.test_utils.factories import (
     StaffFactory,
     TaskFactory,
 )
+from canvas_sdk.v1.data import Assessment, Immunization, StopMedicationEvent
 from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
 
 
@@ -156,12 +158,22 @@ def _seed_lab_value(patient: object) -> _Record:
 
 
 SEEDED_READS: list[tuple[str, Callable[..., _Record]]] = [
-    ("find_goals", lambda patient: GoalFactory.create(patient=patient)),
+    (
+        "find_goals",
+        lambda patient: GoalFactory.create(patient=patient, committer=CanvasUserFactory.create()),
+    ),
     ("find_imaging_reports", lambda patient: ImagingReportFactory.create(patient=patient)),
-    ("find_referrals", lambda patient: ReferralFactory.create(patient=patient)),
+    (
+        "find_referrals",
+        lambda patient: ReferralFactory.create(
+            patient=patient, committer=CanvasUserFactory.create()
+        ),
+    ),
     (
         "find_medication_statements",
-        lambda patient: MedicationStatementFactory.create(patient=patient),
+        lambda patient: MedicationStatementFactory.create(
+            patient=patient, committer=CanvasUserFactory.create()
+        ),
     ),
     ("find_external_events", lambda patient: ExternalEventFactory.create(patient=patient)),
     (
@@ -220,3 +232,60 @@ def test_get_note_content_reads_the_patients_note_in_document_order() -> None:
         {"type": "text", "value": "Follow-up for blood pressure."},
         {"type": "text", "value": "Recheck in 3 months."},
     ]
+
+
+def _command_row(model: type[Model], **fields: object) -> Callable[..., _Record]:
+    """A row of ``model`` on a note of the patient's, with ``fields``."""
+
+    def create(patient: object, **state: object) -> _Record:
+        note = NoteFactory.create(patient=patient)
+        return cast(
+            _Record, model._default_manager.create(patient=patient, note=note, **fields, **state)
+        )
+
+    return create
+
+
+def _goal(patient: object, **state: object) -> _Record:
+    return cast(_Record, GoalFactory.create(patient=patient, **state))
+
+
+def _referral(patient: object, **state: object) -> _Record:
+    return cast(_Record, ReferralFactory.create(patient=patient, **state))
+
+
+def _medication_statement(patient: object, **state: object) -> _Record:
+    return cast(_Record, MedicationStatementFactory.create(patient=patient, **state))
+
+
+COMMITTED_READS: list[tuple[str, Callable[..., _Record]]] = [
+    (
+        "find_assessments",
+        _command_row(Assessment, status="stable", narrative="", background="", care_team=""),
+    ),
+    ("find_immunizations", _command_row(Immunization)),
+    ("find_goals", _goal),
+    ("find_referrals", _referral),
+    ("find_medication_statements", _medication_statement),
+    (
+        "find_stop_medication_events",
+        lambda patient, **state: _command_row(
+            StopMedicationEvent, medication=MedicationFactory.create(patient=patient)
+        )(patient, **state),
+    ),
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("tool, seed", COMMITTED_READS, ids=[tool for tool, _ in COMMITTED_READS])
+def test_a_read_tool_returns_committed_rows_only(tool: str, seed: Callable[..., _Record]) -> None:
+    """A draft and a row entered in error are not chart facts the model can cite."""
+    patient = PatientFactory.create()
+    clinician = CanvasUserFactory.create()
+    committed = seed(patient, committer=clinician)
+    seed(patient)
+    seed(patient, committer=clinician, entered_in_error=CanvasUserFactory.create())
+
+    result = standard_tools.execute(tool, {}, ctx=_ctx(patient.id))
+
+    assert [row.get("id") or row.get("uuid") for row in result] == [str(committed.id)]

@@ -167,7 +167,9 @@ def _find_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str
         "scheduling tools, or in `provider_ids` to `find_appointment_slots`), name, and "
         "primary location. Practice-level config, not patient-scoped."
     ),
-    queryset_factory=lambda args, pid: Staff.objects.filter(active=True),
+    queryset_factory=lambda args, pid: Staff.objects.filter(active=True).select_related(
+        "primary_practice_location"
+    ),
     patient_scoped=False,
     filters={
         "name_contains": FilterSpec(
