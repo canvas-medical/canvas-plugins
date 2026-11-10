@@ -290,8 +290,12 @@ def run_tool_loop(
                 # written; the final message is what the unstreamed call would return.
                 recorder.report_turn()
                 with client.messages.stream(**request) as stream:
-                    for text in stream.text_stream:
-                        recorder.report_text(text)
+                    # Each read's timeout does not bound the whole reply, so a reply still
+                    # arriving at the deadline is closed there rather than read to the end.
+                    for event in stream:
+                        if event.type == "text":
+                            recorder.report_text(event.text)
+                        recorder.check_deadline()
                     response = stream.get_final_message()
             else:
                 response = client.messages.create(**request)

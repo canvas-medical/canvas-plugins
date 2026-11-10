@@ -29,7 +29,7 @@ from canvas_sdk.agents.run_record import (
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent
 from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
+from canvas_sdk.test_utils.agents import FakeGateway, FakeStream, ModelReply, reply, text, tool_use
 
 
 def _tool_use(name: str, block_id: str, **arguments: Any) -> ToolUseBlock:
@@ -926,3 +926,29 @@ def test_a_tool_input_that_is_not_an_object_goes_back_as_an_error() -> None:
     (tool_result,) = client.requests[1]["messages"][-1]["content"]
     assert tool_result["is_error"] is True
     assert result.stopped == "end_turn"
+
+
+def test_a_streamed_reply_still_arriving_at_the_deadline_is_closed_there() -> None:
+    """Each read has a timeout, not the whole reply, so the loop checks the clock per event."""
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    recorder.deadline = time.monotonic() + DEADLINE_MARGIN_SECONDS + 60
+    words_read: list[str] = []
+
+    class _SlowStream(FakeStream):
+        def __iter__(self) -> Any:
+            for event in super().__iter__():
+                words_read.append(event.text)
+                if len(words_read) == 3:
+                    recorder.deadline = time.monotonic()  # the clock runs out mid-reply
+                yield event
+
+    class _SlowGateway(FakeGateway):
+        def stream(self, **kwargs: Any) -> FakeStream:
+            return _SlowStream(self.create(**kwargs))
+
+    client = _SlowGateway(_response("end_turn", _text("one two three four five six seven")))
+
+    with pytest.raises(RunDeadlineExceeded):
+        _with_recorder(recorder, client)
+
+    assert len(words_read) == 3, "the stream is closed at the deadline, not read to the end"

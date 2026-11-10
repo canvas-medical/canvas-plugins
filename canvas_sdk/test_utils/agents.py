@@ -28,6 +28,7 @@ import copy
 import re
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
@@ -93,6 +94,13 @@ class FakeStream:
         for block in self._answer.content:
             if isinstance(block, TextBlock):
                 yield from (word for word in re.split(r"(?<= )", block.text) if word)
+
+    def __iter__(self) -> Iterator[Any]:
+        """The stream's events: a ``text`` event for each word of the reply's text."""
+        snapshot = ""
+        for word in self.text_stream:
+            snapshot += word
+            yield SimpleNamespace(type="text", text=word, snapshot=snapshot)
 
     def get_final_message(self) -> ModelReply:
         """The whole reply, as the stream's final message.
