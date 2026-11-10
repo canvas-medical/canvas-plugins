@@ -7,12 +7,11 @@ from logger import log
 
 
 class LongitudinalCareAdvisorTrigger(BaseHandler):
-    """Fires the LongitudinalCareAdvisor when a note transitions to LOCKED.
+    """Runs the LongitudinalCareAdvisor when a note is locked.
 
-    LOCKED is the right trigger for the longitudinal advisor (and was wrong for
-    ChartSummary) because the advisor reviews a *completed* encounter against
-    prior visits' open protocol cards and surfaces follow-up via new cards —
-    none of which require originating commands onto the locked note itself.
+    The advisor reviews the completed encounter against prior visits' open
+    protocol cards and surfaces outstanding follow-up as new cards, so it needs
+    a finished note and writes nothing onto it.
     """
 
     RESPONDS_TO: list[str] = [EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED)]
@@ -23,8 +22,8 @@ class LongitudinalCareAdvisorTrigger(BaseHandler):
         if not self.is_locked_note_event():
             return []
 
-        note_id = self.context.get("note_id")
-        patient_id = self.context.get("patient_id")
+        note_id = self.event.context.get("note_id")
+        patient_id = self.event.context.get("patient_id")
         if not (note_id and patient_id):
             log.info(
                 "LongitudinalCareAdvisorTrigger: missing note_id or patient_id in context; skipping"

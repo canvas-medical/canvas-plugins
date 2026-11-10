@@ -16,15 +16,12 @@ The platform sets them on ``self.subject`` and ``self.requester``, and runs one 
 patient and clinician. The UI polls ``/chart-chat-history`` to surface the
 assistant turn when it lands.
 
-The full tool surface — clinical reads, task/banner/protocol writes,
-and the originate-on-note commands (Plan/Prescribe/LabOrder/Diagnose/
-Goal/Assessment/FollowUp/StopMedication) — comes from the SDK's
-``standard_tools`` registry via ``tools.extend(standard_tools)`` in
-chart_chat_tools.py. The manifest grants @clinical_reads,
-@clinical_writes, @task_writes, and @clinical_alerts with no
-exclusions. The originate-command tools stage onto the clinician's open
-note, which :meth:`AgentPlugin.run_tool_loop` finds for a run a staff
-member started.
+The tools come from the SDK's ``standard_tools`` registry plus the
+plugin's own in chart_chat_tools.py. The manifest's ``tools.allowed``
+for this agent picks which of them a run is offered, and its
+``tools.approve`` lists the ones that wait for the clinician's approval.
+The originate-command tools stage onto the clinician's open note, which
+:meth:`AgentPlugin.run_tool_loop` finds for a run a staff member started.
 """
 
 from typing import Any

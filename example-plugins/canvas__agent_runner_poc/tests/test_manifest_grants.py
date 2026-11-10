@@ -1,14 +1,22 @@
 """What each agent's manifest grant lets it do, read from the manifest a customer copies."""
 
 import json
+import re
+import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from canvas__agent_runner_poc.agents.chart_chat import SYSTEM_PROMPT, ChartChatAgent
+from canvas__agent_runner_poc.agents.chart_chat_tools import (
+    _CHART_SUMMARY_SUBAGENT,
+    _PRE_VISIT_BRIEF_SUBAGENTS,
+)
 from canvas__agent_runner_poc.agents.claims_chat import ClaimsChatAgent
+from canvas__agent_runner_poc.agents.intake import DocumentIntakeAgent
 from canvas__agent_runner_poc.agents.longitudinal_advisor import LongitudinalCareAdvisor
 
-from canvas_sdk.agents import AgentPlugin, Capability
+from canvas_sdk.agents import AgentPlugin, Capability, ToolRegistry
 from canvas_sdk.test_utils.agents import prepare_agent
 
 MANIFEST = Path(__file__).parents[1] / "canvas__agent_runner_poc" / "CANVAS_MANIFEST.json"
@@ -79,3 +87,38 @@ def test_every_claim_write_waits_for_the_staff_members_approval() -> None:
 
     assert writes
     assert [name for name in writes if not agent.tools.requires_approval(name)] == []
+
+
+def _named_tools(text: str, registry: ToolRegistry) -> set[str]:
+    """The registered tool names a prompt mentions."""
+    return {
+        word for word in set(re.findall(r"[a-z][a-z_]+", text)) if registry.resolve_allowed([word])
+    }
+
+
+@pytest.mark.parametrize(
+    "agent_class",
+    [ChartChatAgent, ClaimsChatAgent, DocumentIntakeAgent, LongitudinalCareAdvisor],
+)
+def test_every_tool_an_agents_prompt_names_is_in_its_grant(agent_class: type[AgentPlugin]) -> None:
+    """A tool the prompt tells the model to call, and the grant leaves out, is silently missing."""
+    registry = agent_class.tools
+    assert registry is not None
+    agent = _granted(agent_class, tuple(Capability))
+    prompt = sys.modules[agent_class.__module__].SYSTEM_PROMPT
+
+    named = _named_tools(prompt, registry)
+
+    assert named
+    assert sorted(named - agent.tools_allowed) == []
+
+
+def test_every_tool_a_chart_chat_sub_agent_uses_is_in_chart_chats_grant() -> None:
+    """A sub-agent's tools are cut to its parent's grant, so one outside it never runs."""
+    agent = _granted(ChartChatAgent)
+    registry = ChartChatAgent.tools
+    assert registry is not None
+
+    for spec in (_CHART_SUMMARY_SUBAGENT, *_PRE_VISIT_BRIEF_SUBAGENTS):
+        wanted = set(spec.allowed_tool_names) | _named_tools(spec.system_prompt, registry)
+        assert sorted(wanted - agent.tools_allowed) == [], spec.name
