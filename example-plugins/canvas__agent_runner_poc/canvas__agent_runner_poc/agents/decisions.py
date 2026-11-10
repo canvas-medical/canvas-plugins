@@ -107,8 +107,9 @@ def record_unapplied(
 ) -> list[dict[str, Any]]:
     """Return ``messages`` with a note when the previous run's changes did not all apply.
 
-    The previous run is the latest finished run of ``agent`` on ``scope_key``, the
-    conversation's, before this one, which ``who`` started. Canvas records how many effects it
+    The previous run is the latest finished run of ``agent`` on ``scope_key`` that the
+    same staff member started, before this one: a claim's scope is shared by every
+    staff member working it, and each has their own conversation. Canvas records how many effects it
     returned, how many the grant dropped, and how many were applied; fewer applied than
     kept means the saved conversation claims changes that were not made.
     """
@@ -117,6 +118,7 @@ def record_unapplied(
         AgentRun.objects.filter(
             agent_id=agent_id,
             scope_key=scope_key,
+            staff__id=agent.requester.staff_id,
             finished_at__isnull=False,
             effects_returned__isnull=False,
         )
@@ -124,7 +126,7 @@ def record_unapplied(
         .order_by("-queued_at")
         .first()
     )
-    if previous is None:
+    if previous is None or not agent.requester.staff_id:
         return messages
     kept = previous.effects_returned - (previous.effects_dropped or 0)
     applied = previous.effects_applied or 0

@@ -43,18 +43,28 @@ def _previous(status: str = AgentRunStatus.FAILED, **counts: Any) -> AgentRun:
     )
 
 
-def _agent() -> AgentPlugin:
-    return prepare_agent(ChartChatAgent)
+@pytest.fixture
+def staff() -> Any:
+    """The staff member whose chat runs."""
+    return StaffFactory.create()
+
+
+def _agent(staff: Any) -> AgentPlugin:
+    return prepare_agent(ChartChatAgent, requester=RunRequester(staff_id=staff.id))
 
 
 @pytest.mark.django_db
-def test_a_run_whose_changes_did_not_apply_is_noted_for_the_model() -> None:
+def test_a_run_whose_changes_did_not_apply_is_noted_for_the_model(staff: Any) -> None:
     """The saved conversation says the plan was added; the next turn hears it was not."""
     run = _previous(
-        effects_returned=3, effects_dropped=1, effects_applied=0, error="Permission denied"
+        staff=staff,
+        effects_returned=3,
+        effects_dropped=1,
+        effects_applied=0,
+        error="Permission denied",
     )
 
-    messages = record_unapplied(HISTORY, _agent(), SCOPE, "clinician")
+    messages = record_unapplied(HISTORY, _agent(staff), SCOPE, "clinician")
 
     (note,) = messages[len(HISTORY) :]
     assert is_decisions_note(note)
@@ -76,38 +86,44 @@ def test_a_run_whose_changes_did_not_apply_is_noted_for_the_model() -> None:
         {"effects_returned": 1, "effects_applied": 0, "scope_key": "patient_and_staff:p2:s1"},
     ],
 )
-def test_no_note_when_every_kept_change_applied_or_none_was_claimed(counts: dict) -> None:
+def test_no_note_when_every_kept_change_applied_or_none_was_claimed(
+    counts: dict, staff: Any
+) -> None:
     """A run that kept its word, or returned nothing, needs no correction."""
-    _previous(**counts)
+    _previous(staff=staff, **counts)
 
-    assert record_unapplied(HISTORY, _agent(), SCOPE, "clinician") == HISTORY
+    assert record_unapplied(HISTORY, _agent(staff), SCOPE, "clinician") == HISTORY
 
 
 @pytest.mark.django_db
-def test_the_note_is_added_once() -> None:
+def test_the_note_is_added_once(staff: Any) -> None:
     """The next turn's conversation already holds it."""
-    _previous(effects_returned=1, effects_applied=0)
-    once = record_unapplied(HISTORY, _agent(), SCOPE, "clinician")
+    _previous(staff=staff, effects_returned=1, effects_applied=0)
+    once = record_unapplied(HISTORY, _agent(staff), SCOPE, "clinician")
 
-    assert record_unapplied(once, _agent(), SCOPE, "clinician") == once
+    assert record_unapplied(once, _agent(staff), SCOPE, "clinician") == once
 
 
 @pytest.mark.django_db
-def test_the_run_itself_is_not_its_own_previous_run() -> None:
+def test_the_run_itself_is_not_its_own_previous_run(staff: Any) -> None:
     """The current run's record is still running; only earlier runs count."""
-    run = _previous(effects_returned=1, effects_applied=0)
-    agent = prepare_agent(ChartChatAgent, run_id=str(run.id))
+    run = _previous(staff=staff, effects_returned=1, effects_applied=0)
+    agent = prepare_agent(
+        ChartChatAgent, run_id=str(run.id), requester=RunRequester(staff_id=staff.id)
+    )
 
     assert record_unapplied(HISTORY, agent, SCOPE, "clinician") == HISTORY
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("agent_class", [ChartChatAgent, ClaimsChatAgent])
-def test_each_chat_tells_the_model_before_the_next_message(agent_class: type[AgentPlugin]) -> None:
+def test_each_chat_tells_the_model_before_the_next_message(
+    agent_class: type[AgentPlugin], staff: Any
+) -> None:
     """The model reads the note ahead of the person's new message."""
-    staff = StaffFactory.create()
     patient = PatientFactory.create()
     _previous(
+        staff=staff,
         effects_returned=1,
         effects_applied=0,
         agent_id=f"{agent_class.__module__}:{agent_class.__name__}",
@@ -125,3 +141,11 @@ def test_each_chat_tells_the_model_before_the_next_message(agent_class: type[Age
     *_, note, question = gateway.requests[0]["messages"]
     assert note["content"][0]["text"].startswith(UNAPPLIED_START)
     assert question["content"] == "Did it work?"
+
+
+@pytest.mark.django_db
+def test_another_staff_members_run_on_a_shared_scope_is_not_noted(staff: Any) -> None:
+    """A claim's scope is every biller's; one's failed changes, and its error, stay theirs."""
+    _previous(staff=StaffFactory.create(), effects_returned=1, effects_applied=0, error="theirs")
+
+    assert record_unapplied(HISTORY, _agent(staff), SCOPE, "staff member") == HISTORY
