@@ -63,6 +63,9 @@ log = logging.getLogger("plugin_runner_logger")
 
 # The most sub-agents run_subagents runs at once.
 MAX_PARALLEL = 8
+# The category of tools that run sub-agents. A sub-agent is never given one, so a run fans
+# out one level, which the plugin runner's database pool is sized for.
+COMPOSITION_CATEGORY = "composition"
 
 
 @dataclass(frozen=True)
@@ -79,7 +82,8 @@ class SubAgentSpec:
         allowed_tool_names: Tool names this sub-agent may use. MUST be
             a subset of the parent's manifest-granted catalog; names
             outside the parent's catalog are silently dropped at
-            scope-time. Keep tight — one of the wins of fan-out is
+            scope-time, as are ``@composition`` tools, so a sub-agent never
+            runs sub-agents of its own. Keep tight — one of the wins of fan-out is
             that the model isn't distracted by tools it can't use here.
         max_turns: Cap on tool-use loop iterations. Default 4 — most
             domain-scoped sub-agents converge in 1-2 turns. Bump if
@@ -137,7 +141,11 @@ def run_subagent(
     try:
         result = run_tool_loop(
             gateway,
-            tools=parent_tools.scope(spec.allowed_tool_names),
+            tools=parent_tools.scope(
+                name
+                for name in spec.allowed_tool_names
+                if COMPOSITION_CATEGORY not in parent_tools.categories_for(name)
+            ),
             ctx=parent_ctx,
             system=spec.system_prompt,
             messages=[{"role": "user", "content": user_message}],

@@ -31,7 +31,8 @@ def agent_run_seconds(manifest_entry: dict) -> int:
     requested = manifest_entry.get("run_seconds")
     if not isinstance(requested, int) or isinstance(requested, bool):
         return DEFAULT_RUN_SECONDS
-    return min(max(requested, 1), MAX_RUN_SECONDS)
+    # A run gets at least the default: less leaves no model time past the deadline margin.
+    return min(max(requested, DEFAULT_RUN_SECONDS), MAX_RUN_SECONDS)
 
 
 # The most tool-result text one run sends the model, summed over its tool calls and its

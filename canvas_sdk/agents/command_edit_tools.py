@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from canvas_sdk.agents import history_tools  # noqa: F401  (its originate tools register first)
+# Every module whose originate tools stage a draft registers before DRAFT_KINDS is read.
+from canvas_sdk.agents import history_tools, order_tools, visit_tools  # noqa: F401
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_registry import EffectField, remove_first, require_patient_id
 from canvas_sdk.commands.base import _BaseCommand
