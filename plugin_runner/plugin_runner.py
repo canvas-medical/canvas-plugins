@@ -309,30 +309,60 @@ class _AgentExecution:
     effect_grant: Any = None
 
 
+# Runs whose call ended while their agent's thread kept running, and the most of them
+# whose slots are freed for other runs. Past the ceiling an ended call keeps its slots, so
+# plugin code that blocks cannot pile up threads without bound.
+_orphaned_runs = 0
+_orphaned_runs_lock = threading.Lock()
+MAX_ORPHANED_AGENT_RUNS = PLUGIN_RUNNER_MAX_AGENT_RUNS
+
+
 class _RunSlots:
     """The agent-run slots one run holds, released once, by whichever side ends first.
 
     Normally the agent's thread releases them when it finishes. Python cannot stop a
     thread, so a run blocked outside a model call (CPU-bound plugin code, a hung I/O call)
     would otherwise keep its slots after its call ended, and a few such runs would turn
-    every later run away as busy.
+    every later run away as busy. An ended call frees them only while fewer than
+    MAX_ORPHANED_AGENT_RUNS runs are orphaned this way.
     """
 
     def __init__(self, extended: bool) -> None:
         self.extended = extended
         self._held = True
+        self._orphaned = False
         self._lock = threading.Lock()
 
-    def release(self) -> bool:
-        """Free the slots, unless they were freed already; whether this call freed them."""
+    def release(self) -> None:
+        """The agent's thread finished: free the slots, or stop counting it as orphaned."""
+        global _orphaned_runs
+        with self._lock:
+            held, self._held = self._held, False
+            if self._orphaned:
+                with _orphaned_runs_lock:
+                    _orphaned_runs -= 1
+        if held:
+            self._free()
+
+    def release_for_ended_call(self) -> bool:
+        """Free the slots of a run still running after its call ended, within the ceiling."""
+        global _orphaned_runs
         with self._lock:
             if not self._held:
                 return False
+            with _orphaned_runs_lock:
+                if _orphaned_runs >= MAX_ORPHANED_AGENT_RUNS:
+                    return False
+                _orphaned_runs += 1
             self._held = False
+            self._orphaned = True
+        self._free()
+        return True
+
+    def _free(self) -> None:
         if self.extended:
             EXTENDED_AGENT_RUN_SLOTS.release()
         AGENT_RUN_SLOTS.release()
-        return True
 
 
 def _stream_progress(
@@ -909,15 +939,19 @@ class PluginRunner(PluginRunnerServicer):
                 recorder.progress = ProgressFeed(agent_progress_level(plugin.get("handler") or {}))
 
                 def call_ended() -> None:
-                    # The call is over but the agent's thread is not: its slots stop
-                    # counting, and the stuck run is reported.
-                    if slots.release():
-                        message = (
-                            f"RunAgent: agent {request.agent_id} run {request.run_id} is still "
-                            "running after its call ended; its slot is freed"
-                        )
-                        log.error(message)
-                        sentry_sdk.capture_message(message, level="error")
+                    # The call is over but the agent's thread is not. It makes no more
+                    # model calls and stops at its next checkpoint; its slots stop counting
+                    # while few runs are stuck this way; and it is reported.
+                    recorder.close()
+                    recorder.deadline = monotonic()
+                    freed = slots.release_for_ended_call()
+                    message = (
+                        f"RunAgent: agent {request.agent_id} run {request.run_id} is still "
+                        "running after its call ended; "
+                        + ("its slot is freed" if freed else "it keeps its slot")
+                    )
+                    log.error(message)
+                    sentry_sdk.capture_message(message, level="error")
 
                 execution = yield from _stream_progress(recorder, execute, call_ended)
             else:

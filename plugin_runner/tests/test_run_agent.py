@@ -1491,3 +1491,45 @@ def test_a_run_that_outlives_its_call_frees_its_slot_and_is_reported(
     # The stuck thread finishing later does not free the slot a second time.
     assert slots.acquire(blocking=False)
     assert not slots.acquire(blocking=False)
+    assert runner_module._orphaned_runs == 0
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_runs_stuck_past_their_call_free_slots_only_up_to_a_ceiling(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Plugin code that blocks on purpose cannot pile up threads by freeing every slot."""
+    slots = threading.Semaphore(2)
+    monkeypatch.setattr(runner_module, "AGENT_RUN_SLOTS", slots)
+    monkeypatch.setattr(runner_module, "MAX_ORPHANED_AGENT_RUNS", 1)
+    monkeypatch.setattr(runner_module, "HEARTBEAT_SECONDS", 0)
+    monkeypatch.setattr(runner_module.sentry_sdk, "capture_message", lambda *a, **k: None)
+    unblock = threading.Event()
+    started = threading.Semaphore(0)
+
+    def _hang(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        started.release()
+        unblock.wait(timeout=10)
+        raise RuntimeError("finished long after its call")
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _hang)
+
+    for _ in range(2):
+        stream = cast(
+            Generator[Any, None, None],
+            plugin_runner.RunAgent(_make_request(stream_progress=True), None),
+        )
+        next(stream)
+        assert started.acquire(timeout=5)
+        stream.close()
+
+    assert slots.acquire(blocking=False), "the first stuck run's slot was freed"
+    assert not slots.acquire(blocking=False), "the second kept its slot past the ceiling"
+    slots.release()
+    unblock.set()
+    time.sleep(0.3)
+    assert runner_module._orphaned_runs == 0
