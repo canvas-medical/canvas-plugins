@@ -220,7 +220,7 @@ requires-dist = [
     { name = "snowflake-connector-python", specifier = ">=4.7.2,<5" },
     { name = "statsd", specifier = ">=4.0.1,<5" },
     { name = "stripe", specifier = ">=14.1.0" },
-    { name = "typer" },
+    { name = "typer", specifier = ">=0.19.2,<0.26" },
     { name = "typing-extensions", specifier = ">=4.14.1,<5" },
     { name = "websocket-client", specifier = ">=1.7.0,<2" },
 ]
