@@ -54,7 +54,15 @@ def test_fanout_shares_one_key_and_starts_the_extended_probe() -> None:
 
 
 @pytest.mark.parametrize(
-    "body", [{"scenario": "s1", "count": 0}, {"scenario": "s1", "count": 101}, {"count": 5}]
+    "body",
+    [
+        {"scenario": "s1", "count": 0},
+        {"scenario": "s1", "count": 101},
+        {"count": 5},
+        {"scenario": "s1", "count": "five"},
+        {"scenario": "s1", "count": 5, "start": "ten"},
+        {"scenario": "s1", "count": 5, "start": -1},
+    ],
 )
 def test_fanout_refuses_a_bad_request(body: dict[str, Any]) -> None:
     """A fanout is 1 to 100 runs of a named scenario."""
@@ -143,3 +151,11 @@ def test_chat_runs_on_the_staff_members_conversation_with_the_patient() -> None:
     )
     assert data["trigger_payload"]["seq"] == 4
     assert json.loads(response.content)["run_id"] == data["run_id"]
+
+
+@pytest.mark.parametrize("seq", ["four", 4.5, True])
+def test_chat_refuses_a_seq_that_is_not_a_whole_number(seq: Any) -> None:
+    """Bad input is a 400, not a server error."""
+    (response,) = _api(LoadTestChatAPI, {"scenario": "s2", "seq": seq, "patient_id": "p1"}).chat()
+
+    assert response.status_code == 400

@@ -17,14 +17,22 @@ Scenarios:
 - ``extended``: ``--extended-runs`` extended runs, which the plugin runner admits only
   ``--max-extended`` at a time.
 - ``faults``: ``--fault-runs`` batch runs with the gateway failing a share of calls.
+
+Before the scenarios, one canary run has to succeed through the fake gateway, so an
+instance pointed at a real gateway stops the driver before it starts any load. The
+plugin's API key and a staff session's Cookie header come from the environment
+(``ARF_LOADTEST_API_KEY``, ``ARF_LOADTEST_SESSION_COOKIE``), and an instance other than
+localhost needs ``--allow-remote-instance``.
 """
 
 import argparse
 import json
+import os
 import sys
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -45,6 +53,9 @@ PLUGIN = "canvas__arf_loadtest"
 # READ_BATCH per /runs request.
 FANOUT_BATCH = 100
 READ_BATCH = 1000
+API_KEY_ENV = "ARF_LOADTEST_API_KEY"
+SESSION_COOKIE_ENV = "ARF_LOADTEST_SESSION_COOKIE"
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 @dataclass
@@ -179,6 +190,10 @@ class Driver:
         value: int = response.json()["value"]
         return value
 
+    def clear(self, scenario: str) -> None:
+        """Delete a scenario's probe records and counters; its AgentRun rows stay."""
+        self.api.post("/clear", json={"scenario": scenario}).raise_for_status()
+
     def control(self, **settings: Any) -> None:
         """Set the fake gateway's latency or fault rates."""
         self.gateway.post("/control", json=settings).raise_for_status()
@@ -193,6 +208,25 @@ class Driver:
         response.raise_for_status()
         stats: dict[str, Any] = response.json()
         return stats
+
+
+def canary(driver: Driver) -> str | None:
+    """Run one probe and confirm this fake gateway served its model calls; why not, or None."""
+    driver.reset_gateway()
+    scenario = driver.scenario("canary")
+    run_ids = driver.fanout(scenario, 1)
+    runs, _ = driver.wait(run_ids)
+    served = driver.gateway_stats()["requests"]
+    driver.clear(scenario)
+    status = runs[0]["status"] if runs else "unrecorded"
+    if status != "succeeded":
+        return f"the canary run ended {status}"
+    if not served:
+        return (
+            "the canary run succeeded without a call to this fake gateway, so the "
+            "instance's INFERENCE_GATEWAY_URL points at another gateway"
+        )
+    return None
 
 
 def throughput(driver: Driver) -> Result:
@@ -287,7 +321,9 @@ def faults(driver: Driver) -> Result:
         runs, _ = driver.wait(run_ids)
     finally:
         driver.control(rate_429=0.0, rate_500=0.0, rate_401=0.0)
+    served = driver.gateway_stats()["requests"]
     unfinished = [run for run in runs if run["status"] not in TERMINAL]
+    succeeded = sum(1 for run in runs if run["status"] == "succeeded")
     return Result(
         "faults",
         {"batch": summarize(runs)},
@@ -296,7 +332,17 @@ def faults(driver: Driver) -> Result:
                 "every run reached a final status",
                 not unfinished and len(runs) == len(run_ids),
                 f"{len(runs)}/{len(run_ids)} recorded, {len(unfinished)} not final",
-            )
+            ),
+            Check(
+                "the gateway served every run's model calls",
+                served >= len(run_ids),
+                f"{served} calls for {len(run_ids)} runs",
+            ),
+            Check(
+                "runs succeeded through the faults",
+                succeeded > 0,
+                f"{succeeded}/{len(run_ids)} succeeded",
+            ),
         ],
     )
 
@@ -354,11 +400,12 @@ def parse(argv: list[str] | None = None) -> tuple[list[str], Settings, str | Non
     )
     parser.add_argument("scenarios", nargs="+", choices=[*SCENARIOS, "all"])
     parser.add_argument("--instance", required=True, help="the instance's base URL")
-    parser.add_argument("--api-key", required=True, help="the plugin's simpleapi-api-key secret")
-    parser.add_argument("--gateway", default="http://localhost:8765", help="the fake gateway's URL")
     parser.add_argument(
-        "--session-cookie", default="", help="a staff session's Cookie header, for chat"
+        "--allow-remote-instance",
+        action="store_true",
+        help="load an instance other than localhost, which must be a development instance",
     )
+    parser.add_argument("--gateway", default="http://localhost:8765", help="the fake gateway's URL")
     parser.add_argument("--patient-id", default="", help="the patient chat turns are about")
     parser.add_argument(
         "--runs", type=int, default=1000, help="batch runs for throughput and priority"
@@ -384,23 +431,39 @@ def parse(argv: list[str] | None = None) -> tuple[list[str], Settings, str | Non
     parser.add_argument("--json", dest="json_path", help="also write the report as JSON here")
     args = parser.parse_args(argv)
     scenarios = list(SCENARIOS) if "all" in args.scenarios else args.scenarios
-    if CHAT_SCENARIOS & set(scenarios) and not (args.session_cookie and args.patient_id):
-        parser.error("priority and chat-order need --session-cookie and --patient-id")
+    host = urlsplit(args.instance).hostname or ""
+    if not (host in LOCAL_HOSTS or host.endswith(".localhost") or args.allow_remote_instance):
+        parser.error(f"{host or args.instance!r} is not localhost; pass --allow-remote-instance")
+    api_key = os.environ.get(API_KEY_ENV, "")
+    session_cookie = os.environ.get(SESSION_COOKIE_ENV, "")
+    if not api_key:
+        parser.error(f"set {API_KEY_ENV} to the plugin's simpleapi-api-key secret")
+    if CHAT_SCENARIOS & set(scenarios) and not (session_cookie and args.patient_id):
+        parser.error(f"priority and chat-order need {SESSION_COOKIE_ENV} and --patient-id")
     settings = Settings(
         **{
             name: value
             for name, value in vars(args).items()
-            if name not in ("scenarios", "json_path")
+            if name not in ("scenarios", "json_path", "allow_remote_instance")
         },
+        api_key=api_key,
+        session_cookie=session_cookie,
         tag=time.strftime("%Y%m%d%H%M%S"),
     )
     return scenarios, settings, args.json_path
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the chosen scenarios in order; exit 1 when any check fails."""
+    """Run the canary, then the chosen scenarios in order.
+
+    Exits 2 when the canary fails and 1 when any scenario's check fails.
+    """
     scenarios, settings, json_path = parse(argv)
     driver = Driver(settings)
+    print("canary...", file=sys.stderr)
+    if problem := canary(driver):
+        print(f"stopping before any load: {problem}", file=sys.stderr)
+        return 2
     results = []
     for name in scenarios:
         print(f"{name}...", file=sys.stderr)
@@ -409,6 +472,7 @@ def main(argv: list[str] | None = None) -> int:
         result = SCENARIOS[name](driver)
         result.seconds = time.monotonic() - started
         result.gateway = driver.gateway_stats()
+        driver.clear(driver.scenario(name))
         results.append(result)
     print(report(results))
     if json_path:

@@ -19,6 +19,10 @@ class FakeInstance:
         self.fanouts: list[int] = []
         self.chat_cookies: list[str] = []
         self.gateway_calls: list[str] = []
+        self.cleared: list[str] = []
+        # Model calls the gateway served since its last reset, and each run's share.
+        self.served = 0
+        self.calls_per_run = 3
         self.clock = 0
 
     def _start(self, scope_key: str, seq: int, kind: str) -> str:
@@ -26,6 +30,7 @@ class FakeInstance:
         started = T0 + timedelta(seconds=self.clock)
         finished = started + timedelta(seconds=1)
         self.clock += 1
+        self.served += self.calls_per_run
         saw = self.counters.get(scope_key, 0)
         self.counters[scope_key] = seq if kind == "chat" else saw + 1
         self.runs[run_id] = {
@@ -57,7 +62,11 @@ class FakeInstance:
         if request.url.host == "gateway":
             self.gateway_calls.append(path)
             if path == "/stats":
-                return httpx.Response(200, json={"requests": 0, "max_in_flight": 0, "faults": {}})
+                return httpx.Response(
+                    200, json={"requests": self.served, "max_in_flight": 0, "faults": {}}
+                )
+            if path == "/reset":
+                self.served = 0
             return httpx.Response(200, json={})
         assert path.startswith("/plugin-io/api/canvas__arf_loadtest/")
         endpoint = path.rsplit("/", 1)[1]
@@ -88,6 +97,9 @@ class FakeInstance:
                     "records": [self.records[i] for i in ids],
                 },
             )
+        if endpoint == "clear":
+            self.cleared.append(body["scenario"])
+            return httpx.Response(200, json={"deleted": 0})
         if endpoint == "counter":
             return httpx.Response(
                 200, json={"value": self.counters.get(request.url.params["key"], 0)}
@@ -109,15 +121,19 @@ def instance(monkeypatch: pytest.MonkeyPatch) -> FakeInstance:
     return fake
 
 
+@pytest.fixture(autouse=True)
+def secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The plugin's API key and a staff session, from the environment."""
+    monkeypatch.setenv(driver.API_KEY_ENV, "key")
+    monkeypatch.setenv(driver.SESSION_COOKIE_ENV, "sessionid=abc")
+
+
 ARGS = [
     "--instance",
     "https://loadtest.example",
-    "--api-key",
-    "key",
+    "--allow-remote-instance",
     "--gateway",
     "http://gateway",
-    "--session-cookie",
-    "sessionid=abc",
     "--patient-id",
     "p1",
     "--poll",
@@ -128,15 +144,16 @@ ARGS = [
 def test_throughput_fans_out_in_batches_and_passes(
     instance: FakeInstance, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A fanout goes out 100 runs per request, and every run is read back."""
+    """After the one-run canary, a fanout goes out 100 runs per request, and every run is read back."""
     assert driver.main(["throughput", "--runs", "250", *ARGS]) == 0
 
-    assert instance.fanouts == [100, 100, 50]
-    assert len(instance.runs) == 250
+    assert instance.fanouts == [1, 100, 100, 50]
+    assert len(instance.runs) == 251
     out = capsys.readouterr().out
     assert "== throughput: PASS" in out
     assert "250 runs" in out
-    assert instance.gateway_calls == ["/reset", "/stats"]
+    assert instance.gateway_calls == ["/reset", "/stats", "/reset", "/stats"]
+    assert [scenario.split("-")[0] for scenario in instance.cleared] == ["canary", "throughput"]
 
 
 def test_contention_and_chat_order_check_what_the_probes_saw(
@@ -162,7 +179,8 @@ def test_a_run_without_a_final_status_fails_after_the_timeout(
 
     def stuck(scope_key: str, seq: int, kind: str) -> str:
         run_id = original(scope_key, seq, kind)
-        instance.runs[run_id].update(status="queued", started_at=None, finished_at=None)
+        if ":throughput-" in scope_key:
+            instance.runs[run_id].update(status="queued", started_at=None, finished_at=None)
         return run_id
 
     instance._start = stuck  # type: ignore[method-assign]
@@ -171,7 +189,62 @@ def test_a_run_without_a_final_status_fails_after_the_timeout(
     assert "[FAIL] all runs succeeded: 0/3 succeeded" in capsys.readouterr().out
 
 
-def test_chat_scenarios_need_a_session_and_patient() -> None:
+def test_chat_scenarios_need_a_session_and_patient(monkeypatch: pytest.MonkeyPatch) -> None:
     """Chat turns run as a staff member about a patient, so both are required."""
+    monkeypatch.delenv(driver.SESSION_COOKIE_ENV)
     with pytest.raises(SystemExit):
-        driver.parse(["priority", "--instance", "x", "--api-key", "k"])
+        driver.parse(["priority", "--instance", "http://localhost:8000", "--patient-id", "p1"])
+
+
+@pytest.mark.parametrize(
+    "instance_url", ["https://customer.canvasmedical.com", "http://10.0.0.5:8000"]
+)
+def test_an_instance_other_than_localhost_needs_the_flag(instance_url: str) -> None:
+    """A mistyped URL cannot put a thousand runs on an instance someone works in."""
+    with pytest.raises(SystemExit):
+        driver.parse(["throughput", "--instance", instance_url])
+
+    assert driver.parse(["throughput", "--instance", instance_url, "--allow-remote-instance"])
+
+
+def test_the_api_key_comes_from_the_environment_never_the_command_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A command line shows up in process lists and shell history."""
+    with pytest.raises(SystemExit):
+        driver.parse(["throughput", "--instance", "http://localhost:8000", "--api-key", "k"])
+    monkeypatch.delenv(driver.API_KEY_ENV)
+    with pytest.raises(SystemExit):
+        driver.parse(["throughput", "--instance", "http://localhost:8000"])
+
+
+def test_the_canary_stops_the_driver_when_another_gateway_served_it(
+    instance: FakeInstance, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An instance pointed at a real gateway gets one run, not a scenario's thousand."""
+    instance.calls_per_run = 0
+
+    assert driver.main(["throughput", "--runs", "250", *ARGS]) == 2
+
+    assert len(instance.runs) == 1
+    assert "points at another gateway" in capsys.readouterr().err
+
+
+def test_faults_fails_when_no_run_succeeded(
+    instance: FakeInstance, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Every run reaching a final status is no pass when every one of them failed."""
+    original = instance._start
+
+    def failing(scope_key: str, seq: int, kind: str) -> str:
+        run_id = original(scope_key, seq, kind)
+        if ":faults-" in scope_key:
+            instance.runs[run_id]["status"] = "failed"
+        return run_id
+
+    instance._start = failing  # type: ignore[method-assign]
+
+    assert driver.main(["faults", "--fault-runs", "4", *ARGS]) == 1
+    out = capsys.readouterr().out
+    assert "[pass] every run reached a final status" in out
+    assert "[FAIL] runs succeeded through the faults: 0/4 succeeded" in out
