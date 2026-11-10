@@ -681,7 +681,11 @@ def test_stream_console_without_the_instance_ends_with_its_answer(
     credentials_token: Mock,
     fake_stream: type[_FakeStream],
 ) -> None:
-    """Console not knowing a Platform-managed instance ends the run non-zero, quoting Console."""
+    """Console not knowing a Platform-managed instance ends the run non-zero, quoting Console.
+
+    The error does not blame the token or point at credentials.ini, whose stream asks Console
+    for the same instance name.
+    """
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
     fake_stream.script = [(NO_INSTANCE, 1000)]
@@ -689,7 +693,10 @@ def test_stream_console_without_the_instance_ends_with_its_answer(
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
     assert result.exit_code == 1
+    assert "Console refused the log stream for acme-prod." in result.output
     assert "Console answered: No instance named 'acme-prod' was found." in result.output
+    assert "log token" not in result.output
+    assert "canvas logout" not in result.output
     assert len(fake_stream.urls) == 1
 
 

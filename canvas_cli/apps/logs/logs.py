@@ -30,6 +30,9 @@ EXPIRY_MARGIN_SECONDS = 30
 REFUSED_TOKEN_STATUSES: tuple[int, ...] = (requests.codes.unauthorized, requests.codes.forbidden)
 # The close code Console sends when it re-checks a Platform-issued token and finds it inactive.
 STREAM_TOKEN_INACTIVE = 4401
+# The refusal Console sends when the instance does not accept the token. Its other refusals,
+# such as "No instance named '<slug>' was found.", are not about the token.
+STREAM_TOKEN_REFUSAL = "Token authorization failed."
 
 
 def _instance_answer(response: requests.Response) -> str:
@@ -683,8 +686,8 @@ def stream_logs(host: str, token: LogToken) -> None:
     fresh token through Platform, which re-checks the person's access, and reconnects. Any
     other close ends the stream, as does a 4401 on a credentials.ini stream. A stream that
     Console closes before starting it ends the run. After a refusal notice, such as "Token
-    authorization failed." or "No instance named ...", the error quotes it, and for a Platform
-    stream also names the way off Platform. With no notice, as when checking the token raises
+    authorization failed." or "No instance named ...", the error quotes it; a Platform token
+    Console refuses also names the way off Platform. With no notice, as when checking the token raises
     and Console closes with 1011, the error gives the close code.
 
     Args:
@@ -709,7 +712,7 @@ def stream_logs(host: str, token: LogToken) -> None:
                     f"(close code {result.close_code}). Run the command again."
                 )
             answer: str = f"Console answered: {result.refusal} "
-            if token.reissuable:
+            if token.reissuable and result.refusal == STREAM_TOKEN_REFUSAL:
                 raise _refused_platform_token(token, answer)
             raise click.ClickException(
                 f"Console refused the log stream for {token.slug}. {answer}".rstrip()
