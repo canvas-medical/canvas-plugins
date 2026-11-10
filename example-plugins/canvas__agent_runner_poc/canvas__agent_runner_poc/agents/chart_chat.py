@@ -266,16 +266,11 @@ def _save_conversation_messages(
     messages: list[dict[str, Any]],
 ) -> None:
     """Persist the updated message history; create the Conversation row on first save."""
-    conversation = Conversation.objects.filter(patient__id=patient_id, staff__id=staff_id).first()
-    if conversation is None:
-        Conversation.objects.create(
-            patient=PatientProxy.objects.get(id=patient_id),
-            staff=StaffProxy.objects.get(id=staff_id),
-            messages=messages,
-        )
-    else:
-        conversation.messages = messages
-        conversation.save()
+    Conversation.objects.update_or_create(
+        patient=PatientProxy.objects.get(id=patient_id),
+        staff=StaffProxy.objects.get(id=staff_id),
+        defaults={"messages": messages},
+    )
 
 
 class ChartChatAgent(AgentPlugin):

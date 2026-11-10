@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from django.db.models import DO_NOTHING, DateTimeField, ForeignKey, Index, JSONField
+from django.db.models import (
+    DO_NOTHING,
+    DateTimeField,
+    ForeignKey,
+    Index,
+    JSONField,
+    UniqueConstraint,
+)
 
 from canvas__agent_runner_poc.models.proxy import PatientProxy, StaffProxy
 from canvas_sdk.v1.data.base import CustomModel
@@ -20,8 +27,8 @@ class Conversation(CustomModel):
     :meth:`ChartChatAgent.load_state` reads the row, ``run()`` extends the
     in-memory list, and ``save_state`` writes back its newest part.
 
-    Like other CustomModels, ``flagged_at`` / ``last_updated_at`` are
-    declared explicitly (CustomModel does not inherit TimestampedModel).
+    ``started_at`` and ``last_updated_at`` are declared here, since CustomModel does not
+    inherit TimestampedModel.
     """
 
     patient: ForeignKey[PatientProxy, PatientProxy] = ForeignKey(
@@ -31,8 +38,8 @@ class Conversation(CustomModel):
         related_name="chart_chat_conversations",
     )
 
-    # The clinician whose conversation this is. Nullable because a column added to a
-    # plugin table cannot be NOT NULL without a default; every row the agent writes sets it.
+    # The clinician whose conversation this is. Nullable, as a plugin table's column without
+    # a default must be; every row the agent writes sets it.
     staff: ForeignKey[StaffProxy, StaffProxy] = ForeignKey(
         StaffProxy,
         to_field="dbid",
@@ -57,4 +64,9 @@ class Conversation(CustomModel):
     class Meta:
         indexes = [
             Index(fields=["patient", "staff", "-last_updated_at"]),
+        ]
+        # One conversation per patient and clinician, so two first messages cannot each
+        # create one.
+        constraints = [
+            UniqueConstraint(fields=["patient", "staff"], name="conversation_patient_staff"),
         ]

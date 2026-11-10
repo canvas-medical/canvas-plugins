@@ -104,18 +104,11 @@ def _save_claims_conversation(
     claim_id: str | None,
     messages: list[dict[str, Any]],
 ) -> None:
-    conversation = ClaimConversation.objects.filter(
-        staff__id=staff_id, claim_id=claim_id or ""
-    ).first()
-    if conversation is None:
-        ClaimConversation.objects.create(
-            staff=StaffProxy.objects.get(id=staff_id),
-            claim_id=claim_id or "",
-            messages=messages,
-        )
-    else:
-        conversation.messages = messages
-        conversation.save()
+    ClaimConversation.objects.update_or_create(
+        staff=StaffProxy.objects.get(id=staff_id),
+        claim_id=claim_id or "",
+        defaults={"messages": messages},
+    )
 
 
 class ClaimsChatAgent(AgentPlugin):

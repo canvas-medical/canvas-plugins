@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from django.db.models import DO_NOTHING, CharField, DateTimeField, ForeignKey, Index, JSONField
+from django.db.models import (
+    DO_NOTHING,
+    CharField,
+    DateTimeField,
+    ForeignKey,
+    Index,
+    JSONField,
+    UniqueConstraint,
+)
 
 from canvas__agent_runner_poc.models.proxy import StaffProxy
 from canvas_sdk.v1.data.base import CustomModel
@@ -32,4 +40,8 @@ class ClaimConversation(CustomModel):
     class Meta:
         indexes = [
             Index(fields=["staff", "claim_id"]),
+        ]
+        # One conversation per staff member and claim, or about the queues.
+        constraints = [
+            UniqueConstraint(fields=["staff", "claim_id"], name="claim_conversation_staff_claim"),
         ]
