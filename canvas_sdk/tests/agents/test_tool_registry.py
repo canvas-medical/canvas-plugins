@@ -1898,7 +1898,10 @@ def test_a_schema_cannot_make_the_runner_fetch_a_reference(monkeypatch: pytest.M
         {
             "name": "t",
             "description": "x",
-            "input_schema": {"$ref": "https://metadata.internal.invalid/schema.json"},
+            "input_schema": {
+                "type": "object",
+                "$ref": "https://metadata.internal.invalid/schema.json",
+            },
         },
         lambda arguments, *, ctx: {},
     )
@@ -1913,6 +1916,27 @@ def test_an_invalid_schema_is_refused_at_registration() -> None:
     """A schema that is not a valid JSON Schema fails when the tool registers."""
     with pytest.raises(Exception, match="is not valid"):  # noqa: B017
         ToolRegistry().register(
-            {"name": "t", "description": "x", "input_schema": {"type": "no-such-type"}},
+            {
+                "name": "t",
+                "description": "x",
+                "input_schema": {"type": "object", "properties": {"n": {"type": "no-such-type"}}},
+            },
+            lambda arguments, *, ctx: {},
+        )
+
+
+@pytest.mark.parametrize("name", ["find conditions", "find.conditions", "x" * 65, "héllo"])
+def test_a_name_the_messages_api_rejects_is_refused_at_registration(name: str) -> None:
+    """The API refuses the whole request over one bad tool name, failing every run."""
+    with pytest.raises(ValueError, match="must be 1 to 64 letters"):
+        ToolRegistry().register({"name": name, "description": "x"}, lambda arguments, *, ctx: {})
+
+
+@pytest.mark.parametrize("schema", [{"type": "array"}, {"properties": {}}, ["type", "object"]])
+def test_an_input_schema_that_is_not_an_object_is_refused_at_registration(schema: Any) -> None:
+    """The API takes only an object schema for a tool's input."""
+    with pytest.raises(ValueError, match="type 'object'"):
+        ToolRegistry().register(
+            {"name": "t", "description": "x", "input_schema": schema},
             lambda arguments, *, ctx: {},
         )
