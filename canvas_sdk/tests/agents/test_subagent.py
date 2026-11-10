@@ -7,9 +7,9 @@ import httpx2
 import pytest
 from anthropic.types import TextBlock, ToolUseBlock
 
-from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents
+from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents, subagent
 from canvas_sdk.agents.gateway import count_model_call
-from canvas_sdk.agents.run_record import RunRecorder, current_recorder
+from canvas_sdk.agents.run_record import RunDeadlineExceeded, RunRecorder, current_recorder
 from canvas_sdk.agents.subagent import MAX_PARALLEL
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text, tool_use
 from canvas_sdk.v1.plugin_database_context import (
@@ -159,8 +159,9 @@ def test_max_parallel_is_capped() -> None:
         with lock:
             running.append(1)
             peak[0] = max(peak[0], len(running))
+            # Held past the cap's worth of arrivals, so a larger pool would start more.
             if len(running) == MAX_PARALLEL:
-                release.set()
+                threading.Timer(0.3, release.set).start()
         release.wait(timeout=5)
         with lock:
             running.pop()
@@ -246,3 +247,41 @@ def test_a_subagent_calls_the_model_its_spec_names() -> None:
 
     assert answer == "Two values."
     assert gateway.requests[0]["model"] == "claude-haiku-4-5"
+
+
+def test_a_subagent_past_the_runs_deadline_ends_the_run() -> None:
+    """Running out of time in a sub-agent ends the run, as it would in the parent."""
+    spec = SubAgentSpec(name="labs", system_prompt="x")
+
+    with pytest.raises(RunDeadlineExceeded):
+        run_subagents(
+            [spec],
+            "question",
+            parent_tools=ToolRegistry(),
+            parent_ctx={},
+            gateway=_FailingGateway(RunDeadlineExceeded("out of time")),  # type: ignore[arg-type]
+        )
+
+
+def test_each_subagent_worker_closes_its_database_connections(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A pool thread's connection is closed when its sub-agent finishes, failing or not."""
+    closed_on: list[str] = []
+    monkeypatch.setattr(
+        subagent.connections,
+        "close_all",
+        lambda: closed_on.append(threading.current_thread().name),
+    )
+    specs = [SubAgentSpec(name=name, system_prompt="x") for name in ("labs", "meds")]
+
+    run_subagents(
+        specs,
+        "question",
+        parent_tools=ToolRegistry(),
+        parent_ctx={},
+        gateway=_FailingGateway(ValueError("bad prompt")),  # type: ignore[arg-type]
+    )
+
+    assert len(closed_on) == 2
+    assert threading.current_thread().name not in closed_on

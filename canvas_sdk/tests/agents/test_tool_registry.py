@@ -1799,6 +1799,30 @@ def test_a_failed_call_takes_back_only_its_own_effects_from_a_shared_run_list() 
     assert run_effects == ["earlier", other_threads]
 
 
+def test_a_failed_call_inside_a_composition_tool_takes_back_only_its_own_effects() -> None:
+    """A sub-agent's tool runs inside the composition tool's call; its failure undoes only it."""
+    registry = ToolRegistry()
+    kept = _FakeEffect(title="the composition tool's own change")
+
+    @registry.tool(name="half_done", description="...", input_schema={"type": "object"})
+    def _half_done(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        ctx["effects"].append(_FakeEffect(title="staged before failing"))
+        raise ValueError("bad input")
+
+    @registry.tool(name="compose", description="...", input_schema={"type": "object"})
+    def _compose(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        ctx["effects"].append(kept)
+        with pytest.raises(ValueError, match="bad input"):
+            registry.execute("half_done", {}, ctx=ctx)
+        return {"ok": True}
+
+    run_effects: list[Any] = ["earlier"]
+
+    registry.execute("compose", {}, ctx={"effects": run_effects})
+
+    assert run_effects == ["earlier", kept]
+
+
 def test_a_tool_sees_and_removes_the_runs_earlier_drafts() -> None:
     """A tool reads, and may pop, effects earlier calls in the run staged."""
     registry = ToolRegistry()

@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 from urllib.parse import unquote
 
@@ -14,7 +15,7 @@ from canvas_sdk.test_utils.factories import (
     PatientFactory,
 )
 from canvas_sdk.tests.agents.test_standard_tools import _allergy
-from canvas_sdk.v1.data import MedicationCoding
+from canvas_sdk.v1.data import Condition, MedicationCoding
 
 NOTE = "00000000-0000-0000-0000-000000000001"
 
@@ -318,3 +319,31 @@ def test_another_patients_allergy_cannot_be_removed() -> None:
 
     with pytest.raises(ValueError, match="not found for this patient"):
         _run("originate_remove_allergy", PatientFactory.create(), allergy_id=str(other.id))
+
+
+def _active_condition(patient: Any) -> Any:
+    return Condition.objects.create(
+        patient=patient,
+        deleted=False,
+        onset_date=date(2020, 1, 1),
+        resolution_date=date(2020, 1, 1),
+        clinical_status="active",
+        notes="",
+        surgical=False,
+        committer=CanvasUserFactory.create(),
+    )
+
+
+@pytest.mark.django_db
+def test_resolving_another_patients_condition_is_refused() -> None:
+    """A condition id the model read elsewhere cannot resolve a condition off this chart."""
+    patient = PatientFactory.create()
+    theirs = _active_condition(PatientFactory.create())
+
+    with pytest.raises(ValueError, match="condition"):
+        _run("originate_resolve_condition", patient, condition_id=str(theirs.id))
+
+    result, effects = _run(
+        "originate_resolve_condition", patient, condition_id=str(_active_condition(patient).id)
+    )
+    assert len(effects) == 1

@@ -379,3 +379,23 @@ def test_the_matched_patients_own_record_is_compared_with_the_print() -> None:
     ):
         reason, _ = confirm_against_print(patient, {"as_printed": other})
         assert "does not match the print" in reason
+
+
+@pytest.mark.django_db
+def test_a_repaired_reading_that_matches_several_patients_names_no_one() -> None:
+    """Two John Smiths born the same day: the repair cannot say which, so it says neither."""
+    for _ in range(2):
+        PatientFactory.create(first_name="John", last_name="Smith", birth_date=BIRTH)
+
+    result, effects = _run(
+        "suggest_patient",
+        first_name="J0HN",
+        last_name="SM1TH",
+        birth_date="1971-03-09",
+        as_printed={"name": "SM1TH, J0HN", "birth_date": "03/09/1971"},
+        legibility="readable_with_artifacts",
+    )
+
+    assert result["ok"] is False
+    assert "More than one patient" in str(result)
+    assert effects == []

@@ -254,3 +254,34 @@ def test_a_pharmacy_request_is_cited_as_one() -> None:
         "lisinopril 10 mg tablet",
         "waiting",
     )
+
+
+@pytest.mark.django_db
+def test_another_patients_answer_does_not_settle_this_patients_request() -> None:
+    """Rx reference numbers are the pharmacy's, so another patient's can match this one's."""
+    patient, other = PatientFactory.create(), PatientFactory.create()
+    waiting = _refill_request(patient, "RX-1")
+    _answer(other, _refill_request(other, "RX-1"), response_type="D")
+
+    rows = _find("find_pharmacy_requests", patient)
+
+    assert [(row["id"], row["status"], row["note_dbid"]) for row in rows] == [
+        (str(waiting.id), "waiting", None)
+    ]
+
+
+@pytest.mark.django_db
+def test_another_patients_change_request_is_not_listed() -> None:
+    """Only the run's patient's change requests, and their answers, come back."""
+    patient, other = PatientFactory.create(), PatientFactory.create()
+    mine = PrescriptionChangeRequestFactory.create(patient=patient, type_code="G")
+    theirs = PrescriptionChangeRequestFactory.create(patient=other, type_code="G")
+    PrescriptionChangeResponseFactory.create(
+        patient=other, request=theirs, response_type="A", committer=CanvasUserFactory.create()
+    )
+
+    rows = [
+        row for row in _find("find_pharmacy_requests", patient) if row["type"] == "Change request"
+    ]
+
+    assert [(row["id"], row["status"]) for row in rows] == [(str(mine.id), "waiting")]
