@@ -693,6 +693,25 @@ def test_stream_console_without_the_instance_ends_with_its_answer(
     assert len(fake_stream.urls) == 1
 
 
+def test_stream_closed_before_start_without_a_notice_ends(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console closing a Platform stream before starting it, with no refusal notice, still ends it."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [([CHECKING], 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "acme-prod refused the log token Canvas Platform issued." in result.output
+    assert "Console answered" not in result.output
+
+
 def test_stream_refused_after_reconnect_ends(
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
@@ -749,6 +768,23 @@ def test_credentials_ini_stream_does_not_reconnect_on_4401(
     assert result.exit_code == 0, result.output
     assert fake_stream.urls == [_stream_url("ini-tok")]
     credentials_token.assert_called_once()
+
+
+def test_credentials_ini_stream_console_refuses_ends_with_its_answer(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A credentials.ini stream Console refuses before starting it exits 1, quoting Console."""
+    fake_stream.script = [(REFUSED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "Console refused the log stream for acme-prod." in result.output
+    assert "Console answered: Token authorization failed." in result.output
+    assert "canvas logout" not in result.output
+    assert fake_stream.urls == [_stream_url("ini-tok")]
 
 
 CREDENTIALS_INI_NOTICE = (

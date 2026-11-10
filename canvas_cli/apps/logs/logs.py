@@ -681,16 +681,17 @@ def stream_logs(host: str, token: LogToken) -> None:
     Console re-checks a Platform-issued token while the stream is open and closes the stream
     with ``STREAM_TOKEN_INACTIVE`` once the token is inactive. A Platform stream then mints a
     fresh token through Platform, which re-checks the person's access, and reconnects. Any
-    other close ends the stream, as does a 4401 on a credentials.ini stream. A Platform stream
-    that Console closes before starting it, as it does after "Token authorization failed." or
-    "No instance named ...", is a refused token, and the error quotes Console's notice.
+    other close ends the stream, as does a 4401 on a credentials.ini stream. A stream that
+    Console closes before starting it, as it does after "Token authorization failed." or "No
+    instance named ...", is refused, and the error quotes Console's notice; for a Platform
+    stream it also names the way off Platform.
 
     Args:
         host (str): The Canvas instance URL.
         token (LogToken): The token source.
 
     Raises:
-        click.ClickException: Console closed a Platform stream before starting it.
+        click.ClickException: Console closed the stream before starting it.
     """
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
@@ -699,10 +700,14 @@ def stream_logs(host: str, token: LogToken) -> None:
         result: StreamResult = _stream_once(
             f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
         )
-        if token.reissuable and not result.opened and result.close_code is not None:
+        if not result.opened and result.close_code is not None:
             # Also stops a re-minted token Console refuses from reconnecting in a loop.
             answer: str = f"Console answered: {result.refusal} " if result.refusal else ""
-            raise _refused_platform_token(token, answer)
+            if token.reissuable:
+                raise _refused_platform_token(token, answer)
+            raise click.ClickException(
+                f"Console refused the log stream for {token.slug}. {answer}".rstrip()
+            )
         if result.close_code != STREAM_TOKEN_INACTIVE or not token.reissuable:
             return
         print("Reconnecting with a fresh log token from Canvas Platform.", file=sys.stderr)
