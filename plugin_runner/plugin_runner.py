@@ -1547,13 +1547,28 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
 
     shutdown_reason = "unknown"
 
-    def handle_signal(signum: int, _frame: object) -> None:
+    def stop(signum: int, _frame: object) -> None:
         nonlocal shutdown_reason
         shutdown_reason = signal.Signals(signum).name
         server.stop(grace=0)
 
-    signal.signal(signal.SIGTERM, handle_signal)
-    signal.signal(signal.SIGINT, handle_signal)
+    def drain_then_stop(signum: int, frame: object) -> None:
+        """Keep answering calls for the drain window, then stop.
+
+        Celery and the web server receive the same SIGTERM and finish their in-flight work,
+        which fires plugin events. A second SIGTERM stops at once.
+        """
+        nonlocal shutdown_reason
+        shutdown_reason = signal.Signals(signum).name
+        drain_seconds = settings.PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS
+        log.info(f"Received SIGTERM, serving for {drain_seconds}s before shutting down")
+        signal.signal(signal.SIGTERM, stop)
+        timer = threading.Timer(drain_seconds, stop, args=(signum, frame))
+        timer.daemon = True
+        timer.start()
+
+    signal.signal(signal.SIGTERM, drain_then_stop)
+    signal.signal(signal.SIGINT, stop)
 
     try:
         server.wait_for_termination()

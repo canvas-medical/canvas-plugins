@@ -79,6 +79,11 @@ else:
     CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+
+# Seconds the plugin runner keeps answering calls after SIGTERM before it stops. The processes
+# that call it are stopped by the same signal and drain their in-flight work, which fires plugin
+# events; the default fits inside a 10 second container stop timeout.
+PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS = float(os.getenv("PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", 8))
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
 # By default, allow a pool size that gives each worker 2 active connections
