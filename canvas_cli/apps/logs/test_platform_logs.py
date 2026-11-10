@@ -905,3 +905,74 @@ def test_platform_run_prints_no_deprecation_notice(
 
     assert result.exit_code == 0, result.output
     assert "deprecated" not in result.stderr
+
+
+def test_platform_stream_url_carries_each_plugin(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """--plugin values reach Console on the live stream, so it sends only those plugins' lines."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(LOG_TOKEN_URL, json=MINTED)
+    fake_stream.script = [(CONNECTED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo --plugin bar")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok") + "&plugin=foo&plugin=bar"]
+
+
+def test_reconnected_stream_keeps_the_plugin_filter(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A stream reconnected with a fresh token after 4401 asks Console for the same plugins."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
+    )
+    fake_stream.script = [(CONNECTED, 4401), (CONNECTED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [
+        _stream_url("plat-tok") + "&plugin=foo",
+        _stream_url("plat-tok-2") + "&plugin=foo",
+    ]
+
+
+def test_credentials_ini_stream_url_carries_the_plugin(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A credentials.ini stream sends the --plugin filter too."""
+    fake_stream.script = [(CONNECTED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("ini-tok") + "&plugin=foo"]
+
+
+def test_stream_plugin_values_are_url_encoded(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A plugin value is encoded, so it can't add a second token parameter to the URL."""
+    fake_stream.script = [(CONNECTED, 1000)]
+
+    result = cli_runner.invoke(app, ["logs", "--host", "acme-prod", "--plugin", "x&token=evil"])
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("ini-tok") + "&plugin=x%26token%3Devil"]
+    assert fake_stream.urls[0].count("token=") == 1
