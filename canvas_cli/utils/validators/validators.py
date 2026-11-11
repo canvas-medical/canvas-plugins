@@ -16,10 +16,10 @@ def _lookup(name: str) -> str:
 
 
 def _refuse_repeated_names(catalog: object) -> None:
-    """Refuse a catalog block naming a pricing unit or vendor twice.
+    """Refuse a catalog block naming a pricing unit or vendor twice, or a fractional markup.
 
-    JSON Schema compares whole items, so it cannot see `Visit` and `visit` as one unit;
-    Canvas Platform refuses the push, so validation refuses it first.
+    JSON Schema compares whole items, so it cannot see `Visit` and `visit` as one unit, and
+    its integer takes `1500.0`; Canvas Platform refuses the push, so validation refuses it first.
     """
     if not isinstance(catalog, dict):
         return
@@ -31,6 +31,10 @@ def _refuse_repeated_names(catalog: object) -> None:
         ]
         if len(set(names)) != len(names):
             raise ValidationError(f"catalog {key} names a {what} twice.")
+    for item in catalog.get("pricing") or []:
+        # JSON Schema's integer takes 1500.0; Canvas Platform takes only a whole int.
+        if isinstance(item, dict) and isinstance(item.get("markup_bps"), float):
+            raise ValidationError("markup_bps is a whole number such as 1500, not 1500.0.")
 
 
 def validate_manifest_file(manifest_json: dict) -> None:
