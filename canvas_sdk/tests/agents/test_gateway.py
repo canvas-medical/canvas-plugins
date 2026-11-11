@@ -305,3 +305,31 @@ def test_a_transport_error_while_streaming_reaches_the_caller_without_its_reques
     assert raised.value.error_type == "connection_error"
     assert raised.value.__context__ is None
     assert KEY not in repr(vars(raised.value))
+
+
+def test_a_streamed_call_counts_against_the_runs_ceiling() -> None:
+    """A stream is a model call like any other, so it cannot get past the ceiling."""
+    opened: list[dict] = []
+
+    class _Stream:
+        def __enter__(self) -> "_Stream":
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    class _Anthropic:
+        class messages:  # noqa: N801
+            @staticmethod
+            def stream(**request: Any) -> _Stream:
+                opened.append(request)
+                return _Stream()
+
+    recorder = RunRecorder(max_model_calls=1)
+    messages = GatewayMessages(_Anthropic(), recorder)  # type: ignore[arg-type]
+
+    messages.stream(model="m", max_tokens=1, messages=[])
+    with pytest.raises(ModelCallLimitReached):
+        messages.stream(model="m", max_tokens=1, messages=[])
+
+    assert (recorder.model_calls, len(opened)) == (1, 1)

@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+import canvas_sdk.agents.tool_registry as tool_registry_module
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
 from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS, PATTERN_TEXT_CHARS, remove_first
@@ -2144,3 +2145,39 @@ def test_a_patterned_string_is_bounded() -> None:
     assert definition["input_schema"]["properties"]["code"]["maxLength"] == PATTERN_TEXT_CHARS
     with pytest.raises(ValueError, match="is too long"):
         registry.execute("t", {"code": "a" * (PATTERN_TEXT_CHARS + 1)}, ctx={})
+
+
+def test_a_removal_finds_and_takes_a_draft_under_the_run_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A sub-agent thread appending between the find and the pop would shift what is taken."""
+    held_during: list[bool] = []
+    real = tool_registry_module._RUN_EFFECTS_LOCK
+
+    class _Watched:
+        depth = 0
+
+        def __enter__(self) -> None:
+            real.acquire()
+            _Watched.depth += 1
+
+        def __exit__(self, *exc: object) -> None:
+            _Watched.depth -= 1
+            real.release()
+
+    monkeypatch.setattr(tool_registry_module, "_RUN_EFFECTS_LOCK", _Watched())
+    registry = ToolRegistry()
+    run_effects: list[Any] = ["first", "draft", "last"]
+
+    def _is_draft(effect: Any) -> bool:
+        held_during.append(_Watched.depth > 0)
+        return effect == "draft"
+
+    @registry.tool(name="drop", description="...", input_schema={"type": "object"})
+    def _drop(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        remove_first(ctx["effects"], _is_draft)
+
+    registry.execute("drop", {}, ctx={"effects": run_effects})
+
+    assert run_effects == ["first", "last"]
+    assert held_during and all(held_during)

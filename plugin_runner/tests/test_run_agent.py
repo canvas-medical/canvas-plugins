@@ -1531,6 +1531,47 @@ def test_a_run_that_outlives_its_call_frees_its_slot_and_is_reported(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_a_run_that_outlives_its_call_makes_no_more_model_calls(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """home-app gave up on it, so a model call it makes after that would spend for nothing."""
+    stuck = threading.Event()
+    unblock = threading.Event()
+    outcome: list[BaseException] = []
+    monkeypatch.setattr(runner_module.sentry_sdk, "capture_message", lambda *a, **k: None)
+
+    def _call_late(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
+        stuck.set()
+        unblock.wait(timeout=10)
+        try:
+            gateway.client().messages.create(model="m", max_tokens=1, messages=[])
+        except Exception as exc:
+            outcome.append(exc)
+        return AgentRunResult(state=state)
+
+    monkeypatch.setattr(LOADED_PLUGINS[AGENT_KEY]["class"], "run", _call_late)
+    monkeypatch.setattr(runner_module, "HEARTBEAT_SECONDS", 0)
+
+    stream = cast(
+        Generator[Any, None, None],
+        plugin_runner.RunAgent(_make_request(stream_progress=True), None),
+    )
+    next(stream)
+    assert stuck.wait(timeout=5)
+    stream.close()  # home-app's call passed its deadline
+    unblock.set()
+    deadline = time.monotonic() + 5
+    while not outcome and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+    assert [type(exc).__name__ for exc in outcome] == ["ModelCallLimitReached"]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
 def test_runs_stuck_past_their_call_free_slots_only_up_to_a_ceiling(
     install_test_plugin: Path,
     load_test_plugins: None,
