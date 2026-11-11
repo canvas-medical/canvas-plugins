@@ -206,12 +206,14 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     findings: list[LintFinding] = []
     for py_file, tree in _iter_python_files(plugin_dir):
         rel = _rel(py_file, plugin_dir)
+        # A nested function is walked again inside its enclosing one; report each comparison once.
+        reported: set[int] = set()
         for function in ast.walk(tree):
             if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue
             secrets = _secret_names(function)
             for node in ast.walk(function):
-                if not (
+                if id(node) in reported or not (
                     isinstance(node, ast.Compare)
                     and len(node.ops) == 1
                     and isinstance(node.ops[0], ast.Eq | ast.NotEq)
@@ -225,6 +227,7 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
                 if (is_secret[0] and _is_request_value(sides[1])) or (
                     is_secret[1] and _is_request_value(sides[0])
                 ):
+                    reported.add(id(node))
                     findings.append(
                         LintFinding(
                             "warning",

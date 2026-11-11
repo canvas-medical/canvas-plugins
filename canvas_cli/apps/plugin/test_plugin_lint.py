@@ -564,3 +564,19 @@ def test_tripwire_models_discovered_only_from_models_dir(tmp_path: Path) -> None
     (tmp_path / "models").mkdir()
     (tmp_path / "models" / "widget.py").write_text("x = 1\n")
     assert (tmp_path / "models" / "widget.py") in discover_model_files(tmp_path)
+
+
+def test_secret_compared_with_eq_in_a_nested_function_is_reported_once() -> None:
+    """The enclosing function's walk reaches the nested one too; the comparison is one finding."""
+    source = """
+        class Api:
+            def authenticate(self, credentials):
+                def check():
+                    return credentials.key == self.secrets["K"]
+
+                return check()
+    """
+    root = _plugin({"handlers/a.py": source})
+    findings = [f.location for f in lint_plugin(root, {}) if f.code == "secret-compared-with-eq"]
+
+    assert findings == ["handlers/a.py:5"]
