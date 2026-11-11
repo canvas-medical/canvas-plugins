@@ -1,9 +1,10 @@
 # A video's YouTube address: a watch link, a youtu.be link or an embed link, each naming
-# an 11-character id. No named groups, since editors read the schema as ECMA regex.
+# an 11-character id, never the embed words for a playlist or a live stream. No named
+# groups, since editors read the schema as ECMA regex.
 YOUTUBE_URL = (
-    r"^https://(?:(?:www\.|m\.)?youtube\.com/watch\?(?:[^#]*&)?v=|youtu\.be/"
+    r"^https://(?:(?:www\.|m\.)?youtube\.com/watch\?(?:[^#]*?&)??v=|youtu\.be/"
     r"|(?:www\.)?youtube\.com/embed/|www\.youtube-nocookie\.com/embed/)"
-    r"[A-Za-z0-9_-]{11}(?![A-Za-z0-9_-])"
+    r"(?!(?:videoseries|live_stream)(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{11}(?![A-Za-z0-9_-])"
 )
 
 manifest_schema = {

@@ -298,6 +298,14 @@ REFUSED = {
     "video-extra-field": {**MINIMAL, "video": {**VIDEO, "autoplay": True}},
     "video-long-caption": {**MINIMAL, "video": {**VIDEO, "caption": "x" * 41}},
     "video-list": {**MINIMAL, "video": [VIDEO]},
+    "video-playlist-embed": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/embed/videoseries?list=PL0123456789"},
+    },
+    "video-live-stream-embed": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/embed/live_stream?channel=UC0123"},
+    },
     "integration-block": {**MINIMAL, "integration": {"unit": "visits"}},
     "empty-pricing": {**MINIMAL, "pricing": []},
     "null-pricing": {**MINIMAL, "pricing": None},
