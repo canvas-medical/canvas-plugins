@@ -195,6 +195,11 @@ LISTING: dict[str, Any] = {
     "setup_instructions": "setup_instructions.md",
     "setup_guide": "setup_guide.md",
     "icon": "assets/icon.png",
+    "video": {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "poster": "assets/video-poster.png",
+        "caption": "Drafting a note",
+    },
     "release_notes": {"kind": "fix", "title": "Cache transcripts", "body": "Cheaper."},
 }
 
@@ -208,6 +213,7 @@ MINIMAL: dict[str, Any] = {
     "surfaces": ["Background"],
 }
 AGENT: dict[str, Any] = LISTING["agent"]
+VIDEO: dict[str, Any] = {"url": "https://youtu.be/dQw4w9WgXcQ", "poster": "assets/poster.png"}
 
 ACCEPTED = {
     "full": LISTING,
@@ -221,6 +227,16 @@ ACCEPTED = {
         **MINIMAL,
         "vendors": [{"name": "Nabla", "relationship": "canvas_managed", "additional_fees": False}],
     },
+    "video-watch-url": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s"},
+    },
+    "video-short-link": {**MINIMAL, "video": {**VIDEO, "url": "https://youtu.be/dQw4w9WgXcQ?si=x"}},
+    "video-embed-url": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"},
+    },
+    "video-without-caption": {**MINIMAL, "video": VIDEO},
 }
 
 VISIT = {"unit": "visit", "price_per_unit": "5.75"}
@@ -264,6 +280,34 @@ REFUSED = {
     "icon-not-an-image": {**MINIMAL, "icon": "icon.svg"},
     "icon-uppercase": {**MINIMAL, "icon": "icon.PNG"},
     "null-icon": {**MINIMAL, "icon": None},
+    "null-video": {**MINIMAL, "video": None},
+    "video-no-url": {**MINIMAL, "video": {"poster": "assets/poster.png"}},
+    "video-no-poster": {**MINIMAL, "video": {"url": VIDEO["url"]}},
+    "video-poster-escapes": {**MINIMAL, "video": {**VIDEO, "poster": "../poster.png"}},
+    "video-poster-not-an-image": {**MINIMAL, "video": {**VIDEO, "poster": "poster.gif"}},
+    "video-not-youtube": {**MINIMAL, "video": {**VIDEO, "url": "https://vimeo.com/76979871"}},
+    "video-http": {**MINIMAL, "video": {**VIDEO, "url": "http://youtu.be/dQw4w9WgXcQ"}},
+    "video-short-id": {**MINIMAL, "video": {**VIDEO, "url": "https://youtu.be/dQw4w9WgXc"}},
+    "video-long-id": {**MINIMAL, "video": {**VIDEO, "url": "https://youtu.be/dQw4w9WgXcQQ"}},
+    "video-shorts": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/shorts/dQw4w9WgXcQ"},
+    },
+    "video-lookalike-host": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://youtu.be.example.com/dQw4w9WgXcQ"},
+    },
+    "video-extra-field": {**MINIMAL, "video": {**VIDEO, "autoplay": True}},
+    "video-long-caption": {**MINIMAL, "video": {**VIDEO, "caption": "x" * 41}},
+    "video-list": {**MINIMAL, "video": [VIDEO]},
+    "video-playlist-embed": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/embed/videoseries?list=PL0123456789"},
+    },
+    "video-live-stream-embed": {
+        **MINIMAL,
+        "video": {**VIDEO, "url": "https://www.youtube.com/embed/live_stream?channel=UC0123"},
+    },
     "integration-block": {**MINIMAL, "integration": {"unit": "visits"}},
     "empty-pricing": {**MINIMAL, "pricing": []},
     "null-pricing": {**MINIMAL, "pricing": None},
