@@ -237,14 +237,17 @@ class _CallEffects:
         return self._run_effects[index]
 
     def take_back(self) -> None:
-        """Remove what this call appended, by identity, and put back what it removed."""
+        """Put back what this call removed, then remove what it appended, by identity.
+
+        In that order, so an effect the call staged and then removed itself is not left.
+        """
         with _RUN_EFFECTS_LOCK:
-            for effect in self._appended:
-                self._remove(effect)
-            self._appended.clear()
             for restore in reversed(self._restores):
                 restore()
             self._restores.clear()
+            for effect in self._appended:
+                self._remove(effect)
+            self._appended.clear()
 
     def _remove(self, effect: Any) -> None:
         if isinstance(self._run_effects, _CallEffects):
