@@ -890,8 +890,9 @@ def deploy(
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
 
-    The manifest `name` is a plain package name: lowercase, at most 63 characters,
-    with an org prefix recommended. The publisher is the manifest `publisher`, else
+    The manifest `name` is a plain package name: lowercase, at most 256 characters,
+    with an org prefix recommended. A name outside that rule deploys when one of your
+    organizations publishes a plugin of exactly that name on Canvas Platform. The publisher is the manifest `publisher`, else
     your organization whose prefix the name carries, else the only organization you
     can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
     accepted, so the push commits it; --ref, --no-push and --snapshot print the
