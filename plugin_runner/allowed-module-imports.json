@@ -8,6 +8,7 @@
     "EffectField",
     "FilterSpec",
     "GatewayClient",
+    "GatewayError",
     "LLMGateway",
     "LLMGatewayConfigurationError",
     "ModelCallLimitReached",
@@ -41,6 +42,8 @@
   ],
   "canvas_sdk.agents.gateway": [
     "GatewayClient",
+    "GatewayError",
+    "GatewayStream",
     "LLMGateway",
     "LLMGatewayConfigurationError",
     "ModelCallLimitReached"

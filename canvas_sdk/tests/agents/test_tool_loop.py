@@ -18,7 +18,7 @@ from canvas_sdk.agents import (
     run_tool_loop,
     standard_tools,
 )
-from canvas_sdk.agents.gateway import build_gateway
+from canvas_sdk.agents.gateway import GatewayError, build_gateway
 from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, MAX_QUEUED_EVENTS, ProgressFeed
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
@@ -278,8 +278,10 @@ def test_gateway_errors_propagate() -> None:
     request = httpx2.Request("POST", "https://gateway.test/v1/messages")
     error = anthropic.APIConnectionError(request=request)
 
-    with pytest.raises(anthropic.APIConnectionError):
+    with pytest.raises(GatewayError) as raised:
         _run(FakeGateway(error))
+
+    assert raised.value.is_outage
 
 
 def test_the_callers_message_list_is_not_modified() -> None:
@@ -587,9 +589,7 @@ def test_results_past_the_runs_total_are_cut() -> None:
 @pytest.mark.parametrize(
     "error",
     [
-        anthropic.APIConnectionError(
-            request=httpx2.Request("POST", "https://gateway.test/v1/messages")
-        ),
+        GatewayError("The model call timed out.", status_code=None, error_type="timeout"),
         RunDeadlineExceeded("the run reached its deadline"),
     ],
     ids=["gateway-error", "deadline"],

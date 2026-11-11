@@ -10,6 +10,7 @@ import httpx2
 import pytest
 
 from canvas_sdk.agents import DEFAULT_HISTORY_CHARS, standard_tools
+from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text
 from canvas_sdk.test_utils.factories import (
     ImagingReportFactory,
@@ -320,7 +321,7 @@ def test_an_outage_still_ends_the_run(files: Files) -> None:
         request=httpx2.Request("POST", "https://gateway.test/v1/messages")
     )
 
-    with pytest.raises(anthropic.APIConnectionError):
+    with pytest.raises(GatewayError):
         _read(patient, FakeGateway(outage), str(record.id))
 
 

@@ -33,12 +33,13 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+import anthropic
 from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 
 import canvas_sdk.commands  # noqa: F401  (importing it defines every SDK command)
 from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
-from canvas_sdk.agents.gateway import agent_secrets, count_model_call
+from canvas_sdk.agents.gateway import agent_secrets, count_model_call, gateway_error
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import (
@@ -132,7 +133,8 @@ class FakeGateway:
 
     Each call to ``client().messages.create``, or to ``messages.stream`` when the run's
     reply is streamed, takes the next reply, or raises it when it is an exception, such
-    as an ``anthropic.APIConnectionError`` for an outage. A copy of each request's
+    as an ``anthropic.APIConnectionError`` for an outage, which it raises as the
+    :class:`~canvas_sdk.agents.gateway.GatewayError` the gateway client would. A copy of each request's
     arguments is kept on :attr:`requests`.
     """
 
@@ -156,6 +158,9 @@ class FakeGateway:
                 f"FakeGateway has no reply queued for model call {len(self.requests)}"
             )
         answer = self._replies.pop(0)
+        if isinstance(answer, anthropic.APIError):
+            # As the gateway client raises it.
+            raise gateway_error(answer)
         if isinstance(answer, Exception):
             raise answer
         return answer

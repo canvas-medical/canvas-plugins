@@ -257,3 +257,29 @@ def test_a_client_kept_past_its_run_is_refused() -> None:
 
     with pytest.raises(ModelCallLimitReached, match="has ended"):
         client.messages.create(model="m", max_tokens=1, messages=[])
+
+
+def test_a_gateway_kept_past_its_run_builds_no_client() -> None:
+    """A module-level copy of the run's gateway, used after the run ended, makes no calls."""
+    recorder = RunRecorder(max_model_calls=1)
+    kept = build_gateway(base_url=GATEWAY_URL, api_key=KEY, recorder=recorder)
+    recorder.close()
+
+    with pytest.raises(ModelCallLimitReached, match="has ended"):
+        kept.client()
+    with pytest.raises(ModelCallLimitReached, match="has ended"):
+        kept.with_model("claude-haiku-4-5").client()
+
+
+def test_a_client_counts_against_its_gateways_run_outside_that_run() -> None:
+    """With no run current, as after the run's context is gone, the gateway's run still counts."""
+    recorder = RunRecorder(max_model_calls=1)
+    client = build_gateway(base_url=GATEWAY_URL, api_key=KEY, recorder=recorder).client()
+    client.messages._client = type(
+        "_Anthropic", (), {"messages": type("m", (), {"create": staticmethod(lambda **r: "reply")})}
+    )()
+
+    assert client.messages.create(model="m", max_tokens=1, messages=[]) == "reply"
+    with pytest.raises(ModelCallLimitReached):
+        client.messages.create(model="m", max_tokens=1, messages=[])
+    assert recorder.model_calls == 1

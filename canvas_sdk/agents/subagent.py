@@ -44,10 +44,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
-import anthropic
 from django.db import connections
 
-from canvas_sdk.agents.gateway import LLMGateway
+from canvas_sdk.agents.gateway import GatewayError, LLMGateway
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, current_recorder
 from canvas_sdk.agents.tool_loop import run_tool_loop, streams_reply
 from canvas_sdk.agents.tool_registry import ToolRegistry
@@ -203,7 +202,7 @@ def run_subagents(
     A failed sub-agent's entry is a string starting with
     ``"(sub-agent ... failed: ...)"`` rather than its result — the
     parent can decide whether to mention the failure or proceed with
-    the rest. A gateway error (``anthropic.APIError``) or the run reaching
+    the rest. A gateway error (:class:`GatewayError`) or the run reaching
     its deadline is raised instead, so it ends the run the way it would in
     the parent. Order of the returned dict is insertion order of
     ``specs`` (regardless of completion order).
@@ -250,7 +249,7 @@ def run_subagents(
         for future, name in future_to_name.items():
             try:
                 results[name] = future.result()
-            except (anthropic.APIError, RunDeadlineExceeded):
+            except (GatewayError, RunDeadlineExceeded):
                 pool.shutdown(wait=False, cancel_futures=True)
                 raise
             except Exception as exc:

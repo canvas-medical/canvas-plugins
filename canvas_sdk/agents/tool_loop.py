@@ -8,10 +8,14 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-import anthropic
 from anthropic.types import TextBlock, ToolUseBlock
 
-from canvas_sdk.agents.gateway import LLMGateway, ModelCallLimitReached, attempt_timeout
+from canvas_sdk.agents.gateway import (
+    GatewayError,
+    LLMGateway,
+    ModelCallLimitReached,
+    attempt_timeout,
+)
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.run_record import (
     RunDeadlineExceeded,
@@ -136,7 +140,7 @@ def _run_tool(
             raise ValueError("The tool's input must be an object of its arguments.")
         result = tools.execute(block.name, arguments, ctx={**ctx, "effects": call_effects})
         content = json.dumps(result, default=str)
-    except (anthropic.APIError, RunDeadlineExceeded):
+    except (GatewayError, RunDeadlineExceeded):
         calls.append(ToolCall(block.name, arguments, None, ok=False))
         if recorder is not None:
             recorder.record_tool_call(

@@ -11,6 +11,7 @@ from canvas_sdk.agents.base import AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import (
     GatewayClient,
+    GatewayError,
     LLMGateway,
     LLMGatewayConfigurationError,
     ModelCallLimitReached,
@@ -47,6 +48,7 @@ __all__ = __exports__ = (
     "LLMGatewayConfigurationError",
     "ModelCallLimitReached",
     "GatewayClient",
+    "GatewayError",
     "RunRequester",
     "RunSubject",
     "SubAgentSpec",

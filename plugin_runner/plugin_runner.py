@@ -17,7 +17,6 @@ from http import HTTPStatus
 from time import monotonic, sleep
 from typing import Any, NotRequired, TypedDict, cast
 
-import anthropic
 import grpc
 import redis
 import sentry_sdk
@@ -56,7 +55,12 @@ from canvas_sdk.agents import (
     RunSubject,
 )
 from canvas_sdk.agents.base import MAX_MODEL_CALLS
-from canvas_sdk.agents.gateway import GATEWAY_KEY_SECRET, agent_secrets, gateway_from_plugin_secrets
+from canvas_sdk.agents.gateway import (
+    GATEWAY_KEY_SECRET,
+    GatewayError,
+    agent_secrets,
+    gateway_from_plugin_secrets,
+)
 from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
 from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
@@ -271,7 +275,7 @@ def _ensure_sqlite_schema() -> None:
     _sqlite_schema_initialized = True
 
 
-def llm_error_kind(exc: anthropic.APIError) -> str:
+def llm_error_kind(exc: GatewayError) -> str:
     """Whether a failed gateway call is worth retrying.
 
     ``LLM_UNAVAILABLE`` is an outage: the gateway or Anthropic answered 5xx or 429,
@@ -279,13 +283,7 @@ def llm_error_kind(exc: anthropic.APIError) -> str:
     hit again: a budget or ceiling (402), a model not enabled (404), a bad key
     (401), or a refused feature (400).
     """
-    if isinstance(exc, anthropic.APIConnectionError):
-        return "LLM_UNAVAILABLE"
-    if isinstance(exc, anthropic.APIStatusError) and (
-        exc.status_code >= 500 or exc.status_code == 429
-    ):
-        return "LLM_UNAVAILABLE"
-    return "LLM_REFUSED"
+    return "LLM_UNAVAILABLE" if exc.is_outage else "LLM_REFUSED"
 
 
 AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
@@ -756,6 +754,9 @@ class PluginRunner(PluginRunnerServicer):
                 return
             namespace_config = plugin.get("namespace_config")
 
+            # run_tool_loop records model and tool calls here for home-app's run record. The
+            # gateway is bound to it, so a client built from a copy kept past the run is refused.
+            recorder = RunRecorder()
             try:
                 gateway = gateway_from_plugin_secrets(
                     plugin.get("secrets") or {},
@@ -763,6 +764,7 @@ class PluginRunner(PluginRunnerServicer):
                     plugin=base_plugin_name,
                     agent=request.agent_id,
                     run_id=request.run_id,
+                    recorder=recorder,
                 )
             except LLMGatewayConfigurationError as exc:
                 log.error(f"RunAgent: cannot dispatch agent — {exc}")
@@ -813,8 +815,6 @@ class PluginRunner(PluginRunnerServicer):
                 return
             slots = _RunSlots(extended)
 
-            # run_tool_loop records model and tool calls here for home-app's run record.
-            recorder = RunRecorder()
             # The tool loop stops making model calls short of home-app's deadline, after
             # which the run's lease can go to the next run of the same scope.
             # home-app sets the call's timeout from the same manifest entry; the shorter of
@@ -897,7 +897,7 @@ class PluginRunner(PluginRunnerServicer):
                         except Exception as run_exc:
                             _invoke_agent_hook(agent, "on_run_error", run_exc)
                             raise
-                except anthropic.APIError as exc:
+                except GatewayError as exc:
                     # The gateway refused the call or could not complete it. Only an
                     # outage is worth retrying: a refusal (budget, model, auth,
                     # request shape) would be refused again.
