@@ -306,22 +306,23 @@ def _matching_organization(organizations: list[dict[str, Any]], name: str) -> di
     return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
 
 
-def _legacy_publisher(client: PlatformClient, name: str) -> str | None:
-    """The slug of the person's organization that publishes a plugin named exactly ``name``
-    on Canvas Platform, else None. A 409 ``ambiguous`` (several publishers, none the
-    person's) counts as none.
+def _legacy_publisher(client: PlatformClient, name: str, declared: str | None) -> str | None:
+    """The slug of the organization that publishes the plugin named ``name`` the person sees
+    on Canvas Platform, member or not, else None. Platform authorizes the push and the
+    deployment itself. A 409 ``ambiguous`` (several publishers) is settled by the manifest
+    ``publisher`` when it names one, and otherwise counts as none.
     """
     try:
         plugin: dict[str, Any] | None = client.plugin(name)
     except PlatformError as error:
-        if error.code == "ambiguous":
+        if error.code != "ambiguous":
+            raise
+        if not declared:
             return None
-        raise
+        plugin = client.plugin(name, declared)
     if plugin is None:
         return None
-    publisher: str = str(plugin.get("publisher") or "")
-    yours: set[str] = {str(o["slug"]) for o in client.me().get("organizations", [])}
-    return publisher if publisher in yours else None
+    return str(plugin.get("publisher") or "") or None
 
 
 def _publisher(
@@ -335,13 +336,13 @@ def _publisher(
 ) -> tuple[str, bool]:
     """The slug of the organization that publishes ``name``, and whether the person picked it.
 
-    It is the manifest's ``publisher``, else ``held``, when it names an organization the
-    person belongs to, or any ``publisher`` for a deploy that pushes nothing, whose
-    deployment Canvas Platform authorizes on its own (a Canvas employee deploys in every
-    organization without belonging to it); else the person's organization whose
-    ``plugin_prefix`` the name carries; else the only organization the person can publish
-    in; else, at a terminal, the one the person picks. The choice is returned, not written: a regular
-    push records it in the manifest once the package is accepted (``records``), and any
+    It is ``held`` when the manifest names no other ``publisher``; else the manifest's
+    ``publisher`` when it names an organization the person belongs to, or any
+    ``publisher`` for a deploy that pushes nothing, whose deployment Canvas Platform
+    authorizes on its own (a Canvas employee deploys in every organization without
+    belonging to it); else the person's organization whose ``plugin_prefix`` the name
+    carries; else the only organization the person can publish in; else, at a terminal,
+    the one the person picks. The choice is returned, not written: a regular push records it in the manifest once the package is accepted (``records``), and any
     other deploy prints the line to add instead. Without a terminal, several
     organizations are refused with the manifest line that chooses one.
 
@@ -352,8 +353,8 @@ def _publisher(
         pushing (bool): Whether the command pushes code, which needs ``push_plugin_code``.
         records (bool): Whether the command is a regular push, which records a picked
             publisher in the manifest.
-        held (str | None): The person's organization that publishes ``name`` on Platform,
-            for a legacy name outside the character rule.
+        held (str | None): The organization that publishes ``name`` on Platform, for a
+            legacy name outside the character rule, whether or not the person belongs to it.
 
     Returns:
         tuple[str, bool]: The publishing organization's slug, and whether the person
@@ -365,9 +366,10 @@ def _publisher(
     organizations: list[dict[str, Any]] = client.me().get("organizations", [])
     slugs: str = ", ".join(str(o["slug"]) for o in organizations)
     declared: str | None = manifest_publisher(plugin_dir)
-    if declared is None and held is not None:
+    if held is not None and declared in (None, held):
+        # Platform refuses a push or deployment the person may not make.
         print(f"Publishing as {held}, which publishes {name} on Canvas Platform.")
-        declared = held
+        return held, False
     if declared is not None:  # "" is a value too, and is refused below as no organization
         match: dict[str, Any] | None = next(
             (o for o in organizations if o["slug"] == declared), None
@@ -920,11 +922,11 @@ def deploy(
     """Publish the plugin's code to Canvas Platform and deploy it.
 
     The manifest `name` is a plain package name: lowercase, at most 256 characters,
-    with an org prefix recommended. A name outside that rule deploys when one of your
-    organizations publishes a plugin of exactly that name on Canvas Platform. The
-    publisher is the manifest `publisher`, else the organization that publishes such a
-    name, else your organization whose prefix the name carries, else the only organization you
-    can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
+    with an org prefix recommended. A name outside that rule deploys when Canvas Platform
+    holds a plugin of exactly that name you can see, under its publisher, and Platform
+    decides whether you may push and deploy it. Otherwise the publisher is the manifest
+    `publisher`, else your organization whose prefix the name carries, else the only
+    organization you can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
     accepted, so the push commits it; --ref, --no-push and --snapshot print the
     manifest line to add instead.
 
@@ -981,12 +983,12 @@ def deploy(
     name = manifest_name(plugin_dir)
     platform = auth.resolve_platform_url()
     client = PlatformClient(platform)
-    # A legacy name one of the person's organizations publishes deploys as is: on an
+    # A legacy name Platform holds a plugin of for the person deploys as is: on an
     # instance a rename is a new plugin.
     held: str | None = (
         None
         if len(name) > PLUGIN_NAME_MAX_LENGTH or PLUGIN_NAME_PATTERN.fullmatch(name)
-        else _legacy_publisher(client, name)
+        else _legacy_publisher(client, name, manifest_publisher(plugin_dir))
     )
     if held is None:
         require_valid_name(name)

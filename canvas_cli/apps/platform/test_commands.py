@@ -304,24 +304,80 @@ EMPLOYEE: dict[str, Any] = {
 }
 
 
+@pytest.mark.parametrize("mode", [["--ref", "v1.2.0"], []])
+def test_deploy_a_legacy_name_a_canvas_engineer_maintains_for_a_customer(
+    mode: list[str],
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    tmp_path: Path,
+    signed_in: None,
+) -> None:
+    """A Canvas-maintained legacy plugin published by a customer deploys for a Canvas
+    engineer who is not a member: Platform, not the CLI, decides who may push and deploy.
+    """
+    api.get(f"{API}/me", json=EMPLOYEE)
+    api.get(f"{API}/plugins/{LEGACY}", json={"name": LEGACY, "publisher": "exmpl"})
+    api.post(
+        f"{API}/orgs/exmpl/plugins",
+        json={"name": LEGACY, "publisher": "exmpl", "git_url": bare.as_uri()},
+    )
+    package = _plain_package(tmp_path, name=LEGACY)
+
+    result = runner.invoke(app, ["deploy", str(package), *mode, "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    ref = mode[1] if mode else _git(package, "rev-parse", "HEAD")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": LEGACY, "ref": ref, "publisher": "exmpl"}
+    ]
+    assert "Publishing as exmpl, which publishes Acme-Intake on Canvas Platform." in result.output
+
+
+def test_deploy_a_legacy_name_you_may_not_push_gets_platforms_refusal(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """A legacy plugin granted to the person's organization but published by another is
+    pushed only if Platform allows it, so its refusal is what the person reads.
+    """
+    sentence = "You cannot push code to globex's plugins."
+    api.get(f"{API}/plugins/{LEGACY}", json={"name": LEGACY, "publisher": "globex"})
+    api.post(f"{API}/orgs/globex/plugins", status_code=403, json={"error": sentence})
+    package = _plain_package(tmp_path, name=LEGACY)
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert sentence in result.output
+    assert "starts with a lowercase letter" not in result.output
+    assert not _requests_to(api, "POST", "/deployments")
+
+
+def test_deploy_an_ambiguous_legacy_name_uses_the_manifest_publisher(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """When several publishers hold the name, the manifest publisher picks whose plugin it is."""
+    api.get(f"{API}/plugins/{LEGACY}", status_code=409, json={"error": "S", "code": "ambiguous"})
+    api.get(f"{API}/plugins/{LEGACY}?publisher=acme", json={"name": LEGACY, "publisher": "acme"})
+    package = _plain_package(tmp_path, json.dumps({"name": LEGACY, "publisher": "acme"}), LEGACY)
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "v1.2.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": LEGACY, "ref": "v1.2.0", "publisher": "acme"}
+    ]
+
+
 @pytest.mark.parametrize(
     ("name", "me", "answer"),
     [
         (LEGACY, ME, {"status_code": 404, "json": {"error": "not found"}}),
-        (LEGACY, ME, {"json": {"name": LEGACY, "publisher": "globex"}}),
         (LEGACY, ME, {"status_code": 409, "json": {"error": "Several", "code": "ambiguous"}}),
-        (LEGACY, EMPLOYEE, {"json": {"name": LEGACY, "publisher": "acme"}}),
-        ("globex__Intake-App", ME, {"json": {"publisher": "globex"}}),
         ("intake\n", ME, {"status_code": 404, "json": {"error": "not found"}}),
     ],
-    ids=[
-        "unknown",
-        "another-organization",
-        "ambiguous",
-        "canvas-employee",
-        "publisher-prefix",
-        "trailing-newline",
-    ],
+    ids=["unknown", "ambiguous-without-a-manifest-publisher", "trailing-newline"],
 )
 @patch("subprocess.run")
 def test_deploy_refuses_an_invalid_name_platform_does_not_hold_for_you(
@@ -333,9 +389,9 @@ def test_deploy_refuses_an_invalid_name_platform_does_not_hold_for_you(
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A name outside the character rule is refused with the rename advice, before any git
-    or deployment, unless one of the person's own organizations publishes it: being a
-    Canvas employee or the name carrying another publisher's prefix is not enough.
+    """A name outside the character rule that Platform holds no plugin of for the person,
+    or holds for several publishers with no manifest publisher to choose, is refused with
+    the rename advice before any git or deployment.
     """
     requests_mock.get(f"{API}/me", json=me)
     requests_mock.get(f"{API}/plugins/{quote(name, safe='')}", **answer)
