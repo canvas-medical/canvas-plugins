@@ -1,10 +1,10 @@
-# arf_loadtest
+# adk_loadtest
 
-Load tests the Agent Runner Framework: how many runs an instance drains and how wide, whether interactive chat turns jump a batch backlog, and whether scope leases hold under contention. Model calls go to a fake inference gateway, so a run costs no tokens and its timing is whatever the test sets.
+Load tests the Agent Development Kit: how many runs an instance drains and how wide, whether interactive chat turns jump a batch backlog, and whether scope leases hold under contention. Model calls go to a fake inference gateway, so a run costs no tokens and its timing is whatever the test sets.
 
-- `arf_loadtest/gateway.py`: the fake gateway. It answers `POST /v1/messages` (streaming included) from a script in the request's system prompt, and takes latency and fault settings on `POST /control`; `GET /stats` reports calls served and the most in flight at once.
-- `canvas__arf_loadtest/`: the plugin under test. Its probe agents run the scripted tool loop and record what they saw in Custom Data; its API starts runs and reads them back.
-- `arf_loadtest/driver.py`: the scenario driver (`arf-loadtest --help`).
+- `adk_loadtest/gateway.py`: the fake gateway. It answers `POST /v1/messages` (streaming included) from a script in the request's system prompt, and takes latency and fault settings on `POST /control`; `GET /stats` reports calls served and the most in flight at once.
+- `canvas__adk_loadtest/`: the plugin under test. Its probe agents run the scripted tool loop and record what they saw in Custom Data; its API starts runs and reads them back.
+- `adk_loadtest/driver.py`: the scenario driver (`adk-loadtest --help`).
 
 ## Scenarios
 
@@ -24,21 +24,21 @@ Batch runs come from the API-key endpoint, so they run as Canvas Bot at batch pr
 Against a local instance (`../canvas/home-app` with this repo mounted):
 
 ```sh
-cd tools/arf_loadtest
+cd tools/adk_loadtest
 uv sync
-uv run uvicorn arf_loadtest.gateway:app --host 0.0.0.0 --port 8765 --workers 1
+uv run uvicorn adk_loadtest.gateway:app --host 0.0.0.0 --port 8765 --workers 1
 ```
 
 1. Point the instance at the gateway: set `INFERENCE_GATEWAY_URL=http://host.docker.internal:8765` in the plugin runner's environment, which builds every agent's gateway client from it, and restart it. A hosted instance needs the gateway at a URL it can reach.
-2. Install the plugin, from the repo root: `uv run canvas install tools/arf_loadtest/canvas__arf_loadtest/canvas__arf_loadtest --host <instance>`.
+2. Install the plugin, from the repo root: `uv run canvas install tools/adk_loadtest/canvas__adk_loadtest/canvas__adk_loadtest --host <instance>`.
 3. Set its secrets: `simpleapi-api-key` to any string, and `INFERENCE_GATEWAY_KEY` to any string (the fake gateway accepts every key).
 4. For `priority` and `chat-order`, log in to the instance as a staff member, copy the session's `Cookie` header, and pick a patient id.
 5. Run the scenarios, with the API key and the session in the environment rather than on the command line:
 
 ```sh
-export ARF_LOADTEST_API_KEY=<simpleapi-api-key>
-export ARF_LOADTEST_SESSION_COOKIE='sessionid=...'
-uv run arf-loadtest all \
+export ADK_LOADTEST_API_KEY=<simpleapi-api-key>
+export ADK_LOADTEST_SESSION_COOKIE='sessionid=...'
+uv run adk-loadtest all \
   --instance http://localhost:8000 --patient-id <patient id> \
   --json report.json
 ```
@@ -51,6 +51,6 @@ Run on a development or load test instance only: the plugin starts agent runs on
 
 ```sh
 uv run pytest                                     # gateway, analysis, driver
-cd canvas__arf_loadtest && uv run pytest          # the plugin
-uv run canvas validate tools/arf_loadtest/canvas__arf_loadtest/canvas__arf_loadtest   # from the repo root
+cd canvas__adk_loadtest && uv run pytest          # the plugin
+uv run canvas validate tools/adk_loadtest/canvas__adk_loadtest/canvas__adk_loadtest   # from the repo root
 ```

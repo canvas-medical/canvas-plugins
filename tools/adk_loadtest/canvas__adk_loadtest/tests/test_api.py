@@ -5,7 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from canvas__arf_loadtest.api.loadtest import (
+from canvas__adk_loadtest.api.loadtest import (
     CHAT_AGENT,
     EXTENDED_AGENT,
     PLUGIN_NAME,
@@ -13,7 +13,7 @@ from canvas__arf_loadtest.api.loadtest import (
     LoadTestAPI,
     LoadTestChatAPI,
 )
-from canvas__arf_loadtest.models import Counter, ProbeRecord
+from canvas__adk_loadtest.models import Counter, ProbeRecord
 
 from canvas_sdk.v1.data import AgentRun, AgentRunStatus
 

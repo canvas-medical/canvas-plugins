@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from arf_loadtest.analysis import (
+from adk_loadtest.analysis import (
     check_all_succeeded,
     check_chat_order,
     check_prioritized,

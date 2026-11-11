@@ -1,6 +1,6 @@
 # canvas__scheduling_mcp
 
-A Model Context Protocol server for scheduling, over the Agent Runner Framework standard tools. An outside agent finds providers and open times, and, when the operator allows it, finds a patient, reads their appointments, and books, reschedules, and cancels.
+A Model Context Protocol server for scheduling, over the Agent Development Kit standard tools. An outside agent finds providers and open times, and, when the operator allows it, finds a patient, reads their appointments, and books, reschedules, and cancels.
 
 ## Setup
 

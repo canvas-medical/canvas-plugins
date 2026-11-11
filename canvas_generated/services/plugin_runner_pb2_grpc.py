@@ -101,7 +101,7 @@ class PluginRunnerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def RunAgent(self, request, context):
-        """Agent Runner Framework (KOALA-5544). Reuses EventResponse so emitted
+        """Agent Development Kit (KOALA-5544). Reuses EventResponse so emitted
         agent effects flow back through the same shape handler-emitted effects do.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)

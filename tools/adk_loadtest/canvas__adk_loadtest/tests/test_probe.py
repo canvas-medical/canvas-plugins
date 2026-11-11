@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 
 import pytest
-from canvas__arf_loadtest.agents.probe import ChatProbeAgent, ExtendedProbeAgent, ProbeAgent
-from canvas__arf_loadtest.models import Counter, ProbeRecord
+from canvas__adk_loadtest.agents.probe import ChatProbeAgent, ExtendedProbeAgent, ProbeAgent
+from canvas__adk_loadtest.models import Counter, ProbeRecord
 
 from canvas_sdk.agents import AgentPlugin, RunSubject
 from canvas_sdk.test_utils.agents import (
@@ -16,7 +16,7 @@ from canvas_sdk.test_utils.agents import (
 )
 from canvas_sdk.test_utils.factories import PatientFactory
 
-MANIFEST = Path(__file__).parents[1] / "canvas__arf_loadtest" / "CANVAS_MANIFEST.json"
+MANIFEST = Path(__file__).parents[1] / "canvas__adk_loadtest" / "CANVAS_MANIFEST.json"
 GRANT = ["@config_reads"]
 CHART_READS = [
     "@clinical_reads",

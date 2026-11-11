@@ -240,7 +240,7 @@ jobs:
           flags: plugin-${{ matrix.plugin }}
           fail_ci_if_error: false
 
-  test-arf-loadtest:
+  test-adk-loadtest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -253,11 +253,11 @@ jobs:
         env:
           CUSTOMER_IDENTIFIER: "ci-unit-tests"
         run: |
-          uv pip install -e tools/arf_loadtest/canvas__arf_loadtest
-          uv run pytest tools/arf_loadtest/canvas__arf_loadtest/tests --verbosity 2
+          uv pip install -e tools/adk_loadtest/canvas__adk_loadtest
+          uv run pytest tools/adk_loadtest/canvas__adk_loadtest/tests --verbosity 2
 
       - name: Test the load test driver and fake gateway
-        run: uv run --project tools/arf_loadtest pytest tools/arf_loadtest/tests --verbosity 2
+        run: uv run --project tools/adk_loadtest pytest tools/adk_loadtest/tests --verbosity 2
 
   integration-tests:
     runs-on: ubuntu-latest

@@ -49,7 +49,7 @@ fi
 log_verbose "Using mypy: $MYPY_PATH"
 
 # Plugins outside example-plugins, checked from their own directory like the example plugins.
-OTHER_PLUGIN_DIRS=("tools/arf_loadtest/canvas__arf_loadtest")
+OTHER_PLUGIN_DIRS=("tools/adk_loadtest/canvas__adk_loadtest")
 
 # The plugin directory a file belongs to, or nothing for a file outside every plugin.
 plugin_dir_of() {
@@ -75,7 +75,7 @@ if [ ${#changed_files[@]} -eq 0 ]; then
         --exclude example-plugins \
         --exclude canvas_cli/templates \
         --exclude custom-plugins \
-        --exclude tools/arf_loadtest/canvas__arf_loadtest \
+        --exclude tools/adk_loadtest/canvas__adk_loadtest \
         . || exit 1
     log_verbose "mypy passed for non-plugin files"
 

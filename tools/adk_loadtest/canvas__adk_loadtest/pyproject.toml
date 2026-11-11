@@ -5,9 +5,9 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
-description = "Probe agents for load testing the Canvas Agent Runner Framework"
+description = "Probe agents for load testing the Canvas Agent Development Kit"
 license = "MIT"
-name = "canvas__arf_loadtest"
+name = "canvas__adk_loadtest"
 requires-python = ">=3.11"
 version = "0.0.1"
 

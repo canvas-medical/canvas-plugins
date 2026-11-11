@@ -5,7 +5,7 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
-description = "A Model Context Protocol server over the Agent Runner Framework's scheduling tools"
+description = "A Model Context Protocol server over the Agent Development Kit's scheduling tools"
 license = "MIT"
 name = "canvas__scheduling_mcp"
 requires-python = ">=3.11"

@@ -3,7 +3,7 @@ canvas__agent_runner_poc
 
 ## Description
 
-Reference agents for the Canvas Agent Runner Framework.
+Reference agents for the Canvas Agent Development Kit.
 
 - **LongitudinalCareAdvisor** runs when a note is locked. It reviews the encounter against prior visits' open protocol cards and adds cards for outstanding follow-up.
 - **ChartChat** is a chat application on the patient chart. It keeps each clinician's conversation with a patient's chart in a `Conversation` row, and composes sub-agents for a chart summary and a pre-visit brief. Commands it proposes are staged onto the clinician's open note.
