@@ -202,10 +202,112 @@ def _secret_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
     }
 
 
+_API_BASES = {"SimpleAPI", "SimpleAPIRoute"}
+_REQUEST_READS = _REQUEST_INPUTS | {"json", "form_data", "body", "text"}
+PUBLIC_ACCESS = "PUBLIC_ACCESS"
+
+
+def _always_true(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Whether the body, past a docstring, is only ``return True``."""
+    body = function.body
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        body = body[1:]
+    return (
+        len(body) == 1
+        and isinstance(body[0], ast.Return)
+        and isinstance(body[0].value, ast.Constant)
+        and body[0].value.value is True
+    )
+
+
+def _declares_public_access(cls: ast.ClassDef) -> bool:
+    return any(
+        isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == PUBLIC_ACCESS for t in node.targets)
+        and isinstance(node.value, ast.Constant)
+        and node.value.value is True
+        for node in cls.body
+    )
+
+
+def _reads_request(node: ast.AST) -> bool:
+    return any(
+        isinstance(n, ast.Attribute) and n.attr in _REQUEST_READS and _is_self_request(n.value)
+        for n in ast.walk(node)
+    )
+
+
+def _is_self_request(node: ast.expr) -> bool:
+    """``self.request``."""
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "request"
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+    )
+
+
+def _reads_data(node: ast.AST, helpers: dict[str, ast.FunctionDef], follow: bool = True) -> bool:
+    """Whether ``node`` queries SDK data (``.objects``, ``for_patient``), directly or through
+    one module-level helper in the same file.
+    """
+    for n in ast.walk(node):
+        if isinstance(n, ast.Attribute) and n.attr in ("objects", "for_patient"):
+            return True
+        if (
+            follow
+            and isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Name)
+            and n.func.id in helpers
+            and _reads_data(helpers[n.func.id], helpers, follow=False)
+        ):
+            return True
+    return False
+
+
+def _open_data_route_findings(rel: Path, tree: ast.Module) -> list[LintFinding]:
+    helpers = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+    findings: list[LintFinding] = []
+    for cls in ast.walk(tree):
+        if (
+            not isinstance(cls, ast.ClassDef)
+            or not _API_BASES & set(_base_names(cls))
+            or _declares_public_access(cls)
+        ):
+            continue
+        methods = [n for n in cls.body if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)]
+        authenticate = next((m for m in methods if m.name == "authenticate"), None)
+        if authenticate is None or not _always_true(authenticate):
+            continue
+        route = next(
+            (
+                m
+                for m in methods
+                if m is not authenticate and _reads_request(m) and _reads_data(m, helpers)
+            ),
+            None,
+        )
+        if route is None:
+            continue
+        findings.append(
+            LintFinding(
+                "warning",
+                f"{rel}:{authenticate.lineno}",
+                "unauthenticated-data-route",
+                f"`{cls.name}.authenticate` always returns True, and `{route.name}` reads Canvas "
+                "data using values from the request, so anyone who can reach the URL can read it. "
+                "Use `StaffSessionAuthMixin`, `PatientSessionAuthMixin` or `APIKeyAuthMixin`, or "
+                f"set `{PUBLIC_ACCESS} = True` on the class if the route is public on purpose.",
+            )
+        )
+    return findings
+
+
 def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     findings: list[LintFinding] = []
     for py_file, tree in _iter_python_files(plugin_dir):
         rel = _rel(py_file, plugin_dir)
+        findings += _open_data_route_findings(rel, tree)
         # A nested function is walked again inside its enclosing one; report each comparison once.
         reported: set[int] = set()
         for function in ast.walk(tree):
