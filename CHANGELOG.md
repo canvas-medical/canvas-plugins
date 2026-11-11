@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v1.1.0 (2026-11-11)
+
+### Features
+
+- Accept a markup on the catalog listing's token pricing component
+  ([#1987](https://github.com/canvas-medical/canvas-plugins/pull/1987),
+  [`4e584af`](https://github.com/canvas-medical/canvas-plugins/commit/4e584af0f992b3f288f111eeec78210b01574a82))
+
+- Accept an optional youtube video in a plugin's catalog listing
+  ([#1991](https://github.com/canvas-medical/canvas-plugins/pull/1991),
+  [`7bd05e6`](https://github.com/canvas-medical/canvas-plugins/commit/7bd05e62b083022f4da42a5b4c098239f3cecd32))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- **cli**: Canvas logs --plugin filters the live stream
+  ([#1989](https://github.com/canvas-medical/canvas-plugins/pull/1989),
+  [`43a8500`](https://github.com/canvas-medical/canvas-plugins/commit/43a85007cd8979d65b88a0cd4ce950917605db9f))
+
+- **sdk**: Expose staff ID.me identity verification status in the data module
+  ([#1976](https://github.com/canvas-medical/canvas-plugins/pull/1976),
+  [`483eb2a`](https://github.com/canvas-medical/canvas-plugins/commit/483eb2aa927370e626c546368ddc1e7b015f8e5a))
+
+
 ## v1.0.1 (2026-11-10)
 
 ### Bug Fixes
