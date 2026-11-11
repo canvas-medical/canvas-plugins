@@ -1,3 +1,12 @@
+# A video's YouTube address: a watch link, a youtu.be link or an embed link, each naming
+# an 11-character id, never the embed words for a playlist or a live stream. No named
+# groups, since editors read the schema as ECMA regex.
+YOUTUBE_URL = (
+    r"^https://(?:(?:www\.|m\.)?youtube\.com/watch\?(?:[^#]*?&)??v=|youtu\.be/"
+    r"|(?:www\.)?youtube\.com/embed/|www\.youtube-nocookie\.com/embed/)"
+    r"(?!(?:videoseries|live_stream)(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{11}(?![A-Za-z0-9_-])"
+)
+
 manifest_schema = {
     "type": "object",
     "properties": {
@@ -357,6 +366,25 @@ manifest_schema = {
                     "type": "string",
                     "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
                 },
+                "video": {
+                    "description": "A YouTube video the plugin's page plays in its screenshot row, first, behind the poster image.",
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "description": "A YouTube watch, youtu.be or embed link, over https. The video must allow embedding.",
+                            "type": "string",
+                            "pattern": YOUTUBE_URL,
+                        },
+                        "poster": {
+                            "description": "Image inside the package folder shown until the video plays. Ends in .png, .jpg, .jpeg or .webp, in lowercase.",
+                            "type": "string",
+                            "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
+                        },
+                        "caption": {"type": "string", "maxLength": 40},
+                    },
+                    "required": ["url", "poster"],
+                    "additionalProperties": False,
+                },
                 "setup_guide": {
                     "description": "Path inside the package folder to a markdown file describing setup for the person deciding whether to install the plugin. 'setup_instructions' is the Studio agent's file; this is the reader's.",
                     "$ref": "#/$defs/catalog_path",
@@ -388,13 +416,16 @@ manifest_schema = {
             "description": (
                 "One unit Canvas charges for, in the singular, and its price as a string of US "
                 "dollars with at most four decimal places. The 'token' unit has no price, "
-                "since the inference gateway prices tokens by model. A unit appears once, "
-                "matched without regard to case, which Platform checks at push."
+                "since the inference gateway prices tokens by model; its markup_bps is what a "
+                "Canvas agent's tokens bill at over list price, in basis points (1500 is 15%). "
+                "A unit appears once, matched without regard to case, which Platform checks "
+                "at push."
             ),
             "type": "object",
             "properties": {
                 "unit": {"$ref": "#/$defs/catalog_text", "maxLength": 40},
                 "price_per_unit": {"type": "string", "pattern": r"^\d{1,8}(\.\d{1,4})?$"},
+                "markup_bps": {"type": "integer", "minimum": 0, "maximum": 10000},
             },
             "required": ["unit"],
             "additionalProperties": False,
@@ -402,7 +433,7 @@ manifest_schema = {
                 "properties": {"unit": {"pattern": r"^\s*[Tt][Oo][Kk][Ee][Nn]\s*$"}},
             },
             "then": {"not": {"required": ["price_per_unit"]}},
-            "else": {"required": ["price_per_unit"]},
+            "else": {"required": ["price_per_unit"], "not": {"required": ["markup_bps"]}},
         },
         "catalog_text": {
             "description": "Text with at least one character that is not whitespace.",

@@ -10,7 +10,7 @@ import zlib
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any, NamedTuple, TypedDict, cast
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import click
 import requests
@@ -466,7 +466,9 @@ def logs(
     ),
     level: list[str] = typer.Option([], help="Repeatable. --level ERROR --level WARN"),
     source: str | None = typer.Option(None, help="Filter by source/service."),
-    plugin: list[str] = typer.Option([], help="Repeatable. --plugin foo --plugin bar."),
+    plugin: list[str] = typer.Option(
+        [], help="Repeatable. --plugin foo --plugin bar. Filters history and the live stream."
+    ),
     handler: list[str] = typer.Option(
         [],
         help="Repeatable. Qualified handler name (e.g. my_plugin.handlers.Foo).",
@@ -579,7 +581,7 @@ def logs(
             print("")
 
         try:
-            stream_logs(host, token)
+            stream_logs(host, token, plugin)
         except KeyboardInterrupt:
             raise typer.Exit(0) from None
 
@@ -687,7 +689,7 @@ def _stream_once(url: str) -> StreamResult:
     return StreamResult(opened[0], close_code[0], refusal[0], error[0])
 
 
-def stream_logs(host: str, token: LogToken) -> None:
+def stream_logs(host: str, token: LogToken, plugins: list[str] | None = None) -> None:
     """Print the instance's live log stream from Console until it closes.
 
     Console re-checks a Platform-issued token while the stream is open and closes the stream
@@ -704,6 +706,7 @@ def stream_logs(host: str, token: LogToken) -> None:
     Args:
         host (str): The Canvas instance URL.
         token (LogToken): The token source.
+        plugins (list[str] | None): Plugins whose lines Console sends; none sends every line.
 
     Raises:
         click.ClickException: Console closed the stream before starting it, or the connection
@@ -712,10 +715,10 @@ def stream_logs(host: str, token: LogToken) -> None:
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
     instance = instance_slug(host) or cast(str, urlparse(host).hostname)
+    plugin_query: str = urlencode([("plugin", p) for p in plugins or []])
     while True:
-        result: StreamResult = _stream_once(
-            f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
-        )
+        url = f"wss://logs.console.canvasmedical.com/{instance}?token={token.get()}"
+        result: StreamResult = _stream_once(f"{url}&{plugin_query}" if plugin_query else url)
         if not result.opened and (result.close_code is not None or result.error):
             # Also stops a re-minted token Console refuses from reconnecting in a loop.
             if not result.refusal and result.close_code is None:

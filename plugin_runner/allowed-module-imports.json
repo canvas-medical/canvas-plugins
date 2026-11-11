@@ -1449,6 +1449,7 @@
     "StaffAddress",
     "StaffContactPoint",
     "StaffExternalIdentifier",
+    "StaffIdentityVerification",
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
@@ -2027,6 +2028,9 @@
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole"
+  ],
+  "canvas_sdk.v1.data.staff_identity_verification": [
+    "StaffIdentityVerification"
   ],
   "canvas_sdk.v1.data.stop_medication_event": [
     "StopMedicationEvent"
