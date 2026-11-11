@@ -5,7 +5,12 @@ from typing import Any
 import pytest
 
 from canvas_sdk.agents import standard_tools
-from canvas_sdk.test_utils.factories import LabReportFactory, LabValueFactory, PatientFactory
+from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
+    LabReportFactory,
+    LabValueFactory,
+    PatientFactory,
+)
 
 
 def _results(patient: Any) -> list[dict[str, Any]]:
@@ -39,3 +44,21 @@ def test_a_result_without_a_range_says_so() -> None:
     (result,) = _results(patient)
 
     assert result["reference_range"] is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "removed",
+    [{"deleted": True}, {"entered_in_error": True}, {"junked": True}],
+    ids=["deleted", "entered in error", "junked"],
+)
+def test_a_report_taken_out_of_the_chart_returns_no_values(removed: dict[str, Any]) -> None:
+    """A report deleted, entered in error, or junked is not a chart fact the model can cite."""
+    patient = PatientFactory.create()
+    LabValueFactory.create(report=LabReportFactory.create(patient=patient), value="kept")
+    fields = dict(removed)
+    if fields.pop("entered_in_error", False):
+        fields["entered_in_error"] = CanvasUserFactory.create()
+    LabValueFactory.create(report=LabReportFactory.create(patient=patient, **fields), value="gone")
+
+    assert [result["value"] for result in _results(patient)] == ["kept"]
