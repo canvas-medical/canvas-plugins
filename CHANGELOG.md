@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.0.1 (2026-11-10)
+
+### Bug Fixes
+
+- **cli**: Link deprecation notices straight to the Canvas Platform upgrade guide
+  ([#1988](https://github.com/canvas-medical/canvas-plugins/pull/1988),
+  [`be93759`](https://github.com/canvas-medical/canvas-plugins/commit/be9375902186a9f050b0c09034f0ebf6d4ed9c37))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+
 ## v1.0.0 (2026-11-10)
 
 ### Features
