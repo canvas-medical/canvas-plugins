@@ -45,9 +45,8 @@ from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-# A plugin name is a Python package and a Postgres identifier (see PG_NAMEDATALEN in
-# plugin_runner/namespace.py).
-PLUGIN_NAME_MAX_LENGTH = 63
+# Canvas Platform's and home-app's limit.
+PLUGIN_NAME_MAX_LENGTH = 256
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -225,7 +224,7 @@ def _edit_publisher_line(text: str, indent: str, slug: str) -> str | None:
 
 
 def require_valid_name(name: str) -> None:
-    """Refuse a manifest name that is not a valid Python package and Postgres identifier."""
+    """Refuse a manifest name that is not a valid Python package name of at most 256 characters."""
     if PLUGIN_NAME_PATTERN.match(name) and len(name) <= PLUGIN_NAME_MAX_LENGTH:
         return
     package: str = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "package"
@@ -233,7 +232,7 @@ def require_valid_name(name: str) -> None:
     raise typer.BadParameter(
         f"The plugin name '{name}' is not valid. A name starts with a lowercase letter, then "
         f"holds lowercase letters, digits and underscores, at most {PLUGIN_NAME_MAX_LENGTH} "
-        "characters, because it is a Python package and a Postgres identifier. Rename it in "
+        "characters, because it is a Python package. Rename it in "
         f"the manifest, the package folder and its imports, for example `{package}`."
     )
 
@@ -949,14 +948,19 @@ def deploy(
     if branch is not None:
         _require_branch_name(plugin_dir, branch)
     name = manifest_name(plugin_dir)
-    require_valid_name(name)
+    if len(name) > PLUGIN_NAME_MAX_LENGTH:
+        require_valid_name(name)
+    platform = auth.resolve_platform_url()
+    client = PlatformClient(platform)
+    if not PLUGIN_NAME_PATTERN.match(name) and _managed_record(client, name) is None:
+        # A legacy name Platform holds for the person deploys as is: on an instance a
+        # rename is a new plugin.
+        require_valid_name(name)
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
         instance_plugin.validate(plugin_dir)
 
-    platform = auth.resolve_platform_url()
-    client = PlatformClient(platform)
     publisher, picked = _publisher(
         client,
         plugin_dir,

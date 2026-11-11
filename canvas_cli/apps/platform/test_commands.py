@@ -18,6 +18,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 import requests_mock as requests_mock_module
 import typer
 from typer.testing import CliRunner
@@ -229,27 +230,132 @@ def test_deploy_accepts_a_plain_name(
     assert "Publishing as acme, the only organization you can publish in." in result.output
 
 
-@pytest.mark.parametrize("name", ["Intake", "1abc", "a" * 64])
 @patch("subprocess.run")
-def test_deploy_refuses_an_invalid_name_before_any_git_or_network(
+def test_deploy_refuses_a_name_over_256_characters_before_any_git_or_network(
     mock_run: Mock,
-    name: str,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A name that is not a Python package and a Postgres identifier is refused up front."""
-    directory = tmp_path / name
+    """A name longer than Canvas Platform accepts is refused up front."""
+    name = "a" * 257
+    directory = tmp_path / "pkg"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": name}))
 
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "at most 63 characters" in result.output
+    assert "at most 256 characters" in result.output
     assert "starts with a lowercase letter" in result.output
     mock_run.assert_not_called()
     assert not requests_mock.called
+
+
+def test_deploy_accepts_a_100_character_name(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """A valid name up to 256 characters deploys without asking Platform about the name."""
+    name = "a" * 100
+    package = _plain_package(tmp_path, name=name)
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--ref", "v1.2.0", "--instance", "acme-staging"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": name, "ref": "v1.2.0", "publisher": "acme"}
+    ]
+    assert not _requests_to(api, "GET", f"/plugins/{name}")
+
+
+LEGACY = "Acme-Intake"
+
+
+@pytest.mark.parametrize("mode", [["--ref", "v1.2.0"], []])
+def test_deploy_a_legacy_name_platform_holds_for_your_organization(
+    mode: list[str], api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """A name outside the character rule deploys when one of the person's organizations
+    publishes a plugin of exactly that name on Platform, since a rename is a new plugin.
+    """
+    api.get(f"{API}/plugins/{LEGACY}", json={"name": LEGACY, "publisher": "acme"})
+    package = _plain_package(tmp_path, name=LEGACY)
+
+    result = runner.invoke(app, ["deploy", str(package), *mode, "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    ref = mode[1] if mode else _git(package, "rev-parse", "HEAD")
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
+        {"name": LEGACY, "ref": ref, "publisher": "acme"}
+    ]
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"status_code": 404, "json": {"error": "not found"}},
+        {"json": {"name": LEGACY, "publisher": "globex"}},
+        {"status_code": 409, "json": {"error": "Several publishers", "code": "ambiguous"}},
+    ],
+    ids=["unknown", "another-organization", "ambiguous"],
+)
+@patch("subprocess.run")
+def test_deploy_refuses_an_invalid_name_platform_does_not_hold_for_you(
+    mock_run: Mock,
+    answer: dict[str, Any],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """A name outside the character rule that none of the person's organizations publishes
+    is refused with the rename advice, before any git or deployment.
+    """
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.get(f"{API}/plugins/{LEGACY}", **answer)
+    directory = tmp_path / LEGACY
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": LEGACY}))
+
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
+
+    assert result.exit_code == 2
+    assert "starts with a lowercase letter" in result.output
+    assert "for example `acme_intake`" in result.output
+    mock_run.assert_not_called()
+    assert not _requests_to(requests_mock, "POST", "/deployments")
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"exc": requests.ConnectionError("refused")},
+        {"status_code": 500, "json": {"error": "Server error"}},
+    ],
+    ids=["unreachable", "error"],
+)
+@patch("subprocess.run")
+def test_deploy_stops_when_platform_cannot_answer_for_an_invalid_name(
+    mock_run: Mock,
+    answer: dict[str, Any],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+) -> None:
+    """Without Platform's answer, a name outside the character rule is never deployed."""
+    requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.get(f"{API}/plugins/{LEGACY}", **answer)
+    directory = tmp_path / LEGACY
+    directory.mkdir()
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": LEGACY}))
+
+    result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "starts with a lowercase letter" not in result.output
+    mock_run.assert_not_called()
+    assert not _requests_to(requests_mock, "POST", "/deployments")
 
 
 def test_deploy_uses_the_manifest_publisher(
@@ -3480,21 +3586,24 @@ def test_init_without_a_publishing_organization_scaffolds_unregistered(
     assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
 
 
-def test_init_refuses_a_scaffolded_name_that_is_too_long(
+def test_init_refuses_a_hyphenated_scaffolded_name(
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A project name that yields a name over 63 characters is refused before registering."""
+    """A new plugin's name follows the character rule even where Platform holds the name,
+    so init never asks Platform about it.
+    """
     monkeypatch.chdir(tmp_path)
     requests_mock.get(f"{API}/me", json=ME)
+    requests_mock.get(f"{API}/plugins/acme__intake-app", json={"publisher": "acme"})
 
-    result = runner.invoke(app, ["init"], input=f"{'a' * 60}\n")
+    result = runner.invoke(app, ["init", "application"], input="Intake-App\n")
 
     assert result.exit_code == 2
-    assert "is not a valid plugin name" in result.output
-    assert "at most 63 characters" in result.output
+    assert "The scaffolded name 'acme__intake-app' is not a valid plugin name" in result.output
+    assert not _requests_to(requests_mock, "GET", "/plugins/acme__intake-app")
     assert not _requests_to(requests_mock, "POST", "/orgs/acme/plugins")
 
 
