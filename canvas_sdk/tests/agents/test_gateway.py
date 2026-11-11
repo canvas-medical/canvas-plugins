@@ -7,8 +7,10 @@ import pytest
 
 from canvas_sdk.agents import LLMGateway, LLMGatewayConfigurationError
 from canvas_sdk.agents.gateway import (
+    GatewayError,
     GatewayMessages,
     ModelCallLimitReached,
+    _converted,
     agent_secrets,
     attempt_timeout,
     build_gateway,
@@ -283,3 +285,23 @@ def test_a_client_counts_against_its_gateways_run_outside_that_run() -> None:
     with pytest.raises(ModelCallLimitReached):
         client.messages.create(model="m", max_tokens=1, messages=[])
     assert recorder.model_calls == 1
+
+
+def test_a_transport_error_while_streaming_reaches_the_caller_without_its_request() -> None:
+    """The client lets a mid-stream read error through; it carries the request it was on."""
+    request = httpx2.Request("POST", f"{GATEWAY_URL}/v1/messages", headers={"x-api-key": KEY})
+
+    def events() -> Any:
+        yield "first"
+        raise httpx2.ReadError("connection reset", request=request)
+
+    received = []
+    with pytest.raises(GatewayError) as raised:
+        for event in _converted(events()):
+            received.append(event)
+
+    assert received == ["first"]
+    assert raised.value.status_code is None
+    assert raised.value.error_type == "connection_error"
+    assert raised.value.__context__ is None
+    assert KEY not in repr(vars(raised.value))

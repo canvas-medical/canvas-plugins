@@ -22,6 +22,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
 import anthropic
+import httpx2
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
 
 from canvas_sdk.agents.run_record import RunRecorder, current_recorder
@@ -71,7 +72,12 @@ class GatewayError(RuntimeError):
         return self.status_code is None or self.status_code >= 500 or self.status_code == 429
 
 
-def gateway_error(exc: anthropic.APIError) -> GatewayError:
+# What a model call can raise that carries the request: the client's errors, and a
+# transport error the client lets through, as from reading a stream.
+_REQUEST_BEARING_ERRORS = (anthropic.APIError, httpx2.HTTPError)
+
+
+def gateway_error(exc: anthropic.APIError | httpx2.HTTPError) -> GatewayError:
     """``exc`` as a :class:`GatewayError`, without the request it carries. Not exported."""
     if isinstance(exc, anthropic.APIStatusError):
         body = exc.body if isinstance(exc.body, dict) else {}
@@ -97,7 +103,7 @@ def _calling(call: Any, *args: Any, **kwargs: Any) -> Any:
     """
     try:
         return call(*args, **kwargs)
-    except anthropic.APIError as exc:
+    except _REQUEST_BEARING_ERRORS as exc:
         error = gateway_error(exc)
     raise error
 
@@ -110,7 +116,7 @@ def _converted(items: Iterable[Any]) -> Iterator[Any]:
             item = next(iterator)
         except StopIteration:
             return
-        except anthropic.APIError as exc:
+        except _REQUEST_BEARING_ERRORS as exc:
             error = gateway_error(exc)
         else:
             yield item
@@ -159,8 +165,12 @@ class GatewayMessages:
     def create(self, **request: Any) -> Any:
         """Make one model call through the gateway; see ``anthropic`` ``messages.create``.
 
-        Raises :class:`GatewayError` when the call fails.
+        Raises :class:`GatewayError` when the call fails. A streamed call goes through
+        :meth:`stream`, which hands back only its events and reply; ``stream=True`` here
+        would return the client's raw stream, which holds the response.
         """
+        if request.get("stream"):
+            raise ValueError("Stream a call with messages.stream, not create(stream=True).")
         count_model_call(request, self._recorder)
         return _calling(self._client.messages.create, **request)
 

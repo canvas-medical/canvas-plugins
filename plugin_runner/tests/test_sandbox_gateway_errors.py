@@ -165,3 +165,22 @@ def test_a_stream_hands_plugin_code_its_reply_but_no_key_or_host(gateway_server:
     assert "ok" in result["final"]
     assert result["reachable"] == []
     assert _leaks(result, gateway_server) == []
+
+
+def test_create_refuses_stream_true(gateway_server: str) -> None:
+    """create(stream=True) would return the client's raw stream, which holds the response."""
+    scope = _sandbox_from_code(
+        """
+def create_streamed(gateway):
+    try:
+        gateway.client(max_retries=0).messages.create(
+            model="m", max_tokens=5, stream=True, messages=[{"role": "user", "content": "hi"}]
+        )
+    except ValueError as error:
+        return str(error)
+"""
+    ).execute()
+
+    refused = scope["create_streamed"](build_gateway(base_url=gateway_server, api_key=KEY))
+
+    assert "messages.stream" in refused
