@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
+from urllib.parse import quote
 
 import pytest
 import requests
@@ -214,20 +215,24 @@ def _plain_package(tmp_path: Path, manifest: str | None = None, name: str = "int
     return directory
 
 
+@pytest.mark.parametrize("name", ["intake", "a" * 100], ids=["short", "100-characters"])
 def test_deploy_accepts_a_plain_name(
-    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+    name: str, api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
 ) -> None:
-    """A package name needs no org prefix; the publisher is the one organization."""
-    package = _plain_package(tmp_path)
+    """A package name needs no org prefix and runs up to 256 characters; the publisher is
+    the one organization, and Platform is not asked about the name.
+    """
+    package = _plain_package(tmp_path, name=name)
 
     result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
 
     assert result.exit_code == 0, result.output
     head = _git(package, "rev-parse", "HEAD")
     assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": "intake", "ref": head, "publisher": "acme"}
+        {"name": name, "ref": head, "publisher": "acme"}
     ]
     assert "Publishing as acme, the only organization you can publish in." in result.output
+    assert not _requests_to(api, "GET", f"/plugins/{name}")
 
 
 @patch("subprocess.run")
@@ -252,24 +257,6 @@ def test_deploy_refuses_a_name_over_256_characters_before_any_git_or_network(
     assert not requests_mock.called
 
 
-def test_deploy_accepts_a_100_character_name(
-    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
-) -> None:
-    """A valid name up to 256 characters deploys without asking Platform about the name."""
-    name = "a" * 100
-    package = _plain_package(tmp_path, name=name)
-
-    result = runner.invoke(
-        app, ["deploy", str(package), "--ref", "v1.2.0", "--instance", "acme-staging"]
-    )
-
-    assert result.exit_code == 0, result.output
-    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"] == [
-        {"name": name, "ref": "v1.2.0", "publisher": "acme"}
-    ]
-    assert not _requests_to(api, "GET", f"/plugins/{name}")
-
-
 LEGACY = "Acme-Intake"
 
 
@@ -292,37 +279,74 @@ def test_deploy_a_legacy_name_platform_holds_for_your_organization(
     ]
 
 
+def test_deploy_a_legacy_name_publishes_as_the_organization_platform_names(
+    api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
+) -> None:
+    """Among several organizations, a legacy name registers and deploys under the one
+    Platform says publishes it, without a prompt.
+    """
+    api.get(f"{API}/me", json={**ME, "organizations": [BIG_LEAP, ACME]})
+    api.get(f"{API}/plugins/{LEGACY}", json={"name": LEGACY, "publisher": "acme"})
+    package = _plain_package(tmp_path, name=LEGACY)
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _requests_to(api, "POST", "/orgs/acme/plugins")[0].json() == {"name": LEGACY}
+    assert _requests_to(api, "POST", "/deployments")[0].json()["plugins"][0]["publisher"] == "acme"
+    assert "Publishing as acme, which publishes Acme-Intake on Canvas Platform." in result.output
+
+
+EMPLOYEE: dict[str, Any] = {
+    **ME,
+    "canvas_employee": True,
+    "organizations": [{**ACME, "slug": "canvas"}],
+}
+
+
 @pytest.mark.parametrize(
-    "answer",
+    ("name", "me", "answer"),
     [
-        {"status_code": 404, "json": {"error": "not found"}},
-        {"json": {"name": LEGACY, "publisher": "globex"}},
-        {"status_code": 409, "json": {"error": "Several publishers", "code": "ambiguous"}},
+        (LEGACY, ME, {"status_code": 404, "json": {"error": "not found"}}),
+        (LEGACY, ME, {"json": {"name": LEGACY, "publisher": "globex"}}),
+        (LEGACY, ME, {"status_code": 409, "json": {"error": "Several", "code": "ambiguous"}}),
+        (LEGACY, EMPLOYEE, {"json": {"name": LEGACY, "publisher": "acme"}}),
+        ("globex__Intake-App", ME, {"json": {"publisher": "globex"}}),
+        ("intake\n", ME, {"status_code": 404, "json": {"error": "not found"}}),
     ],
-    ids=["unknown", "another-organization", "ambiguous"],
+    ids=[
+        "unknown",
+        "another-organization",
+        "ambiguous",
+        "canvas-employee",
+        "publisher-prefix",
+        "trailing-newline",
+    ],
 )
 @patch("subprocess.run")
 def test_deploy_refuses_an_invalid_name_platform_does_not_hold_for_you(
     mock_run: Mock,
+    name: str,
+    me: dict[str, Any],
     answer: dict[str, Any],
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
-    """A name outside the character rule that none of the person's organizations publishes
-    is refused with the rename advice, before any git or deployment.
+    """A name outside the character rule is refused with the rename advice, before any git
+    or deployment, unless one of the person's own organizations publishes it: being a
+    Canvas employee or the name carrying another publisher's prefix is not enough.
     """
-    requests_mock.get(f"{API}/me", json=ME)
-    requests_mock.get(f"{API}/plugins/{LEGACY}", **answer)
-    directory = tmp_path / LEGACY
+    requests_mock.get(f"{API}/me", json=me)
+    requests_mock.get(f"{API}/plugins/{quote(name, safe='')}", **answer)
+    directory = tmp_path / "pkg"
     directory.mkdir()
-    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": LEGACY}))
+    (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": name}))
 
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
     assert "starts with a lowercase letter" in result.output
-    assert "for example `acme_intake`" in result.output
     mock_run.assert_not_called()
     assert not _requests_to(requests_mock, "POST", "/deployments")
 
