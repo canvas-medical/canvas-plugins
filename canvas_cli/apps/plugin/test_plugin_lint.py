@@ -21,7 +21,9 @@ from textwrap import dedent
 
 import pytest
 import requests
+import typer
 
+from canvas_cli.apps.plugin.plugin import _lint_plugin_static
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_sdk.handlers.simple_api import SimpleAPI
 from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin, Credentials
@@ -347,6 +349,86 @@ def test_tripwire_simple_api_denies_unless_authenticate_is_overridden() -> None:
         SimpleAPI.authenticate(SimpleAPI.__new__(SimpleAPI), Credentials.__new__(Credentials))
         is False
     )
+
+
+# ── lint-logic: credential rules ──────────────────────────────────────────────
+
+# Fake credentials, joined at runtime so this public repository never holds one whole.
+_STRIPE_LIVE = "sk_" + "live_" + "Ab3" * 9
+_CREDENTIALS = {
+    "A private key": "-----BEGIN " + "PRIVATE KEY-----",
+    "An Anthropic API key": "sk-ant-" + "api03-" + "A1b2C3" * 15,
+    "A Slack token": "xox" + "b-" + "123456789012-123456789012-" + "AbCdEf123456" * 2,
+    "A Stripe live key": _STRIPE_LIVE,
+    "A GitHub token": "gh" + "p_" + "A1b2C3d4E5f6" * 3,
+    "An OpenAI key": "sk-" + "proj-" + "A1b2C3d4" * 6,
+}
+
+
+@pytest.mark.parametrize("name", list(_CREDENTIALS))
+def test_hardcoded_credential_in_a_shipped_file_is_an_error(name: str) -> None:
+    """Each near-certain shape in a shipped file blocks validation, with the value masked."""
+    value = _CREDENTIALS[name]
+    root = _plugin({"config/settings.json": json.dumps({"service": {"secret": value}})})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "hardcoded-credential"]
+
+    assert [(f.severity, f.location) for f in findings] == [("error", "config/settings.json:1")]
+    assert findings[0].message.startswith(f"{name} (`{value[:4]}…`, {len(value)} characters)")
+    assert value not in findings[0].message
+
+
+@pytest.mark.parametrize("path", ["README.md", "tests/test_billing.py", "docs/setup.txt"])
+def test_hardcoded_credential_in_docs_or_tests_only_warns(path: str) -> None:
+    """Docs and tests hold example keys, so the same shapes there warn instead of block."""
+    root = _plugin({path: f'KEY = "{_STRIPE_LIVE}"\n'})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "hardcoded-credential"]
+
+    assert [(f.severity, f.location) for f in findings] == [("warning", f"{path}:1")]
+
+
+def test_files_that_do_not_ship_are_not_scanned(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hidden files and what `.canvasignore` excludes never reach the package, so they are not read."""
+    root = _plugin(
+        {".env": f"KEY={_STRIPE_LIVE}\n", "scratch/notes.py": f'KEY = "{_STRIPE_LIVE}"\n'}
+    )
+    (root.parent / ".canvasignore").write_text("scratch/\n")
+    monkeypatch.chdir(root.parent)
+
+    assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
+
+
+def test_binary_files_are_skipped() -> None:
+    """A file that is not UTF-8 text is not scanned."""
+    root = _plugin({})
+    (root / "icon.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe" + _STRIPE_LIVE.encode())
+
+    assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
+
+
+@pytest.mark.parametrize(
+    ("source", "found"),
+    [
+        pytest.param('API_TOKEN = "aB3dE5fG7hJ9kL1mN3pQ"\n', True, id="random_value"),
+        pytest.param('API_KEY_SECRET_NAME = "CANVAS_PLUGIN_SIMPLE_API_KEY"\n', False, id="a_name"),
+        pytest.param('TOKEN_URL = "https://auth.Example.com/oauth2/Token1"\n', False, id="a_url"),
+    ],
+)
+def test_possible_credential_warns(source: str, found: bool) -> None:
+    """A random-looking value on a secret-like name warns; secret names and URLs do not."""
+    root = _plugin({"handlers/h.py": source})
+    assert ("possible-credential" in _codes(lint_plugin(root, {}), "warning")) is found
+
+
+def test_a_hardcoded_credential_stops_validation(capsys: pytest.CaptureFixture[str]) -> None:
+    """The error severity makes `canvas validate`, and so install and deploy, exit non-zero."""
+    root = _plugin({"handlers/h.py": f'KEY = "{_STRIPE_LIVE}"\n'})
+
+    with pytest.raises(typer.Exit):
+        _lint_plugin_static(root)
+
+    out = capsys.readouterr().out
+    assert "[hardcoded-credential]" in out
+    assert _STRIPE_LIVE not in out
 
 
 def test_tripwire_requests_is_allowed_and_has_no_default_timeout() -> None:
@@ -685,3 +767,11 @@ def test_secret_compared_with_eq_in_a_nested_function_is_reported_once() -> None
     findings = [f.location for f in lint_plugin(root, {}) if f.code == "secret-compared-with-eq"]
 
     assert findings == ["handlers/a.py:5"]
+
+
+def test_possible_credential_skips_docs_and_tests() -> None:
+    """Placeholder values belong in docs and tests, so a value matched by its shape alone is not
+    reported there.
+    """
+    root = _plugin({"GUIDE.md": '"access_token": "aB3dE5fG7hJ9kL1mN3pQ"\n'})
+    assert "possible-credential" not in _codes(lint_plugin(root, {}))

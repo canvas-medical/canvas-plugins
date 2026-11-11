@@ -20,9 +20,15 @@ the lint can't drift the way a hand-maintained allowlist mirror would.
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+import pathspec
+
+CANVAS_IGNORE_FILENAME = ".canvasignore"
+_DEFAULT_IGNORE = ["__pycache__", "*.pyc", "*.pyo", "node_modules"]
 
 # Directories that never hold plugin source we should lint — build scratch,
 # virtualenvs, caches, tests, VCS.
@@ -55,6 +61,24 @@ class LintFinding:
     location: str
     code: str
     message: str
+
+
+def shipped_files(package: Path) -> Iterator[tuple[Path, Path]]:
+    """``(path, path inside the package)`` for every entry ``canvas install`` packages: nothing
+    hidden or symlinked, and nothing the working directory's ``.canvasignore`` excludes.
+    """
+    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
+    ignore_lines = _DEFAULT_IGNORE + (
+        ignore_file.read_text().splitlines() if ignore_file.exists() else []
+    )
+    ignore = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+    for path in package.rglob("*"):
+        relative = path.relative_to(package)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if path.is_symlink() or ignore.match_file(relative):
+            continue
+        yield path, relative
 
 
 def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
@@ -363,6 +387,85 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     return findings
 
 
+# ── Credential rules ──────────────────────────────────────────────────────────
+# Each certain shape was a live credential in every shipped file it appeared in across
+# installed plugins; in docs and tests the same shapes were examples, so there they warn.
+
+_CERTAIN_CREDENTIALS = {
+    "A private key": re.compile(
+        r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"
+    ),
+    "An Anthropic API key": re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}"),
+    "A Slack token": re.compile(r"\bxox[bp]-\d+-\d+-[A-Za-z0-9-]{20,}"),
+    "A Stripe live key": re.compile(r"\b[rs]k_live_[0-9A-Za-z]{24,}"),
+    "A GitHub token": re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{60,})"),
+    "An OpenAI key": re.compile(r"\bsk-proj-[A-Za-z0-9_-]{40,}"),
+}
+_SECRET_ASSIGNMENT = re.compile(
+    r"(?i)(?:api_?key|secret|token|passw(?:or)?d|private_key)\w*[\"']?\s*[:=]\s*"
+    r"[\"']([^\"'\s]{20,})[\"']"
+)
+_EXAMPLE_SUFFIXES = {".md", ".rst", ".txt"}
+
+
+def _mask(value: str) -> str:
+    return f"`{value[:4]}…`, {len(value)} characters"
+
+
+def _looks_random(value: str) -> bool:
+    """Lower, upper and digit characters, and not a URL: unlike a CONSTANT_NAME or a link."""
+    return (
+        any(c.islower() for c in value)
+        and any(c.isupper() for c in value)
+        and any(c.isdigit() for c in value)
+        and not value.startswith(("http://", "https://"))
+    )
+
+
+def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
+    findings: list[LintFinding] = []
+    for path, rel in shipped_files(plugin_dir):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        example = rel.suffix.lower() in _EXAMPLE_SUFFIXES or bool(
+            {"test", "tests"} & set(rel.parts)
+        )
+        for number, line in enumerate(text.split("\n"), start=1):
+            for name, pattern in _CERTAIN_CREDENTIALS.items():
+                match = pattern.search(line)
+                if match:
+                    findings.append(
+                        LintFinding(
+                            "warning" if example else "error",
+                            f"{rel}:{number}",
+                            "hardcoded-credential",
+                            f"{name} ({_mask(match.group(0))}) ships inside the plugin package, "
+                            "where anyone with the package can read it. Move it to a manifest "
+                            "secret read with `self.secrets[...]`, and rotate it.",
+                        )
+                    )
+                    break
+            else:
+                # Docs and tests are where placeholder values belong; only certain shapes count there.
+                for match in [] if example else _SECRET_ASSIGNMENT.finditer(line):
+                    if _looks_random(match.group(1)):
+                        findings.append(
+                            LintFinding(
+                                "warning",
+                                f"{rel}:{number}",
+                                "possible-credential",
+                                f"A secret-like value ({_mask(match.group(1))}) ships inside the "
+                                "plugin package. If it is a real credential, move it to a manifest "
+                                "secret read with `self.secrets[...]`, and rotate it.",
+                            )
+                        )
+    return findings
+
+
 # ── Custom Data rules ─────────────────────────────────────────────────────────
 # Grounded in the runner: models are discovered only from `<plugin>/models/`
 # (plugin_runner/ddl.py), table creation is gated on the manifest `custom_data`
@@ -477,6 +580,7 @@ def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
+        + _credential_findings(plugin_dir)
         + _custom_data_findings(plugin_dir, manifest)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
