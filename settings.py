@@ -115,22 +115,32 @@ CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 SUBAGENT_MAX_PARALLEL = 8
 
 
-def database_pool_max(requested: str | None, *, workers: int, agent_runs: int) -> int:
+# How many runs still going after their call ended may have their slots freed for other
+# runs; the plugin runner keeps a run's slots past this, so blocked code cannot pile up.
+PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS = PLUGIN_RUNNER_MAX_AGENT_RUNS
+
+
+def database_pool_max(
+    requested: str | None, *, workers: int, agent_runs: int, orphaned_runs: int
+) -> int:
     """The database pool's size, or ``requested`` when set.
 
     Each worker and agent run gets 2 active connections, and each agent run one more for
     every sub-agent it can run at once, so a run fanning out to sub-agents never leaves
-    event handling waiting on the pool.
+    event handling waiting on the pool. A run whose call ended keeps its connections while
+    its slot goes to a new run, so those runs are counted on top.
     """
     if requested:
         return int(requested)
-    return (workers + agent_runs) * 2 + agent_runs * SUBAGENT_MAX_PARALLEL
+    runs = agent_runs + orphaned_runs
+    return (workers + runs) * 2 + runs * SUBAGENT_MAX_PARALLEL
 
 
 PLUGIN_RUNNER_DATABASE_POOL_MAX = database_pool_max(
     os.getenv("PLUGIN_RUNNER_DATABASE_POOL_MAX"),
     workers=PLUGIN_RUNNER_MAX_WORKERS,
     agent_runs=PLUGIN_RUNNER_MAX_AGENT_RUNS,
+    orphaned_runs=PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS,
 )
 
 if CANVAS_SDK_DB_BACKEND == "postgres":
