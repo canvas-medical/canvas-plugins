@@ -121,6 +121,7 @@ from settings import (
     PLUGIN_RUNNER_EVENT_REGISTRY_PATH,
     PLUGIN_RUNNER_MAX_AGENT_RUNS,
     PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS,
+    PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
@@ -317,7 +318,7 @@ class _AgentExecution:
 # plugin code that blocks cannot pile up threads without bound.
 _orphaned_runs = 0
 _orphaned_runs_lock = threading.Lock()
-MAX_ORPHANED_AGENT_RUNS = PLUGIN_RUNNER_MAX_AGENT_RUNS
+MAX_ORPHANED_AGENT_RUNS = PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS
 
 
 class _RunSlots:
