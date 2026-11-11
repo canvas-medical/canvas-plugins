@@ -132,7 +132,7 @@ manifest_schema = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 63},
+                    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 256},
                     "publisher": {"type": "string", "minLength": 1},
                     "version": {"type": "string", "minLength": 1},
                 },

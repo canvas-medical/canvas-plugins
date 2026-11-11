@@ -125,6 +125,18 @@ def validate_manifest_file(manifest_json: dict) -> None:
             raise ValidationError(
                 f"A bundle carries no code of its own, so it cannot declare {carried}."
             )
+        # A dependency's name follows the plugin name rule; Canvas Platform refuses it with
+        # this sentence, so the CLI does too.
+        if (
+            len(error.path) == 3
+            and error.path[0] == "dependencies"
+            and error.path[2] == "name"
+            and error.validator in ("pattern", "maxLength")
+        ):
+            raise ValidationError(
+                f"dependency name {error.instance!r} must be lowercase letters, digits and "
+                "underscores, starting with a letter, at most 256 characters."
+            )
         if error.path and len(error.path) and error.path[0] == "tags":
             if error.validator == "enum":
                 tag_value_warnings.append(error)

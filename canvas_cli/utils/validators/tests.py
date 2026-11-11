@@ -513,6 +513,22 @@ def test_manifest_rejects_malformed_bundle(manifest: dict) -> None:
         validate_manifest_file(manifest)
 
 
+def test_manifest_accepts_a_dependency_name_of_256_characters() -> None:
+    """Plugin names run up to 256 characters on instances, so a dependency can name one."""
+    validate_manifest_file(_bundle_manifest(dependencies=[_dependency("c" * 256)]))
+
+
+@pytest.mark.parametrize("name", ["c" * 257, "Scribe-Core"], ids=["too-long", "bad-name"])
+def test_manifest_refuses_a_dependency_name_outside_the_plugin_name_rule(name: str) -> None:
+    """A dependency name follows the plugin name rule, refused with the sentence Canvas
+    Platform gives (its `test_manifest.py` holds the same 257-character case).
+    """
+    with pytest.raises(ValidationError) as error:
+        validate_manifest_file(_bundle_manifest(dependencies=[_dependency(name)]))
+    assert "at most 256" in error.value.message
+    assert "lowercase letters, digits and underscores" in error.value.message
+
+
 @pytest.mark.parametrize(
     ("version", "normalized"),
     [("v1.16.0", "1.16.0"), (" 1.16.0", "1.16.0"), ("1.16.0 ", "1.16.0"), ("V2", "2")],
