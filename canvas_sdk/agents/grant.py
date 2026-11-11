@@ -160,6 +160,25 @@ def apply_tool_grant(agent: "AgentPlugin", grant: Mapping[str, Any]) -> EffectGr
     )
 
 
+# The most effects one run may return after the grant drops what it does not allow. The
+# platform applies none of a run's effects past it, so the runner refuses such a run before
+# its state is saved.
+MAX_RUN_EFFECTS = 500
+
+
+class TooManyEffects(RuntimeError):
+    """A run returned more effects than the platform applies in one run."""
+
+
+def refuse_too_many_effects(effects: Iterable["Effect"], grant: EffectGrant) -> None:
+    """Raise :class:`TooManyEffects` when the grant keeps more than :data:`MAX_RUN_EFFECTS`."""
+    kept = sum(1 for effect in effects if grant.allows(effect))
+    if kept > MAX_RUN_EFFECTS:
+        raise TooManyEffects(
+            f"The run returned {kept} effects; the most one run may return is {MAX_RUN_EFFECTS}."
+        )
+
+
 def split_granted_effects(
     effects: Iterable["Effect"], grant: EffectGrant
 ) -> tuple[list["Effect"], list["Effect"]]:

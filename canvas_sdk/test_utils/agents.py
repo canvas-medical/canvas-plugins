@@ -37,10 +37,15 @@ import anthropic
 from anthropic.types import ParsedTextBlock, TextBlock, ToolUseBlock
 
 import canvas_sdk.commands  # noqa: F401  (importing it defines every SDK command)
-from canvas_sdk.agents.base import AgentPlugin
+from canvas_sdk.agents.base import MAX_MODEL_CALLS, AgentPlugin
 from canvas_sdk.agents.capabilities import Capability
 from canvas_sdk.agents.gateway import agent_secrets, count_model_call, gateway_error
-from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
+from canvas_sdk.agents.grant import (
+    EffectGrant,
+    apply_tool_grant,
+    refuse_too_many_effects,
+    split_granted_effects,
+)
 from canvas_sdk.agents.result import AgentRunResult
 from canvas_sdk.agents.run_record import (
     DEFAULT_RUN_SECONDS,
@@ -144,6 +149,9 @@ class FakeGateway:
         self._replies = list(replies)
         self.requests: list[dict[str, Any]] = []
         self.messages = self
+        # The run it is bound to, as the platform binds a gateway to its run: calls count
+        # against it, and are refused once it has ended, even from a copy kept past it.
+        self.recorder: RunRecorder | None = None
 
     def client(self, **kwargs: Any) -> "FakeGateway":
         """The fake client; it is the gateway itself."""
@@ -151,7 +159,7 @@ class FakeGateway:
 
     def create(self, **kwargs: Any) -> ModelReply:
         """Answer one model call with the next queued reply, counted as the gateway counts it."""
-        count_model_call(kwargs)
+        count_model_call(kwargs, self.recorder)
         self.requests.append(copy.deepcopy(kwargs))
         if not self._replies:
             raise AssertionError(
@@ -288,15 +296,18 @@ def run_agent(
     effect_grant = EffectGrant(
         direct=tools.direct_effect_types(), proposable=tools.proposable_effect_types()
     )
-    recorder = RunRecorder(max_model_calls=agent.max_model_calls)
+    recorder = RunRecorder(max_model_calls=min(agent.max_model_calls, MAX_MODEL_CALLS))
     recorder.deadline = monotonic() + run_seconds
     recorder.max_tool_result_chars = RUN_TOOL_RESULT_CHARS
+    if isinstance(gateway, FakeGateway):
+        gateway.recorder = recorder
     token = current_recorder.set(recorder)
     try:
         agent.on_run_start(scope_key)
         try:
             state = agent.load_state(scope_key)
             result = agent.run(state, gateway, trigger_payload or {})
+            refuse_too_many_effects(result.effects, effect_grant)
             agent.save_state(scope_key, result.state)
         except Exception as exc:
             agent.on_run_error(exc)
@@ -304,6 +315,8 @@ def run_agent(
         agent.on_run_end(result)
     finally:
         current_recorder.reset(token)
+        # As on the platform, a client the agent's code kept makes no call after the run.
+        recorder.close()
     granted, dropped = split_granted_effects(result.effects, effect_grant)
     kept = _permitted_usage(granted, usage_units, type(agent).__module__.split(".")[0])
     dropped += [effect for effect in granted if not any(effect is each for each in kept)]
