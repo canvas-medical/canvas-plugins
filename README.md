@@ -409,7 +409,7 @@ Listens and prints log streams from the instance.
 - Signed in to Canvas Platform, `canvas logs` asks Platform for a 15-minute log token for an instance it manages. An instance Platform does not manage is refused with the way to sign out (`canvas logout`, or unsetting `CANVAS_PLATFORM_TOKEN`), so `credentials.ini` is used only once you are signed out.
 - While following, Console closes the stream with code 4401 once the log token is inactive; `canvas logs` then asks Platform for a fresh token, which re-checks your access, and reconnects.
 - Signed out, or for localhost and other hosts that are not Canvas instances, `canvas logs` uses `credentials.ini` and prints a deprecation notice on stderr.
-- `--plugin` filters the live stream as well as history, by the plugin each runner line is tagged with. Like history, it leaves out the runner's untagged lines, such as plugin load and install.
+- `--plugin` filters the live stream as well as history, by the plugin each line is tagged with: the plugin runner's handler lines and the effect failures Canvas logs for that plugin. Like history, it leaves out untagged lines, such as plugin load and install.
 
 **Usage**:
 
