@@ -102,7 +102,8 @@ def grant_problems(tools: ToolRegistry, grant: Mapping[str, Any]) -> list[str]:
     Each key must be a list of tool names and ``@category`` groups. An ``approve`` or
     ``denied`` entry that names no tool on the registry is a problem, since a misspelling
     would silently lift an approval or a denial; an ``allowed`` entry only adds tools, so
-    a name the registry lacks grants nothing and is no problem.
+    a name the registry lacks grants nothing and is no problem. So is an ``approve`` entry
+    whose tools stage no change: approval covers changes, so it would hold nothing.
     """
     problems = []
     for key in ("allowed", "approve", "denied"):
@@ -112,12 +113,17 @@ def grant_problems(tools: ToolRegistry, grant: Mapping[str, Any]) -> list[str]:
         if not isinstance(entries, list) or not all(isinstance(e, str) for e in entries):
             problems.append(f"tools.{key} must be a list of tool names and @category groups")
             continue
-        if key != "allowed":
-            problems.extend(
-                f"tools.{key} names no tool: {entry!r}"
-                for entry in entries
-                if not tools.resolve_allowed([entry])
-            )
+        if key == "allowed":
+            continue
+        for entry in entries:
+            named = tools.resolve_allowed([entry])
+            if not named:
+                problems.append(f"tools.{key} names no tool: {entry!r}")
+            elif key == "approve" and not any(tools.effect_types_for(name) for name in named):
+                problems.append(
+                    f"tools.approve names no tool that stages a change: {entry!r}, so it "
+                    "would hold nothing for approval"
+                )
     return problems
 
 

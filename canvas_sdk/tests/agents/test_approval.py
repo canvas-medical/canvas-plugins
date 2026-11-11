@@ -3,6 +3,8 @@
 import json
 from typing import Any
 
+import pytest
+
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, ToolRegistry
 from canvas_sdk.agents.approval import propose
 from canvas_sdk.agents.grant import EffectGrant, apply_tool_grant, split_granted_effects
@@ -320,7 +322,7 @@ def test_a_composition_tool_passes_its_sub_agents_proposal_through() -> None:
     """A proposal a sub-agent's tool made is kept as it is, never wrapped in another."""
     agent = _Agent()
     grant = apply_tool_grant(
-        agent, {"allowed": ["brief", "create_task"], "approve": ["brief", "create_task"]}
+        agent, {"allowed": ["brief", "create_task"], "approve": ["create_task"]}
     )
     assert agent.tools is not None
     effects: list[Effect] = []
@@ -331,21 +333,12 @@ def test_a_composition_tool_passes_its_sub_agents_proposal_through() -> None:
     assert split_granted_effects(effects, grant) == (effects, [])
 
 
-def test_a_composition_tool_does_not_wrap_a_change_no_approval_covers() -> None:
-    """Approval covers changes, so one no approval-listed tool stages is made as it would be.
-
-    Wrapping it would tell the model an approval waits that the grant then drops.
-    """
+def test_approving_a_tool_that_stages_no_change_is_refused() -> None:
+    """Approval covers changes, so listing a tool that stages none would hold nothing."""
     agent = _Agent()
-    grant = apply_tool_grant(agent, {"allowed": ["brief", "create_task"], "approve": ["brief"]})
-    assert agent.tools is not None
-    effects: list[Effect] = []
 
-    result = agent.tools.execute("brief", {}, ctx={"effects": effects, "parent_tools": agent.tools})
-
-    assert result == {"ok": True}
-    assert [EffectType.Name(e.type) for e in effects] == ["CREATE_TASK"]
-    assert split_granted_effects(effects, grant) == (effects, [])
+    with pytest.raises(ValueError, match="names no tool that stages a change: 'brief'"):
+        apply_tool_grant(agent, {"allowed": ["brief", "create_task"], "approve": ["brief"]})
 
 
 def test_a_usage_record_is_never_proposed() -> None:
