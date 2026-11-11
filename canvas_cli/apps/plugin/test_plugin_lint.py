@@ -808,3 +808,12 @@ def test_possible_credential_skips_docs_and_tests() -> None:
     """
     root = _plugin({"GUIDE.md": '"access_token": "aB3dE5fG7hJ9kL1mN3pQ"\n'})
     assert "possible-credential" not in _codes(lint_plugin(root, {}))
+
+
+def test_a_private_key_does_not_hide_an_api_key_on_the_same_line() -> None:
+    """A line holding both reports the private-key warning and still blocks on the API key."""
+    line = json.dumps({"private_key": "-----BEGIN " + "PRIVATE KEY-----", "stripe": _STRIPE_LIVE})
+    root = _plugin({"config/settings.json": line})
+    found = [(f.severity, f.code) for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert sorted(found) == [("error", "hardcoded-credential"), ("warning", "hardcoded-credential")]

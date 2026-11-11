@@ -436,7 +436,8 @@ def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
         is_example = is_doc or bool({"test", "tests"} & set(rel.parts))
         for number, line in enumerate(text.split("\n"), start=1):
             where = f"{rel}:{number}"
-            if _PRIVATE_KEY.search(line):
+            has_private_key = bool(_PRIVATE_KEY.search(line))
+            if has_private_key:
                 # A warning until the SDK can load an mTLS client key from a secret: `requests`
                 # takes the key only as a file path, which the sandbox cannot create.
                 findings.append(
@@ -450,7 +451,6 @@ def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
                         "key, which plugins can only load from a file today.",
                     )
                 )
-                continue
             api_key = next(
                 ((name, match) for name, p in _API_KEYS.items() if (match := p.search(line))),
                 None,
@@ -469,7 +469,7 @@ def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
                     )
                 )
                 continue
-            for value in [] if is_example else _SECRET_ASSIGNMENT.finditer(line):
+            for value in [] if is_example or has_private_key else _SECRET_ASSIGNMENT.finditer(line):
                 if _looks_random(value.group(1)):
                     findings.append(
                         LintFinding(
