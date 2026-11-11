@@ -2019,3 +2019,29 @@ def test_a_failed_call_puts_back_the_drafts_it_removed() -> None:
         registry.execute("drop_then_fail", {}, ctx={"effects": run_effects})
 
     assert run_effects == ["first", "draft", "last"]
+
+
+@pytest.mark.parametrize("approval", [False, True], ids=["direct", "approval-listed"])
+def test_a_failed_call_that_removed_its_own_draft_leaves_nothing(approval: bool) -> None:
+    """Putting back what it removed must not bring back what it staged itself."""
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="stage_drop_fail",
+        description="...",
+        input_schema={"type": "object"},
+        effect_types=("CREATE_TASK",),
+    )
+    def _stage_drop_fail(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        own = _task_effect("staged and removed")
+        ctx["effects"].append(own)
+        remove_first(ctx["effects"], lambda effect: effect is own)
+        raise ValueError("bad input")
+
+    run_effects: list[Any] = ["earlier"]
+    tools = registry.with_approval(["stage_drop_fail"]) if approval else registry
+
+    with pytest.raises(ValueError, match="bad input"):
+        tools.execute("stage_drop_fail", {}, ctx={"effects": run_effects})
+
+    assert run_effects == ["earlier"]
