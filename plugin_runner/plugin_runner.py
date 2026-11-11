@@ -436,16 +436,32 @@ def _without_frame_locals(event: Any, hint: Any) -> Any:
     return event
 
 
-def _report_agent_exception(message: str, exc: BaseException) -> None:
-    """Log and report an agent run's exception, its frames' local variables left out.
+def _with_type_only(run_id: str) -> Callable[[Any, Any], Any]:
+    """An event processor replacing each exception's message with its type and ``run_id``.
 
-    An agent's frames hold the conversation, tool results, and document text, which are
-    patient data; the error, its type, and where it happened are what diagnosis needs, and
+    A message can carry chart text: a pydantic ``input_value=``, a ``KeyError`` on a
+    chart-derived key, or a plugin's f-string.
+    """
+
+    def process(event: Any, hint: Any) -> Any:
+        for value in (event.get("exception") or {}).get("values") or []:
+            value["value"] = f"{value.get('type') or 'Exception'} in agent run {run_id}"
+        return event
+
+    return process
+
+
+def _report_agent_exception(message: str, exc: BaseException, run_id: str) -> None:
+    """Log and report an agent run's exception with neither frame locals nor its message.
+
+    An agent's frames and messages hold the conversation, tool results, and document text,
+    which are patient data; the type and where it happened are what diagnosis needs, and
     the run record already holds the run. The logged exception reaches Sentry too, so both
-    go through a scope that strips the locals.
+    go through the scope.
     """
     with sentry_sdk.new_scope() as scope:
         scope.add_event_processor(_without_frame_locals)
+        scope.add_event_processor(_with_type_only(run_id))
         log.exception(message)
         sentry_sdk.capture_exception(exc)
 
@@ -652,8 +668,12 @@ class PluginRunner(PluginRunnerServicer):
                             apply_effects_to_context(effects, event=event)
 
                     except Exception as e:
-                        log.exception(f"Encountered exception in plugin {plugin_name}")
-                        sentry_sdk.capture_exception(e)
+                        # A handler's frames hold the event's context, such as a SimpleAPI
+                        # request's body, so the report leaves their locals out.
+                        with sentry_sdk.new_scope() as scope:
+                            scope.add_event_processor(_without_frame_locals)
+                            log.exception(f"Encountered exception in plugin {plugin_name}")
+                            sentry_sdk.capture_exception(e)
                         continue
 
                     effect_list += effects
@@ -934,7 +954,9 @@ class PluginRunner(PluginRunnerServicer):
                         success=False, effects=[], agent_run=_agent_run_summary(recorder)
                     )
                 except Exception as exc:
-                    _report_agent_exception(f"RunAgent: agent {request.agent_id} raised", exc)
+                    _report_agent_exception(
+                        f"RunAgent: agent {request.agent_id} raised", exc, request.run_id
+                    )
                     outcome.failure = EventResponse(
                         success=False, effects=[], agent_run=_agent_run_summary(recorder)
                     )
