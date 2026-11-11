@@ -22,6 +22,7 @@ from canvas_generated.messages.plugins_pb2 import (
 from canvas_sdk.agents import AgentRunResult, ToolRegistry
 from canvas_sdk.agents.base import MAX_MODEL_CALLS
 from canvas_sdk.agents.gateway import gateway_error
+from canvas_sdk.agents.grant import MAX_RUN_EFFECTS
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
     RUN_TOOL_RESULT_CHARS,
@@ -915,6 +916,36 @@ def test_run_agent_past_its_deadline_saves_nothing_and_emits_nothing(
     response = next(iter(plugin_runner.RunAgent(_make_request(), context)))
 
     assert response.success is False
+    assert list(response.effects) == []
+    assert saved == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_agent_plugin"], indirect=True)
+def test_run_agent_refuses_a_run_with_more_effects_than_home_app_applies(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    inference_gateway_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """home-app applies none of a run's effects past the cap, so the runner saves no state."""
+    agent_cls = LOADED_PLUGINS[AGENT_KEY]["class"]
+    saved: list[str] = []
+    log = Effect(type=EffectType.LOG, payload="{}")
+    monkeypatch.setattr(
+        agent_cls,
+        "run",
+        lambda self, state, gateway, payload: AgentRunResult(
+            state=state, effects=[log] * (MAX_RUN_EFFECTS + 1)
+        ),
+    )
+    monkeypatch.setattr(
+        agent_cls, "save_state", lambda self, scope_key, state: saved.append(scope_key)
+    )
+
+    response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
+
+    assert (response.success, response.error_kind) == (False, "TOO_MANY_EFFECTS")
     assert list(response.effects) == []
     assert saved == []
 

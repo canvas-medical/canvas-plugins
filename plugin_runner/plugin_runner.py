@@ -61,7 +61,12 @@ from canvas_sdk.agents.gateway import (
     agent_secrets,
     gateway_from_plugin_secrets,
 )
-from canvas_sdk.agents.grant import apply_tool_grant, split_granted_effects
+from canvas_sdk.agents.grant import (
+    TooManyEffects,
+    apply_tool_grant,
+    refuse_too_many_effects,
+    split_granted_effects,
+)
 from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
 from canvas_sdk.agents.run_record import (
     DEFAULT_RUN_SECONDS,
@@ -892,6 +897,7 @@ class PluginRunner(PluginRunnerServicer):
                                     "the RunAgent call ended before run() returned; "
                                     "its state and effects are discarded"
                                 )
+                            refuse_too_many_effects(result.effects, outcome.effect_grant)
                             agent.save_state(request.scope_key, result.state)
                             _invoke_agent_hook(agent, "on_run_end", result)
                         except Exception as run_exc:
@@ -909,6 +915,15 @@ class PluginRunner(PluginRunnerServicer):
                         success=False,
                         effects=[],
                         error_kind=error_kind,
+                        agent_run=_agent_run_summary(recorder),
+                    )
+                except TooManyEffects as exc:
+                    # The platform would apply none of them, so the state is not saved either.
+                    log.warning(f"RunAgent: agent {request.agent_id} run {request.run_id}: {exc}")
+                    outcome.failure = EventResponse(
+                        success=False,
+                        effects=[],
+                        error_kind="TOO_MANY_EFFECTS",
                         agent_run=_agent_run_summary(recorder),
                     )
                 except RunDeadlineExceeded as exc:

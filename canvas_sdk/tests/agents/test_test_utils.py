@@ -4,6 +4,9 @@ from typing import Any
 import pytest
 
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, RunSubject, ToolRegistry
+from canvas_sdk.agents.base import MAX_MODEL_CALLS
+from canvas_sdk.agents.gateway import ModelCallLimitReached
+from canvas_sdk.agents.grant import MAX_RUN_EFFECTS, TooManyEffects
 from canvas_sdk.agents.run_record import RUN_TOOL_RESULT_CHARS, RunDeadlineExceeded
 from canvas_sdk.agents.tool_registry import MAX_TOOL_RESULT_CHARS
 from canvas_sdk.effects import Effect, EffectType
@@ -216,3 +219,60 @@ def test_run_agent_caps_the_tool_results_a_run_sends_in_all() -> None:
     results = gateway.requests[1]["messages"][-1]["content"]
     sent = sum(len(json.dumps(block["content"])) for block in results)
     assert sent < RUN_TOOL_RESULT_CHARS + 4 * 1_000
+
+
+def test_run_agent_clamps_the_model_call_ceiling_as_the_platform_does() -> None:
+    """An agent asking for more than MAX_MODEL_CALLS gets that many, as on the platform."""
+    refused: list[int] = []
+
+    class _Greedy(_Agent):
+        max_model_calls = MAX_MODEL_CALLS + 50
+
+        def run(self, state: AgentState, gateway: Any, trigger_payload: dict) -> AgentRunResult:
+            client = gateway.client()
+            for call in range(MAX_MODEL_CALLS + 1):
+                try:
+                    client.messages.create(model="m", max_tokens=1, messages=[])
+                except ModelCallLimitReached:
+                    refused.append(call)
+            return AgentRunResult(state=state)
+
+    gateway = FakeGateway(*[reply(text("x")) for _ in range(MAX_MODEL_CALLS + 1)])
+
+    run = run_agent(prepare_agent(_Greedy), gateway)
+
+    assert run.model_calls == MAX_MODEL_CALLS
+    assert refused == [MAX_MODEL_CALLS]
+
+
+def test_a_client_kept_past_run_agent_makes_no_call() -> None:
+    """The run's recorder is closed at the end, as the runner closes it."""
+    kept: list[Any] = []
+
+    class _Keeper(_Agent):
+        def run(self, state: AgentState, gateway: Any, trigger_payload: dict) -> AgentRunResult:
+            kept.append(gateway)
+            return AgentRunResult(state=state)
+
+    run_agent(prepare_agent(_Keeper), FakeGateway())
+
+    with pytest.raises(ModelCallLimitReached, match="has ended"):
+        kept[0].client().messages.create(model="m", max_tokens=1, messages=[])
+
+
+def test_run_agent_refuses_more_effects_than_one_run_may_return_before_saving_state() -> None:
+    """The platform applies none of them, so the state that records them is not saved."""
+    saved: list[str] = []
+
+    class _Flood(_Agent):
+        def run(self, state: AgentState, gateway: Any, trigger_payload: dict) -> AgentRunResult:
+            log = Effect(type=EffectType.LOG, payload="{}")
+            return AgentRunResult(state=state, effects=[log] * (MAX_RUN_EFFECTS + 1))
+
+        def save_state(self, scope_key: str, state: AgentState) -> None:
+            saved.append(scope_key)
+
+    with pytest.raises(TooManyEffects):
+        run_agent(prepare_agent(_Flood, allowed=["log_patient"]), FakeGateway())
+
+    assert saved == []
