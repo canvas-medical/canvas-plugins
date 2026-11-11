@@ -1823,3 +1823,22 @@ def test_active_only_applies_its_default_when_the_model_leaves_it_out(
     )
     assert len(standard_tools.execute(tool, {"active_only": False}, ctx={})) == before + 1
     assert len(standard_tools.execute(tool, {}, ctx={})) == before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", [False, True], ids=["direct", "approval-listed"])
+def test_removing_a_banner_this_run_added_takes_the_add_back(approval: bool) -> None:
+    """The banner is not on the chart yet, so the removal withdraws the add."""
+    patient = PatientFactory.create()
+    tools = standard_tools.with_approval(["add_banner_alert"]) if approval else standard_tools
+    effects: list[Any] = []
+    ctx = {"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects}
+    added = tools.execute(
+        "add_banner_alert",
+        {"narrative": "Overdue", "intent": "warning", "placement": ["chart"]},
+        ctx=ctx,
+    )
+    key = (added.get("tool_result") or added)["banner_key"]
+
+    assert tools.execute("remove_banner_alert", {"banner_key": key}, ctx=ctx) == {"ok": True}
+    assert effects == []

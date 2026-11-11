@@ -1,9 +1,11 @@
 import copy
+import json
 import re
 import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Any, Protocol
 from uuid import uuid4
 
@@ -243,6 +245,50 @@ def remove_first(effects: Any, matches: Callable[[Any], bool]) -> Any | None:
             if matches(effect):
                 return effects.pop(index)
     return None
+
+
+def _proposed_changes(effect: Any) -> list[Any]:
+    """The changes a proposal effect wraps, each with its ``type`` and ``payload``; else []."""
+    if EffectType.Name(effect.type) != PROPOSAL_EFFECT_TYPE:
+        return []
+    return [
+        SimpleNamespace(type=EffectType.Value(inner["type"]), payload=inner["payload"])
+        for inner in json.loads(effect.payload)["data"]["effects"]
+    ]
+
+
+def staged_in_run(effects: Any, matches: Callable[[Any], bool]) -> bool:
+    """Whether this run staged a change ``matches`` accepts, bare or in a proposal."""
+    return any(
+        matches(effect) or any(matches(change) for change in _proposed_changes(effect))
+        for effect in effects
+    )
+
+
+def withdraw_staged(effects: Any, matches: Callable[[Any], bool]) -> bool:
+    """Take back a change this run staged that ``matches`` accepts; whether one was found.
+
+    A bare one is removed. One waiting in a proposal is taken out of it; the proposal keeps
+    its id and its other changes, and is withdrawn when it has none left.
+    """
+    if remove_first(effects, matches) is not None:
+        return True
+    proposal = remove_first(
+        effects, lambda effect: any(matches(change) for change in _proposed_changes(effect))
+    )
+    if proposal is None:
+        return False
+    payload = json.loads(proposal.payload)
+    payload["data"]["effects"] = [
+        inner
+        for inner, change in zip(
+            payload["data"]["effects"], _proposed_changes(proposal), strict=True
+        )
+        if not matches(change)
+    ]
+    if payload["data"]["effects"]:
+        effects.append(type(proposal)(type=proposal.type, payload=json.dumps(payload)))
+    return True
 
 
 def _bounded_strings(schema: dict[str, Any]) -> dict[str, Any]:

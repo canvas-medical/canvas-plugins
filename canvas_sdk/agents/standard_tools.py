@@ -21,6 +21,7 @@ is hand-registered via :meth:`ToolRegistry.tool`.
 """
 
 import base64
+import json
 import re
 import time
 from collections.abc import Callable
@@ -41,6 +42,7 @@ from canvas_sdk.agents.tool_registry import (
     command_type_active,
     command_type_off_error,
     require_patient_id,
+    withdraw_staged,
 )
 from canvas_sdk.commands import (
     AssessCommand,
@@ -55,6 +57,7 @@ from canvas_sdk.commands import (
     ReferCommand,
     StopMedicationCommand,
 )
+from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
 from canvas_sdk.effects.banner_alert.remove_banner_alert import RemoveBannerAlert
 from canvas_sdk.effects.note.message import Message as MessageEffect
@@ -3415,34 +3418,52 @@ standard_tools.add_effect_tool(
 )
 
 
-standard_tools.add_effect_tool(
+def _is_staged_banner(effect: Any, key: str) -> bool:
+    """Whether ``effect`` adds the banner ``key``."""
+    if effect.type != EffectType.ADD_BANNER_ALERT or not effect.payload:
+        return False
+    payload = json.loads(effect.payload)
+    return isinstance(payload, dict) and payload.get("key") == key
+
+
+@standard_tools.tool(
     name="remove_banner_alert",
     description=(
         "Remove a banner alert this plugin added to the patient's chart. "
         "Takes the banner's `key` — obtained either from a prior "
-        "`add_banner_alert` call (returned as `banner_key` in the response) "
-        "or from `find_banner_alerts`, for a row whose `plugin_name` is this "
-        "plugin's; another plugin's banner is refused. Use when the underlying clinical "
-        "issue has been addressed (e.g., the overdue screening was "
-        "completed) and the banner should no longer display."
+        "`add_banner_alert` call (returned as `banner_key` in the response), "
+        "including one earlier in this run, or from `find_banner_alerts`, for a row "
+        "whose `plugin_name` is this plugin's; another plugin's banner is refused. Use "
+        "when the underlying clinical issue has been addressed (e.g., the overdue "
+        "screening was completed) and the banner should no longer display."
     ),
-    effect_class=RemoveBannerAlert,
-    fields={
-        "banner_key": EffectField(
-            type="string",
-            description=(
-                "The banner's key — exactly as returned by add_banner_alert "
-                "(``banner_key`` in the response) or find_banner_alerts "
-                "(``key`` in each row)."
-            ),
-            required=True,
-            command_field="key",
-        ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "banner_key": {
+                "type": "string",
+                "description": (
+                    "The banner's key — exactly as returned by add_banner_alert "
+                    "(``banner_key`` in the response) or find_banner_alerts "
+                    "(``key`` in each row)."
+                ),
+            },
+        },
+        "required": ["banner_key"],
     },
-    pre_build=_require_own_banner,
     categories=("clinical_alerts",),
+    effect_types=("REMOVE_BANNER_ALERT",),
     returns_description="`{ok: true}`.",
 )
+def _remove_banner_alert(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+    """Remove a banner: one this run added is taken back before it reaches the chart."""
+    key = arguments["banner_key"]
+    patient_id = require_patient_id(ctx)
+    if withdraw_staged(ctx["effects"], lambda effect: _is_staged_banner(effect, key)):
+        return {"ok": True}
+    _require_own_banner(arguments, ctx)
+    ctx["effects"].append(RemoveBannerAlert(patient_id=patient_id, key=key).apply())
+    return {"ok": True}
 
 
 standard_tools.add_effect_tool(

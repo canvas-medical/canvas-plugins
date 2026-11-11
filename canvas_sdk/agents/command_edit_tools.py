@@ -19,7 +19,12 @@ from uuid import UUID
 # Every module whose originate tools stage a draft registers before DRAFT_KINDS is read.
 from canvas_sdk.agents import history_tools, order_tools, visit_tools  # noqa: F401
 from canvas_sdk.agents.standard_tools import standard_tools
-from canvas_sdk.agents.tool_registry import EffectField, remove_first, require_patient_id
+from canvas_sdk.agents.tool_registry import (
+    EffectField,
+    require_patient_id,
+    staged_in_run,
+    withdraw_staged,
+)
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.v1.data import Command
 
@@ -75,8 +80,10 @@ def _is_run_originate(effect: Any, command_id: str) -> bool:
 
 
 def _run_staged(command_id: str, ctx: dict[str, Any]) -> bool:
-    """Whether this run staged the originate effect for ``command_id``."""
-    return any(_is_run_originate(effect, command_id) for effect in ctx.get("effects") or [])
+    """Whether this run staged the originate effect for ``command_id``, bare or proposed."""
+    return staged_in_run(
+        ctx.get("effects") or [], lambda effect: _is_run_originate(effect, command_id)
+    )
 
 
 def _require_grant(key: str, tool: str, ctx: dict[str, Any]) -> None:
@@ -253,7 +260,7 @@ def _delete_staged_command(arguments: dict[str, Any], *, ctx: dict[str, Any]) ->
     command_id = str(arguments.get("command_id") or "")
     effects: list[Any] = ctx["effects"]
     # The draft has not reached the note yet, so it is simply not staged.
-    if remove_first(effects, lambda effect: _is_run_originate(effect, command_id)) is not None:
+    if withdraw_staged(effects, lambda effect: _is_run_originate(effect, command_id)):
         return {"ok": True, "command_id": command_id, "command": None, "deleted": True}
     key, kind = _staged_draft(command_id, "delete_staged_command", ctx)
     effects.append(kind.command_class(command_uuid=command_id).delete())
