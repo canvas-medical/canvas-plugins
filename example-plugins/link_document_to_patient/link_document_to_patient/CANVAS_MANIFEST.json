@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "1.0.0",
+    "name": "link_document_to_patient",
+    "description": "Example plugin demonstrating the LINK_DOCUMENT_TO_PATIENT effect for automated document-to-patient linking",
+    "components": {
+        "protocols": [
+            {
+                "class": "link_document_to_patient.handlers.link_document:LinkDocumentHandler",
+                "description": "Links incoming documents to patients based on extracted demographics",
+                "data_access": {
+                    "event": "DOCUMENT_RECEIVED",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": ["data-integration", "document-linking"],
+    "secrets": [],
+    "license": "MIT",
+    "readme": "./README.md"
+}
