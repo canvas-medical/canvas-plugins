@@ -158,6 +158,21 @@ def _bounded_strings(schema: dict[str, Any]) -> dict[str, Any]:
     return bounded
 
 
+def _restorer(effects: list[Any], index: int, effect: Any) -> Callable[[], None]:
+    """Put ``effect`` back at ``index`` of ``effects``, once, however often it is called.
+
+    Both a failed call and the failed call around it may restore the same removal.
+    """
+    done: list[bool] = []
+
+    def restore() -> None:
+        if not done:
+            done.append(True)
+            effects.insert(min(index, len(effects)), effect)
+
+    return restore
+
+
 class _CallEffects:
     """A run's effects list as one tool call sees it.
 
@@ -170,6 +185,9 @@ class _CallEffects:
     def __init__(self, run_effects: Any) -> None:
         self._run_effects = run_effects
         self._appended: list[Any] = []
+        # How to put back each effect this call removed, so a call that fails leaves the
+        # drafts it removed where they were.
+        self._restores: list[Callable[[], None]] = []
 
     def append(self, effect: Any) -> None:
         self._run_effects.append(effect)
@@ -191,7 +209,23 @@ class _CallEffects:
         ``pop``.
         """
         with _RUN_EFFECTS_LOCK:
-            return remove_first(self._run_effects, matches)
+            found = self._pop_match(matches)
+        return found[0] if found is not None else None
+
+    def _pop_match(self, matches: Callable[[Any], bool]) -> tuple[Any, Callable[[], None]] | None:
+        """Remove the first match from the run's list; it and a way to put it back."""
+        if isinstance(self._run_effects, _CallEffects):
+            found = self._run_effects._pop_match(matches)
+        else:
+            found = None
+            for index, effect in enumerate(self._run_effects):
+                if matches(effect):
+                    del self._run_effects[index]
+                    found = (effect, _restorer(self._run_effects, index, effect))
+                    break
+        if found is not None:
+            self._restores.append(found[1])
+        return found
 
     def __iter__(self) -> Any:
         return iter(list(self._run_effects))
@@ -203,11 +237,14 @@ class _CallEffects:
         return self._run_effects[index]
 
     def take_back(self) -> None:
-        """Remove what this call appended, by identity, from the run's list."""
+        """Remove what this call appended, by identity, and put back what it removed."""
         with _RUN_EFFECTS_LOCK:
             for effect in self._appended:
                 self._remove(effect)
             self._appended.clear()
+            for restore in reversed(self._restores):
+                restore()
+            self._restores.clear()
 
     def _remove(self, effect: Any) -> None:
         if isinstance(self._run_effects, _CallEffects):
@@ -234,10 +271,22 @@ class _ProposedEffects(_CallEffects):
         """What the call staged, in order."""
         return list(self._appended)
 
-    def remove_first(self, matches: Callable[[Any], bool]) -> Any | None:
+    def _pop_match(self, matches: Callable[[Any], bool]) -> tuple[Any, Callable[[], None]] | None:
         """Remove the first match, among what this call staged or else the run's list."""
-        found = remove_first(self._appended, matches)
-        return found if found is not None else super().remove_first(matches)
+        for index, effect in enumerate(self._appended):
+            if matches(effect):
+                del self._appended[index]
+                found = (effect, _restorer(self._appended, index, effect))
+                self._restores.append(found[1])
+                return found
+        return super()._pop_match(matches)
+
+    def _remove(self, effect: Any) -> None:
+        """Drop ``effect`` from what this call staged, as a nested call's take-back does."""
+        for index, staged in enumerate(self._appended):
+            if staged is effect:
+                del self._appended[index]
+                return
 
     def __iter__(self) -> Any:
         return iter([*self._run_effects, *self._appended])
@@ -1547,7 +1596,12 @@ class ToolRegistry:
                 call_effects.take_back()
                 raise
         call_effects = _ProposedEffects(ctx["effects"])
-        result = executor(arguments, ctx={**ctx, "effects": call_effects})
+        try:
+            result = executor(arguments, ctx={**ctx, "effects": call_effects})
+        except Exception:
+            # Nothing it staged is proposed, and the drafts it removed are put back.
+            call_effects.take_back()
+            raise
         # Approval covers changes, not this tool's name: a proposal a sub-agent's tool made
         # stays as it is, and a change no approval-listed tool stages is made as any granted
         # tool would make it, so the model is never told an approval waits that the grant
