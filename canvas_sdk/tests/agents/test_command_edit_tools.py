@@ -2,14 +2,16 @@
 
 import json
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import standard_tools
+from canvas_sdk.agents.approval import proposal_id, propose
 from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
 from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.commands import PlanCommand as Plan
 from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
 from canvas_sdk.v1.data import Command, Note, Patient
 
@@ -257,3 +259,45 @@ def test_every_standard_originate_tools_kind_can_be_edited_and_deleted() -> None
     }
 
     assert staged <= set(DRAFT_KINDS), sorted(staged - set(DRAFT_KINDS))
+
+
+@pytest.mark.django_db
+def test_an_approval_listed_delete_withdraws_this_runs_proposed_draft() -> None:
+    """With the plan and the delete both approval-listed, the plan waits in a proposal."""
+    patient = PatientFactory.create()
+    tools = standard_tools.with_approval(["originate_plan", "delete_staged_command"])
+    effects: list[Any] = []
+    ctx = {"patient_id": patient.id, "note_id": NOTE, "effects": effects, "parent_tools": tools}
+    staged = tools.execute("originate_plan", {"narrative": "Recheck"}, ctx=ctx)
+    command_id = staged["tool_result"]["command_id"]
+    assert [EffectType.Name(e.type) for e in effects] == ["PROPOSE_AGENT_ACTION"]
+
+    with pytest.raises(ValueError, match="This run staged that draft"):
+        tools.execute(
+            "edit_staged_command",
+            {"command_id": command_id, "fields": {"narrative": "Later"}},
+            ctx=ctx,
+        )
+    result = tools.execute("delete_staged_command", {"command_id": command_id}, ctx=ctx)
+
+    assert (result["deleted"], result["command"]) == (True, None)
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_withdrawing_one_proposed_draft_keeps_the_rest_of_its_proposal() -> None:
+    """A proposal holding two drafts keeps its id and the other draft."""
+    patient = PatientFactory.create()
+    first = Plan(narrative="Recheck", note_uuid=NOTE, command_uuid=str(uuid4()))
+    second = Plan(narrative="Labs", note_uuid=NOTE, command_uuid=str(uuid4()))
+    proposal = propose([first.originate(), second.originate()], "originate_plan", {})
+    effects: list[Any] = [proposal]
+    tools = standard_tools.with_approval(["originate_plan", "delete_staged_command"])
+    ctx = {"patient_id": patient.id, "note_id": NOTE, "effects": effects, "parent_tools": tools}
+
+    tools.execute("delete_staged_command", {"command_id": first.command_uuid}, ctx=ctx)
+
+    (kept,) = effects
+    assert proposal_id(kept) == proposal_id(proposal)
+    (inner,) = json.loads(kept.payload)["data"]["effects"]
+    assert json.loads(inner["payload"])["command"] == second.command_uuid
