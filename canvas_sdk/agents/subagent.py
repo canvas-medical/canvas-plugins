@@ -41,6 +41,7 @@ cross-plugin reuse, that's the signal to promote it to a full
 
 import logging
 from collections.abc import Callable, Iterable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -103,6 +104,10 @@ class SubAgentSpec:
     model: str | None = None
 
 
+# How many sub-agents the current thread is inside; a pool thread is given its caller's.
+_SUBAGENT_DEPTH: ContextVar[int] = ContextVar("subagent_depth", default=0)
+
+
 def run_subagent(
     spec: SubAgentSpec,
     user_message: str,
@@ -135,6 +140,10 @@ def run_subagent(
         the loop stops before the model ends its turn, or if the final
         turn produced no text.
     """
+    # The worker pool is sized for one level, so a sub-agent's tool cannot start more.
+    if _SUBAGENT_DEPTH.get() >= 1:
+        raise ValueError("A sub-agent cannot run sub-agents of its own.")
+    depth_token = _SUBAGENT_DEPTH.set(_SUBAGENT_DEPTH.get() + 1)
     # The sub-agent's text is for its parent, never streamed to the person waiting.
     token = streams_reply.set(False)
     try:
@@ -154,6 +163,7 @@ def run_subagent(
         )
     finally:
         streams_reply.reset(token)
+        _SUBAGENT_DEPTH.reset(depth_token)
     if result.stopped != "end_turn":
         log.warning(f"SubAgent[{spec.name}] stopped without finishing ({result.stopped})")
         return ""
@@ -173,15 +183,18 @@ def _in_database_context_of_this_thread(fn: Callable[..., str]) -> Callable[...,
     namespace = get_current_schema()
     access_level = get_access_level()
     recorder = current_recorder.get()
+    depth = _SUBAGENT_DEPTH.get()
 
     def run_in_context(*args: Any, **kwargs: Any) -> str:
         token = current_recorder.set(recorder)
+        depth_token = _SUBAGENT_DEPTH.set(depth)
         try:
             if plugin is None:
                 return fn(*args, **kwargs)
             with plugin_database_context(plugin, namespace=namespace, access_level=access_level):
                 return fn(*args, **kwargs)
         finally:
+            _SUBAGENT_DEPTH.reset(depth_token)
             current_recorder.reset(token)
             connections.close_all()
 

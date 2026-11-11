@@ -1,11 +1,12 @@
 import json
+import re
 from typing import Any
 
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
-from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS, remove_first
+from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS, PATTERN_TEXT_CHARS, remove_first
 from canvas_sdk.effects import Effect
 from canvas_sdk.test_utils.agents import turn_on_command_types
 from canvas_sdk.test_utils.factories import CommandTypeSettingFactory
@@ -1892,24 +1893,22 @@ def test_a_call_inside_its_schema_runs() -> None:
 
 
 def test_a_schema_cannot_make_the_runner_fetch_a_reference(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A plugin's schema is validated outside the sandbox, so a remote $ref resolves nothing."""
+    """A plugin's schema is validated outside the sandbox, so a remote $ref is refused unread."""
     fetched: list[str] = []
     monkeypatch.setattr("urllib.request.urlopen", lambda url, *a, **k: fetched.append(str(url)))
-    registry = ToolRegistry()
-    registry.register(
-        {
-            "name": "t",
-            "description": "x",
-            "input_schema": {
-                "type": "object",
-                "$ref": "https://metadata.internal.invalid/schema.json",
-            },
-        },
-        lambda arguments, *, ctx: {},
-    )
 
-    with pytest.raises(Exception):  # noqa: B017 - the resolver's own error type
-        registry.execute("t", {}, ctx={})
+    with pytest.raises(ValueError, match="does not resolve inside the schema"):
+        ToolRegistry().register(
+            {
+                "name": "t",
+                "description": "x",
+                "input_schema": {
+                    "type": "object",
+                    "$ref": "https://metadata.internal.invalid/schema.json",
+                },
+            },
+            lambda arguments, *, ctx: {},
+        )
 
     assert fetched == []
 
@@ -2045,3 +2044,103 @@ def test_a_failed_call_that_removed_its_own_draft_leaves_nothing(approval: bool)
         tools.execute("stage_drop_fail", {}, ctx={"effects": run_effects})
 
     assert run_effects == ["earlier"]
+
+
+def _register(registry: ToolRegistry, schema: Any, name: str = "t") -> None:
+    registry.register(
+        {"name": name, "description": "x", "input_schema": schema}, lambda arguments, *, ctx: {}
+    )
+
+
+@pytest.mark.parametrize(
+    ("schema", "problem"),
+    [
+        (
+            {"type": "object", "properties": {"n": {"type": "integer", "maximun": 5}}},
+            "unknown keyword 'maximun'",
+        ),
+        ({"type": "object", "anyOf": [{"required": ["a"]}]}, "top-level anyOf"),
+        ({"type": "object", "oneOf": [{"required": ["a"]}]}, "top-level oneOf"),
+        (
+            {"type": "object", "properties": {"n": {"$ref": "#/$defs/missing"}}},
+            "does not resolve",
+        ),
+        (
+            {"type": "object", "properties": {"u": {"type": "string", "format": "uri"}}},
+            "format 'uri' is not checked",
+        ),
+    ],
+    ids=["unknown keyword", "anyOf", "oneOf", "unresolved $ref", "unchecked format"],
+)
+def test_a_schema_that_would_fail_every_call_or_go_unenforced_is_refused(
+    schema: dict[str, Any], problem: str
+) -> None:
+    """Refused at registration, rather than accepted and then failing or never checked."""
+    with pytest.raises(ValueError, match=re.escape(problem)):
+        _register(ToolRegistry(), schema)
+
+
+def test_a_refused_schema_leaves_no_half_registered_tool() -> None:
+    """The schema is checked before the definition or executor is stored."""
+    registry = ToolRegistry()
+
+    with pytest.raises(Exception):  # noqa: B017 - jsonschema's own error type
+        _register(registry, {"type": "object", "properties": {"n": {"type": "no-such-type"}}})
+
+    assert registry.definitions() == []
+    _register(registry, {"type": "object"})
+    assert [d["name"] for d in registry.definitions()] == ["t"]
+
+
+def test_a_local_ref_registers_and_is_enforced() -> None:
+    """A reference into the schema itself resolves, and what it names is checked."""
+    registry = ToolRegistry()
+    _register(
+        registry,
+        {
+            "type": "object",
+            "$defs": {"small": {"type": "integer", "maximum": 5}},
+            "properties": {"n": {"$ref": "#/$defs/small"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="greater than the maximum"):
+        registry.execute("t", {"n": 9}, ctx={})
+
+
+@pytest.mark.parametrize(
+    ("value", "valid"),
+    [
+        ("2026-11-11T09:30:00Z", True),
+        ("2026-11-11T09:30:00+00:00", True),
+        ("2026-11-11", False),
+        ("soon", False),
+    ],
+)
+def test_a_date_time_format_is_checked(value: str, valid: bool) -> None:
+    """The SDK checks date-time itself; jsonschema checks it only with an extra installed."""
+    registry = ToolRegistry()
+    _register(
+        registry,
+        {"type": "object", "properties": {"at": {"type": "string", "format": "date-time"}}},
+    )
+
+    if valid:
+        registry.execute("t", {"at": value}, ctx={})
+    else:
+        with pytest.raises(ValueError, match="date-time"):
+            registry.execute("t", {"at": value}, ctx={})
+
+
+def test_a_patterned_string_is_bounded() -> None:
+    """A pattern backtracks on long input, so a string matched with one gets a length cap."""
+    registry = ToolRegistry()
+    _register(
+        registry,
+        {"type": "object", "properties": {"code": {"type": "string", "pattern": "^(a+)+$"}}},
+    )
+
+    (definition,) = registry.definitions()
+    assert definition["input_schema"]["properties"]["code"]["maxLength"] == PATTERN_TEXT_CHARS
+    with pytest.raises(ValueError, match="is too long"):
+        registry.execute("t", {"code": "a" * (PATTERN_TEXT_CHARS + 1)}, ctx={})
