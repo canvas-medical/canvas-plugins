@@ -1,10 +1,12 @@
+import json
 from typing import Any
 
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import EffectField, FilterSpec, ToolNotAllowed, ToolRegistry, standard_tools
-from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS
+from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS, remove_first
+from canvas_sdk.effects import Effect
 from canvas_sdk.test_utils.agents import turn_on_command_types
 from canvas_sdk.test_utils.factories import CommandTypeSettingFactory
 
@@ -1940,3 +1942,80 @@ def test_an_input_schema_that_is_not_an_object_is_refused_at_registration(schema
             {"name": "t", "description": "x", "input_schema": schema},
             lambda arguments, *, ctx: {},
         )
+
+
+def _task_effect(title: str) -> Effect:
+    return Effect(type=EffectType.CREATE_TASK, payload=json.dumps({"data": {"title": title}}))
+
+
+def test_a_failed_call_inside_an_approval_listed_tool_is_not_proposed() -> None:
+    """The model is told the nested call failed, so no proposal may carry what it staged."""
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="half_done",
+        description="...",
+        input_schema={"type": "object"},
+        effect_types=("CREATE_TASK",),
+    )
+    def _half_done(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        ctx["effects"].append(_task_effect("staged before failing"))
+        raise ValueError("bad input")
+
+    @registry.tool(
+        name="compose",
+        description="...",
+        input_schema={"type": "object"},
+        effect_types=("CREATE_TASK",),
+    )
+    def _compose(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        with pytest.raises(ValueError, match="bad input"):
+            registry.execute("half_done", {}, ctx=ctx)
+        return {"ok": True}
+
+    approving = registry.with_approval(["compose"])
+    run_effects: list[Any] = []
+
+    assert approving.execute("compose", {}, ctx={"effects": run_effects}) == {"ok": True}
+    assert run_effects == []
+
+
+def test_an_approval_listed_call_that_fails_puts_back_the_drafts_it_removed() -> None:
+    """A removal is part of the call, so a call that raises leaves the run's drafts as they were."""
+    registry = ToolRegistry()
+    draft = _task_effect("an earlier draft")
+    run_effects: list[Any] = ["first", draft, "last"]
+
+    @registry.tool(
+        name="replace_draft",
+        description="...",
+        input_schema={"type": "object"},
+        effect_types=("CREATE_TASK",),
+    )
+    def _replace_draft(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        assert remove_first(ctx["effects"], lambda effect: effect is draft) is draft
+        ctx["effects"].append(_task_effect("its replacement"))
+        raise ValueError("bad input")
+
+    with pytest.raises(ValueError, match="bad input"):
+        registry.with_approval(["replace_draft"]).execute(
+            "replace_draft", {}, ctx={"effects": run_effects}
+        )
+
+    assert run_effects == ["first", draft, "last"]
+
+
+def test_a_failed_call_puts_back_the_drafts_it_removed() -> None:
+    """The same holds for a call that needs no approval."""
+    registry = ToolRegistry()
+    run_effects: list[Any] = ["first", "draft", "last"]
+
+    @registry.tool(name="drop_then_fail", description="...", input_schema={"type": "object"})
+    def _drop_then_fail(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        remove_first(ctx["effects"], lambda effect: effect == "draft")
+        raise ValueError("bad input")
+
+    with pytest.raises(ValueError, match="bad input"):
+        registry.execute("drop_then_fail", {}, ctx={"effects": run_effects})
+
+    assert run_effects == ["first", "draft", "last"]
