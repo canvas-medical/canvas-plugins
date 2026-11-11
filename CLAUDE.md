@@ -35,7 +35,7 @@ event-driven plugin SDK and runtime for Canvas Medical EHR. published as the `ca
 
 ## tooling
 
-- **python**: 3.11, 3.12 (requires >=3.11, <3.13)
+- **python**: 3.11 through 3.15 (requires >=3.11, <3.16)
 - **package manager**: `uv` (>=0.8.0)
 - **build**: hatchling
 - **release**: python-semantic-release, tag-based versioning
@@ -62,6 +62,6 @@ uv run python -m plugin_runner.generate_allowed_imports  # update import allowli
 - pytest with django plugin, uses sqlite in test mode
 - `conftest.py` fixtures: `install_test_plugin`, `load_test_plugins`, `cli_runner`
 - plugin test fixtures live in `plugin_runner/tests/fixtures/plugins/`
-- CI tests against python 3.11 and 3.12 matrix
+- CI tests against a python 3.11 through 3.15 matrix
 - example plugins each tested independently in CI
 - integration tests dispatched to the canvas repo

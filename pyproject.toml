@@ -4,14 +4,16 @@ requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
-  "grpcio-tools>=1.78.0,<2",
+  # grpcio-tools ships Python 3.15 wheels only from 1.84, which needs protobuf 7; the
+  # runtime stays on protobuf 6, so bin/generate-protobufs runs on 3.14 or earlier.
+  "grpcio-tools>=1.78.0,<2; python_version < '3.15'",
   "httpretty>=1.1.4",
   "mypy>=1.17.0,<2",
   "pre-commit>=4.3.0,<5",
   "psutil>=7.0.0",
   "pytest-cov",
   "pytest-django>=4.11,<5",
-  "pytest-freezegun>=0.4.2",
+  "pytest-freezer>=0.4.9",
   "pytest-mock",
   "pytest>=9.0.3,<10",
   "python-semantic-release",
@@ -37,6 +39,8 @@ dependencies = [
   "factory-boy>=3.3.3",
   "frozendict>=2.4.6",
   "grpcio>=1.78.0,<2",
+  # 1.84 is the first grpcio with Python 3.15 wheels.
+  "grpcio>=1.84.0,<2; python_version >= '3.15'",
   "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
   "nh3>=0.3.0,<0.4",
@@ -44,8 +48,10 @@ dependencies = [
   "pathspec>=0.12.1",
   "protobuf>=6,<7",
   "psutil>=7.2.2,<8",
-  "psycopg[binary,pool]>=3.3.3,<4",
+  "psycopg[binary,pool]>=3.3.6,<4",
   "pydantic>=2.12.5,<3",
+  # 2.14 is the first pydantic whose pydantic-core ships Python 3.15 wheels.
+  "pydantic>=2.14.0,<3; python_version >= '3.15'",
   "pyjwt>=2.15.0,<3",
   "python-dotenv>=1.0.1,<2",
   "python-logstash-async>=4.0.2",
@@ -54,7 +60,10 @@ dependencies = [
   "requests",
   "restrictedpython>=8.5,<9",
   "sentry-sdk>=2.33.2",
-  "snowflake-connector-python>=4.7.2,<5",
+  # snowflake-connector-python 4.x references ssl.PROTOCOL_TLSv1, which Python 3.15 removed,
+  # so 3.15 takes 5.2, the first release that supports it.
+  "snowflake-connector-python>=4.7.2,<5; python_version < '3.15'",
+  "snowflake-connector-python>=5.2.0,<6; python_version >= '3.15'",
   "statsd>=4.0.1,<5",
   "stripe>=14.1.0",
   # typer 0.26 bundles its own click and only catches that copy's ClickException, so the
@@ -67,7 +76,7 @@ description = "SDK to customize event-driven actions in your Canvas instance"
 license = "MIT"
 name = "canvas"
 readme = "README.md"
-requires-python = ">=3.11,<3.15"
+requires-python = ">=3.11,<3.16"
 version = "1.2.0"
 
 [project.optional-dependencies]
@@ -148,8 +157,7 @@ init_typed = true
 addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
-  'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning',
-  'ignore:distutils Version classes are deprecated:DeprecationWarning:pytest_freezegun'
+  'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
 ]
 markers = ['integtest: mark a test as being an integration test with external dependencies']
 norecursedirs = [
@@ -232,6 +240,9 @@ certifi = "3 days"
 # Lint and type-check tooling tracks latest: the cutoff above is for the
 # dependencies we ship.
 ruff = "2035-01-01T00:00:00Z"
+# snowflake-connector-python 5.2.0, the first release that runs on Python 3.15, was
+# published six days before Python 3.15 support landed here.
+snowflake-connector-python = "6 days"
 ty = "2035-01-01T00:00:00Z"
 uv = "2035-01-01T00:00:00Z"
 
