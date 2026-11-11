@@ -352,8 +352,13 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
         "and `date` (the report's original_date, ISO 8601). "
         "Defaults to the 10 most-recent results."
     ),
+    # A report received over HL7 has no committer, so entered-in-error and deleted are
+    # what take one out of the chart, as junked does.
     queryset_factory=lambda args, pid: LabValue.objects.filter(
-        report__patient__id=pid, report__junked=False
+        report__patient__id=pid,
+        report__junked=False,
+        report__deleted=False,
+        report__entered_in_error__isnull=True,
     ),
     filters={
         "name_contains": FilterSpec(
@@ -806,7 +811,9 @@ def _serialize_message(message: Any) -> dict[str, Any]:
         "appointments ordered by start_time ascending; pass "
         "`upcoming_only=false` to include past appointments."
     ),
-    queryset_factory=lambda args, pid: Appointment.objects.filter(patient__id=pid),
+    queryset_factory=lambda args, pid: Appointment.objects.filter(
+        patient__id=pid, entered_in_error__isnull=True
+    ),
     filters={
         "status": FilterSpec(
             type="string",

@@ -8,6 +8,7 @@ import pytest
 
 from canvas_sdk.agents import Capability, ToolNotAllowed, scheduling_tools, standard_tools
 from canvas_sdk.test_utils.factories import (
+    CanvasUserFactory,
     NoteFactory,
     NoteTypeFactory,
     PatientFactory,
@@ -423,3 +424,17 @@ def test_only_the_runs_patients_appointment_opens_its_time_in_a_slot_search(
             window | {"reschedule_appointment_id": str(mine.id)},
             ctx=_ctx(),
         )
+
+
+@pytest.mark.django_db
+def test_find_appointments_leaves_out_an_appointment_entered_in_error() -> None:
+    """One entered in error never happened, so it is not a visit the model can cite."""
+    patient = PatientFactory.create()
+    kept = _appointment(patient)
+    gone = _appointment(patient)
+    gone.entered_in_error = CanvasUserFactory.create()
+    gone.save()
+
+    rows = standard_tools.execute("find_appointments", {}, ctx={"patient_id": patient.id})
+
+    assert [row["id"] for row in rows] == [str(kept.id)]
