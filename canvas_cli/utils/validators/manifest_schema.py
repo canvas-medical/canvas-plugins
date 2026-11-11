@@ -388,13 +388,16 @@ manifest_schema = {
             "description": (
                 "One unit Canvas charges for, in the singular, and its price as a string of US "
                 "dollars with at most four decimal places. The 'token' unit has no price, "
-                "since the inference gateway prices tokens by model. A unit appears once, "
-                "matched without regard to case, which Platform checks at push."
+                "since the inference gateway prices tokens by model; its markup_bps is what a "
+                "Canvas agent's tokens bill at over list price, in basis points (1500 is 15%). "
+                "A unit appears once, matched without regard to case, which Platform checks "
+                "at push."
             ),
             "type": "object",
             "properties": {
                 "unit": {"$ref": "#/$defs/catalog_text", "maxLength": 40},
                 "price_per_unit": {"type": "string", "pattern": r"^\d{1,8}(\.\d{1,4})?$"},
+                "markup_bps": {"type": "integer", "minimum": 0, "maximum": 10000},
             },
             "required": ["unit"],
             "additionalProperties": False,
@@ -402,7 +405,7 @@ manifest_schema = {
                 "properties": {"unit": {"pattern": r"^\s*[Tt][Oo][Kk][Ee][Nn]\s*$"}},
             },
             "then": {"not": {"required": ["price_per_unit"]}},
-            "else": {"required": ["price_per_unit"]},
+            "else": {"required": ["price_per_unit"], "not": {"required": ["markup_bps"]}},
         },
         "catalog_text": {
             "description": "Text with at least one character that is not whitespace.",
