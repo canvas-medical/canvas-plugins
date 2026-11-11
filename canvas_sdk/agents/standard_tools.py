@@ -118,7 +118,7 @@ from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 # A link a banner or a card's button opens: an https URL, or a path in Canvas. The model
 # chooses it, and chart text it read can steer it, so no javascript:, data:, http:, or
 # protocol-relative (//host) link is staged.
-SAFE_HREF = r"^(https://[^\s/]+(/\S*)?|/(?!/)\S*)$"
+SAFE_HREF = r"^(https://[^\s/\\]+(/[^\s\\]*)?|/(?![/\\])[^\s\\]*)$"
 
 standard_tools = ToolRegistry()
 

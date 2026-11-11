@@ -1730,6 +1730,11 @@ def test_a_task_and_its_comment_are_authored_as_the_requester() -> None:
         ("http://lab.example.com", False),
         ("//elsewhere.example.com/x", False),
         ("data:text/html,<script>", False),
+        # Browsers read a backslash as a slash, so these leave Canvas.
+        ("/\\evil.com/x", False),
+        ("/\\/evil.com", False),
+        ("https://lab.example.com\\@evil.com/x", False),
+        ("/" + "a" * 2_048, False),
     ],
 )
 @pytest.mark.django_db
@@ -1750,7 +1755,7 @@ def test_a_banner_or_card_link_is_https_or_a_canvas_path(href: str, allowed: boo
             standard_tools.execute(tool, arguments, ctx=ctx)
             assert len(effects) == 1, tool
         else:
-            with pytest.raises(ValueError, match="does not match"):
+            with pytest.raises(ValueError, match="does not match|is too long"):
                 standard_tools.execute(tool, arguments, ctx=ctx)
             assert effects == [], tool
 

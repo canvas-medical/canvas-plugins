@@ -3,6 +3,7 @@ import re
 import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 from uuid import uuid4
 
@@ -116,6 +117,113 @@ class EffectField:
 
 # The longest free-text argument a tool accepts unless its field says otherwise.
 MAX_TEXT_CHARS = 10_000
+# The longest string a tool's schema matches with a ``pattern`` or checks with a ``format``,
+# unless its field says otherwise: a pattern can backtrack on long input.
+PATTERN_TEXT_CHARS = 2_048
+
+# The formats a tool's schema may name, each checked when the tool is called. jsonschema
+# checks ``date-time`` only with an extra installed, so it is checked here.
+FORMAT_CHECKER = FormatChecker()
+
+
+@FORMAT_CHECKER.checks("date-time", raises=ValueError)
+def _is_date_time(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    if "T" not in value.upper() and " " not in value:
+        raise ValueError(f"{value!r} has no time")
+    datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
+    return True
+
+
+# Keywords a tool's schema may use: Draft 2020-12's, plus its annotations.
+_SCHEMA_KEYWORDS = frozenset(Draft202012Validator.VALIDATORS) | {
+    "$schema",
+    "$id",
+    "$anchor",
+    "$defs",
+    "$comment",
+    "title",
+    "description",
+    "default",
+    "examples",
+    "deprecated",
+    "readOnly",
+    "writeOnly",
+    "contentEncoding",
+    "contentMediaType",
+}
+# Where a schema holds other schemas: one, a list, or a map of them.
+_SUBSCHEMA_KEYS = frozenset(
+    {
+        "items",
+        "additionalProperties",
+        "not",
+        "if",
+        "then",
+        "else",
+        "contains",
+        "propertyNames",
+        "unevaluatedItems",
+        "unevaluatedProperties",
+    }
+)
+_SUBSCHEMA_LIST_KEYS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+_SUBSCHEMA_MAP_KEYS = frozenset({"properties", "patternProperties", "$defs", "dependentSchemas"})
+
+
+def _schema_problems(schema: dict[str, Any]) -> list[str]:
+    """What in a tool's input schema would fail every call or go unenforced.
+
+    A top-level ``anyOf``, ``oneOf``, or ``allOf``, which the Messages API refuses; a keyword
+    that is not JSON Schema's, such as a misspelled ``maximun``, which nothing enforces; a
+    ``$ref`` that does not resolve inside the schema; and a ``format`` nothing checks.
+    """
+    problems = [
+        f"a top-level {keyword}, which the Messages API refuses"
+        for keyword in ("anyOf", "oneOf", "allOf")
+        if keyword in schema
+    ]
+
+    def walk(node: Any, where: str) -> None:
+        if not isinstance(node, dict):
+            return
+        problems.extend(
+            f"{where}: unknown keyword {keyword!r}"
+            for keyword in sorted(node.keys() - _SCHEMA_KEYWORDS)
+        )
+        if isinstance(ref := node.get("$ref"), str) and not _resolves(schema, ref):
+            problems.append(f"{where}: $ref {ref!r} does not resolve inside the schema")
+        if "format" in node and node["format"] not in FORMAT_CHECKER.checkers:
+            problems.append(f"{where}: format {node['format']!r} is not checked")
+        for key in _SUBSCHEMA_KEYS & node.keys():
+            walk(node[key], f"{where}.{key}")
+        for key in _SUBSCHEMA_LIST_KEYS & node.keys():
+            for index, child in enumerate(node[key] if isinstance(node[key], list) else []):
+                walk(child, f"{where}.{key}[{index}]")
+        for key in _SUBSCHEMA_MAP_KEYS & node.keys():
+            for name, child in (node[key] if isinstance(node[key], dict) else {}).items():
+                walk(child, f"{where}.{key}.{name}")
+
+    walk(schema, "input_schema")
+    return problems
+
+
+def _resolves(schema: dict[str, Any], ref: str) -> bool:
+    """Whether ``ref`` is a JSON pointer into ``schema`` that names something there."""
+    if not ref.startswith("#"):
+        return False
+    node: Any = schema
+    for part in [p for p in ref[1:].split("/") if p]:
+        part = part.replace("~1", "/").replace("~0", "~")
+        if isinstance(node, dict) and part in node:
+            node = node[part]
+        elif isinstance(node, list) and part.isdigit() and int(part) < len(node):
+            node = node[int(part)]
+        else:
+            return False
+    return True
+
 
 # Effect types an approval-listed tool stages bare: a usage record meters the call, and a
 # proposal inside it would pass the runner's usage gate, which checks bare effects only.
@@ -138,16 +246,16 @@ def remove_first(effects: Any, matches: Callable[[Any], bool]) -> Any | None:
 
 
 def _bounded_strings(schema: dict[str, Any]) -> dict[str, Any]:
-    """``schema`` with ``MAX_TEXT_CHARS`` as the length limit of every free-text string.
+    """``schema`` with a length limit on every string: :data:`MAX_TEXT_CHARS` for free text,
+    :data:`PATTERN_TEXT_CHARS` for one with a ``pattern`` or ``format``.
 
-    A string with its own ``maxLength``, ``enum``, ``format``, or ``pattern`` keeps it; the
-    limit reaches strings inside object properties and array items too.
+    A string with its own ``maxLength``, ``enum``, or ``const`` keeps it; the limit reaches
+    strings inside object properties and array items too.
     """
     bounded = dict(schema)
-    if bounded.get("type") == "string" and not (
-        {"maxLength", "enum", "format", "pattern", "const"} & bounded.keys()
-    ):
-        bounded["maxLength"] = MAX_TEXT_CHARS
+    if bounded.get("type") == "string" and not ({"maxLength", "enum", "const"} & bounded.keys()):
+        patterned = {"format", "pattern"} & bounded.keys()
+        bounded["maxLength"] = PATTERN_TEXT_CHARS if patterned else MAX_TEXT_CHARS
     if isinstance(bounded.get("properties"), dict):
         bounded["properties"] = {
             key: _bounded_strings(value) if isinstance(value, dict) else value
@@ -583,15 +691,17 @@ class ToolRegistry:
             **copy.deepcopy(definition),
             "input_schema": _bounded_strings(definition.get("input_schema") or {"type": "object"}),
         }
-        self._definitions.append(definition)
-        self._executors[name] = executor
         schema = definition["input_schema"]
+        # Checked before anything is stored, so a refused schema leaves no half-registered tool.
         Draft202012Validator.check_schema(schema)
+        if problems := _schema_problems(schema):
+            raise ValueError(f"Tool {name!r} input_schema: {'; '.join(problems)}")
         # An empty registry resolves no reference outside the schema, so a plugin's schema
         # cannot make the runner fetch a URL or read a file.
-        self._validators[name] = Draft202012Validator(
-            schema, registry=Registry(), format_checker=FormatChecker()
-        )
+        validator = Draft202012Validator(schema, registry=Registry(), format_checker=FORMAT_CHECKER)
+        self._definitions.append(definition)
+        self._executors[name] = executor
+        self._validators[name] = validator
         for category in categories:
             self._categories.setdefault(category, set()).add(name)
         if metadata:
@@ -1605,10 +1715,8 @@ class ToolRegistry:
             # Nothing it staged is proposed, and the drafts it removed are put back.
             call_effects.take_back()
             raise
-        # Approval covers changes, not this tool's name: a proposal a sub-agent's tool made
-        # stays as it is, and a change no approval-listed tool stages is made as any granted
-        # tool would make it, so the model is never told an approval waits that the grant
-        # would drop.
+        # Approval covers changes, not this tool's name: a sub-agent's proposal stays as it
+        # is, and a change no approval-listed tool stages is made as any granted tool's is.
         proposable = self.proposable_effect_types() - {PROPOSAL_EFFECT_TYPE}
         wrapped: list[Any] = []
         passed: list[Any] = []

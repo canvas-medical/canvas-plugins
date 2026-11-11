@@ -316,3 +316,37 @@ def test_a_subagent_is_never_given_a_composition_tool() -> None:
     )
 
     assert [tool["name"] for tool in gateway.requests[0]["tools"]] == ["read_chart"]
+
+
+@pytest.mark.parametrize("through_pool", [False, True], ids=["direct", "parallel"])
+def test_a_sub_agents_tool_cannot_start_more_sub_agents(through_pool: bool) -> None:
+    """The pool is sized for one level, so a nested sub-agent fails without calling the model."""
+    tools = ToolRegistry()
+    nested = SubAgentSpec(name="nested", system_prompt="x")
+    attempts: list[str] = []
+
+    @tools.tool(name="nest", description="x", input_schema={"type": "object"})
+    def _nest(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        attempts.append("nest")
+        return run_subagents(
+            [nested], "deeper", parent_tools=tools, parent_ctx=ctx, gateway=ctx["gateway"]
+        )
+
+    gateway = FakeGateway(reply(tool_use("nest")), reply(text("done")))
+    spec = SubAgentSpec(name="outer", system_prompt="x", allowed_tool_names=frozenset({"nest"}))
+    ctx: dict[str, Any] = {"effects": [], "gateway": gateway}
+
+    stand_in: Any = gateway
+    if through_pool:
+        result = run_subagents([spec], "go", parent_tools=tools, parent_ctx=ctx, gateway=stand_in)[
+            "outer"
+        ]
+    else:
+        result = run_subagent(spec, "go", parent_tools=tools, parent_ctx=ctx, gateway=stand_in)
+
+    assert result == "done"
+    assert attempts == ["nest"]
+    # The outer sub-agent's two calls; the nested one never called the model.
+    assert len(gateway.requests) == 2
+    tool_result = gateway.requests[1]["messages"][-1]["content"][0]
+    assert "cannot run sub-agents" in str(tool_result["content"])
