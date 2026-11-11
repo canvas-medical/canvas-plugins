@@ -1,4 +1,4 @@
-"""A fake inference gateway for load testing the Agent Runner Framework.
+"""A fake inference gateway for load testing the Agent Development Kit.
 
 It answers ``POST /v1/messages`` the way Canvas's inference gateway does, streaming
 included, so an agent's ``run_tool_loop`` runs unchanged against it, but from a script
@@ -63,7 +63,7 @@ class Stats:
     max_in_flight: int = 0
 
 
-app = FastAPI(title="ARF load test gateway")
+app = FastAPI(title="ADK load test gateway")
 _control = Control()
 _stats = Stats()
 _lock = threading.Lock()

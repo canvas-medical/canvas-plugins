@@ -3,8 +3,8 @@ from typing import Any
 
 import arrow
 
-from canvas__arf_loadtest.agents.tools import tools as _registered_tools
-from canvas__arf_loadtest.models import Counter, ProbeRecord
+from canvas__adk_loadtest.agents.tools import tools as _registered_tools
+from canvas__adk_loadtest.models import Counter, ProbeRecord
 from canvas_sdk.agents import AgentPlugin, AgentRunResult, AgentState, LLMGateway
 
 DEFAULT_SCRIPT: dict[str, Any] = {"tools": [["find_note_types", {}]], "text": "done"}
@@ -12,7 +12,7 @@ DEFAULT_SCRIPT: dict[str, Any] = {"tools": [["find_note_types", {}]], "text": "d
 
 def _system(script: dict[str, Any]) -> str:
     """The prompt the fake gateway reads its script from."""
-    return f"Agent Runner Framework load test probe. LOADTEST_SCRIPT={json.dumps(script)}"
+    return f"Agent Development Kit load test probe. LOADTEST_SCRIPT={json.dumps(script)}"
 
 
 def _read_counter(key: str) -> int:

@@ -8,14 +8,14 @@ session, so its runs are a staff member's and queue as interactive.
 from http import HTTPStatus
 from typing import Any
 
-from canvas__arf_loadtest.models import Counter, ProbeRecord
+from canvas__adk_loadtest.models import Counter, ProbeRecord
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.agent import RunAgentEffect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.v1.data import AgentRun
 
-PLUGIN_NAME = "canvas__arf_loadtest"
+PLUGIN_NAME = "canvas__adk_loadtest"
 PROBE_AGENT = f"{PLUGIN_NAME}.agents.probe:ProbeAgent"
 EXTENDED_AGENT = f"{PLUGIN_NAME}.agents.probe:ExtendedProbeAgent"
 CHAT_AGENT = f"{PLUGIN_NAME}.agents.probe:ChatProbeAgent"

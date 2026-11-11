@@ -34,7 +34,7 @@ message GetRegisteredEventTypesResponse {
   bool ready = 3;
 }
 
-// Agent Runner Framework (KOALA-5544)
+// Agent Development Kit (KOALA-5544)
 //
 // Sent from home-app's `run_agent` Celery task to the plugin-runner to
 // invoke an AgentPlugin subclass. The plugin-runner resolves the agent

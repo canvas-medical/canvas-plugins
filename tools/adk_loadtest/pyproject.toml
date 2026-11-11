@@ -14,16 +14,16 @@ dependencies = [
   "httpx",
   "uvicorn"
 ]
-description = "Load test the Agent Runner Framework: a fake inference gateway and a scenario driver"
-name = "arf-loadtest"
+description = "Load test the Agent Development Kit: a fake inference gateway and a scenario driver"
+name = "adk-loadtest"
 requires-python = ">=3.12"
 version = "0.1.0"
 
 [project.scripts]
-arf-loadtest = "arf_loadtest.driver:main"
+adk-loadtest = "adk_loadtest.driver:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["arf_loadtest"]
+packages = ["adk_loadtest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

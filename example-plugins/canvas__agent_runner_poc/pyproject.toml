@@ -5,7 +5,7 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
-description = "Reference agents for the Canvas Agent Runner Framework"
+description = "Reference agents for the Canvas Agent Development Kit"
 license = "MIT"
 name = "canvas__agent_runner_poc"
 requires-python = ">=3.11"

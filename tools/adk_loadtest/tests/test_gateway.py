@@ -9,8 +9,8 @@ from typing import Any
 import anthropic
 import pytest
 import uvicorn
+from adk_loadtest import gateway
 from anthropic.types import MessageParam, ToolUseBlock
-from arf_loadtest import gateway
 from fastapi.testclient import TestClient
 
 SCRIPT = 'LOADTEST_SCRIPT={"tools": [["find_note_types", {}]], "latency_ms": 0, "text": "all done"}'

@@ -1,9 +1,9 @@
-"""Drive load test scenarios against an instance running the canvas__arf_loadtest plugin.
+"""Drive load test scenarios against an instance running the canvas__adk_loadtest plugin.
 
 Each scenario starts probe runs through the plugin's API, waits for every run to reach
 a final status, reads back the platform's run records and what each probe saw, and
 reports timings and pass/fail checks. The instance's ``INFERENCE_GATEWAY_URL`` points
-at the fake gateway (``arf_loadtest.gateway``), which the driver also controls.
+at the fake gateway (``adk_loadtest.gateway``), which the driver also controls.
 
 Scenarios:
 
@@ -21,7 +21,7 @@ Scenarios:
 Before the scenarios, one canary run has to succeed through the fake gateway, so an
 instance pointed at a real gateway stops the driver before it starts any load. The
 plugin's API key and a staff session's Cookie header come from the environment
-(``ARF_LOADTEST_API_KEY``, ``ARF_LOADTEST_SESSION_COOKIE``), and an instance other than
+(``ADK_LOADTEST_API_KEY``, ``ADK_LOADTEST_SESSION_COOKIE``), and an instance other than
 localhost needs ``--allow-remote-instance``.
 """
 
@@ -36,7 +36,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from arf_loadtest.analysis import (
+from adk_loadtest.analysis import (
     TERMINAL,
     Check,
     Summary,
@@ -48,13 +48,13 @@ from arf_loadtest.analysis import (
     summarize,
 )
 
-PLUGIN = "canvas__arf_loadtest"
+PLUGIN = "canvas__adk_loadtest"
 # The plugin starts at most this many runs per fanout request, and reads back at most
 # READ_BATCH per /runs request.
 FANOUT_BATCH = 100
 READ_BATCH = 1000
-API_KEY_ENV = "ARF_LOADTEST_API_KEY"
-SESSION_COOKIE_ENV = "ARF_LOADTEST_SESSION_COOKIE"
+API_KEY_ENV = "ADK_LOADTEST_API_KEY"
+SESSION_COOKIE_ENV = "ADK_LOADTEST_SESSION_COOKIE"
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 

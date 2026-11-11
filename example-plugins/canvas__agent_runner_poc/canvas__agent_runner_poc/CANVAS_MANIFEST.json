@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.20",
     "name": "canvas__agent_runner_poc",
-    "description": "Reference agents for the Canvas Agent Runner Framework. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode. DocumentIntake reads each incoming document and suggests its patient, type, and report values for staff to confirm.",
+    "description": "Reference agents for the Canvas Agent Development Kit. LongitudinalCareAdvisor reviews encounters on note lock and tracks recommendations across visits via SDK protocol cards. ChartChat is a chart-side conversational agent demonstrating the snapshot state pattern, with on-demand sub-agent composition (generate_chart_summary, generate_pre_visit_brief). ClaimsChat is a claims chat for billing staff, gated on the revenue capability, in queue or single-claim mode. DocumentIntake reads each incoming document and suggests its patient, type, and report values for staff to confirm.",
     "components": {
         "handlers": [
             {

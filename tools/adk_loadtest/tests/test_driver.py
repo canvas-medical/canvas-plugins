@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 import pytest
-from arf_loadtest import driver
+from adk_loadtest import driver
 
 T0 = datetime(2026, 11, 4, tzinfo=UTC)
 
@@ -68,7 +68,7 @@ class FakeInstance:
             if path == "/reset":
                 self.served = 0
             return httpx.Response(200, json={})
-        assert path.startswith("/plugin-io/api/canvas__arf_loadtest/")
+        assert path.startswith("/plugin-io/api/canvas__adk_loadtest/")
         endpoint = path.rsplit("/", 1)[1]
         body = json.loads(request.content) if request.content else {}
         if endpoint == "fanout":

@@ -1,4 +1,4 @@
-"""A Model Context Protocol server over the Agent Runner Framework's standard tools.
+"""A Model Context Protocol server over the Agent Development Kit's standard tools.
 
 One SimpleAPI route, ``POST /mcp``, speaks MCP's JSON-RPC over the Streamable HTTP
 transport, answering each request with plain JSON (the transport allows a server that
