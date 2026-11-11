@@ -1,3 +1,5 @@
+from hmac import compare_digest
+
 import arrow
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -17,7 +19,7 @@ class EmailBounceAPI(SimpleAPIRoute):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
-        return credentials.key == self.secrets["my-api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["my-api-key"].encode())
 
     def post(self) -> list[Response]:
         """Create a task for the patient with the given MRN."""

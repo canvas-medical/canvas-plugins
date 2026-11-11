@@ -1,3 +1,5 @@
+from hmac import compare_digest
+
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPIRoute
 
@@ -12,7 +14,7 @@ class HelloWorldAPI(SimpleAPIRoute):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
-        return credentials.key == self.secrets["my-api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["my-api-key"].encode())
 
     def get(self) -> list[Response]:
         """Return a message."""
