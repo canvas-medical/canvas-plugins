@@ -201,6 +201,14 @@ def test_secret_compared_with_eq_flagged(source: str) -> None:
             """,
             id="secret_used_as_a_setting",
         ),
+        pytest.param(
+            """
+            class Api:
+                def authenticate(self, credentials):
+                    return credentials.key == self.expected_key()
+            """,
+            id="a_method_result_is_not_a_secret_read",
+        ),
     ],
 )
 def test_secret_compared_with_eq_not_flagged(source: str) -> None:
