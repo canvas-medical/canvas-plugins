@@ -1118,7 +1118,9 @@ def test_an_agents_exception_reaches_sentry_without_its_frames_locals(
     assert response.success is False
     assert transport.sent, "the exception was reported"
     assert all("MARKER-CHART-CONTENT" not in envelope for envelope in transport.sent)
-    assert any("boom after 1 message" in envelope for envelope in transport.sent)
+    # The message can carry chart text, so the type and run id stand in for it.
+    assert not any("boom after 1 message" in envelope for envelope in transport.sent)
+    assert any("ValueError in agent run" in envelope for envelope in transport.sent)
 
 
 @pytest.mark.parametrize("run_seconds", [None, 1200], ids=["default", "extended"])
