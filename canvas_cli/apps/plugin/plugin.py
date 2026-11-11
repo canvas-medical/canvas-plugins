@@ -851,9 +851,9 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
 
 def _lint_plugin_static(plugin_name: Path) -> None:
-    """Static pre-load lint: RestrictedPython constructs that fail at runtime and
-    Custom Data setup mistakes the sandbox load can't surface. Prints warnings and
-    raises ``typer.Exit(1)`` on any error-severity finding.
+    """Static pre-load lint (:func:`lint_plugin`): sandbox constructs, request handling,
+    shipped credentials and Custom Data setup. Prints warnings and raises
+    ``typer.Exit(1)`` on any error-severity finding.
     """
     manifest_path = plugin_name / "CANVAS_MANIFEST.json"
     try:

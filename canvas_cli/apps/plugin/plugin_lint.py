@@ -1,7 +1,7 @@
 """Static pre-load lint for ``canvas validate``.
 
-AST-scans a plugin's source for three classes of problem the sandbox handler-load
-can't surface on its own:
+Scans a plugin for four classes of problem the sandbox handler-load can't surface
+on its own (the fourth reads every shipped file, not just the source):
 
   * RestrictedPython constructs that fail at *runtime* inside a method body
     (``compile_restricted`` accepts them, so they load clean and only blow up
@@ -10,6 +10,7 @@ can't surface on its own:
     leave tables uncreated or relations dropped.
   * Request-handling mistakes that run fine but weaken the plugin: a secret
     compared with ``==``, or a ``requests`` call with no timeout.
+  * Credentials written into a file the package ships.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -388,13 +389,11 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
 
 
 # ── Credential rules ──────────────────────────────────────────────────────────
-# Each certain shape was a live credential in every shipped file it appeared in across
-# installed plugins; in docs and tests the same shapes were examples, so there they warn.
+# Each API-key shape was a live credential in every shipped file it appeared in across
+# installed plugins, so it is an error anywhere but a Markdown or reST document.
 
-_CERTAIN_CREDENTIALS = {
-    "A private key": re.compile(
-        r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"
-    ),
+_PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
+_API_KEYS = {
     "An Anthropic API key": re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}"),
     "A Slack token": re.compile(r"\bxox[bp]-\d+-\d+-[A-Za-z0-9-]{20,}"),
     "A Stripe live key": re.compile(r"\b[rs]k_live_[0-9A-Za-z]{24,}"),
@@ -405,20 +404,20 @@ _SECRET_ASSIGNMENT = re.compile(
     r"(?i)(?:api_?key|secret|token|passw(?:or)?d|private_key)\w*[\"']?\s*[:=]\s*"
     r"[\"']([^\"'\s]{20,})[\"']"
 )
-_EXAMPLE_SUFFIXES = {".md", ".rst", ".txt"}
-
-
-def _mask(value: str) -> str:
-    return f"`{value[:4]}…`, {len(value)} characters"
+_DOC_SUFFIXES = {".md", ".rst"}
+_HEX_TOKEN = re.compile(r"[0-9a-f]{32,}")
 
 
 def _looks_random(value: str) -> bool:
-    """Lower, upper and digit characters, and not a URL: unlike a CONSTANT_NAME or a link."""
-    return (
+    """Lower, upper and digit characters, or a long lowercase hex run (a Twilio-style token),
+    and not a URL: unlike a CONSTANT_NAME or a link.
+    """
+    if value.startswith(("http://", "https://")):
+        return False
+    return bool(_HEX_TOKEN.fullmatch(value)) or (
         any(c.islower() for c in value)
         and any(c.isupper() for c in value)
         and any(c.isdigit() for c in value)
-        and not value.startswith(("http://", "https://"))
     )
 
 
@@ -431,38 +430,57 @@ def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        example = rel.suffix.lower() in _EXAMPLE_SUFFIXES or bool(
-            {"test", "tests"} & set(rel.parts)
-        )
+        is_doc = rel.suffix.lower() in _DOC_SUFFIXES
+        # Placeholder values belong in docs and tests, so a value matched by its shape alone is
+        # not reported there.
+        is_example = is_doc or bool({"test", "tests"} & set(rel.parts))
         for number, line in enumerate(text.split("\n"), start=1):
-            for name, pattern in _CERTAIN_CREDENTIALS.items():
-                match = pattern.search(line)
-                if match:
+            where = f"{rel}:{number}"
+            if _PRIVATE_KEY.search(line):
+                # A warning until the SDK can load an mTLS client key from a secret: `requests`
+                # takes the key only as a file path, which the sandbox cannot create.
+                findings.append(
+                    LintFinding(
+                        "warning",
+                        where,
+                        "hardcoded-credential",
+                        "A private key ships inside the plugin package, where anyone with the "
+                        "package can read it. Move it to a manifest secret read with "
+                        "`self.secrets[...]` and rotate it, unless it is a mutual-TLS client "
+                        "key, which plugins can only load from a file today.",
+                    )
+                )
+                continue
+            api_key = next(
+                ((name, match) for name, p in _API_KEYS.items() if (match := p.search(line))),
+                None,
+            )
+            if api_key:
+                name, match = api_key
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        f"{name} (`{match.group(0)[:4]}…`, {len(match.group(0))} characters) "
+                        "ships inside the plugin package, where anyone with the package can read "
+                        "it. Move it to a manifest secret read with `self.secrets[...]`, and "
+                        "rotate it.",
+                    )
+                )
+                continue
+            for value in [] if is_example else _SECRET_ASSIGNMENT.finditer(line):
+                if _looks_random(value.group(1)):
                     findings.append(
                         LintFinding(
-                            "warning" if example else "error",
-                            f"{rel}:{number}",
-                            "hardcoded-credential",
-                            f"{name} ({_mask(match.group(0))}) ships inside the plugin package, "
-                            "where anyone with the package can read it. Move it to a manifest "
+                            "warning",
+                            where,
+                            "possible-credential",
+                            f"A secret-like value ({len(value.group(1))} characters) ships inside "
+                            "the plugin package. If it is a real credential, move it to a manifest "
                             "secret read with `self.secrets[...]`, and rotate it.",
                         )
                     )
-                    break
-            else:
-                # Docs and tests are where placeholder values belong; only certain shapes count there.
-                for match in [] if example else _SECRET_ASSIGNMENT.finditer(line):
-                    if _looks_random(match.group(1)):
-                        findings.append(
-                            LintFinding(
-                                "warning",
-                                f"{rel}:{number}",
-                                "possible-credential",
-                                f"A secret-like value ({_mask(match.group(1))}) ships inside the "
-                                "plugin package. If it is a real credential, move it to a manifest "
-                                "secret read with `self.secrets[...]`, and rotate it.",
-                            )
-                        )
     return findings
 
 
