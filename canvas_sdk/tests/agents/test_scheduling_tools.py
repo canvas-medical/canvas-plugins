@@ -438,3 +438,21 @@ def test_find_appointments_leaves_out_an_appointment_entered_in_error() -> None:
     rows = standard_tools.execute("find_appointments", {}, ctx={"patient_id": patient.id})
 
     assert [row["id"] for row in rows] == [str(kept.id)]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("first_name", ["", "   "], ids=["empty", "blank"])
+def test_find_patient_needs_a_first_name(first_name: str) -> None:
+    """A last name and birth date alone can name another person in the same family."""
+    patient = PatientFactory.create()
+
+    with pytest.raises(ValueError, match="first name"):
+        standard_tools.execute(
+            "find_patient",
+            {
+                "first_name": first_name,
+                "last_name": patient.last_name,
+                "birth_date": patient.birth_date.isoformat(),
+            },
+            ctx={"capabilities": frozenset({Capability.PATIENT_SEARCH})},
+        )

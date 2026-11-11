@@ -22,7 +22,11 @@ from django.utils import timezone
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.agents import Capability, history_tools, standard_tools
-from canvas_sdk.agents.standard_tools import _walk_note_body, _wrap_recommendation_command
+from canvas_sdk.agents.standard_tools import (
+    _build_protocol_recommendation,
+    _walk_note_body,
+    _wrap_recommendation_command,
+)
 from canvas_sdk.agents.tool_registry import MAX_TEXT_CHARS
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
@@ -1842,3 +1846,48 @@ def test_removing_a_banner_this_run_added_takes_the_add_back(approval: bool) -> 
 
     assert tools.execute("remove_banner_alert", {"banner_key": key}, ctx=ctx) == {"ok": True}
     assert effects == []
+
+
+def test_a_cards_button_cannot_carry_a_command_outside_the_offered_ones() -> None:
+    """The button applies on a click, outside the agent's checks, so only drafts are offered.
+
+    The schema's enum refuses it first; the builder refuses it too, for a caller past it.
+    """
+    with pytest.raises(ValueError, match="cannot be a card's button"):
+        _build_protocol_recommendation(
+            {"title": "Refill", "commands": [{"type": "refill", "context": {}}]}, ctx={}
+        )
+
+
+@pytest.mark.django_db
+def test_remove_banner_alert_refuses_a_banner_already_removed() -> None:
+    """An inactive banner is off the chart, so removing it again would report a change that is not one."""
+    patient = PatientFactory.create()
+    banner = _banner(patient, "banner-1")
+    banner.status = "inactive"
+    banner.save()
+
+    with pytest.raises(ValueError, match="not an active banner"):
+        standard_tools.execute(
+            "remove_banner_alert",
+            {"banner_key": "banner-1"},
+            ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": []},
+        )
+
+
+@pytest.mark.django_db
+def test_another_patients_card_with_the_same_key_does_not_block_this_patients() -> None:
+    """A card is keyed on its patient too, so only this patient's cards are checked."""
+    patient = PatientFactory.create()
+    ProtocolCurrentFactory.create(
+        patient=PatientFactory.create(), protocol_key="shared-key", plugin_name="other"
+    )
+    effects: list[Any] = []
+
+    result = standard_tools.execute(
+        "add_or_update_protocol_card",
+        {"card_key": "shared-key", "title": "Recheck A1c", "narrative": "Overdue."},
+        ctx={"patient_id": patient.id, "plugin_name": _PLUGIN, "effects": effects},
+    )
+
+    assert result == {"ok": True, "card_key": "shared-key"}

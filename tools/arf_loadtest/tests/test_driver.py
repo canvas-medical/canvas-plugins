@@ -248,3 +248,23 @@ def test_faults_fails_when_no_run_succeeded(
     out = capsys.readouterr().out
     assert "[pass] every run reached a final status" in out
     assert "[FAIL] runs succeeded through the faults: 0/4 succeeded" in out
+
+
+def test_faults_fails_when_a_run_never_reaches_a_final_status(
+    instance: FakeInstance, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A run still queued when the wait ends is the failure the scenario looks for."""
+    original = instance._start
+
+    def stuck(scope_key: str, seq: int, kind: str) -> str:
+        run_id = original(scope_key, seq, kind)
+        if ":faults-" in scope_key and seq == 0:
+            instance.runs[run_id].update(status="queued", started_at=None, finished_at=None)
+        return run_id
+
+    instance._start = stuck  # type: ignore[method-assign]
+
+    assert driver.main(["faults", "--fault-runs", "3", "--timeout", "0", *ARGS]) == 1
+    assert "[FAIL] every run reached a final status: 3/3 recorded, 1 not final" in (
+        capsys.readouterr().out
+    )
