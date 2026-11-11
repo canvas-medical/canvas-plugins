@@ -2,13 +2,11 @@ import threading
 from types import SimpleNamespace
 from typing import Any
 
-import anthropic
-import httpx2
 import pytest
 from anthropic.types import TextBlock, ToolUseBlock
 
 from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents, subagent
-from canvas_sdk.agents.gateway import count_model_call
+from canvas_sdk.agents.gateway import GatewayError, count_model_call
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, RunRecorder, current_recorder
 from canvas_sdk.agents.subagent import MAX_PARALLEL
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text, tool_use
@@ -116,12 +114,12 @@ class _FailingGateway:
 
 def test_a_subagents_gateway_error_is_raised_for_the_run_to_report() -> None:
     """An outage or refusal inside a sub-agent ends the run as LLM_UNAVAILABLE or LLM_REFUSED."""
-    error = anthropic.APIConnectionError(
-        request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+    error = GatewayError(
+        "The model call could not reach the gateway.", status_code=None, error_type="connection"
     )
     spec = SubAgentSpec(name="labs", system_prompt="x")
 
-    with pytest.raises(anthropic.APIConnectionError):
+    with pytest.raises(GatewayError):
         run_subagents(
             [spec],
             "question",

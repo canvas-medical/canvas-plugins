@@ -28,10 +28,10 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-import anthropic
 import requests
 from django.db.models import Q
 
+from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.agents.note_helpers import find_open_note
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import (
@@ -2209,7 +2209,7 @@ def answer_from_file(
             # The file is sent whole: windowing would drop the only message it is in.
             history_chars=None,
         )
-    except anthropic.APIStatusError as exc:
+    except GatewayError as exc:
         # The model's limits (400) or the gateway's budget hold (402) refused this file;
         # the run goes on without it. Anything else is the platform's to classify.
         if exc.status_code not in (400, 402):

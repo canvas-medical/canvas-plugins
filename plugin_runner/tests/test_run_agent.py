@@ -21,6 +21,7 @@ from canvas_generated.messages.plugins_pb2 import (
 )
 from canvas_sdk.agents import AgentRunResult, ToolRegistry
 from canvas_sdk.agents.base import MAX_MODEL_CALLS
+from canvas_sdk.agents.gateway import gateway_error
 from canvas_sdk.agents.run_record import (
     DEADLINE_MARGIN_SECONDS,
     RUN_TOOL_RESULT_CHARS,
@@ -444,12 +445,14 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
 def _status_error(status: int) -> Exception:
     request = httpx2.Request("POST", "https://gateway.test/v1/messages")
     response = httpx2.Response(status, request=request, json={"error": {"message": "no"}})
-    return anthropic.APIStatusError("no", response=response, body=None)
+    return gateway_error(anthropic.APIStatusError("no", response=response, body=None))
 
 
 def _connection_error() -> Exception:
-    return anthropic.APIConnectionError(
-        request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+    return gateway_error(
+        anthropic.APIConnectionError(
+            request=httpx2.Request("POST", "https://gateway.test/v1/messages")
+        )
     )
 
 
