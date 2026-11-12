@@ -393,6 +393,10 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
 # installed plugins, so it is an error anywhere but a Markdown or reST document.
 
 _PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
+# A downloaded service-account file: a key with a body in a JSON `private_key` field.
+_SERVICE_ACCOUNT_KEY = re.compile(
+    r'"private_key"\s*:\s*"-----BEGIN (?:RSA )?PRIVATE KEY-----\\n[A-Za-z0-9+/]{40,}'
+)
 _API_KEYS = {
     "An Anthropic API key": re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}"),
     "A Slack token": re.compile(r"\bxox[bp]-\d+-\d+-[A-Za-z0-9-]{20,}"),
@@ -437,7 +441,19 @@ def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
         for number, line in enumerate(text.split("\n"), start=1):
             where = f"{rel}:{number}"
             has_private_key = bool(_PRIVATE_KEY.search(line))
-            if has_private_key:
+            if _SERVICE_ACCOUNT_KEY.search(line):
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        "A service-account private key ships inside the plugin package, where "
+                        "anyone with the package can read it. Store the service-account JSON as a "
+                        "manifest secret read with `self.secrets[...]`, sign with "
+                        '`jwt.encode(claims, key, algorithm="RS256")`, and rotate the key.',
+                    )
+                )
+            elif has_private_key:
                 # A warning until the SDK can load an mTLS client key from a secret: `requests`
                 # takes the key only as a file path, which the sandbox cannot create.
                 findings.append(
@@ -592,7 +608,7 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
 
 
 def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
-    """Return all construct, request-handling and Custom Data findings for a plugin,
+    """Return all construct, request-handling, credential and Custom Data findings for a plugin,
     most-blocking first (errors before warnings).
     """
     findings = (

@@ -392,6 +392,49 @@ def test_private_key_warns_wherever_it_ships(path: str) -> None:
     assert "MIIE" not in findings[0].message
 
 
+_SERVICE_ACCOUNT_JSON = json.dumps(
+    {
+        "type": "service_account",
+        "private_key": "-----BEGIN "
+        + "PRIVATE KEY-----\n"
+        + "MIIEvQIBADANBgkqhkiG9w0BAQEF" * 3
+        + "\n",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    "path, severity",
+    [
+        ("config/service_account.json", "error"),
+        ("tests/fixtures/service_account.json", "error"),
+        ("README.md", "warning"),
+    ],
+)
+def test_a_service_account_private_key_is_an_error(path: str, severity: str) -> None:
+    """A service-account key signs a JWT, which works from a secret, so a key with a body in a
+    JSON `private_key` field blocks outside documents and points at that pattern.
+    """
+    root = _plugin({path: _SERVICE_ACCOUNT_JSON})
+    findings = [f for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert [(f.severity, f.location) for f in findings] == [(severity, f"{path}:1")]
+    assert "jwt.encode" in findings[0].message
+    assert "MIIE" not in findings[0].message
+
+
+def test_a_private_key_field_without_a_body_stays_a_warning() -> None:
+    """A header-only placeholder is no usable key."""
+    root = _plugin(
+        {"tests/fixture.json": json.dumps({"private_key": "-----BEGIN " + "PRIVATE KEY-----"})}
+    )
+    findings = [f for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert [(f.severity, "mutual-TLS client key" in f.message) for f in findings] == [
+        ("warning", True)
+    ]
+
+
 @pytest.mark.parametrize("path", ["README.md", "docs/guide.rst"])
 def test_api_key_in_a_markdown_or_rest_document_only_warns(path: str) -> None:
     """Documents hold example keys, so an API-key shape there warns instead of blocks."""
