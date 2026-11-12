@@ -1,8 +1,8 @@
 """LLM access for agents, through Canvas's inference gateway.
 
-The plugin runner builds an :class:`LLMGateway` from the instance's
-``INFERENCE_GATEWAY_URL`` and the agent plugin's own ``INFERENCE_GATEWAY_KEY`` secret,
-which the plugin declares in its manifest ``variables`` with ``sensitive: true``.
+The plugin runner builds an :class:`LLMGateway` from the agent plugin's own
+``INFERENCE_GATEWAY_URL`` and ``INFERENCE_GATEWAY_KEY`` secrets, which Platform sends
+together and the plugin declares in its manifest ``variables``, the key ``sensitive: true``.
 :meth:`LLMGateway.client` returns a :class:`GatewayClient`, which calls the gateway with
 that key and the runner's attribution headers.
 
@@ -17,7 +17,6 @@ toward the ceiling of the run the gateway was built for, and none is made once t
 has ended.
 """
 
-import os
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
@@ -317,9 +316,9 @@ def attempt_timeout(seconds_left: float, max_retries: int = DEFAULT_MAX_RETRIES)
     return max(1.0, seconds_left / (max_retries + 1))
 
 
-# Secrets the plugin runner keeps from an agent: its gateway key, which the runner turns
-# into the agent's gateway, and the GraphQL token handlers get.
-AGENT_WITHHELD_SECRETS = frozenset({GATEWAY_KEY_SECRET, "graphql_jwt"})
+# Secrets the plugin runner keeps from an agent: its gateway key and URL, which the runner
+# turns into the agent's gateway, and the GraphQL token handlers get.
+AGENT_WITHHELD_SECRETS = frozenset({GATEWAY_KEY_SECRET, GATEWAY_URL_VARIABLE, "graphql_jwt"})
 
 
 def agent_secrets(secrets: Mapping[str, object]) -> dict[str, str]:
@@ -339,25 +338,24 @@ def gateway_from_plugin_secrets(
     run_id: str = "",
     instance: str = "",
     model: str = DEFAULT_MODEL,
-    environ: Mapping[str, str] | None = None,
     recorder: RunRecorder | None = None,
 ) -> LLMGateway:
-    """Build a gateway from the instance's gateway URL and the plugin's key secret.
+    """Build a gateway from the plugin's gateway URL and key secrets.
 
     Called by the runner, which stamps the attribution with the plugin, agent and
     run it is executing.
     """
-    environ = os.environ if environ is None else environ
-    base_url = environ.get(GATEWAY_URL_VARIABLE, "").strip()
+    base_url = str(secrets.get(GATEWAY_URL_VARIABLE) or "").strip()
     key = str(secrets.get(GATEWAY_KEY_SECRET) or "").strip()
-    missing = []
-    if not base_url:
-        missing.append(f"instance config {GATEWAY_URL_VARIABLE}")
-    if not key:
-        missing.append(f"plugin secret {GATEWAY_KEY_SECRET}")
+    missing = [
+        name
+        for name, value in ((GATEWAY_URL_VARIABLE, base_url), (GATEWAY_KEY_SECRET, key))
+        if not value
+    ]
     if missing:
+        noun = "plugin secret" if len(missing) == 1 else "plugin secrets"
         raise LLMGatewayConfigurationError(
-            f"Agent LLM access is not configured: {' and '.join(missing)} unset."
+            f"Agent LLM access is not configured: {noun} {' and '.join(missing)} unset."
         )
     return build_gateway(
         base_url=base_url,
