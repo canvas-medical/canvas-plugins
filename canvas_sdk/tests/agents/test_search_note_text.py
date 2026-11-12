@@ -177,7 +177,99 @@ def test_returns_description_names_exactly_the_fields_it_returns() -> None:
         )
     )
 
-    assert described == returned
+    assert described == returned | {"truncated", "oldest_checked"}
+
+
+@pytest.mark.django_db
+def test_a_capped_scan_says_so_and_before_reaches_the_older_notes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every body's stored JSON holds "type", so newer notes use up the cap; the marker says so."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    older = _note(patient, 1, "Type 2 diabetes, stable.")
+    for day in (10, 11, 12):
+        _note(patient, day, "Knee exam unchanged.")
+
+    first = _search(patient, text="type")
+
+    assert first == [
+        {"truncated": True, "oldest_checked": datetime(2026, 1, 11, tzinfo=UTC).isoformat()}
+    ]
+    second = _search(patient, text="type", before=first[-1]["oldest_checked"])
+    assert [row["id"] for row in second] == [str(older.id)]
+
+
+@pytest.mark.django_db
+def test_a_scan_that_reads_every_candidate_has_no_marker(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exactly the cap's worth of candidates leaves nothing unchecked, so nothing is truncated."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    for day in (10, 11):
+        _note(patient, day, "Knee exam unchanged.")
+
+    assert _search(patient, text="type") == []
+
+
+@pytest.mark.django_db
+def test_notes_on_the_same_date_come_back_in_a_stable_order() -> None:
+    """Notes sharing a date of service are ordered newest row first, every call."""
+    patient = PatientFactory.create()
+    first = _note(patient, 4, "Cough.")
+    second = _note(patient, 4, "Cough again.")
+
+    assert [row["id"] for row in _search(patient, text="cough")] == [str(second.id), str(first.id)]
+    assert first.dbid < second.dbid
+
+
+@pytest.mark.django_db
+def test_a_short_word_matches_only_itself() -> None:
+    """The "d" of "vitamin d" is a whole word, not the start of any word."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Vitamin supplement taken daily.")
+    low_d = _note(patient, 2, "Vitamin D low; start supplement.")
+
+    assert [row["id"] for row in _search(patient, text="vitamin d")] == [str(low_d.id)]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("text", ["¿dolor?", "dolor—", "«dolor»"])
+def test_punctuation_in_any_script_is_ignored(text: str) -> None:
+    """Punctuation outside ASCII is stripped from a word's ends too."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Dolor de pecho.")
+
+    assert [row["id"] for row in _search(patient, text=text)] == [str(note.id)]
+
+
+@pytest.mark.django_db
+def test_a_word_whose_lowercase_changes_length_still_matches() -> None:
+    """The word İzmir lowercases to a longer string; it is matched as typed, any case."""
+    patient = PatientFactory.create()
+    note = NoteFactory.create(
+        patient=patient,
+        title="Travel history: İzmir",
+        datetime_of_service=datetime(2026, 1, 3, tzinfo=UTC),
+        _body=[{"type": "text", "value": "Doing well."}],
+    )
+
+    assert [row["id"] for row in _search(patient, text="İzmir")] == [str(note.id)]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({"limit": 0}, "limit: 0 is less than the minimum of 1"),
+        ({"limit": "many"}, "limit: 'many' is not of type 'integer'"),
+        ({"before": "last week"}, "`before` must be an ISO 8601 date"),
+    ],
+)
+def test_an_unreadable_argument_is_refused_by_name(
+    arguments: dict[str, object], message: str
+) -> None:
+    """The model hears which argument it got wrong, not a bare conversion error."""
+    with pytest.raises(ValueError, match=message):
+        standard_tools.execute("search_note_text", {"text": "pain", **arguments}, ctx=_ctx("p1"))
 
 
 @pytest.mark.django_db
@@ -271,7 +363,7 @@ def test_too_many_distinct_words_are_refused_and_repeats_count_once() -> None:
         standard_tools.execute(
             "search_note_text", {"text": " ".join(f"w{i}" for i in range(13))}, ctx=_ctx("p1")
         )
-    assert STANDARD_TOOLS_MODULE._search_words("Pain pain PAIN, chest") == ["pain", "chest"]
+    assert STANDARD_TOOLS_MODULE._search_words("Pain pain PAIN, chest") == ["Pain", "chest"]
 
 
 @pytest.mark.django_db
