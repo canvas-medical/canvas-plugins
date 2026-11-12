@@ -8,6 +8,10 @@
       {
         "class": "sendgrid_email.handlers.email_manip:EmailManip",
         "description": "Emails with Sendgrid"
+      },
+      {
+        "class": "sendgrid_email.handlers.email_manip:SendGridCallbacks",
+        "description": "Receives SendGrid's inbound email and event webhooks"
       }
     ],
     "applications": [

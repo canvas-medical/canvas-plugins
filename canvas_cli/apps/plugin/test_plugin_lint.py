@@ -21,7 +21,9 @@ from textwrap import dedent
 
 import pytest
 import requests
+import typer
 
+from canvas_cli.apps.plugin.plugin import _lint_plugin_static
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_sdk.handlers.simple_api import SimpleAPI
 from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin, Credentials
@@ -263,14 +265,37 @@ _OPEN_ROUTE = """
 
 
 def test_unauthenticated_data_route_flagged() -> None:
-    """A route class that admits everyone and reads data keyed from the request is a warning
+    """A route class that admits everyone and reads data keyed from the request is an error
     on its `authenticate`, naming the route.
     """
     root = _plugin({"routes/vitals.py": _OPEN_ROUTE.format(extra="")})
     findings = [f for f in lint_plugin(root, {}) if f.code == "unauthenticated-data-route"]
 
-    assert [(f.severity, f.location) for f in findings] == [("warning", "routes/vitals.py:7")]
-    assert "`VitalsApp.authenticate` always returns True, and `index` reads" in findings[0].message
+    assert [(f.severity, f.location) for f in findings] == [("error", "routes/vitals.py:7")]
+    assert (
+        "`VitalsApp.authenticate` always returns True, so anyone who can reach the URL can call "
+        "`index`" in findings[0].message
+    )
+
+
+def test_unauthenticated_route_actor_check_flagged() -> None:
+    """`self.event.actor is not None` admits everyone, because the SDK always attaches an Actor."""
+    source = _OPEN_ROUTE.replace("return True", "return self.event.actor is not None")
+    root = _plugin({"routes/vitals.py": source.format(extra="")})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "unauthenticated-data-route"]
+
+    assert [f.severity for f in findings] == ["error"]
+    assert "true for every request" in findings[0].message
+
+
+def test_unauthenticated_route_blocks_validate() -> None:
+    """The finding is an error, so `canvas validate` exits non-zero on it."""
+    root = _plugin({"routes/vitals.py": _OPEN_ROUTE.format(extra="")})
+
+    with pytest.raises(typer.Exit) as exit_info:
+        _lint_plugin_static(root)
+
+    assert exit_info.value.exit_code == 1
 
 
 def test_unauthenticated_data_route_through_a_helper_flagged() -> None:
@@ -292,7 +317,7 @@ def test_unauthenticated_data_route_through_a_helper_flagged() -> None:
                 return notes_for(self.request.path_params["patient"])
     """
     root = _plugin({"routes/notes.py": source})
-    assert "unauthenticated-data-route" in _codes(lint_plugin(root, {}), "warning")
+    assert "unauthenticated-data-route" in _codes(lint_plugin(root, {}), "error")
 
 
 @pytest.mark.parametrize(
@@ -300,20 +325,16 @@ def test_unauthenticated_data_route_through_a_helper_flagged() -> None:
     [
         pytest.param(_OPEN_ROUTE.format(extra="PUBLIC_ACCESS = True"), id="declared_public"),
         pytest.param(
-            _OPEN_ROUTE.replace("return True", "return credentials is not None").format(extra=""),
+            _OPEN_ROUTE.replace("return True", "return self.event.actor.id is not None").format(
+                extra=""
+            ),
             id="authenticate_checks_something",
         ),
         pytest.param(
-            _OPEN_ROUTE.replace("Observation.objects.for_patient(patient)", "[patient]").format(
-                extra=""
-            ),
-            id="no_data_read",
-        ),
-        pytest.param(
-            _OPEN_ROUTE.replace('self.request.query_params.get("patient")', '"fixed"').format(
-                extra=""
-            ),
-            id="no_request_input",
+            _OPEN_ROUTE.replace('self.request.query_params.get("patient")', '"fixed"')
+            .replace("list(Observation.objects.for_patient(patient))", "[patient]")
+            .format(extra=""),
+            id="no_request_input_or_data_read",
         ),
         pytest.param(
             """
@@ -328,13 +349,15 @@ def test_unauthenticated_data_route_through_a_helper_flagged() -> None:
             id="auth_mixin_not_overridden",
         ),
         pytest.param(
-            _OPEN_ROUTE.replace("(SimpleAPI)", "(WebSocketAPI)").format(extra=""),
-            id="not_a_simple_api_class",
+            _OPEN_ROUTE.replace("(SimpleAPI)", "(BaseHandler)").format(extra=""),
+            id="not_an_api_class",
         ),
     ],
 )
 def test_unauthenticated_data_route_not_flagged(source: str) -> None:
-    """Declared public, real authentication, or no request-keyed data read is not flagged."""
+    """Declared public, real authentication, or a route reading neither the request nor Canvas
+    data is not flagged.
+    """
     root = _plugin({"routes/r.py": source})
     assert "unauthenticated-data-route" not in _codes(lint_plugin(root, {}))
 
