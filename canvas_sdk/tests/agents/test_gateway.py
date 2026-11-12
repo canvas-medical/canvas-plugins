@@ -40,8 +40,8 @@ def gateway() -> LLMGateway:
         api_key=KEY,
         attribution={
             "instance": "acme-prod",
-            "plugin": "agent_runner_poc",
-            "agent": "agent_runner_poc.agents.chart_chat:ChartChatAgent",
+            "plugin": "canvas__chart_chat",
+            "agent": "canvas__chart_chat.agents.chart_chat:ChartChatAgent",
             "run-id": "run-1",
         },
     )
@@ -68,8 +68,8 @@ def test_a_call_goes_to_the_gateway_with_the_plugins_key_and_attribution() -> No
     assert str(sent[0].url) == f"{GATEWAY_URL}/v1/messages"
     assert sent[0].headers["x-api-key"] == KEY
     assert sent[0].headers["x-canvas-instance"] == "acme-prod"
-    assert sent[0].headers["x-canvas-plugin"] == "agent_runner_poc"
-    assert sent[0].headers["x-canvas-agent"] == "agent_runner_poc.agents.chart_chat:ChartChatAgent"
+    assert sent[0].headers["x-canvas-plugin"] == "canvas__chart_chat"
+    assert sent[0].headers["x-canvas-agent"] == "canvas__chart_chat.agents.chart_chat:ChartChatAgent"
     assert sent[0].headers["x-canvas-run-id"] == "run-1"
 
 
