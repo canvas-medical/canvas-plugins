@@ -303,6 +303,11 @@ manifest_schema = {
                     "enum": ["agent", "plugin"],
                     "default": "plugin",
                 },
+                "maintainer": {
+                    "description": "Who maintains the plugin: 'publisher', its publisher, or 'installer', each organization that installs it.",
+                    "enum": ["publisher", "installer"],
+                    "default": "publisher",
+                },
                 "category": {
                     "enum": [
                         "Billing & RCM",
