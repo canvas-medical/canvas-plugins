@@ -45,8 +45,8 @@ from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-# Canvas Platform's and home-app's limit.
-PLUGIN_NAME_MAX_LENGTH = 256
+# Canvas Platform's limit.
+PLUGIN_NAME_MAX_LENGTH = 255
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -921,7 +921,7 @@ def deploy(
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
 
-    The manifest `name` is a plain package name: lowercase, at most 256 characters,
+    The manifest `name` is a plain package name: lowercase, at most 255 characters,
     with an org prefix recommended. A name outside that rule deploys when Canvas Platform
     holds a plugin of exactly that name you can see, under its publisher, and Platform
     decides whether you may push and deploy it. Otherwise the publisher is the manifest

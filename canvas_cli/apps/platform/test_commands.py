@@ -219,7 +219,7 @@ def _plain_package(tmp_path: Path, manifest: str | None = None, name: str = "int
 def test_deploy_accepts_a_plain_name(
     name: str, api: requests_mock_module.Mocker, tmp_path: Path, signed_in: None
 ) -> None:
-    """A package name needs no org prefix and runs up to 256 characters; the publisher is
+    """A package name needs no org prefix and runs up to 255 characters; the publisher is
     the one organization, and Platform is not asked about the name.
     """
     package = _plain_package(tmp_path, name=name)
@@ -236,14 +236,14 @@ def test_deploy_accepts_a_plain_name(
 
 
 @patch("subprocess.run")
-def test_deploy_refuses_a_name_over_256_characters_before_any_git_or_network(
+def test_deploy_refuses_a_name_over_255_characters_before_any_git_or_network(
     mock_run: Mock,
     requests_mock: requests_mock_module.Mocker,
     signed_in: None,
     tmp_path: Path,
 ) -> None:
     """A name longer than Canvas Platform accepts is refused up front."""
-    name = "a" * 257
+    name = "a" * 256
     directory = tmp_path / "pkg"
     directory.mkdir()
     (directory / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": name}))
@@ -251,7 +251,7 @@ def test_deploy_refuses_a_name_over_256_characters_before_any_git_or_network(
     result = runner.invoke(app, ["deploy", str(directory), "--instance", "acme-staging"])
 
     assert result.exit_code == 2
-    assert "at most 256 characters" in result.output
+    assert "at most 255 characters" in result.output
     assert "starts with a lowercase letter" in result.output
     mock_run.assert_not_called()
     assert not requests_mock.called
