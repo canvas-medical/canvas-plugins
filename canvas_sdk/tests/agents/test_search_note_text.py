@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from canvas_sdk.agents import standard_tools
 from canvas_sdk.agents.citations import Sources, cite
@@ -198,6 +200,22 @@ def test_a_capped_scan_says_so_and_before_reaches_the_older_notes(
     ]
     second = _search(patient, text="type", before=first[-1]["oldest_checked"])
     assert [row["id"] for row in second] == [str(older.id)]
+
+
+@pytest.mark.django_db
+def test_the_scan_reads_only_what_the_text_check_needs() -> None:
+    """The candidate scan joins no provider or note type; only matched notes load those."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Cough.")
+    limit_clause = f"LIMIT {STANDARD_TOOLS_MODULE.SEARCH_NOTE_TEXT_MAX_CANDIDATES + 1}"
+
+    with CaptureQueriesContext(connection) as queries:
+        assert len(_search(patient, text="cough")) == 1
+
+    scans = [query["sql"] for query in queries.captured_queries if limit_clause in query["sql"]]
+    assert len(scans) == 1
+    assert "staff" not in scans[0] and "notetype" not in scans[0]
+    assert "billing_note" not in scans[0]
 
 
 @pytest.mark.django_db
