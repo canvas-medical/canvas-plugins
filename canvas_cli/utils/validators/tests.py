@@ -237,6 +237,8 @@ ACCEPTED = {
         "video": {**VIDEO, "url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"},
     },
     "video-without-caption": {**MINIMAL, "video": VIDEO},
+    "maintainer-publisher": {**MINIMAL, "maintainer": "publisher"},
+    "maintainer-installer": {**MINIMAL, "maintainer": "installer"},
 }
 
 VISIT = {"unit": "visit", "price_per_unit": "5.75"}
@@ -298,6 +300,8 @@ REFUSED = {
         "video": {**VIDEO, "url": "https://youtu.be.example.com/dQw4w9WgXcQ"},
     },
     "video-extra-field": {**MINIMAL, "video": {**VIDEO, "autoplay": True}},
+    "unknown-maintainer": {**MINIMAL, "maintainer": "canvas"},
+    "null-maintainer": {**MINIMAL, "maintainer": None},
     "video-long-caption": {**MINIMAL, "video": {**VIDEO, "caption": "x" * 41}},
     "video-list": {**MINIMAL, "video": [VIDEO]},
     "video-playlist-embed": {
