@@ -15,7 +15,6 @@ from typing import Any, cast
 from urllib.parse import urljoin
 
 import click
-import pathspec
 import requests
 import typer
 from cookiecutter.exceptions import OutputDirExistsException
@@ -24,14 +23,13 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
 from canvas_cli.apps.platform.routing import managed_instance
+from canvas_cli.apps.plugin import plugin_lint
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
 from canvas_cli.utils.validators import validate_manifest_file
 from plugin_runner.plugin_runner import sandbox_plugin_handlers
 from plugin_runner.sandbox import collect_missing_attribute_reads
-
-CANVAS_IGNORE_FILENAME = ".canvasignore"
 
 ONE_MEGABYTE = 1024 * 1024
 
@@ -93,38 +91,12 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
-    default_ignore = ["__pycache__", "*.pyc", "*.pyo", "node_modules"]
-
-    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
-    if ignore_file.exists():
-        ignore_lines = default_ignore + ignore_file.read_text().splitlines()
-    else:
-        ignore_lines = default_ignore
-
-    ignore_patterns = pathspec.PathSpec.from_lines(
-        pathspec.patterns.GitWildMatchPattern, ignore_lines
-    )
-
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
         with tarfile.open(tar_file.name, "w:gz") as tar:
             file_count = 0
             file_size_total = 0
 
-            for path in package.rglob("*"):
-                relative = path.relative_to(package)
-
-                # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in relative.parts):
-                    continue
-
-                # Skip symlinks
-                if path.is_symlink():
-                    continue
-
-                # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(relative):
-                    continue
-
+            for path, relative in plugin_lint.shipped_files(package):
                 file_count += 1
 
                 stat = path.stat()
@@ -879,9 +851,9 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
 
 def _lint_plugin_static(plugin_name: Path) -> None:
-    """Static pre-load lint: RestrictedPython constructs that fail at runtime and
-    Custom Data setup mistakes the sandbox load can't surface. Prints warnings and
-    raises ``typer.Exit(1)`` on any error-severity finding.
+    """Static pre-load lint (:func:`lint_plugin`): sandbox constructs, request handling,
+    shipped credentials and Custom Data setup. Prints warnings and raises
+    ``typer.Exit(1)`` on any error-severity finding.
     """
     manifest_path = plugin_name / "CANVAS_MANIFEST.json"
     try:
@@ -900,7 +872,7 @@ def _lint_plugin_static(plugin_name: Path) -> None:
         print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
 
     if errors:
-        print("\nThese issues will fail on the instance (sandbox / Custom Data):")
+        print("\nThese issues must be fixed before the plugin can be installed:")
         for e in errors:
             print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
         raise typer.Exit(code=1)
