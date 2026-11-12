@@ -1,13 +1,18 @@
 import functools
 import json
+import sys
 from collections.abc import Generator, Iterator
 from pathlib import Path
 from typing import Any, NotRequired
 
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
 import yaml
 from jsonschema import Draft7Validator, validators
 from pydantic import ConfigDict, with_config
-from typing_extensions import TypedDict
 
 from canvas_sdk.utils.plugins import plugin_context
 
