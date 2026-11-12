@@ -18,7 +18,7 @@ from canvas_sdk.agents.gateway import (
 )
 from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
 
-GATEWAY_URL = "https://gateway.test"
+GATEWAY_URL = "https://inference-dev.canvasmedical.com"
 KEY = "cnvs_sk_plugin_key"
 
 MESSAGE: dict[str, Any] = {
@@ -124,6 +124,42 @@ def test_gateway_from_plugin_secrets_names_what_is_missing(
     """A missing URL or key is named."""
     with pytest.raises(LLMGatewayConfigurationError, match=missing):
         gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://collector.example",
+        "http://inference.canvasmedical.com",
+        "https://inference.canvasmedical.com.collector.example",
+        "https://user@collector.example",
+        "inference.canvasmedical.com",
+    ],
+)
+def test_a_url_that_is_not_canvass_gateway_is_refused(url: str) -> None:
+    """Anyone who can edit a plugin's settings on an instance cannot send its key and its
+    prompts somewhere else.
+    """
+    with pytest.raises(LLMGatewayConfigurationError, match="not Canvas's inference gateway"):
+        gateway_from_plugin_secrets(
+            {"INFERENCE_GATEWAY_KEY": KEY, "INFERENCE_GATEWAY_URL": url},
+            plugin="p",
+            agent="p.agents.a:A",
+        )
+
+
+@pytest.mark.parametrize(
+    "url", ["https://inference.canvasmedical.com", "https://inference-dev.canvasmedical.com/"]
+)
+def test_canvass_production_and_development_gateways_are_accepted(url: str) -> None:
+    """Platform prod and Platform dev send these."""
+    gw = gateway_from_plugin_secrets(
+        {"INFERENCE_GATEWAY_KEY": KEY, "INFERENCE_GATEWAY_URL": url},
+        plugin="p",
+        agent="p.agents.a:A",
+    )
+
+    assert gw._base_url == url
 
 
 def test_the_instance_environment_is_not_a_gateway_url(monkeypatch: pytest.MonkeyPatch) -> None:

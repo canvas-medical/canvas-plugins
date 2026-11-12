@@ -19,6 +19,7 @@ has ended.
 
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
+from urllib.parse import urlsplit
 
 import anthropic
 import httpx2
@@ -33,6 +34,10 @@ DEFAULT_MAX_RETRIES = 2
 
 GATEWAY_URL_VARIABLE = "INFERENCE_GATEWAY_URL"
 GATEWAY_KEY_SECRET = "INFERENCE_GATEWAY_KEY"
+
+# The URL is a plugin setting anyone who edits the plugin's settings on an instance can
+# change, so it must name one of Canvas's own gateways before the key and prompts go there.
+GATEWAY_HOSTS = frozenset({"inference.canvasmedical.com", "inference-dev.canvasmedical.com"})
 
 ATTRIBUTION_PREFIX = "x-canvas-"
 
@@ -356,6 +361,12 @@ def gateway_from_plugin_secrets(
         noun = "plugin secret" if len(missing) == 1 else "plugin secrets"
         raise LLMGatewayConfigurationError(
             f"Agent LLM access is not configured: {noun} {' and '.join(missing)} unset."
+        )
+    parts = urlsplit(base_url)
+    if parts.scheme != "https" or parts.username or parts.hostname not in GATEWAY_HOSTS:
+        raise LLMGatewayConfigurationError(
+            f"Agent LLM access is not configured: plugin secret {GATEWAY_URL_VARIABLE} "
+            "is not Canvas's inference gateway."
         )
     return build_gateway(
         base_url=base_url,
