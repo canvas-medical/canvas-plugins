@@ -45,9 +45,8 @@ from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
 
 PLUGIN_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-# A plugin name is a Python package and a Postgres identifier (see PG_NAMEDATALEN in
-# plugin_runner/namespace.py).
-PLUGIN_NAME_MAX_LENGTH = 63
+# Canvas Platform's limit.
+PLUGIN_NAME_MAX_LENGTH = 255
 
 DEPLOYMENT_TERMINAL = frozenset({"succeeded", "partial", "failed", "cancelled"})
 POLL_INTERVAL_SECONDS = 2.0
@@ -225,15 +224,15 @@ def _edit_publisher_line(text: str, indent: str, slug: str) -> str | None:
 
 
 def require_valid_name(name: str) -> None:
-    """Refuse a manifest name that is not a valid Python package and Postgres identifier."""
-    if PLUGIN_NAME_PATTERN.match(name) and len(name) <= PLUGIN_NAME_MAX_LENGTH:
+    """Refuse a manifest name that is not a valid Python package name within the length limit."""
+    if PLUGIN_NAME_PATTERN.fullmatch(name) and len(name) <= PLUGIN_NAME_MAX_LENGTH:
         return
     package: str = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "package"
     package = package.lstrip("0123456789_")[:PLUGIN_NAME_MAX_LENGTH] or "package"
     raise typer.BadParameter(
         f"The plugin name '{name}' is not valid. A name starts with a lowercase letter, then "
         f"holds lowercase letters, digits and underscores, at most {PLUGIN_NAME_MAX_LENGTH} "
-        "characters, because it is a Python package and a Postgres identifier. Rename it in "
+        "characters, because it is a Python package. Rename it in "
         f"the manifest, the package folder and its imports, for example `{package}`."
     )
 
@@ -307,18 +306,43 @@ def _matching_organization(organizations: list[dict[str, Any]], name: str) -> di
     return max(matches, key=lambda o: len(o["plugin_prefix"]), default=None)
 
 
+def _legacy_publisher(client: PlatformClient, name: str, declared: str | None) -> str | None:
+    """The slug of the organization that publishes the plugin named ``name`` the person sees
+    on Canvas Platform, member or not, else None. Platform authorizes the push and the
+    deployment itself. A 409 ``ambiguous`` (several publishers) is settled by the manifest
+    ``publisher`` when it names one, and otherwise counts as none.
+    """
+    try:
+        plugin: dict[str, Any] | None = client.plugin(name)
+    except PlatformError as error:
+        if error.code != "ambiguous":
+            raise
+        if not declared:
+            return None
+        plugin = client.plugin(name, declared)
+    if plugin is None:
+        return None
+    return str(plugin.get("publisher") or "") or None
+
+
 def _publisher(
-    client: PlatformClient, plugin_dir: Path, name: str, *, pushing: bool, records: bool
+    client: PlatformClient,
+    plugin_dir: Path,
+    name: str,
+    *,
+    pushing: bool,
+    records: bool,
+    held: str | None,
 ) -> tuple[str, bool]:
     """The slug of the organization that publishes ``name``, and whether the person picked it.
 
-    It is the manifest's ``publisher`` when it names an organization the person belongs
-    to, or any ``publisher`` for a deploy that pushes nothing, whose deployment Canvas
-    Platform authorizes on its own (a Canvas employee deploys in every organization
-    without belonging to it); else the person's organization whose ``plugin_prefix`` the
-    name carries; else the only organization the person can publish in; else, at a
-    terminal, the one the person picks. The choice is returned, not written: a regular
-    push records it in the manifest once the package is accepted (``records``), and any
+    It is ``held`` when the manifest names no other ``publisher``; else the manifest's
+    ``publisher`` when it names an organization the person belongs to, or any
+    ``publisher`` for a deploy that pushes nothing, whose deployment Canvas Platform
+    authorizes on its own (a Canvas employee deploys in every organization without
+    belonging to it); else the person's organization whose ``plugin_prefix`` the name
+    carries; else the only organization the person can publish in; else, at a terminal,
+    the one the person picks. The choice is returned, not written: a regular push records it in the manifest once the package is accepted (``records``), and any
     other deploy prints the line to add instead. Without a terminal, several
     organizations are refused with the manifest line that chooses one.
 
@@ -329,6 +353,8 @@ def _publisher(
         pushing (bool): Whether the command pushes code, which needs ``push_plugin_code``.
         records (bool): Whether the command is a regular push, which records a picked
             publisher in the manifest.
+        held (str | None): The organization that publishes ``name`` on Platform, for a
+            legacy name outside the character rule, whether or not the person belongs to it.
 
     Returns:
         tuple[str, bool]: The publishing organization's slug, and whether the person
@@ -340,6 +366,10 @@ def _publisher(
     organizations: list[dict[str, Any]] = client.me().get("organizations", [])
     slugs: str = ", ".join(str(o["slug"]) for o in organizations)
     declared: str | None = manifest_publisher(plugin_dir)
+    if held is not None and declared in (None, held):
+        # Platform refuses a push or deployment the person may not make.
+        print(f"Publishing as {held}, which publishes {name} on Canvas Platform.")
+        return held, False
     if declared is not None:  # "" is a value too, and is refused below as no organization
         match: dict[str, Any] | None = next(
             (o for o in organizations if o["slug"] == declared), None
@@ -891,10 +921,12 @@ def deploy(
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
 
-    The manifest `name` is a plain package name: lowercase, at most 63 characters,
-    with an org prefix recommended. The publisher is the manifest `publisher`, else
-    your organization whose prefix the name carries, else the only organization you
-    can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
+    The manifest `name` is a plain package name: lowercase, at most 255 characters,
+    with an org prefix recommended. A name outside that rule deploys when Canvas Platform
+    holds a plugin of exactly that name you can see, under its publisher, and Platform
+    decides whether you may push and deploy it. Otherwise the publisher is the manifest
+    `publisher`, else your organization whose prefix the name carries, else the only
+    organization you can publish in, else, at a terminal, the organization you pick. A regular push records the pick in the manifest once the package is
     accepted, so the push commits it; --ref, --no-push and --snapshot print the
     manifest line to add instead.
 
@@ -949,20 +981,29 @@ def deploy(
     if branch is not None:
         _require_branch_name(plugin_dir, branch)
     name = manifest_name(plugin_dir)
-    require_valid_name(name)
+    platform = auth.resolve_platform_url()
+    client = PlatformClient(platform)
+    # A legacy name Platform holds a plugin of for the person deploys as is: on an
+    # instance a rename is a new plugin.
+    held: str | None = (
+        None
+        if len(name) > PLUGIN_NAME_MAX_LENGTH or PLUGIN_NAME_PATTERN.fullmatch(name)
+        else _legacy_publisher(client, name, manifest_publisher(plugin_dir))
+    )
+    if held is None:
+        require_valid_name(name)
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
         instance_plugin.validate(plugin_dir)
 
-    platform = auth.resolve_platform_url()
-    client = PlatformClient(platform)
     publisher, picked = _publisher(
         client,
         plugin_dir,
         name,
         pushing=pushing,
         records=pushing and not snapshot,
+        held=held,
     )
     if push_only:
         sha = _push(
