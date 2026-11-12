@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
@@ -15,7 +16,7 @@ class RoomBookingAPI(SimpleAPI):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Validate the request's API key against the stored secret."""
-        return credentials.key == self.secrets["my-api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["my-api-key"].encode())
 
     @api.get("/staff")
     def list_staff(self) -> list[Response | Effect]:

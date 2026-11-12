@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from typing import Any
 
 from canvas_sdk.effects import Effect
@@ -46,7 +47,7 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
-        return credentials.key == self.secrets["api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["api-key"].encode())
 
     def post(self) -> list[Response | Effect]:
         """Translate the request body into a questionnaire and emit the effect."""

@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from typing import Any
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -20,7 +21,7 @@ class ReadQuestionnaireAPI(SimpleAPIRoute):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
-        return credentials.key == self.secrets["api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["api-key"].encode())
 
     def get(self) -> list[Response]:
         """Return the active questionnaire with the requested name."""

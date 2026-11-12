@@ -1,6 +1,6 @@
 """Static pre-load lint for ``canvas validate``.
 
-AST-scans a plugin's source for two classes of problem the sandbox handler-load
+AST-scans a plugin's source for three classes of problem the sandbox handler-load
 can't surface on its own:
 
   * RestrictedPython constructs that fail at *runtime* inside a method body
@@ -8,6 +8,8 @@ can't surface on its own:
     when the line executes on the instance).
   * Custom Data setup mistakes the runner silently tolerates at load but that
     leave tables uncreated or relations dropped.
+  * Request-handling mistakes that run fine but weaken the plugin: a secret
+    compared with ``==``, or a ``requests`` call with no timeout.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -157,6 +159,108 @@ def _construct_findings(plugin_dir: Path) -> list[LintFinding]:
     return findings
 
 
+# ── Request-handling rules ────────────────────────────────────────────────────
+# Tripwires in test_plugin_lint.py pin the SDK behavior each rule relies on.
+
+_REQUESTS_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "request"}
+_REQUEST_INPUTS = {"headers", "query_params", "path_params"}
+
+
+def _is_secret_read(node: ast.expr) -> bool:
+    """``self.secrets[...]`` or ``self.secrets.get(...)``."""
+    if isinstance(node, ast.Subscript):
+        node = node.value
+    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        if node.func.attr != "get":
+            return False
+        node = node.func.value
+    else:
+        return False
+    return isinstance(node, ast.Attribute) and node.attr == "secrets"
+
+
+def _is_request_value(node: ast.expr) -> bool:
+    """A value the caller sent: ``credentials.<field>``, or a request header or parameter."""
+    while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        node = node.func.value  # .get(...) / .encode() / .strip()
+    if isinstance(node, ast.Subscript):
+        node = node.value
+    if not isinstance(node, ast.Attribute):
+        return False
+    is_credentials_field = isinstance(node.value, ast.Name) and node.value.id == "credentials"
+    return is_credentials_field or node.attr in _REQUEST_INPUTS
+
+
+def _secret_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """Local names assigned straight from ``self.secrets`` in ``function``."""
+    return {
+        target.id
+        for node in ast.walk(function)
+        if isinstance(node, ast.Assign) and _is_secret_read(node.value)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+
+
+def _request_findings(plugin_dir: Path) -> list[LintFinding]:
+    findings: list[LintFinding] = []
+    for py_file, tree in _iter_python_files(plugin_dir):
+        rel = _rel(py_file, plugin_dir)
+        # A nested function is walked again inside its enclosing one; report each comparison once.
+        reported: set[int] = set()
+        for function in ast.walk(tree):
+            if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            secrets = _secret_names(function)
+            for node in ast.walk(function):
+                if id(node) in reported or not (
+                    isinstance(node, ast.Compare)
+                    and len(node.ops) == 1
+                    and isinstance(node.ops[0], ast.Eq | ast.NotEq)
+                ):
+                    continue
+                sides = (node.left, node.comparators[0])
+                is_secret = [
+                    _is_secret_read(side) or (isinstance(side, ast.Name) and side.id in secrets)
+                    for side in sides
+                ]
+                if (is_secret[0] and _is_request_value(sides[1])) or (
+                    is_secret[1] and _is_request_value(sides[0])
+                ):
+                    reported.add(id(node))
+                    findings.append(
+                        LintFinding(
+                            "warning",
+                            f"{rel}:{node.lineno}",
+                            "secret-compared-with-eq",
+                            "A secret is compared with `==`, which takes longer the more "
+                            "leading characters match, so a caller can guess it one "
+                            "character at a time. Use `APIKeyAuthMixin` (it uses "
+                            "`compare_digest`) or `hmac.compare_digest(a.encode(), b.encode())`.",
+                        )
+                    )
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in _REQUESTS_METHODS
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "requests"
+                and not any(kw.arg in ("timeout", None) for kw in node.keywords)
+            ):
+                findings.append(
+                    LintFinding(
+                        "warning",
+                        f"{rel}:{node.lineno}",
+                        "requests-no-timeout",
+                        f"`requests.{node.func.attr}(...)` has no `timeout`, so a slow "
+                        "server holds the handler with no limit. Pass `timeout=` or use "
+                        "`canvas_sdk.utils.Http`, which always sets one.",
+                    )
+                )
+    return findings
+
+
 # ── Custom Data rules ─────────────────────────────────────────────────────────
 # Grounded in the runner: models are discovered only from `<plugin>/models/`
 # (plugin_runner/ddl.py), table creation is gated on the manifest `custom_data`
@@ -265,9 +369,13 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
 
 
 def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
-    """Return all construct + Custom Data findings for a plugin, most-blocking
-    first (errors before warnings).
+    """Return all construct, request-handling and Custom Data findings for a plugin,
+    most-blocking first (errors before warnings).
     """
-    findings = _construct_findings(plugin_dir) + _custom_data_findings(plugin_dir, manifest)
+    findings = (
+        _construct_findings(plugin_dir)
+        + _request_findings(plugin_dir)
+        + _custom_data_findings(plugin_dir, manifest)
+    )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
     return findings

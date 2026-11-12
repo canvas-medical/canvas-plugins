@@ -13,15 +13,18 @@ Two layers:
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
 
 import pytest
+import requests
 
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
-from plugin_runner.sandbox import sandbox_from_module
+from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin
+from plugin_runner.sandbox import ALLOWED_MODULES, sandbox_from_module
 
 
 def _plugin(files: dict[str, str], manifest: dict | None = None) -> Path:
@@ -134,6 +137,126 @@ def test_tripwire_sandbox_allows_setattr_and_delattr() -> None:
 def test_tripwire_sandbox_allows_one_arg_type() -> None:
     """The lint lets one-argument ``type(x)`` through because the sandbox runs it."""
     assert _sandbox_raises("k = type(5).__name__\n") is None
+
+
+# ── lint-logic: request-handling rules ────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param(
+            """
+            class Api:
+                def authenticate(self, credentials):
+                    return credentials.key == self.secrets["API_KEY"]
+            """,
+            id="credentials_against_secret",
+        ),
+        pytest.param(
+            """
+            class Api:
+                def authenticate(self, credentials):
+                    expected = self.secrets.get("API_KEY")
+                    return self.request.headers.get("X-Key") != expected
+            """,
+            id="header_against_secret_held_in_a_local",
+        ),
+        pytest.param(
+            """
+            class Api:
+                def get(self):
+                    if self.secrets["TOKEN"] == self.request.query_params["token"]:
+                        return []
+            """,
+            id="secret_on_the_left",
+        ),
+    ],
+)
+def test_secret_compared_with_eq_flagged(source: str) -> None:
+    """Comparing a caller-sent value with a secret using == or != is a warning."""
+    root = _plugin({"handlers/api.py": source})
+    assert "secret-compared-with-eq" in _codes(lint_plugin(root, {}), "warning")
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param(
+            """
+            from hmac import compare_digest
+
+            class Api:
+                def authenticate(self, credentials):
+                    return compare_digest(credentials.key.encode(), self.secrets["API_KEY"].encode())
+            """,
+            id="compare_digest",
+        ),
+        pytest.param(
+            """
+            class Handler:
+                def compute(self):
+                    if self.secrets.get("FEATURE_ENABLED") == "true":
+                        return []
+            """,
+            id="secret_used_as_a_setting",
+        ),
+        pytest.param(
+            """
+            class Api:
+                def authenticate(self, credentials):
+                    return credentials.key == self.expected_key()
+            """,
+            id="a_method_result_is_not_a_secret_read",
+        ),
+    ],
+)
+def test_secret_compared_with_eq_not_flagged(source: str) -> None:
+    """A constant-time comparison, or a secret read as a setting, is not flagged."""
+    root = _plugin({"handlers/api.py": source})
+    assert "secret-compared-with-eq" not in _codes(lint_plugin(root, {}))
+
+
+def test_requests_without_timeout_flagged() -> None:
+    """A `requests` call with no `timeout` keyword is a warning naming the method."""
+    root = _plugin({"handlers/h.py": "import requests\nr = requests.post(url, json={})\n"})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "requests-no-timeout"]
+
+    assert [(f.severity, f.location) for f in findings] == [("warning", "handlers/h.py:2")]
+    assert "`requests.post(...)`" in findings[0].message
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param("import requests\nr = requests.get(url, timeout=10)\n", id="timeout_given"),
+        pytest.param(
+            "import requests\nr = requests.get(url, **options)\n", id="kwargs_may_carry_it"
+        ),
+        pytest.param(
+            "from canvas_sdk.utils import Http\nr = Http().get(url)\n", id="sdk_http_sets_its_own"
+        ),
+    ],
+)
+def test_requests_with_timeout_not_flagged(source: str) -> None:
+    """A call that sets or may set a timeout, or goes through the SDK's Http, is not flagged."""
+    root = _plugin({"handlers/h.py": source})
+    assert "requests-no-timeout" not in _codes(lint_plugin(root, {}))
+
+
+def test_tripwire_requests_is_allowed_and_has_no_default_timeout() -> None:
+    """`requests-no-timeout` exists because plugins may call `requests`, which waits forever by
+    default. If either changes, drop the rule in plugin_lint.py.
+    """
+    assert "get" in ALLOWED_MODULES["requests"]
+    assert inspect.signature(requests.Session.request).parameters["timeout"].default is None
+
+
+def test_tripwire_api_key_auth_mixin_compares_in_constant_time() -> None:
+    """`secret-compared-with-eq` points authors at APIKeyAuthMixin, so it must keep using
+    compare_digest. If it stops, change the rule's message in plugin_lint.py.
+    """
+    assert "compare_digest(" in inspect.getsource(APIKeyAuthMixin.authenticate)
 
 
 # ── lint-logic: Custom Data rules ─────────────────────────────────────────────
@@ -441,3 +564,19 @@ def test_tripwire_models_discovered_only_from_models_dir(tmp_path: Path) -> None
     (tmp_path / "models").mkdir()
     (tmp_path / "models" / "widget.py").write_text("x = 1\n")
     assert (tmp_path / "models" / "widget.py") in discover_model_files(tmp_path)
+
+
+def test_secret_compared_with_eq_in_a_nested_function_is_reported_once() -> None:
+    """The enclosing function's walk reaches the nested one too; the comparison is one finding."""
+    source = """
+        class Api:
+            def authenticate(self, credentials):
+                def check():
+                    return credentials.key == self.secrets["K"]
+
+                return check()
+    """
+    root = _plugin({"handlers/a.py": source})
+    findings = [f.location for f in lint_plugin(root, {}) if f.code == "secret-compared-with-eq"]
+
+    assert findings == ["handlers/a.py:5"]

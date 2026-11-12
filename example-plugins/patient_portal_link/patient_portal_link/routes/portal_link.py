@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from http import HTTPStatus
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -24,7 +25,7 @@ class SendPortalLinkAPI(SimpleAPIRoute):
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
-        return credentials.key == self.secrets["my-api-key"]
+        return compare_digest(credentials.key.encode(), self.secrets["my-api-key"].encode())
 
     def post(self) -> list[Response]:
         """Mint a portal link for the requested patient and send it."""
