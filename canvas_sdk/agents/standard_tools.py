@@ -23,8 +23,8 @@ is hand-registered via :meth:`ToolRegistry.tool`.
 import base64
 import json
 import re
-import string
 import time
+import unicodedata
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -1242,13 +1242,17 @@ def _get_note_content(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict
 
 # Notes search_note_text reads past the database match while checking the text itself,
 # since a body stored as JSON also matches its keys, command names and ids.
-SEARCH_NOTE_TEXT_MAX_CANDIDATES = 1000
+SEARCH_NOTE_TEXT_MAX_CANDIDATES = 200
+# Candidate notes fetched per database round trip during that check.
+SEARCH_NOTE_TEXT_CHUNK_SIZE = 50
 # Characters of context kept on each side of the match in a snippet.
 SEARCH_NOTE_TEXT_SNIPPET_CONTEXT = 80
-# Stripped from each end of a search word, so `"chest pain"` and `chest pain?` match.
-SEARCH_NOTE_TEXT_PUNCTUATION = string.punctuation + "“”‘’«»…"
 # The most distinct words one search takes; each becomes a database filter.
 SEARCH_NOTE_TEXT_MAX_WORDS = 12
+# A word this short matches only as a whole word, so the "d" of "vitamin d" never finds "daily".
+SEARCH_NOTE_TEXT_WHOLE_WORD_MAX_LENGTH = 2
+SEARCH_NOTE_TEXT_DEFAULT_LIMIT = 10
+SEARCH_NOTE_TEXT_MAX_LIMIT = 25
 
 
 def _note_text(note: Any) -> str:
@@ -1257,24 +1261,65 @@ def _note_text(note: Any) -> str:
     return " ".join(" ".join(part.split()) for part in [note.title or "", *blocks] if part.strip())
 
 
+def _is_punctuation(character: str) -> bool:
+    """Whether ``character`` is punctuation or a symbol in any script."""
+    return unicodedata.category(character)[0] in ("P", "S")
+
+
+def _strip_punctuation(word: str) -> str:
+    """``word`` without punctuation at either end, so `"chest`, `pain—` and `¿dolor` match."""
+    start, end = 0, len(word)
+    while start < end and _is_punctuation(word[start]):
+        start += 1
+    while end > start and _is_punctuation(word[end - 1]):
+        end -= 1
+    return word[start:end]
+
+
 def _search_words(text: str) -> list[str]:
-    """The distinct lowercased words of ``text``, in order, with surrounding punctuation removed."""
-    words = (word.strip(SEARCH_NOTE_TEXT_PUNCTUATION) for word in text.lower().split())
-    return list(dict.fromkeys(word for word in words if word))
+    """The distinct words of ``text`` in order, as typed, with surrounding punctuation removed.
+
+    Words differing only in case count once, under their first spelling.
+    """
+    words: dict[str, str] = {}
+    for word in (_strip_punctuation(word) for word in text.split()):
+        if word:
+            words.setdefault(word.casefold(), word)
+    return list(words.values())
+
+
+def _word_piece(word: str) -> str:
+    """``word`` as a pattern: a short word whole, a longer one with any ending."""
+    ending = r"(?!\w)" if len(word) <= SEARCH_NOTE_TEXT_WHOLE_WORD_MAX_LENGTH else r"\w*"
+    return re.escape(word) + ending
 
 
 def _word_pattern(words: list[str]) -> re.Pattern[str]:
-    """The words in sequence, each at the start of a word, any case.
+    """The words in sequence, each from the start of a word, any case.
 
-    "ear" never matches inside "year", and "headache" still finds "headaches".
+    "ear" never matches inside "year", "headache" still finds "headaches", and a word of
+    two characters or fewer matches only itself.
     """
-    joined = r"\w*\W+".join(re.escape(word) for word in words)
+    joined = r"\W+".join(_word_piece(word) for word in words)
     return re.compile(rf"(?<!\w){joined}", re.IGNORECASE)
 
 
-def _match_snippet(text: str, words: list[str]) -> str:
+def _search_before(value: Any) -> datetime | None:
+    """The ``before`` argument as an aware datetime, UTC when it names no zone."""
+    if value in (None, ""):
+        return None
+    try:
+        before = datetime.fromisoformat(str(value))
+    except ValueError:
+        raise ValueError(
+            "search_note_text's `before` must be an ISO 8601 date or date and time."
+        ) from None
+    return before if before.tzinfo else before.replace(tzinfo=UTC)
+
+
+def _match_snippet(text: str, phrase: re.Pattern[str], first_word: re.Pattern[str]) -> str:
     """A short excerpt of ``text`` around the words as a phrase, else around the first word."""
-    match = _word_pattern(words).search(text) or _word_pattern(words[:1]).search(text)
+    match = phrase.search(text) or first_word.search(text)
     start, end_of_match = match.span() if match else (0, 0)
     begin = max(start - SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, 0)
     end = min(end_of_match + SEARCH_NOTE_TEXT_SNIPPET_CONTEXT, len(text))
@@ -1288,10 +1333,11 @@ def _match_snippet(text: str, words: list[str]) -> str:
         "Find the patient's notes whose title or free text mentions the given words ('the note "
         "that mentions chest pain', 'when did we discuss sleep apnea'). Matches notes holding "
         "every word at the start of a word (so 'headache' also finds 'headaches', but 'ear' "
-        "never finds 'year'), in any order and any case, newest first, each with a "
-        "snippet around the match; deleted notes are left out. Searches only the title and the "
-        "narrative the clinician typed; structured commands are read with get_note_content. "
-        "Use the row's `id` with get_note_content to read the whole note."
+        "never finds 'year'; a word of one or two characters matches only itself), in any "
+        "order and any case, newest first, each with a snippet around the match; deleted "
+        "notes are left out. Searches only the title and the narrative the clinician typed; "
+        "structured commands are read with get_note_content. Use the row's `id` with "
+        "get_note_content to read the whole note."
     ),
     input_schema={
         "type": "object",
@@ -1306,8 +1352,17 @@ def _match_snippet(text: str, words: list[str]) -> str:
             "limit": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 25,
-                "description": "Maximum notes to return. Defaults to 10.",
+                "maximum": SEARCH_NOTE_TEXT_MAX_LIMIT,
+                "description": (
+                    f"Maximum notes to return. Defaults to {SEARCH_NOTE_TEXT_DEFAULT_LIMIT}."
+                ),
+            },
+            "before": {
+                "type": "string",
+                "description": (
+                    "Only notes dated before this ISO 8601 date or date and time. Pass a "
+                    "truncated result's oldest_checked here to search further back."
+                ),
             },
         },
         "required": ["text"],
@@ -1317,14 +1372,20 @@ def _match_snippet(text: str, words: list[str]) -> str:
     returns_description=(
         "Array of objects matching find_notes' row shape (`id`, `dbid`, `title`, `note_type`, "
         "`note_type_name`, `state`, `datetime_of_service`, `provider_name`) plus `snippet`, "
-        "the note's text around the match. Empty when no note mentions every word."
+        "the note's text around the match. Empty when no checked note mentions every word. "
+        f"At most the newest {SEARCH_NOTE_TEXT_MAX_CANDIDATES} notes that might match are "
+        "checked; when older ones were left unchecked, a last element follows the rows with "
+        "`truncated` true and `oldest_checked`, the ISO 8601 date of the oldest note checked. "
+        "An empty "
+        "or short result is then not evidence that no note mentions the words: call again "
+        "with before set to `oldest_checked`, or add a word."
     ),
 )
 def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
     """The patient's notes whose title or typed text holds every word of ``text``, newest first.
 
     Checks at most :data:`SEARCH_NOTE_TEXT_MAX_CANDIDATES` notes the database narrowing
-    matches.
+    matches, and ends the list with a ``truncated`` marker when older ones were left unchecked.
     """
     patient_id = require_patient_id(ctx)
     words = _search_words(str(arguments.get("text") or ""))
@@ -1334,25 +1395,54 @@ def _search_note_text(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list
         raise ValueError(
             f"search_note_text takes at most {SEARCH_NOTE_TEXT_MAX_WORDS} distinct words."
         )
-    limit = min(max(int(arguments.get("limit") or 10), 1), 25)
+    limit = int(arguments.get("limit", SEARCH_NOTE_TEXT_DEFAULT_LIMIT))
+    before = _search_before(arguments.get("before"))
 
     notes = Note.objects.filter(patient__id=patient_id).exclude(
         current_state__state=NoteStates.DELETED
     )
+    if before is not None:
+        notes = notes.filter(datetime_of_service__lt=before)
     for word in words:
         notes = notes.filter(Q(body__icontains=word) | Q(title__icontains=word))
-    notes = notes.select_related("provider", "current_state", "note_type_version").order_by(
-        "-datetime_of_service"
-    )
+    candidates = notes.only("title", "body", "datetime_of_service").order_by(
+        "-datetime_of_service", "-dbid"
+    )[: SEARCH_NOTE_TEXT_MAX_CANDIDATES + 1]
 
-    rows: list[dict[str, Any]] = []
-    for note in notes[:SEARCH_NOTE_TEXT_MAX_CANDIDATES]:
-        text = _note_text(note)
-        if not all(_word_pattern([word]).search(text) for word in words):
-            continue
-        rows.append({**_serialize_note(note), "snippet": _match_snippet(text, words)})
-        if len(rows) == limit:
+    word_patterns = [_word_pattern([word]) for word in words]
+    phrase = _word_pattern(words)
+    snippets: dict[int, str] = {}
+    oldest_checked: datetime | None = None
+    truncated = False
+    for checked, note in enumerate(candidates.iterator(chunk_size=SEARCH_NOTE_TEXT_CHUNK_SIZE)):
+        if checked == SEARCH_NOTE_TEXT_MAX_CANDIDATES:
+            truncated = True
             break
+        oldest_checked = note.datetime_of_service
+        text = _note_text(note)
+        if all(pattern.search(text) for pattern in word_patterns):
+            snippets[note.dbid] = _match_snippet(text, phrase, word_patterns[0])
+            if len(snippets) == limit:
+                break
+
+    by_dbid: dict[int, Any] = {}
+    if snippets:
+        matched = Note.objects.filter(dbid__in=list(snippets)).select_related(
+            "provider", "current_state", "note_type_version"
+        )
+        by_dbid = {note.dbid: note for note in matched}
+    rows: list[dict[str, Any]] = [
+        {**_serialize_note(by_dbid[dbid]), "snippet": snippet}
+        for dbid, snippet in snippets.items()
+        if dbid in by_dbid
+    ]
+    if truncated:
+        rows.append(
+            {
+                "truncated": True,
+                "oldest_checked": oldest_checked.isoformat() if oldest_checked else None,
+            }
+        )
     return rows
 
 
