@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v1.2.0 (2026-11-12)
+
+### Features
+
+- Declare plugin dependencies and bundles
+  ([#1977](https://github.com/canvas-medical/canvas-plugins/pull/1977),
+  [`633a3bb`](https://github.com/canvas-medical/canvas-plugins/commit/633a3bbd7dedf752c8ad3b8661f7ec7444616dde))
+
+- **cli**: Canvas deploy deploys a legacy plugin name Canvas Platform holds (PLATFORM-130)
+  ([#1997](https://github.com/canvas-medical/canvas-plugins/pull/1997),
+  [`3d47863`](https://github.com/canvas-medical/canvas-plugins/commit/3d47863e23346c7415669e2de21cbaa940f1dfb3))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+Co-authored-by: Justin Adjasu <justinadjasu3@gmail.com>
+
+- **cli**: Warn when a secret is compared with == or a requests call has no timeout
+  ([#1992](https://github.com/canvas-medical/canvas-plugins/pull/1992),
+  [`d6d2188`](https://github.com/canvas-medical/canvas-plugins/commit/d6d21883a6dad0bf2398b916ecd4512b64ed21ac))
+
+
 ## v1.1.0 (2026-11-11)
 
 ### Features
