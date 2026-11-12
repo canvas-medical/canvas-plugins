@@ -33,6 +33,24 @@ def test_the_units_are_the_manifest_pricing_without_token() -> None:
     assert usage_units(manifest) == frozenset({"visit"})
 
 
+def test_an_unlisted_unit_may_be_recorded() -> None:
+    """An unlisted unit is billed to organizations whose alternate pricing credit names it,
+    so the plugin records it beside its listed units for the same work.
+    """
+    manifest = {
+        "catalog": {
+            "pricing": [
+                {"unit": "note", "price_per_unit": "0.60"},
+                {"unit": "provider", "price_per_unit": "99", "unlisted": True},
+            ]
+        }
+    }
+
+    assert usage_units(manifest) == frozenset({"note", "provider"})
+    kept = permitted_usage([_usage("provider", key="provider:abc:2026-11")], usage_units(manifest))
+    assert len(kept) == 1
+
+
 @pytest.mark.parametrize(
     "manifest",
     [{}, {"catalog": None}, {"catalog": {}}, {"catalog": {"pricing": "visit"}}],

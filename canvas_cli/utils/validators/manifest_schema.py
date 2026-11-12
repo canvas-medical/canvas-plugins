@@ -384,6 +384,13 @@ manifest_schema = {
                     "minItems": 1,
                     "maxItems": 10,
                     "items": {"$ref": "#/$defs/catalog_pricing_component"},
+                    "contains": {
+                        "description": "At least one component is listed, so the catalog shows what the plugin costs.",
+                        "not": {
+                            "properties": {"unlisted": {"const": True}},
+                            "required": ["unlisted"],
+                        },
+                    },
                 },
                 "vendors": {
                     "description": "The third parties the plugin depends on, and who holds the account with each.",
@@ -469,20 +476,29 @@ manifest_schema = {
                 "since the inference gateway prices tokens by model; its markup_bps is what a "
                 "Canvas agent's tokens bill at over list price, in basis points (1500 is 15%). "
                 "A unit appears once, matched without regard to case, which Platform checks "
-                "at push."
+                "at push. An unlisted component is left off the catalog and charged only to an "
+                "organization holding an alternate pricing credit that names it."
             ),
             "type": "object",
             "properties": {
                 "unit": {"$ref": "#/$defs/catalog_text", "maxLength": 40},
                 "price_per_unit": {"type": "string", "pattern": r"^\d{1,8}(\.\d{1,4})?$"},
                 "markup_bps": {"type": "integer", "minimum": 0, "maximum": 10000},
+                "unlisted": {"type": "boolean", "default": False},
             },
             "required": ["unit"],
             "additionalProperties": False,
             "if": {
                 "properties": {"unit": {"pattern": r"^\s*[Tt][Oo][Kk][Ee][Nn]\s*$"}},
             },
-            "then": {"not": {"required": ["price_per_unit"]}},
+            "then": {
+                "not": {
+                    "anyOf": [
+                        {"required": ["price_per_unit"]},
+                        {"properties": {"unlisted": {"const": True}}, "required": ["unlisted"]},
+                    ]
+                }
+            },
             "else": {"required": ["price_per_unit"], "not": {"required": ["markup_bps"]}},
         },
         "catalog_text": {
