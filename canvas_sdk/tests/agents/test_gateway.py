@@ -69,7 +69,9 @@ def test_a_call_goes_to_the_gateway_with_the_plugins_key_and_attribution() -> No
     assert sent[0].headers["x-api-key"] == KEY
     assert sent[0].headers["x-canvas-instance"] == "acme-prod"
     assert sent[0].headers["x-canvas-plugin"] == "canvas__chart_chat"
-    assert sent[0].headers["x-canvas-agent"] == "canvas__chart_chat.agents.chart_chat:ChartChatAgent"
+    assert (
+        sent[0].headers["x-canvas-agent"] == "canvas__chart_chat.agents.chart_chat:ChartChatAgent"
+    )
     assert sent[0].headers["x-canvas-run-id"] == "run-1"
 
 
