@@ -132,7 +132,7 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         otherwise returns the absolute URL if set.
         """
         if self.document:
-            return presigned_url(self.document)
+            return presigned_url(self.document, content_type=self.document_content_type)
         return self.document_absolute_url
 
     @property
