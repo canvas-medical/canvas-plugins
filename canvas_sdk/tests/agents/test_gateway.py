@@ -134,6 +134,10 @@ def test_gateway_from_plugin_secrets_names_what_is_missing(
         "https://inference.canvasmedical.com.collector.example",
         "https://user@collector.example",
         "inference.canvasmedical.com",
+        "https://:pw@inference.canvasmedical.com",
+        "https://user@inference.canvasmedical.com",
+        "https://inferen\tce.canvasmedical.com",
+        "https://inference.canvasmedical.com/v1\n/messages",
     ],
 )
 def test_a_url_that_is_not_canvass_gateway_is_refused(url: str) -> None:
@@ -160,6 +164,26 @@ def test_canvass_production_and_development_gateways_are_accepted(url: str) -> N
     )
 
     assert gw._base_url == url
+
+
+def test_the_runners_environment_can_allow_one_more_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A local fake gateway, such as the load test's, is reachable only when whoever runs the
+    runner names its exact origin; a plugin setting cannot.
+    """
+    secrets = {
+        "INFERENCE_GATEWAY_KEY": KEY,
+        "INFERENCE_GATEWAY_URL": "http://host.docker.internal:8765",
+    }
+    with pytest.raises(LLMGatewayConfigurationError):
+        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+
+    monkeypatch.setenv("INFERENCE_GATEWAY_ALLOWED_ORIGIN", "http://host.docker.internal:8765")
+    gw = gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+    assert gw._base_url == "http://host.docker.internal:8765"
+
+    secrets["INFERENCE_GATEWAY_URL"] = "http://host.docker.internal:9999"
+    with pytest.raises(LLMGatewayConfigurationError):
+        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
 
 
 def test_the_instance_environment_is_not_a_gateway_url(monkeypatch: pytest.MonkeyPatch) -> None:

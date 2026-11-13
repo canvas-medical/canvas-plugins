@@ -29,9 +29,9 @@ uv sync
 uv run uvicorn adk_loadtest.gateway:app --host 0.0.0.0 --port 8765 --workers 1
 ```
 
-1. Point the instance at the gateway: set `INFERENCE_GATEWAY_URL=http://host.docker.internal:8765` in the plugin runner's environment, which builds every agent's gateway client from it, and restart it. A hosted instance needs the gateway at a URL it can reach.
+1. Let the runner reach the gateway: set `INFERENCE_GATEWAY_ALLOWED_ORIGIN=http://host.docker.internal:8765` in the plugin runner's environment and restart it. The runner sends an agent's key and prompts only to Canvas's own gateways and this one origin. A hosted instance needs the gateway at a URL it can reach, named the same way.
 2. Install the plugin, from the repo root: `uv run canvas install tools/adk_loadtest/canvas__adk_loadtest/canvas__adk_loadtest --host <instance>`.
-3. Set its secrets: `simpleapi-api-key` to any string, and `INFERENCE_GATEWAY_KEY` to any string (the fake gateway accepts every key).
+3. Set its secrets: `simpleapi-api-key` to any string, `INFERENCE_GATEWAY_KEY` to any string (the fake gateway accepts every key), and `INFERENCE_GATEWAY_URL` to `http://host.docker.internal:8765`.
 4. For `priority` and `chat-order`, log in to the instance as a staff member, copy the session's `Cookie` header, and pick a patient id.
 5. Run the scenarios, with the API key and the session in the environment rather than on the command line:
 

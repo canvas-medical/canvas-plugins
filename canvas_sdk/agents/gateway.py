@@ -17,9 +17,10 @@ toward the ceiling of the run the gateway was built for, and none is made once t
 has ended.
 """
 
+import os
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import anthropic
 import httpx2
@@ -38,6 +39,10 @@ GATEWAY_KEY_SECRET = "INFERENCE_GATEWAY_KEY"
 # The URL is a plugin setting anyone who edits the plugin's settings on an instance can
 # change, so it must name one of Canvas's own gateways before the key and prompts go there.
 GATEWAY_HOSTS = frozenset({"inference.canvasmedical.com", "inference-dev.canvasmedical.com"})
+
+# One more exact origin (scheme, host and port), set in the runner's own environment for a
+# local fake gateway such as tools/adk_loadtest's. A plugin setting cannot set it.
+ALLOWED_ORIGIN_VARIABLE = "INFERENCE_GATEWAY_ALLOWED_ORIGIN"
 
 ATTRIBUTION_PREFIX = "x-canvas-"
 
@@ -362,8 +367,7 @@ def gateway_from_plugin_secrets(
         raise LLMGatewayConfigurationError(
             f"Agent LLM access is not configured: {noun} {' and '.join(missing)} unset."
         )
-    parts = urlsplit(base_url)
-    if parts.scheme != "https" or parts.username or parts.hostname not in GATEWAY_HOSTS:
+    if not _is_allowed_gateway(base_url):
         raise LLMGatewayConfigurationError(
             f"Agent LLM access is not configured: plugin secret {GATEWAY_URL_VARIABLE} "
             "is not Canvas's inference gateway."
@@ -375,6 +379,18 @@ def gateway_from_plugin_secrets(
         attribution={"instance": instance, "plugin": plugin, "agent": agent, "run-id": run_id},
         recorder=recorder,
     )
+
+
+def _is_allowed_gateway(url: str) -> bool:
+    """Whether ``url`` names a Canvas gateway, or the origin the runner's environment allows."""
+    parts = urlsplit(url)
+    # urlsplit drops tabs and newlines, so the URL sent must be the URL checked.
+    if urlunsplit(parts) != url or "@" in parts.netloc:
+        return False
+    if parts.scheme == "https" and parts.hostname in GATEWAY_HOSTS:
+        return True
+    allowed = os.environ.get(ALLOWED_ORIGIN_VARIABLE, "").strip()
+    return bool(allowed) and f"{parts.scheme}://{parts.netloc}" == allowed
 
 
 __exports__ = (
