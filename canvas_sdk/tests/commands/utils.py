@@ -31,6 +31,9 @@ COMMANDS_TO_SKIP = [
     "ImagingReviewCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
+    # Refill responses need a pending refill request and cannot be committed from a plugin.
+    "ApproveRefillCommand",
+    "DenyRefillCommand",
 ]
 
 
