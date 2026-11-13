@@ -8,8 +8,10 @@ can't surface on its own:
     when the line executes on the instance).
   * Custom Data setup mistakes the runner silently tolerates at load but that
     leave tables uncreated or relations dropped.
-  * Request-handling mistakes that run fine but weaken the plugin: a secret
-    compared with ``==``, or a ``requests`` call with no timeout.
+  * Request-handling mistakes that run fine but weaken the plugin: a route whose
+    ``authenticate`` admits every caller (an error; the check itself lives in
+    ``plugin_runner/open_routes.py``, which the runner also runs at load), a
+    secret compared with ``==``, or a ``requests`` call with no timeout.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -23,6 +25,8 @@ import ast
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+from plugin_runner.open_routes import PUBLIC_ACCESS, open_routes_in_module
 
 # Directories that never hold plugin source we should lint — build scratch,
 # virtualenvs, caches, tests, VCS.
@@ -202,10 +206,32 @@ def _secret_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
     }
 
 
+def _open_data_route_findings(rel: Path, tree: ast.Module) -> list[LintFinding]:
+    findings: list[LintFinding] = []
+    for open_route in open_routes_in_module(tree):
+        reached = (
+            f"anyone who can reach the URL can call `{open_route.route}`"
+            if open_route.route
+            else "anyone who can reach the URL can open the socket"
+        )
+        findings.append(
+            LintFinding(
+                "error",
+                f"{rel}:{open_route.line}",
+                "unauthenticated-data-route",
+                f"{open_route.describe()}, so {reached}. Use `StaffSessionAuthMixin`, "
+                "`PatientSessionAuthMixin` or `APIKeyAuthMixin`, or set "
+                f"`{PUBLIC_ACCESS} = True` on the class if the route is public on purpose.",
+            )
+        )
+    return findings
+
+
 def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     findings: list[LintFinding] = []
     for py_file, tree in _iter_python_files(plugin_dir):
         rel = _rel(py_file, plugin_dir)
+        findings += _open_data_route_findings(rel, tree)
         # A nested function is walked again inside its enclosing one; report each comparison once.
         reported: set[int] = set()
         for function in ast.walk(tree):

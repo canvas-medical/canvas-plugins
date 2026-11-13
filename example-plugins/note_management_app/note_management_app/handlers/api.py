@@ -9,14 +9,17 @@ from canvas_sdk.v1.data import Note as NoteModel
 
 
 class AppApi(SimpleAPI):
-    """API handler for serving the note management application."""
+    """API handler for serving the note management application's page.
+
+    The page itself is public: it holds no patient data, and the OAuth flow inside it signs the
+    user in. Every route that returns or changes data lives on ``NoteApi``.
+    """
 
     PREFIX = ""
+    PUBLIC_ACCESS = True
 
     def authenticate(self, credentials: Credentials) -> bool:
-        """Allow access to the application without authentication.
-        The OAuth flow will handle authentication within the app.
-        """
+        """Serve the page to anyone; it carries no data."""
         return True
 
     @api.get("/app")
@@ -41,7 +44,19 @@ class AppApi(SimpleAPI):
             )
         ]
 
-    @api.get("/notes/recent")
+
+class NoteApi(SimpleAPI):
+    """API handler for note-related operations."""
+
+    PREFIX = "/notes"
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Change this method to authenticate based on your needs.
+        More info at: https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#authentication.
+        """
+        return self.event.actor.instance is not None
+
+    @api.get("/recent")
     def get_recent_notes(self) -> list[Response | Effect]:
         """Get the 10 most recent notes with patient info and status."""
         # Fetch the 10 most recent notes
@@ -70,18 +85,6 @@ class AppApi(SimpleAPI):
             )
 
         return [JSONResponse({"notes": notes_data}, status_code=HTTPStatus.OK)]
-
-
-class NoteApi(SimpleAPI):
-    """API handler for note-related operations."""
-
-    PREFIX = "/notes"
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Change this method to authenticate based on your needs.
-        More info at: https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#authentication.
-        """
-        return self.event.actor.instance is not None
 
     @api.post("/<id>/lock")
     def lock_note(self) -> list[Response | Effect]:

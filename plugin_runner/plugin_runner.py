@@ -69,6 +69,7 @@ from plugin_runner.installation import (
     register_plugin_app_config,
     uninstall_plugin,
 )
+from plugin_runner.open_routes import find_open_routes
 from plugin_runner.sandbox import EvaluatedModules, Sandbox, SandboxMode, sandbox_from_module
 from plugin_runner.sandbox_allowlists import (
     AllowlistUnavailable,
@@ -1051,6 +1052,42 @@ def _report_legacy_sandbox(name: str, reasons: list[str], errors: dict[str | Non
         )
 
 
+def _report_open_routes(name: str, path: pathlib.Path) -> None:
+    """Report API handlers whose ``authenticate`` admits every caller.
+
+    ``canvas validate`` refuses these, but a plugin uploaded through the admin never runs it,
+    so the runner checks at load as well. It reports without refusing: plugins already
+    installed with open routes keep working until their authors fix them. A failure in the
+    check itself is logged and never stops the plugin loading.
+    """
+    try:
+        found = find_open_routes(path)
+    except Exception as e:
+        log.warning(f'Could not check plugin "{name}" for open API routes: {type(e).__name__}')
+
+        return
+
+    if not found:
+        return
+
+    lines = [f"{rel}:{route.line} {route.describe()}" for rel, route in found]
+
+    log.error(
+        f'Plugin "{name}" has API handlers that admit every caller without a login: '
+        + "; ".join(lines)
+    )
+
+    with sentry_sdk.new_scope() as scope:
+        scope.set_tag("plugin-name", name)
+        scope.set_tag("open-route-kinds", ",".join(sorted({route.kind for _, route in found})))
+        scope.set_context("open_routes", {"plugin": name, "handlers": lines})
+        scope.fingerprint = ["plugin-open-route", name]
+        sentry_sdk.capture_message(
+            f'Plugin "{name}" has API handlers that admit every caller without a login',
+            level="error",
+        )
+
+
 def _load_plugin_handlers(
     name: str,
     path: pathlib.Path,
@@ -1282,6 +1319,7 @@ def import_plugin(path: pathlib.Path) -> bool:
 
         # TODO when we encounter an exception here, disable the plugin in response
         results = sandbox_plugin_handlers(name, path, handlers)
+        _report_open_routes(name, path)
         units = usage_units(manifest_json)
 
         any_failed = False

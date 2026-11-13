@@ -879,9 +879,9 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
 
 def _lint_plugin_static(plugin_name: Path) -> None:
-    """Static pre-load lint: RestrictedPython constructs that fail at runtime and
-    Custom Data setup mistakes the sandbox load can't surface. Prints warnings and
-    raises ``typer.Exit(1)`` on any error-severity finding.
+    """Static pre-load lint: RestrictedPython constructs that fail at runtime, Custom
+    Data setup mistakes the sandbox load can't surface, and API routes that admit every
+    caller. Prints warnings and raises ``typer.Exit(1)`` on any error-severity finding.
     """
     manifest_path = plugin_name / "CANVAS_MANIFEST.json"
     try:
@@ -900,7 +900,7 @@ def _lint_plugin_static(plugin_name: Path) -> None:
         print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
 
     if errors:
-        print("\nThese issues will fail on the instance (sandbox / Custom Data):")
+        print("\nThese issues must be fixed before the plugin can be installed:")
         for e in errors:
             print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
         raise typer.Exit(code=1)
