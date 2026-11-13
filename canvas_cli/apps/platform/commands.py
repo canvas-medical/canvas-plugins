@@ -925,6 +925,7 @@ def _push(
     target, _ = _target_and_default_branch(registered, branch)
     git.connect_remote(plugin_dir, registered["git_url"], platform)
     git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
+    instance_plugin.check_unpushed_history(git.unpushed_history(plugin_dir))
     git.push_head(plugin_dir, target)
     sha = git.head_sha(plugin_dir)
     print(f"Pushed {name} {sha[:12]} to {target} on Canvas Platform.")

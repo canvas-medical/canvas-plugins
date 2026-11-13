@@ -1083,6 +1083,26 @@ def test_a_first_deploy_checks_the_repository_it_creates(
     assert _git(bare, "for-each-ref") == ""
 
 
+def test_deploy_refuses_a_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A key added and then deleted in commits not pushed yet still travels with the push."""
+    (package / "old.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package, "add", "old.json")
+    _git(package, "commit", "-m", "add settings")
+    _git(package, "rm", "-q", "old.json")
+    _git(package, "commit", "-m", "remove settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "Earlier commits this deploy pushes hold these" in result.output
+    assert f"{NAME}/old.json:1  [hardcoded-credential]" not in result.output
+    assert "old.json:1  [hardcoded-credential]" in result.output
+    assert _STRIPE_LIVE not in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
 def test_deploy_ignores_a_credential_in_a_file_git_ignores(
     api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
 ) -> None:
