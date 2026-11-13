@@ -889,6 +889,11 @@ def validate(
     _validate_plugin_loads(plugin_name)
 
 
+def lint_pushed(plugin_dir: Path, pushed: Iterable[tuple[Path, Path]] | None) -> None:
+    """The static lint, with the credential rule reading ``pushed``, the files a deploy sends."""
+    _lint_plugin_static(plugin_dir, pushed)
+
+
 def validate_pushed(plugin_dir: Path, pushed: Iterable[tuple[Path, Path]] | None) -> None:
     """`validate`, with the credential rule reading ``pushed``, the files a deploy sends."""
     validate_manifest(plugin_dir)
