@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any, NoReturn, Self
+from typing import NoReturn, Self
 
 from pydantic import Field
 
@@ -34,12 +34,13 @@ class _RefillResponseCommand(_BaseCommand):
         cls,
         refill_request: RefillRequest | str,
         note_uuid: str,
-        **fields: Any,
+        **fields: str | None,
     ) -> Self:
         """Build the response to a refill request in a note of the same patient.
 
         Raises:
             ValueError: If the note does not belong to the refill request's patient.
+            django.core.exceptions.ValidationError: If either id is not a UUID.
         """
         refill_request_id = str(
             refill_request.id if isinstance(refill_request, RefillRequest) else refill_request
@@ -73,14 +74,6 @@ class _RefillResponseCommand(_BaseCommand):
             )
 
         return super().edit()
-
-    def commit(self) -> Effect:
-        """Refill responses are never committed from a plugin."""
-        self._not_supported("be committed")
-
-    def enter_in_error(self) -> Effect:
-        """Refill responses are never entered in error from a plugin."""
-        self._not_supported("be entered in error")
 
     def recommendation_context(self) -> dict:
         """Protocol cards insert commands outside the plugin effect path, so they cannot carry one."""
