@@ -137,7 +137,9 @@ def test_commit_and_enter_in_error_are_refused(
     """There is no plugin path to commit or enter a refill response in error."""
     command = command_cls(command_uuid="cmd-1")
 
-    with pytest.raises(ValueError, match="sends it to the pharmacy from the card"):
+    with pytest.raises(
+        ValueError, match=f"{method.upper()}_{command_cls.constantized_key()}_COMMAND"
+    ):
         getattr(command, method)()
 
 
