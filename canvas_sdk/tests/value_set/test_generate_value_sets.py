@@ -2,24 +2,35 @@ import io
 import sys
 import zipfile
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[3] / "tools"))
 
+import generate_value_sets  # noqa: E402
 from generate_value_sets import (  # noqa: E402
     ValueSetData,
     class_name,
     code_system_attribute,
     code_value,
+    download_workbook,
+    login,
+    main,
+    measure_sort_key,
+    parse,
     place,
     reference_layout,
     render_class,
     rows,
+    sheets,
+    write_package,
 )
 
 HEADER = ["CMS ID", "Value Set Name", "Value Set OID", "Code", "Code System"]
 
 
-def _xlsx(sheets: dict[str, list[list[str]]]) -> bytes:
+def _xlsx(sheets: dict[str, list[list[str]]], header: list[str] = HEADER) -> bytes:
     """A minimal xlsx: a title row, then a header row, then data, using shared strings."""
     strings: list[str] = []
 
@@ -33,7 +44,7 @@ def _xlsx(sheets: dict[str, list[list[str]]]) -> bytes:
         sheet_entries, rels = [], []
         for number, (title, table) in enumerate(sheets.items(), start=1):
             xml_rows = []
-            for r, row in enumerate([["Title block"], HEADER, *table], start=1):
+            for r, row in enumerate([["Title block"], header, *table], start=1):
                 cells = "".join(
                     f'<c r="{chr(65 + c)}{r}" t="s"><v>{index(value)}</v></c>'
                     for c, value in enumerate(row)
@@ -165,3 +176,228 @@ def test_render_class_is_valid_python() -> None:
     assert {"99212", "99213"} == vars(namespace["OfficeVisit"])["CPT"]
     assert "**Used in:** CMS122v15, CMS125v15" in source
     assert source.index('"99212"') < source.index('"99213"')
+
+
+CATEGORY_HEADER = [
+    "CMS ID",
+    "Value Set Name",
+    "Value Set OID",
+    "Definition Version",
+    "Expansion Version",
+    "Purpose: Clinical Focus",
+    "Purpose: Data Element Scope",
+    "Purpose: Inclusion Criteria",
+    "Purpose: Exclusion Criteria",
+    "Code",
+    "Description",
+    "Code System",
+]
+
+
+class _Response(io.BytesIO):
+    """A stand-in for the object ``urllib.request.urlopen`` returns."""
+
+    def __init__(self, body: bytes, headers: dict[str, str] | None = None) -> None:
+        super().__init__(body)
+        self.headers = headers or {}
+
+
+def _category_row(oid: str, name: str, code: str, description: str, system: str) -> list[str]:
+    return [
+        "CMS122v15",
+        name,
+        oid,
+        "20250101",
+        "eCQM Update 2026-05-14",
+        "Focus.",
+        "Scope.",
+        "",
+        "",
+        code,
+        description,
+        system,
+    ]
+
+
+def test_sheets_reads_inline_strings_numbers_and_gaps() -> None:
+    """Inline strings, raw values, and empty cells are read; skipped columns become blanks."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr(
+            "xl/worksheets/sheet1.xml",
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<sheetData><row r="1">'
+            '<c r="A1" t="inlineStr"><is><t>inline</t></is></c>'
+            '<c r="C1"><v>42</v></c>'
+            '<c r="D1"/>'
+            '</row><row r="2"/></sheetData></worksheet>',
+        )
+        archive.writestr(
+            "xl/workbook.xml",
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            '<sheets><sheet name="Only" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Target="/xl/worksheets/sheet1.xml"/></Relationships>',
+        )
+    assert list(sheets(buffer.getvalue())) == [("Only", [["inline", "", "42", ""], []])]
+
+
+def test_parse_collects_categories_measures_and_codes() -> None:
+    """Both workbooks feed one value set; measure rows for unknown OIDs are ignored."""
+    category = _xlsx(
+        {
+            "Encounter": [
+                _category_row("1.2", "Office Visit", "99213", "Office  visit\n", "CPT"),
+                [],
+            ],
+            "No QDM Category Assigned": [
+                _category_row("1.2", "Office Visit", "R26.2", "", "ICD10CM"),
+            ],
+        },
+        header=CATEGORY_HEADER,
+    )
+    measures = _xlsx(
+        {
+            "CMS125v15": [
+                ["CMS125v15", "Office Visit", "1.2", "99213", "CPT"],
+                ["CMS125v15", "Unknown", "9.9", "1", "CPT"],
+            ]
+        }
+    )
+    value_sets = parse(category, measures)
+    assert list(value_sets) == ["1.2"]
+    office_visit = value_sets["1.2"]
+    assert office_visit.categories == {"Encounter", "No QDM Category Assigned"}
+    assert office_visit.measures == {"CMS122v15", "CMS125v15"}
+    assert office_visit.codes == {"CPT": {"99213": "Office visit"}, "ICD10CM": {"R262": ""}}
+    assert office_visit.purpose["Clinical Focus"] == "Focus."
+    assert office_visit.purpose["Exclusion Criteria"] == ""
+
+
+def test_login_returns_the_session_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A successful login hands back the Authorization header VSAC returns."""
+    requests: list[Any] = []
+
+    def urlopen(request: Any) -> _Response:
+        requests.append(request)
+        return _Response(b'{"status": "true"}', {"Authorization": "token-1"})
+
+    monkeypatch.setattr(generate_value_sets.urllib.request, "urlopen", urlopen)
+    assert login("key with space") == "token-1"
+    assert requests[0].data == b"apikey=key%20with%20space"
+    assert requests[0].get_method() == "POST"
+
+
+def test_login_rejects_a_bad_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A rejected key stops the script with VSAC's response."""
+    monkeypatch.setattr(
+        generate_value_sets.urllib.request,
+        "urlopen",
+        lambda request: _Response(b'{"status": "false"}'),
+    )
+    with pytest.raises(SystemExit, match="VSAC rejected the API key"):
+        login("bad")
+
+
+def test_download_workbook_unzips_the_spreadsheet(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The xlsx inside VSAC's zip is returned, fetched with the session token."""
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as zipped:
+        zipped.writestr("readme.txt", "ignored")
+        zipped.writestr("value_sets.xlsx", b"xlsx-bytes")
+    requests: list[Any] = []
+
+    def urlopen(request: Any) -> _Response:
+        requests.append(request)
+        return _Response(archive.getvalue())
+
+    monkeypatch.setattr(generate_value_sets.urllib.request, "urlopen", urlopen)
+    assert download_workbook("token-1", "category", "20260514") == b"xlsx-bytes"
+    assert requests[0].full_url.endswith("/groupby/category/version/20260514")
+    assert requests[0].get_header("Authorization") == "token-1"
+
+
+def test_write_package_writes_importable_modules(tmp_path: Path) -> None:
+    """Each module is valid Python whose ``__exports__`` lists its classes in order."""
+    first = _value_set("1.1", "Office Visit", "Encounter")
+    first.codes["CPT"] = {"99213": "Office visit"}
+    second = _value_set("2.2", "Annual Wellness Visit", "Encounter")
+    write_package(
+        tmp_path / "v2099",
+        {"encounter": [("OfficeVisit", first), ("AnnualWellnessVisit", second)]},
+    )
+    assert (tmp_path / "v2099" / "__init__.py").read_text() == "__exports__ = ()\n"
+    source = (tmp_path / "v2099" / "encounter.py").read_text()
+    namespace: dict[str, Any] = {}
+    runnable = source.replace("from ..value_set import ValueSet", "ValueSet = object")
+    exec(compile(runnable, "<encounter>", "exec"), namespace)
+    assert namespace["__exports__"] == ("AnnualWellnessVisit", "OfficeVisit")
+    assert namespace["OfficeVisit"].CPT == {"99213"}
+
+
+def test_naming_edge_cases() -> None:
+    """Digit-led names get a prefix, unknown measure ids sort last, no reference maps nothing."""
+    assert class_name("2 Hour Glucose") == "VS2HourGlucose"
+    assert sorted(["Other", "CMS1028v4", "CMS122v15"], key=measure_sort_key) == [
+        "CMS122v15",
+        "CMS1028v4",
+        "Other",
+    ]
+    assert reference_layout(None) == {}
+
+
+def test_main_requires_an_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without UMLS_API_KEY the script exits before touching the network."""
+    monkeypatch.delenv("UMLS_API_KEY", raising=False)
+    monkeypatch.setattr(
+        sys, "argv", ["generate_value_sets.py", "--release", "20260514", "--year", "2027"]
+    )
+    with pytest.raises(SystemExit, match="UMLS_API_KEY"):
+        main()
+
+
+def test_main_downloads_parses_and_writes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The script logs in, downloads both groupings, and writes the package to ``--output``."""
+    category = _xlsx(
+        {"Encounter": [_category_row("1.2", "Office Visit", "99213", "Office visit", "CPT")]},
+        header=CATEGORY_HEADER,
+    )
+    measures = _xlsx({"CMS125v15": [["CMS125v15", "Office Visit", "1.2", "99213", "CPT"]]})
+    downloads: list[tuple[str, str, str]] = []
+
+    def download(token: str, group_by: str, release: str) -> bytes:
+        downloads.append((token, group_by, release))
+        return category if group_by == "category" else measures
+
+    monkeypatch.setenv("UMLS_API_KEY", "key")
+    monkeypatch.setattr(generate_value_sets, "login", lambda api_key: f"token-for-{api_key}")
+    monkeypatch.setattr(generate_value_sets, "download_workbook", download)
+    output = tmp_path / "v2099"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "generate_value_sets.py",
+            "--release",
+            "20260514",
+            "--year",
+            "2099",
+            "--reference",
+            str(tmp_path / "missing"),
+            "--output",
+            str(output),
+        ],
+    )
+    main()
+    assert downloads == [
+        ("token-for-key", "category", "20260514"),
+        ("token-for-key", "cms", "20260514"),
+    ]
+    assert "class OfficeVisit(ValueSet):" in (output / "encounter.py").read_text()
+    assert capsys.readouterr().out == f"Wrote 1 value sets in 1 modules to {output}\n"
