@@ -911,7 +911,11 @@ def _push(
     """
     if snapshot:
         return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
+    created = not git.in_repo(plugin_dir)
     git.ensure_repo(plugin_dir)
+    if created:
+        # Validation ran before this repository existed, so it could not list what is pushed.
+        instance_plugin.lint_pushed(plugin_dir, git.pushed_files(plugin_dir, snapshot=False))
     require_no_ignored_python(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     if record_publisher:

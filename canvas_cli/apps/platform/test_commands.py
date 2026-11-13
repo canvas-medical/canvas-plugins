@@ -1058,6 +1058,31 @@ def test_deploy_refuses_a_credential_in_a_committed_hidden_file(
     assert _git(bare, "for-each-ref") == ""
 
 
+def test_a_first_deploy_checks_the_repository_it_creates(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    tmp_path: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A deploy from outside any repository creates one at the package's parent and pushes
+    everything in it, hidden files included, so that repository is what gets checked.
+    """
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    directory = tmp_path / "fresh" / NAME
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
+    (directory / ".local_settings.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--instance", "acme-staging"], input="y\ny\n\n"
+    )
+
+    assert result.exit_code == 1
+    assert ".local_settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
 def test_deploy_ignores_a_credential_in_a_file_git_ignores(
     api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
 ) -> None:
