@@ -7,9 +7,12 @@ Supports both plugin-specific schemas and shared data namespaces.
 from __future__ import annotations
 
 import threading
-from collections.abc import Generator
-from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Generator
+from contextlib import AbstractContextManager, contextmanager, nullcontext
+from typing import TYPE_CHECKING, Any
+
+from django.conf import settings as django_settings
+from django.db import connection, transaction
 
 if TYPE_CHECKING:
     from django.db.backends.base.base import BaseDatabaseWrapper
@@ -56,31 +59,67 @@ def is_write_allowed() -> bool:
 
 def _is_postgres() -> bool:
     """Check if we're running on PostgreSQL (vs SQLite for tests)."""
-    from django.conf import settings
-
-    return "postgresql" in settings.DATABASES["default"]["ENGINE"]
+    return "postgresql" in django_settings.DATABASES["default"]["ENGINE"]
 
 
-def _set_search_path(schema: str) -> None:
-    """Set PostgreSQL search_path. No-op on SQLite."""
-    if not _is_postgres():
-        return
-
-    from django.db import connection
-
-    with connection.cursor() as cursor:
-        cursor.execute("SET search_path = %s, public", [schema])
+# Transaction-local (is_local=true): Postgres reverts it at COMMIT/ROLLBACK, so
+# it never outlives the transaction it was set in.
+SET_LOCAL_SEARCH_PATH_SQL = "SELECT set_config('search_path', %s, true)"
 
 
-def _reset_search_path() -> None:
-    """Reset PostgreSQL search_path to default. No-op on SQLite."""
-    if not _is_postgres():
-        return
+def _search_path_value(schema: str) -> str:
+    """Return the search_path value for a namespace schema."""
+    return f'"{schema}", public'
 
-    from django.db import connection
 
-    with connection.cursor() as cursor:
-        cursor.execute("SET search_path = public")
+def _apply_local_search_path(cursor: Any, schema: str) -> None:
+    """Set search_path for the current transaction only on a raw DB-API cursor."""
+    cursor.execute(SET_LOCAL_SEARCH_PATH_SQL, [_search_path_value(schema)])
+
+
+def _namespace_search_path_wrapper(
+    execute: Callable[..., Any],
+    sql: str,
+    params: Any,
+    many: bool,
+    context: dict[str, Any],
+) -> Any:
+    """Django execute wrapper that scopes search_path to each query's transaction.
+
+    The plugin runner reaches Postgres through pgdog in transaction mode, so two
+    consecutive transactions from one Django connection can run on different
+    Postgres sessions, and a Postgres session is shared by many clients. A
+    session-level ``SET search_path`` would leak to whichever client uses that
+    session next, or be missing on the next transaction. Instead, every query
+    made while a namespace is active runs inside a transaction that first sets
+    the namespace's search_path locally: inside the caller's transaction if
+    there is one, otherwise in a transaction wrapped around the single query.
+
+    The schema is read from the thread-local plugin context at call time, so
+    nested contexts see the innermost namespace.
+    """
+    schema = get_current_schema()
+    # Statements Django issues while opening the wrapping transaction re-enter
+    # this wrapper (SQLite sends BEGIN through a cursor); pass those through.
+    if schema is None or getattr(_plugin_context, "scoping_search_path", False):
+        return execute(sql, params, many, context)
+
+    db = context["connection"]
+    # context["cursor"] is Django's CursorWrapper; .cursor is the raw DB-API
+    # cursor, which does not re-enter this wrapper.
+    raw_cursor = context["cursor"].cursor
+
+    scope: AbstractContextManager[Any] = (
+        nullcontext() if db.in_atomic_block else transaction.atomic(using=db.alias)
+    )
+    _plugin_context.scoping_search_path = True
+    try:
+        with scope:
+            _apply_local_search_path(raw_cursor, schema)
+            _plugin_context.scoping_search_path = False
+            return execute(sql, params, many, context)
+    finally:
+        _plugin_context.scoping_search_path = False
 
 
 def _swap_to_writable_connection() -> BaseDatabaseWrapper | None:
@@ -139,9 +178,12 @@ def plugin_database_context(
     _plugin_context.schema = namespace
     _plugin_context.access_level = access_level
 
-    # Only change search_path if a namespace is declared
-    if namespace:
-        _set_search_path(namespace)
+    # Only scope search_path if a namespace is declared (PostgreSQL only).
+    search_path_scope: AbstractContextManager[Any] = (
+        connection.execute_wrapper(_namespace_search_path_wrapper)
+        if namespace and _is_postgres()
+        else nullcontext()
+    )
 
     # In SQLite mode, the default connection is read-only. Swap to the
     # writable connection for plugins that have read_write access so that
@@ -151,7 +193,8 @@ def plugin_database_context(
         original_connection = _swap_to_writable_connection()
 
     try:
-        yield
+        with search_path_scope:
+            yield
     finally:
         # Restore writable connection swap if we did one
         if original_connection is not None:
@@ -162,17 +205,11 @@ def plugin_database_context(
             _plugin_context.plugin_name = old_plugin
             _plugin_context.schema = old_schema
             _plugin_context.access_level = old_access_level
-            if old_schema:
-                _set_search_path(old_schema)
-            elif namespace:
-                _reset_search_path()
         else:
             # Clear context entirely
             for attr in ("plugin_name", "schema", "access_level"):
                 if hasattr(_plugin_context, attr):
                     delattr(_plugin_context, attr)
-            if namespace:
-                _reset_search_path()
 
 
 __exports__ = (
