@@ -263,6 +263,40 @@ def ignored_python_files(plugin_dir: Path) -> list[str]:
     return listing.splitlines()
 
 
+def pushed_files(plugin_dir: Path, *, snapshot: bool) -> list[tuple[Path, Path]] | None:
+    """``(path, path relative to the package)`` for each file a deploy pushes, or None outside
+    a git repository, where nothing is pushed yet.
+
+    A snapshot pushes the package folder and a plain deploy the whole repository: tracked files
+    and new ones that are not ignored, as ``git add -A`` stages them, hidden ones included.
+    Symbolic links are left out, since reading one would follow it.
+    """
+    require_installed()
+    package = plugin_dir.resolve()
+    if not in_repo(package):
+        return None
+    top = package
+    if not snapshot:
+        top = Path(_output(package, "rev-parse", "--show-toplevel", what="git rev-parse").strip())
+    listing = _output(
+        top,
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "--",
+        ".",
+        what="git ls-files",
+    )
+    files: list[tuple[Path, Path]] = []
+    for name in listing.split("\0"):
+        path = top.resolve() / name
+        if name and not path.is_symlink() and path.is_file():
+            files.append((path, Path(os.path.relpath(path, package))))
+    return files
+
+
 def push_head(plugin_dir: Path, branch: str) -> None:
     """Push HEAD to ``branch`` on ``origin``, with global and system config ignored."""
     result = run(plugin_dir, "push", REMOTE, f"HEAD:refs/heads/{branch}", isolate_config=True)

@@ -1151,7 +1151,7 @@ def deploy(
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
-        instance_plugin.validate(plugin_dir)
+        instance_plugin.validate_pushed(plugin_dir, git.pushed_files(plugin_dir, snapshot=snapshot))
 
     publisher, picked = _publisher(
         client,

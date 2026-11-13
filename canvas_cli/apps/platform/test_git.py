@@ -206,3 +206,40 @@ def test_clone_surfaces_the_clone_error(tmp_path: Path) -> None:
     """A failed clone reports the failure."""
     with pytest.raises(git.GitError, match="git clone failed"):
         git.clone(str(tmp_path / "does-not-exist.git"), tmp_path / "dest", "https://p.example.com")
+
+
+def test_pushed_files_are_what_the_push_sends(repo: Path) -> None:
+    """A plain deploy pushes the whole repository, tracked or new and not ignored, hidden files
+    included; a snapshot pushes the package folder alone. Symbolic links are not read.
+    """
+    package = repo / "acme__hello"
+    package.mkdir()
+    (package / "CANVAS_MANIFEST.json").write_text("{}")
+    (package / ".hidden.json").write_text("{}")
+    (package / "ignored.json").write_text("{}")
+    (repo / ".gitignore").write_text("acme__hello/ignored.json\n")
+    (repo / "README.md").write_text("readme\n")
+    (package / "link.json").symlink_to(package / "CANVAS_MANIFEST.json")
+    git.run(repo, "add", "-A")
+    git.run(repo, "commit", "-m", "first")
+    (package / "new.json").write_text("{}")
+
+    def listed(snapshot: bool) -> set[str]:
+        files = git.pushed_files(package, snapshot=snapshot)
+        assert files is not None
+        assert all(path == (package / relative).resolve() for path, relative in files)
+        return {str(relative) for _, relative in files}
+
+    assert listed(snapshot=False) == {
+        "CANVAS_MANIFEST.json",
+        ".hidden.json",
+        "new.json",
+        "../.gitignore",
+        "../README.md",
+    }
+    assert listed(snapshot=True) == {"CANVAS_MANIFEST.json", ".hidden.json", "new.json"}
+
+
+def test_pushed_files_outside_a_repository_are_unknown(plugin_dir: Path) -> None:
+    """Before `git init` nothing is pushed yet, so the caller falls back to the package's files."""
+    assert git.pushed_files(plugin_dir, snapshot=False) is None
