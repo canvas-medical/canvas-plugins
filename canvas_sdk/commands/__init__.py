@@ -33,6 +33,7 @@ from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.reference import ReferenceCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
+from canvas_sdk.commands.commands.refill_response import ApproveRefillCommand, DenyRefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.remove_past_medical_history import (
     RemovePastMedicalHistoryCommand,
@@ -57,9 +58,11 @@ __all__ = __exports__ = (
     "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
+    "ApproveRefillCommand",
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "DenyRefillCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",

@@ -204,10 +204,12 @@
     "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
+    "ApproveRefillCommand",
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
     "CustomCommand",
+    "DenyRefillCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -369,6 +371,10 @@
   ],
   "canvas_sdk.commands.commands.refill": [
     "RefillCommand"
+  ],
+  "canvas_sdk.commands.commands.refill_response": [
+    "ApproveRefillCommand",
+    "DenyRefillCommand"
   ],
   "canvas_sdk.commands.commands.remove_allergy": [
     "RemoveAllergyCommand"
