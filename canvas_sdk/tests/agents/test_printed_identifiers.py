@@ -605,3 +605,32 @@ def test_an_mrn_printed_beside_other_numbers_matches() -> None:
     )
 
     assert (result.get("patient_id"), result.get("confidence")) == (patient.id, "high"), result
+
+
+@pytest.mark.parametrize(
+    ("read", "printed"),
+    [
+        ("345", "MRN 12-345"),
+        ("4471", "MRN: VL-4471"),
+        ("99812", "MRN 4471 ACCT 99812"),
+        ("4471", "MRN 4471 5550123"),
+    ],
+    ids=["part-of-a-hyphenated-mrn", "part-of-a-sending-mrn", "account-number", "two-numbers"],
+)
+@pytest.mark.django_db
+def test_only_a_whole_printed_mrn_matches(read: str, printed: str) -> None:
+    """Part of an MRN, an account number, or one of two unlabeled numbers is not the MRN."""
+    PatientFactory.create(first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn=read)
+
+    result, effects = _run(
+        "suggest_patient",
+        first_name="Ann",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        mrn=read,
+        as_printed={"name": "SMITH, ANN", "birth_date": "03/09/1971", "mrn": printed},
+        legibility="clear",
+    )
+
+    assert result["ok"] is False, result
+    assert effects == []

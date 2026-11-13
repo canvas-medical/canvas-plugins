@@ -37,7 +37,11 @@ _MRN_REPAIRS = {
 # Letters a fax prints inside a numeric date, read as the digits they stand for.
 _DATE_DIGITS = str.maketrans({"o": "0", "i": "1", "l": "1", "|": "1", "s": "5", "b": "8"})
 # Words printed beside an MRN that are not part of it.
-_MRN_LABEL_WORDS = frozenset({"mrn", "mr", "id", "no", "number", "chart", "acct", "pt", "patient"})
+_MRN_LABEL_WORDS = frozenset({"mrn", "mr", "id", "no", "number", "chart", "pt", "patient"})
+# Words that label a number printed beside the MRN that is not it.
+_OTHER_NUMBER_LABELS = frozenset(
+    {"acct", "account", "visit", "encounter", "enc", "fin", "csn", "room", "bed", "order", "phone"}
+)
 _MONTHS = {
     name: number
     for number, names in enumerate(
@@ -95,19 +99,21 @@ def _name_agrees(read: str, printed: str) -> bool:
 
 
 def _mrn_agrees(read: str, printed: str) -> bool:
-    """The MRN read is printed, its label words dropped, allowing for misreads.
+    """The MRN read is the whole printed MRN, allowing for misreads.
 
-    It can be printed beside other numbers ("MRN 4471 ACCT 99812"), so it agrees with any
-    run of consecutive printed words, joined as "VL-4471" joins to "vl4471".
+    The print is split at label words: the text before any label, or after an MRN label,
+    is an MRN, joined as "VL-4471" joins to "vl4471"; the text after a label such as ACCT
+    is another number. The MRN read must equal one MRN segment whole, so part of an MRN,
+    an account number, or one of two numbers printed together never agrees.
     """
-    shown = [t.translate(_FOLD) for t in _tokens(printed, folded=False)]
-    shown = [t for t in shown if t not in _MRN_LABEL_WORDS]
     wanted = "".join(_tokens(read, folded=True))
-    return any(
-        "".join(shown[start:end]) == wanted
-        for start in range(len(shown))
-        for end in range(start + 1, len(shown) + 1)
-    )
+    segments: list[tuple[bool, list[str]]] = [(True, [])]
+    for token in _tokens(printed, folded=False):
+        if token in _MRN_LABEL_WORDS or token in _OTHER_NUMBER_LABELS:
+            segments.append((token in _MRN_LABEL_WORDS, []))
+        else:
+            segments[-1][1].append(token.translate(_FOLD))
+    return any(is_mrn and "".join(words) == wanted for is_mrn, words in segments)
 
 
 def parse_printed_date(printed: str) -> date | None:
