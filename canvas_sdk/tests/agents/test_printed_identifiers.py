@@ -453,3 +453,155 @@ def test_an_accented_name_read_as_printed_matches() -> None:
     )
 
     assert (result["patient_id"], result["confidence"]) == (patient.id, "high")
+
+
+# Middle names, suffixes, and how dates and MRNs are printed ----------------------------
+
+
+@pytest.mark.parametrize(
+    ("patient", "read", "printed_name"),
+    [
+        (
+            {"first_name": "John", "last_name": "Smith", "suffix": "Jr."},
+            {"first_name": "John", "last_name": "Smith", "suffix": "Jr"},
+            "JOHN SMITH JR",
+        ),
+        (
+            {"first_name": "John", "last_name": "Smith", "middle_name": "Quincy"},
+            {"first_name": "John", "middle_name": "Quincy", "last_name": "Smith"},
+            "JOHN QUINCY SMITH",
+        ),
+        (
+            {"first_name": "John", "last_name": "Smith", "middle_name": "Quincy"},
+            {"first_name": "John", "last_name": "Smith"},
+            "SMITH, JOHN Q.",
+        ),
+        (
+            {
+                "first_name": "John",
+                "last_name": "Smith",
+                "middle_name": "Quincy",
+                "suffix": "III",
+            },
+            {"first_name": "John", "middle_name": "Quincy", "last_name": "Smith", "suffix": "III"},
+            "SMITH III, JOHN QUINCY",
+        ),
+    ],
+    ids=["suffix", "middle-name", "middle-initial", "middle-name-and-suffix"],
+)
+@pytest.mark.django_db
+def test_a_printed_middle_name_or_suffix_the_patient_has_matches(
+    patient: dict[str, str], read: dict[str, str], printed_name: str
+) -> None:
+    """The patient's recorded middle name and suffix account for the rest of the print."""
+    found = PatientFactory.create(**patient, birth_date=BIRTH)
+
+    result, _ = _run(
+        "suggest_patient",
+        **read,
+        birth_date="1971-03-09",
+        as_printed={"name": printed_name, "birth_date": "03/09/1971"},
+        legibility="clear",
+    )
+
+    assert (result.get("patient_id"), result.get("confidence")) == (found.id, "high"), result
+
+
+@pytest.mark.parametrize(
+    ("patient", "read", "printed_name"),
+    [
+        (
+            {"first_name": "John", "last_name": "Smith", "suffix": "Sr."},
+            {"first_name": "John", "last_name": "Smith", "suffix": "Jr"},
+            "JOHN SMITH JR",
+        ),
+        (
+            {"first_name": "John", "last_name": "Smith"},
+            {"first_name": "John", "last_name": "Smith", "suffix": "Jr"},
+            "JOHN SMITH JR",
+        ),
+        (
+            {"first_name": "John", "last_name": "Smith", "middle_name": "Paul"},
+            {"first_name": "John", "middle_name": "Quincy", "last_name": "Smith"},
+            "JOHN QUINCY SMITH",
+        ),
+        (
+            {"first_name": "John", "last_name": "Smith", "middle_name": "Paul"},
+            {"first_name": "John", "last_name": "Smith"},
+            "JOHN Q. SMITH",
+        ),
+        (
+            {"first_name": "Ann", "last_name": "Smith"},
+            {"first_name": "Ann", "middle_name": "Jones", "last_name": "Smith"},
+            "ANN SMITH-JONES",
+        ),
+    ],
+    ids=[
+        "other-suffix",
+        "suffix-not-recorded",
+        "other-middle-name",
+        "other-middle-initial",
+        "unrecorded-word-read-as-middle-name",
+    ],
+)
+@pytest.mark.django_db
+def test_a_printed_middle_name_or_suffix_the_patient_lacks_names_no_one(
+    patient: dict[str, str], read: dict[str, str], printed_name: str
+) -> None:
+    """Junior's fax never names Senior, and a word the record cannot explain names no one."""
+    PatientFactory.create(**patient, birth_date=BIRTH)
+
+    result, effects = _run(
+        "suggest_patient",
+        **read,
+        birth_date="1971-03-09",
+        as_printed={"name": printed_name, "birth_date": "03/09/1971"},
+        legibility="clear",
+    )
+
+    assert result["ok"] is False, result
+    assert effects == []
+
+
+def test_a_middle_name_or_suffix_read_must_be_printed() -> None:
+    """A middle name or suffix the print does not show is refused like any other reading."""
+    printed = {"name": "JOHN SMITH", "birth_date": "03/09/1971"}
+    read = {"first_name": "John", "last_name": "Smith", "birth_date": "1971-03-09"}
+
+    assert "middle name read" in str(
+        check_printed({**read, "middle_name": "Quincy", "as_printed": printed})
+    )
+    assert "suffix read" in str(check_printed({**read, "suffix": "Jr", "as_printed": printed}))
+
+
+@pytest.mark.parametrize(
+    "printed",
+    ["March 9th, 1971", "09-MAR-1971", "9-Mar-1971", "Born: 03/09/1971", "Born 9 March 1971"],
+)
+def test_common_printed_date_formats_are_read(printed: str) -> None:
+    """Ordinal days, day-month-year with a month name, and a Born label are all read."""
+    assert parse_printed_date(printed) == BIRTH
+
+
+@pytest.mark.django_db
+def test_an_mrn_printed_beside_other_numbers_matches() -> None:
+    """The MRN read is found among the numbers printed next to it."""
+    patient = PatientFactory.create(
+        first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="4471"
+    )
+
+    result, _ = _run(
+        "suggest_patient",
+        first_name="Ann",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        mrn="4471",
+        as_printed={
+            "name": "SMITH, ANN",
+            "birth_date": "03/09/1971",
+            "mrn": "MRN 4471 ACCT 99812",
+        },
+        legibility="clear",
+    )
+
+    assert (result.get("patient_id"), result.get("confidence")) == (patient.id, "high"), result

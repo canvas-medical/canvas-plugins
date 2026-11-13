@@ -59,7 +59,18 @@ _MONTHS = {
     )
     for name in names
 }
-_DATE_LABEL = re.compile(r"^\s*(dob|d\.o\.b\.?|birth\s*date|date\s*of\s*birth)\s*[:#]?\s*", re.I)
+_DATE_LABEL = re.compile(
+    r"^\s*(dob|d\.o\.b\.?|birth\s*date|date\s*of\s*birth|born)\s*[:#]?\s*", re.I
+)
+# A day printed as an ordinal, such as the "9th" of "March 9th, 1971".
+_ORDINAL = re.compile(r"\b(\d{1,2})(st|nd|rd|th)\b")
+# The read parts of a name, in the order a print shows them.
+_NAME_KEYS = ("first_name", "middle_name", "last_name", "suffix")
+# Generational suffixes, folded as names are, so a printed one is told from a middle name.
+_SUFFIXES = frozenset(
+    "".join(re.findall(r"[a-z0-9|]+", word.translate(_FOLD)))
+    for word in ("jr", "sr", "ii", "iii", "iv")
+)
 
 # The most readings tried per field, and per document, fewest changed characters first.
 MAX_VARIANTS_PER_FIELD = 8
@@ -84,19 +95,29 @@ def _name_agrees(read: str, printed: str) -> bool:
 
 
 def _mrn_agrees(read: str, printed: str) -> bool:
-    """The MRN read is the printed one, its label words dropped, allowing for misreads."""
-    shown = [t for t in _tokens(printed, folded=False) if t not in _MRN_LABEL_WORDS]
-    return "".join(_tokens(read, folded=True)) == "".join(shown).translate(_FOLD)
+    """The MRN read is printed, its label words dropped, allowing for misreads.
+
+    It can be printed beside other numbers ("MRN 4471 ACCT 99812"), so it agrees with any
+    run of consecutive printed words, joined as "VL-4471" joins to "vl4471".
+    """
+    shown = [t.translate(_FOLD) for t in _tokens(printed, folded=False)]
+    shown = [t for t in shown if t not in _MRN_LABEL_WORDS]
+    wanted = "".join(_tokens(read, folded=True))
+    return any(
+        "".join(shown[start:end]) == wanted
+        for start in range(len(shown))
+        for end in range(start + 1, len(shown) + 1)
+    )
 
 
 def parse_printed_date(printed: str) -> date | None:
     """The birth date as printed, read month first with a four-digit year, or None.
 
-    Takes ``03/09/1971`` (and ``-`` or ``.``), ``1971-03-09``, and ``March 9, 1971`` or
-    ``9 Mar 1971``. A two-digit year or a date that is not one is None: it is never
-    guessed.
+    Takes ``03/09/1971`` (and ``-`` or ``.``), ``1971-03-09``, ``March 9th, 1971``, and
+    ``9 Mar 1971`` or ``09-MAR-1971``, after a ``DOB`` or ``Born`` label. A two-digit year
+    or a date that is not one is None: it is never guessed.
     """
-    shown = _DATE_LABEL.sub("", printed).strip().lower()
+    shown = _ORDINAL.sub(r"\1", _DATE_LABEL.sub("", printed).strip().lower())
     numeric = shown.translate(_DATE_DIGITS)
     if match := re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", numeric):
         year, month, day = (int(part) for part in match.groups())
@@ -104,7 +125,7 @@ def parse_printed_date(printed: str) -> date | None:
         month, day, year = (int(part) for part in match.groups())
     elif match := re.fullmatch(r"([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})", shown):
         month, day, year = _MONTHS.get(match[1], 0), int(match[2]), int(match[3])
-    elif match := re.fullmatch(r"(\d{1,2})\s+([a-z]+)\.?,?\s+(\d{4})", shown):
+    elif match := re.fullmatch(r"(\d{1,2})[\s-]+([a-z]+)\.?,?[\s-]+(\d{4})", shown):
         day, month, year = int(match[1]), _MONTHS.get(match[2], 0), int(match[3])
     else:
         return None
@@ -130,11 +151,7 @@ def _whole_name_read(arguments: dict[str, Any], name: str) -> str | None:
     words = _printed_name_words(name)
     if len(words) > 1 and not str(arguments.get("first_name") or "").strip():
         return "The first name is printed; pass the first name read."
-    read = set(
-        _tokens(
-            f"{arguments.get('first_name') or ''} {arguments.get('last_name') or ''}", folded=True
-        )
-    )
+    read = set(_tokens(" ".join(str(arguments.get(key) or "") for key in _NAME_KEYS), folded=True))
     if any(word not in read for word in words):
         return "Part of the name as printed was not read; pass the whole name as printed."
     return None
@@ -148,20 +165,16 @@ def confirm_against_print(
     Compares, in code and without the model's readings, the patient's last name and first
     name (or nickname) with the printed name, their birth date with the printed date, and
     their MRN, or one of ``outside_mrns`` (the current numbers other organizations keep for
-    them), with the printed MRN. Returns ``(refused, confirmed)``: why the patient is not the one printed,
-    or empty, and how many printed identifiers the patient's record confirms.
+    them), with the printed MRN. Any other printed name word must be the patient's
+    recorded suffix or middle name, or a middle initial that agrees with it. Returns
+    ``(refused, confirmed)``: why the patient is not the one printed, or empty, and how many
+    printed identifiers the patient's record confirms.
     """
     printed = arguments.get("as_printed") or {}
     confirmed = 0
     if name := str(printed.get("name") or "").strip():
-        shown = set(_tokens(name, folded=True))
-        given = {
-            str(value) for value in (patient.first_name, getattr(patient, "nickname", "")) if value
-        }
-        if not set(_tokens(patient.last_name or "", folded=True)) <= shown:
-            return "The matched patient's last name does not match the print.", 0
-        if not any(set(_tokens(value, folded=True)) <= shown for value in given):
-            return "The matched patient's first name does not match the print.", 0
+        if refused := _name_refused(patient, name):
+            return refused, 0
         confirmed += 2
     if printed_date := str(printed.get("birth_date") or "").strip():
         if parse_printed_date(printed_date) != patient.birth_date:
@@ -173,6 +186,32 @@ def confirm_against_print(
             return "The matched patient's MRN does not match the print.", 0
         confirmed += 1
     return "", confirmed
+
+
+def _name_refused(patient: Any, name: str) -> str:
+    """Why the patient's recorded name is not the printed one, or empty when it is."""
+    shown = set(_tokens(name, folded=True))
+    last = set(_tokens(patient.last_name or "", folded=True))
+    if not last <= shown:
+        return "The matched patient's last name does not match the print."
+    givens = [
+        set(_tokens(str(value), folded=True))
+        for value in (patient.first_name, getattr(patient, "nickname", ""))
+        if value
+    ]
+    if not any(given <= shown for given in givens):
+        return "The matched patient's first name does not match the print."
+    rest = shown - last - set().union(*(given for given in givens if given <= shown))
+    printed_suffix = rest & _SUFFIXES
+    if printed_suffix and printed_suffix != set(_tokens(patient.suffix or "", folded=True)):
+        return "The matched patient's suffix does not match the print."
+    middle = _tokens(patient.middle_name or "", folded=True)
+    for word in rest - printed_suffix:
+        if len(word) == 1 and not middle:
+            continue
+        if not any(part == word or (len(word) == 1 and part[0] == word) for part in middle):
+            return "The matched patient's middle name does not match the print."
+    return ""
 
 
 def check_printed(arguments: dict[str, Any]) -> str | None:
@@ -190,7 +229,7 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
         return "The pages name different patients; a person files this document."
     printed = arguments.get("as_printed") or {}
     for label, read_keys, printed_key in (
-        ("name", ("first_name", "last_name"), "name"),
+        ("name", _NAME_KEYS, "name"),
         ("birth date", ("birth_date",), "birth_date"),
         ("MRN", ("mrn",), "mrn"),
     ):
@@ -198,7 +237,7 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
         if was_read and not str(printed.get(printed_key) or "").strip():
             return f"Pass the {label} as printed in `as_printed`; it is checked against the print."
     name = str(printed.get("name") or "").strip()
-    for key in ("first_name", "last_name"):
+    for key in _NAME_KEYS:
         read = str(arguments.get(key) or "").strip()
         if read and name and not _name_agrees(read, name):
             return f"The {key.replace('_', ' ')} read is not the name as printed."

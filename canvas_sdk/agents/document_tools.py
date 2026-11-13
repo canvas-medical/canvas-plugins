@@ -80,7 +80,15 @@ _CONFIDENCE_PROPERTY = {
 }
 _PATIENT_PROPERTIES = {
     "first_name": {"type": "string", "description": "First name as the document gives it."},
+    "middle_name": {
+        "type": "string",
+        "description": "Middle name or initial, when the document prints one.",
+    },
     "last_name": {"type": "string", "description": "Last name as the document gives it."},
+    "suffix": {
+        "type": "string",
+        "description": "Suffix such as Jr, Sr, or III, when the document prints one.",
+    },
     "birth_date": {
         "type": "string",
         "format": "date",
