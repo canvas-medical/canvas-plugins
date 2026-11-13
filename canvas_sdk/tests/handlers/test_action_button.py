@@ -89,6 +89,8 @@ def test_show_button_regex_extracts_location() -> None:
         "SHOW_NOTE_BODY_AUTOMATION_BUTTON": "NOTE_BODY_AUTOMATION",
         "SHOW_CHART_PATIENT_HEADER_BUTTON": "CHART_PATIENT_HEADER",
         "SHOW_CHART_SUMMARY_GOALS_SECTION_BUTTON": "CHART_SUMMARY_GOALS_SECTION",
+        "SHOW_CLAIM_QUEUE_HEADER_BUTTON": "CLAIM_QUEUE_HEADER",
+        "SHOW_CLAIM_DETAILS_BUTTON": "CLAIM_DETAILS",
     }
     for event_name, expected_location in cases.items():
         match = SHOW_BUTTON_REGEX.fullmatch(event_name)
@@ -114,6 +116,8 @@ def test_responds_to_contains_expected_event_types() -> None:
     assert "SHOW_NOTE_BODY_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_NOTE_BODY_AUTOMATION_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_CHART_PATIENT_HEADER_BUTTON" in ActionButton.RESPONDS_TO
+    assert "SHOW_CLAIM_QUEUE_HEADER_BUTTON" in ActionButton.RESPONDS_TO
+    assert "SHOW_CLAIM_DETAILS_BUTTON" in ActionButton.RESPONDS_TO
 
 
 # --- ButtonLocation enum tests ---
@@ -126,6 +130,8 @@ def test_button_location_enum_values() -> None:
     assert ActionButton.ButtonLocation.NOTE_BODY.value == "note_body"
     assert ActionButton.ButtonLocation.NOTE_BODY_AUTOMATION.value == "note_body_automation"
     assert ActionButton.ButtonLocation.CHART_PATIENT_HEADER.value == "chart_patient_header"
+    assert ActionButton.ButtonLocation.CLAIM_QUEUE_HEADER.value == "claim_queue_header"
+    assert ActionButton.ButtonLocation.CLAIM_DETAILS.value == "claim_details"
 
 
 # --- visible() tests ---
@@ -717,3 +723,92 @@ def test_a_note_body_button_stays_out_of_the_command_list() -> None:
     event = Event(EventRequest(type=EventType.SHOW_NOTE_BODY_AUTOMATION_BUTTON))
 
     assert NoColorActionButton(event).compute() == []
+
+
+# --- the revenue claim locations ---
+
+
+class ClaimQueueButton(ActionButton):
+    """A button at the top of a claim queue."""
+
+    BUTTON_TITLE = "Export"
+    BUTTON_KEY = "export_claims"
+    BUTTON_LOCATION = ActionButton.ButtonLocation.CLAIM_QUEUE_HEADER
+    PRIORITY = 0
+
+    def handle(self) -> list[Effect]:
+        """Return one effect per claim the queue was showing."""
+        return [
+            ShowButtonEffect(key=claim_id, title="Exported", priority=0).apply()
+            for claim_id in self.event.context["claim_ids"]
+        ]
+
+
+class ClaimDetailsButton(ActionButton):
+    """A button on the claim details page."""
+
+    BUTTON_TITLE = "Check eligibility"
+    BUTTON_KEY = "check_eligibility"
+    BUTTON_LOCATION = ActionButton.ButtonLocation.CLAIM_DETAILS
+    PRIORITY = 0
+
+    def handle(self) -> list[Effect]:
+        """Handle the click."""
+        return []
+
+
+def test_a_claim_queue_button_shows_at_the_top_of_a_queue() -> None:
+    """The claim queue header event shows a CLAIM_QUEUE_HEADER button."""
+    event = Event(EventRequest(type=EventType.SHOW_CLAIM_QUEUE_HEADER_BUTTON))
+
+    effects = ClaimQueueButton(event).compute()
+
+    assert len(effects) == 1
+    assert json.loads(effects[0].payload)["data"]["key"] == "export_claims"
+
+
+def test_a_claim_details_button_shows_on_a_claim() -> None:
+    """The claim details event shows a CLAIM_DETAILS button."""
+    event = Event(EventRequest(type=EventType.SHOW_CLAIM_DETAILS_BUTTON))
+
+    effects = ClaimDetailsButton(event).compute()
+
+    assert len(effects) == 1
+    assert json.loads(effects[0].payload)["data"]["key"] == "check_eligibility"
+
+
+@pytest.mark.parametrize(
+    ("button", "event_type"),
+    [
+        (ClaimQueueButton, EventType.SHOW_CLAIM_DETAILS_BUTTON),
+        (ClaimDetailsButton, EventType.SHOW_CLAIM_QUEUE_HEADER_BUTTON),
+        (ExampleActionButton, EventType.SHOW_CLAIM_QUEUE_HEADER_BUTTON),
+        (ExampleActionButton, EventType.SHOW_CLAIM_DETAILS_BUTTON),
+    ],
+)
+def test_claim_buttons_stay_in_their_own_location(
+    button: type[ActionButton], event_type: EventType
+) -> None:
+    """A button only answers the claim event for its own location."""
+    event = Event(EventRequest(type=event_type))
+
+    assert button(event).compute() == []
+
+
+def test_a_claim_queue_button_click_receives_the_queue_claims() -> None:
+    """Clicking a claim queue button runs handle() with the queue's claims in context."""
+    event = Event(
+        EventRequest(
+            type=EventType.ACTION_BUTTON_CLICKED,
+            target="queue-id",
+            target_type="ClaimQueue",
+            context=json.dumps({"key": "export_claims", "claim_ids": ["claim-1", "claim-2"]}),
+        )
+    )
+
+    effects = ClaimQueueButton(event).compute()
+
+    assert [json.loads(effect.payload)["data"]["key"] for effect in effects] == [
+        "claim-1",
+        "claim-2",
+    ]
