@@ -1857,6 +1857,37 @@ def test_main_marks_registry_not_ready_before_loading_and_on_shutdown(
     assert event_registry.snapshot().ready is False
 
 
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_binds_the_port_only_once_plugins_are_loaded(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    mock_reconcile: MagicMock,
+) -> None:
+    """The port refuses connections while plugins load, so a caller fails fast instead of hanging.
+
+    A bound but unstarted gRPC server accepts TCP connections and never answers them, which
+    leaves each caller waiting out its connect deadline.
+    """
+    from plugin_runner.plugin_runner import main
+
+    calls: list[str] = []
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.add_insecure_port.side_effect = lambda _address: calls.append("bind")
+    mock_server.start.side_effect = lambda: calls.append("start")
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+    mock_reconcile.side_effect = lambda _paths: calls.append("load")
+
+    main(specified_plugin_paths=[])
+
+    assert calls == ["load", "bind", "start"]
+    mock_server.add_insecure_port.assert_called_once_with("127.0.0.1:50051")
+
+
 @pytest.mark.parametrize(
     "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
 )
