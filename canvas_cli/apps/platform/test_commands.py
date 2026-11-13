@@ -1037,6 +1037,42 @@ def test_deploy_refuses_a_dirty_tree_without_a_terminal(
     assert _git(bare, "for-each-ref") == ""
 
 
+_STRIPE_LIVE = "sk_" + "live_" + "Ab3" * 9
+
+
+def test_deploy_refuses_a_credential_in_a_committed_hidden_file(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """`canvas install` never packages a hidden file, but deploy pushes every committed one, so
+    the credential check reads what the push sends.
+    """
+    (package / ".local_settings.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package, "add", ".local_settings.json")
+    _git(package, "commit", "-m", "settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert ".local_settings.json:1  [hardcoded-credential]" in result.output
+    assert _STRIPE_LIVE not in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_ignores_a_credential_in_a_file_git_ignores(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A gitignored file is never pushed, so a key in it does not stop the deploy."""
+    (package.parent / ".gitignore").write_text(f"{NAME}/local.json\n")
+    (package / "local.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package.parent, "add", ".gitignore")
+    _git(package.parent, "commit", "-m", "ignore local settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "branch", "--list", "main") != ""
+
+
 def test_deploy_refuses_a_package_nested_deeper_in_a_repository(
     api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
 ) -> None:

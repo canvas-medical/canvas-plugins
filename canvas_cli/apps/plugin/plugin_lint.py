@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import ast
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -425,9 +425,9 @@ def _looks_random(value: str) -> bool:
     )
 
 
-def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
+def _credential_findings(files: Iterable[tuple[Path, Path]]) -> list[LintFinding]:
     findings: list[LintFinding] = []
-    for path, rel in shipped_files(plugin_dir):
+    for path, rel in files:
         if not path.is_file():
             continue
         try:
@@ -607,14 +607,17 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
     return findings
 
 
-def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
+def lint_plugin(
+    plugin_dir: Path, manifest: dict, files: Iterable[tuple[Path, Path]] | None = None
+) -> list[LintFinding]:
     """Return all construct, request-handling, credential and Custom Data findings for a plugin,
-    most-blocking first (errors before warnings).
+    most-blocking first (errors before warnings). The credential rule reads ``files``
+    (``(path, path inside the package)``), by default what ``canvas install`` packages.
     """
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
-        + _credential_findings(plugin_dir)
+        + _credential_findings(shipped_files(plugin_dir) if files is None else files)
         + _custom_data_findings(plugin_dir, manifest)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
