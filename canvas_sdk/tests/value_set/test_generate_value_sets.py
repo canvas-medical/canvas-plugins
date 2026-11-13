@@ -336,7 +336,7 @@ def test_write_package_writes_importable_modules(tmp_path: Path) -> None:
     runnable = source.replace("from ..value_set import ValueSet", "ValueSet = object")
     exec(compile(runnable, "<encounter>", "exec"), namespace)
     assert namespace["__exports__"] == ("AnnualWellnessVisit", "OfficeVisit")
-    assert namespace["OfficeVisit"].CPT == {"99213"}
+    assert {"99213"} == namespace["OfficeVisit"].CPT
 
 
 def test_naming_edge_cases() -> None:
