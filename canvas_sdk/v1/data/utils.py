@@ -1,6 +1,8 @@
 import datetime
 import hashlib
 import hmac
+import mimetypes
+import posixpath
 import random
 import string
 import urllib.parse
@@ -11,13 +13,20 @@ from decimal import Decimal
 from django.conf import settings
 
 
-def presigned_url(s3_key: str, expires_in: int = 3600) -> str:
+def presigned_url(s3_key: str, expires_in: int = 3600, content_type: str | None = None) -> str:
     """
     Generate a presigned URL for an S3 object.
+
+    S3 serves an object under the type it was uploaded with, and a browser names a download after
+    the last segment of its key, so an object stored with no extension downloads as an untyped
+    file. When the key has no extension and `content_type` maps to one, the URL is signed with
+    response-header overrides that make S3 answer with that type and a filename carrying the
+    matching extension.
 
     Args:
         s3_key: The S3 object key (path within the bucket).
         expires_in: URL expiration time in seconds. Defaults to 3600 (1 hour).
+        content_type: The object's MIME type, used only when the key has no extension.
 
     Returns:
         A presigned URL string that can be used to access the S3 object.
@@ -57,6 +66,13 @@ def presigned_url(s3_key: str, expires_in: int = 3600) -> str:
         "X-Amz-Expires": str(expires_in),
         "X-Amz-SignedHeaders": "host",
     }
+
+    file_name = posixpath.basename(s3_key)
+    extension = mimetypes.guess_extension(content_type) if content_type else None
+    if content_type and extension and not posixpath.splitext(file_name)[1]:
+        download_name = f"{file_name}{extension}".replace('"', "")
+        query_params["response-content-type"] = content_type
+        query_params["response-content-disposition"] = f'inline; filename="{download_name}"'
 
     # Sort and encode query parameters
     sorted_params = sorted(query_params.items())
