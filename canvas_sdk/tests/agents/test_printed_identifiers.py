@@ -634,3 +634,16 @@ def test_only_a_whole_printed_mrn_matches(read: str, printed: str) -> None:
 
     assert result["ok"] is False, result
     assert effects == []
+
+
+@pytest.mark.parametrize("number", ["-", "#", ""])
+def test_an_mrn_with_no_letters_or_digits_never_agrees(number: str) -> None:
+    """An outside number stored as "-" is not the printed MRN, even before its label."""
+    patient = PatientFactory.build(first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="A-1")
+
+    refused, _ = confirm_against_print(patient, {"as_printed": {"mrn": "MRN 4471"}}, [number])
+
+    assert "MRN does not match" in refused
+    assert "MRN read is not" in str(
+        check_printed({"mrn": number or "-", "as_printed": {"mrn": "MRN 4471"}})
+    )

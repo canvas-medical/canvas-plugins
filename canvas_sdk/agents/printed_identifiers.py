@@ -107,6 +107,8 @@ def _mrn_agrees(read: str, printed: str) -> bool:
     an account number, or one of two numbers printed together never agrees.
     """
     wanted = "".join(_tokens(read, folded=True))
+    if not wanted:
+        return False
     segments: list[tuple[bool, list[str]]] = [(True, [])]
     for token in _tokens(printed, folded=False):
         if token in _MRN_LABEL_WORDS or token in _OTHER_NUMBER_LABELS:
