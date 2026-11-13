@@ -410,3 +410,46 @@ def test_a_repaired_reading_that_matches_several_patients_names_no_one() -> None
     assert result["ok"] is False
     assert "More than one patient" in str(result)
     assert effects == []
+
+
+@pytest.mark.parametrize(
+    ("printed", "read"),
+    [("RENÉE", "René"), ("ANDRÉA", "André"), ("ÉLISE", "Lise")],
+    ids=["renee-read-as-rene", "andrea-read-as-andre", "elise-read-as-lise"],
+)
+@pytest.mark.django_db
+def test_an_accented_print_is_not_read_as_a_shorter_name(printed: str, read: str) -> None:
+    """RENÉE is printed for Renée, so the twin René born the same day is not named."""
+    PatientFactory.create(first_name=read, last_name="Doe", birth_date=BIRTH)
+    PatientFactory.create(
+        first_name=printed.capitalize(), last_name="Doe", birth_date=date(1990, 1, 1)
+    )
+
+    result, effects = _run(
+        "suggest_patient",
+        first_name=read,
+        last_name="Doe",
+        birth_date="1971-03-09",
+        as_printed={"name": f"{printed} DOE", "birth_date": "03/09/1971"},
+        legibility="clear",
+    )
+
+    assert result["ok"] is False
+    assert effects == []
+
+
+@pytest.mark.django_db
+def test_an_accented_name_read_as_printed_matches() -> None:
+    """Accents fold the same way on both sides, so RENÉE DOE read as Renée names her."""
+    patient = PatientFactory.create(first_name="Renée", last_name="Doe", birth_date=BIRTH)
+
+    result, _ = _run(
+        "suggest_patient",
+        first_name="Renée",
+        last_name="Doe",
+        birth_date="1971-03-09",
+        as_printed={"name": "RENÉE DOE", "birth_date": "03/09/1971"},
+        legibility="clear",
+    )
+
+    assert (result["patient_id"], result["confidence"]) == (patient.id, "high")

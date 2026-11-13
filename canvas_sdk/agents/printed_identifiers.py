@@ -12,6 +12,7 @@ is never altered.
 """
 
 import re
+import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
@@ -69,7 +70,10 @@ SWAPPED = "name_swapped"
 
 
 def _tokens(value: str, *, folded: bool) -> list[str]:
-    lowered = value.lower().translate(_FOLD) if folded else value.lower()
+    """The words of ``value``, lowercased with accents stripped, so RENÉE is one word."""
+    decomposed = unicodedata.normalize("NFKD", value)
+    plain = "".join(char for char in decomposed if not unicodedata.combining(char)).lower()
+    lowered = plain.translate(_FOLD) if folded else plain
     return re.findall(r"[a-z0-9|]+", lowered)
 
 
