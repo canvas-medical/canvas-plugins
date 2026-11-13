@@ -8,9 +8,10 @@ from canvas_sdk.v1.data.imaging import ImagingReport
 
 
 def test_document_url_with_document() -> None:
-    """document_url returns a presigned URL when document is set."""
+    """document_url presigns the document under the content type the reference records."""
     doc_ref = DocumentReference()
     doc_ref.document = "some/key.pdf"
+    doc_ref.document_content_type = "application/pdf"
     doc_ref.document_absolute_url = "https://example.com/fallback.pdf"
 
     with patch(
@@ -18,7 +19,7 @@ def test_document_url_with_document() -> None:
         return_value="https://s3.example.com/presigned",
     ) as mock:
         assert doc_ref.document_url == "https://s3.example.com/presigned"
-        mock.assert_called_once_with("some/key.pdf")
+        mock.assert_called_once_with("some/key.pdf", content_type="application/pdf")
 
 
 def test_document_url_falls_back_to_absolute_url() -> None:

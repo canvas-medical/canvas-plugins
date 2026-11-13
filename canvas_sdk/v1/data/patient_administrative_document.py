@@ -44,9 +44,13 @@ class PatientAdministrativeDocument(TimestampedModel, IdentifiableModel, Report)
 
     @property
     def document_url(self) -> str | None:
-        """Return a presigned URL for the document file, or None if unset."""
+        """Return a presigned URL for the document file, or None if unset.
+
+        Canvas stores administrative documents, consents included, as PDFs, which is also the
+        type their DocumentReference records.
+        """
         if self.document:
-            return presigned_url(self.document.name)
+            return presigned_url(self.document.name, content_type="application/pdf")
         return None
 
 

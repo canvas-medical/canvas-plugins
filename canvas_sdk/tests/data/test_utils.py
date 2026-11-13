@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from pytest_django.fixtures import SettingsWrapper
@@ -154,3 +155,74 @@ def test_presigned_url_raises_error_without_credentials(settings: SettingsWrappe
 
     with pytest.raises(ValueError, match="AWS credentials not configured"):
         presigned_url("path/to/file.pdf")
+
+
+@pytest.fixture
+def signing_settings(settings: SettingsWrapper) -> SettingsWrapper:
+    """Fixed credentials and bucket, matching the ones the reference URLs below were signed with."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
+    return settings
+
+
+def url_parts(url: str) -> tuple[str, dict[str, list[str]]]:
+    """Split a URL into its path and its query parameters, so parameter order does not matter."""
+    split = urlsplit(url)
+    return split.path, parse_qs(split.query)
+
+
+# Reference URLs signed by botocore's S3SigV4QueryAuth, AWS's own SigV4 implementation, with the
+# credentials in signing_settings at 2026-11-13 12:00:00 UTC.
+BOTOCORE_PLAIN_URL = (
+    "https://test-bucket.s3.us-west-2.amazonaws.com/test-customer/path/to/file.pdf"
+    "?X-Amz-Algorithm=AWS4-HMAC-SHA256"
+    "&X-Amz-Credential=test-access-key%2F20261113%2Fus-west-2%2Fs3%2Faws4_request"
+    "&X-Amz-Date=20261113T120000Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host"
+    "&X-Amz-Signature=907fb67028ab57377c0a3944f210063934040ab9c2427165b1a5fbc44709d20b"
+)
+BOTOCORE_TYPED_URL = (
+    "https://test-bucket.s3.us-west-2.amazonaws.com/test-customer/note_history/note_state_document_7"
+    "?response-content-type=application%2Fpdf"
+    "&response-content-disposition=inline%3B%20filename%3D%22note_state_document_7.pdf%22"
+    "&X-Amz-Algorithm=AWS4-HMAC-SHA256"
+    "&X-Amz-Credential=test-access-key%2F20261113%2Fus-west-2%2Fs3%2Faws4_request"
+    "&X-Amz-Date=20261113T120000Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host"
+    "&X-Amz-Signature=0ea615aa8f1bef7f3857d29b4be9f26e28ba3e1441e403e9087b858d1bfa1958"
+)
+
+
+@pytest.mark.freeze_time("2026-11-13 12:00:00")
+def test_presigned_url_signature_matches_botocore(signing_settings: SettingsWrapper) -> None:
+    """The signature matches the one AWS's own signer produces for the same request."""
+    assert url_parts(presigned_url("path/to/file.pdf")) == url_parts(BOTOCORE_PLAIN_URL)
+
+
+@pytest.mark.freeze_time("2026-11-13 12:00:00")
+def test_presigned_url_names_and_types_a_key_without_an_extension(
+    signing_settings: SettingsWrapper,
+) -> None:
+    """A key with no extension is signed with response overrides for its type and filename."""
+    url = presigned_url("note_history/note_state_document_7", content_type="application/pdf")
+
+    assert url_parts(url) == url_parts(BOTOCORE_TYPED_URL)
+
+
+@pytest.mark.parametrize(
+    "s3_key,content_type",
+    [
+        ("path/to/file.pdf", "application/pdf"),
+        ("path/to/file", None),
+        ("path/to/file", "application/x-unknown"),
+    ],
+    ids=["has-extension", "no-content-type", "unrecognized-content-type"],
+)
+def test_presigned_url_signs_without_response_overrides(
+    signing_settings: SettingsWrapper, s3_key: str, content_type: str | None
+) -> None:
+    """A key that has an extension, or whose type gives none, is signed with no overrides."""
+    _, query = url_parts(presigned_url(s3_key, content_type=content_type))
+
+    assert [key for key in query if key.startswith("response-")] == []
