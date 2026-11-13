@@ -8,9 +8,10 @@ report values, and the reviewer. A suggestion files nothing: a person reviews th
 Canvas and confirms it.
 
 The model never chooses the patient. ``match_patient`` and ``suggest_patient`` take what
-the document says (name, birth date, MRN) and match it in code, suggesting a patient only
-when exactly one matches, since a model choosing among near matches can file a document
-to the wrong chart without noticing.
+the document says (name, birth date, MRN), each identifier both as read and as printed,
+and match it in code, suggesting a patient only when exactly one matches and that
+patient's own record agrees with the print, since a model choosing among near matches
+can file a document to the wrong chart without noticing.
 """
 
 from datetime import date
@@ -98,12 +99,12 @@ _PRINTED_PROPERTIES = {
     "as_printed": {
         "type": "object",
         "description": (
-            "For a scanned or faxed document: each identifier exactly as printed, "
-            "character for character, misprints and all (for example 'DOE, J0HN' or "
-            "'DOB: 03/O9/1971'). With it, the identifiers read are checked against the "
-            "print, and a common fax misread is tried when they match no one. Read every "
-            "identifier the print shows, the whole name included: one printed but not "
-            "passed, or read only in part, names no patient."
+            "Required: each identifier exactly as the document prints it, character for "
+            "character, misprints and all (for example 'DOE, J0HN' or 'DOB: 03/O9/1971'). "
+            "The identifiers read are checked against the print, and a common fax misread "
+            "is tried when they match no one. Every identifier read needs its printed "
+            "text here, and every identifier printed must be read, the whole name "
+            "included: one missing from either side names no patient."
         ),
         "properties": {
             "name": {"type": "string", "description": "The patient's name as printed."},
@@ -173,36 +174,25 @@ def _annotations(
     return annotations
 
 
-def _confirmed_confidence(
-    patient: Any, arguments: dict[str, Any], matched_on: list[str], how: str
-) -> tuple[str, str]:
+def _confirmed_confidence(patient: Any, arguments: dict[str, Any], how: str) -> tuple[str, str]:
     """Why the one patient found is not the one printed, or the match's confidence.
 
-    Returns ``(refused, confidence)``. With the print passed, the patient's own record is
-    compared with it in code, and confidence counts the printed identifiers the record
-    confirms rather than the fields the model passed: high for three. A repaired or
-    swapped reading is medium.
+    Returns ``(refused, confidence)``. The patient's own record is compared with the print
+    in code, and confidence counts the printed identifiers the record confirms rather
+    than the fields the model passed: high for three. A repaired or swapped reading is
+    medium.
     """
-    if arguments.get("as_printed"):
-        outside = (
-            Patient.objects.filter(_sending_mrns(date.today()), id=patient.id)
-            .values_list("external_identifiers__value", flat=True)
-            .distinct()
-        )
-        refused, confirmed = confirm_against_print(
-            patient, arguments, [str(value) for value in outside if value]
-        )
-        if refused:
-            return f"{refused} A person files this document.", ""
-        return "", "medium" if how or confirmed < 3 else "high"
-    return "", "medium" if how else _match_confidence(matched_on)
-
-
-def _match_confidence(matched_on: list[str]) -> str:
-    """High when three of Canvas's own identifiers agree, such as last name, birth date,
-    and first name. Another organization's MRN never counts toward it.
-    """
-    return "high" if len([m for m in matched_on if m != "sending_mrn"]) >= 3 else "medium"
+    outside = (
+        Patient.objects.filter(_sending_mrns(date.today()), id=patient.id)
+        .values_list("external_identifiers__value", flat=True)
+        .distinct()
+    )
+    refused, confirmed = confirm_against_print(
+        patient, arguments, [str(value) for value in outside if value]
+    )
+    if refused:
+        return f"{refused} A person files this document.", ""
+    return "", "medium" if how or confirmed < 3 else "high"
 
 
 def _sending_mrns(today: date) -> Q:
@@ -370,9 +360,9 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
         "name and MRN when the document gives them, exactly as the document shows them. "
         "Returns the patient's id only when exactly one matches; otherwise it says none "
         "or several did and names no one. Never guess or loosen identifiers to get a "
-        "match: a document no one patient matches is for a person to file. On a scan or "
-        "fax, also pass each identifier `as_printed` and the `legibility`: the code checks "
-        "the values against the print and tries common fax misreads itself."
+        "match: a document no one patient matches is for a person to file. Also pass each "
+        "identifier `as_printed` and the `legibility`: the code checks the values against "
+        "the print and tries common fax misreads itself."
     ),
     input_schema={
         "type": "object",
@@ -382,7 +372,8 @@ def _read_incoming_document(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
     required_permissions=(QUEUE_PERMISSION,),
     returns_description=(
         "`{match: {patient_id}, matched_on, confidence}` when exactly one patient matches "
-        "(`confidence` is high when three identifiers agree, else medium), else "
+        "(`confidence` is high when the patient's record confirms three printed "
+        "identifiers, else medium), else "
         "`{match: null, reason}`."
     ),
     progress_label="Matching the patient",
@@ -395,7 +386,7 @@ def _match_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[st
         return {"match": None, "reason": refused}
     if len(found) != 1:
         return _no_match(found)
-    refused, confidence = _confirmed_confidence(found[0], arguments, matched_on, how)
+    refused, confidence = _confirmed_confidence(found[0], arguments, how)
     if refused:
         return {"match": None, "reason": refused}
     return {
@@ -519,8 +510,8 @@ def _find_report_templates(
         "Suggest, on the document's review form, the patient the document is for. Pass "
         "the identifiers exactly as the document shows them, as for `match_patient`: the "
         "patient is matched in code and suggested only when exactly one matches. Files "
-        "nothing; a person confirms the patient. On a scan or fax, pass `as_printed` and "
-        "`legibility` as for `match_patient`."
+        "nothing; a person confirms the patient. Pass `as_printed` and `legibility` as "
+        "for `match_patient`."
     ),
     input_schema={
         "type": "object",
@@ -545,7 +536,7 @@ def _suggest_patient(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[
     if len(found) != 1:
         return {"ok": False, **_no_match(found)}
     patient = found[0]
-    refused, confidence = _confirmed_confidence(patient, arguments, matched_on, how)
+    refused, confidence = _confirmed_confidence(patient, arguments, how)
     if refused:
         return {"ok": False, "match": None, "reason": refused}
     ctx["effects"].append(

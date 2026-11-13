@@ -175,8 +175,8 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
     """Why the identifiers cannot be trusted, or None when they can.
 
     Refuses identifiers the model called illegible or handwritten, pages that name
-    different patients, and a value read that its printed text does not support. Checks
-    only what the model passed: without ``as_printed`` there is nothing to compare.
+    different patients, an identifier read without its printed text in ``as_printed``,
+    and a value read that its printed text does not support.
     """
     if arguments.get("legibility") == "illegible":
         return "The identifiers are illegible; a person files this document."
@@ -185,6 +185,14 @@ def check_printed(arguments: dict[str, Any]) -> str | None:
     if arguments.get("pages_disagree"):
         return "The pages name different patients; a person files this document."
     printed = arguments.get("as_printed") or {}
+    for label, read_keys, printed_key in (
+        ("name", ("first_name", "last_name"), "name"),
+        ("birth date", ("birth_date",), "birth_date"),
+        ("MRN", ("mrn",), "mrn"),
+    ):
+        was_read = any(str(arguments.get(key) or "").strip() for key in read_keys)
+        if was_read and not str(printed.get(printed_key) or "").strip():
+            return f"Pass the {label} as printed in `as_printed`; it is checked against the print."
     name = str(printed.get("name") or "").strip()
     for key in ("first_name", "last_name"):
         read = str(arguments.get(key) or "").strip()

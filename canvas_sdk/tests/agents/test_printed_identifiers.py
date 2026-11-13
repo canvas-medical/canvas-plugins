@@ -183,7 +183,7 @@ def test_repairs_that_point_at_different_patients_suggest_no_one() -> None:
         first_name="Sam",
         last_name="Al1",
         birth_date="1971-03-09",
-        as_printed={"name": "AL1, SAM"},
+        as_printed={"name": "AL1, SAM", "birth_date": "03/09/1971"},
         legibility="readable_with_artifacts",
     )
 
@@ -193,12 +193,17 @@ def test_repairs_that_point_at_different_patients_suggest_no_one() -> None:
 
 
 @pytest.mark.django_db
-def test_an_exact_match_is_unchanged_and_needs_no_print() -> None:
-    """A clean PDF's identifiers match as before, without as_printed."""
+def test_an_exact_match_carries_no_repair_warning() -> None:
+    """A clean PDF's identifiers, read exactly as printed, match with no fix to flag."""
     patient = PatientFactory.create(first_name="John", last_name="Smith", birth_date=BIRTH)
 
     result, (effect,) = _run(
-        "suggest_patient", first_name="John", last_name="Smith", birth_date="1971-03-09"
+        "suggest_patient",
+        first_name="John",
+        last_name="Smith",
+        birth_date="1971-03-09",
+        as_printed={"name": "JOHN SMITH", "birth_date": "03/09/1971"},
+        legibility="clear",
     )
 
     assert (result["patient_id"], result["confidence"]) == (patient.id, "high")
@@ -232,7 +237,7 @@ def test_a_match_among_cut_short_readings_is_not_taken_as_the_only_one() -> None
         last_name="Smith",
         birth_date="1971-03-09",
         mrn="1050815",
-        as_printed={"mrn": "1050815", "birth_date": "03/09/1971"},
+        as_printed={"name": "SMITH", "mrn": "1050815", "birth_date": "03/09/1971"},
         legibility="readable_with_artifacts",
     )
 
@@ -251,7 +256,7 @@ def test_the_models_label_never_replaces_the_repair_warning() -> None:
         first_name="J0HN",
         last_name="Smith",
         birth_date="1971-03-09",
-        as_printed={"name": "SMITH, J0HN"},
+        as_printed={"name": "SMITH, J0HN", "birth_date": "03/09/1971"},
         legibility="clear",
         label="Exact match",
     )
@@ -348,15 +353,21 @@ def test_the_matched_patient_must_agree_with_the_print_in_code() -> None:
 
 @pytest.mark.django_db
 def test_confidence_counts_the_identifiers_printed_and_confirmed() -> None:
-    """Three printed identifiers the patient agrees with are high confidence; one is medium."""
-    patient = PatientFactory.create(first_name="Ann", last_name="Smith", birth_date=BIRTH)
+    """Three printed identifiers the patient agrees with are high confidence; two are medium."""
+    patient = PatientFactory.create(
+        first_name="Ann", last_name="Smith", birth_date=BIRTH, mrn="A-1"
+    )
     printed = {"name": "SMITH, ANN", "birth_date": "03/09/1971"}
     read = {"first_name": "Ann", "last_name": "Smith", "birth_date": "1971-03-09"}
 
     full, _ = _run("suggest_patient", **read, as_printed=printed, legibility="clear")
-    # The print shows no name: names the model passes anyway are not printed evidence.
+    # The print shows no name, so only the birth date and MRN are printed evidence.
     partial, _ = _run(
-        "suggest_patient", **read, as_printed={"birth_date": "03/09/1971"}, legibility="clear"
+        "suggest_patient",
+        birth_date="1971-03-09",
+        mrn="A-1",
+        as_printed={"birth_date": "03/09/1971", "mrn": "A-1"},
+        legibility="clear",
     )
 
     assert (full["patient_id"], full["confidence"]) == (patient.id, "high")

@@ -95,7 +95,12 @@ def test_one_matching_patient_is_named(document: Any) -> None:
     PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=date(1990, 1, 1))
 
     result, _ = _run(
-        "match_patient", document, first_name=" jane", last_name="DOE", birth_date="1980-04-02"
+        "match_patient",
+        document,
+        first_name=" jane",
+        last_name="DOE",
+        birth_date="1980-04-02",
+        as_printed={"name": "DOE, JANE", "birth_date": "04/02/1980"},
     )
 
     assert result["match"]["patient_id"] == str(patient.id)
@@ -109,7 +114,13 @@ def test_several_matching_patients_name_no_one(document: Any) -> None:
     for _ in range(2):
         PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
 
-    result, _ = _run("match_patient", document, last_name="Doe", birth_date="1980-04-02")
+    result, _ = _run(
+        "match_patient",
+        document,
+        last_name="Doe",
+        birth_date="1980-04-02",
+        as_printed={"name": "DOE", "birth_date": "04/02/1980"},
+    )
 
     assert result == {
         "match": None,
@@ -125,7 +136,12 @@ def test_a_nickname_matches_the_first_name(document: Any) -> None:
     )
 
     result, _ = _run(
-        "match_patient", document, first_name="Peggy", last_name="Doe", birth_date="1980-04-02"
+        "match_patient",
+        document,
+        first_name="Peggy",
+        last_name="Doe",
+        birth_date="1980-04-02",
+        as_printed={"name": "PEGGY DOE", "birth_date": "04/02/1980"},
     )
 
     assert result["match"]["patient_id"] == str(patient.id)
@@ -134,15 +150,28 @@ def test_a_nickname_matches_the_first_name(document: Any) -> None:
 @pytest.mark.django_db
 def test_an_mrn_must_agree_with_the_rest(document: Any) -> None:
     """An MRN whose patient has another birth date matches no one."""
-    patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
+    patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
 
-    agreeing, _ = _run("match_patient", document, mrn=patient.mrn, last_name="doe")
-    disagreeing, _ = _run("match_patient", document, mrn=patient.mrn, birth_date="1999-09-09")
+    agreeing, _ = _run(
+        "match_patient",
+        document,
+        mrn=patient.mrn,
+        last_name="doe",
+        first_name="Jane",
+        as_printed={"name": "DOE, JANE", "mrn": patient.mrn},
+    )
+    disagreeing, _ = _run(
+        "match_patient",
+        document,
+        mrn=patient.mrn,
+        birth_date="1999-09-09",
+        as_printed={"mrn": patient.mrn, "birth_date": "09/09/1999"},
+    )
 
     assert agreeing == {
         "match": {"patient_id": str(patient.id)},
-        "matched_on": "mrn, last_name",
-        "confidence": "medium",
+        "matched_on": "mrn, last_name, first_name",
+        "confidence": "high",
     }
     assert disagreeing["match"] is None
 
@@ -153,23 +182,35 @@ def test_an_mrn_alone_names_no_one(document: Any) -> None:
     patient = PatientFactory.create()
 
     with pytest.raises(ValueError, match="last name or birth date with the MRN"):
-        _run("match_patient", document, mrn=patient.mrn)
+        _run("match_patient", document, mrn=patient.mrn, as_printed={"mrn": patient.mrn})
 
 
 @pytest.mark.django_db
 def test_a_name_alone_is_not_enough(document: Any) -> None:
     """Without an MRN, the last name and birth date are both required."""
     with pytest.raises(ValueError, match="last name and birth date"):
-        _run("match_patient", document, first_name="Jane", last_name="Doe")
+        _run(
+            "match_patient",
+            document,
+            first_name="Jane",
+            last_name="Doe",
+            as_printed={"name": "JANE DOE"},
+        )
 
 
 @pytest.mark.django_db
 def test_the_suggested_patient_is_the_one_code_matched(document: Any) -> None:
     """The model passes what the document says, never a patient id."""
-    patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
+    patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
 
     result, (effect,) = _run(
-        "suggest_patient", document, last_name="Doe", birth_date="1980-04-02", label="From fax"
+        "suggest_patient",
+        document,
+        first_name="Jane",
+        last_name="Doe",
+        birth_date="1980-04-02",
+        as_printed={"name": "JANE DOE", "birth_date": "04/02/1980"},
+        label="From fax",
     )
 
     assert result["ok"] is True
@@ -180,17 +221,93 @@ def test_the_suggested_patient_is_the_one_code_matched(document: Any) -> None:
             "patient_key": str(patient.id),
             "annotations": [
                 {"text": "AI suggested", "color": document_tools.SOURCE_COLOR},
-                {"text": "Match: medium", "color": document_tools.CONFIDENCE_COLORS["medium"]},
+                {"text": "Match: high", "color": document_tools.CONFIDENCE_COLORS["high"]},
                 {"text": "From fax", "color": document_tools.SOURCE_COLOR},
             ],
         },
     )
 
 
+@pytest.mark.parametrize("tool", ["match_patient", "suggest_patient"])
+@pytest.mark.parametrize(
+    "printed",
+    [
+        None,
+        {},
+        {"birth_date": "04/02/1980"},
+        {"name": "DOE"},
+    ],
+    ids=["no print", "empty print", "name not printed", "birth date not printed"],
+)
+@pytest.mark.django_db
+def test_an_identifier_read_without_its_print_names_no_one(
+    document: Any, tool: str, printed: dict[str, str] | None
+) -> None:
+    """A fax printed JANE DOE, read as last name and birth date alone, never finds John Doe."""
+    PatientFactory.create(first_name="John", last_name="Doe", birth_date=BIRTH)
+    read: dict[str, Any] = {"last_name": "Doe", "birth_date": "1980-04-02"}
+    if printed is not None:
+        read["as_printed"] = printed
+
+    result, effects = _run(tool, document, **read)
+
+    assert result.get("match") is None
+    assert "as printed" in result.get("reason", "")
+    assert effects == []
+
+
+@pytest.mark.parametrize("tool", ["match_patient", "suggest_patient"])
+@pytest.mark.django_db
+def test_an_mrn_read_without_its_print_names_no_one(document: Any, tool: str) -> None:
+    """The MRN read needs its printed text as much as the name and birth date do."""
+    patient = PatientFactory.create(first_name="Jane", last_name="Doe", birth_date=BIRTH)
+
+    result, effects = _run(
+        tool,
+        document,
+        first_name="Jane",
+        last_name="Doe",
+        birth_date="1980-04-02",
+        mrn=patient.mrn,
+        as_printed={"name": "DOE, JANE", "birth_date": "04/02/1980"},
+    )
+
+    assert result.get("match") is None
+    assert "as printed" in result.get("reason", "")
+    assert effects == []
+
+
+@pytest.mark.parametrize("tool", ["match_patient", "suggest_patient"])
+@pytest.mark.django_db
+def test_a_printed_initial_is_checked_against_the_patients_first_name(
+    document: Any, tool: str
+) -> None:
+    """A fax printed J. DOE does not name John Doe, the only Doe born that day."""
+    PatientFactory.create(first_name="John", last_name="Doe", birth_date=BIRTH)
+
+    result, effects = _run(
+        tool,
+        document,
+        last_name="Doe",
+        birth_date="1980-04-02",
+        as_printed={"name": "J. DOE", "birth_date": "04/02/1980"},
+    )
+
+    assert result.get("match") is None
+    assert "first name does not match the print" in result.get("reason", "")
+    assert effects == []
+
+
 @pytest.mark.django_db
 def test_no_patient_is_suggested_without_one_match(document: Any) -> None:
     """With no match, nothing is staged."""
-    result, effects = _run("suggest_patient", document, last_name="Nobody", birth_date="1980-04-02")
+    result, effects = _run(
+        "suggest_patient",
+        document,
+        last_name="Nobody",
+        birth_date="1980-04-02",
+        as_printed={"name": "NOBODY", "birth_date": "04/02/1980"},
+    )
 
     assert result["ok"] is False and effects == []
 
@@ -388,9 +505,7 @@ def test_the_sending_organizations_mrn_matches(document: Any) -> None:
         first_name="Jane",
         last_name="Doe",
         birth_date="1980-04-02",
-    )
-    names_only, _ = _run(
-        "match_patient", document, mrn="VL-4471", last_name="Doe", birth_date="1980-04-02"
+        as_printed={"name": "DOE, JANE", "birth_date": "04/02/1980", "mrn": "MRN VL-4471"},
     )
 
     assert full == {
@@ -398,8 +513,6 @@ def test_the_sending_organizations_mrn_matches(document: Any) -> None:
         "matched_on": "sending_mrn, last_name, birth_date, first_name",
         "confidence": "high",
     }
-    # Another organization's MRN never raises the confidence on its own.
-    assert names_only["confidence"] == "medium"
 
 
 @pytest.mark.django_db
@@ -408,13 +521,16 @@ def test_the_sending_organizations_mrn_must_agree_too(document: Any) -> None:
     patient = PatientFactory.create(last_name="Doe", birth_date=BIRTH)
     _sending_mrn(patient, "VL-4471")
 
-    disagreeing, _ = _run("match_patient", document, mrn="VL-4471", birth_date="1999-09-09")
-    one_agreeing, _ = _run("match_patient", document, mrn="VL-4471", birth_date="1980-04-02")
+    def match(birth_date: str, printed_date: str) -> Any:
+        printed = {"mrn": "VL-4471", "birth_date": printed_date}
+        return _run(
+            "match_patient", document, mrn="VL-4471", birth_date=birth_date, as_printed=printed
+        )[0]
 
-    assert disagreeing["match"] is None
-    assert one_agreeing["match"] is None
+    assert match("1999-09-09", "09/09/1999")["match"] is None
+    assert match("1980-04-02", "04/02/1980")["match"] is None
     with pytest.raises(ValueError, match="last name or birth date with the MRN"):
-        _run("match_patient", document, mrn="VL-4471")
+        _run("match_patient", document, mrn="VL-4471", as_printed={"mrn": "VL-4471"})
 
 
 @pytest.mark.django_db
