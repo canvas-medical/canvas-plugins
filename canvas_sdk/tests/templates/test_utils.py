@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from canvas_sdk.agents.ui import AGENT_UI_CSS
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import LOADED_PLUGINS
@@ -83,3 +84,17 @@ def test_sanitize_html_template_filter(install_test_plugin: Path, load_test_plug
         '<div id="escaped">&lt;b&gt;hi&lt;/b&gt;&lt;img src=&quot;x&quot; '
         "onerror=&quot;alert(1)&quot;&gt;</div>" in result[0].payload
     )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_render_template"], indirect=True)
+def test_agent_ui_stylesheet_renders_unescaped_in_a_plugin(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """A sandboxed plugin imports the agent stylesheet and its template outputs it intact."""
+    plugin = LOADED_PLUGINS[
+        "test_render_template:test_render_template.handlers.my_handler:AgentUiStylesheet"
+    ]
+    result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+    assert result[0].payload == f"<style>{AGENT_UI_CSS}</style>\n"
+    assert "'Helvetica Neue'" in result[0].payload
+    assert "&amp;" not in result[0].payload and "&#x27;" not in result[0].payload

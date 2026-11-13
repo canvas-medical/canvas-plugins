@@ -87,6 +87,10 @@
     "ToolNotAllowed",
     "ToolRegistry"
   ],
+  "canvas_sdk.agents.ui": [
+    "AGENT_UI_CSS",
+    "TOKENS"
+  ],
   "canvas_sdk.caching.client": [
     "get_cache"
   ],
