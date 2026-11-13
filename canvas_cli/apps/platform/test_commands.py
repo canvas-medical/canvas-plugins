@@ -953,7 +953,7 @@ def test_deploy_push_only_pushes_head_and_deploys_nothing(
     assert not _requests_to(api, "POST", "/deployments")
     assert f"Pushed {NAME} {head[:12]} to main on Canvas Platform." in result.output
     assert (
-        f"To install this commit on an instance: canvas deploy {package} --ref {head[:12]}"
+        f"To install this commit on an instance: canvas deploy {package} --ref {head}"
         in result.output
     )
     assert "Not deployed" not in result.output
