@@ -889,6 +889,27 @@ def validate(
     _validate_plugin_loads(plugin_name)
 
 
+def check_unpushed_history(versions: Iterable[tuple[Path, str]]) -> None:
+    """Print the credential findings in file versions that earlier unpushed commits hold, and
+    raise ``typer.Exit(1)`` on an error, since the push sends those commits too.
+    """
+    findings = plugin_lint.credential_findings(versions)
+    if not findings:
+        return
+    print("Earlier commits this deploy pushes hold these, though the current files do not:")
+    for w in (f for f in findings if f.severity == "warning"):
+        print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
+    errors = [f for f in findings if f.severity == "error"]
+    if errors:
+        print(
+            "\nThese must be removed before the plugin can be deployed. Rewrite the commits "
+            "that add them, which are not pushed yet, and rotate each credential:"
+        )
+        for e in errors:
+            print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
+        raise typer.Exit(code=1)
+
+
 def lint_pushed(plugin_dir: Path, pushed: Iterable[tuple[Path, Path]] | None) -> None:
     """The static lint, with the credential rule reading ``pushed``, the files a deploy sends."""
     _lint_plugin_static(plugin_dir, pushed)

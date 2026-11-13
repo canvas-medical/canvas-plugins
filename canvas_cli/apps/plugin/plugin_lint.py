@@ -425,15 +425,21 @@ def _looks_random(value: str) -> bool:
     )
 
 
-def _credential_findings(files: Iterable[tuple[Path, Path]]) -> list[LintFinding]:
-    findings: list[LintFinding] = []
+def _file_texts(files: Iterable[tuple[Path, Path]]) -> Iterator[tuple[Path, str]]:
+    """``(path inside the package, text)`` for each readable text file in ``files``."""
     for path, rel in files:
         if not path.is_file():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            yield rel, path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
+
+
+def credential_findings(texts: Iterable[tuple[Path, str]]) -> list[LintFinding]:
+    """The credential findings in each ``(path inside the package, text)``."""
+    findings: list[LintFinding] = []
+    for rel, text in texts:
         is_doc = rel.suffix.lower() in _DOC_SUFFIXES
         # Placeholder values belong in docs and tests, so a value matched by its shape alone is
         # not reported there.
@@ -617,7 +623,7 @@ def lint_plugin(
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
-        + _credential_findings(shipped_files(plugin_dir) if files is None else files)
+        + credential_findings(_file_texts(shipped_files(plugin_dir) if files is None else files))
         + _custom_data_findings(plugin_dir, manifest)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
