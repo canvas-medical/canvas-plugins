@@ -17,6 +17,7 @@ def test_items_enum_values() -> None:
     assert Items.CAMPAIGNS.value == "campaigns"
     assert Items.DATA_INTEGRATION.value == "data_integration"
     assert Items.QUESTIONNAIRE_BUILDER.value == "questionnaire_builder"
+    assert Items.IDENTITY_VERIFICATION.value == "identity_verification"
     assert Items.SETTINGS.value == "settings"
     assert Items.MULTI_FACTOR_AUTHENTICATION.value == "multi_factor_authentication"
     assert Items.CHANGELOG.value == "changelog"
