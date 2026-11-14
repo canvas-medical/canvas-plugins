@@ -12,11 +12,15 @@ from canvas_sdk.agents.gateway import (
     ModelCallLimitReached,
     _converted,
     agent_secrets,
-    attempt_timeout,
     build_gateway,
     gateway_from_plugin_secrets,
 )
-from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
+from canvas_sdk.agents.run_record import (
+    DEADLINE_MARGIN_SECONDS,
+    RunDeadlineExceeded,
+    RunRecorder,
+    current_recorder,
+)
 
 GATEWAY_URL = "https://inference-dev.canvasmedical.com"
 KEY = "cnvs_sk_plugin_key"
@@ -196,23 +200,109 @@ def test_the_instance_environment_is_not_a_gateway_url(monkeypatch: pytest.Monke
         )
 
 
-def test_in_a_run_the_client_timeout_splits_the_time_left_across_attempts() -> None:
-    """A call and its retries together end before the run's deadline."""
-    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + 60)
+def _client_in_run(
+    seconds_left: float, max_retries: int = 2, status: int = 200
+) -> tuple[Any, list[httpx2.Request], RunRecorder]:
+    """A client built in a run with ``seconds_left`` before its margin, and what it sends."""
+    sent: list[httpx2.Request] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        sent.append(request)
+        return httpx2.Response(status, json=MESSAGE if status == 200 else {"error": {}})
+
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + seconds_left)
     token = current_recorder.set(recorder)
     try:
-        client = gateway().client(max_retries=2)
+        client = gateway().client(max_retries=max_retries)
     finally:
         current_recorder.reset(token)
+    client._client = client._client.with_options(
+        http_client=httpx2.Client(transport=httpx2.MockTransport(handler))
+    )
+    client.messages = GatewayMessages(client._client, recorder)
+    return client, sent, recorder
 
-    assert 19 < client._client.timeout <= 20  # type: ignore[operator]
+
+def _read_timeout(request: httpx2.Request) -> float:
+    return float(request.extensions["timeout"]["read"])
+
+
+CALL: dict[str, Any] = {
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 16,
+    "messages": [{"role": "user", "content": "hi"}],
+}
+
+
+def test_in_a_run_each_attempt_gets_the_time_left_split_across_attempts() -> None:
+    """A call and its retries together end before the run's deadline."""
+    client, sent, _ = _client_in_run(60, max_retries=2)
+
+    client.messages.create(**CALL)
+
+    assert 19 < _read_timeout(sent[0]) <= 20
+
+
+@pytest.mark.parametrize("asked", [30, 300], ids=["longer than the run allows", "far longer"])
+def test_a_calls_own_timeout_cannot_carry_it_past_the_deadline(asked: float) -> None:
+    """Plugin code passing timeout= gets at most the time the run has left per attempt."""
+    client, sent, _ = _client_in_run(60, max_retries=2)
+
+    client.messages.create(**CALL, timeout=asked)
+
+    assert _read_timeout(sent[0]) <= 20
+
+
+def test_a_calls_own_shorter_timeout_is_kept() -> None:
+    """Plugin code may shorten a call."""
+    client, sent, _ = _client_in_run(60, max_retries=2)
+
+    client.messages.create(**CALL, timeout=5)
+
+    assert _read_timeout(sent[0]) == 5
+
+
+def test_a_streamed_calls_own_timeout_cannot_carry_it_past_the_deadline() -> None:
+    """The stream is held to the same per-attempt time as a plain call."""
+    client, sent, _ = _client_in_run(60, max_retries=0, status=400)
+
+    with pytest.raises(GatewayError), client.messages.stream(**CALL, timeout=300) as stream:
+        list(stream)
+
+    assert _read_timeout(sent[0]) <= 60
+
+
+def test_the_time_left_is_read_when_the_call_is_made_not_when_the_client_was_built() -> None:
+    """A client kept from early in the run gets the time the run has left now."""
+    client, sent, recorder = _client_in_run(60, max_retries=2)
+    recorder.deadline = time.monotonic() + DEADLINE_MARGIN_SECONDS + 6
+
+    client.messages.create(**CALL)
+
+    assert _read_timeout(sent[0]) <= 2
+
+
+def test_retries_are_capped_so_the_attempts_fit_the_time_left() -> None:
+    """More retries would each get a sliver of the time left; past two, they are refused."""
+    client, sent, _ = _client_in_run(6, max_retries=10, status=500)
+
+    with pytest.raises(GatewayError):
+        client.messages.create(**CALL)
+
     assert client._client.max_retries == 2
+    assert len(sent) == 3
+    assert sum(_read_timeout(request) for request in sent) <= 6
 
 
-def test_attempt_timeout_never_drops_below_a_second() -> None:
-    """A run at its margin still gets a usable timeout; the tool loop stops it first."""
-    assert attempt_timeout(0.5) == 1.0
-    assert attempt_timeout(90, max_retries=2) == 30.0
+def test_a_call_with_no_time_left_is_not_made() -> None:
+    """Inside the deadline's margin the run is ending, so the call is refused unsent."""
+    client, sent, recorder = _client_in_run(60)
+    recorder.deadline = time.monotonic() + DEADLINE_MARGIN_SECONDS - 1
+
+    with pytest.raises(RunDeadlineExceeded):
+        client.messages.create(**CALL)
+
+    assert sent == []
 
 
 def test_with_model_keeps_the_url_key_and_attribution() -> None:

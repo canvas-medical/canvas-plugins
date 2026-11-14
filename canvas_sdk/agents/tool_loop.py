@@ -14,7 +14,6 @@ from canvas_sdk.agents.gateway import (
     GatewayError,
     LLMGateway,
     ModelCallLimitReached,
-    attempt_timeout,
 )
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.run_record import (
@@ -272,11 +271,8 @@ def run_tool_loop(
                 log.exception("on_turn hook raised; ignoring")
 
         recorder = current_recorder.get()
-        request_options: dict[str, Any] = {}
         if recorder is not None:
             recorder.check_deadline()
-            if (left := recorder.seconds_left()) is not None:
-                request_options["timeout"] = attempt_timeout(left)
             recorder.phase = "thinking"
 
         sent = transcript if history_chars is None else window_messages(transcript, history_chars)
@@ -286,7 +282,6 @@ def run_tool_loop(
             "system": system_param,
             "tools": cast(Any, tools.definitions()),
             "messages": cast(Any, sent),
-            **request_options,
         }
         try:
             if recorder is not None and recorder.streams_reply and streams_reply.get():

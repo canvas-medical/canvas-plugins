@@ -24,9 +24,9 @@ from urllib.parse import urlsplit, urlunsplit
 
 import anthropic
 import httpx2
-from anthropic import NOT_GIVEN, Anthropic, NotGiven
+from anthropic import Anthropic
 
-from canvas_sdk.agents.run_record import RunRecorder, current_recorder
+from canvas_sdk.agents.run_record import RunDeadlineExceeded, RunRecorder, current_recorder
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -180,16 +180,37 @@ class GatewayMessages:
         """
         if request.get("stream"):
             raise ValueError("Stream a call with messages.stream, not create(stream=True).")
+        client = self._within_deadline(request)
         count_model_call(request, self._recorder)
-        return _calling(self._client.messages.create, **request)
+        return _calling(client.messages.create, **request)
 
     def stream(self, **request: Any) -> GatewayStream:
         """Stream one model call through the gateway; see ``anthropic`` ``messages.stream``.
 
         Use it as a context manager. Raises :class:`GatewayError` when the call fails.
         """
+        client = self._within_deadline(request)
         count_model_call(request, self._recorder)
-        return GatewayStream(_calling(self._client.messages.stream, **request))
+        return GatewayStream(_calling(client.messages.stream, **request))
+
+    def _within_deadline(self, request: dict[str, Any]) -> Anthropic:
+        """The client for one call in a run: each attempt gets the time left split across
+        the first try and every retry, read when the call is made, and a ``timeout`` in
+        ``request`` may shorten that but never lengthen it.
+
+        Raises :class:`RunDeadlineExceeded` with no time left. Outside a run, the client
+        and ``request`` are as given.
+        """
+        left = self._recorder.seconds_left() if self._recorder is not None else None
+        if left is None:
+            return self._client
+        if left <= 0:
+            raise RunDeadlineExceeded("the run reached its deadline")
+        attempt = left / (self._client.max_retries + 1)
+        asked = request.pop("timeout", None)
+        if isinstance(asked, int | float) and not isinstance(asked, bool) and asked > 0:
+            attempt = min(attempt, float(asked))
+        return self._client.with_options(timeout=attempt)
 
 
 class GatewayClient:
@@ -271,23 +292,18 @@ class LLMGateway:
     def client(self, *, max_retries: int = DEFAULT_MAX_RETRIES) -> GatewayClient:
         """A client for the gateway, carrying the attribution headers.
 
-        In a platform run, each attempt's timeout is the time left before the run's
-        deadline split across the attempts, so retries cannot carry a call past it.
-        Raises :class:`ModelCallLimitReached` once the gateway's run has ended.
+        ``max_retries`` is at most ``DEFAULT_MAX_RETRIES``. In a platform run, each call's
+        attempts share the time left before the run's deadline, so retries cannot carry a
+        call past it. Raises :class:`ModelCallLimitReached` once the gateway's run has ended.
         """
         recorder = self._recorder or current_recorder.get()
         if recorder is not None and recorder.closed:
             raise ModelCallLimitReached("The run has ended; it makes no more model calls.")
-        left = recorder.seconds_left() if recorder is not None else None
-        timeout: float | NotGiven = (
-            NOT_GIVEN if left is None else attempt_timeout(left, max_retries)
-        )
         return GatewayClient(
             Anthropic(
                 api_key=self._api_key,
                 base_url=self._base_url,
-                max_retries=max_retries,
-                timeout=timeout,
+                max_retries=min(max(max_retries, 0), DEFAULT_MAX_RETRIES),
                 default_headers={
                     f"{ATTRIBUTION_PREFIX}{name}": value
                     for name, value in self._attribution.items()
@@ -319,11 +335,6 @@ def build_gateway(
         attribution=attribution,
         recorder=recorder,
     )
-
-
-def attempt_timeout(seconds_left: float, max_retries: int = DEFAULT_MAX_RETRIES) -> float:
-    """One attempt's timeout when ``seconds_left`` must cover the first try and every retry."""
-    return max(1.0, seconds_left / (max_retries + 1))
 
 
 # Secrets the plugin runner keeps from an agent: its gateway key and URL, which the runner

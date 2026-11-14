@@ -480,16 +480,6 @@ def test_the_loop_raises_once_the_run_is_inside_its_deadline_margin() -> None:
     assert client.requests == []
 
 
-def test_each_model_call_gets_the_time_left_split_across_its_retries() -> None:
-    """Retries of one call cannot carry it past the run's deadline."""
-    client = FakeGateway(_response("end_turn", _text("done")))
-    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS + 90)
-
-    _with_recorder(recorder, client)
-
-    assert 29 < client.requests[0]["timeout"] <= 30
-
-
 def test_without_a_deadline_model_calls_carry_no_timeout() -> None:
     """Outside a platform run the client's own timeout applies."""
     client = FakeGateway(_response("end_turn", _text("done")))
