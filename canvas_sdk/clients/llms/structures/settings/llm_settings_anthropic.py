@@ -18,7 +18,10 @@ class LlmSettingsAnthropic(LlmSettings):
         structured_outputs: Request schema output with Anthropic structured outputs instead of a
             forced tool call. Models that reject forced tool use (Claude Opus 5.5, Claude Sonnet 5.5,
             Claude Fable 5.1) require it. The schema must fit structured outputs' limits: at most
-            24 optional fields and 16 union-typed fields.
+            24 optional fields and 16 union-typed fields, and it cannot contain dict fields
+            (use a list of models instead). Anthropic caches schemas for up to 24 hours without
+            PHI protections, so keep PHI out of the schema: property names, enums, consts,
+            patterns, and descriptions.
     example:
         ```python3
         LlmSettingsAnthropic(

@@ -3,11 +3,11 @@ import json
 from datetime import date
 from http import HTTPStatus
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import call
 
 import pytest
-from pydantic import Field
+from pydantic import Field, create_model
 from pytest_mock import MockerFixture
 from requests import exceptions
 
@@ -683,6 +683,64 @@ def test_to_dict__schema_structured_outputs_unsupported_keywords() -> None:
     assert result == expected
     # the model's own schema is left untouched
     assert _ConstrainedSchemaLlm.model_json_schema()["properties"]["confidence"]["minimum"] == 0.0
+
+
+class _CatLlm(BaseModelLlmJson):
+    kind: Literal["cat"]
+    meow: str
+
+
+class _DogLlm(BaseModelLlmJson):
+    kind: Literal["dog"]
+    bark: str
+
+
+class _UnionSchemaLlm(BaseModelLlmJson):
+    pet: _CatLlm | _DogLlm = Field(discriminator="kind")
+
+
+def test_to_dict__schema_structured_outputs_discriminated_union() -> None:
+    """Test that a discriminated union is sent as anyOf, its discriminator noted in the description."""
+    tested = LlmAnthropic(_structured_settings())
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(_UnionSchemaLlm)
+    result = tested.to_dict()["output_config"]["format"]["schema"]
+    pet = result["properties"]["pet"]
+    assert "oneOf" not in pet
+    assert "discriminator" not in pet
+    assert pet["anyOf"] == [{"$ref": "#/$defs/_CatLlm"}, {"$ref": "#/$defs/_DogLlm"}]
+    assert "discriminator" in pet["description"]
+
+
+def test__output_schema__object_without_additional_properties() -> None:
+    """Test that an object missing additionalProperties gets the false the API requires."""
+    schema = {
+        "type": "object",
+        "properties": {"inner": {"type": "object", "properties": {"a": {"type": "string"}}}},
+    }
+    result = LlmAnthropic._output_schema(schema)
+    assert result["additionalProperties"] is False
+    assert result["properties"]["inner"]["additionalProperties"] is False
+    assert "additionalProperties" not in result["properties"]["inner"]["properties"]["a"]
+
+
+@pytest.mark.parametrize(
+    "value_type",
+    [
+        pytest.param(dict[str, _CatLlm], id="dict_of_models"),
+        pytest.param(dict[str, Any], id="dict_of_any"),
+    ],
+)
+def test_to_dict__schema_structured_outputs_dict_field_raises(value_type: Any) -> None:
+    """Test that a dict field raises, since structured outputs rejects additionalProperties."""
+    schema = create_model("DictSchemaLlm", __base__=BaseModelLlmJson, mapping=(value_type, ...))
+    tested = LlmAnthropic(_structured_settings())
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(schema)
+    with pytest.raises(ValueError, match="dict fields"):
+        tested.to_dict()
 
 
 def test_to_dict__schema_tool_keeps_keywords() -> None:

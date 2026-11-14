@@ -27,6 +27,7 @@ _UNSUPPORTED_SCHEMA_KEYWORDS = (
     "maxContains",
     "minProperties",
     "maxProperties",
+    "discriminator",
 )
 _SUPPORTED_MIN_ITEMS = (0, 1)
 _SUPPORTED_STRING_FORMATS = (
@@ -51,7 +52,6 @@ _SUBSCHEMA_KEYWORDS = (
     "allOf",
     "oneOf",
     "not",
-    "additionalProperties",
 )
 
 
@@ -66,12 +66,25 @@ class LlmAnthropic(LlmApi):
         """Return a copy of a JSON schema that structured outputs accepts.
 
         Unsupported constraints are removed and noted in the description instead,
-        so the model still sees them.
+        so the model still sees them. `oneOf` is sent as `anyOf`, and every object
+        gets `additionalProperties: false`, which the API requires.
+
+        Raises:
+            ValueError: An object allows additional properties, such as a `dict` field.
+                Structured outputs cannot express one, so use a list of models instead.
         """
         result: dict = {}
         removed: dict = {}
         for key, value in schema.items():
-            if (
+            if key == "additionalProperties":
+                if value is not False:
+                    raise ValueError(
+                        "Structured outputs does not support objects with additional "
+                        f"properties, such as dict fields: {schema.get('title', schema)}. "
+                        "Use a list of models instead."
+                    )
+                result[key] = value
+            elif (
                 key in _UNSUPPORTED_SCHEMA_KEYWORDS
                 or (key == "minItems" and value not in _SUPPORTED_MIN_ITEMS)
                 or (key == "format" and value not in _SUPPORTED_STRING_FORMATS)
@@ -82,9 +95,14 @@ class LlmAnthropic(LlmApi):
             elif key in _SUBSCHEMA_KEYWORDS and isinstance(value, dict):
                 result[key] = cls._output_schema(value)
             elif key in _SUBSCHEMA_KEYWORDS and isinstance(value, list):
-                result[key] = [cls._output_schema(sub) for sub in value]
+                result["anyOf" if key == "oneOf" else key] = [
+                    cls._output_schema(sub) for sub in value
+                ]
             else:
                 result[key] = value
+
+        if result.get("type") == "object":
+            result.setdefault("additionalProperties", False)
 
         if removed:
             constraints = ", ".join(f"{key}: {removed[key]}" for key in sorted(removed))
