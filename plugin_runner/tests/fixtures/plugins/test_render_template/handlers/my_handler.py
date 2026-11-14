@@ -1,3 +1,4 @@
+from canvas_sdk.agents.ui import AGENT_UI_CSS
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
@@ -87,5 +88,20 @@ class SanitizeHtmlFilter(BaseHandler):
                     "templates/sanitize.html",
                     {"message": '<b>hi</b><img src="x" onerror="alert(1)">'},
                 ),
+            )
+        ]
+
+
+class AgentUiStylesheet(BaseHandler):
+    """Handler used in unit tests."""
+
+    RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
+
+    def compute(self) -> list[Effect]:
+        """This method gets called when an event of the type RESPONDS_TO is fired."""
+        return [
+            Effect(
+                type=EffectType.LOG,
+                payload=render_to_string("templates/agent_ui.html", {"agent_ui_css": AGENT_UI_CSS}),
             )
         ]

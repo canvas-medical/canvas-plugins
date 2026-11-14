@@ -1,0 +1,364 @@
+"""The tool-use loop every agent runs: call the model, dispatch its tool calls, repeat."""
+
+import json
+import logging
+import time
+from collections.abc import Callable, Mapping
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+from anthropic.types import TextBlock, ToolUseBlock
+
+from canvas_sdk.agents.gateway import (
+    GatewayError,
+    LLMGateway,
+    ModelCallLimitReached,
+    attempt_timeout,
+)
+from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
+from canvas_sdk.agents.run_record import (
+    RunDeadlineExceeded,
+    RunRecorder,
+    ToolCallRecord,
+    current_recorder,
+)
+from canvas_sdk.agents.tool_registry import ToolRegistry, _CallEffects
+
+if TYPE_CHECKING:
+    from canvas_sdk.effects import Effect
+
+log = logging.getLogger("plugin_runner_logger")
+
+# Stop reasons that can leave complete tool calls to run: a normal tool turn, or a
+# turn cut off by max_tokens after one or more tool calls finished.
+_TOOL_STOP_REASONS = frozenset({"tool_use", "max_tokens"})
+_CUT_OFF = (
+    "Not run: your turn was cut off by the token limit while writing this call, so its "
+    "input may be incomplete. Make the call again."
+)
+
+
+@dataclass(frozen=True)
+class ToolCall:
+    """One tool call a :func:`run_tool_loop` ran, for the agent's code to read.
+
+    Attributes:
+        name: The tool's name.
+        arguments: What the model passed.
+        result: What the tool returned; ``None`` when it failed.
+        ok: Whether the tool returned rather than raised.
+    """
+
+    name: str
+    arguments: dict[str, Any]
+    result: Any = None
+    ok: bool = True
+
+
+@dataclass
+class ToolLoopResult:
+    """What a :func:`run_tool_loop` produced.
+
+    Attributes:
+        text: The text of the model's last turn, stripped; empty when it had none.
+        messages: The messages passed in followed by every turn of this loop, as
+            JSON-safe dicts. A transcript you can store and pass back on the next run.
+        turns: How many times the model was called.
+        stopped: ``"end_turn"`` when the model finished, ``"max_turns"`` when the turn
+            cap stopped it, ``"call_limit"`` when the run's model-call ceiling did, and
+            ``"unexpected"`` for any other stop reason.
+        stop_reason: The model's stop reason on its last turn.
+        effects: The ``effects`` list from ``ctx``, holding what the tools staged.
+        calls: Every tool call the loop ran, in order, with its arguments and result. A
+            tool that only takes what the model read, such as a form the model fills in,
+            hands its arguments to the agent's code this way, and code reads what a write
+            tool decided from its result rather than parsing the effect it staged.
+    """
+
+    text: str = ""
+    messages: list[dict[str, Any]] = field(default_factory=list)
+    effects: list["Effect"] = field(default_factory=list)
+    turns: int = 0
+    stopped: Literal["end_turn", "max_turns", "call_limit", "unexpected"] = "max_turns"
+    stop_reason: str | None = None
+    calls: list[ToolCall] = field(default_factory=list)
+
+    def last_call(self, name: str) -> ToolCall | None:
+        """The last call to the tool ``name`` that returned, or None when none did."""
+        return next((call for call in reversed(self.calls) if call.name == name and call.ok), None)
+
+
+# Whether this tool loop's reply text may be streamed to the person waiting on the run.
+# Only the agent's own loop streams: it is off while a tool runs, so a model call a tool
+# makes (read_document's reader, a plugin's own) never streams, and run_subagent turns
+# it off on the worker threads its sub-agents run on, which do not inherit it.
+streams_reply: ContextVar[bool] = ContextVar("streams_reply", default=True)
+
+
+def _api_block(block: Any) -> dict[str, Any]:
+    """A reply block as the Messages API takes it back on the next call.
+
+    A streamed call's final message holds ``ParsedTextBlock``s, whose ``parsed_output``
+    the API refuses in a request, so it is left out.
+    """
+    dumped: dict[str, Any] = block.model_dump()
+    dumped.pop("parsed_output", None)
+    return dumped
+
+
+def _tool_result(tool_use_id: str, content: str, *, is_error: bool = False) -> dict[str, Any]:
+    result: dict[str, Any] = {"type": "tool_result", "tool_use_id": tool_use_id, "content": content}
+    if is_error:
+        result["is_error"] = True
+    return result
+
+
+def _run_tool(
+    tools: ToolRegistry, block: ToolUseBlock, ctx: dict[str, Any], calls: list[ToolCall]
+) -> dict[str, Any]:
+    """Run one tool call; a failure goes back to the model as an error so it can recover.
+
+    A gateway error or the run's deadline, raised by a sub-agent the tool ran, ends
+    the run instead.
+    """
+    recorder = current_recorder.get()
+    label = tools.progress_label_for(block.name)
+    if recorder is not None:
+        recorder.report_tool("tool_started", label)
+    started = time.perf_counter()
+    # What a tool's own model calls write is the tool's working material, and can be
+    # drawn from untrusted content such as a document, so none of it streams.
+    quiet = streams_reply.set(False)
+    # Read once, and refused when not an object, so no handler below can raise on it.
+    arguments: dict[str, Any] = dict(block.input) if isinstance(block.input, Mapping) else {}
+    # The call's effects, so a failure after the tool returns, such as a result that cannot
+    # be written as JSON, takes them back as a failure inside the tool does.
+    call_effects = _CallEffects(ctx.setdefault("effects", []))
+    try:
+        if not isinstance(block.input, Mapping):
+            raise ValueError("The tool's input must be an object of its arguments.")
+        result = tools.execute(block.name, arguments, ctx={**ctx, "effects": call_effects})
+        content = json.dumps(result, default=str)
+    except (GatewayError, RunDeadlineExceeded):
+        calls.append(ToolCall(block.name, arguments, None, ok=False))
+        if recorder is not None:
+            recorder.record_tool_call(
+                ToolCallRecord(block.name, False, "aborted", _elapsed_ms(started))
+            )
+            recorder.report_tool("tool_finished", label, ok=False)
+        raise
+    except Exception as exc:
+        call_effects.take_back()
+        log.warning(f"Tool {block.name!r} failed: {type(exc).__name__}")
+        calls.append(ToolCall(block.name, arguments, None, ok=False))
+        if recorder is not None:
+            recorder.record_tool_call(
+                ToolCallRecord(block.name, False, type(exc).__name__, _elapsed_ms(started))
+            )
+            recorder.report_tool("tool_finished", label, ok=False)
+        return _tool_result(block.id, f"Tool execution failed: {exc!s}", is_error=True)
+    finally:
+        streams_reply.reset(quiet)
+    calls.append(ToolCall(block.name, arguments, result))
+    if recorder is not None:
+        recorder.record_tool_call(ToolCallRecord(block.name, True, "", _elapsed_ms(started)))
+        recorder.report_tool("tool_finished", label, ok=True)
+    return _tool_result(
+        block.id, _capped(content, tools.max_result_chars_for(block.name), recorder)
+    )
+
+
+def _capped(content: str, limit: int, recorder: RunRecorder | None) -> str:
+    """``content`` cut to the tool's ``limit`` and to what is left of the run's total.
+
+    A cut result says so, so the model can narrow its request or answer from what it has.
+    """
+    wanted = min(len(content), limit)
+    allowed = recorder.reserve_tool_result(wanted) if recorder is not None else wanted
+    if allowed < wanted:
+        return content[:allowed] + (
+            f"\n[Result cut at {allowed} of {len(content)} characters: the run has read "
+            "as much tool output as it may. Answer from what it has.]"
+        )
+    if len(content) <= limit:
+        return content
+    return (
+        content[:limit] + f"\n[Result cut at {limit} of {len(content)} characters. "
+        "Narrow the request, for example with filters or a lower limit, to see the rest.]"
+    )
+
+
+def _elapsed_ms(started: float) -> int:
+    return int((time.perf_counter() - started) * 1000)
+
+
+def _stopped(result: ToolLoopResult) -> ToolLoopResult:
+    """Record how the loop ended in the run's recorder, and return ``result``."""
+    if (recorder := current_recorder.get()) is not None:
+        recorder.record_stop(result.stopped)
+    return result
+
+
+def run_tool_loop(
+    gateway: LLMGateway,
+    *,
+    tools: ToolRegistry,
+    ctx: dict[str, Any],
+    system: str,
+    messages: list[dict[str, Any]],
+    max_turns: int = 8,
+    max_tokens: int = 4096,
+    model: str | None = None,
+    history_chars: int | None = DEFAULT_HISTORY_CHARS,
+    cache_system: bool = True,
+    on_turn: Callable[[int], None] | None = None,
+) -> ToolLoopResult:
+    """Call the model with ``tools`` until it finishes, dispatching its tool calls.
+
+    Each turn calls the model, records its reply, and runs every tool call it made
+    through ``tools.execute(..., ctx=ctx)``, sending the results back on the next turn.
+    A tool that raises goes back to the model as an ``is_error`` result. The loop ends
+    when the model ends its turn, after ``max_turns`` calls, or on any other stop
+    reason; in that last case unanswered tool calls get error results, so the returned
+    transcript stays valid to store and send again. Errors from the gateway propagate,
+    including those from a sub-agent a tool runs.
+
+    In a platform run, the loop also stops when the run reaches its model-call ceiling
+    (``stopped="call_limit"``), raises ``RunDeadlineExceeded`` once the run is too
+    close to its deadline to make another call, and gives each call no longer than the
+    time left, split across its retries. A tool result longer than the tool's limit
+    (see ``max_result_chars`` on :meth:`ToolRegistry.register`) is cut, with a note
+    telling the model, and in a platform run so is any result past the run's total of
+    tool-result text.
+
+    Args:
+        gateway: The run's :class:`LLMGateway`.
+        tools: The tools the model may call, normally the agent's scoped ``self.tools``.
+        ctx: Per-run context passed to every tool (``patient_id``, ``effects``, ...).
+            Gets an empty ``effects`` list when it has none.
+        system: The system prompt.
+        messages: The conversation so far, ending with the turn to answer. Not modified.
+        max_turns: The most model calls to make.
+        max_tokens: ``max_tokens`` for each call.
+        model: The model to call; defaults to ``gateway.model``. The tools that make
+            model calls of their own, such as ``read_document``, use it too: the loop
+            hands them ``ctx["gateway"]`` with this model as its default.
+        history_chars: The size budget for the history sent each turn
+            (:func:`window_messages`); ``None`` sends all of it. The full history is
+            always returned in :attr:`ToolLoopResult.messages`.
+        cache_system: Mark the system prompt for prompt caching.
+        on_turn: Called with the turn index before each model call. Its exceptions are
+            logged and ignored.
+    """
+    client = gateway.client()
+    transcript = list(messages)
+    system_param: Any = (
+        [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+        if cache_system
+        else system
+    )
+    result = ToolLoopResult(messages=transcript, effects=ctx.setdefault("effects", []))
+    ctx_gateway = ctx.get("gateway")
+    if model and isinstance(ctx_gateway, LLMGateway):
+        # A copy, so the caller's context keeps its gateway; the effects list is shared.
+        ctx = {**ctx, "gateway": ctx_gateway.with_model(model)}
+
+    for turn in range(max_turns):
+        if on_turn is not None:
+            try:
+                on_turn(turn)
+            except Exception:
+                log.exception("on_turn hook raised; ignoring")
+
+        recorder = current_recorder.get()
+        request_options: dict[str, Any] = {}
+        if recorder is not None:
+            recorder.check_deadline()
+            if (left := recorder.seconds_left()) is not None:
+                request_options["timeout"] = attempt_timeout(left)
+            recorder.phase = "thinking"
+
+        sent = transcript if history_chars is None else window_messages(transcript, history_chars)
+        request = {
+            "model": model or gateway.model,
+            "max_tokens": max_tokens,
+            "system": system_param,
+            "tools": cast(Any, tools.definitions()),
+            "messages": cast(Any, sent),
+            **request_options,
+        }
+        try:
+            if recorder is not None and recorder.streams_reply and streams_reply.get():
+                # The same call, streamed so the person waiting reads the reply as it is
+                # written; the final message is what the unstreamed call would return.
+                recorder.report_turn()
+                with client.messages.stream(**request) as stream:
+                    # Each read's timeout does not bound the whole reply, so a reply still
+                    # arriving at the deadline is closed there rather than read to the end.
+                    for event in stream:
+                        if event.type == "text":
+                            recorder.report_text(event.text)
+                        recorder.check_deadline()
+                    response = stream.get_final_message()
+            else:
+                response = client.messages.create(**request)
+        except ModelCallLimitReached as exc:
+            # The client counts every model call, the run's own and any its code makes.
+            log.warning(f"Tool loop stopped: {exc}")
+            result.stopped = "call_limit"
+            return _stopped(result)
+        result.turns = turn + 1
+        result.stop_reason = response.stop_reason
+        log.info(
+            f"Tool loop turn={turn} stop_reason={response.stop_reason} "
+            f"blocks={[block.type for block in response.content]}"
+        )
+
+        transcript.append(
+            {"role": "assistant", "content": [_api_block(block) for block in response.content]}
+        )
+        result.text = "\n".join(
+            block.text for block in response.content if isinstance(block, TextBlock)
+        ).strip()
+        tool_uses = [block for block in response.content if isinstance(block, ToolUseBlock)]
+
+        if response.stop_reason == "end_turn":
+            result.stopped = "end_turn"
+            return _stopped(result)
+        if response.stop_reason in _TOOL_STOP_REASONS and tool_uses:
+            if recorder is not None:
+                recorder.phase = "working"
+            complete, cut_off = tool_uses, []
+            if response.stop_reason == "max_tokens":
+                # Generation stopped at the last call, so its input may be incomplete;
+                # the model makes it again rather than a write running half-specified.
+                complete, cut_off = tool_uses[:-1], tool_uses[-1:]
+            transcript.append(
+                {
+                    "role": "user",
+                    "content": [_run_tool(tools, block, ctx, result.calls) for block in complete]
+                    + [_tool_result(block.id, _CUT_OFF, is_error=True) for block in cut_off],
+                }
+            )
+            continue
+
+        result.stopped = "unexpected"
+        if tool_uses:
+            reason = f"Not run: the turn ended with stop reason {response.stop_reason!r}."
+            transcript.append(
+                {
+                    "role": "user",
+                    "content": [
+                        _tool_result(block.id, reason, is_error=True) for block in tool_uses
+                    ],
+                }
+            )
+        log.warning(f"Tool loop stopped on unexpected stop_reason={response.stop_reason!r}")
+        return _stopped(result)
+
+    log.warning(f"Tool loop hit max_turns={max_turns}")
+    return _stopped(result)
+
+
+__exports__ = ("ToolLoopResult", "run_tool_loop")
