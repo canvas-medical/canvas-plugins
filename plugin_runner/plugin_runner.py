@@ -1,4 +1,5 @@
 import base64
+import contextvars
 import json
 import os
 import pathlib
@@ -8,12 +9,12 @@ import sys
 import threading
 import warnings
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from dataclasses import dataclass
 from http import HTTPStatus
-from time import sleep
+from time import monotonic, sleep
 from typing import Any, NotRequired, TypedDict, cast
 
 import grpc
@@ -22,6 +23,7 @@ import sentry_sdk
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
 from django.core.signals import request_finished, request_started
+from django.db import connections
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import ConnectionError, TimeoutError
 from redis.retry import Retry
@@ -29,6 +31,7 @@ from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
+from canvas_generated.messages.events_pb2 import AgentRunProgress, AgentRunSummary, AgentToolCall
 from canvas_generated.messages.plugins_pb2 import (
     GetRegisteredEventTypesRequest,
     GetRegisteredEventTypesResponse,
@@ -36,12 +39,42 @@ from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginResponse,
     ReloadPluginsRequest,
     ReloadPluginsResponse,
+    RunAgentRequest,
     UnloadPluginRequest,
     UnloadPluginResponse,
 )
 from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
+)
+from canvas_sdk.agents import (
+    AgentPlugin,
+    Capability,
+    LLMGatewayConfigurationError,
+    RunRequester,
+    RunSubject,
+)
+from canvas_sdk.agents.base import MAX_MODEL_CALLS
+from canvas_sdk.agents.gateway import (
+    GATEWAY_KEY_SECRET,
+    GatewayError,
+    agent_secrets,
+    gateway_from_plugin_secrets,
+)
+from canvas_sdk.agents.grant import (
+    TooManyEffects,
+    apply_tool_grant,
+    refuse_too_many_effects,
+    split_granted_effects,
+)
+from canvas_sdk.agents.progress import ProgressEvent, ProgressFeed, agent_progress_level
+from canvas_sdk.agents.run_record import (
+    DEFAULT_RUN_SECONDS,
+    RUN_TOOL_RESULT_CHARS,
+    RunDeadlineExceeded,
+    RunRecorder,
+    agent_run_seconds,
+    current_recorder,
 )
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
@@ -86,6 +119,9 @@ from settings import (
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     PLUGIN_RUNNER_EVENT_REGISTRY_PATH,
+    PLUGIN_RUNNER_MAX_AGENT_RUNS,
+    PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS,
+    PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
@@ -245,6 +281,237 @@ def _ensure_sqlite_schema() -> None:
     _sqlite_schema_initialized = True
 
 
+def llm_error_kind(exc: GatewayError) -> str:
+    """Whether a failed gateway call is worth retrying.
+
+    ``LLM_UNAVAILABLE`` is an outage: the gateway or Anthropic answered 5xx or 429,
+    or the connection failed. ``LLM_REFUSED`` is everything the same request would
+    hit again: a budget or ceiling (402), a model not enabled (404), a bad key
+    (401), or a refused feature (400).
+    """
+    return "LLM_UNAVAILABLE" if exc.is_outage else "LLM_REFUSED"
+
+
+AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_AGENT_RUNS)
+# Of those, the ones an extended run (manifest `run_seconds` above the default) may hold,
+# so long runs cannot take every thread from the agents people are waiting on.
+EXTENDED_AGENT_RUN_SLOTS = threading.BoundedSemaphore(PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS)
+
+
+# How often a streamed run reports it is alive when nothing else happened, and how
+# often the stream checks for tool events and for the run finishing.
+HEARTBEAT_SECONDS = 2.0
+PROGRESS_POLL_SECONDS = 0.25
+
+
+@dataclass
+class _AgentExecution:
+    """How a run's agent finished: a failure response, or its result and tool grant."""
+
+    failure: EventResponse | None = None
+    result: Any = None
+    effect_grant: Any = None
+
+
+# Runs whose call ended while their agent's thread kept running, and the most of them
+# whose slots are freed for other runs. Past the ceiling an ended call keeps its slots, so
+# plugin code that blocks cannot pile up threads without bound.
+_orphaned_runs = 0
+_orphaned_runs_lock = threading.Lock()
+MAX_ORPHANED_AGENT_RUNS = PLUGIN_RUNNER_MAX_ORPHANED_AGENT_RUNS
+
+
+class _RunSlots:
+    """The agent-run slots one run holds, released once, by whichever side ends first.
+
+    Normally the agent's thread releases them when it finishes. Python cannot stop a
+    thread, so a run blocked outside a model call (CPU-bound plugin code, a hung I/O call)
+    would otherwise keep its slots after its call ended, and a few such runs would turn
+    every later run away as busy. An ended call frees them only while fewer than
+    MAX_ORPHANED_AGENT_RUNS runs are orphaned this way.
+    """
+
+    def __init__(self, extended: bool) -> None:
+        self.extended = extended
+        self._held = True
+        self._orphaned = False
+        self._lock = threading.Lock()
+
+    def release(self) -> None:
+        """The agent's thread finished: free the slots, or stop counting it as orphaned."""
+        global _orphaned_runs
+        with self._lock:
+            held, self._held = self._held, False
+            if self._orphaned:
+                with _orphaned_runs_lock:
+                    _orphaned_runs -= 1
+        if held:
+            self._free()
+
+    def release_for_ended_call(self) -> bool:
+        """Free the slots of a run still running after its call ended, within the ceiling."""
+        global _orphaned_runs
+        with self._lock:
+            if not self._held:
+                return False
+            with _orphaned_runs_lock:
+                if _orphaned_runs >= MAX_ORPHANED_AGENT_RUNS:
+                    return False
+                _orphaned_runs += 1
+            self._held = False
+            self._orphaned = True
+        self._free()
+        return True
+
+    def _free(self) -> None:
+        if self.extended:
+            EXTENDED_AGENT_RUN_SLOTS.release()
+        AGENT_RUN_SLOTS.release()
+
+
+def _stream_progress(
+    recorder: RunRecorder,
+    execute: Callable[[], _AgentExecution],
+    on_call_ended: Callable[[], None] = lambda: None,
+) -> Generator[EventResponse, None, _AgentExecution]:
+    """Run ``execute`` on its own thread, streaming the run's progress until it returns.
+
+    The thread runs in a copy of this context and closes its database connections when
+    it finishes. A heartbeat goes out whenever HEARTBEAT_SECONDS pass without another
+    event, so the person waiting on the run can tell it is alive. Reply text that
+    arrives between polls goes out as one event. ``on_call_ended`` is called when the
+    stream is closed, as when the call passes its deadline, while ``execute`` is still
+    running.
+    """
+    feed = recorder.progress
+    assert feed is not None
+    outcome: list[_AgentExecution] = []
+    finished = threading.Event()
+    run_context = contextvars.copy_context()
+
+    def work() -> None:
+        try:
+            outcome.append(run_context.run(execute))
+        finally:
+            connections.close_all()
+            finished.set()
+
+    started = monotonic()
+    threading.Thread(target=work, name="agent-run", daemon=True).start()
+    last_sent = started
+
+    def progress(event: ProgressEvent | None = None) -> EventResponse:
+        return EventResponse(
+            progress=AgentRunProgress(
+                kind=event.kind if event else "heartbeat",
+                phase=recorder.phase,
+                elapsed_ms=int((monotonic() - started) * 1000),
+                label=event.label if event else "",
+                ok=event.ok if event else False,
+                text=event.text if event else "",
+            )
+        )
+
+    try:
+        while not finished.is_set():
+            if (event := feed.next(timeout=PROGRESS_POLL_SECONDS)) is not None:
+                yield progress(event)
+                last_sent = monotonic()
+            elif monotonic() - last_sent >= HEARTBEAT_SECONDS:
+                yield progress()
+                last_sent = monotonic()
+    finally:
+        if not finished.is_set():
+            on_call_ended()
+    while (event := feed.next(timeout=0)) is not None:
+        yield progress(event)
+    return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
+
+
+def _without_frame_locals(event: Any, hint: Any) -> Any:
+    """A Sentry event with every stack frame's local variables removed."""
+    for kind in ("exception", "threads"):
+        for value in (event.get(kind) or {}).get("values") or []:
+            for frame in (value.get("stacktrace") or {}).get("frames") or []:
+                frame.pop("vars", None)
+    return event
+
+
+def _with_type_only(run_id: str) -> Callable[[Any, Any], Any]:
+    """An event processor replacing each exception's message with its type and ``run_id``,
+    and dropping the event's breadcrumbs.
+
+    A message can carry chart text: a pydantic ``input_value=``, a ``KeyError`` on a
+    chart-derived key, or a plugin's f-string. The breadcrumbs carry it too: each log line,
+    the run's traceback included, is published to Redis, which Sentry records as a breadcrumb.
+    """
+
+    def process(event: Any, hint: Any) -> Any:
+        for value in (event.get("exception") or {}).get("values") or []:
+            value["value"] = f"{value.get('type') or 'Exception'} in agent run {run_id}"
+        event.pop("breadcrumbs", None)
+        return event
+
+    return process
+
+
+def _report_agent_exception(message: str, exc: BaseException, run_id: str) -> None:
+    """Log and report an agent run's exception without frame locals, message, or breadcrumbs.
+
+    An agent's frames and messages hold the conversation, tool results, and document text,
+    which are patient data; the type and where it happened are what diagnosis needs, and
+    the run record already holds the run. The logged exception reaches Sentry too, so both
+    go through the scope.
+    """
+    # An isolation scope, since that is where breadcrumbs are kept: the publish of this
+    # traceback is discarded with it rather than left for the process's next event.
+    with sentry_sdk.isolation_scope() as scope:
+        scope.add_event_processor(_without_frame_locals)
+        scope.add_event_processor(_with_type_only(run_id))
+        log.exception(message)
+        sentry_sdk.capture_exception(exc)
+
+
+def _agent_run_summary(
+    recorder: RunRecorder,
+    *,
+    effects_returned: int = 0,
+    effects_dropped: int = 0,
+) -> AgentRunSummary:
+    """What a run did, for home-app's run record."""
+    return AgentRunSummary(
+        model_calls=recorder.model_calls,
+        stop_reason=recorder.stop_reason,
+        effects_returned=effects_returned,
+        effects_dropped=effects_dropped,
+        tool_calls=[
+            AgentToolCall(
+                name=call.name,
+                ok=call.ok,
+                error_type=call.error_type,
+                duration_ms=call.duration_ms,
+            )
+            for call in recorder.tool_calls
+        ],
+    )
+
+
+def _invoke_agent_hook(agent: Any, hook_name: str, *args: Any) -> None:
+    """Invoke an :class:`AgentPlugin` lifecycle hook, swallowing any exception.
+
+    Lifecycle hooks (``on_run_start``, ``on_run_end``, ``on_run_error``) are
+    observability seams — they emit telemetry, log timings, etc. — not core
+    logic. A hook that raises is a bug in the plugin's *observability* code,
+    and must not prevent the agent's actual ``load_state`` → ``run`` →
+    ``save_state`` lifecycle from completing (or its error from propagating).
+    Anything thrown by the hook is logged and discarded.
+    """
+    try:
+        getattr(agent, hook_name)(*args)
+    except Exception:
+        log.exception(f"RunAgent: agent hook {hook_name!r} raised; ignoring")
+
+
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -326,10 +593,15 @@ class PluginRunner(PluginRunnerServicer):
 
                     namespace_config = plugin.get("namespace_config")
 
-                    secrets = plugin.get("secrets", {})
-
-                    secrets.update(
-                        {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
+                    # A handler never gets the plugin's gateway key: only the runner builds
+                    # the gateway from it, for the plugin's agents.
+                    secrets = {
+                        name: value
+                        for name, value in (plugin.get("secrets") or {}).items()
+                        if name != GATEWAY_KEY_SECRET
+                    }
+                    secrets["graphql_jwt"] = token_for_plugin(
+                        plugin_name=plugin_name, audience="home"
                     )
 
                     try:
@@ -402,8 +674,12 @@ class PluginRunner(PluginRunnerServicer):
                             apply_effects_to_context(effects, event=event)
 
                     except Exception as e:
-                        log.exception(f"Encountered exception in plugin {plugin_name}")
-                        sentry_sdk.capture_exception(e)
+                        # A handler's frames hold the event's context, such as a SimpleAPI
+                        # request's body, so the report leaves their locals out.
+                        with sentry_sdk.new_scope() as scope:
+                            scope.add_event_processor(_without_frame_locals)
+                            log.exception(f"Encountered exception in plugin {plugin_name}")
+                            sentry_sdk.capture_exception(e)
                         continue
 
                     effect_list += effects
@@ -441,6 +717,339 @@ class PluginRunner(PluginRunnerServicer):
                 request_finished.send(sender=self.__class__)
 
             yield EventResponse(success=True, effects=effect_list)
+
+    def RunAgent(self, request: RunAgentRequest, context: Any) -> Iterable[EventResponse]:
+        """Invoke an AgentPlugin subclass and stream its emitted effects.
+
+        Called by home-app's ``run_agent`` Celery task in response to a
+        ``RunAgentEffect`` from a plugin trigger handler. Resolves the agent
+        class from :data:`LOADED_PLUGINS`, drives
+        ``load_state`` → ``run`` → ``save_state`` inside the plugin's
+        database context, and yields the emitted effects in a single
+        ``EventResponse``.
+
+        home-app serializes runs on one scope with a lease it holds until the
+        run's effects are dispatched, and bounds the call with a deadline the
+        lease outlives. A run whose call is no longer active once ``run()``
+        returns has passed that deadline, so it neither saves state nor
+        returns effects. LLM access goes
+        through Canvas's inference gateway: the gateway is built from the
+        plugin's own ``INFERENCE_GATEWAY_URL`` and ``INFERENCE_GATEWAY_KEY``
+        secrets, attributed to the plugin, agent, and run.
+        Gateway refusals and outages come back as
+        ``LLM_REFUSED`` and ``LLM_UNAVAILABLE`` so home-app retries only the latter.
+        """
+        module_path, _, class_name = request.agent_id.partition(":")
+        base_plugin_name = module_path.split(".", 1)[0]
+        registry_key = f"{base_plugin_name}:{module_path}:{class_name}"
+        # The plugin chooses the id, so one no plugin loaded is not a metric series of its own.
+        metric_agent_id = request.agent_id if registry_key in LOADED_PLUGINS else "unknown"
+        with metrics.measure(
+            metrics.get_qualified_name(self.RunAgent),
+            extra_tags={"agent_id": metric_agent_id},
+        ):
+            if not module_path or not class_name:
+                log.error(f"RunAgent: invalid agent_id={request.agent_id!r}")
+                yield EventResponse(success=False, effects=[])
+                return
+
+            # `plugin_name` is the plugin whose handler emitted the RunAgentEffect,
+            # stamped by this runner when the handler ran. An agent runs with its own
+            # plugin's gateway key, data namespace, and tool grants, so only that
+            # plugin may run it.
+            if request.plugin_name != base_plugin_name:
+                log.error(
+                    f"RunAgent: plugin {request.plugin_name!r} cannot run agent "
+                    f"{request.agent_id!r}, which belongs to {base_plugin_name!r}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            if registry_key not in LOADED_PLUGINS:
+                # Also a runner still loading its plugins after a restart, which home-app
+                # retries.
+                log.error(
+                    f"RunAgent: agent class not loaded — "
+                    f"agent_id={request.agent_id} registry_key={registry_key}"
+                )
+                yield EventResponse(success=False, effects=[], error_kind="AGENT_NOT_LOADED")
+                return
+
+            plugin = LOADED_PLUGINS[registry_key]
+            agent_class = plugin["class"]
+            # A plugin's handlers and applications load beside its agents; only an
+            # agent runs here.
+            if not (isinstance(agent_class, type) and issubclass(agent_class, AgentPlugin)):
+                log.error(f"RunAgent: {request.agent_id!r} is not an agent")
+                yield EventResponse(success=False, effects=[])
+                return
+            namespace_config = plugin.get("namespace_config")
+
+            # run_tool_loop records model and tool calls here for home-app's run record. The
+            # gateway is bound to it, so a client built from a copy kept past the run is refused.
+            recorder = RunRecorder()
+            try:
+                gateway = gateway_from_plugin_secrets(
+                    plugin.get("secrets") or {},
+                    instance=CUSTOMER_IDENTIFIER,
+                    plugin=base_plugin_name,
+                    agent=request.agent_id,
+                    run_id=request.run_id,
+                    recorder=recorder,
+                )
+            except LLMGatewayConfigurationError as exc:
+                log.error(f"RunAgent: cannot dispatch agent — {exc}")
+                yield EventResponse(success=False, effects=[], error_kind="LLM_NOT_CONFIGURED")
+                return
+
+            try:
+                trigger_payload = (
+                    json.loads(request.trigger_payload) if request.trigger_payload else {}
+                )
+            except json.JSONDecodeError as exc:
+                log.error(
+                    f"RunAgent: invalid trigger_payload JSON for agent_id={request.agent_id}: {exc}"
+                )
+                yield EventResponse(success=False, effects=[])
+                return
+
+            db_namespace = namespace_config["namespace"] if namespace_config else None
+            db_access_level = namespace_config["access_level"] if namespace_config else "read"
+
+            sentry_sdk.set_tag("agent-id", request.agent_id)
+            log.info(
+                f"RunAgent: invoking agent_id={request.agent_id} "
+                f"scope_key={request.scope_key} run_id={request.run_id} "
+                f"trigger={request.handler_name}"
+            )
+
+            if not AGENT_RUN_SLOTS.acquire(blocking=False):
+                log.warning(
+                    f"RunAgent: {PLUGIN_RUNNER_MAX_AGENT_RUNS} agent run(s) already in progress; "
+                    f"turning away agent_id={request.agent_id} run_id={request.run_id} to retry"
+                )
+                sentry_sdk.set_tag("agent-id", None)
+                yield EventResponse(success=False, effects=[], error_kind="RUNNER_BUSY")
+                return
+
+            run_seconds = agent_run_seconds(plugin.get("handler") or {})
+            extended = run_seconds > DEFAULT_RUN_SECONDS
+            if extended and not EXTENDED_AGENT_RUN_SLOTS.acquire(blocking=False):
+                AGENT_RUN_SLOTS.release()
+                log.warning(
+                    f"RunAgent: {PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS} extended agent run(s) "
+                    f"already in progress; turning away agent_id={request.agent_id} "
+                    f"run_id={request.run_id} to retry"
+                )
+                sentry_sdk.set_tag("agent-id", None)
+                yield EventResponse(success=False, effects=[], error_kind="EXTENDED_RUNS_BUSY")
+                return
+            slots = _RunSlots(extended)
+
+            # The tool loop stops making model calls short of home-app's deadline, after
+            # which the run's lease can go to the next run of the same scope.
+            # home-app sets the call's timeout from the same manifest entry; the shorter of
+            # the two stands.
+            remaining = context.time_remaining() if context is not None else None
+            recorder.deadline = monotonic() + min(
+                run_seconds, remaining if remaining is not None else run_seconds
+            )
+            recorder.max_tool_result_chars = RUN_TOOL_RESULT_CHARS
+
+            def execute() -> _AgentExecution:
+                """Run the agent and release its slots; never raises."""
+                outcome = _AgentExecution()
+                sentry_sdk.set_tag("agent-id", request.agent_id)
+                recorder_token = current_recorder.set(recorder)
+                try:
+                    with (
+                        plugin_context(f"{module_path}.{class_name}"),
+                        plugin_database_context(
+                            base_plugin_name,
+                            namespace=db_namespace,
+                            access_level=db_access_level,
+                        ),
+                    ):
+                        agent = agent_class()
+                        recorder.max_model_calls = min(agent.max_model_calls, MAX_MODEL_CALLS)
+                        # home-app validated the subject and decided the requester's
+                        # permissions and capabilities before enqueuing the run. A
+                        # capability this SDK does not know names nothing its tools
+                        # check, so it is left out.
+                        agent.subject = RunSubject(
+                            patient_id=request.subject.patient_id or None,
+                            note_id=request.subject.note_id or None,
+                            claim_id=request.subject.claim_id or None,
+                            document_id=request.subject.document_id or None,
+                        )
+                        agent.requester = RunRequester(
+                            staff_id=request.requester.staff_id or None,
+                            permissions=(
+                                None
+                                if request.requester.all_permissions
+                                else frozenset(request.requester.permissions)
+                            ),
+                        )
+                        agent.capabilities = frozenset(
+                            Capability(name)
+                            for name in request.capabilities
+                            if name in {known.value for known in Capability}
+                        )
+                        # The manifest's components.agents[].tools grant is what the
+                        # agent may do, less the tools its requester could not use.
+                        # `allowed` holds tool names and `@category` references,
+                        # `denied` is subtracted after expansion, and an agent whose
+                        # manifest grants nothing gets no tools. The agent's registry is
+                        # swapped for the scoped view, and the effect types the
+                        # remaining tools declare bound what the agent may return below,
+                        # bare or, for tools listed under `approve`, as proposals.
+                        outcome.effect_grant = apply_tool_grant(
+                            agent, (plugin.get("handler") or {}).get("tools") or {}
+                        )
+                        agent.run_id = request.run_id
+                        agent.secrets = agent_secrets(plugin.get("secrets") or {})
+                        # Lifecycle hooks: on_run_start before
+                        # load_state, on_run_end after a successful save_state,
+                        # on_run_error if anything in between raises. Hook
+                        # failures are swallowed by `_invoke_agent_hook` so a
+                        # botched hook can't crash the underlying run.
+                        _invoke_agent_hook(agent, "on_run_start", request.scope_key)
+                        try:
+                            state = agent.load_state(request.scope_key)
+                            result = agent.run(state, gateway, trigger_payload)
+                            outcome.result = result
+                            if context is not None and not context.is_active():
+                                raise RunDeadlineExceeded(
+                                    "the RunAgent call ended before run() returned; "
+                                    "its state and effects are discarded"
+                                )
+                            refuse_too_many_effects(result.effects, outcome.effect_grant)
+                            agent.save_state(request.scope_key, result.state)
+                            _invoke_agent_hook(agent, "on_run_end", result)
+                        except Exception as run_exc:
+                            _invoke_agent_hook(agent, "on_run_error", run_exc)
+                            raise
+                except GatewayError as exc:
+                    # The gateway refused the call or could not complete it. Only an
+                    # outage is worth retrying: a refusal (budget, model, auth,
+                    # request shape) would be refused again.
+                    error_kind = llm_error_kind(exc)
+                    log.warning(
+                        f"RunAgent: agent {request.agent_id} LLM call failed ({error_kind}): {exc}"
+                    )
+                    outcome.failure = EventResponse(
+                        success=False,
+                        effects=[],
+                        error_kind=error_kind,
+                        agent_run=_agent_run_summary(recorder),
+                    )
+                except TooManyEffects as exc:
+                    # The platform would apply none of them, so the state is not saved either.
+                    log.warning(f"RunAgent: agent {request.agent_id} run {request.run_id}: {exc}")
+                    outcome.failure = EventResponse(
+                        success=False,
+                        effects=[],
+                        error_kind="TOO_MANY_EFFECTS",
+                        agent_run=_agent_run_summary(recorder),
+                    )
+                except RunDeadlineExceeded as exc:
+                    log.warning(
+                        f"RunAgent: agent {request.agent_id} run {request.run_id} stopped: {exc}"
+                    )
+                    outcome.failure = EventResponse(
+                        success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                    )
+                except Exception as exc:
+                    _report_agent_exception(
+                        f"RunAgent: agent {request.agent_id} raised", exc, request.run_id
+                    )
+                    outcome.failure = EventResponse(
+                        success=False, effects=[], agent_run=_agent_run_summary(recorder)
+                    )
+                finally:
+                    current_recorder.reset(recorder_token)
+                    # A client the agent's code kept makes no model call after its run.
+                    recorder.close()
+                    # Released before anything is yielded, so the slot frees as soon as
+                    # the agent finishes rather than when the caller drains the stream.
+                    slots.release()
+                    sentry_sdk.set_tag("agent-id", None)
+
+                return outcome
+
+            if request.stream_progress:
+                # The agent runs on its own thread while this call streams its progress.
+                recorder.progress = ProgressFeed(agent_progress_level(plugin.get("handler") or {}))
+
+                def call_ended() -> None:
+                    # The call is over but the agent's thread is not. It makes no more
+                    # model calls and stops at its next checkpoint; its slots stop counting
+                    # while few runs are stuck this way; and it is reported.
+                    recorder.close()
+                    recorder.deadline = monotonic()
+                    freed = slots.release_for_ended_call()
+                    message = (
+                        f"RunAgent: agent {request.agent_id} run {request.run_id} is still "
+                        "running after its call ended; "
+                        + ("its slot is freed" if freed else "it keeps its slot")
+                    )
+                    log.error(message)
+                    sentry_sdk.capture_message(message, level="error")
+
+                execution = yield from _stream_progress(recorder, execute, call_ended)
+            else:
+                execution = execute()
+            sentry_sdk.set_tag("agent-id", None)
+
+            if execution.failure is not None:
+                yield execution.failure
+                return
+            result = execution.result
+            effect_grant = execution.effect_grant
+            assert result is not None and effect_grant is not None
+
+            # Agent effects carry no classname. home-app reads a classname as a CQM
+            # protocol identifier: ProtocolCardEffectInterpreter keys a card on
+            # `{classname}|{plugin_name}` when one is set, ignoring the effect's own
+            # `key`, which would put every card an agent emits for a patient in one row.
+            granted_effects, ungranted = split_granted_effects(result.effects, effect_grant)
+            for effect in ungranted:
+                log.warning(
+                    f"RunAgent: dropping {EffectType.Name(effect.type)} from agent "
+                    f"{request.agent_id}; no tool its manifest grants stages that effect"
+                )
+            emitted_effects = [
+                Effect(
+                    type=effect.type,
+                    payload=effect.payload,
+                    plugin_name=base_plugin_name,
+                    # The agent, not the trigger handler that started it, so the
+                    # security audit names the agent behind each write.
+                    handler_name=class_name,
+                    actor=request.requester.actor,
+                    source=request.requester.source or "agent",
+                )
+                for effect in granted_effects
+            ]
+            emitted_effects = permitted_usage(
+                emitted_effects, plugin.get("usage_units", frozenset())
+            )
+            emitted_effects = validate_effects(emitted_effects)
+
+            log.info(
+                f"RunAgent: agent_id={request.agent_id} run_id={request.run_id} "
+                f"completed with {len(emitted_effects)} effect(s)"
+            )
+
+            yield EventResponse(
+                success=True,
+                effects=emitted_effects,
+                agent_run=_agent_run_summary(
+                    recorder,
+                    effects_returned=len(result.effects),
+                    effects_dropped=len(result.effects) - len(emitted_effects),
+                ),
+            )
 
     def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
@@ -1273,6 +1882,7 @@ def import_plugin(path: pathlib.Path) -> bool:
                 cast(list, components.get("protocols", []))
                 + cast(list, components.get("applications", []))
                 + cast(list, components.get("handlers", []))
+                + cast(list, components.get("agents", []))
             )
         except Exception as e:
             log.exception(f'Unable to load plugin "{name}"')
@@ -1314,6 +1924,8 @@ def import_plugin(path: pathlib.Path) -> bool:
 
                 LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                # The manifest entry carries an agent's tool grant, which an update can narrow.
+                LOADED_PLUGINS[name_and_class]["handler"] = r.handler
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
                 LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
                 LOADED_PLUGINS[name_and_class]["usage_units"] = units
@@ -1518,7 +2130,10 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     # not loaded yet, so home-app sends every event until the first rebuild.
     EVENT_REGISTRY.mark_not_ready()
 
-    executor = ThreadPoolExecutor(max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS)
+    # Agent runs get their own threads, so a full set of agent runs leaves every worker to events.
+    executor = ThreadPoolExecutor(
+        max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS + settings.PLUGIN_RUNNER_MAX_AGENT_RUNS
+    )
     server = grpc.server(
         thread_pool=executor,
         options=(
