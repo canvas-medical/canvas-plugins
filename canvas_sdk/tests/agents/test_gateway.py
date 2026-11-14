@@ -18,7 +18,7 @@ from canvas_sdk.agents.gateway import (
 )
 from canvas_sdk.agents.run_record import DEADLINE_MARGIN_SECONDS, RunRecorder, current_recorder
 
-GATEWAY_URL = "https://gateway.test"
+GATEWAY_URL = "https://inference-dev.canvasmedical.com"
 KEY = "cnvs_sk_plugin_key"
 
 MESSAGE: dict[str, Any] = {
@@ -90,14 +90,13 @@ def test_repr_leaves_out_the_key() -> None:
     assert KEY not in repr(gateway())
 
 
-def test_gateway_from_plugin_secrets_reads_the_url_and_the_plugins_key() -> None:
-    """The URL is instance config; the key is the plugin's own secret."""
+def test_gateway_from_plugin_secrets_reads_the_url_and_the_key_from_the_plugins_secrets() -> None:
+    """Platform sends both with every deploy, so a key always meets its own gateway."""
     gw = gateway_from_plugin_secrets(
-        {"INFERENCE_GATEWAY_KEY": f"  {KEY}  "},
+        {"INFERENCE_GATEWAY_KEY": f"  {KEY}  ", "INFERENCE_GATEWAY_URL": GATEWAY_URL},
         plugin="p",
         agent="p.agents.a:A",
         run_id="run-1",
-        environ={"INFERENCE_GATEWAY_URL": GATEWAY_URL},
     )
 
     assert gw._base_url == GATEWAY_URL
@@ -108,24 +107,93 @@ def test_gateway_from_plugin_secrets_reads_the_url_and_the_plugins_key() -> None
 
 
 @pytest.mark.parametrize(
-    "secrets, environ, missing",
+    "secrets, missing",
     [
-        ({}, {}, "instance config INFERENCE_GATEWAY_URL and plugin secret INFERENCE_GATEWAY_KEY"),
-        ({"INFERENCE_GATEWAY_KEY": KEY}, {"INFERENCE_GATEWAY_URL": " "}, "INFERENCE_GATEWAY_URL"),
+        ({}, "plugin secrets INFERENCE_GATEWAY_URL and INFERENCE_GATEWAY_KEY"),
+        ({"INFERENCE_GATEWAY_KEY": KEY, "INFERENCE_GATEWAY_URL": " "}, "INFERENCE_GATEWAY_URL"),
         (
-            {"INFERENCE_GATEWAY_KEY": ""},
-            {"INFERENCE_GATEWAY_URL": GATEWAY_URL},
+            {"INFERENCE_GATEWAY_KEY": "", "INFERENCE_GATEWAY_URL": GATEWAY_URL},
             "INFERENCE_GATEWAY_KEY",
         ),
     ],
     ids=["neither", "no-url", "empty-key"],
 )
 def test_gateway_from_plugin_secrets_names_what_is_missing(
-    secrets: dict[str, str], environ: dict[str, str], missing: str
+    secrets: dict[str, str], missing: str
 ) -> None:
-    """A missing URL or key is named, with where it is set."""
+    """A missing URL or key is named."""
     with pytest.raises(LLMGatewayConfigurationError, match=missing):
-        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A", environ=environ)
+        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://collector.example",
+        "http://inference.canvasmedical.com",
+        "https://inference.canvasmedical.com.collector.example",
+        "https://user@collector.example",
+        "inference.canvasmedical.com",
+        "https://:pw@inference.canvasmedical.com",
+        "https://user@inference.canvasmedical.com",
+        "https://inferen\tce.canvasmedical.com",
+        "https://inference.canvasmedical.com/v1\n/messages",
+    ],
+)
+def test_a_url_that_is_not_canvass_gateway_is_refused(url: str) -> None:
+    """Anyone who can edit a plugin's settings on an instance cannot send its key and its
+    prompts somewhere else.
+    """
+    with pytest.raises(LLMGatewayConfigurationError, match="not Canvas's inference gateway"):
+        gateway_from_plugin_secrets(
+            {"INFERENCE_GATEWAY_KEY": KEY, "INFERENCE_GATEWAY_URL": url},
+            plugin="p",
+            agent="p.agents.a:A",
+        )
+
+
+@pytest.mark.parametrize(
+    "url", ["https://inference.canvasmedical.com", "https://inference-dev.canvasmedical.com/"]
+)
+def test_canvass_production_and_development_gateways_are_accepted(url: str) -> None:
+    """Platform prod and Platform dev send these."""
+    gw = gateway_from_plugin_secrets(
+        {"INFERENCE_GATEWAY_KEY": KEY, "INFERENCE_GATEWAY_URL": url},
+        plugin="p",
+        agent="p.agents.a:A",
+    )
+
+    assert gw._base_url == url
+
+
+def test_the_runners_environment_can_allow_one_more_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A local fake gateway, such as the load test's, is reachable only when whoever runs the
+    runner names its exact origin; a plugin setting cannot.
+    """
+    secrets = {
+        "INFERENCE_GATEWAY_KEY": KEY,
+        "INFERENCE_GATEWAY_URL": "http://host.docker.internal:8765",
+    }
+    with pytest.raises(LLMGatewayConfigurationError):
+        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+
+    monkeypatch.setenv("INFERENCE_GATEWAY_ALLOWED_ORIGIN", "http://host.docker.internal:8765")
+    gw = gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+    assert gw._base_url == "http://host.docker.internal:8765"
+
+    secrets["INFERENCE_GATEWAY_URL"] = "http://host.docker.internal:9999"
+    with pytest.raises(LLMGatewayConfigurationError):
+        gateway_from_plugin_secrets(secrets, plugin="p", agent="p.agents.a:A")
+
+
+def test_the_instance_environment_is_not_a_gateway_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only the plugin's own secrets say where its key works."""
+    monkeypatch.setenv("INFERENCE_GATEWAY_URL", GATEWAY_URL)
+
+    with pytest.raises(LLMGatewayConfigurationError, match="INFERENCE_GATEWAY_URL"):
+        gateway_from_plugin_secrets(
+            {"INFERENCE_GATEWAY_KEY": KEY}, plugin="p", agent="p.agents.a:A"
+        )
 
 
 def test_in_a_run_the_client_timeout_splits_the_time_left_across_attempts() -> None:
@@ -165,9 +233,14 @@ def test_with_model_keeps_the_url_key_and_attribution() -> None:
     assert gateway.with_model(gateway.model) is gateway
 
 
-def test_agent_secrets_leave_out_the_gateway_key_and_the_handler_token() -> None:
+def test_agent_secrets_leave_out_the_gateway_key_url_and_the_handler_token() -> None:
     """An agent sees its plugin's variables; the runner keeps the key it builds the gateway from."""
-    secrets = {"INFERENCE_GATEWAY_KEY": "k", "graphql_jwt": "t", "MODEL": "claude-haiku-4-5"}
+    secrets = {
+        "INFERENCE_GATEWAY_KEY": "k",
+        "INFERENCE_GATEWAY_URL": GATEWAY_URL,
+        "graphql_jwt": "t",
+        "MODEL": "claude-haiku-4-5",
+    }
 
     assert agent_secrets(secrets) == {"MODEL": "claude-haiku-4-5"}
 

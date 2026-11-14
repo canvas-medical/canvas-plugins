@@ -2,7 +2,7 @@
 
 Each scenario starts probe runs through the plugin's API, waits for every run to reach
 a final status, reads back the platform's run records and what each probe saw, and
-reports timings and pass/fail checks. The instance's ``INFERENCE_GATEWAY_URL`` points
+reports timings and pass/fail checks. The plugin's ``INFERENCE_GATEWAY_URL`` points
 at the fake gateway (``adk_loadtest.gateway``), which the driver also controls.
 
 Scenarios:
@@ -224,7 +224,7 @@ def canary(driver: Driver) -> str | None:
     if not served:
         return (
             "the canary run succeeded without a call to this fake gateway, so the "
-            "instance's INFERENCE_GATEWAY_URL points at another gateway"
+            "plugin's INFERENCE_GATEWAY_URL points at another gateway"
         )
     return None
 

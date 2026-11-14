@@ -729,8 +729,8 @@ class PluginRunner(PluginRunnerServicer):
         returns has passed that deadline, so it neither saves state nor
         returns effects. LLM access goes
         through Canvas's inference gateway: the gateway is built from the
-        instance's ``INFERENCE_GATEWAY_URL`` and the plugin's own
-        ``INFERENCE_GATEWAY_KEY`` secret, attributed to the plugin, agent, and run.
+        plugin's own ``INFERENCE_GATEWAY_URL`` and ``INFERENCE_GATEWAY_KEY``
+        secrets, attributed to the plugin, agent, and run.
         Gateway refusals and outages come back as
         ``LLM_REFUSED`` and ``LLM_UNAVAILABLE`` so home-app retries only the latter.
         """

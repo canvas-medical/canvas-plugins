@@ -55,13 +55,13 @@ def plugin_runner() -> PluginRunner:
 
 @pytest.fixture
 def inference_gateway_env(load_test_plugins: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Configure the inference gateway the way an instance and an agent plugin do.
-
-    The gateway URL is instance config; the key is the agent plugin's own
-    INFERENCE_GATEWAY_KEY secret.
+    """Configure the inference gateway the way Platform does: the agent plugin's own
+    INFERENCE_GATEWAY_URL and INFERENCE_GATEWAY_KEY secrets.
     """
-    monkeypatch.setenv("INFERENCE_GATEWAY_URL", "https://gateway.test")
-    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin"}
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {
+        "INFERENCE_GATEWAY_URL": "https://inference-dev.canvasmedical.com",
+        "INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin",
+    }
 
 
 def _make_request(
@@ -391,7 +391,6 @@ def test_run_agent_without_gateway_configuration_short_circuits(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without the gateway URL or the plugin's key, the RPC refuses to dispatch and says why."""
-    monkeypatch.delenv("INFERENCE_GATEWAY_URL", raising=False)
     LOADED_PLUGINS[AGENT_KEY]["secrets"] = {}
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.success is False
@@ -407,8 +406,10 @@ def test_run_agent_needs_the_plugins_gateway_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A gateway URL alone is not enough; the plugin needs its own INFERENCE_GATEWAY_KEY."""
-    monkeypatch.setenv("INFERENCE_GATEWAY_URL", "https://gateway.test")
-    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"ANTHROPIC_API_KEY": "sk-ant-plugin"}
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {
+        "INFERENCE_GATEWAY_URL": "https://inference-dev.canvasmedical.com",
+        "ANTHROPIC_API_KEY": "sk-ant-plugin",
+    }
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
     assert response.error_kind == "LLM_NOT_CONFIGURED"
 
@@ -435,7 +436,7 @@ def test_run_agent_attributes_the_gateway_to_the_plugin_agent_and_run(
 
     assert response.success is True
     assert seen[0]._api_key == "cnvs_sk_test_plugin"
-    assert seen[0]._base_url == "https://gateway.test"
+    assert seen[0]._base_url == "https://inference-dev.canvasmedical.com"
     attribution = seen[0]._attribution
     assert attribution["plugin"] == "test_agent_plugin"
     assert attribution["agent"] == AGENT_ID
@@ -796,7 +797,10 @@ def test_a_reloaded_plugins_narrower_grant_applies_at_once(
     manifest_path.write_text(json.dumps(manifest))
 
     runner_module.reload_plugin(install_test_plugin)
-    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {"INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin"}
+    LOADED_PLUGINS[AGENT_KEY]["secrets"] = {
+        "INFERENCE_GATEWAY_URL": "https://inference-dev.canvasmedical.com",
+        "INFERENCE_GATEWAY_KEY": "cnvs_sk_test_plugin",
+    }
     response = next(iter(plugin_runner.RunAgent(_make_request(), None)))
 
     assert response.success is True

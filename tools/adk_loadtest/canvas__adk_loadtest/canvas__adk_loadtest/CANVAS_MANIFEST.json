@@ -44,6 +44,7 @@
     },
     "variables": [
         {"name": "INFERENCE_GATEWAY_KEY", "sensitive": true},
+        {"name": "INFERENCE_GATEWAY_URL"},
         {"name": "simpleapi-api-key", "sensitive": true}
     ],
     "tags": {},
