@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v1.3.0 (2026-11-14)
+
+### Chores
+
+- Move PR workflows off pull_request_target
+  ([#1972](https://github.com/canvas-medical/canvas-plugins/pull/1972),
+  [`dfd14fc`](https://github.com/canvas-medical/canvas-plugins/commit/dfd14fc6c863526ff529d1d0bd1f51cac651800f))
+
+### Features
+
+- [koala-5544] - Agent Development Kit PoC
+  ([#1713](https://github.com/canvas-medical/canvas-plugins/pull/1713),
+  [`2b12b62`](https://github.com/canvas-medical/canvas-plugins/commit/2b12b62cbe1c2ad94f78add6ade5739b79c0e338))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+Co-authored-by: aaryanxshah <130312042+aaryanxshah@users.noreply.github.com>
+
+- Accept a maintainer in a plugin's catalog listing (PLATFORM-132)
+  ([#1998](https://github.com/canvas-medical/canvas-plugins/pull/1998),
+  [`4d37283`](https://github.com/canvas-medical/canvas-plugins/commit/4d37283fb22ef82bccdfea8f875ef287dc91acf0))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+
 ## v1.2.0 (2026-11-12)
 
 ### Features
