@@ -1984,3 +1984,77 @@ def test_update_refused_prints_status_and_body(
         )
 
     assert 'Status code 400: {"error": "bad"}' in capsys.readouterr().out
+
+
+_FORBIDDEN_IMPORT_AGENT = """
+import subprocess
+
+from canvas_sdk.agents import AgentPlugin
+
+
+class Handler(AgentPlugin):
+    def load_state(self, scope_key):
+        return None
+
+    def run(self, state, gateway, trigger_payload):
+        return None
+
+    def save_state(self, scope_key, state):
+        return None
+"""
+
+
+def test_validate_plugin_loads_checks_agents_too(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """Agent classes load in the same sandbox, so a disallowed import in one fails validation."""
+    plugin = _scaffold_plugin(tmp_path / "bad_agent_plugin", _FORBIDDEN_IMPORT_AGENT)
+    manifest_path = plugin / "CANVAS_MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["components"] = {"agents": manifest["components"]["protocols"]}
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(typer.Exit) as exc_info:
+        _validate_plugin_loads(plugin)
+
+    assert exc_info.value.exit_code == 1
+    captured = capsys.readouterr()
+    assert "✗ bad_agent_plugin.handlers.my_handler:Handler" in captured.out
+    assert "'subprocess' is not an allowed import" in captured.out
+
+
+_STANDARD_TOOLS_AGENT = """
+from canvas_sdk.agents import AgentPlugin, standard_tools
+
+
+class Handler(AgentPlugin):
+    tools = standard_tools
+
+    def load_state(self, scope_key):
+        return None
+
+    def run(self, state, gateway, trigger_payload):
+        return None
+
+    def save_state(self, scope_key, state):
+        return None
+"""
+
+
+def test_validate_plugin_loads_refuses_an_approval_that_names_no_tool(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A misspelled `approve` entry would lift the gate at run time, so validation fails."""
+    plugin = _scaffold_plugin(tmp_path / "grant_plugin", _STANDARD_TOOLS_AGENT)
+    manifest_path = plugin / "CANVAS_MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text())
+    agent = manifest["components"]["protocols"][0]
+    agent["tools"] = {"allowed": ["@task_writes"], "approve": ["@task_write"]}
+    manifest["components"] = {"agents": [agent]}
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(typer.Exit) as exc_info:
+        _validate_plugin_loads(plugin)
+
+    assert exc_info.value.exit_code == 1
+    assert "tools.approve names no tool: '@task_write'" in capsys.readouterr().out

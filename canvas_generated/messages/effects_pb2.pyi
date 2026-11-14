@@ -436,6 +436,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_PATIENT_IDENTIFICATION_CARD: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
     HTTP_REQUEST: _ClassVar[EffectType]
+    RUN_AGENT: _ClassVar[EffectType]
+    PROPOSE_AGENT_ACTION: _ClassVar[EffectType]
+    DECIDE_AGENT_PROPOSAL: _ClassVar[EffectType]
     LINK_DOCUMENT_TO_PATIENT: _ClassVar[EffectType]
     CATEGORIZE_DOCUMENT: _ClassVar[EffectType]
     ASSIGN_DOCUMENT_REVIEWER: _ClassVar[EffectType]
@@ -875,6 +878,9 @@ UPDATE_PATIENT_IDENTIFICATION_CARD: EffectType
 DELETE_PATIENT_IDENTIFICATION_CARD: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
 HTTP_REQUEST: EffectType
+RUN_AGENT: EffectType
+PROPOSE_AGENT_ACTION: EffectType
+DECIDE_AGENT_PROPOSAL: EffectType
 LINK_DOCUMENT_TO_PATIENT: EffectType
 CATEGORIZE_DOCUMENT: EffectType
 ASSIGN_DOCUMENT_REVIEWER: EffectType

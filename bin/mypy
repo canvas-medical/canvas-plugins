@@ -48,6 +48,24 @@ if [ -z "$MYPY_PATH" ]; then
 fi
 log_verbose "Using mypy: $MYPY_PATH"
 
+# Plugins outside example-plugins, checked from their own directory like the example plugins.
+OTHER_PLUGIN_DIRS=("tools/adk_loadtest/canvas__adk_loadtest")
+
+# The plugin directory a file belongs to, or nothing for a file outside every plugin.
+plugin_dir_of() {
+    local file="$1"
+    if [[ "$file" == example-plugins/* ]]; then
+        echo "$file" | cut -d'/' -f1-2
+        return
+    fi
+    for dir in "${OTHER_PLUGIN_DIRS[@]}"; do
+        if [[ "$file" == "$dir"/* ]]; then
+            echo "$dir"
+            return
+        fi
+    done
+}
+
 if [ ${#changed_files[@]} -eq 0 ]; then
     log_verbose "No files specified, running mypy on entire project..."
 
@@ -57,6 +75,7 @@ if [ ${#changed_files[@]} -eq 0 ]; then
         --exclude example-plugins \
         --exclude canvas_cli/templates \
         --exclude custom-plugins \
+        --exclude tools/adk_loadtest/canvas__adk_loadtest \
         . || exit 1
     log_verbose "mypy passed for non-plugin files"
 
@@ -66,6 +85,7 @@ if [ ${#changed_files[@]} -eq 0 ]; then
     while IFS= read -r -d '' dir; do
         plugin_dirs+=("$dir")
     done < <(find example-plugins -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null || true)
+    plugin_dirs+=("${OTHER_PLUGIN_DIRS[@]}")
 
     for plugin_dir in "${plugin_dirs[@]}"; do
         log_verbose "Running mypy on plugin: $plugin_dir"
@@ -88,7 +108,7 @@ other_files=()
 
 # Process each changed file
 for file in "${changed_files[@]}"; do
-    if [[ "$file" == example-plugins/* ]]; then
+    if [[ -n "$(plugin_dir_of "$file")" ]]; then
         plugin_files+=("$file")
         log_verbose "  Plugin file: $file"
     else
@@ -137,7 +157,7 @@ if [ ${#plugin_files[@]} -gt 0 ]; then
             break
         fi
 
-        plugin_dir=$(echo "$file" | cut -d'/' -f1-2)
+        plugin_dir=$(plugin_dir_of "$file")
 
         if [[ "$plugin_dir" != "$current_plugin" ]]; then
             # Process previous plugin batch if exists

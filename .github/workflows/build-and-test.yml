@@ -240,6 +240,25 @@ jobs:
           flags: plugin-${{ matrix.plugin }}
           fail_ci_if_error: false
 
+  test-adk-loadtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install-python-and-uv
+        with:
+          PYTHON_VERSION: "3.13"
+      - uses: ./.github/actions/install-canvas
+
+      - name: Test the load test probe plugin
+        env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
+        run: |
+          uv pip install -e tools/adk_loadtest/canvas__adk_loadtest
+          uv run pytest tools/adk_loadtest/canvas__adk_loadtest/tests --verbosity 2
+
+      - name: Test the load test driver and fake gateway
+        run: uv run --project tools/adk_loadtest pytest tools/adk_loadtest/tests --verbosity 2
+
   integration-tests:
     runs-on: ubuntu-latest
     steps:

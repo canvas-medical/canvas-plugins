@@ -1,0 +1,393 @@
+"""search_note_text finds the run's patient's notes by what their free text says."""
+
+import json
+import re
+import sys
+from datetime import UTC, datetime
+from typing import Any
+
+import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+
+from canvas_sdk.agents import standard_tools
+from canvas_sdk.agents.citations import Sources, cite
+from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note, NoteStates
+
+# `canvas_sdk.agents.standard_tools` names the registry, so reach the module itself here.
+STANDARD_TOOLS_MODULE = sys.modules["canvas_sdk.agents.standard_tools"]
+
+
+def _ctx(patient_id: object) -> dict[str, object]:
+    return {"patient_id": patient_id, "effects": []}
+
+
+def _note(patient: object, day: int, *texts: str) -> Note:
+    """A version 1 note on ``day`` of January 2026 whose body holds ``texts`` as text blocks."""
+    return NoteFactory.create(
+        patient=patient,
+        datetime_of_service=datetime(2026, 1, day, tzinfo=UTC),
+        _body=[{"type": "text", "value": text} for text in texts],
+    )
+
+
+def _search(patient: Any, **arguments: object) -> list[dict[str, Any]]:
+    return standard_tools.execute("search_note_text", arguments, ctx=_ctx(patient.id))
+
+
+@pytest.mark.django_db
+def test_returns_notes_mentioning_the_words_newest_first_with_a_snippet() -> None:
+    """Matching notes come back newest first; a note that does not mention the words is left out."""
+    patient = PatientFactory.create()
+    older = _note(patient, 3, "Patient reports chest pain on exertion.")
+    newer = _note(patient, 20, "Follow-up.", "Chest pain resolved since last visit.")
+    _note(patient, 25, "Knee pain, no other complaints.")
+
+    rows = _search(patient, text="chest pain")
+
+    assert [row["id"] for row in rows] == [str(newer.id), str(older.id)]
+    assert rows[0]["snippet"] == "Follow-up. Chest pain resolved since last visit."
+    assert rows[0]["dbid"] == newer.dbid
+    json.dumps(rows)
+
+
+@pytest.mark.django_db
+def test_every_word_must_appear_in_any_order() -> None:
+    """A note matches only when it holds every word, whatever their order and case."""
+    patient = PatientFactory.create()
+    both = _note(patient, 5, "Pain in the chest, left side.")
+    _note(patient, 6, "Chest x-ray ordered.")
+
+    rows = _search(patient, text="CHEST pain")
+
+    assert [row["id"] for row in rows] == [str(both.id)]
+    assert "chest" in rows[0]["snippet"].lower()
+
+
+@pytest.mark.django_db
+def test_another_patients_notes_are_absent() -> None:
+    """With the same words on two charts, only the run's patient's note comes back."""
+    patient, other = PatientFactory.create(), PatientFactory.create()
+    own = _note(patient, 1, "Discussed sleep apnea.")
+    _note(other, 2, "Discussed sleep apnea.")
+
+    assert [row["id"] for row in _search(patient, text="sleep apnea")] == [str(own.id)]
+
+
+@pytest.mark.django_db
+def test_words_in_the_stored_body_structure_do_not_match() -> None:
+    """A body stored as JSON holds "type" and "value" in every note; only typed text counts."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Blood pressure stable.")
+
+    assert _search(patient, text="value") == []
+    assert _search(patient, text="type") == []
+
+
+@pytest.mark.django_db
+def test_a_word_found_only_in_the_body_structure_does_not_complete_a_match() -> None:
+    """The database matches "type" in every body; the typed text must hold every word itself."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Chest pain on exertion.")
+
+    assert _search(patient, text="pain type") == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("text", ['"chest pain"', "'chest pain'", "chest pain?", "(chest, pain)"])
+def test_punctuation_around_the_words_is_ignored(text: str) -> None:
+    """The model often quotes a phrase; quotes and trailing punctuation are not part of a word."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Chest pain resolved.")
+
+    assert [row["id"] for row in _search(patient, text=text)] == [str(note.id)]
+
+
+@pytest.mark.django_db
+def test_the_snippet_centers_on_the_phrase_rather_than_its_first_word() -> None:
+    """A note that says "chest" early and "chest pain" late shows the "chest pain" passage."""
+    patient = PatientFactory.create()
+    filler = "Unremarkable review of systems. " * 10
+    _note(patient, 1, f"Chest x-ray clear. {filler}Today reports chest pain at rest.")
+
+    snippet = _search(patient, text="chest pain")[0]["snippet"]
+
+    assert "reports chest pain at rest" in snippet
+    assert "Chest x-ray clear" not in snippet
+
+
+@pytest.mark.django_db
+def test_the_database_narrows_candidates_before_the_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Newer notes without the word never use up the candidates the text check reads."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    older = _note(patient, 1, "Headache since Monday.")
+    for day in (10, 11, 12):
+        _note(patient, day, "Knee exam unchanged.")
+
+    assert [row["id"] for row in _search(patient, text="headache")] == [str(older.id)]
+
+
+@pytest.mark.django_db
+def test_limit_caps_the_rows() -> None:
+    """``limit`` keeps the newest matching notes."""
+    patient = PatientFactory.create()
+    for day in range(1, 6):
+        _note(patient, day, f"Headache, day {day}.")
+
+    rows = _search(patient, text="headache", limit=2)
+
+    assert [row["snippet"] for row in rows] == ["Headache, day 5.", "Headache, day 4."]
+
+
+@pytest.mark.django_db
+def test_a_long_note_gets_a_snippet_around_the_match() -> None:
+    """A long note is cut to the text around the match, marked with ellipses."""
+    patient = PatientFactory.create()
+    text = f"{'Routine history. ' * 20}Noted a new heart murmur today. {'Plan unchanged. ' * 20}"
+    _note(patient, 1, text)
+
+    snippet = _search(patient, text="heart murmur")[0]["snippet"]
+
+    assert snippet.startswith("…") and snippet.endswith("…")
+    assert "Noted a new heart murmur today." in snippet
+    assert len(snippet) < len(text) / 2
+
+
+def test_text_with_no_words_is_refused() -> None:
+    """Blank text is an error the model sees, not a search that matches every note."""
+    with pytest.raises(ValueError, match="at least one word"):
+        standard_tools.execute("search_note_text", {"text": "   "}, ctx=_ctx("p1"))
+
+
+def test_a_run_without_a_patient_is_refused() -> None:
+    """A patient-less run gets an error, never an empty chart read as no notes."""
+    with pytest.raises(ValueError, match="not about a patient"):
+        standard_tools.execute("search_note_text", {"text": "pain"}, ctx=_ctx(None))
+
+
+@pytest.mark.django_db
+def test_returns_description_names_exactly_the_fields_it_returns() -> None:
+    """The model plans on the described fields, so the description must match the rows."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Shortness of breath.")
+    returned = set(_search(patient, text="breath")[0])
+    described = set(
+        re.findall(
+            r"`([a-z_]+)`", standard_tools.metadata_for("search_note_text")["returns_description"]
+        )
+    )
+
+    assert described == returned | {"truncated", "oldest_checked"}
+
+
+@pytest.mark.django_db
+def test_a_capped_scan_says_so_and_before_reaches_the_older_notes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every body's stored JSON holds "type", so newer notes use up the cap; the marker says so."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    older = _note(patient, 1, "Type 2 diabetes, stable.")
+    for day in (10, 11, 12):
+        _note(patient, day, "Knee exam unchanged.")
+
+    first = _search(patient, text="type")
+
+    assert first == [
+        {"truncated": True, "oldest_checked": datetime(2026, 1, 11, tzinfo=UTC).isoformat()}
+    ]
+    second = _search(patient, text="type", before=first[-1]["oldest_checked"])
+    assert [row["id"] for row in second] == [str(older.id)]
+
+
+@pytest.mark.django_db
+def test_the_scan_reads_only_what_the_text_check_needs() -> None:
+    """The candidate scan joins no provider or note type; only matched notes load those."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Cough.")
+    limit_clause = f"LIMIT {STANDARD_TOOLS_MODULE.SEARCH_NOTE_TEXT_MAX_CANDIDATES + 1}"
+
+    with CaptureQueriesContext(connection) as queries:
+        assert len(_search(patient, text="cough")) == 1
+
+    scans = [query["sql"] for query in queries.captured_queries if limit_clause in query["sql"]]
+    assert len(scans) == 1
+    assert "staff" not in scans[0] and "notetype" not in scans[0]
+    assert "billing_note" not in scans[0]
+
+
+@pytest.mark.django_db
+def test_a_scan_that_reads_every_candidate_has_no_marker(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exactly the cap's worth of candidates leaves nothing unchecked, so nothing is truncated."""
+    monkeypatch.setattr(STANDARD_TOOLS_MODULE, "SEARCH_NOTE_TEXT_MAX_CANDIDATES", 2)
+    patient = PatientFactory.create()
+    for day in (10, 11):
+        _note(patient, day, "Knee exam unchanged.")
+
+    assert _search(patient, text="type") == []
+
+
+@pytest.mark.django_db
+def test_notes_on_the_same_date_come_back_in_a_stable_order() -> None:
+    """Notes sharing a date of service are ordered newest row first, every call."""
+    patient = PatientFactory.create()
+    first = _note(patient, 4, "Cough.")
+    second = _note(patient, 4, "Cough again.")
+
+    assert [row["id"] for row in _search(patient, text="cough")] == [str(second.id), str(first.id)]
+    assert first.dbid < second.dbid
+
+
+@pytest.mark.django_db
+def test_a_short_word_matches_only_itself() -> None:
+    """The "d" of "vitamin d" is a whole word, not the start of any word."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Vitamin supplement taken daily.")
+    low_d = _note(patient, 2, "Vitamin D low; start supplement.")
+
+    assert [row["id"] for row in _search(patient, text="vitamin d")] == [str(low_d.id)]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("text", ["¿dolor?", "dolor—", "«dolor»"])
+def test_punctuation_in_any_script_is_ignored(text: str) -> None:
+    """Punctuation outside ASCII is stripped from a word's ends too."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Dolor de pecho.")
+
+    assert [row["id"] for row in _search(patient, text=text)] == [str(note.id)]
+
+
+@pytest.mark.django_db
+def test_a_word_whose_lowercase_changes_length_still_matches() -> None:
+    """The word İzmir lowercases to a longer string; it is matched as typed, any case."""
+    patient = PatientFactory.create()
+    note = NoteFactory.create(
+        patient=patient,
+        title="Travel history: İzmir",
+        datetime_of_service=datetime(2026, 1, 3, tzinfo=UTC),
+        _body=[{"type": "text", "value": "Doing well."}],
+    )
+
+    assert [row["id"] for row in _search(patient, text="İzmir")] == [str(note.id)]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({"limit": 0}, "limit: 0 is less than the minimum of 1"),
+        ({"limit": "many"}, "limit: 'many' is not of type 'integer'"),
+        ({"before": "last week"}, "`before` must be an ISO 8601 date"),
+    ],
+)
+def test_an_unreadable_argument_is_refused_by_name(
+    arguments: dict[str, object], message: str
+) -> None:
+    """The model hears which argument it got wrong, not a bare conversion error."""
+    with pytest.raises(ValueError, match=message):
+        standard_tools.execute("search_note_text", {"text": "pain", **arguments}, ctx=_ctx("p1"))
+
+
+@pytest.mark.django_db
+def test_a_reply_can_cite_a_found_note() -> None:
+    """The rows are citable as notes, so a chat can open the note it cites."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Wheezing on exam.")
+    rows = _search(patient, text="wheezing")
+    messages = [
+        {
+            "role": "assistant",
+            "content": [{"type": "tool_use", "id": "t1", "name": "search_note_text"}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": json.dumps(rows)}],
+        },
+    ]
+
+    text, citations = cite(
+        f"Wheezing was noted [[cite:{note.id}]].", Sources(standard_tools).add_all(messages)
+    )
+
+    assert text == "Wheezing was noted [1]."
+    assert [(c.kind, c.note_dbid) for c in citations] == [("Note", note.dbid)]
+
+
+@pytest.mark.django_db
+def test_a_word_matches_only_as_a_whole_word() -> None:
+    """A short word is not found inside a longer one: "ear" is not in "year"."""
+    patient = PatientFactory.create()
+    _note(patient, 1, "Seen last year, heart clear.")
+    ear = _note(patient, 2, "Left ear pain.")
+
+    assert [row["id"] for row in _search(patient, text="ear")] == [str(ear.id)]
+
+
+@pytest.mark.django_db
+def test_the_note_title_is_searched() -> None:
+    """A note whose title alone holds the words is found, and its snippet shows the title."""
+    patient = PatientFactory.create()
+    note = NoteFactory.create(
+        patient=patient,
+        title="Sleep apnea follow-up",
+        datetime_of_service=datetime(2026, 1, 3, tzinfo=UTC),
+        _body=[{"type": "text", "value": "Doing well."}],
+    )
+
+    rows = _search(patient, text="apnea")
+
+    assert [row["id"] for row in rows] == [str(note.id)]
+    assert "Sleep apnea follow-up" in rows[0]["snippet"]
+
+
+@pytest.mark.django_db
+def test_deleted_notes_are_left_out() -> None:
+    """A deleted note is never returned, so it cannot be cited."""
+    patient = PatientFactory.create()
+    deleted = _note(patient, 2, "Chest pain.")
+    CurrentNoteStateEvent.objects.create(note=deleted, state=NoteStates.DELETED)
+    kept = _note(patient, 1, "Chest pain again.")
+
+    assert [row["id"] for row in _search(patient, text="chest pain")] == [str(kept.id)]
+
+
+@pytest.mark.django_db
+def test_a_text_block_that_is_not_text_does_not_break_the_search() -> None:
+    """A malformed block in one note is skipped rather than failing every search."""
+    patient = PatientFactory.create()
+    NoteFactory.create(
+        patient=patient,
+        datetime_of_service=datetime(2026, 1, 9, tzinfo=UTC),
+        _body=[{"type": "text", "value": 7}, {"type": "text", "value": "Cough for a week."}],
+    )
+
+    assert [row["snippet"] for row in _search(patient, text="cough")] == ["Cough for a week."]
+
+
+@pytest.mark.django_db
+def test_the_snippet_window_holds_the_match_when_lowercasing_changes_length() -> None:
+    """The window is placed on the original text, though "İ" lowercases to two characters."""
+    patient = PatientFactory.create()
+    _note(patient, 1, f"{'İ' * 120} Reports chest pain today.")
+
+    assert "chest pain" in _search(patient, text="chest pain")[0]["snippet"]
+
+
+def test_too_many_distinct_words_are_refused_and_repeats_count_once() -> None:
+    """Each distinct word is one database filter, so their number is capped."""
+    with pytest.raises(ValueError, match="at most 12 distinct words"):
+        standard_tools.execute(
+            "search_note_text", {"text": " ".join(f"w{i}" for i in range(13))}, ctx=_ctx("p1")
+        )
+    assert STANDARD_TOOLS_MODULE._search_words("Pain pain PAIN, chest") == ["Pain", "chest"]
+
+
+@pytest.mark.django_db
+def test_a_word_also_finds_its_longer_forms() -> None:
+    """A word finds its longer forms: "headache" finds "headaches"."""
+    patient = PatientFactory.create()
+    note = _note(patient, 1, "Recurring headaches; wrist fractured last spring.")
+
+    assert [row["id"] for row in _search(patient, text="headache fracture")] == [str(note.id)]
