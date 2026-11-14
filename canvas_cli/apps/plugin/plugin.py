@@ -28,6 +28,8 @@ from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
 from canvas_cli.utils.validators import validate_manifest_file
+from canvas_sdk.agents import ToolRegistry
+from canvas_sdk.agents.grant import grant_problems
 from plugin_runner.plugin_runner import sandbox_plugin_handlers
 from plugin_runner.sandbox import collect_missing_attribute_reads
 
@@ -818,7 +820,7 @@ def validate_manifest(
 
 
 def _validate_plugin_loads(plugin_name: Path) -> None:
-    """Sandbox-load every handler declared in the manifest and report failures.
+    """Sandbox-load every handler and agent declared in the manifest and report failures.
 
     Surfaces sandbox violations (disallowed imports, restricted syntax, import
     errors) at validation time instead of at runtime on the instance. Uses the
@@ -831,10 +833,12 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     plugin_path = plugin_name.resolve()
     manifest_json = json.loads((plugin_path / "CANVAS_MANIFEST.json").read_text())
     components = manifest_json.get("components", {})
+    # The same component lists the runner's import_plugin loads.
     handlers = (
         components.get("protocols", [])
         + components.get("applications", [])
         + components.get("handlers", [])
+        + components.get("agents", [])
     )
 
     if not handlers:
@@ -848,18 +852,29 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
 
-    print(f"Loading {len(handlers)} handler(s) in the sandbox:")
+    print(f"Loading {len(handlers)} handler(s) and agent(s) in the sandbox:")
 
     with collect_missing_attribute_reads() as missing:
         results = sandbox_plugin_handlers(plugin_path.name, plugin_path, handlers)
 
-    failures = [r for r in results if r.error is not None]
-
+    agent_entries = [id(entry) for entry in components.get("agents", [])]
+    failures = []
     for r in results:
         label = r.handler.get("class", "<unknown>")
+        problems = []
+        if r.error is None and id(r.handler) in agent_entries and r.scope and r.handler_class:
+            # The run fails on a grant the runner cannot apply; say so before deploy.
+            registry = getattr(r.scope[r.handler_class], "tools", None) or ToolRegistry()
+            problems = grant_problems(registry, r.handler.get("tools") or {})
         if r.error is not None:
+            failures.append(r)
             print(f"  ✗ {label}")
             print(f"      {type(r.error).__name__}: {r.error}")
+        elif problems:
+            failures.append(r)
+            print(f"  ✗ {label}")
+            for problem in problems:
+                print(f"      {problem}")
         else:
             print(f"  ✓ {label}")
 
@@ -872,10 +887,10 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
             print(f"  - {name}")
 
     if failures:
-        print(f"\n{len(failures)} of {len(results)} handler(s) failed to load in the sandbox.")
+        print(f"\n{len(failures)} of {len(results)} component(s) failed to load in the sandbox.")
         raise typer.Exit(1)
 
-    print(f"All {len(results)} handler(s) load cleanly in the sandbox.")
+    print(f"All {len(results)} component(s) load cleanly in the sandbox.")
 
 
 def _lint_plugin_static(plugin_name: Path) -> None:
@@ -909,7 +924,7 @@ def _lint_plugin_static(plugin_name: Path) -> None:
 def validate(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
-    """Validate a plugin's manifest and that all its handlers load in the sandbox."""
+    """Validate a plugin's manifest and that all its handlers and agents load in the sandbox."""
     validate_manifest(plugin_name)
     _lint_plugin_static(plugin_name)
     _validate_plugin_loads(plugin_name)
