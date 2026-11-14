@@ -36,7 +36,11 @@ def plugin_runner() -> PluginRunner:
 
 @pytest.fixture
 def sentry_events() -> Iterator[list[dict[str, Any]]]:
-    """Sentry with events kept here, sending default PII as the runner's settings do."""
+    """Sentry with events kept here, sending default PII as the runner's settings do.
+
+    Each test runs in its own isolation scope, so a breadcrumb one test records is not
+    in the next test's events.
+    """
     _Captured.events = []
     sentry_sdk.init(
         dsn="https://key@sentry.invalid/1",
@@ -45,7 +49,8 @@ def sentry_events() -> Iterator[list[dict[str, Any]]]:
         include_local_variables=True,
     )
     try:
-        yield _Captured.events
+        with sentry_sdk.isolation_scope():
+            yield _Captured.events
     finally:
         sentry_sdk.init()
 
@@ -109,4 +114,27 @@ def test_a_handlers_exception_reaches_sentry_without_frame_locals(
         for frame in value.get("stacktrace", {}).get("frames", [])
     ]
     assert frames and not any("vars" in frame for frame in frames)
+    assert CHART_TEXT not in json.dumps(sentry_events)
+
+
+def test_an_agent_runs_log_breadcrumb_does_not_reach_a_later_event(
+    sentry_events: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Breadcrumbs outlive the event they were recorded beside, so the publish of an agent
+    run's traceback must not stay behind for the next error the process reports.
+    """
+
+    def publish(message: str, *args: Any, **kwargs: Any) -> None:
+        # What the runner's log handler does: publish the line, which Sentry records.
+        sentry_sdk.add_breadcrumb(category="redis", message=f"PUBLISH KeyError: '{CHART_TEXT}'")
+
+    monkeypatch.setattr("plugin_runner.plugin_runner.log.exception", publish)
+    try:
+        _raise_with_chart_text()
+    except KeyError as exc:
+        _report_agent_exception("RunAgent: agent a raised", exc, "run-1")
+    sentry_sdk.capture_message("a handler failed later")
+    sentry_sdk.flush()
+
+    assert len(sentry_events) == 2
     assert CHART_TEXT not in json.dumps(sentry_events)

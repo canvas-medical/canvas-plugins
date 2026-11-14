@@ -463,7 +463,9 @@ def _report_agent_exception(message: str, exc: BaseException, run_id: str) -> No
     the run record already holds the run. The logged exception reaches Sentry too, so both
     go through the scope.
     """
-    with sentry_sdk.new_scope() as scope:
+    # An isolation scope, since that is where breadcrumbs are kept: the publish of this
+    # traceback is discarded with it rather than left for the process's next event.
+    with sentry_sdk.isolation_scope() as scope:
         scope.add_event_processor(_without_frame_locals)
         scope.add_event_processor(_with_type_only(run_id))
         log.exception(message)
