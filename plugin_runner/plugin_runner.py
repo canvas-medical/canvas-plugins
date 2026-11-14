@@ -438,22 +438,25 @@ def _without_frame_locals(event: Any, hint: Any) -> Any:
 
 
 def _with_type_only(run_id: str) -> Callable[[Any, Any], Any]:
-    """An event processor replacing each exception's message with its type and ``run_id``.
+    """An event processor replacing each exception's message with its type and ``run_id``,
+    and dropping the event's breadcrumbs.
 
     A message can carry chart text: a pydantic ``input_value=``, a ``KeyError`` on a
-    chart-derived key, or a plugin's f-string.
+    chart-derived key, or a plugin's f-string. The breadcrumbs carry it too: each log line,
+    the run's traceback included, is published to Redis, which Sentry records as a breadcrumb.
     """
 
     def process(event: Any, hint: Any) -> Any:
         for value in (event.get("exception") or {}).get("values") or []:
             value["value"] = f"{value.get('type') or 'Exception'} in agent run {run_id}"
+        event.pop("breadcrumbs", None)
         return event
 
     return process
 
 
 def _report_agent_exception(message: str, exc: BaseException, run_id: str) -> None:
-    """Log and report an agent run's exception with neither frame locals nor its message.
+    """Log and report an agent run's exception without frame locals, message, or breadcrumbs.
 
     An agent's frames and messages hold the conversation, tool results, and document text,
     which are patient data; the type and where it happened are what diagnosis needs, and

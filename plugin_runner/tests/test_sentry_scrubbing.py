@@ -58,7 +58,15 @@ def _raise_with_chart_text() -> None:
 def test_an_agent_runs_exception_reaches_sentry_with_neither_locals_nor_message(
     sentry_events: list[dict[str, Any]],
 ) -> None:
-    """The message can carry chart text, so the type and run id stand in for it."""
+    """The message can carry chart text, so the type and run id stand in for it.
+
+    The runner publishes each log line to Redis, and Sentry's Redis integration records the
+    publish, traceback included, as a breadcrumb; this one stands in for it, so the test
+    holds wherever Redis is reachable or not.
+    """
+    sentry_sdk.add_breadcrumb(
+        category="redis", message=f"PUBLISH plugin-logging-stream KeyError: '{CHART_TEXT}'"
+    )
     try:
         _raise_with_chart_text()
     except KeyError as exc:
