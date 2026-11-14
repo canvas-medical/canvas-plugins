@@ -2292,11 +2292,39 @@ class Sandbox:
         if self.errors or code is None:
             raise RuntimeError(f"Code is invalid: {self.errors}")
 
+        if globals is None and self._strict and self._published(self.namespace) is None:
+            return self._execute_as_published_module()
+
         namespace = self.scope if globals is None else globals
 
         exec(code, namespace)
 
         return namespace
+
+    def _execute_as_published_module(self) -> dict:
+        """Execute this sandbox's own module the way an imported plugin module runs.
+
+        A module a handler is loaded from is executed directly rather than imported, so
+        without this it is never published. Code that looks its defining module up in
+        `sys.modules` (a `@dataclass` with string annotations, such as under
+        `from __future__ import annotations`, or `typing.get_type_hints`) then fails.
+        """
+        published = self._register_sandboxed_module(
+            self.namespace, Path(self.source_code_path), self.scope
+        )
+
+        try:
+            exec(self.compile_result.code, published.__dict__)
+        except BaseException:
+            # Same as an imported module that fails: don't leave it visible half-built.
+            self._evaluated_modules.pop(self.namespace, None)
+            sys.modules.pop(self.namespace, None)
+            raise
+        finally:
+            # Callers read the result through `scope`, also after a failed execution.
+            self.scope.update(published.__dict__)
+
+        return self.scope
 
 
 def sandbox_from_module(
