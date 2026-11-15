@@ -1,0 +1,944 @@
+import json
+import time
+from datetime import date
+from typing import Any
+
+import anthropic
+import httpx2
+import pytest
+from anthropic.types import TextBlock, ToolUseBlock
+
+from canvas_sdk.agents import (
+    AgentPlugin,
+    AgentRunResult,
+    AgentState,
+    RunSubject,
+    ToolRegistry,
+    require_patient_id,
+    run_tool_loop,
+    standard_tools,
+)
+from canvas_sdk.agents.gateway import GatewayError, build_gateway
+from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL, MAX_QUEUED_EVENTS, ProgressFeed
+from canvas_sdk.agents.run_record import (
+    DEADLINE_MARGIN_SECONDS,
+    RunDeadlineExceeded,
+    RunRecorder,
+    current_recorder,
+)
+from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent
+from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.test_utils.agents import FakeGateway, FakeStream, ModelReply, reply, text, tool_use
+
+
+def _tool_use(name: str, block_id: str, **arguments: Any) -> ToolUseBlock:
+    return tool_use(name, arguments, id=block_id)
+
+
+def _text(value: str) -> TextBlock:
+    return text(value)
+
+
+def _response(stop_reason: str, *content: Any) -> ModelReply:
+    return reply(*content, stop_reason=stop_reason)
+
+
+def _tools() -> ToolRegistry:
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"patient": ctx["patient_id"], "asked": arguments}
+
+    @tools.tool(name="broken", description="x", input_schema={"type": "object"})
+    def _broken(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> None:
+        raise ValueError("no such record")
+
+    return tools
+
+
+def _run(client: FakeGateway, messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> Any:
+    return run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=kwargs.pop("tools", _tools()),
+        ctx={"patient_id": "p1"},
+        system="You are a test agent.",
+        messages=messages or [{"role": "user", "content": "go"}],
+        **kwargs,
+    )
+
+
+def test_end_turn_returns_the_final_text() -> None:
+    """A model that answers without tools ends the loop after one turn."""
+    result = _run(FakeGateway(_response("end_turn", _text("  All clear. "))))
+
+    assert result.text == "All clear."
+    assert result.turns == 1
+    assert result.stopped == "end_turn"
+    assert result.messages[-1] == {
+        "role": "assistant",
+        "content": [{"type": "text", "text": "  All clear. ", "citations": None}],
+    }
+
+
+def test_tool_calls_are_dispatched_and_their_results_sent_back() -> None:
+    """Each tool call runs with ctx and its JSON result goes back on the next turn."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1", section="labs")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = _run(client)
+
+    results = client.requests[1]["messages"][-1]
+    assert results["role"] == "user"
+    assert results["content"] == [
+        {
+            "type": "tool_result",
+            "tool_use_id": "t1",
+            "content": json.dumps({"patient": "p1", "asked": {"section": "labs"}}),
+        }
+    ]
+    assert result.turns == 2
+    assert result.stopped == "end_turn"
+
+
+def test_a_failing_tool_goes_back_to_the_model_as_an_error() -> None:
+    """The model sees the failure and can recover; the run does not end."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("broken", "t1")),
+        _response("end_turn", _text("sorry")),
+    )
+
+    _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "no such record" in tool_result["content"]
+
+
+def test_an_ungranted_tool_is_reported_as_unknown() -> None:
+    """A tool the scoped registry lacks fails like any other tool, back to the model."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("originate_prescribe_medication", "t1")),
+        _response("end_turn", _text("ok")),
+    )
+
+    _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "Unknown tool" in tool_result["content"]
+
+
+def test_a_turn_cut_off_by_max_tokens_runs_only_its_complete_tool_calls() -> None:
+    """The last call in a cut-off turn is where generation stopped, so its input may be cut.
+
+    The calls before it run; the last is answered with an error asking the model to make
+    it again, rather than run with missing or truncated arguments.
+    """
+    client = FakeGateway(
+        _response("max_tokens", _tool_use("read_chart", "t1"), _tool_use("read_chart", "t2")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = _run(client)
+
+    first, last = client.requests[1]["messages"][-1]["content"]
+    assert (first["tool_use_id"], first.get("is_error", False)) == ("t1", False)
+    assert (last["tool_use_id"], last["is_error"]) == ("t2", True)
+    assert "cut off" in last["content"]
+    assert result.stopped == "end_turn"
+
+
+def test_the_turn_cap_stops_the_loop() -> None:
+    """A model that keeps calling tools stops at max_turns with its results recorded."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("tool_use", _tool_use("read_chart", "t2")),
+    )
+
+    result = _run(client, max_turns=2)
+
+    assert result.stopped == "max_turns"
+    assert result.turns == 2
+    assert result.messages[-1]["content"][0]["tool_use_id"] == "t2"
+
+
+def test_an_unexpected_stop_never_leaves_a_tool_call_without_a_result() -> None:
+    """A stored transcript ending on an unanswered tool call would fail every later call."""
+    client = FakeGateway(_response("refusal", _tool_use("read_chart", "t1")))
+
+    result = _run(client)
+
+    assert result.stopped == "unexpected"
+    assert result.stop_reason == "refusal"
+    (tool_result,) = result.messages[-1]["content"]
+    assert tool_result == {
+        "type": "tool_result",
+        "tool_use_id": "t1",
+        "content": "Not run: the turn ended with stop reason 'refusal'.",
+        "is_error": True,
+    }
+
+
+def test_the_model_sees_a_window_and_the_full_history_comes_back() -> None:
+    """Long histories are windowed for the call but returned whole for storage."""
+    history: list[dict[str, Any]] = [
+        {"role": "user", "content": "old " + "x" * 5000},
+        {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
+        {"role": "user", "content": "new question"},
+    ]
+    client = FakeGateway(_response("end_turn", _text("new answer")))
+
+    result = _run(client, messages=history, history_chars=200)
+
+    assert client.requests[0]["messages"] == [history[2]]
+    assert result.messages[:3] == history
+    assert len(result.messages) == 4
+
+
+def test_windowing_can_be_turned_off() -> None:
+    """history_chars=None sends everything."""
+    history: list[dict[str, Any]] = [
+        {"role": "user", "content": "old " + "x" * 5000},
+        {"role": "assistant", "content": [{"type": "text", "text": "old answer"}]},
+        {"role": "user", "content": "new question"},
+    ]
+    client = FakeGateway(_response("end_turn", _text("new answer")))
+
+    _run(client, messages=history, history_chars=None)
+
+    assert client.requests[0]["messages"] == history
+
+
+def test_the_system_prompt_is_marked_for_caching_by_default() -> None:
+    """The system prompt is the stable prefix every turn and run shares."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client)
+
+    assert client.requests[0]["system"] == [
+        {
+            "type": "text",
+            "text": "You are a test agent.",
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+
+
+def test_caching_can_be_turned_off() -> None:
+    """cache_system=False sends the system prompt as a plain string."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client, cache_system=False)
+
+    assert client.requests[0]["system"] == "You are a test agent."
+
+
+def test_the_request_uses_the_gateway_model_and_the_given_limits() -> None:
+    """Model defaults to the gateway's; tools come from the registry."""
+    client = FakeGateway(_response("end_turn", _text("ok")))
+
+    _run(client, max_tokens=123)
+
+    request = client.requests[0]
+    assert request["model"] == "claude-test"
+    assert request["max_tokens"] == 123
+    assert [tool["name"] for tool in request["tools"]] == ["read_chart", "broken"]
+
+
+def test_on_turn_fires_before_each_call() -> None:
+    """The turn hook sees 0, 1, ... once per LLM call."""
+    seen: list[int] = []
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    _run(client, on_turn=seen.append)
+
+    assert seen == [0, 1]
+
+
+def test_a_failing_turn_hook_does_not_end_the_run() -> None:
+    """Hooks are for observability, so their failures are logged and ignored."""
+
+    def _broken_hook(turn_index: int) -> None:
+        raise RuntimeError("metrics are down")
+
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))), on_turn=_broken_hook)
+
+    assert result.stopped == "end_turn"
+
+
+def test_gateway_errors_propagate() -> None:
+    """The platform classifies gateway failures, so the loop must not swallow them."""
+    request = httpx2.Request("POST", "https://gateway.test/v1/messages")
+    error = anthropic.APIConnectionError(request=request)
+
+    with pytest.raises(GatewayError) as raised:
+        _run(FakeGateway(error))
+
+    assert raised.value.is_outage
+
+
+def test_the_callers_message_list_is_not_modified() -> None:
+    """The loop works on a copy; the caller decides what to store."""
+    history = [{"role": "user", "content": "go"}]
+
+    _run(FakeGateway(_response("end_turn", _text("ok"))), messages=history)
+
+    assert history == [{"role": "user", "content": "go"}]
+
+
+def test_the_result_effects_are_the_ctx_effects_list() -> None:
+    """Sub-agents share the parent's ctx, so their effects land in the parent's list."""
+    effects: list[Any] = ["staged earlier"]
+    ctx = {"patient_id": "p1", "effects": effects}
+
+    result = run_tool_loop(
+        FakeGateway(_response("end_turn", _text("ok"))),  # type: ignore[arg-type]
+        tools=_tools(),
+        ctx=ctx,
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects is effects
+
+
+class _LoopingAgent(AgentPlugin):
+    tools = _tools()
+
+    def __init__(self) -> None:
+        self.turns_seen: list[int] = []
+
+    def on_turn(self, turn_index: int) -> None:
+        self.turns_seen.append(turn_index)
+
+    def load_state(self, scope_key: str) -> AgentState:
+        return AgentState()
+
+    def run(self, state: AgentState, gateway: Any, trigger_payload: dict) -> AgentRunResult:
+        return AgentRunResult(state=state)
+
+    def save_state(self, scope_key: str, state: AgentState) -> None:
+        return None
+
+
+def test_the_agent_method_uses_its_tools_and_on_turn_hook() -> None:
+    """AgentPlugin.run_tool_loop passes self.tools and wires on_turn."""
+    agent = _LoopingAgent()
+    agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert [tool["name"] for tool in client.requests[0]["tools"]] == ["read_chart"]
+    assert agent.turns_seen == [0, 1]
+    assert result.stopped == "end_turn"
+
+
+def test_the_agent_method_gives_tools_the_run_subject() -> None:
+    """Tools read the platform's patient; the agent never names one."""
+    agent = _LoopingAgent()
+    agent.tools = _LoopingAgent.tools.scope({"read_chart"})
+    agent.subject = RunSubject(patient_id="p1")
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert json.loads(tool_result["content"])["patient"] == "p1"
+
+
+def test_the_agent_method_returns_the_effects_its_tools_staged() -> None:
+    """Staged effects come back on the result, so the agent returns them as-is."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="stage", description="x", input_schema={"type": "object"})
+    def _stage(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        ctx["effects"].append("an effect")
+        return {"ok": True}
+
+    agent = _LoopingAgent()
+    agent.tools = tools
+    client = FakeGateway(
+        _response("tool_use", _tool_use("stage", "t1")),
+        _response("end_turn", _text("done")),
+    )
+
+    result = agent.run_tool_loop(
+        client,  # type: ignore[arg-type]
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    assert result.effects == ["an effect"]
+
+
+def test_a_patient_tool_in_a_patientless_run_reports_the_missing_patient() -> None:
+    """The model hears the run has no patient instead of reading an empty chart."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="read_chart", description="x", input_schema={"type": "object"})
+    def _read_chart(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"patient": require_patient_id(ctx)}
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text("ok")),
+    )
+
+    run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=tools,
+        ctx={"patient_id": None},
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+    )
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert "not about a patient" in tool_result["content"]
+
+
+def test_the_runs_recorder_gets_model_calls_tool_calls_and_how_the_loop_ended() -> None:
+    """The platform's run record comes from the loop, not from agent code."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1"), _tool_use("broken", "t2")),
+        _response("end_turn", _text("done")),
+    )
+    recorder = RunRecorder()
+    token = current_recorder.set(recorder)
+    try:
+        _run(client)
+    finally:
+        current_recorder.reset(token)
+
+    assert recorder.model_calls == 2
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("read_chart", True, ""),
+        ("broken", False, "ValueError"),
+    ]
+    assert recorder.stop_reason == "end_turn"
+
+
+def test_without_a_recorder_the_loop_records_nothing() -> None:
+    """Code outside a platform run, such as a test, runs the loop unchanged."""
+    result = _run(FakeGateway(_response("end_turn", _text("ok"))))
+
+    assert result.stopped == "end_turn"
+    assert current_recorder.get() is None
+
+
+def _with_recorder(recorder: RunRecorder, client: FakeGateway, **kwargs: Any) -> Any:
+    token = current_recorder.set(recorder)
+    try:
+        return _run(client, **kwargs)
+    finally:
+        current_recorder.reset(token)
+
+
+def test_the_loop_stops_at_the_runs_model_call_ceiling() -> None:
+    """The ceiling covers the whole run, so calls already made count against it."""
+    client = FakeGateway(_response("tool_use", _tool_use("read_chart", "t1")))
+    recorder = RunRecorder(model_calls=2, max_model_calls=3)
+
+    result = _with_recorder(recorder, client)
+
+    assert (result.stopped, result.turns) == ("call_limit", 1)
+    assert len(client.requests) == 1
+    assert (recorder.model_calls, recorder.stop_reason) == (3, "call_limit")
+
+
+def test_the_loop_raises_once_the_run_is_inside_its_deadline_margin() -> None:
+    """No model call starts that could not finish before the run's deadline."""
+    client = FakeGateway(_response("end_turn", _text("late")))
+    recorder = RunRecorder(deadline=time.monotonic() + DEADLINE_MARGIN_SECONDS - 1)
+
+    with pytest.raises(RunDeadlineExceeded):
+        _with_recorder(recorder, client)
+
+    assert client.requests == []
+
+
+def test_without_a_deadline_model_calls_carry_no_timeout() -> None:
+    """Outside a platform run the client's own timeout applies."""
+    client = FakeGateway(_response("end_turn", _text("done")))
+
+    _run(client)
+
+    assert "timeout" not in client.requests[0]
+
+
+def test_a_long_tool_result_is_cut_and_says_so() -> None:
+    """One oversized result cannot push the next call past the context window."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="dump", description="x", input_schema={"type": "object"})
+    def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        return "x" * (DEFAULT_TOOL_RESULT_CHARS * 2)
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("dump", "t1")), _response("end_turn", _text("ok"))
+    )
+
+    result = _run(client, tools=tools)
+
+    content = result.messages[2]["content"][0]["content"]
+    assert content.startswith('"' + "x" * 100)
+    assert content.endswith("to see the rest.]"), (
+        "the model is told the result was cut and how to see the rest"
+    )
+    assert f"Result cut at {DEFAULT_TOOL_RESULT_CHARS} of" in content
+
+
+def _dump_tool(tools: ToolRegistry, name: str, size: int, **options: Any) -> None:
+    @tools.tool(name=name, description="x", input_schema={"type": "object"}, **options)
+    def _dump(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        return "x" * size
+
+
+def test_a_tool_that_sets_a_larger_limit_sends_more() -> None:
+    """A tool whose answer cannot be split registers a limit above the default."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 120_000, max_result_chars=150_000)
+
+    result = _run(
+        FakeGateway(
+            _response("tool_use", _tool_use("records", "t1")), _response("end_turn", _text("ok"))
+        ),
+        tools=tools,
+    )
+
+    content = result.messages[2]["content"][0]["content"]
+    assert content == json.dumps("x" * 120_000)
+
+
+@pytest.mark.parametrize("limit", [0, MAX_TOOL_RESULT_CHARS + 1])
+def test_a_tool_limit_outside_the_ceiling_is_refused_at_registration(limit: int) -> None:
+    """A plugin cannot register a tool that sends more than the ceiling, or nothing."""
+    with pytest.raises(ValueError, match="max_result_chars"):
+        _dump_tool(ToolRegistry(), "records", 10, max_result_chars=limit)
+
+
+def test_a_tools_limit_survives_scoping_and_extending() -> None:
+    """The manifest-scoped registry and a plugin's copy of the catalog keep the limit."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, max_result_chars=150_000)
+    _dump_tool(tools, "other", 10)
+    copy = ToolRegistry()
+    copy.extend(tools)
+
+    assert tools.scope(["records"]).max_result_chars_for("records") == 150_000
+    assert copy.max_result_chars_for("records") == 150_000
+    assert copy.max_result_chars_for("other") == DEFAULT_TOOL_RESULT_CHARS
+
+
+def test_results_past_the_runs_total_are_cut() -> None:
+    """However many large tools a run calls, the text it sends the model is bounded."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 100, max_result_chars=150_000)
+    recorder = RunRecorder(max_tool_result_chars=250)
+    client = FakeGateway(
+        _response("tool_use", _tool_use("records", "t1"), _tool_use("records", "t2")),
+        _response("tool_use", _tool_use("records", "t3")),
+        _response("end_turn", _text("ok")),
+    )
+
+    result = _with_recorder(recorder, client, tools=tools)
+
+    first, second = (block["content"] for block in result.messages[2]["content"])
+    third = result.messages[4]["content"][0]["content"]
+    assert (first, second) == (json.dumps("x" * 100), json.dumps("x" * 100))
+    # Each result is 102 characters with its JSON quotes, so the third gets the last 46.
+    sent, note = third.split("\n", 1)
+    assert sent == '"' + "x" * 45
+    assert note.startswith("[Result cut at 46 of 102") and "as much tool output as it may" in note
+    assert recorder.tool_result_chars == 250
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        GatewayError("The model call timed out.", status_code=None, error_type="timeout"),
+        RunDeadlineExceeded("the run reached its deadline"),
+    ],
+    ids=["gateway-error", "deadline"],
+)
+def test_a_tool_that_hits_a_gateway_error_or_the_deadline_ends_the_run(error: Exception) -> None:
+    """A composition tool's sub-agent failure is the run's failure, not a result to recover from."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="brief", description="x", input_schema={"type": "object"})
+    def _brief(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise error
+
+    client = FakeGateway(_response("tool_use", _tool_use("brief", "t1")))
+    recorder = RunRecorder()
+
+    with pytest.raises(type(error)):
+        _with_recorder(recorder, client, tools=tools)
+
+    assert [(call.name, call.ok, call.error_type) for call in recorder.tool_calls] == [
+        ("brief", False, "aborted")
+    ]
+
+
+def test_the_loop_reports_each_tools_label_and_outcome() -> None:
+    """A streamed run's tool calls arrive as labels, never as names or arguments."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+
+    @tools.tool(name="broken", description="x", input_schema={"type": "object"})
+    def _broken(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise RuntimeError("no")
+
+    recorder = RunRecorder(progress=ProgressFeed("activity"))
+    client = FakeGateway(
+        _response(
+            "tool_use", _tool_use("records", "t1", query="metformin"), _tool_use("broken", "t2")
+        ),
+        _response("end_turn", _text("ok")),
+    )
+
+    _with_recorder(recorder, client, tools=tools)
+
+    feed = recorder.progress
+    assert feed is not None
+    events = []
+    while (event := feed.next(timeout=0)) is not None:
+        events.append((event.kind, event.label, event.ok))
+    assert events == [
+        ("tool_started", "Reading outside records", False),
+        ("tool_finished", "Reading outside records", True),
+        ("tool_started", DEFAULT_PROGRESS_LABEL, False),
+        ("tool_finished", DEFAULT_PROGRESS_LABEL, False),
+    ]
+    assert recorder.phase == "thinking", "the last model call leaves the run thinking"
+
+
+def test_a_status_feed_drops_tool_events() -> None:
+    """At the default level nothing about the tools is queued."""
+    feed = ProgressFeed("status")
+    feed.tool("tool_started", "Reading lab results")
+
+    assert feed.next(timeout=0) is None
+
+
+def test_progress_labels_survive_scoping_and_extending() -> None:
+    """The manifest-scoped registry and a plugin's copy of the catalog keep the labels."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+    copy = ToolRegistry()
+    copy.extend(tools)
+
+    assert tools.scope(["records"]).progress_label_for("records") == "Reading outside records"
+    assert copy.progress_label_for("records") == "Reading outside records"
+
+
+def test_labels_can_only_name_registered_tools() -> None:
+    """A misspelled name fails loudly rather than leaving a tool unlabeled."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10)
+
+    tools.set_progress_labels({"records": "Reading outside records"})
+    with pytest.raises(ValueError, match="No such tools"):
+        tools.set_progress_labels({"recrods": "Reading outside records"})
+
+    assert tools.progress_label_for("records") == "Reading outside records"
+
+
+def test_every_standard_tool_has_a_progress_label() -> None:
+    """A new standard tool must say what it is doing, not show the generic label."""
+    unlabeled = [
+        definition["name"]
+        for definition in standard_tools.definitions()
+        if standard_tools.progress_label_for(definition["name"]) == DEFAULT_PROGRESS_LABEL
+    ]
+
+    assert unlabeled == []
+
+
+def _events(feed: ProgressFeed) -> list[tuple[str, str]]:
+    events = []
+    while (event := feed.next(timeout=0)) is not None:
+        events.append((event.kind, event.text or event.label))
+    return events
+
+
+def test_at_the_reply_level_the_loop_streams_each_turns_text() -> None:
+    """The person waiting reads each model call's text as it arrives, turn by turn."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10, progress_label="Reading outside records")
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(
+        _response("tool_use", _text("Let me look."), _tool_use("records", "t1")),
+        _response("end_turn", _text("Three records need review.")),
+    )
+
+    result = _with_recorder(recorder, client, tools=tools)
+
+    assert result.text == "Three records need review."
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == [
+        ("turn_started", ""),
+        ("text", "Let me look."),
+        ("tool_started", "Reading outside records"),
+        ("tool_finished", "Reading outside records"),
+        ("turn_started", ""),
+        ("text", "Three records need review."),
+    ], "text arriving faster than it is streamed merges into one event"
+    assert recorder.phase == "writing"
+
+
+def test_below_the_reply_level_the_loop_does_not_stream() -> None:
+    """At "activity" the call is made unstreamed and no text is queued."""
+    recorder = RunRecorder(progress=ProgressFeed("activity"))
+    client = FakeGateway(_response("end_turn", _text("Done.")))
+    client.stream = None  # type: ignore[assignment]
+
+    _with_recorder(recorder, client)
+
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == []
+
+
+def test_a_sub_agents_text_is_never_streamed() -> None:
+    """A sub-agent writes for its parent, not for the person waiting on the run."""
+    tools = ToolRegistry()
+    _dump_tool(tools, "records", 10)
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(_response("end_turn", _text("Sub-agent notes.")))
+    token = current_recorder.set(recorder)
+    try:
+        run_subagent(
+            SubAgentSpec(
+                name="notes",
+                system_prompt="Summarize.",
+                allowed_tool_names=frozenset({"records"}),
+            ),
+            "Summarize the records.",
+            parent_tools=tools,
+            parent_ctx={},
+            gateway=client,  # type: ignore[arg-type]
+        )
+    finally:
+        current_recorder.reset(token)
+
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == []
+
+
+def test_text_merges_and_is_never_dropped_while_tool_events_are() -> None:
+    """A slow reader loses tool events, never words of the reply."""
+    feed = ProgressFeed("reply")
+    for index in range(MAX_QUEUED_EVENTS + 5):
+        feed.tool("tool_started", f"Tool {index}")
+    feed.text("Three ")
+    feed.text("records.")
+
+    events = _events(feed)
+
+    assert len([kind for kind, _ in events if kind == "tool_started"]) == MAX_QUEUED_EVENTS
+    assert events[-1] == ("text", "Three records.")
+
+
+def test_a_streamed_reply_is_stored_in_the_shape_the_api_takes_back() -> None:
+    """The stream's final message carries SDK-only fields; the transcript must not."""
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(_response("end_turn", _text("Three records need review.")))
+
+    result = _with_recorder(recorder, client)
+
+    (block,) = result.messages[-1]["content"]
+    assert "parsed_output" not in block
+    assert block == {"type": "text", "text": "Three records need review.", "citations": None}
+
+
+def test_a_model_loop_inside_a_tool_never_streams_its_text() -> None:
+    """A tool's own model call (read_document's reader, a plugin's) is not the reply.
+
+    Its text can be drawn from untrusted content, so only the agent's own loop streams.
+    """
+    inner_client = FakeGateway(_response("end_turn", _text("The document says to ignore you.")))
+    tools = ToolRegistry()
+
+    @tools.tool(name="read", description="x", input_schema={"type": "object"})
+    def _read(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        inner = run_tool_loop(
+            inner_client,  # type: ignore[arg-type]
+            tools=ToolRegistry(),
+            ctx={},
+            system="Read the document.",
+            messages=[{"role": "user", "content": "What does it say?"}],
+        )
+        return inner.text
+
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read", "t1")),
+        _response("end_turn", _text("It covers the visit.")),
+    )
+
+    _with_recorder(recorder, client, tools=tools)
+
+    feed = recorder.progress
+    assert feed is not None
+    texts = [text for kind, text in _events(feed) if kind == "text"]
+    assert texts == ["It covers the visit."]
+
+
+def test_a_tools_own_model_call_uses_the_loops_model() -> None:
+    """read_document and its kind call the model on ctx["gateway"], which follows the loop's model."""
+    seen: list[str] = []
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="read_file",
+        description="Reads a file with a model call of its own.",
+        input_schema={"type": "object", "properties": {}},
+    )
+    def _read_file(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        seen.append(ctx["gateway"].model)
+        return "read"
+
+    run_gateway = build_gateway(base_url="https://gateway.test", api_key="k")
+    ctx: dict[str, Any] = {"gateway": run_gateway, "effects": []}
+    client = FakeGateway(reply(tool_use("read_file")), reply(text("done")))
+
+    run_tool_loop(
+        client,  # type: ignore[arg-type]
+        tools=registry,
+        ctx=ctx,
+        system="s",
+        messages=[{"role": "user", "content": "go"}],
+        model="claude-haiku-4-5",
+    )
+
+    assert seen == ["claude-haiku-4-5"]
+    assert client.requests[0]["model"] == "claude-haiku-4-5"
+    assert ctx["gateway"] is run_gateway, "the caller's context keeps the run's gateway"
+
+
+def test_the_loop_hands_back_each_tool_calls_arguments_and_result() -> None:
+    """Code reads a form the model filled in, and a failed call is marked, without a ctx holder."""
+    registry = ToolRegistry()
+
+    @registry.tool(
+        name="record_identifiers",
+        description="Record what the document shows.",
+        input_schema={"type": "object", "properties": {"last_name": {"type": "string"}}},
+    )
+    def _record(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True}
+
+    @registry.tool(
+        name="flaky", description="Fails.", input_schema={"type": "object", "properties": {}}
+    )
+    def _flaky(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> str:
+        raise ValueError("no")
+
+    client = FakeGateway(
+        reply(tool_use("record_identifiers", {"last_name": "Doe"}), tool_use("flaky")),
+        reply(tool_use("record_identifiers", {"last_name": "Roe"})),
+        reply(text("done")),
+    )
+
+    result = _run(client, tools=registry)
+
+    assert [(call.name, call.ok) for call in result.calls] == [
+        ("record_identifiers", True),
+        ("flaky", False),
+        ("record_identifiers", True),
+    ]
+    last = result.last_call("record_identifiers")
+    assert last is not None
+    assert (last.arguments, last.result) == ({"last_name": "Roe"}, {"ok": True})
+    assert result.last_call("flaky") is None
+
+
+def test_a_result_that_cannot_be_serialized_takes_back_the_calls_effects() -> None:
+    """The model is told the call failed, so the change it staged is not applied either."""
+    tools = ToolRegistry()
+
+    @tools.tool(name="stage_and_return_dates", description="x", input_schema={"type": "object"})
+    def _stage(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[Any, Any]:
+        ctx["effects"].append(Effect(type=EffectType.CREATE_TASK, payload="{}"))
+        return {date(2026, 1, 1): "a key json cannot write"}
+
+    client = FakeGateway(
+        _response("tool_use", _tool_use("stage_and_return_dates", "t1")),
+        _response("end_turn", _text("sorry")),
+    )
+
+    result = _run(client, tools=tools)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert result.effects == []
+
+
+def test_a_tool_input_that_is_not_an_object_goes_back_as_an_error() -> None:
+    """The run continues; the model hears its call was malformed."""
+    # The API's types require an object; a reply that bypassed them is modeled here.
+    block = ToolUseBlock.model_construct(
+        id="t1",
+        name="read_chart",
+        input=[1, 2],  # type: ignore[arg-type]
+        type="tool_use",
+    )
+    client = FakeGateway(_response("tool_use", block), _response("end_turn", _text("ok")))
+
+    result = _run(client)
+
+    (tool_result,) = client.requests[1]["messages"][-1]["content"]
+    assert tool_result["is_error"] is True
+    assert result.stopped == "end_turn"
+
+
+def test_a_streamed_reply_still_arriving_at_the_deadline_is_closed_there() -> None:
+    """Each read has a timeout, not the whole reply, so the loop checks the clock per event."""
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    recorder.deadline = time.monotonic() + DEADLINE_MARGIN_SECONDS + 60
+    words_read: list[str] = []
+
+    class _SlowStream(FakeStream):
+        def __iter__(self) -> Any:
+            for event in super().__iter__():
+                words_read.append(event.text)
+                if len(words_read) == 3:
+                    recorder.deadline = time.monotonic()  # the clock runs out mid-reply
+                yield event
+
+    class _SlowGateway(FakeGateway):
+        def stream(self, **kwargs: Any) -> FakeStream:
+            return _SlowStream(self.create(**kwargs))
+
+    client = _SlowGateway(_response("end_turn", _text("one two three four five six seven")))
+
+    with pytest.raises(RunDeadlineExceeded):
+        _with_recorder(recorder, client)
+
+    assert len(words_read) == 3, "the stream is closed at the deadline, not read to the end"
