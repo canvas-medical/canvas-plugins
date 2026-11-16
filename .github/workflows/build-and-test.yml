@@ -47,7 +47,9 @@ jobs:
         with:
           name: coverage-data-py${{ matrix.version }}
           path: coverage-py${{ matrix.version }}.data
-          retention-days: 1
+          # Long enough to re-run only the Coverage job on a PR that sat over a
+          # weekend.
+          retention-days: 5
           if-no-files-found: error
 
       - name: Install pipx
@@ -141,7 +143,14 @@ jobs:
             --fail-under "$DIFF_COVER_FAIL_UNDER" \
             --minimum-change "$DIFF_COVER_MINIMUM_CHANGE" \
             --format markdown:diff-cover.md,github-annotations:warning
-          echo "status=$?" >> "$GITHUB_OUTPUT"
+          STATUS=$?
+          # diff-cover exits 1 both for a missed threshold and for a crash; only
+          # a crash leaves no report.
+          if [ ! -f diff-cover.md ]; then
+            echo "::error::diff-cover did not produce a report (exit $STATUS). See the log above."
+            exit 1
+          fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
       - name: Compare total coverage with the merge base
         if: github.event_name == 'pull_request'
@@ -305,7 +314,9 @@ jobs:
         with:
           name: coverage-plugin-${{ matrix.plugin }}
           path: example-plugins/${{ matrix.plugin }}/coverage.xml
-          retention-days: 1
+          # Long enough to re-run only the Coverage job on a PR that sat over a
+          # weekend.
+          retention-days: 5
           if-no-files-found: warn
 
   test-adk-loadtest:
