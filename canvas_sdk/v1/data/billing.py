@@ -14,17 +14,25 @@ if TYPE_CHECKING:
     from canvas_sdk.value_set.value_set import ValueSet
 
 
+# The value set code systems whose codes a billing line item's `cpt` field can hold.
+BILLING_CODE_SYSTEMS = (CodeConstants.CPT, CodeConstants.HCPCSLEVELII, CodeConstants.HCPCS)
+
+
 class BillingLineItemQuerySet(ValueSetTimeframeLookupQuerySet):
     """A class that adds functionality to filter BillingLineItem objects."""
 
     def find(self, value_set: type["ValueSet"]) -> Self:
         """
-        This method is overridden to use for BillingLineItem CPT codes.
-        The codes are saved as string values in the BillingLineItem.cpt field,
-        which differs from other coding models.
+        Billing line items whose code is in the value set's CPT or HCPCS codes.
+
+        A line item stores its code as a plain string in the `cpt` field, with no code
+        system, so codes from the value set's CPT, HCPCSLEVELII, and HCPCS systems all match.
         """
-        values_dict = value_set.values
-        return self.filter(cpt__in=values_dict.get(CodeConstants.HCPCS, []))
+        values = value_set.values
+        codes: set[str] = set()
+        for system in BILLING_CODE_SYSTEMS:
+            codes |= values.get(system, set())
+        return self.filter(cpt__in=codes)
 
 
 class BillingLineItemStatus(models.TextChoices):
