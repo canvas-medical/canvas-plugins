@@ -211,6 +211,21 @@ def test_presigned_url_names_and_types_a_key_without_an_extension(
 
 
 @pytest.mark.parametrize(
+    "title",
+    ["Consent Form - Dr. Smith", "HIPAA consent v1.2"],
+    ids=["abbreviation-in-title", "version-number-in-title"],
+)
+def test_presigned_url_treats_a_dot_in_a_title_as_part_of_the_name(
+    signing_settings: SettingsWrapper, title: str
+) -> None:
+    """Consent files are stored under their title, so a dot inside the title is not an extension."""
+    _, query = url_parts(presigned_url(title, content_type="application/pdf"))
+
+    assert query["response-content-type"] == ["application/pdf"]
+    assert query["response-content-disposition"] == [f'inline; filename="{title}.pdf"']
+
+
+@pytest.mark.parametrize(
     "s3_key,content_type",
     [
         ("path/to/file.pdf", "application/pdf"),
