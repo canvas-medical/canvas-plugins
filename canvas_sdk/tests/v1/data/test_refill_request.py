@@ -28,3 +28,11 @@ def test_refill_request_is_exported() -> None:
 def test_refill_request_coding_relates_to_refill_request() -> None:
     """RefillRequestCoding points back at RefillRequest via the codings relation."""
     assert RefillRequestCoding._meta.get_field("refill_request").related_model is RefillRequest
+
+
+def test_pending_excludes_ignored_and_committed_responses() -> None:
+    """pending() compiles to SQL that drops ignored requests and committed responses."""
+    sql = str(RefillRequest.objects.pending().query).lower()
+    assert "ignored" in sql
+    assert "committer" in sql
+    assert "deleted" not in sql
