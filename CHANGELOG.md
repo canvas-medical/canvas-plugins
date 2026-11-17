@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v1.3.1 (2026-11-17)
+
+### Bug Fixes
+
+- Match CPT and HCPCS Level II codes in BillingLineItem.find()
+  ([#2004](https://github.com/canvas-medical/canvas-plugins/pull/2004),
+  [`7c0f9da`](https://github.com/canvas-medical/canvas-plugins/commit/7c0f9daa33b2d4381ce8adf16030d6e6c63d22d5))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- Support Claude Opus 5.5 in the Anthropic LLM client
+  ([#1905](https://github.com/canvas-medical/canvas-plugins/pull/1905),
+  [`5a76813`](https://github.com/canvas-medical/canvas-plugins/commit/5a76813703902434c20fef8d65a4a4a684e2d011))
+
+- **plugin_runner**: Keep serving for a drain window after SIGTERM
+  ([#1990](https://github.com/canvas-medical/canvas-plugins/pull/1990),
+  [`d88b16e`](https://github.com/canvas-medical/canvas-plugins/commit/d88b16e4e98f1554ef07c86bd714c1c885d4fca4))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+
 ## v1.3.0 (2026-11-14)
 
 ### Chores
