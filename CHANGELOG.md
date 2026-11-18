@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.3.2 (2026-11-18)
+
+### Bug Fixes
+
+- **sdk**: Serve extension-less documents with their type and a matching filename
+  ([#2007](https://github.com/canvas-medical/canvas-plugins/pull/2007),
+  [`4366fe0`](https://github.com/canvas-medical/canvas-plugins/commit/4366fe0df6f474ce45b040a44975861090cd9931))
+
+
 ## v1.3.1 (2026-11-17)
 
 ### Bug Fixes
