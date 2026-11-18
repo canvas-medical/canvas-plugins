@@ -1,11 +1,12 @@
 from enum import StrEnum
-from typing import NoReturn, Self
+from typing import NoReturn
 
 from pydantic import Field
+from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand, _OptionalId
 from canvas_sdk.effects import Effect
-from canvas_sdk.v1.data import Note, RefillRequest
+from canvas_sdk.v1.data import RefillRequest
 
 # Surescripts carries at most 70 printable ASCII characters in a note to the pharmacist.
 _NOTE_TO_PHARMACIST_MAX_LENGTH = 70
@@ -24,35 +25,33 @@ class _RefillResponseCommand(_BaseCommand):
         abstract = True
         originate_required_fields = ("refill_request_id",)
 
-    refill_request_id: str | None = None
+    refill_request_id: _OptionalId = None
     note_to_pharmacist: str | None = Field(
         default=None, max_length=_NOTE_TO_PHARMACIST_MAX_LENGTH, pattern=_PRINTABLE_ASCII
     )
 
-    @classmethod
-    def for_request(
-        cls,
-        refill_request: RefillRequest | str,
-        note_uuid: str,
-        **fields: str | None,
-    ) -> Self:
-        """Build the response to a refill request in a note of the same patient.
+    def _get_error_details(self, method: str) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
 
-        Raises:
-            ValueError: If the note does not belong to the refill request's patient.
-            django.core.exceptions.ValidationError: If either id is not a UUID.
-        """
-        refill_request_id = str(
-            refill_request.id if isinstance(refill_request, RefillRequest) else refill_request
+        if self.refill_request_id is None:
+            return errors
+
+        request_patient_id = (
+            RefillRequest.objects.filter(id=self.refill_request_id)
+            .values_list("patient__id", flat=True)
+            .first()
         )
-        if not Note.objects.filter(
-            id=note_uuid, patient__refill_requests__id=refill_request_id
-        ).exists():
-            raise ValueError(
-                f"Refill request {refill_request_id} does not belong to the patient of note {note_uuid}."
+
+        if request_patient_id is None or not self._is_target_patient(request_patient_id):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Refill request {self.refill_request_id} does not belong to this command's patient",
+                    self.refill_request_id,
+                )
             )
 
-        return cls(refill_request_id=refill_request_id, note_uuid=note_uuid, **fields)
+        return errors
 
     def _not_supported(self, what: str) -> NoReturn:
         raise ValueError(
@@ -74,6 +73,18 @@ class _RefillResponseCommand(_BaseCommand):
             )
 
         return super().edit()
+
+    def commit(self) -> Effect:
+        """Refused: only the provider commits a refill response, by sending it from the card."""
+        self._not_supported("be committed")
+
+    def enter_in_error(self) -> Effect:
+        """Refused: a refill response is never entered in error by a plugin."""
+        self._not_supported("be entered in error")
+
+    def set_custom_html(self, custom_html: str | None) -> Effect:
+        """Refused: a plugin cannot change what the provider sees on the card."""
+        self._not_supported("carry custom HTML")
 
     def recommendation_context(self) -> dict:
         """Protocol cards insert commands outside the plugin effect path, so they cannot carry one."""
