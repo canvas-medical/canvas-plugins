@@ -56,12 +56,12 @@ class ServiceProvider(Model):
     notes: str | None = Field(max_length=512, default=None)
 
 
-_PARTIAL_DATE = re.compile(r"\d{4}|\d{2}/\d{4}")
+_PARTIAL_DATE = re.compile(r"\d{4}|\d{1,2}/\d{4}")
 _DATE = TypeAdapter(date)
 
 
 def _approximate_date(value: Any) -> date | str:
-    """A year (``YYYY``) or month (``MM/YYYY``) as a string, or else a ``date``.
+    """A year (``YYYY``) or month (``MM/YYYY`` or ``M/YYYY``) as a string, or else a ``date``.
 
     A partial date is kept as the string it was given, so Canvas can record it as the
     approximate date it is ("2023", not January 1, 2023), written the way the chart's own date
@@ -69,21 +69,21 @@ def _approximate_date(value: Any) -> date | str:
     a midnight datetime or a timestamp comes back as a ``date``.
     """
     if isinstance(value, str) and _PARTIAL_DATE.fullmatch(value):
-        if "/" in value and not 1 <= int(value[:2]) <= 12:
+        if "/" in value and not 1 <= int(value.split("/")[0]) <= 12:
             raise ValueError(f"{value!r} is not a real month")
         return value
     return _DATE.validate_python(value)
 
 
-#: A field Canvas records as an approximate date: a ``date``, or a ``YYYY`` or ``MM/YYYY``
-#: string when only the year or the month is known.
+#: A field Canvas records as an approximate date: a ``date``, or a ``YYYY``, ``MM/YYYY`` or
+#: ``M/YYYY`` string when only the year or the month is known.
 ApproximateDate = Annotated[
     date | str,
     PlainValidator(_approximate_date),
     WithJsonSchema(
         {
             "type": "string",
-            "pattern": r"^(\d{4}|\d{2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            "pattern": r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
             "description": "A year (YYYY), month (MM/YYYY) or day (YYYY-MM-DD)",
         }
     ),

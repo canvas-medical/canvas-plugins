@@ -141,7 +141,7 @@ def sent(command_class: type[_BaseCommand], field: str, value: Any) -> Any:
 
 
 @pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
-@pytest.mark.parametrize("value", ["2023", "09/2026", "12/2026", "01/2026"])
+@pytest.mark.parametrize("value", ["2023", "09/2026", "12/2026", "01/2026", "9/2026", "1/2026"])
 def test_a_year_or_month_is_sent_as_written(
     command_class: type[_BaseCommand], field: str, value: str
 ) -> None:
@@ -181,7 +181,8 @@ def test_a_full_day_reads_back_as_a_date(
     [
         "13/2026",
         "00/2026",
-        "9/2026",
+        "0/2026",
+        "009/2026",
         "2026-09",
         "2026-02-30",
         " 2023",
@@ -239,14 +240,14 @@ def argument_errors(tool: str, argument: str, value: str) -> list[str]:
 
 
 @pytest.mark.parametrize(("tool", "argument"), TOOL_ARGUMENTS)
-@pytest.mark.parametrize("value", ["2023", "06/2025", "2025-06-14"])
+@pytest.mark.parametrize("value", ["2023", "06/2025", "6/2025", "2025-06-14"])
 def test_an_agent_tool_takes_a_year_month_or_day(tool: str, argument: str, value: str) -> None:
     """A model that knows only the year or the month can pass it to the tool."""
     assert argument_errors(tool, argument, value) == []
 
 
 @pytest.mark.parametrize(("tool", "argument"), TOOL_ARGUMENTS)
-@pytest.mark.parametrize("value", ["2025-06", "June 2025", "6/2025"])
+@pytest.mark.parametrize("value", ["2025-06", "June 2025", "006/2025"])
 def test_an_agent_tool_refuses_other_shapes(tool: str, argument: str, value: str) -> None:
     """A shape the command would refuse is refused at the tool call."""
     assert argument_errors(tool, argument, value)
