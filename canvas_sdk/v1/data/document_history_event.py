@@ -1,9 +1,9 @@
-from typing import TypeAlias, TypeVar
+from typing import TypeAlias
 
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
-from canvas_sdk.v1.data.django_content_type import ContentType
+from canvas_sdk.v1.data.django_content_type import resolve_content_object
 from canvas_sdk.v1.data.imaging import ImagingReport, ImagingReview
 from canvas_sdk.v1.data.lab import LabReport, LabReview
 from canvas_sdk.v1.data.referral import ReferralReport, ReferralReview
@@ -19,31 +19,19 @@ DocumentReview: TypeAlias = (
     LabReview | ImagingReview | ReferralReview | UncategorizedClinicalDocumentReview
 )
 
-# The SDK model for each content type a history entry links to, keyed by its model name.
-_DOCUMENT_MODELS: dict[str, type[ReviewableDocument]] = {
-    "labreport": LabReport,
-    "imagingreport": ImagingReport,
-    "referralreport": ReferralReport,
-    "uncategorizedclinicaldocument": UncategorizedClinicalDocument,
+# The SDK model for each content type a history entry links to, keyed by (app_label, model).
+_DOCUMENT_MODELS: dict[tuple[str, str], type[ReviewableDocument]] = {
+    ("api", "labreport"): LabReport,
+    ("api", "imagingreport"): ImagingReport,
+    ("api", "referralreport"): ReferralReport,
+    ("api", "uncategorizedclinicaldocument"): UncategorizedClinicalDocument,
 }
-_REVIEW_MODELS: dict[str, type[DocumentReview]] = {
-    "labreview": LabReview,
-    "imagingreview": ImagingReview,
-    "referralreview": ReferralReview,
-    "uncategorizeddocumentreview": UncategorizedClinicalDocumentReview,
+_REVIEW_MODELS: dict[tuple[str, str], type[DocumentReview]] = {
+    ("api", "labreview"): LabReview,
+    ("api", "imagingreview"): ImagingReview,
+    ("api", "referralreview"): ReferralReview,
+    ("api", "uncategorizeddocumentreview"): UncategorizedClinicalDocumentReview,
 }
-
-_T = TypeVar("_T", bound=models.Model)
-
-
-def _resolve(
-    models_by_name: dict[str, type[_T]], content_type: ContentType | None, object_id: int | None
-) -> _T | None:
-    """The instance a content type + object id points at, or None for an unknown type."""
-    if content_type is None or object_id is None or content_type.app_label != "api":
-        return None
-    model = models_by_name.get(content_type.model)
-    return model._default_manager.filter(dbid=object_id).first() if model else None
 
 
 class DocumentHistoryEventType(models.TextChoices):
@@ -102,12 +90,14 @@ class DocumentHistoryEvent(TimestampedModel, IdentifiableModel):
     @property
     def document(self) -> ReviewableDocument | None:
         """The lab, imaging or referral report, or uncategorized clinical document, of this entry."""
-        return _resolve(_DOCUMENT_MODELS, self.content_type, self.object_id)
+        return resolve_content_object(_DOCUMENT_MODELS, self.content_type, self.object_id)
 
     @property
     def review(self) -> DocumentReview | None:
         """The review command of a "recorded" or "entered in error" entry, else None."""
-        return _resolve(_REVIEW_MODELS, self.review_content_type, self.review_object_id)
+        return resolve_content_object(
+            _REVIEW_MODELS, self.review_content_type, self.review_object_id
+        )
 
     @property
     def comment_hidden(self) -> bool:

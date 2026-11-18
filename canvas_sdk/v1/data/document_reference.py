@@ -7,6 +7,7 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.django_content_type import resolve_content_object
 from canvas_sdk.v1.data.educational_material import EducationalMaterial
 from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.invoice import Invoice
@@ -142,14 +143,7 @@ class DocumentReference(TimestampedModel, IdentifiableModel):
         Returns None when the document has no related object or the content type has no
         SDK data model equivalent.
         """
-        content_type = self.content_type
-        if content_type is None or self.object_id is None:
-            return None
-
-        model = _RELATED_OBJECT_MODELS.get((content_type.app_label, content_type.model))
-        if model is None:
-            return None
-        return model._default_manager.filter(dbid=self.object_id).first()
+        return resolve_content_object(_RELATED_OBJECT_MODELS, self.content_type, self.object_id)
 
 
 __exports__ = (

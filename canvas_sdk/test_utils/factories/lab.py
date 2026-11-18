@@ -160,7 +160,7 @@ class LabOrderReasonConditionFactory(factory.django.DjangoModelFactory[LabOrderR
         model = LabOrderReasonCondition
 
     reason = factory.SubFactory(LabOrderReasonFactory)
-    condition = None  # Optional field - would need a ConditionFactory
+    condition = None
 
 
 class LabTestFactory(factory.django.DjangoModelFactory[LabTest]):

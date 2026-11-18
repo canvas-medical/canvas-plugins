@@ -172,6 +172,12 @@ from .remove_allergy_event import RemoveAllergyEventFactory
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEventFactory
 from .resolve_condition_event import ResolveConditionEventFactory
 from .service_provider import ServiceProviderFactory
+from .service_request import (
+    ServiceRequestCategoryCodingFactory,
+    ServiceRequestCodingFactory,
+    ServiceRequestFactory,
+    ServiceRequestReasonConditionFactory,
+)
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -350,6 +356,10 @@ __all__ = (
     "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
     "ServiceProviderFactory",
+    "ServiceRequestFactory",
+    "ServiceRequestCategoryCodingFactory",
+    "ServiceRequestCodingFactory",
+    "ServiceRequestReasonConditionFactory",
     "StaffFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",

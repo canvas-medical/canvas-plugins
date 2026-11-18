@@ -36,3 +36,11 @@ def test_condition_category_coding_resolves_to_its_condition() -> None:
 def test_condition_category_coding_condition_is_required() -> None:
     """The condition foreign key is required, matching the NOT NULL column it reads."""
     assert ConditionCategoryCoding._meta.get_field("condition").null is False
+
+
+@pytest.mark.django_db
+def test_factory_conditions_are_committed() -> None:
+    """A factory-made condition has a committer, so committed() returns it."""
+    condition = ConditionFactory.create()
+
+    assert list(Condition.objects.committed()) == [condition]
