@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.5.0 (2026-11-18)
+
+### Features
+
+- **data**: Expose codings of exposed clinical models in the data module (KOALA-8454)
+  ([#2011](https://github.com/canvas-medical/canvas-plugins/pull/2011),
+  [`9a2c786`](https://github.com/canvas-medical/canvas-plugins/commit/9a2c7863d3c3d9798cd9bc5c136ea76f17beea94))
+
+
 ## v1.4.0 (2026-11-18)
 
 ### Features
