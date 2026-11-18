@@ -5,12 +5,12 @@ month can say so, and the partial date reaches Canvas as the string it was given
 ``date`` field accepts is read the same way here.
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from canvas_sdk.agents import history_tools  # noqa: F401  (registers the history tools)
 from canvas_sdk.agents.standard_tools import standard_tools
@@ -39,6 +39,100 @@ APPROXIMATE_FIELDS: list[tuple[type[_BaseCommand], str]] = [
     (MedicalHistoryCommand, "approximate_end_date"),
     (PastSurgicalHistoryCommand, "approximate_date"),
 ]
+
+
+class OnMain(BaseModel):
+    """The field as every approximate date was typed on ``main``: a lax, optional ``date``."""
+
+    model_config = ConfigDict(strict=False, validate_assignment=True)
+
+    value: date | None = None
+
+
+#: Values a plugin may pass today, accepted or refused on ``main``. Each must be read the same way.
+VALUES_FROM_BEFORE: list[Any] = [
+    None,
+    date(2026, 9, 14),
+    datetime(2026, 9, 14),
+    datetime(2026, 9, 14, tzinfo=UTC),
+    datetime(2026, 9, 14, tzinfo=timezone(timedelta(hours=-5))),
+    datetime(2026, 9, 14, 10, 30),
+    "2026-09-14",
+    "2026-09-14T00:00:00",
+    "2026-09-14T00:00:00Z",
+    "2026-09-14T00:00:00+00:00",
+    "2026-09-14T10:30:00",
+    "2026-09-14 00:00:00",
+    b"2026-09-14",
+    1789344000,
+    1789344000.0,
+    "1789344000",
+    1789344000000,
+    1789344001,
+    0,
+    2023,
+    "2026-02-30",
+    "2026/09/14",
+    "09/14/2026",
+    "14 Sep 2026",
+    "",
+    " 2026-09-14",
+    [2026, 9, 14],
+    {"year": 2026},
+]
+
+
+def read_on_main(value: Any) -> tuple[str, Any]:
+    """How ``main`` reads ``value``: the date it becomes, or that it is refused."""
+    try:
+        return ("read", OnMain(value=value).value)
+    except ValidationError:
+        return ("refused", None)
+
+
+def read_here(command_class: type[_BaseCommand], field: str, value: Any) -> tuple[str, Any]:
+    """How the command reads ``value`` for ``field`` when built with it."""
+    try:
+        return ("read", getattr(command_class(**{field: value}), field))
+    except ValidationError:
+        return ("refused", None)
+
+
+def assigned_here(command_class: type[_BaseCommand], field: str, value: Any) -> tuple[str, Any]:
+    """How the command reads ``value`` set on ``field`` after it is built."""
+    command = command_class()
+    try:
+        setattr(command, field, value)
+    except ValidationError:
+        return ("refused", None)
+    return ("read", getattr(command, field))
+
+
+@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
+@pytest.mark.parametrize("value", VALUES_FROM_BEFORE)
+def test_a_value_from_before_is_read_as_main_reads_it(
+    command_class: type[_BaseCommand], field: str, value: Any
+) -> None:
+    """Built with it: what ``main`` took comes back as the same ``date``, and what it refused is refused."""
+    assert read_here(command_class, field, value) == read_on_main(value)
+
+
+@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
+@pytest.mark.parametrize("value", VALUES_FROM_BEFORE)
+def test_a_value_from_before_is_assigned_as_main_assigns_it(
+    command_class: type[_BaseCommand], field: str, value: Any
+) -> None:
+    """Set after the command is built, the same holds."""
+    assert assigned_here(command_class, field, value) == read_on_main(value)
+
+
+@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
+@pytest.mark.parametrize("value", [date(2026, 9, 14), "2026-09-14", 1789344000])
+def test_a_value_from_before_is_sent_as_main_sent_it(
+    command_class: type[_BaseCommand], field: str, value: Any
+) -> None:
+    """``values`` carries a full day in ISO form, as it did."""
+    assert sent(command_class, field, value) == "2026-09-14"
 
 
 def sent(command_class: type[_BaseCommand], field: str, value: Any) -> Any:
