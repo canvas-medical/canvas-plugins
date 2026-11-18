@@ -1,15 +1,20 @@
-"""Approximate dates: a date, or a year, month or day written as ``YYYY``, ``YYYY-MM`` or ``YYYY-MM-DD``.
+"""Approximate dates: a date, or a year or month written as ``YYYY`` or ``MM/YYYY``.
 
 Canvas records these fields as approximate dates, so a plugin that only knows the year or the
-month can say so, and the partial date reaches Canvas as the string it was given.
+month can say so, and the partial date reaches Canvas as the string it was given. Every value a
+``date`` field accepts is read the same way here.
 """
 
 from datetime import date, datetime
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
+from canvas_sdk.agents import history_tools  # noqa: F401  (registers the history tools)
+from canvas_sdk.agents.standard_tools import standard_tools
+from canvas_sdk.agents.tool_registry import FORMAT_CHECKER
 from canvas_sdk.commands import (
     AllergyCommand,
     AssessCommand,
@@ -42,32 +47,50 @@ def sent(command_class: type[_BaseCommand], field: str, value: Any) -> Any:
 
 
 @pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
-@pytest.mark.parametrize("value", ["2023", "2026-09", "2026-09-14"])
-def test_a_year_month_or_day_is_sent_as_written(
+@pytest.mark.parametrize("value", ["2023", "09/2026", "12/2026", "01/2026"])
+def test_a_year_or_month_is_sent_as_written(
     command_class: type[_BaseCommand], field: str, value: str
 ) -> None:
     """A partial date stays partial, so Canvas records it as the approximate date it is."""
-    assert sent(command_class, field, value) == value
+    command = command_class(**{field: value})
 
-
-@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
-def test_a_date_is_sent_as_its_iso_form(command_class: type[_BaseCommand], field: str) -> None:
-    """A plugin that passes a ``date`` keeps working as it did."""
-    assert sent(command_class, field, date(2026, 9, 14)) == "2026-09-14"
-
-
-@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
-def test_a_datetime_at_midnight_is_its_date(command_class: type[_BaseCommand], field: str) -> None:
-    """A midnight datetime was accepted as its date before, and still is."""
-    assert sent(command_class, field, datetime(2026, 9, 14)) == "2026-09-14"
+    assert getattr(command, field) == value
+    assert command.values[field] == value
 
 
 @pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
 @pytest.mark.parametrize(
     "value",
     [
-        "2026-13",
+        "2026-09-14",
+        "2026-09-14T00:00:00",
+        date(2026, 9, 14),
+        datetime(2026, 9, 14),
+        1789344000,
+        "1789344000",
+    ],
+)
+def test_a_full_day_reads_back_as_a_date(
+    command_class: type[_BaseCommand], field: str, value: Any
+) -> None:
+    """Whatever a ``date`` field accepts is still read as a ``date`` and sent in ISO form."""
+    command = command_class(**{field: value})
+
+    assert getattr(command, field) == date(2026, 9, 14)
+    assert getattr(command, field).year == 2026
+    assert command.values[field] == "2026-09-14"
+
+
+@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
+@pytest.mark.parametrize(
+    "value",
+    [
+        "13/2026",
+        "00/2026",
+        "9/2026",
+        "2026-09",
         "2026-02-30",
+        " 2023",
         "Sep 2026",
         "20260914",
         "2026/09",
@@ -79,7 +102,7 @@ def test_a_datetime_at_midnight_is_its_date(command_class: type[_BaseCommand], f
 def test_anything_else_is_refused(
     command_class: type[_BaseCommand], field: str, value: Any
 ) -> None:
-    """Only real dates in the three written forms, so Canvas never stores one it can't read."""
+    """A month that does not exist, or anything a ``date`` field refuses, is refused."""
     with pytest.raises(ValidationError):
         command_class(**{field: value})
 
@@ -88,3 +111,48 @@ def test_anything_else_is_refused(
 def test_none_still_means_no_date(command_class: type[_BaseCommand], field: str) -> None:
     """The fields stay optional."""
     assert sent(command_class, field, None) is None
+
+
+@pytest.mark.parametrize(("command_class", "field"), APPROXIMATE_FIELDS)
+def test_the_command_schema_still_calls_it_a_date(
+    command_class: type[_BaseCommand], field: str
+) -> None:
+    """``command_schema`` reports these fields as ``date``, as it does for any date field."""
+    schema = command_class.command_schema()
+    name = command_class.model_json_schema()["properties"][field].get("commands_api_name", field)
+
+    assert schema[name]["type"] is date
+
+
+#: Every agent tool argument that fills one of those fields.
+TOOL_ARGUMENTS: list[tuple[str, str]] = [
+    ("originate_diagnose_condition", "approximate_date_of_onset"),
+    ("originate_follow_up", "requested_date"),
+    ("originate_medical_history", "approximate_start_date"),
+    ("originate_medical_history", "approximate_end_date"),
+    ("originate_allergy", "approximate_date"),
+    ("originate_surgical_history", "approximate_date"),
+    ("originate_immunization_statement", "approximate_date"),
+]
+
+
+def argument_errors(tool: str, argument: str, value: str) -> list[str]:
+    """What the tool's argument schema says about ``value``, empty when it takes it."""
+    (definition,) = (d for d in standard_tools.definitions() if d["name"] == tool)
+    property_schema = definition["input_schema"]["properties"][argument]
+    validator = Draft202012Validator(property_schema, format_checker=FORMAT_CHECKER)
+    return [error.message for error in validator.iter_errors(value)]
+
+
+@pytest.mark.parametrize(("tool", "argument"), TOOL_ARGUMENTS)
+@pytest.mark.parametrize("value", ["2023", "06/2025", "2025-06-14"])
+def test_an_agent_tool_takes_a_year_month_or_day(tool: str, argument: str, value: str) -> None:
+    """A model that knows only the year or the month can pass it to the tool."""
+    assert argument_errors(tool, argument, value) == []
+
+
+@pytest.mark.parametrize(("tool", "argument"), TOOL_ARGUMENTS)
+@pytest.mark.parametrize("value", ["2025-06", "June 2025", "6/2025"])
+def test_an_agent_tool_refuses_other_shapes(tool: str, argument: str, value: str) -> None:
+    """A shape the command would refuse is refused at the tool call."""
+    assert argument_errors(tool, argument, value)
