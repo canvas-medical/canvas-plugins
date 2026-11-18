@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.4.0 (2026-11-18)
+
+### Features
+
+- Let plugins start, edit and delete Approve Refill and Deny Refill cards
+  ([#2006](https://github.com/canvas-medical/canvas-plugins/pull/2006),
+  [`861edf0`](https://github.com/canvas-medical/canvas-plugins/commit/861edf0c1d33b120d38cd3b0fd59e36211a49816))
+
+
 ## v1.3.2 (2026-11-18)
 
 ### Bug Fixes
