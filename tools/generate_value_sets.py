@@ -8,8 +8,9 @@ category and by CMS measure, and writes one module per QDM category.
 A release published in May serves the following year's performance period, so the
 2026-05-14 release (the v15 measures) generates ``v2027``.
 
-Value sets that exist in the reference package keep its class name and module, so a
-plugin upgrades by changing only the package in its import path.
+Value sets that exist in the reference package keep its class name and module. Codes and
+code-system names follow VSAC, so value sets a release retires have no class, and code-system
+attributes take VSAC's current abbreviation.
 
 Usage::
 
@@ -39,6 +40,7 @@ VSAC = "https://vsac.nlm.nih.gov/vsac"
 XLSX = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 RELS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 CONTENT = "ec_hospip_hospop"
+TIMEOUT_SECONDS = 300
 
 CATEGORY_MODULES = {
     "Adverse Event": "adverse_event",
@@ -91,7 +93,7 @@ def login(api_key: str) -> str:
         headers={"Accept": "application/json", "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
         body = json.load(response)
         token = response.headers.get("Authorization")
     if body.get("status") != "true" or not token:
@@ -106,10 +108,17 @@ def download_workbook(token: str, group_by: str, release: str) -> bytes:
         f"/content/{CONTENT}/groupby/{group_by}/version/{release}"
     )
     request = urllib.request.Request(url, headers={"Authorization": token})
-    with urllib.request.urlopen(request) as response:
-        archive = zipfile.ZipFile(io.BytesIO(response.read()))
-    (name,) = [n for n in archive.namelist() if n.endswith(".xlsx")]
-    return archive.read(name)
+    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        body = response.read()
+    download = f"VSAC release {release} grouped by {group_by}"
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(body))
+    except zipfile.BadZipFile:
+        raise SystemExit(f"{download} is not a zip archive: {body[:200]!r}") from None
+    spreadsheets = [n for n in archive.namelist() if n.endswith(".xlsx")]
+    if len(spreadsheets) != 1:
+        raise SystemExit(f"{download} holds {len(spreadsheets)} spreadsheets, expected 1")
+    return archive.read(spreadsheets[0])
 
 
 def sheets(workbook_bytes: bytes) -> Iterator[tuple[str, list[list[str]]]]:
@@ -165,7 +174,10 @@ def rows(workbook_bytes: bytes) -> Iterator[tuple[str, dict[str, str]]]:
                     header = row
                 continue
             if row and row[0]:
-                yield title, dict(zip(header, row, strict=False))
+                yield (
+                    title,
+                    {column: row[i] if i < len(row) else "" for i, column in enumerate(header)},
+                )
 
 
 def parse(category_bytes: bytes, measure_bytes: bytes) -> dict[str, ValueSetData]:
@@ -252,18 +264,26 @@ def place(
     Value sets in the reference package keep every module and class name they had there.
     When a reference OID appears under several class names, only the classes named after the
     value set keep it, so a reference class carrying another value set's OID by mistake does
-    not claim it. New value sets go to their QDM category's module under a name derived from
-    the value set name.
+    not claim it. When none of those names match (VSAC renamed the value set), every reference
+    name is dropped and reported on stderr. New value sets go to their QDM category's module
+    under a name derived from the value set name.
     """
     placed: dict[str, list[tuple[str, ValueSetData]]] = defaultdict(list)
     taken: dict[str, set[str]] = defaultdict(set)
     ordered = sorted(value_sets.values(), key=lambda vs: (vs.oid not in layout, vs.name, vs.oid))
     for value_set in ordered:
+        reference = layout.get(value_set.oid, [])
         locations = [
             (module, name)
-            for module, name in layout.get(value_set.oid, [])
-            if class_name(value_set.name) == name or len(layout[value_set.oid]) == 1
+            for module, name in reference
+            if class_name(value_set.name) == name or len(reference) == 1
         ]
+        if reference and not locations:
+            dropped = ", ".join(f"{module}.{name}" for module, name in reference)
+            print(
+                f"{value_set.oid} ({value_set.name}) drops reference names {dropped}",
+                file=sys.stderr,
+            )
         if not locations:
             categories = sorted(value_set.categories - {NO_CATEGORY}) or [NO_CATEGORY]
             locations = [(CATEGORY_MODULES[categories[0]], class_name(value_set.name))]
@@ -279,7 +299,7 @@ def render_class(name: str, value_set: ValueSetData) -> str:
     """Render one ValueSet subclass in the house format."""
     lines = [f"class {name}(ValueSet):", '    """']
     for label, text in value_set.purpose.items():
-        lines += [f"    **{label}:** {clean(text)}", ""]
+        lines += [f"    **{label}:** {docstring_text(text)}", ""]
     lines += [
         f"    **Used in:** {', '.join(sorted(value_set.measures, key=measure_sort_key))}",
         '    """',
@@ -300,6 +320,11 @@ def render_class(name: str, value_set: ValueSetData) -> str:
     return "\n".join(lines)
 
 
+def docstring_text(text: str) -> str:
+    """One line of VSAC text, escaped so it reads back unchanged inside a triple-quoted docstring."""
+    return clean(text).replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+
+
 def measure_sort_key(measure: str) -> tuple[int, int]:
     """Order ``CMS122v15`` before ``CMS1028v4`` numerically."""
     match = re.match(r"CMS(\d+)v(\d+)", measure)
@@ -307,8 +332,10 @@ def measure_sort_key(measure: str) -> tuple[int, int]:
 
 
 def write_package(output: Path, placed: dict[str, list[tuple[str, ValueSetData]]]) -> None:
-    """Write ``__init__.py`` plus one module per QDM category."""
+    """Write ``__init__.py`` plus one module per QDM category, removing stale category modules."""
     output.mkdir(parents=True, exist_ok=True)
+    for module in set(CATEGORY_MODULES.values()) - set(placed):
+        (output / f"{module}.py").unlink(missing_ok=True)
     (output / "__init__.py").write_text("__exports__ = ()\n")
     for module, entries in sorted(placed.items()):
         entries.sort(key=lambda entry: entry[0])

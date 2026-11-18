@@ -1,5 +1,6 @@
 import io
 import sys
+import warnings
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -105,6 +106,14 @@ def test_rows_reads_each_sheet_after_its_header() -> None:
     ]
 
 
+def test_rows_fills_trailing_empty_cells() -> None:
+    """A row whose last cells are empty still has every header column, read as blank."""
+    workbook = _xlsx({"Encounter": [["CMS122v15", "Office Visit", "1.2.3"]]})
+    [(_, row)] = list(rows(workbook))
+    assert row["Code"] == ""
+    assert row["Code System"] == ""
+
+
 def test_naming_follows_earlier_packages() -> None:
     """Class names, code system attributes, and ICD-10 codes match the v2026 conventions."""
     assert class_name("HbA1c Laboratory Test") == "Hba1CLaboratoryTest"
@@ -150,6 +159,21 @@ def test_place_ignores_a_reference_class_carrying_another_oid(tmp_path: Path) ->
     assert [(name, vs.oid) for name, vs in placed["condition"]] == [("HospiceDiagnosis", "4.4")]
 
 
+def test_place_reports_reference_names_it_drops(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A reference OID whose names all differ from the renamed value set is reported."""
+    (tmp_path / "encounter.py").write_text(
+        'class OldName(ValueSet):\n    OID = "7.7"\n\n'
+        'class OtherOldName(ValueSet):\n    OID = "7.7"\n'
+    )
+    placed = place({"7.7": _value_set("7.7", "New Name", "Encounter")}, reference_layout(tmp_path))
+    assert [name for name, _ in placed["encounter"]] == ["NewName"]
+    assert capsys.readouterr().err == (
+        "7.7 (New Name) drops reference names encounter.OldName, encounter.OtherOldName\n"
+    )
+
+
 def test_place_disambiguates_value_sets_sharing_a_name() -> None:
     """Two value sets with the same name in one module get distinct class names."""
     placed = place(
@@ -176,6 +200,21 @@ def test_render_class_is_valid_python() -> None:
     assert {"99212", "99213"} == vars(namespace["OfficeVisit"])["CPT"]
     assert "**Used in:** CMS122v15, CMS125v15" in source
     assert source.index('"99212"') < source.index('"99213"')
+
+
+def test_render_class_escapes_docstring_text() -> None:
+    """Backslashes and triple quotes in VSAC's purpose text survive into the docstring."""
+    value_set = _value_set("1.2", "Office Visit", "Encounter")
+    value_set.purpose["Clinical Focus"] = 'Matches \\d+ and """quoted""" text.'
+    source = render_class("OfficeVisit", value_set)
+    namespace: dict[str, Any] = {"ValueSet": object}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        exec(compile(source, "<rendered>", "exec"), namespace)
+    assert (
+        '**Clinical Focus:** Matches \\d+ and """quoted""" text.'
+        in namespace["OfficeVisit"].__doc__
+    )
 
 
 CATEGORY_HEADER = [
@@ -282,14 +321,16 @@ def test_login_returns_the_session_token(monkeypatch: pytest.MonkeyPatch) -> Non
     """A successful login hands back the Authorization header VSAC returns."""
     requests: list[Any] = []
 
-    def urlopen(request: Any) -> _Response:
-        requests.append(request)
+    def urlopen(request: Any, timeout: float) -> _Response:
+        requests.append((request, timeout))
         return _Response(b'{"status": "true"}', {"Authorization": "token-1"})
 
     monkeypatch.setattr(generate_value_sets.urllib.request, "urlopen", urlopen)
     assert login("key with space") == "token-1"
-    assert requests[0].data == b"apikey=key%20with%20space"
-    assert requests[0].get_method() == "POST"
+    request, timeout = requests[0]
+    assert request.data == b"apikey=key%20with%20space"
+    assert request.get_method() == "POST"
+    assert timeout == generate_value_sets.TIMEOUT_SECONDS
 
 
 def test_login_rejects_a_bad_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -297,7 +338,7 @@ def test_login_rejects_a_bad_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         generate_value_sets.urllib.request,
         "urlopen",
-        lambda request: _Response(b'{"status": "false"}'),
+        lambda request, timeout: _Response(b'{"status": "false"}'),
     )
     with pytest.raises(SystemExit, match="VSAC rejected the API key"):
         login("bad")
@@ -311,14 +352,43 @@ def test_download_workbook_unzips_the_spreadsheet(monkeypatch: pytest.MonkeyPatc
         zipped.writestr("value_sets.xlsx", b"xlsx-bytes")
     requests: list[Any] = []
 
-    def urlopen(request: Any) -> _Response:
-        requests.append(request)
+    def urlopen(request: Any, timeout: float) -> _Response:
+        requests.append((request, timeout))
         return _Response(archive.getvalue())
 
     monkeypatch.setattr(generate_value_sets.urllib.request, "urlopen", urlopen)
     assert download_workbook("token-1", "category", "20260514") == b"xlsx-bytes"
-    assert requests[0].full_url.endswith("/groupby/category/version/20260514")
-    assert requests[0].get_header("Authorization") == "token-1"
+    request, timeout = requests[0]
+    assert request.full_url.endswith("/groupby/category/version/20260514")
+    assert request.get_header("Authorization") == "token-1"
+    assert timeout == generate_value_sets.TIMEOUT_SECONDS
+
+
+def _zip(**files: bytes) -> bytes:
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as zipped:
+        for name, content in files.items():
+            zipped.writestr(name, content)
+    return archive.getvalue()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(b"<html>Release not found</html>", id="not-a-zip"),
+        pytest.param(_zip(**{"readme.txt": b"no spreadsheet"}), id="no-xlsx"),
+        pytest.param(_zip(**{"a.xlsx": b"1", "b.xlsx": b"2"}), id="two-xlsx"),
+    ],
+)
+def test_download_workbook_names_the_release_when_the_download_is_unusable(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    """A response that is not a zip holding one spreadsheet stops the script naming the release."""
+    monkeypatch.setattr(
+        generate_value_sets.urllib.request, "urlopen", lambda request, timeout: _Response(body)
+    )
+    with pytest.raises(SystemExit, match="VSAC release 20260514 grouped by category"):
+        download_workbook("token-1", "category", "20260514")
 
 
 def test_write_package_writes_importable_modules(tmp_path: Path) -> None:
@@ -337,6 +407,20 @@ def test_write_package_writes_importable_modules(tmp_path: Path) -> None:
     exec(compile(runnable, "<encounter>", "exec"), namespace)
     assert namespace["__exports__"] == ("AnnualWellnessVisit", "OfficeVisit")
     assert {"99213"} == namespace["OfficeVisit"].CPT
+
+
+def test_write_package_removes_category_modules_the_release_no_longer_has(tmp_path: Path) -> None:
+    """A rerun deletes stale category modules and leaves other files alone."""
+    output = tmp_path / "v2099"
+    output.mkdir()
+    (output / "care_goal.py").write_text("stale")
+    (output / "notes.txt").write_text("kept")
+    write_package(output, {"encounter": [("OfficeVisit", _value_set("1.1", "Office Visit"))]})
+    assert sorted(path.name for path in output.iterdir()) == [
+        "__init__.py",
+        "encounter.py",
+        "notes.txt",
+    ]
 
 
 def test_naming_edge_cases() -> None:
