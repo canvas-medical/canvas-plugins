@@ -93,7 +93,10 @@ class ImagingCodingFactory(factory.django.DjangoModelFactory[ImagingCoding]):
         model = ImagingCoding
 
     imaging_order = factory.SubFactory(ImagingOrderFactory)
-    system = factory.Faker("random_element", elements=["CPT", "LOINC", "SNOMED"])
+    system = factory.Faker(
+        "random_element",
+        elements=["http://www.ama-assn.org/go/cpt", "http://loinc.org", "http://snomed.info/sct"],
+    )
     code = factory.Faker("bothify", text="#####")
     display = factory.Faker("text", max_nb_chars=200)
 

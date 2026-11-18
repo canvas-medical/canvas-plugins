@@ -42,6 +42,8 @@ class DiagnosticReportCodeCodingFactory(
         model = DiagnosticReportCodeCoding
 
     diagnostic_report = factory.SubFactory(DiagnosticReportFactory)
-    system = factory.Faker("random_element", elements=["LOINC", "SNOMED"])
+    system = factory.Faker(
+        "random_element", elements=["http://loinc.org", "http://snomed.info/sct"]
+    )
     code = factory.Faker("bothify", text="#####-#")
     display = factory.Faker("text", max_nb_chars=200)

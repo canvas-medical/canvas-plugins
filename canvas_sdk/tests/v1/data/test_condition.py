@@ -31,3 +31,8 @@ def test_condition_category_coding_resolves_to_its_condition() -> None:
     fetched = ConditionCategoryCoding.objects.get(dbid=coding.dbid)
 
     assert fetched.condition == parent
+
+
+def test_condition_category_coding_condition_is_required() -> None:
+    """The condition foreign key is required, matching the NOT NULL column it reads."""
+    assert ConditionCategoryCoding._meta.get_field("condition").null is False

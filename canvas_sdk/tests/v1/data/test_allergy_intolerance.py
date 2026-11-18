@@ -26,3 +26,8 @@ def test_allergy_intolerance_reaction_resolves_to_its_allergy_intolerance() -> N
     fetched = AllergyIntoleranceReaction.objects.get(dbid=coding.dbid)
 
     assert fetched.allergy_intolerance == parent
+
+
+def test_allergy_intolerance_reaction_allergy_intolerance_is_required() -> None:
+    """The allergy_intolerance foreign key is required, matching the NOT NULL column it reads."""
+    assert AllergyIntoleranceReaction._meta.get_field("allergy_intolerance").null is False

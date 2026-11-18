@@ -84,7 +84,6 @@ class AllergyIntoleranceReaction(Coding):
         AllergyIntolerance,
         on_delete=models.DO_NOTHING,
         related_name="reactions",
-        null=True,
     )
 
 

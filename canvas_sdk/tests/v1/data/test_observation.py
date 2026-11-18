@@ -1,10 +1,11 @@
 import pytest
+from django.utils import timezone
 
 from canvas_sdk.test_utils.factories import (
     ObservationComponentFactory,
     ObservationComponentValueCodingFactory,
 )
-from canvas_sdk.v1.data import ObservationComponentValueCoding
+from canvas_sdk.v1.data import Observation, ObservationComponentValueCoding
 
 
 @pytest.mark.django_db
@@ -26,3 +27,28 @@ def test_observation_component_value_coding_resolves_to_its_observation_componen
     fetched = ObservationComponentValueCoding.objects.get(dbid=coding.dbid)
 
     assert fetched.observation_component == parent
+
+
+def test_observation_component_value_coding_observation_component_is_required() -> None:
+    """The observation_component foreign key is required, matching the NOT NULL column it reads."""
+    assert ObservationComponentValueCoding._meta.get_field("observation_component").null is False
+
+
+@pytest.mark.django_db
+def test_observation_reaches_component_value_codings() -> None:
+    """An observation's component value codings are reachable through its components."""
+    observation = Observation.objects.create(
+        category="laboratory",
+        units="",
+        value="",
+        note_id=1,
+        name="Urinalysis",
+        effective_datetime=timezone.now(),
+    )
+    component = ObservationComponentFactory.create(observation=observation)
+    coding = ObservationComponentValueCodingFactory.create(observation_component=component)
+    ObservationComponentValueCodingFactory.create()
+
+    codings = [c for comp in observation.components.all() for c in comp.value_codings.all()]
+
+    assert codings == [coding]
