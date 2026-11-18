@@ -1291,6 +1291,7 @@
     "AgentRunToolCall",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction",
     "Application",
     "Appointment",
     "AppointmentExternalIdentifier",
@@ -1340,6 +1341,7 @@
     "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding",
     "ContactCategory",
     "ContentType",
@@ -1355,7 +1357,10 @@
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "DeviceCoding",
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
@@ -1396,6 +1401,7 @@
     "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
     "ImagingReport",
@@ -1469,6 +1475,7 @@
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding",
     "Organization",
     "OrganizationAddress",
@@ -1592,7 +1599,8 @@
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
-    "AllergyIntoleranceCoding"
+    "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction"
   ],
   "canvas_sdk.v1.data.application": [
     "Application"
@@ -1728,6 +1736,7 @@
   "canvas_sdk.v1.data.condition": [
     "ClinicalStatus",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding"
   ],
   "canvas_sdk.v1.data.coverage": [
@@ -1761,10 +1770,13 @@
     "DetectedIssueEvidence"
   ],
   "canvas_sdk.v1.data.device": [
-    "Device"
+    "Device",
+    "DeviceCoding"
   ],
   "canvas_sdk.v1.data.diagnostic_report": [
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus"
   ],
   "canvas_sdk.v1.data.diagnostic_view": [
@@ -1849,6 +1861,7 @@
     "HistoryOfPresentIllness"
   ],
   "canvas_sdk.v1.data.imaging": [
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
     "ImagingReport",
@@ -1958,6 +1971,7 @@
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding"
   ],
   "canvas_sdk.v1.data.organization": [

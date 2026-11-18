@@ -92,6 +92,17 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
         return list(self.get_task_objects())
 
 
+class ImagingCoding(Coding):
+    """A coding of the imaging ordered on an imaging order."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_imagingcoding_001"
+
+    imaging_order = models.ForeignKey(
+        ImagingOrder, on_delete=models.DO_NOTHING, db_column="image_id", related_name="codings"
+    )
+
+
 class ImagingReview(AuditedModel, IdentifiableModel):
     """Model to read ImagingReview data."""
 
@@ -230,6 +241,7 @@ class ImagingOrderActionEvent(BaseActionEvent):
 
 
 __exports__ = (
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingReview",
     "ImagingReport",

@@ -8,6 +8,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySet,
     IdentifiableModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class Device(AuditedModel, IdentifiableModel):
@@ -44,4 +45,13 @@ class Device(AuditedModel, IdentifiableModel):
     procedure_id = models.BigIntegerField()
 
 
-__exports__ = ("Device",)
+class DeviceCoding(Coding):
+    """A type coding on a device."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_devicecoding_001"
+
+    device = models.ForeignKey(Device, on_delete=models.DO_NOTHING, related_name="codings")
+
+
+__exports__ = ("Device", "DeviceCoding")
