@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.6.0 (2026-11-18)
+
+### Features
+
+- Let approximate-date command fields take a year or a month
+  ([#2010](https://github.com/canvas-medical/canvas-plugins/pull/2010),
+  [`f6c7958`](https://github.com/canvas-medical/canvas-plugins/commit/f6c795877099c17207a7d3662b119b9d08f0a6c0))
+
+
 ## v1.5.0 (2026-11-18)
 
 ### Features
