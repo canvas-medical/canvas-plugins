@@ -1304,6 +1304,8 @@
     "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
+    "Authorization",
+    "AuthorizationDiagnosisCode",
     "BannerAlert",
     "BannerAlertIntent",
     "BannerAlertStatus",
@@ -1419,6 +1421,8 @@
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
+    "InpatientFacility",
+    "InpatientStay",
     "InstallmentPlan",
     "Instruction",
     "InstructionCoding",
@@ -1435,6 +1439,7 @@
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
@@ -1449,9 +1454,13 @@
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
@@ -1624,6 +1633,10 @@
   "canvas_sdk.v1.data.assessment": [
     "Assessment",
     "AssessmentStatus"
+  ],
+  "canvas_sdk.v1.data.authorization": [
+    "Authorization",
+    "AuthorizationDiagnosisCode"
   ],
   "canvas_sdk.v1.data.banner_alert": [
     "BannerAlert"
@@ -1890,6 +1903,10 @@
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
   ],
+  "canvas_sdk.v1.data.inpatient": [
+    "InpatientFacility",
+    "InpatientStay"
+  ],
   "canvas_sdk.v1.data.instruction": [
     "Instruction",
     "InstructionCoding"
@@ -1916,6 +1933,7 @@
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
@@ -1931,12 +1949,16 @@
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "TransmissionType"
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
     "Letter",
-    "LetterActionEvent"
+    "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",

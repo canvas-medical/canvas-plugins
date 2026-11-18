@@ -33,6 +33,12 @@ class Message(TimestampedModel, IdentifiableModel):
     team = models.ForeignKey(
         "v1.Team", on_delete=models.DO_NOTHING, related_name="assigned_messages", null=True
     )
+    template = models.ForeignKey(
+        "v1.LetterLanguageTemplate",
+        on_delete=models.SET_NULL,
+        related_name="messages",
+        null=True,
+    )
 
 
 class MessageAttachment(TimestampedModel, IdentifiableModel):

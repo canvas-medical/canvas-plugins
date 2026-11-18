@@ -1,8 +1,10 @@
 from .allergy_intolerance import AllergyIntoleranceFactory, AllergyIntoleranceReactionFactory
+from .authorization import AuthorizationDiagnosisCodeFactory, AuthorizationFactory
 from .calendar import CalendarFactory, EventFactory
 from .cancel_prescription import CancelPrescriptionFactory
 from .cancel_prescription_response import CancelPrescriptionResponseFactory
 from .change_medication import ChangeMedicationFactory
+from .charge_description_master import ChargeDescriptionMasterFactory
 from .chart_section_review import ChartSectionReviewFactory
 from .claim import (
     ClaimCommentFactory,
@@ -70,6 +72,7 @@ from .imaging import (
     ImagingReportTemplateFieldOptionFactory,
     ImagingReviewFactory,
 )
+from .inpatient import InpatientFacilityFactory, InpatientStayFactory
 from .integration_task import (
     IntegrationTaskActionEventFactory,
     IntegrationTaskFactory,
@@ -80,6 +83,7 @@ from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
     LabOrderReasonFactory,
+    LabOrderSpecimenFactory,
     LabPartnerFactory,
     LabPartnerTestFactory,
     LabPartnerTestQuestionChoiceFactory,
@@ -90,13 +94,20 @@ from .lab import (
     LabTestFactory,
     LabValueCodingFactory,
     LabValueFactory,
+    LabValuePerformerFactory,
 )
 from .lab_report_template import (
     LabReportTemplateFactory,
     LabReportTemplateFieldFactory,
     LabReportTemplateFieldOptionFactory,
 )
-from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
+from .letter import (
+    LanguageFactory,
+    LetterActionEventFactory,
+    LetterFactory,
+    LetterLanguageTemplateFactory,
+    LetterTemplateFactory,
+)
 from .medication import MedicationFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
@@ -208,11 +219,14 @@ from .vitals import VitalSignFactory, VitalSignReadingFactory
 __all__ = (
     "AllergyIntoleranceFactory",
     "AllergyIntoleranceReactionFactory",
+    "AuthorizationDiagnosisCodeFactory",
+    "AuthorizationFactory",
     "CalendarFactory",
     "CancelPrescriptionFactory",
     "CancelPrescriptionResponseFactory",
     "CanvasUserFactory",
     "ChangeMedicationFactory",
+    "ChargeDescriptionMasterFactory",
     "ChartSectionReviewFactory",
     "ClaimBannerAlertFactory",
     "ClaimFactory",
@@ -277,6 +291,8 @@ __all__ = (
     "ImagingReportTemplateFieldFactory",
     "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
+    "InpatientFacilityFactory",
+    "InpatientStayFactory",
     "IntegrationTaskActionEventFactory",
     "IntegrationTaskFactory",
     "IntegrationTaskReviewFactory",
@@ -284,6 +300,7 @@ __all__ = (
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",
+    "LabOrderSpecimenFactory",
     "LabPartnerFactory",
     "LabPartnerTestFactory",
     "LabPartnerTestQuestionChoiceFactory",
@@ -294,12 +311,15 @@ __all__ = (
     "LabTestFactory",
     "LabValueCodingFactory",
     "LabValueFactory",
+    "LabValuePerformerFactory",
     "LanguageFactory",
     "LetterFactory",
     "LabReportTemplateFactory",
     "LabReportTemplateFieldFactory",
     "LabReportTemplateFieldOptionFactory",
     "LetterActionEventFactory",
+    "LetterLanguageTemplateFactory",
+    "LetterTemplateFactory",
     "MedicationFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",

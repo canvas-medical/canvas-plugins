@@ -314,8 +314,9 @@ class Note(TimestampedModel, IdentifiableModel):
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField(max_length=32)
     billing_note = models.TextField()
-    # TODO -implement InpatientStay model
-    # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
+    inpatient_stay = models.ForeignKey(
+        "v1.InpatientStay", on_delete=models.DO_NOTHING, related_name="rounding_notes", null=True
+    )
     related_data = models.JSONField(default=dict, blank=True)
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField(default=timezone.now)
