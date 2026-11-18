@@ -517,6 +517,7 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.constants": [
+    "ApproximateDate",
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",

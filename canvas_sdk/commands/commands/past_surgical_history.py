@@ -1,10 +1,8 @@
-from datetime import date
-
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.commands.constants import CodeSystems, Coding
+from canvas_sdk.commands.constants import ApproximateDate, CodeSystems, Coding
 
 
 class PastSurgicalHistoryCommand(BaseCommand):
@@ -14,7 +12,7 @@ class PastSurgicalHistoryCommand(BaseCommand):
         key = "surgicalHistory"
 
     past_surgical_history: str | Coding | None = None
-    approximate_date: date | None = None
+    approximate_date: ApproximateDate | None = None
     comment: str | None = Field(max_length=1000, default=None)
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
