@@ -4,11 +4,12 @@ import pytest
 from pytest_django.fixtures import SettingsWrapper
 
 from canvas_sdk.test_utils.factories import (
+    ImagingCodingFactory,
     ImagingOrderFactory,
     ImagingReportCodingFactory,
     ImagingReportFactory,
 )
-from canvas_sdk.v1.data.imaging import ImagingOrder, ImagingReport
+from canvas_sdk.v1.data.imaging import ImagingCoding, ImagingOrder, ImagingReport
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -141,3 +142,24 @@ def test_imaging_order_document_round_trips() -> None:
     fetched = ImagingOrder.objects.get(dbid=order.dbid)
 
     assert fetched.document.name == "imaging_order_abc.pdf"
+
+
+@pytest.mark.django_db
+def test_imaging_order_codings_return_only_its_codings() -> None:
+    """ImagingOrder.codings returns only that order's codings."""
+    parent = ImagingOrderFactory.create()
+    coding = ImagingCodingFactory.create(imaging_order=parent)
+    ImagingCodingFactory.create()
+
+    assert list(parent.codings.all()) == [coding]
+
+
+@pytest.mark.django_db
+def test_imaging_coding_resolves_to_its_imaging_order() -> None:
+    """The imaging_order foreign key resolves to the parent ImagingOrder."""
+    parent = ImagingOrderFactory.create()
+    coding = ImagingCodingFactory.create(imaging_order=parent)
+
+    fetched = ImagingCoding.objects.get(dbid=coding.dbid)
+
+    assert fetched.imaging_order == parent

@@ -6,6 +6,7 @@ from django.utils import timezone
 from factory.fuzzy import FuzzyDate
 
 from canvas_sdk.v1.data import (
+    ImagingCoding,
     ImagingOrder,
     ImagingOrderActionEvent,
     ImagingReport,
@@ -83,6 +84,21 @@ class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
         end_date=datetime.date.today(),
     )
     review = None  # Optional field
+
+
+class ImagingCodingFactory(factory.django.DjangoModelFactory[ImagingCoding]):
+    """Factory for creating an ImagingCoding."""
+
+    class Meta:
+        model = ImagingCoding
+
+    imaging_order = factory.SubFactory(ImagingOrderFactory)
+    system = factory.Faker(
+        "random_element",
+        elements=["http://www.ama-assn.org/go/cpt", "http://loinc.org", "http://snomed.info/sct"],
+    )
+    code = factory.Faker("bothify", text="#####")
+    display = factory.Faker("text", max_nb_chars=200)
 
 
 class ImagingReportCodingFactory(factory.django.DjangoModelFactory[ImagingReportCoding]):

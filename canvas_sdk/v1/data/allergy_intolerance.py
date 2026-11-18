@@ -74,4 +74,17 @@ class AllergyIntoleranceCoding(Coding):
     )
 
 
-__exports__ = ("AllergyIntolerance", "AllergyIntoleranceCoding")
+class AllergyIntoleranceReaction(Coding):
+    """A reaction coding on an allergy intolerance."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_reaction_001"
+
+    allergy_intolerance = models.ForeignKey(
+        AllergyIntolerance,
+        on_delete=models.DO_NOTHING,
+        related_name="reactions",
+    )
+
+
+__exports__ = ("AllergyIntolerance", "AllergyIntoleranceCoding", "AllergyIntoleranceReaction")

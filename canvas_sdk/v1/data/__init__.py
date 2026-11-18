@@ -6,7 +6,11 @@ from .agent_run import (
     AgentRunSubject,
     AgentRunToolCall,
 )
-from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .allergy_intolerance import (
+    AllergyIntolerance,
+    AllergyIntoleranceCoding,
+    AllergyIntoleranceReaction,
+)
 from .application import Application
 from .appointment import (
     Appointment,
@@ -60,7 +64,7 @@ from .coding_gap_event import (
 from .command import Command, CommandMetadata
 from .command_type_setting import CommandTypeSetting
 from .compound_medication import CompoundMedication
-from .condition import Condition, ConditionCoding
+from .condition import Condition, ConditionCategoryCoding, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
 from .custom_attribute import (
     AttributeHub,
@@ -69,8 +73,13 @@ from .custom_attribute import (
 )
 from .custom_command import CustomCommand
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
-from .device import Device
-from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
+from .device import Device, DeviceCoding
+from .diagnostic_report import (
+    DiagnosticReport,
+    DiagnosticReportCategoryCoding,
+    DiagnosticReportCodeCoding,
+    DiagnosticReportStatus,
+)
 from .diagnostic_view import DiagnosticView
 from .discount import Discount
 from .django_content_type import ContentType
@@ -101,6 +110,7 @@ from .google_calendar import GoogleCalendar, GoogleCalendarBusyBlock, GoogleCale
 from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
+    ImagingCoding,
     ImagingOrder,
     ImagingOrderActionEvent,
     ImagingReport,
@@ -175,6 +185,7 @@ from .observation import (
     ObservationCoding,
     ObservationComponent,
     ObservationComponentCoding,
+    ObservationComponentValueCoding,
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
@@ -308,6 +319,7 @@ __all__ = __exports__ = (
     "AppointmentLabel",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction",
     "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
@@ -352,6 +364,7 @@ __all__ = __exports__ = (
     "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding",
     "Coverage",
     "CustomAttribute",
@@ -366,7 +379,10 @@ __all__ = __exports__ = (
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "DeviceCoding",
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
     "Discount",
@@ -408,6 +424,7 @@ __all__ = __exports__ = (
     "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
     "ImagingReport",
@@ -480,6 +497,7 @@ __all__ = __exports__ = (
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding",
     "Organization",
     "OrganizationAddress",
