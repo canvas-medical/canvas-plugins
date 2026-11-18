@@ -69,8 +69,11 @@ def _approximate_date(value: Any) -> date | str:
     a midnight datetime or a timestamp comes back as a ``date``.
     """
     if isinstance(value, str) and _PARTIAL_DATE.fullmatch(value):
-        if "/" in value and not 1 <= int(value.split("/")[0]) <= 12:
-            raise ValueError(f"{value!r} is not a real month")
+        month, _, year = value.rpartition("/")
+        try:
+            date(int(year), int(month or 1), 1)
+        except ValueError as error:
+            raise ValueError(f"{value!r} is not a real year or month") from error
         return value
     return _DATE.validate_python(value)
 
