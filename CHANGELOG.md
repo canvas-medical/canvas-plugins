@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.9.0 (2026-11-19)
+
+### Features
+
+- **data**: Expose the KOALA-7282 models in the data module and wire their FKs (KOALA-7282)
+  ([#2013](https://github.com/canvas-medical/canvas-plugins/pull/2013),
+  [`5a1cf7a`](https://github.com/canvas-medical/canvas-plugins/commit/5a1cf7ae717e9238f268d5072ef947d1c40d514a))
+
+
 ## v1.8.0 (2026-11-19)
 
 ### Bug Fixes
