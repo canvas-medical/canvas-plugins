@@ -206,15 +206,14 @@ class CompoundMedication(TrackableFieldsModel):
                     )
                 )
 
-        elif method == "update":
-            if not self.instance_id:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'instance_id' is required to update a compound medication.",
-                        None,
-                    )
+        elif method == "update" and not self.instance_id:
+            errors.append(
+                self._create_error_detail(
+                    "missing",
+                    "Field 'instance_id' is required to update a compound medication.",
+                    None,
                 )
+            )
 
         if (
             self.instance_id

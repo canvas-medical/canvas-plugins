@@ -133,7 +133,7 @@ class PatientPosting(BasePosting):
     def discounted_amount(self) -> Decimal:
         """Returns the discounted amount per claim for a patient bulk posting."""
         if not self.patient_payment or not self.patient_payment.discount:
-            return Decimal("0")
+            return Decimal(0)
 
         discount = self.patient_payment.discount
         return quantize(

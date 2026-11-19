@@ -76,7 +76,7 @@ def test_exclude_removed_line_items_without_balances() -> None:
     """Removed line items are kept only while a posted amount is left on them."""
     claim = ClaimFactory.create()
     active = ClaimLineItemFactory.create(claim=claim)
-    paid, adjusted, transferred, untouched, netted_to_zero = (
+    paid, adjusted, transferred, _untouched, netted_to_zero = (
         ClaimLineItemFactory.create(claim=claim, status=ClaimLineItemStatus.REMOVED)
         for _ in range(5)
     )
@@ -133,7 +133,7 @@ def test_exclude_removed_line_items_without_balances_sums_each_transaction_type(
     }
 
     assert kept == {
-        line_item.dbid: (Decimal("62.00"), Decimal("38.00"), Decimal("0")),
+        line_item.dbid: (Decimal("62.00"), Decimal("38.00"), Decimal(0)),
         other_line_item.dbid: (Decimal("10.00"), Decimal("10.00"), Decimal("7.00")),
     }
 
@@ -143,7 +143,7 @@ def test_exclude_removed_line_item_without_active_posting() -> None:
     """Removed line items are kept only while an active transaction is posted to them."""
     claim = ClaimFactory.create()
     active = ClaimLineItemFactory.create(claim=claim)
-    paid, voided, untouched = (
+    paid, voided, _untouched = (
         ClaimLineItemFactory.create(claim=claim, status=ClaimLineItemStatus.REMOVED)
         for _ in range(3)
     )

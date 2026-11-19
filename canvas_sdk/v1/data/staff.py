@@ -122,7 +122,7 @@ class Staff(TimestampedModel):
         if not roles:
             return None
 
-        role = sorted(roles, key=lambda role: role.domain_privilege_level)[-1]
+        role = max(roles, key=lambda role: role.domain_privilege_level)
 
         return role
 

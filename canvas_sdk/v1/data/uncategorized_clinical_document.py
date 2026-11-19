@@ -21,8 +21,6 @@ class UncategorizedClinicalDocumentReviewQuerySet(
 ):
     """A queryset for uncategorized clinical document reviews."""
 
-    pass
-
 
 UncategorizedClinicalDocumentReviewManager = BaseModelManager.from_queryset(
     UncategorizedClinicalDocumentReviewQuerySet

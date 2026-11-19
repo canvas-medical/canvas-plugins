@@ -8,7 +8,5 @@ class BaseProtocol(BaseHandler, ABC):
     The class that protocols inherit from.
     """
 
-    pass
-
 
 __exports__ = ("BaseProtocol",)

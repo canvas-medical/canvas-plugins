@@ -37,13 +37,9 @@ from canvas_sdk.v1.data.custom_attribute import AttributeHub
 class FakeProxyClass:
     """Stub proxy class for testing __class__ swapping."""
 
-    pass
-
 
 class FakeParentModel:
     """Simulates a base model class with a FK descriptor."""
-
-    pass
 
 
 # ---------------------------------------------------------------------------

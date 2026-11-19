@@ -16,7 +16,5 @@ version = importlib.metadata.version("canvas")
 class MoveClaimToQueue(_MoveClaimToQueue):
     """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::move_to_queue."""
 
-    pass
-
 
 __all__ = __exports__ = ("MoveClaimToQueue",)

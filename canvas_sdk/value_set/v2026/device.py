@@ -20,7 +20,7 @@ class FrailtyDevice(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     SNOMEDCT = {
-        "466986006",   # Walking table (physical object)
+        "466986006",  # Walking table (physical object)
         "1142151007",  # Oxygen composite cylinder (physical object)
         "1255320005",  # Wheeled walker (physical object)
         "1256013004",  # Gait rehabilitation electronic wheeled walker (physical object)
@@ -29,51 +29,51 @@ class FrailtyDevice(ValueSet):
         "1256019000",  # Wheeled non-foldable walking chair (physical object)
         "1256020006",  # Wheeled foldable walking chair (physical object)
         "1256022003",  # Wheeled walking table (physical object)
-        "183240000",   # Self-propelled wheelchair (physical object)
-        "183241001",   # Pedal powered wheelchair (physical object)
-        "183248007",   # Attendant powered wheelchair (physical object)
-        "228869008",   # Manual wheelchair (physical object)
-        "23366006",    # Motorized wheelchair device (physical object)
-        "23562009",    # Household ventilator, device (physical object)
-        "261323006",   # Portable oxygen cylinder (physical object)
-        "262177002",   # Static oxygen cylinder (physical object)
-        "266731002",   # Walking frame (physical object)
-        "336608004",   # Oxygen cylinder (physical object)
-        "360006004",   # Walking stick (physical object)
-        "360008003",   # Commode (physical object)
-        "360299009",   # Long cane (physical object)
-        "371786002",   # Pressure support ventilator (physical object)
-        "37874008",    # Continuing positive airway pressure unit, device (physical object)
-        "391685000",   # Oxygen gas cylinder DD (physical object)
-        "391686004",   # Oxygen gas cylinder HD (physical object)
-        "391687008",   # Oxygen gas cylinder RD (physical object)
-        "391688003",   # Oxygen gas cylinder DF (physical object)
-        "391689006",   # Oxygen gas cylinder HX (physical object)
-        "391880008",   # Oxygen gas cylinder F (physical object)
-        "391881007",   # Oxygen gas cylinder AF (physical object)
-        "426160001",   # Oxygen ventilator (physical object)
-        "464002006",   # Portable ventilator, electric (physical object)
-        "464157006",   # Multiple-base walking stick (physical object)
-        "464405003",   # Multi-terrain sports wheelchair, attendant/occupant-driven (physical object)
-        "464443000",   # Stand-up wheelchair (physical object)
-        "464571009",   # Multi-terrain sports wheelchair, electric-motor-driven (physical object)
-        "464752005",   # Multi-terrain sports wheelchair, occupant-driven (physical object)
-        "465159000",   # Stair-climbing wheelchair (physical object)
-        "465556004",   # Single-base walking stick (physical object)
-        "465565006",   # Transport wheelchair, collapsible (physical object)
-        "465921009",   # Ventilation rocking bed (physical object)
-        "466182009",   # Wheelchair, occupant-driven, front-wheels-operated, non-collapsible (physical object)
-        "466193006",   # Wheelchair, power-assisted, occupant-controlled, non-collapsible (physical object)
-        "466213002",   # Wheelchair, electric-motor-driven, occupant-controlled, manual-steering, collapsible (physical object)
-        "466229005",   # Wheelchair, occupant-driven, bimanual-lever-operated, non-collapsible (physical object)
-        "466284002",   # Wheelchair, attendant/occupant-driven, bimanual-lever-operated, collapsible (physical object)
-        "466316007",   # Wheelchair, combustion-engine-driven, non-collapsible (physical object)
-        "466322003",   # Wheelchair, power-assisted, attendant/occupant-controlled, non-collapsible (physical object)
-        "466331003",   # Wheelchair, attendant/occupant-driven, single-rear-wheel-operated, non-collapsible (physical object)
-        "466337004",   # Wheelchair, attendant/occupant-driven, foot-operated, non-collapsible (physical object)
-        "466340004",   # Wheelchair, occupant-driven, bimanual-lever-operated, collapsible (physical object)
-        "466344008",   # Wheelchair, electric-motor-driven, occupant-controlled, powered-steering, non-collapsible (physical object)
-        "466364003",   # Wheelchair, attendant/occupant-driven, rear-wheels-operated, collapsible (physical object)
+        "183240000",  # Self-propelled wheelchair (physical object)
+        "183241001",  # Pedal powered wheelchair (physical object)
+        "183248007",  # Attendant powered wheelchair (physical object)
+        "228869008",  # Manual wheelchair (physical object)
+        "23366006",  # Motorized wheelchair device (physical object)
+        "23562009",  # Household ventilator, device (physical object)
+        "261323006",  # Portable oxygen cylinder (physical object)
+        "262177002",  # Static oxygen cylinder (physical object)
+        "266731002",  # Walking frame (physical object)
+        "336608004",  # Oxygen cylinder (physical object)
+        "360006004",  # Walking stick (physical object)
+        "360008003",  # Commode (physical object)
+        "360299009",  # Long cane (physical object)
+        "371786002",  # Pressure support ventilator (physical object)
+        "37874008",  # Continuing positive airway pressure unit, device (physical object)
+        "391685000",  # Oxygen gas cylinder DD (physical object)
+        "391686004",  # Oxygen gas cylinder HD (physical object)
+        "391687008",  # Oxygen gas cylinder RD (physical object)
+        "391688003",  # Oxygen gas cylinder DF (physical object)
+        "391689006",  # Oxygen gas cylinder HX (physical object)
+        "391880008",  # Oxygen gas cylinder F (physical object)
+        "391881007",  # Oxygen gas cylinder AF (physical object)
+        "426160001",  # Oxygen ventilator (physical object)
+        "464002006",  # Portable ventilator, electric (physical object)
+        "464157006",  # Multiple-base walking stick (physical object)
+        "464405003",  # Multi-terrain sports wheelchair, attendant/occupant-driven (physical object)
+        "464443000",  # Stand-up wheelchair (physical object)
+        "464571009",  # Multi-terrain sports wheelchair, electric-motor-driven (physical object)
+        "464752005",  # Multi-terrain sports wheelchair, occupant-driven (physical object)
+        "465159000",  # Stair-climbing wheelchair (physical object)
+        "465556004",  # Single-base walking stick (physical object)
+        "465565006",  # Transport wheelchair, collapsible (physical object)
+        "465921009",  # Ventilation rocking bed (physical object)
+        "466182009",  # Wheelchair, occupant-driven, front-wheels-operated, non-collapsible (physical object)
+        "466193006",  # Wheelchair, power-assisted, occupant-controlled, non-collapsible (physical object)
+        "466213002",  # Wheelchair, electric-motor-driven, occupant-controlled, manual-steering, collapsible (physical object)
+        "466229005",  # Wheelchair, occupant-driven, bimanual-lever-operated, non-collapsible (physical object)
+        "466284002",  # Wheelchair, attendant/occupant-driven, bimanual-lever-operated, collapsible (physical object)
+        "466316007",  # Wheelchair, combustion-engine-driven, non-collapsible (physical object)
+        "466322003",  # Wheelchair, power-assisted, attendant/occupant-controlled, non-collapsible (physical object)
+        "466331003",  # Wheelchair, attendant/occupant-driven, single-rear-wheel-operated, non-collapsible (physical object)
+        "466337004",  # Wheelchair, attendant/occupant-driven, foot-operated, non-collapsible (physical object)
+        "466340004",  # Wheelchair, occupant-driven, bimanual-lever-operated, collapsible (physical object)
+        "466344008",  # Wheelchair, electric-motor-driven, occupant-controlled, powered-steering, non-collapsible (physical object)
+        "466364003",  # Wheelchair, attendant/occupant-driven, rear-wheels-operated, collapsible (physical object)
         "466365002",  # Wheelchair, electric-motor-driven, attendant/occupant-controlled, manual-steering, collapsible (physical object)
         "466366001",  # Wheelchair, attendant/occupant-driven, single-lever-operated, non-collapsible (physical object)
         "466378002",  # Wheelchair, electric-motor-driven, occupant-controlled, powered-steering, collapsible (physical object)
@@ -123,8 +123,8 @@ class FrailtyDevice(ValueSet):
         "467163008",  # Wheelchair, occupant-driven, single-front-wheel-operated, non-collapsible (physical object)
         "469860004",  # All-plastic conventional wheelchair (physical object)
         "470174002",  # Heat/moisture exchanger insertable filter (physical object)
-        "58938008",   # Wheelchair device (physical object)
-        "66435007",   # Electric bed, device (physical object)
+        "58938008",  # Wheelchair device (physical object)
+        "66435007",  # Electric bed, device (physical object)
         "700593005",  # Heated respiratory humidifier (physical object)
         "700705005",  # Non-heated respiratory humidifier (physical object)
         "700910000",  # Ultrasonic respiratory humidifier (physical object)
@@ -140,9 +140,10 @@ class FrailtyDevice(ValueSet):
         "705428009",  # Manual-driven wheelchair (physical object)
         "706180003",  # Respiratory humidifier (physical object)
         "714700001",  # Bilevel positive airway pressure unit hand held (physical object)
-        "71545009",   # Household humidifier, device (physical object)
-        "87405001",   # Cane, device (physical object)
+        "71545009",  # Household humidifier, device (physical object)
+        "87405001",  # Cane, device (physical object)
     }
+
 
 class GraduatedCompressionStockings(ValueSet):
     """
@@ -208,6 +209,7 @@ class GraduatedCompressionStockings(ValueSet):
         "408132004",  # Class III bacteriostatic below knee stocking (physical object)
     }
 
+
 class IntermittentPneumaticCompressionDevices(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of devices using intermittent pneumatic compression devices for venous thromboembolism (VTE) prophylaxis.
@@ -233,6 +235,7 @@ class IntermittentPneumaticCompressionDevices(ValueSet):
         "469365001",  # Intermittent venous compression system (physical object)
     }
 
+
 class VenousFootPumps(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts for a device for a venous pump applied for venous thromboembolism (VTE) prophylaxis.
@@ -253,9 +256,10 @@ class VenousFootPumps(ValueSet):
         "442023007",  # Venous foot pump, device (physical object)
     }
 
+
 class NonInvasiveOxygenTherapyDeviceCodes(ValueSet):
     """
-    **Clinical Focus:** N/A
+    **Clinical Focus:** N/A.
 
     **Data Element Scope:** N/A
 
@@ -305,6 +309,7 @@ class NonInvasiveOxygenTherapyDeviceCodes(ValueSet):
         "706175007",  # Ventilator breathing circuit (physical object)
         "719705009",  # Capnography oxygen mask (physical object)
     }
+
 
 __exports__ = (
     "FrailtyDevice",

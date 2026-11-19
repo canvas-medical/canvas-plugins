@@ -64,8 +64,6 @@ class VitalSignReadingQuerySet(
 ):
     """VitalSignReadingQuerySet."""
 
-    pass
-
 
 VitalSignReadingManager = BaseModelManager.from_queryset(VitalSignReadingQuerySet)
 

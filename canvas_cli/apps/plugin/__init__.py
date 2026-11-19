@@ -12,13 +12,13 @@ from canvas_cli.apps.plugin.plugin import (
 )
 
 __all__ = (
-    "list_secrets",
-    "set_secrets",
     "disable",
     "enable",
-    "scaffold",
     "install",
     "list",
+    "list_secrets",
+    "scaffold",
+    "set_secrets",
     "uninstall",
     "validate",
     "validate_manifest",

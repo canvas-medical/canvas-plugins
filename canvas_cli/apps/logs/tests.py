@@ -535,7 +535,7 @@ def test_websocket_message_handlers() -> None:
         mock_print.assert_called_once_with("Error: Connection failed")
 
     with patch("builtins.print") as mock_print:
-        _on_close(mock_ws, "1000", "Normal closure")
+        _on_close(mock_ws, 1000, "Normal closure")
         mock_print.assert_called_once_with(
             "Connection closed with status code 1000: Normal closure"
         )

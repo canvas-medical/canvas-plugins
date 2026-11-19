@@ -230,7 +230,7 @@ def test_memory_excessive_growth_logs_warning_with_name(
         MagicMock(rss=110 * mb),  # 10 MB growth, default threshold is 5 MB
     ]
     mock_psutil.Process.return_value = mock_process
-    client, pipeline = _make_client()
+    client, _pipeline = _make_client()
 
     with measure("my_handler.compute", track_memory_usage=True, client=client):
         pass
@@ -256,7 +256,7 @@ def test_memory_excessive_growth_logs_plugin_name_from_extra_tags(
         MagicMock(rss=110 * mb),  # 10 MB growth, default threshold is 5 MB
     ]
     mock_psutil.Process.return_value = mock_process
-    client, pipeline = _make_client()
+    client, _pipeline = _make_client()
 
     with measure(
         "handler_name",
@@ -288,7 +288,7 @@ def test_memory_below_threshold_no_warning(
         MagicMock(rss=101 * mb),  # 1 MB growth, below 5 MB threshold
     ]
     mock_psutil.Process.return_value = mock_process
-    client, pipeline = _make_client()
+    client, _pipeline = _make_client()
 
     with measure("block", track_memory_usage=True, client=client):
         pass
@@ -312,7 +312,7 @@ def test_memory_threshold_respects_env_var(
         MagicMock(rss=103 * mb),  # 3 MB growth, above 2 MB threshold
     ]
     mock_psutil.Process.return_value = mock_process
-    client, pipeline = _make_client()
+    client, _pipeline = _make_client()
 
     with measure("block", track_memory_usage=True, client=client):
         pass

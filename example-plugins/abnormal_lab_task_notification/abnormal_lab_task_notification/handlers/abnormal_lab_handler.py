@@ -66,5 +66,5 @@ class AbnormalLabHandler(BaseHandler):
             return [applied_task]
 
         except Exception as e:
-            log.error(f"Error processing lab report {lab_report_id}: {str(e)}")
+            log.error(f"Error processing lab report {lab_report_id}: {e!s}")
             return []

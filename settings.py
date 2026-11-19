@@ -78,7 +78,7 @@ else:
     # Default to sqlite3 for local development if no DATABASE_URL is set
     CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
-PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", "5"))
 
 
 def agent_run_limit(requested: str | None) -> int:
@@ -111,7 +111,7 @@ PLUGIN_RUNNER_MAX_EXTENDED_AGENT_RUNS = extended_agent_run_limit(
 # Seconds the plugin runner keeps answering calls after SIGTERM before it stops. The processes
 # that call it are stopped by the same signal and drain their in-flight work, which fires plugin
 # events; the default fits inside a 10 second container stop timeout.
-PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS = float(os.getenv("PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", 8))
+PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS = float(os.getenv("PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", "8"))
 CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
 # How many sub-agents one run_subagents call runs at once, each on its own thread with its

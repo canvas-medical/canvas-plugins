@@ -30,6 +30,7 @@ def run_vite_build() -> bool:
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
+        check=False,
     )
 
     if result.returncode != 0:

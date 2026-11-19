@@ -343,7 +343,7 @@ def test_resolving_another_patients_condition_is_refused() -> None:
     with pytest.raises(ValueError, match="condition"):
         _run("originate_resolve_condition", patient, condition_id=str(theirs.id))
 
-    result, effects = _run(
+    _result, effects = _run(
         "originate_resolve_condition", patient, condition_id=str(_active_condition(patient).id)
     )
     assert len(effects) == 1

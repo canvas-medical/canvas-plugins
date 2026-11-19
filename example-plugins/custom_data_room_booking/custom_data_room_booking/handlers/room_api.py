@@ -117,7 +117,7 @@ class RoomBookingAPI(SimpleAPI):
         except StaffProxy.DoesNotExist:
             return [JSONResponse({"error": "Staff not found"}, status_code=HTTPStatus.NOT_FOUND)]
 
-        bookable, created = StaffBookable.objects.get_or_create(staff=staff)
+        _bookable, created = StaffBookable.objects.get_or_create(staff=staff)
         if not created:
             return [JSONResponse({"message": f"Staff {staff.display_name} is already bookable"})]
         return [

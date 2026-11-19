@@ -493,7 +493,7 @@ class CustomDataUatAPI(StaffSessionAuthMixin, SimpleAPI):
                 # Force an error — duplicate UniqueConstraint violation
                 PatientTag.objects.create(tag=tag, patient=patient, priority=1)
                 PatientTag.objects.create(tag=tag, patient=patient, priority=2)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # Expected — IntegrityError from UniqueConstraint violation
 
         section["checks"]["rollback_tag_gone"] = not Tag.objects.filter(

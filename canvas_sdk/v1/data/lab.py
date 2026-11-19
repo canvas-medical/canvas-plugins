@@ -131,8 +131,6 @@ class LabReportProducer(TimestampedModel, IdentifiableModel):
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
 
-    pass
-
 
 LabReviewManager = BaseModelManager.from_queryset(LabReviewQuerySet)
 
@@ -166,8 +164,6 @@ class LabValueTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
 
 class LabValueQuerySet(LabValueTimeframeLookupQuerySetMixin, ValueSetLookupQuerySet):
     """LabValueQuerySet."""
-
-    pass
 
 
 class LabValue(TimestampedModel, IdentifiableModel):

@@ -1916,7 +1916,7 @@ def test_a_schema_cannot_make_the_runner_fetch_a_reference(monkeypatch: pytest.M
 
 def test_an_invalid_schema_is_refused_at_registration() -> None:
     """A schema that is not a valid JSON Schema fails when the tool registers."""
-    with pytest.raises(Exception, match="is not valid"):  # noqa: B017
+    with pytest.raises(Exception, match="is not valid"):
         ToolRegistry().register(
             {
                 "name": "t",
