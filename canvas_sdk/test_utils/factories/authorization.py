@@ -10,10 +10,7 @@ class AuthorizationFactory(factory.django.DjangoModelFactory[Authorization]):
         model = Authorization
 
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
-    coverage = None
     authorization_number = factory.Sequence(lambda n: f"AUTH-{n:06d}")
-    start_date = None
-    expiration_date = None
     visits_approved = 0
     unlimited_visits = True
 

@@ -22,5 +22,3 @@ class InpatientStayFactory(factory.django.DjangoModelFactory[InpatientStay]):
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
     inpatient_facility = factory.SubFactory(InpatientFacilityFactory)
     room_number = "101"
-    admit_time = None
-    discharge_time = None

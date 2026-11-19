@@ -11,7 +11,7 @@ from canvas_sdk.v1.data import Letter, LetterTemplate, LetterTemplateType, Messa
 
 @pytest.mark.django_db
 def test_letter_template_reads_its_kinds_locations_and_languages() -> None:
-    """A template is found by kind and lists its per-language content."""
+    """A template read by id returns its kinds and locations and lists its per-language content."""
     template = LetterTemplateFactory.create(
         name="Referral letter",
         restrict_editing=True,
