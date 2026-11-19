@@ -942,3 +942,42 @@ def test_a_streamed_reply_still_arriving_at_the_deadline_is_closed_there() -> No
         _with_recorder(recorder, client)
 
     assert len(words_read) == 3, "the stream is closed at the deadline, not read to the end"
+
+
+SCHEMA_OUTPUT = {
+    "effort": "medium",
+    "format": {
+        "type": "json_schema",
+        "schema": {
+            "type": "object",
+            "properties": {"allergies": {"type": "array", "items": {"type": "string"}}},
+            "required": ["allergies"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+def test_output_config_is_sent_on_every_call_including_tool_turns() -> None:
+    """The schema bounds the final answer while the model still reads with its tools first."""
+    client = FakeGateway(
+        _response("tool_use", _tool_use("read_chart", "t1")),
+        _response("end_turn", _text('{"allergies": ["latex"]}')),
+    )
+
+    result = _run(client, output_config=SCHEMA_OUTPUT)
+
+    assert result.text == '{"allergies": ["latex"]}'
+    assert [request["output_config"] for request in client.requests] == [
+        SCHEMA_OUTPUT,
+        SCHEMA_OUTPUT,
+    ]
+
+
+def test_without_output_config_none_is_sent() -> None:
+    """An agent that reads its answer as prose sends the request it always has."""
+    client = FakeGateway(_response("end_turn", _text("All clear.")))
+
+    _run(client)
+
+    assert "output_config" not in client.requests[0]
