@@ -94,10 +94,14 @@ class SubAgentSpec:
             gateway's default when unset. A cheap model suits a narrow extraction, a
             stronger one a harder read. The gateway refuses a model the organization has
             not enabled.
-        output_config: The Messages API's ``output_config`` for each of its calls. Its
-            ``format`` makes the final text JSON matching a schema, for a caller that
-            parses the answer rather than reading it, and its ``effort`` sets how much
-            the model thinks. Unset sends none.
+        output_config: The Messages API's ``output_config``, sent on each call the
+            sub-agent's own loop makes; a tool's own model calls, such as
+            ``read_document``'s reader, do not get it. Its ``format`` makes the final
+            text JSON matching a schema, for a caller that parses the answer rather than
+            reading it, and its ``effort`` sets how much the model thinks. Unset sends
+            none. The answer is still ``""`` when the loop stops before the model ends
+            its turn, and :func:`run_subagents` reports a failed sub-agent as a
+            ``"(sub-agent ... failed: ...)"`` string, so check for both before parsing.
     """
 
     name: str
