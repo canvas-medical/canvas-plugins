@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import TimestampedModel
+from canvas_sdk.v1.data.base import Model, TimestampedModel
 from canvas_sdk.v1.data.utils import presigned_url
 
 
@@ -49,7 +49,9 @@ class Invoice(TimestampedModel):
     invoice_pdf = models.FileField(null=True)
     status = models.CharField(max_length=10, choices=InvoiceStatus.choices)
     workflow = models.CharField(max_length=10, choices=InvoiceWorkflow.choices)
-    # claims = models.ManyToManyField("v1.Claim", related_name="full_invoices")
+    claims = models.ManyToManyField(
+        "v1.Claim", related_name="full_invoices", through="v1.InvoiceClaim"
+    )
     error_message = models.TextField()
     sent_mean = models.CharField(max_length=6, choices=InvoiceSentMeans.choices)
 
@@ -61,8 +63,19 @@ class Invoice(TimestampedModel):
         return None
 
 
+class InvoiceClaim(Model):
+    """M2M for Invoice -> Claims."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_invoicefull_claims_001"
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, db_column="invoicefull_id")
+    claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE)
+
+
 __exports__ = (
     "Invoice",
+    "InvoiceClaim",
     "InvoiceRecipients",
     "InvoiceStatus",
     "InvoiceWorkflow",

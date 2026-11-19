@@ -1,10 +1,16 @@
 from decimal import Decimal
-from typing import Self
+from typing import Self, cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
-from canvas_sdk.v1.data.utils import quantize
+from canvas_sdk.v1.data.base import (
+    CommittableModelManager,
+    CommittableQuerySet,
+    IdentifiableModel,
+    Model,
+    TimestampedModel,
+)
+from canvas_sdk.v1.data.utils import presigned_url, quantize
 
 
 class PostingQuerySet(models.QuerySet):
@@ -193,6 +199,11 @@ class BaseRemittanceAdvice(AbstractBulkPosting):
         "v1.Transactor", related_name="remits", null=True, on_delete=models.PROTECT
     )
 
+    # Claims a remit covers, including claims whose remit processing was skipped.
+    claims = models.ManyToManyField(
+        "v1.Claim", related_name="remits", through="v1.BaseRemittanceAdviceClaim"
+    )
+
     era_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
 
     @property
@@ -202,10 +213,77 @@ class BaseRemittanceAdvice(AbstractBulkPosting):
         return quantize(sum(posting.posted_amount for posting in postings))
 
 
+class BaseRemittanceAdviceClaim(Model):
+    """M2M for BaseRemittanceAdvice -> Claims."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_baseremittanceadvice_claims_001"
+
+    remittance = models.ForeignKey(
+        BaseRemittanceAdvice, on_delete=models.CASCADE, db_column="baseremittanceadvice_id"
+    )
+    claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE)
+
+
+class ManualRemittanceAdvice(BaseRemittanceAdvice):
+    """A remit posted by hand."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_manualremittanceadvice_001"
+
+
+class ElectronicRemittanceAdvice(BaseRemittanceAdvice):
+    """An electronic remit (ERA)."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_electronicremittanceadvice_001"
+
+    check_type = models.CharField(max_length=25, null=True, blank=True)
+    provider_name = models.CharField(max_length=255, null=True, blank=True)
+    payer_name = models.CharField(max_length=255, null=True, blank=True)
+    download_date = models.DateField(null=True, blank=True)
+    provider_npi = models.CharField(max_length=255, null=True, blank=True)
+    received_time = models.DateTimeField(null=True, blank=True)
+
+
+class NewRemittanceDocument(TimestampedModel):
+    """The file a manual or electronic remit was posted from."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_newremittancedocument_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.PROTECT, related_name="+")
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.PROTECT, related_name="+", null=True
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.PROTECT, related_name="+", null=True
+    )
+    deleted = models.BooleanField(default=False)
+
+    remittance = models.OneToOneField(
+        BaseRemittanceAdvice, related_name="document", on_delete=models.PROTECT
+    )
+    document = models.FileField(max_length=100)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a presigned URL for the remit file, or None if unset."""
+        if self.document:
+            return presigned_url(self.document.name)
+        return None
+
+
 __exports__ = (
     "BasePosting",
     "CoveragePosting",
     "PatientPosting",
     "BulkPatientPosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
+    "ManualRemittanceAdvice",
+    "ElectronicRemittanceAdvice",
+    "NewRemittanceDocument",
 )
