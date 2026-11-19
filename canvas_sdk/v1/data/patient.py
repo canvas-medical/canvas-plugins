@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -9,6 +9,8 @@ from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     MetadataModel,
     TimestampedModel,
@@ -432,10 +434,12 @@ class PatientKnownLocation(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_patientknownlocation_001"
 
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="known_locations"
     )
-    known_location = models.TextField()
+    known_location = models.TextField(max_length=300)
 
 
 class PatientParentGuardian(TimestampedModel, IdentifiableModel):

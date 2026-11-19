@@ -157,24 +157,6 @@ _SOURCE_MODELS: dict[tuple[str, str], type[Immunization | ImmunizationStatement]
 }
 
 
-class ConsolidatedImmunizationQuerySet(
-    CommittableQuerySetMixin, ForPatientQuerySetMixin, ValueSetLookupQuerySet
-):
-    """ConsolidatedImmunizationQuerySet."""
-
-    def active(self) -> Self:
-        """Filter consolidated immunizations."""
-        return self.committed()
-
-    @staticmethod
-    def q_object(system: str, codes: Container[str]) -> models.Q:
-        """ConsolidatedImmunizationCoding uses the singular ``coding`` reverse accessor."""
-        return models.Q(coding__system=system, coding__code__in=codes)
-
-
-ConsolidatedImmunizationManager = BaseModelManager.from_queryset(ConsolidatedImmunizationQuerySet)
-
-
 class ConsolidatedImmunization(AuditedModel, IdentifiableModel):
     """An immunization or immunization statement, in the consolidated form FHIR Immunization serves.
 
@@ -185,7 +167,8 @@ class ConsolidatedImmunization(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_consolidatedimmunization_001"
 
-    objects = cast(ConsolidatedImmunizationQuerySet, ConsolidatedImmunizationManager())
+    # Its codings also use the singular ``coding`` accessor, so the statement queryset fits.
+    objects = cast(ImmunizationStatementQuerySet, ImmunizationStatementManager())
 
     content_type = models.ForeignKey(
         "v1.ContentType", on_delete=models.DO_NOTHING, related_name="+"

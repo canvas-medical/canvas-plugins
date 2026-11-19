@@ -198,6 +198,7 @@ from .service_request import (
     ServiceRequestFactory,
     ServiceRequestReasonConditionFactory,
 )
+from .snapshot import SnapshotFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -382,6 +383,7 @@ __all__ = (
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
     "ProvenanceFactory",
+    "SnapshotFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
     "ReasonForVisitSettingCodingFactory",

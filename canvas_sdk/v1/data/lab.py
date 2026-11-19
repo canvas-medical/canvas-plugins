@@ -302,6 +302,8 @@ class LabOrderSpecimen(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborderspecimen_001"
 
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
     order = models.ForeignKey(
         "v1.LabOrder", on_delete=models.DO_NOTHING, related_name="specimens", null=True
     )
