@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.7.0 (2026-11-19)
+
+### Chores
+
+- Bump urllib3 (high, major) ([#2015](https://github.com/canvas-medical/canvas-plugins/pull/2015),
+  [`5cded94`](https://github.com/canvas-medical/canvas-plugins/commit/5cded9421b98b80e561f488cd282b77a5fce2a3a))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- **data**: Expose ServiceRequest in the data module (KOALA-8457)
+  ([#2012](https://github.com/canvas-medical/canvas-plugins/pull/2012),
+  [`a441be5`](https://github.com/canvas-medical/canvas-plugins/commit/a441be54b93be31567ed415ddf79d0e00d69b429))
+
+
 ## v1.6.0 (2026-11-18)
 
 ### Features
