@@ -19,6 +19,7 @@ from .appointment import (
     AppointmentMetadata,
 )
 from .assessment import Assessment
+from .authorization import Authorization, AuthorizationDiagnosisCode
 from .banner_alert import BannerAlert
 from .base import (
     MAX_BULK_SIZE,
@@ -127,6 +128,7 @@ from .immunization import (
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .inpatient import InpatientFacility, InpatientStay
 from .instruction import Instruction, InstructionCoding
 from .integration_task import (
     IntegrationTask,
@@ -142,6 +144,7 @@ from .lab import (
     LabOrderActionEvent,
     LabOrderReason,
     LabOrderReasonCondition,
+    LabOrderSpecimen,
     LabPartner,
     LabPartnerTest,
     LabPartnerTestQuestion,
@@ -156,8 +159,16 @@ from .lab import (
     LabTest,
     LabValue,
     LabValueCoding,
+    LabValuePerformer,
 )
-from .letter import Language, Letter, LetterActionEvent
+from .letter import (
+    Language,
+    Letter,
+    LetterActionEvent,
+    LetterLanguageTemplate,
+    LetterTemplate,
+    LetterTemplateType,
+)
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -329,6 +340,8 @@ __all__ = __exports__ = (
     "AllergyIntoleranceReaction",
     "AssessCodingGapEvent",
     "Assessment",
+    "Authorization",
+    "AuthorizationDiagnosisCode",
     "AttributeHub",
     "BannerAlert",
     "BasePosting",
@@ -445,6 +458,8 @@ __all__ = __exports__ = (
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
+    "InpatientFacility",
+    "InpatientStay",
     "InstallmentPlan",
     "Instruction",
     "InstructionCoding",
@@ -461,6 +476,7 @@ __all__ = __exports__ = (
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
@@ -471,6 +487,7 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "Language",
     "Letter",
     "LabReportTemplate",
@@ -478,6 +495,9 @@ __all__ = __exports__ = (
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
     "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",

@@ -339,6 +339,9 @@ class Claim(TimestampedModel, IdentifiableModel):
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="assigned_claims", null=True
     )
     team = models.ForeignKey("v1.Team", on_delete=models.SET_NULL, related_name="claims", null=True)
+    authorization = models.ForeignKey(
+        "v1.Authorization", on_delete=models.DO_NOTHING, related_name="claims", null=True
+    )
 
     accept_assign = models.BooleanField(default=True)
     auto_accident = models.BooleanField(default=False)

@@ -8,6 +8,7 @@ from canvas_sdk.v1.data import (
     LabOrderActionEvent,
     LabOrderReason,
     LabOrderReasonCondition,
+    LabOrderSpecimen,
     LabPartner,
     LabPartnerTest,
     LabPartnerTestQuestion,
@@ -18,6 +19,7 @@ from canvas_sdk.v1.data import (
     LabTest,
     LabValue,
     LabValueCoding,
+    LabValuePerformer,
 )
 from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.common import (
@@ -248,3 +250,23 @@ class LabOrderActionEventFactory(factory.django.DjangoModelFactory[LabOrderActio
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
     lab_order = factory.SubFactory("canvas_sdk.test_utils.factories.LabOrderFactory")
+
+
+class LabValuePerformerFactory(factory.django.DjangoModelFactory[LabValuePerformer]):
+    """Factory for creating a LabValuePerformer."""
+
+    class Meta:
+        model = LabValuePerformer
+
+    name = factory.Faker("company")
+
+
+class LabOrderSpecimenFactory(factory.django.DjangoModelFactory[LabOrderSpecimen]):
+    """Factory for creating a LabOrderSpecimen."""
+
+    class Meta:
+        model = LabOrderSpecimen
+
+    order = factory.SubFactory(LabOrderFactory)
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    specimen_type = "Blood"

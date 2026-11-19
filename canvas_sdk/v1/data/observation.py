@@ -45,6 +45,13 @@ class Observation(AuditedModel, IdentifiableModel):
     note_id = models.BigIntegerField()
     name = models.TextField()
     effective_datetime = models.DateTimeField()
+    specimen = models.ForeignKey(
+        "v1.LabOrderSpecimen",
+        on_delete=models.DO_NOTHING,
+        related_name="observations",
+        null=True,
+        blank=True,
+    )
 
 
 class ObservationCoding(Coding):

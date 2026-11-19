@@ -179,6 +179,27 @@ class LabValue(TimestampedModel, IdentifiableModel):
     test = models.ForeignKey(
         "LabTest", related_name="values", null=True, on_delete=models.DO_NOTHING
     )
+    performer = models.ForeignKey(
+        "v1.LabValuePerformer", on_delete=models.DO_NOTHING, related_name="values", null=True
+    )
+
+
+class LabValuePerformer(TimestampedModel, IdentifiableModel):
+    """The lab that performed a lab value, with its address and contact."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labvalueperformer_001"
+
+    name = models.CharField(max_length=100)
+    ordinal = models.IntegerField(default=0)
+    line1 = models.CharField(max_length=255, blank=True, default="")
+    line2 = models.CharField(max_length=255, blank=True, default="")
+    city = models.CharField(max_length=255, blank=True, default="")
+    state_code = models.CharField(max_length=2, blank=True, default="")
+    postal_code = models.CharField(max_length=255, blank=True, default="")
+    contact_name = models.CharField(max_length=255, blank=True, default="")
+    phone = models.CharField(max_length=10, blank=True, default="")
+    email = models.CharField(max_length=255, blank=True, default="")
 
 
 class LabValueCoding(TimestampedModel):
@@ -260,6 +281,26 @@ class LabOrder(AuditedModel, IdentifiableModel):
     labcorp_abn_url = models.URLField()
 
     reports = models.ManyToManyField("v1.LabReport", through="v1.LabTest")
+
+
+class LabOrderSpecimen(AuditedModel, IdentifiableModel):
+    """A specimen collected for a lab order."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_laborderspecimen_001"
+
+    order = models.ForeignKey(
+        "v1.LabOrder", on_delete=models.DO_NOTHING, related_name="specimens", null=True
+    )
+    identifier = models.CharField(max_length=2, default="")
+    specimen_type = models.CharField(max_length=500, default="")
+    quantity = models.FloatField(null=True)
+    units = models.CharField(max_length=50, default="")
+    source = models.CharField(max_length=255, default="")
+    source_additional = models.CharField(max_length=255, default="")
+    collection_date_time = models.DateTimeField(null=True)
+    # The body-site table has no SDK model, so its key is exposed as a plain column.
+    body_site_id = models.IntegerField(null=True)
 
 
 class LabOrderReason(AuditedModel):
@@ -498,7 +539,9 @@ __exports__ = (
     "LabReview",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "LabOrder",
+    "LabOrderSpecimen",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabTest",
