@@ -1553,6 +1553,11 @@
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus",
     "Snapshot",
     "SnapshotImage",
     "SpecialtyReportTemplate",
@@ -2140,6 +2145,13 @@
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.v1.data.service_request": [
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus"
   ],
   "canvas_sdk.v1.data.snapshot": [
     "Snapshot",

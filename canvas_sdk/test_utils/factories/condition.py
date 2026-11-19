@@ -12,9 +12,12 @@ class ConditionFactory(factory.django.DjangoModelFactory[Condition]):
     class Meta:
         model = Condition
 
+    patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
+    committer = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     deleted = False
-    onset_date = datetime.date(2024, 1, 1)
-    resolution_date = datetime.date(2024, 1, 1)
+    onset_date = datetime.date(2020, 1, 1)
+    # sentinel: the SDK field is non-nullable, while home-app stores NULL for an active condition
+    resolution_date = datetime.date(2099, 12, 31)
     clinical_status = ClinicalStatus.ACTIVE
     notes = ""
     surgical = False

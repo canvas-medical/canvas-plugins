@@ -276,6 +276,13 @@ from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .report import Report
 from .resolve_condition_event import ResolveConditionEvent
 from .service_provider import ServiceProvider
+from .service_request import (
+    ServiceRequest,
+    ServiceRequestCategoryCoding,
+    ServiceRequestCoding,
+    ServiceRequestReasonCondition,
+    ServiceRequestStatus,
+)
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
     SpecialtyReportTemplate,
@@ -575,6 +582,11 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus",
     "SpecialtyReportTemplate",
     "SpecialtyReportTemplateField",
     "SpecialtyReportTemplateFieldOption",
