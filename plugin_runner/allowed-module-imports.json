@@ -6,6 +6,7 @@
     "Capability",
     "DEFAULT_HISTORY_CHARS",
     "EffectField",
+    "Effort",
     "FilterSpec",
     "GatewayClient",
     "GatewayError",
@@ -76,6 +77,7 @@
     "RunSubject"
   ],
   "canvas_sdk.agents.tool_loop": [
+    "Effort",
     "ToolLoopResult",
     "run_tool_loop"
   ],
