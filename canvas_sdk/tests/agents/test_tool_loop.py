@@ -1,18 +1,19 @@
 import json
 import time
 from datetime import date
-from typing import Any
+from typing import Any, get_args, get_type_hints
 
 import anthropic
 import httpx2
 import pytest
-from anthropic.types import TextBlock, ToolUseBlock
+from anthropic.types import OutputConfigParam, TextBlock, ToolUseBlock
 from pydantic import BaseModel
 
 from canvas_sdk.agents import (
     AgentPlugin,
     AgentRunResult,
     AgentState,
+    Effort,
     RunSubject,
     ToolRegistry,
     require_patient_id,
@@ -962,7 +963,7 @@ def test_an_output_schema_is_asked_for_on_every_call_including_tool_turns() -> N
         _response("end_turn", _text('{"allergies": ["latex"]}')),
     )
 
-    result = _run(client, output_schema=_Allergies, effort="medium")
+    result = _run(client, output_schema=_Allergies, effort=Effort.MEDIUM)
 
     output_format = LlmAnthropic.output_format(_Allergies)
     expected = {"effort": "medium", "format": output_format}
@@ -978,6 +979,23 @@ def test_effort_alone_is_sent_without_a_format() -> None:
     _run(client, effort="low")
 
     assert client.requests[0]["output_config"] == {"effort": "low"}
+
+
+def test_an_effort_the_api_does_not_have_is_refused_before_any_call() -> None:
+    """A typo fails here, with the levels named, rather than as a 400 from the gateway."""
+    client = FakeGateway(_response("end_turn", _text("All clear.")))
+
+    with pytest.raises(ValueError, match="'medum' is not a valid Effort"):
+        _run(client, effort="medum")
+
+    assert client.requests == []
+
+
+def test_the_effort_levels_are_the_apis() -> None:
+    """Kept to the Anthropic SDK's own list, so a level it adds or drops shows up here."""
+    allowed = get_args(get_args(get_type_hints(OutputConfigParam)["effort"])[0])
+
+    assert {level.value for level in Effort} == set(allowed)
 
 
 def test_without_a_schema_or_effort_no_output_config_is_sent() -> None:

@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from anthropic.types import TextBlock, ToolUseBlock
@@ -201,13 +202,31 @@ def _stopped(result: ToolLoopResult) -> ToolLoopResult:
     return result
 
 
+class Effort(StrEnum):
+    """How much the model thinks on a call: the Messages API's ``output_config.effort``.
+
+    A model that does not take effort, or not a given level, is refused by the gateway.
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    XHIGH = "xhigh"
+    MAX = "max"
+
+
 def output_config(
-    output_schema: type[BaseModelLlmJson] | None, effort: str | None
+    output_schema: type[BaseModelLlmJson] | None, effort: Effort | str | None
 ) -> dict[str, Any] | None:
-    """The ``output_config`` for a schema and an effort, or ``None`` when neither is set."""
+    """The ``output_config`` for a schema and an effort, or ``None`` when neither is set.
+
+    Raises:
+        ValueError: ``effort`` is not an :class:`Effort` level, or ``output_schema`` is
+            not one structured outputs can express.
+    """
     config: dict[str, Any] = {}
-    if effort:
-        config["effort"] = effort
+    if effort is not None:
+        config["effort"] = Effort(effort).value
     if output_schema is not None:
         config["format"] = LlmAnthropic.output_format(output_schema)
     return config or None
@@ -227,7 +246,7 @@ def run_tool_loop(
     cache_system: bool = True,
     on_turn: Callable[[int], None] | None = None,
     output_schema: type[BaseModelLlmJson] | None = None,
-    effort: str | None = None,
+    effort: Effort | str | None = None,
 ) -> ToolLoopResult:
     """Call the model with ``tools`` until it finishes, dispatching its tool calls.
 
@@ -270,12 +289,13 @@ def run_tool_loop(
             shape, read with ``output_schema.model_validate_json(result.text)``; the model
             still calls tools on the turns before it. The request is the one
             ``LlmAnthropic`` sends for the same schema.
-        effort: The ``output_config.effort`` for each call, such as ``"medium"``: how
-            much the model thinks. The gateway refuses it for a model that does not
-            take it.
+        effort: How much the model thinks on each call, an :class:`Effort` such as
+            ``Effort.MEDIUM`` (or its value, ``"medium"``). The gateway refuses it for a
+            model that does not take it.
 
     Raises:
-        ValueError: ``output_schema`` is not one structured outputs can express.
+        ValueError: ``output_schema`` is not one structured outputs can express, or
+            ``effort`` is not an :class:`Effort` level.
     """
     config = output_config(output_schema, effort)
     client = gateway.client()
@@ -386,4 +406,4 @@ def run_tool_loop(
     return _stopped(result)
 
 
-__exports__ = ("ToolLoopResult", "run_tool_loop")
+__exports__ = ("Effort", "ToolLoopResult", "run_tool_loop")
