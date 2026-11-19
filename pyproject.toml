@@ -238,9 +238,8 @@ ignore = [
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
 
 [tool.ruff.lint.per-file-ignores]
-# Generated from VSAC value sets, which repeat codes across their source lists and
-# carry trailing spaces in their descriptions.
-"canvas_sdk/value_set/**" = ["B033", "W291"]
+# Generated from VSAC value sets, whose descriptions carry trailing spaces.
+"canvas_sdk/value_set/**" = ["W291"]
 # Fixture plugins pin exactly which source patterns run under the sandbox, so the rules that
 # rewrite a pattern (ascii(), aliased imports, explicit return None, a bare pass) stay off.
 "plugin_runner/tests/fixtures/plugins/**" = ["PIE790", "PLR0402", "RET501", "RUF010"]
