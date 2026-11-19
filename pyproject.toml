@@ -85,14 +85,19 @@ omit = [
   "**/conftest.py",
   "**/test_*.py",
   "**/tests.py",
+  # Anchored: a bare "settings.py" also matches every nested settings.py.
+  "./settings.py",
   "canvas_cli/templates/**",
   "canvas_generated/**",
   "canvas_sdk/tests/**",
   "example-plugins/**/tests/**",
   "import_tracing/**",
-  "protobufs/**",
-  "settings.py"
+  "protobufs/**"
 ]
+
+# The SDK packages, so files no test imports still report, as uncovered.
+[tool.coverage.run]
+source = ["canvas_cli", "canvas_sdk", "logger", "plugin_runner", "pubsub"]
 
 [tool.django-stubs]
 django_settings_module = "settings"

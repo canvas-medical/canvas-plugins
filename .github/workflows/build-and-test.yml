@@ -8,6 +8,9 @@ on:
   push:
     branches: ["main", "release/*"]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -72,7 +75,9 @@ jobs:
     needs:
       - build-and-test
       - test-example-plugins
-    if: success()
+    # Runs even when a job it needs failed, and then fails itself: a skipped
+    # required check counts as passing.
+    if: ${{ !cancelled() }}
     permissions:
       contents: read
       actions: read
@@ -86,6 +91,16 @@ jobs:
       DIFF_COVER_FAIL_UNDER: "80"
       DIFF_COVER_MINIMUM_CHANGE: "5"
     steps:
+      - name: Fail when a test job did not succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          FAILED=$(jq -r 'to_entries[] | select(.value.result != "success") | "\(.key): \(.value.result)"' <<< "$NEEDS")
+          if [ -n "$FAILED" ]; then
+            echo "::error::Coverage needs every test job to succeed. Not successful: $(echo "$FAILED" | paste -sd, -)"
+            exit 1
+          fi
+
       - uses: actions/checkout@v5
         with:
           # diff-cover diffs against the merge base, so it needs history, but
@@ -126,6 +141,25 @@ jobs:
           name: coverage-baseline
           path: coverage.xml
           retention-days: 90
+
+      # diff-cover counts nothing for files absent from every report, so a
+      # changed example plugin with no tests would pass unmeasured.
+      - name: Fail when a changed example plugin has no coverage report
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          MERGE_BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          MISSING=$(git diff --name-only --diff-filter=d "$MERGE_BASE" HEAD -- 'example-plugins/*.py' \
+            | grep -v -e '/tests/' -e '/test_[^/]*\.py$' \
+            | cut -d/ -f2 | sort -u \
+            | while read -r plugin; do
+                [ -f "coverage-plugins/coverage-plugin-$plugin/coverage.xml" ] || echo "$plugin"
+              done)
+          if [ -n "$MISSING" ]; then
+            echo "::error::These example plugins changed but have no tests, so their changes are unmeasured. Add tests under example-plugins/<name>/tests: $(echo "$MISSING" | paste -sd, -)"
+            exit 1
+          fi
 
       - name: Diff coverage against the base branch
         if: github.event_name == 'pull_request'
