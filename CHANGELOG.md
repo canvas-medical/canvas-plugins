@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v1.8.0 (2026-11-19)
+
+### Bug Fixes
+
+- Low-risk bumps for 3 dependencies (critical)
+  ([#2016](https://github.com/canvas-medical/canvas-plugins/pull/2016),
+  [`4b9a099`](https://github.com/canvas-medical/canvas-plugins/commit/4b9a0994c89c0d2ebf756bb462565ab06c5924a0))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- Add effect and events for refill requests
+  ([#1801](https://github.com/canvas-medical/canvas-plugins/pull/1801),
+  [`bb02736`](https://github.com/canvas-medical/canvas-plugins/commit/bb027368a4dd07c076b17a072a227911117694a2))
+
+
 ## v1.7.0 (2026-11-19)
 
 ### Chores
