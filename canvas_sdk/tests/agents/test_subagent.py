@@ -276,11 +276,16 @@ def test_a_subagent_asks_for_the_output_its_spec_names() -> None:
     assert gateway.requests[0]["output_config"] == output_config
 
 
-def test_a_spec_with_output_config_stays_hashable() -> None:
+def test_specs_with_equal_output_configs_are_equal_and_hash_alike() -> None:
     """Specs are frozen and may be kept in sets; the config dict is left out of the hash."""
-    spec = SubAgentSpec(name="extract", system_prompt="Extract.", output_config={"effort": "low"})
+    first = SubAgentSpec(name="extract", system_prompt="Extract.", output_config={"effort": "low"})
+    second = SubAgentSpec(name="extract", system_prompt="Extract.", output_config={"effort": "low"})
+    other = SubAgentSpec(name="extract", system_prompt="Extract.", output_config={"effort": "high"})
 
-    assert spec in {spec}
+    assert first == second
+    assert hash(first) == hash(second)
+    assert len({first, second}) == 1
+    assert first != other
 
 
 def test_a_subagent_past_the_runs_deadline_ends_the_run() -> None:
