@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.10.0 (2026-11-19)
+
+### Features
+
+- **sdk**: Allow UpdateRefillRequest to ignore a refill request (KOALA-8146)
+  ([#2008](https://github.com/canvas-medical/canvas-plugins/pull/2008),
+  [`e0e88b7`](https://github.com/canvas-medical/canvas-plugins/commit/e0e88b754f05b30b2f16a8a9192b195eee8a64fd))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
 ## v1.9.0 (2026-11-19)
 
 ### Features
