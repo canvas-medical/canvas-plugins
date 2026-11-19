@@ -7,6 +7,7 @@ import anthropic
 import httpx2
 import pytest
 from anthropic.types import TextBlock, ToolUseBlock
+from pydantic import BaseModel
 
 from canvas_sdk.agents import (
     AgentPlugin,
@@ -28,6 +29,8 @@ from canvas_sdk.agents.run_record import (
 )
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent
 from canvas_sdk.agents.tool_registry import DEFAULT_TOOL_RESULT_CHARS, MAX_TOOL_RESULT_CHARS
+from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.test_utils.agents import FakeGateway, FakeStream, ModelReply, reply, text, tool_use
 
@@ -944,40 +947,53 @@ def test_a_streamed_reply_still_arriving_at_the_deadline_is_closed_there() -> No
     assert len(words_read) == 3, "the stream is closed at the deadline, not read to the end"
 
 
-SCHEMA_OUTPUT = {
-    "effort": "medium",
-    "format": {
-        "type": "json_schema",
-        "schema": {
-            "type": "object",
-            "properties": {"allergies": {"type": "array", "items": {"type": "string"}}},
-            "required": ["allergies"],
-            "additionalProperties": False,
-        },
-    },
-}
+class _Allergies(BaseModelLlmJson):
+    allergies: list[str]
 
 
-def test_output_config_is_sent_on_every_call_including_tool_turns() -> None:
+class _Plain(BaseModel):
+    allergies: list[str]
+
+
+def test_an_output_schema_is_asked_for_on_every_call_including_tool_turns() -> None:
     """The schema bounds the final answer while the model still reads with its tools first."""
     client = FakeGateway(
         _response("tool_use", _tool_use("read_chart", "t1")),
         _response("end_turn", _text('{"allergies": ["latex"]}')),
     )
 
-    result = _run(client, output_config=SCHEMA_OUTPUT)
+    result = _run(client, output_schema=_Allergies, effort="medium")
 
-    assert result.text == '{"allergies": ["latex"]}'
-    assert [request["output_config"] for request in client.requests] == [
-        SCHEMA_OUTPUT,
-        SCHEMA_OUTPUT,
-    ]
+    output_format = LlmAnthropic.output_format(_Allergies)
+    expected = {"effort": "medium", "format": output_format}
+    assert [request["output_config"] for request in client.requests] == [expected, expected]
+    assert output_format["schema"]["additionalProperties"] is False
+    assert _Allergies.model_validate_json(result.text).allergies == ["latex"]
 
 
-def test_without_output_config_none_is_sent() -> None:
+def test_effort_alone_is_sent_without_a_format() -> None:
+    """An agent can set how much the model thinks and still read its answer as prose."""
+    client = FakeGateway(_response("end_turn", _text("All clear.")))
+
+    _run(client, effort="low")
+
+    assert client.requests[0]["output_config"] == {"effort": "low"}
+
+
+def test_without_a_schema_or_effort_no_output_config_is_sent() -> None:
     """An agent that reads its answer as prose sends the request it always has."""
     client = FakeGateway(_response("end_turn", _text("All clear.")))
 
     _run(client)
 
     assert "output_config" not in client.requests[0]
+
+
+def test_a_schema_that_is_not_a_base_model_llm_json_is_refused_before_any_call() -> None:
+    """Structured outputs need the shape BaseModelLlmJson guarantees, so nothing is sent."""
+    client = FakeGateway(_response("end_turn", _text("{}")))
+
+    with pytest.raises(ValueError, match="BaseModelLlmJson"):
+        _run(client, output_schema=_Plain)
+
+    assert client.requests == []

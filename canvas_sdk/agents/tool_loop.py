@@ -23,6 +23,8 @@ from canvas_sdk.agents.run_record import (
     current_recorder,
 )
 from canvas_sdk.agents.tool_registry import ToolRegistry, _CallEffects
+from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 
 if TYPE_CHECKING:
     from canvas_sdk.effects import Effect
@@ -199,6 +201,18 @@ def _stopped(result: ToolLoopResult) -> ToolLoopResult:
     return result
 
 
+def output_config(
+    output_schema: type[BaseModelLlmJson] | None, effort: str | None
+) -> dict[str, Any] | None:
+    """The ``output_config`` for a schema and an effort, or ``None`` when neither is set."""
+    config: dict[str, Any] = {}
+    if effort:
+        config["effort"] = effort
+    if output_schema is not None:
+        config["format"] = LlmAnthropic.output_format(output_schema)
+    return config or None
+
+
 def run_tool_loop(
     gateway: LLMGateway,
     *,
@@ -212,7 +226,8 @@ def run_tool_loop(
     history_chars: int | None = DEFAULT_HISTORY_CHARS,
     cache_system: bool = True,
     on_turn: Callable[[int], None] | None = None,
-    output_config: dict[str, Any] | None = None,
+    output_schema: type[BaseModelLlmJson] | None = None,
+    effort: str | None = None,
 ) -> ToolLoopResult:
     """Call the model with ``tools`` until it finishes, dispatching its tool calls.
 
@@ -250,11 +265,19 @@ def run_tool_loop(
         cache_system: Mark the system prompt for prompt caching.
         on_turn: Called with the turn index before each model call. Its exceptions are
             logged and ignored.
-        output_config: The Messages API's ``output_config``, sent on every call: a
-            ``format`` holding a JSON Schema makes the model's final answer JSON that
-            matches it, and ``effort`` sets how much the model thinks. The model still
-            calls tools on the turns before its answer. Unset sends none.
+        output_schema: A ``BaseModelLlmJson`` subclass the final answer must match.
+            Each call asks for structured output, so the final text is JSON of that
+            shape, read with ``output_schema.model_validate_json(result.text)``; the model
+            still calls tools on the turns before it. The request is the one
+            ``LlmAnthropic`` sends for the same schema.
+        effort: The ``output_config.effort`` for each call, such as ``"medium"``: how
+            much the model thinks. The gateway refuses it for a model that does not
+            take it.
+
+    Raises:
+        ValueError: ``output_schema`` is not one structured outputs can express.
     """
+    config = output_config(output_schema, effort)
     client = gateway.client()
     transcript = list(messages)
     system_param: Any = (
@@ -288,8 +311,8 @@ def run_tool_loop(
             "tools": cast(Any, tools.definitions()),
             "messages": cast(Any, sent),
         }
-        if output_config is not None:
-            request["output_config"] = output_config
+        if config:
+            request["output_config"] = config
         try:
             if recorder is not None and recorder.streams_reply and streams_reply.get():
                 # The same call, streamed so the person waiting reads the reply as it is
