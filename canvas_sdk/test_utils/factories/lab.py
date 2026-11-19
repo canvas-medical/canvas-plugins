@@ -14,9 +14,11 @@ from canvas_sdk.v1.data import (
     LabPartnerTestQuestion,
     LabPartnerTestQuestionChoice,
     LabReport,
+    LabReportProducer,
     LabReportRemark,
     LabReview,
     LabTest,
+    LabTestAOE,
     LabValue,
     LabValueCoding,
     LabValuePerformer,
@@ -27,7 +29,7 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
-from canvas_sdk.v1.data.lab import TransmissionType
+from canvas_sdk.v1.data.lab import LabTestAOEAnswerType, TransmissionType
 
 
 class LabReportFactory(factory.django.DjangoModelFactory[LabReport]):
@@ -270,3 +272,26 @@ class LabOrderSpecimenFactory(factory.django.DjangoModelFactory[LabOrderSpecimen
     order = factory.SubFactory(LabOrderFactory)
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     specimen_type = "Blood"
+
+
+class LabReportProducerFactory(factory.django.DjangoModelFactory[LabReportProducer]):
+    """Factory for creating a LabReportProducer."""
+
+    class Meta:
+        model = LabReportProducer
+
+    report = factory.SubFactory(LabReportFactory)
+    unstructured_name = factory.Faker("company")
+    unstructured_address = factory.Faker("address")
+
+
+class LabTestAOEFactory(factory.django.DjangoModelFactory[LabTestAOE]):
+    """Factory for creating a LabTestAOE."""
+
+    class Meta:
+        model = LabTestAOE
+
+    test = factory.SubFactory(LabTestFactory)
+    code = factory.Faker("bothify", text="AOE###")
+    aoe_type = LabTestAOEAnswerType.STRING
+    text_value = factory.Faker("word")

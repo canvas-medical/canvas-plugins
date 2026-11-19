@@ -115,6 +115,19 @@ class LabReportRemark(TimestampedModel):
     comment = models.CharField(max_length=512)
 
 
+class LabReportProducer(TimestampedModel, IdentifiableModel):
+    """A facility or person that produced a lab report, as the lab sent it (free text)."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labreportproducer_001"
+
+    unstructured_name = models.CharField(max_length=128, blank=True, default="")
+    unstructured_address = models.CharField(max_length=512, blank=True, default="")
+    report = models.ForeignKey(
+        LabReport, on_delete=models.DO_NOTHING, related_name="producers", null=True
+    )
+
+
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
 
@@ -381,6 +394,37 @@ class LabTest(TimestampedModel, IdentifiableModel):
         return f"{self.ontology_test_name}: f{self.ontology_test_code}"
 
 
+class LabTestAOEAnswerType(models.TextChoices):
+    """The type of an ask-at-order-entry answer."""
+
+    STRING = "string", "string"
+    DATE = "date", "date"
+    CHOICE = "choice", "choice"
+    BOOLEAN = "boolean", "boolean"
+    OPEN_CHOICE = "open-choice", "open-choice"
+
+
+class LabTestAOE(TimestampedModel, IdentifiableModel):
+    """An ask-at-order-entry (AOE) answer on a lab test.
+
+    The answer is in ``boolean_value``, ``date_value`` or ``text_value`` depending on
+    ``aoe_type``; a date that could not be parsed is kept in ``text_value``.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labtestaoe_001"
+
+    test = models.ForeignKey(LabTest, on_delete=models.DO_NOTHING, related_name="aoes", null=True)
+    code = models.CharField(max_length=20, null=True)
+    aoe_type = models.CharField(
+        max_length=30, choices=LabTestAOEAnswerType.choices, default=LabTestAOEAnswerType.STRING
+    )
+    boolean_value = models.BooleanField(null=True)
+    text_value = models.TextField(null=True)
+    date_value = models.DateField(null=True)
+    display = models.TextField(null=True)
+
+
 class LabPartner(TimestampedModel, IdentifiableModel):
     """A class representing a lab partner."""
 
@@ -535,6 +579,7 @@ __exports__ = (
     "TransmissionType",
     "LabReport",
     "LabReportRemark",
+    "LabReportProducer",
     "LabReviewQuerySet",
     "LabReview",
     "LabValue",
@@ -545,6 +590,8 @@ __exports__ = (
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabTest",
+    "LabTestAOE",
+    "LabTestAOEAnswerType",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
