@@ -212,6 +212,7 @@ def run_tool_loop(
     history_chars: int | None = DEFAULT_HISTORY_CHARS,
     cache_system: bool = True,
     on_turn: Callable[[int], None] | None = None,
+    output_config: dict[str, Any] | None = None,
 ) -> ToolLoopResult:
     """Call the model with ``tools`` until it finishes, dispatching its tool calls.
 
@@ -249,6 +250,10 @@ def run_tool_loop(
         cache_system: Mark the system prompt for prompt caching.
         on_turn: Called with the turn index before each model call. Its exceptions are
             logged and ignored.
+        output_config: The Messages API's ``output_config``, sent on every call: a
+            ``format`` holding a JSON Schema makes the model's final answer JSON that
+            matches it, and ``effort`` sets how much the model thinks. The model still
+            calls tools on the turns before its answer. Unset sends none.
     """
     client = gateway.client()
     transcript = list(messages)
@@ -283,6 +288,8 @@ def run_tool_loop(
             "tools": cast(Any, tools.definitions()),
             "messages": cast(Any, sent),
         }
+        if output_config is not None:
+            request["output_config"] = output_config
         try:
             if recorder is not None and recorder.streams_reply and streams_reply.get():
                 # The same call, streamed so the person waiting reads the reply as it is

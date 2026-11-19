@@ -136,7 +136,7 @@ class AgentPlugin(ABC):
         :meth:`tool_context` builds, plus any extra keys in ``ctx``. The effects the
         tools stage come back on :attr:`ToolLoopResult.effects`. ``options`` are the
         remaining ``run_tool_loop`` arguments (``max_turns``, ``max_tokens``,
-        ``model``, ``history_chars``, ``cache_system``).
+        ``model``, ``history_chars``, ``cache_system``, ``output_config``).
         """
         return run_tool_loop(
             gateway,

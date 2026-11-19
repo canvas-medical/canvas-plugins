@@ -247,6 +247,42 @@ def test_a_subagent_calls_the_model_its_spec_names() -> None:
     assert gateway.requests[0]["model"] == "claude-haiku-4-5"
 
 
+def test_a_subagent_asks_for_the_output_its_spec_names() -> None:
+    """A caller that parses the answer gets JSON matching its schema, at the effort it set."""
+    output_config = {
+        "effort": "medium",
+        "format": {
+            "type": "json_schema",
+            "schema": {
+                "type": "object",
+                "properties": {"values": {"type": "array", "items": {"type": "string"}}},
+                "required": ["values"],
+                "additionalProperties": False,
+            },
+        },
+    }
+    gateway = FakeGateway(reply(text('{"values": ["a", "b"]}')))
+    spec = SubAgentSpec(name="extract", system_prompt="Extract.", output_config=output_config)
+
+    answer = run_subagent(
+        spec,
+        "Read it.",
+        parent_tools=ToolRegistry(),
+        parent_ctx={"effects": []},
+        gateway=gateway,  # type: ignore[arg-type]
+    )
+
+    assert answer == '{"values": ["a", "b"]}'
+    assert gateway.requests[0]["output_config"] == output_config
+
+
+def test_a_spec_with_output_config_stays_hashable() -> None:
+    """Specs are frozen and may be kept in sets; the config dict is left out of the hash."""
+    spec = SubAgentSpec(name="extract", system_prompt="Extract.", output_config={"effort": "low"})
+
+    assert spec in {spec}
+
+
 def test_a_subagent_past_the_runs_deadline_ends_the_run() -> None:
     """Running out of time in a sub-agent ends the run, as it would in the parent."""
     spec = SubAgentSpec(name="labs", system_prompt="x")

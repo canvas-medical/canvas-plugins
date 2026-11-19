@@ -94,6 +94,10 @@ class SubAgentSpec:
             gateway's default when unset. A cheap model suits a narrow extraction, a
             stronger one a harder read. The gateway refuses a model the organization has
             not enabled.
+        output_config: The Messages API's ``output_config`` for each of its calls. Its
+            ``format`` makes the final text JSON matching a schema, for a caller that
+            parses the answer rather than reading it, and its ``effort`` sets how much
+            the model thinks. Unset sends none.
     """
 
     name: str
@@ -102,6 +106,7 @@ class SubAgentSpec:
     max_turns: int = 4
     max_tokens: int = 2048
     model: str | None = None
+    output_config: dict[str, Any] | None = field(default=None, hash=False)
 
 
 # How many sub-agents the current thread is inside; a pool thread is given its caller's.
@@ -160,6 +165,7 @@ def run_subagent(
             max_turns=spec.max_turns,
             max_tokens=spec.max_tokens,
             model=spec.model,
+            output_config=spec.output_config,
         )
     finally:
         streams_reply.reset(token)
