@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.11.0 (2026-11-19)
+
+### Features
+
+- **data**: Expose CarePlan in the data module (KOALA-8482)
+  ([#2020](https://github.com/canvas-medical/canvas-plugins/pull/2020),
+  [`7068f17`](https://github.com/canvas-medical/canvas-plugins/commit/7068f17ce2e682396da4a8c71959fd365b96f151))
+
+
 ## v1.10.0 (2026-11-19)
 
 ### Features
