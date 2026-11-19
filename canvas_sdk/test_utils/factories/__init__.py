@@ -3,6 +3,7 @@ from .authorization import AuthorizationDiagnosisCodeFactory, AuthorizationFacto
 from .calendar import CalendarFactory, EventFactory
 from .cancel_prescription import CancelPrescriptionFactory
 from .cancel_prescription_response import CancelPrescriptionResponseFactory
+from .care_plan import CarePlanCodingFactory, CarePlanFactory
 from .change_medication import ChangeMedicationFactory
 from .charge_description_master import ChargeDescriptionMasterFactory
 from .chart_section_review import ChartSectionReviewFactory
@@ -225,6 +226,8 @@ __all__ = (
     "CancelPrescriptionFactory",
     "CancelPrescriptionResponseFactory",
     "CanvasUserFactory",
+    "CarePlanCodingFactory",
+    "CarePlanFactory",
     "ChangeMedicationFactory",
     "ChargeDescriptionMasterFactory",
     "ChartSectionReviewFactory",
