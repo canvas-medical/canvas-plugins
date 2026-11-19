@@ -1320,6 +1320,10 @@
     "CancelPrescriptionResponse",
     "CancelPrescriptionStatus",
     "CanvasUser",
+    "CarePlan",
+    "CarePlanCoding",
+    "CarePlanIntent",
+    "CarePlanStatus",
     "CareTeamMembership",
     "CareTeamRole",
     "ChangeMedication",
@@ -1670,6 +1674,12 @@
   ],
   "canvas_sdk.v1.data.cancel_prescription_response": [
     "CancelPrescriptionResponse"
+  ],
+  "canvas_sdk.v1.data.care_plan": [
+    "CarePlan",
+    "CarePlanCoding",
+    "CarePlanIntent",
+    "CarePlanStatus"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
