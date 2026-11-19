@@ -10,6 +10,7 @@ from canvas_sdk.test_utils.factories import (
     ClaimCoverageEventFactory,
     ClaimFactory,
     ClaimQueueFactory,
+    ClaimResponseDetailFactory,
     ClaimResponseFactory,
     ClaimSnoozeEventFactory,
     ClaimStateChangeEventFactory,
@@ -21,7 +22,6 @@ from canvas_sdk.test_utils.factories import (
     ManualRemittanceAdviceFactory,
     NewRemittanceDocumentFactory,
     RemarkCodeFactory,
-    ResponseFactory,
 )
 from canvas_sdk.v1.data import (
     BaseRemittanceAdvice,
@@ -107,7 +107,7 @@ def test_claim_snooze_history_reads_from_the_claim() -> None:
 def test_claim_responses_and_their_messages_read_from_the_claim() -> None:
     """A claim's responses and each response's messages are reachable from the claim."""
     claim_response = ClaimResponseFactory.create(status=ClaimResponseStatus.REJECTED)
-    message = ResponseFactory.create(claim_response=claim_response, response_code="A7")
+    message = ClaimResponseDetailFactory.create(claim_response=claim_response, response_code="A7")
 
     claim = Claim.objects.get(claim_responses=claim_response)
     fetched = claim.claim_responses.get()

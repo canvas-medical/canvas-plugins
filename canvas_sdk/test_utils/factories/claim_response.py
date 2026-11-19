@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import factory
 
-from canvas_sdk.v1.data import ClaimResponse, ClaimResponseStatus, Response
+from canvas_sdk.v1.data import ClaimResponse, ClaimResponseDetail, ClaimResponseStatus
 
 
 class ClaimResponseFactory(factory.django.DjangoModelFactory[ClaimResponse]):
@@ -22,11 +22,11 @@ class ClaimResponseFactory(factory.django.DjangoModelFactory[ClaimResponse]):
     total_charge = Decimal("150.00")
 
 
-class ResponseFactory(factory.django.DjangoModelFactory[Response]):
-    """Factory for creating a Response."""
+class ClaimResponseDetailFactory(factory.django.DjangoModelFactory[ClaimResponseDetail]):
+    """Factory for creating a ClaimResponseDetail."""
 
     class Meta:
-        model = Response
+        model = ClaimResponseDetail
 
     claim_response = factory.SubFactory(ClaimResponseFactory)
     response_code = "A1"

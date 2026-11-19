@@ -33,7 +33,7 @@ from .claim_line_item import (
     ClaimLineItemFactory,
     ClaimLineItemModifierFactory,
 )
-from .claim_response import ClaimResponseFactory, ResponseFactory
+from .claim_response import ClaimResponseDetailFactory, ClaimResponseFactory
 from .clipboard import ClipboardFactory
 from .coding_gap_event import (
     AssessCodingGapEventFactory,
@@ -286,6 +286,7 @@ __all__ = (
     "ClaimLineItemModifierFactory",
     "ClaimPatientFactory",
     "ClaimProviderFactory",
+    "ClaimResponseDetailFactory",
     "ClaimResponseFactory",
     "ClaimSnoozeEventFactory",
     "ClaimStateChangeEventFactory",
@@ -312,7 +313,6 @@ __all__ = (
     "NewRemittanceDocumentFactory",
     "PatientPostingFactory",
     "RemarkCodeFactory",
-    "ResponseFactory",
     "ValidateCodingGapEventFactory",
     "CoverageFactory",
     "CustomCommandFactory",

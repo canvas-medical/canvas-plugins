@@ -1348,6 +1348,7 @@
     "ClaimProvider",
     "ClaimQueue",
     "ClaimResponse",
+    "ClaimResponseDetail",
     "ClaimResponseStatus",
     "ClaimSnoozeEvent",
     "ClaimSnoozeState",
@@ -1592,7 +1593,6 @@
     "RemovePastMedicalHistoryEvent",
     "Report",
     "ResolveConditionEvent",
-    "Response",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -1767,8 +1767,8 @@
   ],
   "canvas_sdk.v1.data.claim_response": [
     "ClaimResponse",
-    "ClaimResponseStatus",
-    "Response"
+    "ClaimResponseDetail",
+    "ClaimResponseStatus"
   ],
   "canvas_sdk.v1.data.clipboard": [
     "Clipboard"

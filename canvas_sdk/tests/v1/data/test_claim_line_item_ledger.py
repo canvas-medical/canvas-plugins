@@ -7,6 +7,9 @@ from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     ClaimFactory,
     ClaimLineItemFactory,
+    LineItemTransferFactory,
+    NewLineItemAdjustmentFactory,
+    NewLineItemPaymentFactory,
 )
 from canvas_sdk.v1.data import (
     BasePosting,
@@ -114,6 +117,31 @@ def test_exclude_removed_line_items_without_balances() -> None:
     kept = ClaimLineItem.objects.filter(claim=claim).exclude_removed_line_items_without_balances()
 
     assert set(kept) == {active, paid, adjusted, transferred}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "transaction_factory",
+    [NewLineItemPaymentFactory, NewLineItemAdjustmentFactory, LineItemTransferFactory],
+    ids=lambda f: f.__name__,
+)
+def test_exclude_removed_line_items_without_balances_counts_soft_deleted_transactions(
+    transaction_factory: Any,
+) -> None:
+    """A removed line item whose only transaction is soft-deleted still has a balance, as in home-app."""
+    removed = ClaimLineItemFactory.create(status=ClaimLineItemStatus.REMOVED)
+    transaction_factory.create(
+        claim_line_item=removed,
+        posting__claim=removed.claim,
+        amount=Decimal("25.00"),
+        deleted=True,
+    )
+
+    kept = ClaimLineItem.objects.filter(
+        claim=removed.claim
+    ).exclude_removed_line_items_without_balances()
+
+    assert list(kept) == [removed]
 
 
 @pytest.mark.django_db

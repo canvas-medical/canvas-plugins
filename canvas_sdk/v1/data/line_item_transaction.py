@@ -54,12 +54,8 @@ class RemarkCode(TimestampedModel):
     posting = models.ForeignKey(
         "v1.CoveragePosting", related_name="remark_codes", on_delete=models.PROTECT
     )
-    # The column is named billing_line_item_id but holds a ClaimLineItem id.
     claim_line_item = models.ForeignKey(
-        "v1.ClaimLineItem",
-        related_name="remark_codes",
-        on_delete=models.PROTECT,
-        db_column="billing_line_item_id",
+        "v1.ClaimLineItem", related_name="remark_codes", on_delete=models.PROTECT
     )
     remark_code = models.CharField(max_length=6)
 

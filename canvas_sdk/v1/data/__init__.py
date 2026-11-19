@@ -64,7 +64,7 @@ from .claim_event import (
     ClaimStateChangeEvent,
 )
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
-from .claim_response import ClaimResponse, ClaimResponseStatus, Response
+from .claim_response import ClaimResponse, ClaimResponseDetail, ClaimResponseStatus
 from .clipboard import Clipboard
 from .coding_gap_event import (
     AssessCodingGapEvent,
@@ -411,6 +411,7 @@ __all__ = __exports__ = (
     "ClaimProvider",
     "ClaimQueue",
     "ClaimResponse",
+    "ClaimResponseDetail",
     "ClaimResponseStatus",
     "ClaimSnoozeEvent",
     "ClaimSnoozeState",
@@ -657,7 +658,6 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "RemarkCode",
-    "Response",
     "ServiceProvider",
     "ServiceRequest",
     "ServiceRequestCategoryCoding",

@@ -52,7 +52,7 @@ class ClaimResponse(TimestampedModel):
     total_charge = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
 
-class Response(TimestampedModel):
+class ClaimResponseDetail(TimestampedModel):
     """One message within a claim response."""
 
     class Meta:
@@ -71,5 +71,5 @@ class Response(TimestampedModel):
 __exports__ = (
     "ClaimResponse",
     "ClaimResponseStatus",
-    "Response",
+    "ClaimResponseDetail",
 )

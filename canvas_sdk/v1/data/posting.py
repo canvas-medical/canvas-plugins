@@ -222,7 +222,7 @@ class BaseRemittanceAdviceClaim(Model):
     """M2M for BaseRemittanceAdvice -> Claims."""
 
     class Meta:
-        db_table = "canvas_sdk_data_quality_and_revenue_baseremittanceadvice_claims_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_remittanceadvice_claims_001"
 
     remittance = models.ForeignKey(
         BaseRemittanceAdvice, on_delete=models.CASCADE, db_column="baseremittanceadvice_id"
@@ -241,7 +241,7 @@ class ElectronicRemittanceAdvice(BaseRemittanceAdvice):
     """An electronic remit (ERA)."""
 
     class Meta:
-        db_table = "canvas_sdk_data_quality_and_revenue_electronicremittanceadvice_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_electronicremittance_001"
 
     check_type = models.CharField(max_length=25, null=True, blank=True)
     provider_name = models.CharField(max_length=255, null=True, blank=True)
