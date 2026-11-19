@@ -18,7 +18,7 @@ class AbstractLineItemTransaction(TimestampedModel):
     class Meta:
         abstract = True
 
-    objects = AbstractLineItemQuerySet.as_manager()
+    objects = BaseModelManager.from_queryset(AbstractLineItemQuerySet)()
 
     posting = models.ForeignKey(
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
@@ -35,6 +35,7 @@ class AbstractLineItemTransaction(TimestampedModel):
     entered_in_error = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
     )
+    deleted = models.BooleanField(default=False)
 
 
 class LineItemAllowed(AbstractLineItemTransaction):
@@ -42,11 +43,6 @@ class LineItemAllowed(AbstractLineItemTransaction):
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_lineitemallowed_001"
-
-    # Hides soft-deleted rows; the siblings' views expose no deleted column, so only this model does.
-    objects = BaseModelManager.from_queryset(AbstractLineItemQuerySet)()  # type: ignore[assignment,misc]
-
-    deleted = models.BooleanField(default=False)
 
 
 class RemarkCode(TimestampedModel):

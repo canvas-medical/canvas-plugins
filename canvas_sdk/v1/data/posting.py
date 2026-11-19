@@ -4,6 +4,7 @@ from typing import Self, cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    BaseModelManager,
     CommittableModelManager,
     CommittableQuerySet,
     IdentifiableModel,
@@ -29,7 +30,7 @@ class BasePosting(TimestampedModel):
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_baseposting_001"
 
-    objects = PostingQuerySet.as_manager()
+    objects = BaseModelManager.from_queryset(PostingQuerySet)()
 
     corrected_posting = models.ForeignKey(
         "v1.BasePosting", related_name="correction_postings", on_delete=models.PROTECT, null=True
@@ -45,6 +46,7 @@ class BasePosting(TimestampedModel):
     entered_in_error = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
     )
+    deleted = models.BooleanField(default=False)
 
     @property
     def paid_amount(self) -> Decimal:
@@ -158,9 +160,12 @@ class AbstractBulkPosting(TimestampedModel, IdentifiableModel):
     class Meta:
         abstract = True
 
+    objects = BaseModelManager()
+
     payment_collection = models.OneToOneField(
         "v1.PaymentCollection", related_name="%(class)s", on_delete=models.PROTECT
     )
+    deleted = models.BooleanField(default=False)
 
     total_paid = models.DecimalField(max_digits=8, decimal_places=2)
 

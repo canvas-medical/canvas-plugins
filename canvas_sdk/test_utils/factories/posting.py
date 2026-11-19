@@ -5,10 +5,12 @@ import factory
 from canvas_sdk.v1.data import (
     BaseRemittanceAdvice,
     BaseRemittanceAdviceClaim,
+    BulkPatientPosting,
     CoveragePosting,
     ElectronicRemittanceAdvice,
     ManualRemittanceAdvice,
     NewRemittanceDocument,
+    PatientPosting,
 )
 
 
@@ -81,3 +83,30 @@ class CoveragePostingFactory(factory.django.DjangoModelFactory[CoveragePosting])
     crossover_id = ""
     payer_icn = factory.Sequence(lambda n: f"ICN{n:06d}")
     position_in_era = 1
+
+
+class BulkPatientPostingFactory(factory.django.DjangoModelFactory[BulkPatientPosting]):
+    """Factory for creating a BulkPatientPosting."""
+
+    class Meta:
+        model = BulkPatientPosting
+
+    payment_collection = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.PaymentCollectionFactory"
+    )
+    payer = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
+    total_paid = Decimal("20.00")
+
+
+class PatientPostingFactory(factory.django.DjangoModelFactory[PatientPosting]):
+    """Factory for creating a PatientPosting."""
+
+    class Meta:
+        model = PatientPosting
+
+    claim = factory.SubFactory("canvas_sdk.test_utils.factories.ClaimFactory")
+    claim_patient = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.ClaimPatientFactory",
+        claim=factory.SelfAttribute("..claim"),
+    )
+    patient_payment = factory.SubFactory(BulkPatientPostingFactory)

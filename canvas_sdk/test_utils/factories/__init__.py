@@ -14,6 +14,7 @@ from .claim import (
     ClaimFactory,
     ClaimLabelFactory,
     ClaimMetadataFactory,
+    ClaimPatientFactory,
     ClaimProviderFactory,
     ClaimQueueFactory,
     ClaimSubmissionFactory,
@@ -122,7 +123,13 @@ from .letter import (
     LetterLanguageTemplateFactory,
     LetterTemplateFactory,
 )
-from .line_item_transaction import LineItemAllowedFactory, RemarkCodeFactory
+from .line_item_transaction import (
+    LineItemAllowedFactory,
+    LineItemTransferFactory,
+    NewLineItemAdjustmentFactory,
+    NewLineItemPaymentFactory,
+    RemarkCodeFactory,
+)
 from .medication import MedicationFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
@@ -172,10 +179,12 @@ from .portal_invitation import PortalInvitationFactory
 from .posting import (
     BaseRemittanceAdviceClaimFactory,
     BaseRemittanceAdviceFactory,
+    BulkPatientPostingFactory,
     CoveragePostingFactory,
     ElectronicRemittanceAdviceFactory,
     ManualRemittanceAdviceFactory,
     NewRemittanceDocumentFactory,
+    PatientPostingFactory,
 )
 from .practicelocation import (
     PracticeLocationAddressFactory,
@@ -253,6 +262,7 @@ __all__ = (
     "BaseRemittanceAdviceClaimFactory",
     "BaseRemittanceAdviceFactory",
     "BillingLineItemFactory",
+    "BulkPatientPostingFactory",
     "CalendarFactory",
     "CancelPrescriptionFactory",
     "CancelPrescriptionResponseFactory",
@@ -274,6 +284,7 @@ __all__ = (
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
     "ClaimLineItemModifierFactory",
+    "ClaimPatientFactory",
     "ClaimProviderFactory",
     "ClaimResponseFactory",
     "ClaimSnoozeEventFactory",
@@ -294,8 +305,12 @@ __all__ = (
     "InvoiceClaimFactory",
     "InvoiceFactory",
     "LineItemAllowedFactory",
+    "LineItemTransferFactory",
     "ManualRemittanceAdviceFactory",
+    "NewLineItemAdjustmentFactory",
+    "NewLineItemPaymentFactory",
     "NewRemittanceDocumentFactory",
+    "PatientPostingFactory",
     "RemarkCodeFactory",
     "ResponseFactory",
     "ValidateCodingGapEventFactory",
