@@ -20,6 +20,7 @@ class ProviderMenuConfiguration(_BaseEffect):
         CAMPAIGNS = "campaigns"
         DATA_INTEGRATION = "data_integration"
         QUESTIONNAIRE_BUILDER = "questionnaire_builder"
+        IDENTITY_VERIFICATION = "identity_verification"
         SETTINGS = "settings"
         MULTI_FACTOR_AUTHENTICATION = "multi_factor_authentication"
         CHANGELOG = "changelog"
