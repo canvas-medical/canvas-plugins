@@ -1,6 +1,11 @@
 from .allergy_intolerance import AllergyIntoleranceFactory, AllergyIntoleranceReactionFactory
 from .appointment import AppointmentFactory
 from .assessment import AssessmentFactory
+from .attached_document import (
+    LetterDocumentFactory,
+    PatientChartDocumentFactory,
+    ReferralDocumentFactory,
+)
 from .authorization import AuthorizationDiagnosisCodeFactory, AuthorizationFactory
 from .billing import BillingLineItemFactory
 from .calendar import CalendarFactory, EventFactory
@@ -59,6 +64,7 @@ from .diagnostic_report import (
 from .diagnostic_view import DiagnosticViewElementFactory, DiagnosticViewFactory
 from .django_content_type import ContentTypeFactory
 from .dme import DmeOrderActionEventFactory, DmeOrderFactory, DmeProductFactory
+from .document_annotation import DocumentAnnotationFactory
 from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .document_type import DocumentTypeFactory
@@ -340,7 +346,11 @@ __all__ = (
     "DmeOrderFactory",
     "DmeProductFactory",
     "DocumentCodingFactory",
+    "DocumentAnnotationFactory",
     "DocumentHistoryEventFactory",
+    "LetterDocumentFactory",
+    "PatientChartDocumentFactory",
+    "ReferralDocumentFactory",
     "DocumentReviewDelegationFactory",
     "DocumentTypeFactory",
     "EducationalMaterialFactory",
