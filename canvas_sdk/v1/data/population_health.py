@@ -60,7 +60,9 @@ class Intervention(TimestampedModel):
     campaign = models.ForeignKey(
         "v1.Campaign", on_delete=models.DO_NOTHING, related_name="interventions"
     )
-    patients = models.ManyToManyField("v1.Patient", through="v1.InterventionPatient")
+    patients = models.ManyToManyField(
+        "v1.Patient", through="v1.InterventionPatient", related_name="interventions"
+    )
     template = models.ForeignKey(
         "v1.LetterTemplate", on_delete=models.DO_NOTHING, related_name="interventions"
     )
