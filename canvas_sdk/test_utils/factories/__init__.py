@@ -208,7 +208,18 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .provenance import ProvenanceFactory
-from .questionnaire import InterviewFactory, QuestionFactory
+from .questionnaire import (
+    InterviewFactory,
+    InterviewSendEventFactory,
+    InterviewTemplateFactory,
+    InterviewTemplateQuestionnaireMapFactory,
+    InterviewVisualFindingFactory,
+    QuestionFactory,
+    QuestionnaireFactory,
+    QuestionnaireItemGroupFactory,
+    QuestionnaireQuestionMapFactory,
+    QuestionnaireResultFactory,
+)
 from .reason_for_visit import (
     ReasonForVisitCodingFactory,
     ReasonForVisitFactory,
@@ -451,7 +462,16 @@ __all__ = (
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
     "ProvenanceFactory",
+    "InterviewFactory",
+    "InterviewSendEventFactory",
+    "InterviewTemplateFactory",
+    "InterviewTemplateQuestionnaireMapFactory",
+    "InterviewVisualFindingFactory",
     "QuestionFactory",
+    "QuestionnaireFactory",
+    "QuestionnaireItemGroupFactory",
+    "QuestionnaireQuestionMapFactory",
+    "QuestionnaireResultFactory",
     "SnapshotFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
