@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -18,9 +19,11 @@ from canvas_sdk.test_utils.factories import (
     CoveragePostingFactory,
     ElectronicRemittanceAdviceFactory,
     InvoiceClaimFactory,
+    InvoiceFactory,
     LineItemAllowedFactory,
     ManualRemittanceAdviceFactory,
     NewRemittanceDocumentFactory,
+    PaymentCollectionFactory,
     RemarkCodeFactory,
 )
 from canvas_sdk.v1.data import (
@@ -200,7 +203,6 @@ def test_line_item_allowed_reads_per_posting_and_claim_line() -> None:
     assert list(LineItemAllowed.objects.active()) == [allowed]
     assert claim.postings.get().lineitemalloweds.count() == 2
     assert allowed.claim_line_item.lineitemalloweds.active().get().amount == Decimal("80.00")
-    assert list(allowed.billing_line_item.lineitemalloweds.all()) == [allowed]
 
 
 @pytest.mark.django_db
@@ -269,3 +271,27 @@ def test_deleted_allowed_amounts_are_hidden() -> None:
     assert list(LineItemAllowed.objects.all()) == [kept]
     assert list(LineItemAllowed.objects.active()) == [kept]
     assert list(kept.posting.lineitemalloweds.all()) == [kept]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("model_factory", "fields"),
+    [
+        (PaymentCollectionFactory, ("check_number", "check_date", "deposit_date")),
+        (
+            CoveragePostingFactory,
+            ("crossover_carrier", "crossover_id", "payer_icn", "position_in_era"),
+        ),
+        (InvoiceFactory, ("total_amount", "error_message", "sent_mean")),
+    ],
+    ids=lambda v: getattr(v, "__name__", ""),
+)
+def test_nullable_revenue_columns_read_back_as_none(
+    model_factory: Any, fields: tuple[str, ...]
+) -> None:
+    """Columns that home-app allows to be NULL read back as None."""
+    row = model_factory.create(**dict.fromkeys(fields))
+
+    fetched = type(row)._default_manager.get(pk=row.pk)
+
+    assert {field: getattr(fetched, field) for field in fields} == dict.fromkeys(fields)

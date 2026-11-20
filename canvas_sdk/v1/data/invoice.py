@@ -45,15 +45,15 @@ class Invoice(TimestampedModel):
     )
     recipient = models.ForeignKey("v1.Patient", on_delete=models.CASCADE, related_name="invoices")
     recipient_type = models.CharField(max_length=10, choices=InvoiceRecipients.choices)
-    total_amount = models.DecimalField(max_digits=8, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     invoice_pdf = models.FileField(null=True)
     status = models.CharField(max_length=10, choices=InvoiceStatus.choices)
     workflow = models.CharField(max_length=10, choices=InvoiceWorkflow.choices)
     claims = models.ManyToManyField(
         "v1.Claim", related_name="full_invoices", through="v1.InvoiceClaim"
     )
-    error_message = models.TextField()
-    sent_mean = models.CharField(max_length=6, choices=InvoiceSentMeans.choices)
+    error_message = models.TextField(null=True, blank=True)
+    sent_mean = models.CharField(max_length=6, choices=InvoiceSentMeans.choices, null=True)
 
     @property
     def invoice_pdf_url(self) -> str | None:

@@ -79,8 +79,6 @@ class CoveragePostingFactory(factory.django.DjangoModelFactory[CoveragePosting])
         claim=factory.SelfAttribute("..claim"),
     )
     remittance = factory.SubFactory(ElectronicRemittanceAdviceFactory)
-    crossover_carrier = ""
-    crossover_id = ""
     payer_icn = factory.Sequence(lambda n: f"ICN{n:06d}")
     position_in_era = 1
 

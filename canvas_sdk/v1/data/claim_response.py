@@ -46,9 +46,8 @@ class ClaimResponse(TimestampedModel):
     sender_icn = models.CharField(max_length=255, blank=True, null=True)
     sender_name = models.CharField(max_length=255, blank=True, null=True)
     sender_id = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(
-        max_length=5, choices=ClaimResponseStatus.choices, blank=True, null=True
-    )
+    # Values come straight from the clearinghouse; ClaimResponseStatus names the two Canvas acts on.
+    status = models.CharField(max_length=5, blank=True, null=True)
     total_charge = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
 

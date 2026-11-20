@@ -106,10 +106,10 @@ class CoveragePosting(BasePosting):
         "v1.ClaimCoverage", related_name="postings", on_delete=models.PROTECT
     )
 
-    crossover_carrier = models.CharField(max_length=255)
-    crossover_id = models.CharField(max_length=255)
-    payer_icn = models.CharField(max_length=255)
-    position_in_era = models.PositiveIntegerField()
+    crossover_carrier = models.CharField(max_length=255, null=True, blank=True)
+    crossover_id = models.CharField(max_length=255, null=True, blank=True)
+    payer_icn = models.CharField(max_length=255, null=True, blank=True)
+    position_in_era = models.PositiveIntegerField(null=True, blank=True)
 
 
 class PatientPosting(BasePosting):

@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 
 from canvas_sdk.test_utils.factories import (
+    BillingLineItemFactory,
     CanvasUserFactory,
     ClaimFactory,
     ClaimLineItemFactory,
@@ -11,55 +12,26 @@ from canvas_sdk.test_utils.factories import (
     NewLineItemAdjustmentFactory,
     NewLineItemPaymentFactory,
 )
-from canvas_sdk.v1.data import (
-    BasePosting,
-    BillingLineItem,
-    ClaimLineItem,
-    LineItemTransfer,
-    NewLineItemAdjustment,
-    NewLineItemPayment,
-)
+from canvas_sdk.v1.data import BillingLineItem, ClaimLineItem, NewLineItemPayment
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItemStatus
 
-LineItemTransaction = NewLineItemPayment | NewLineItemAdjustment | LineItemTransfer
-
-_MODEL_FIELDS: dict[type[LineItemTransaction], dict[str, Any]] = {
-    NewLineItemPayment: {"charged": Decimal("100.00")},
-    NewLineItemAdjustment: {"deviated_from_posting_ruleset": False, "write_off": False},
-    LineItemTransfer: {"deviated_from_posting_ruleset": False},
-}
-
-
-def _charge(**kwargs: Any) -> BillingLineItem:
-    return BillingLineItem.objects.create(charge=Decimal("100.00"), units=1, command_id=1, **kwargs)
-
-
-def _post(
-    model: type[LineItemTransaction], line_item: ClaimLineItem, amount: str
-) -> LineItemTransaction:
-    # Like the view, both columns get the claim line id, so the test DB needs a charge with that id.
-    if not BillingLineItem.objects.filter(dbid=line_item.dbid).exists():
-        _charge(dbid=line_item.dbid)
-    return model.objects.create(
-        posting=BasePosting.objects.create(claim=line_item.claim),
-        billing_line_item_id=line_item.dbid,
-        claim_line_item=line_item,
-        amount=Decimal(amount),
-        **_MODEL_FIELDS[model],
-    )
+_TRANSACTION_FACTORIES = [
+    NewLineItemPaymentFactory,
+    NewLineItemAdjustmentFactory,
+    LineItemTransferFactory,
+]
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("model", list(_MODEL_FIELDS), ids=lambda model: model.__name__)
-def test_claim_line_item_is_the_line_the_amount_was_posted_to(
-    model: type[LineItemTransaction],
-) -> None:
+@pytest.mark.parametrize("transaction_factory", _TRANSACTION_FACTORIES, ids=lambda f: f.__name__)
+def test_claim_line_item_is_the_line_the_amount_was_posted_to(transaction_factory: Any) -> None:
     """claim_line_item is the claim line posted to; billing_line_item is unchanged."""
-    charge = _charge(dbid=2002, cpt="99213")
+    charge = BillingLineItemFactory.create(dbid=2002, cpt="99213")
     line_item = ClaimLineItemFactory.create(dbid=1001, billing_line_item=charge)
-    unrelated = _charge(dbid=1001, cpt="NOSHOW")
+    unrelated = BillingLineItemFactory.create(dbid=1001, cpt="NOSHOW")
 
-    transaction = model.objects.get(dbid=_post(model, line_item, "10.00").dbid)
+    created = transaction_factory.create(claim_line_item=line_item)
+    transaction = transaction_factory._meta.model.objects.get(dbid=created.dbid)
 
     assert transaction.claim_line_item == line_item
     assert transaction.claim_line_item.claim == transaction.posting.claim
@@ -71,7 +43,7 @@ def test_claim_line_item_is_the_line_the_amount_was_posted_to(
 def test_claim_line_item_supports_queryset_lookups() -> None:
     """claim_line_item works in filter, select_related, prefetch_related and values."""
     line_item = ClaimLineItemFactory.create(proc_code="99213")
-    payment = _post(NewLineItemPayment, line_item, "10.00")
+    payment = NewLineItemPaymentFactory.create(claim_line_item=line_item)
     payments = NewLineItemPayment.objects.filter(claim_line_item__claim=line_item.claim)
 
     assert list(NewLineItemPayment.objects.filter(claim_line_item=line_item)) == [payment]
@@ -84,9 +56,9 @@ def test_claim_line_item_supports_queryset_lookups() -> None:
 def test_claim_line_item_exposes_its_line_item_transactions() -> None:
     """ClaimLineItem gets the reverse relations, and BillingLineItem keeps its own."""
     line_item = ClaimLineItemFactory.create()
-    payment = _post(NewLineItemPayment, line_item, "10.00")
-    adjustment = _post(NewLineItemAdjustment, line_item, "20.00")
-    transfer = _post(LineItemTransfer, line_item, "30.00")
+    payment = NewLineItemPaymentFactory.create(claim_line_item=line_item)
+    adjustment = NewLineItemAdjustmentFactory.create(claim_line_item=line_item)
+    transfer = LineItemTransferFactory.create(claim_line_item=line_item)
 
     assert list(line_item.newlineitempayments.all()) == [payment]
     assert list(line_item.newlineitemadjustments.all()) == [adjustment]
@@ -108,11 +80,11 @@ def test_exclude_removed_line_items_without_balances() -> None:
         ClaimLineItemFactory.create(claim=claim, status=ClaimLineItemStatus.REMOVED)
         for _ in range(5)
     )
-    _post(NewLineItemPayment, paid, "10.00")
-    _post(NewLineItemAdjustment, adjusted, "20.00")
-    _post(LineItemTransfer, transferred, "30.00")
-    _post(NewLineItemPayment, netted_to_zero, "15.00")
-    _post(NewLineItemPayment, netted_to_zero, "-15.00")
+    NewLineItemPaymentFactory.create(claim_line_item=paid, amount=Decimal("10.00"))
+    NewLineItemAdjustmentFactory.create(claim_line_item=adjusted, amount=Decimal("20.00"))
+    LineItemTransferFactory.create(claim_line_item=transferred, amount=Decimal("30.00"))
+    NewLineItemPaymentFactory.create(claim_line_item=netted_to_zero, amount=Decimal("15.00"))
+    NewLineItemPaymentFactory.create(claim_line_item=netted_to_zero, amount=Decimal("-15.00"))
 
     kept = ClaimLineItem.objects.filter(claim=claim).exclude_removed_line_items_without_balances()
 
@@ -120,22 +92,13 @@ def test_exclude_removed_line_items_without_balances() -> None:
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "transaction_factory",
-    [NewLineItemPaymentFactory, NewLineItemAdjustmentFactory, LineItemTransferFactory],
-    ids=lambda f: f.__name__,
-)
+@pytest.mark.parametrize("transaction_factory", _TRANSACTION_FACTORIES, ids=lambda f: f.__name__)
 def test_exclude_removed_line_items_without_balances_counts_soft_deleted_transactions(
     transaction_factory: Any,
 ) -> None:
     """A removed line item whose only transaction is soft-deleted still has a balance, as in home-app."""
     removed = ClaimLineItemFactory.create(status=ClaimLineItemStatus.REMOVED)
-    transaction_factory.create(
-        claim_line_item=removed,
-        posting__claim=removed.claim,
-        amount=Decimal("25.00"),
-        deleted=True,
-    )
+    transaction_factory.create(claim_line_item=removed, amount=Decimal("25.00"), deleted=True)
 
     kept = ClaimLineItem.objects.filter(
         claim=removed.claim
@@ -148,15 +111,15 @@ def test_exclude_removed_line_items_without_balances_counts_soft_deleted_transac
 def test_exclude_removed_line_items_without_balances_sums_each_transaction_type() -> None:
     """Each balance annotation totals its own type, even with several types on one line."""
     line_item = ClaimLineItemFactory.create(status=ClaimLineItemStatus.REMOVED)
-    _post(NewLineItemPayment, line_item, "41.00")
-    _post(NewLineItemPayment, line_item, "21.00")
-    _post(NewLineItemAdjustment, line_item, "38.00")
+    NewLineItemPaymentFactory.create(claim_line_item=line_item, amount=Decimal("41.00"))
+    NewLineItemPaymentFactory.create(claim_line_item=line_item, amount=Decimal("21.00"))
+    NewLineItemAdjustmentFactory.create(claim_line_item=line_item, amount=Decimal("38.00"))
     other_line_item = ClaimLineItemFactory.create(claim=line_item.claim)
-    _post(NewLineItemPayment, other_line_item, "10.00")
-    _post(NewLineItemAdjustment, other_line_item, "5.00")
-    _post(NewLineItemAdjustment, other_line_item, "5.00")
-    _post(LineItemTransfer, other_line_item, "3.00")
-    _post(LineItemTransfer, other_line_item, "4.00")
+    NewLineItemPaymentFactory.create(claim_line_item=other_line_item, amount=Decimal("10.00"))
+    NewLineItemAdjustmentFactory.create(claim_line_item=other_line_item, amount=Decimal("5.00"))
+    NewLineItemAdjustmentFactory.create(claim_line_item=other_line_item, amount=Decimal("5.00"))
+    LineItemTransferFactory.create(claim_line_item=other_line_item, amount=Decimal("3.00"))
+    LineItemTransferFactory.create(claim_line_item=other_line_item, amount=Decimal("4.00"))
 
     kept = {
         item.dbid: (
@@ -184,10 +147,10 @@ def test_exclude_removed_line_item_without_active_posting() -> None:
         ClaimLineItemFactory.create(claim=claim, status=ClaimLineItemStatus.REMOVED)
         for _ in range(3)
     )
-    _post(NewLineItemPayment, paid, "10.00")
-    voided_payment = _post(NewLineItemPayment, voided, "10.00")
-    voided_payment.entered_in_error = CanvasUserFactory.create()
-    voided_payment.save()
+    NewLineItemPaymentFactory.create(claim_line_item=paid)
+    NewLineItemPaymentFactory.create(
+        claim_line_item=voided, entered_in_error=CanvasUserFactory.create()
+    )
 
     kept = ClaimLineItem.objects.filter(
         claim=claim

@@ -18,6 +18,7 @@ def _total_posted(
     model: type[NewLineItemPayment | NewLineItemAdjustment | LineItemTransfer],
 ) -> Coalesce:
     # A subquery per type: summing all three over joins counts each amount once per row of the others.
+    # _base_manager keeps soft-deleted rows, as home-app's join-based Sum does.
     return Coalesce(
         Subquery(
             model._base_manager.filter(claim_line_item=OuterRef("pk"))
