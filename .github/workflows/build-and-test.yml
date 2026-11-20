@@ -46,7 +46,7 @@ jobs:
           mv .coverage coverage-py${{ matrix.version }}.data
 
       - name: Upload coverage data artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-data-py${{ matrix.version }}
           path: coverage-py${{ matrix.version }}.data
@@ -344,7 +344,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-plugin-${{ matrix.plugin }}
           path: example-plugins/${{ matrix.plugin }}/coverage.xml
