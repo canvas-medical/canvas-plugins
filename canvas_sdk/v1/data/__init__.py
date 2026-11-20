@@ -55,7 +55,16 @@ from .claim import (
 )
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
+from .claim_event import (
+    ClaimAssigneeEvent,
+    ClaimCoverageEvent,
+    ClaimCoverageEventType,
+    ClaimSnoozeEvent,
+    ClaimSnoozeState,
+    ClaimStateChangeEvent,
+)
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
+from .claim_response import ClaimResponse, ClaimResponseDetail, ClaimResponseStatus
 from .clipboard import Clipboard
 from .coding_gap_event import (
     AssessCodingGapEvent,
@@ -63,6 +72,7 @@ from .coding_gap_event import (
     DeferCodingGapEvent,
     ValidateCodingGapEvent,
 )
+from .collection_status_history import CollectionStatus, CollectionStatusHistory
 from .command import Command, CommandMetadata
 from .command_type_setting import CommandTypeSetting
 from .compound_medication import CompoundMedication
@@ -140,7 +150,7 @@ from .integration_task import (
     IntegrationTaskReview,
     IntegrationTaskStatus,
 )
-from .invoice import Invoice
+from .invoice import Invoice, InvoiceClaim
 from .lab import (
     FieldType,
     LabOrder,
@@ -175,9 +185,11 @@ from .letter import (
     LetterTemplateType,
 )
 from .line_item_transaction import (
+    LineItemAllowed,
     LineItemTransfer,
     NewLineItemAdjustment,
     NewLineItemPayment,
+    RemarkCode,
 )
 from .medication import Medication, MedicationCoding
 from .medication_history import (
@@ -246,8 +258,12 @@ from .portal_invitation import (
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
+    BaseRemittanceAdviceClaim,
     BulkPatientPosting,
     CoveragePosting,
+    ElectronicRemittanceAdvice,
+    ManualRemittanceAdvice,
+    NewRemittanceDocument,
     PatientPosting,
 )
 from .practicelocation import (
@@ -356,6 +372,7 @@ __all__ = __exports__ = (
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BillingLineItem",
     "BillingLineItemModifier",
     "BusinessLine",
@@ -377,10 +394,13 @@ __all__ = __exports__ = (
     "ChartSectionReviewSection",
     "Claim",
     "ClaimBannerAlert",
+    "ClaimAssigneeEvent",
     "BannerAlertStatus",
     "BannerAlertIntent",
     "ClaimComment",
     "ClaimCoverage",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
@@ -390,9 +410,17 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
     "Clipboard",
+    "CollectionStatus",
+    "CollectionStatusHistory",
     "Command",
     "CommandMetadata",
     "CommandTypeSetting",
@@ -436,6 +464,7 @@ __all__ = __exports__ = (
     "DocumentReviewDelegation",
     "DocumentType",
     "EducationalMaterial",
+    "ElectronicRemittanceAdvice",
     "EligibilityRequest",
     "EligibilityResponse",
     "EligibilityResponseStatus",
@@ -488,6 +517,7 @@ __all__ = __exports__ = (
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
     "Invoice",
+    "InvoiceClaim",
     "LabOrder",
     "LabOrderActionEvent",
     "LabOrderReason",
@@ -517,8 +547,10 @@ __all__ = __exports__ = (
     "LetterTemplate",
     "LetterTemplateType",
     "LineItemTransfer",
+    "LineItemAllowed",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
+    "ManualRemittanceAdvice",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -532,6 +564,7 @@ __all__ = __exports__ = (
     "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
+    "NewRemittanceDocument",
     "Note",
     "NoteActionEvent",
     "NoteMetadata",
@@ -624,6 +657,7 @@ __all__ = __exports__ = (
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "RemarkCode",
     "ServiceProvider",
     "ServiceRequest",
     "ServiceRequestCategoryCoding",

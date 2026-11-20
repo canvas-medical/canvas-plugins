@@ -6,6 +6,7 @@ from canvas_sdk.v1.data import (
     ClaimCoverage,
     ClaimLabel,
     ClaimMetadata,
+    ClaimPatient,
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
@@ -42,6 +43,18 @@ class ClaimFactory(factory.django.DjangoModelFactory[Claim]):
 
     note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     current_queue = factory.SubFactory(ClaimQueueFactory)
+
+
+class ClaimPatientFactory(factory.django.DjangoModelFactory[ClaimPatient]):
+    """Factory for creating a ClaimPatient."""
+
+    class Meta:
+        model = ClaimPatient
+
+    claim = factory.SubFactory(ClaimFactory)
+    first_name = "Jane"
+    last_name = "Doe"
+    dob = "1980-01-01"
 
 
 class ClaimCommentFactory(factory.django.DjangoModelFactory[ClaimComment]):

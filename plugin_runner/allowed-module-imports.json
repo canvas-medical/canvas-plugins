@@ -1311,6 +1311,7 @@
     "BannerAlertStatus",
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BillingLineItem",
     "BillingLineItemModifier",
     "BulkPatientPosting",
@@ -1331,9 +1332,12 @@
     "ChartSectionReview",
     "ChartSectionReviewSection",
     "Claim",
+    "ClaimAssigneeEvent",
     "ClaimBannerAlert",
     "ClaimComment",
     "ClaimCoverage",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
@@ -1343,9 +1347,17 @@
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
     "Clipboard",
+    "CollectionStatus",
+    "CollectionStatusHistory",
     "Command",
     "CommandMetadata",
     "CommandTypeSetting",
@@ -1389,6 +1401,7 @@
     "DocumentReviewDelegation",
     "DocumentType",
     "EducationalMaterial",
+    "ElectronicRemittanceAdvice",
     "EligibilityRequest",
     "EligibilityResponse",
     "EligibilityResponseStatus",
@@ -1441,6 +1454,7 @@
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
     "Invoice",
+    "InvoiceClaim",
     "LabOrder",
     "LabOrderActionEvent",
     "LabOrderReason",
@@ -1469,9 +1483,11 @@
     "LetterLanguageTemplate",
     "LetterTemplate",
     "LetterTemplateType",
+    "LineItemAllowed",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
+    "ManualRemittanceAdvice",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -1486,6 +1502,7 @@
     "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
+    "NewRemittanceDocument",
     "Note",
     "NoteActionEvent",
     "NoteMetadata",
@@ -1571,6 +1588,7 @@
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemarkCode",
     "RemoveAllergyEvent",
     "RemovePastMedicalHistoryEvent",
     "Report",
@@ -1731,6 +1749,14 @@
   "canvas_sdk.v1.data.claim_diagnosis_code": [
     "ClaimDiagnosisCode"
   ],
+  "canvas_sdk.v1.data.claim_event": [
+    "ClaimAssigneeEvent",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent"
+  ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
     "ClaimLineItemDiagnosisCode",
@@ -1738,6 +1764,11 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.claim_response": [
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus"
   ],
   "canvas_sdk.v1.data.clipboard": [
     "Clipboard"
@@ -1747,6 +1778,10 @@
     "CreateCodingGapEvent",
     "DeferCodingGapEvent",
     "ValidateCodingGapEvent"
+  ],
+  "canvas_sdk.v1.data.collection_status_history": [
+    "CollectionStatus",
+    "CollectionStatusHistory"
   ],
   "canvas_sdk.v1.data.command": [
     "Command",
@@ -1943,6 +1978,7 @@
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
+    "InvoiceClaim",
     "InvoiceRecipients",
     "InvoiceSentMeans",
     "InvoiceStatus",
@@ -1985,9 +2021,11 @@
     "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
+    "LineItemAllowed",
     "LineItemTransfer",
     "NewLineItemAdjustment",
-    "NewLineItemPayment"
+    "NewLineItemPayment",
+    "RemarkCode"
   ],
   "canvas_sdk.v1.data.medication": [
     "Medication",
@@ -2101,8 +2139,12 @@
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BulkPatientPosting",
     "CoveragePosting",
+    "ElectronicRemittanceAdvice",
+    "ManualRemittanceAdvice",
+    "NewRemittanceDocument",
     "PatientPosting"
   ],
   "canvas_sdk.v1.data.practicelocation": [

@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import QuerySet
 
-from canvas_sdk.v1.data.base import TimestampedModel
+from canvas_sdk.v1.data.base import BaseModelManager, TimestampedModel
 
 
 class AbstractLineItemQuerySet(models.QuerySet):
@@ -18,7 +18,7 @@ class AbstractLineItemTransaction(TimestampedModel):
     class Meta:
         abstract = True
 
-    objects = AbstractLineItemQuerySet.as_manager()
+    objects = BaseModelManager.from_queryset(AbstractLineItemQuerySet)()
 
     posting = models.ForeignKey(
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
@@ -35,6 +35,29 @@ class AbstractLineItemTransaction(TimestampedModel):
     entered_in_error = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
     )
+    deleted = models.BooleanField(default=False)
+
+
+class LineItemAllowed(AbstractLineItemTransaction):
+    """Subclass for the amount a payer allowed on a billing line item."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_lineitemallowed_001"
+
+
+class RemarkCode(TimestampedModel):
+    """An 835 remark code a payer sent for a claim line on a coverage posting."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_remarkcode_001"
+
+    posting = models.ForeignKey(
+        "v1.CoveragePosting", related_name="remark_codes", on_delete=models.PROTECT
+    )
+    claim_line_item = models.ForeignKey(
+        "v1.ClaimLineItem", related_name="remark_codes", on_delete=models.PROTECT
+    )
+    remark_code = models.CharField(max_length=6)
 
 
 class NewLineItemPayment(AbstractLineItemTransaction):
@@ -80,6 +103,8 @@ class LineItemTransfer(AbstractLineItemAdjustment):
 
 
 __exports__ = (
+    "LineItemAllowed",
+    "RemarkCode",
     "NewLineItemPayment",
     "NewLineItemAdjustment",
     "LineItemTransfer",

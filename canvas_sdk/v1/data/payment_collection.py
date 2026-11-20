@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import BaseModelManager, IdentifiableModel, TimestampedModel
 
 
 class PostingMethods(models.TextChoices):
@@ -18,12 +18,16 @@ class PaymentCollection(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_paymentcollection_001"
 
+    objects = BaseModelManager()
+
+    deleted = models.BooleanField(default=False)
+
     total_collected = models.DecimalField(max_digits=8, decimal_places=2)
     method = models.CharField(choices=PostingMethods.choices, max_length=10)
 
-    check_number = models.CharField(max_length=250)
-    check_date = models.DateField()
-    deposit_date = models.DateField()
+    check_number = models.CharField(max_length=250, null=True, blank=True)
+    check_date = models.DateField(null=True)
+    deposit_date = models.DateField(null=True)
 
     description = models.TextField()
 
