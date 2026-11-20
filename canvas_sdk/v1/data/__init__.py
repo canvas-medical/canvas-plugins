@@ -17,6 +17,7 @@ from .appointment import (
     AppointmentExternalIdentifier,
     AppointmentLabel,
     AppointmentMetadata,
+    AppointmentScheduledTogether,
 )
 from .assessment import Assessment
 from .authorization import Authorization, AuthorizationDiagnosisCode
@@ -73,7 +74,7 @@ from .coding_gap_event import (
     ValidateCodingGapEvent,
 )
 from .collection_status_history import CollectionStatus, CollectionStatusHistory
-from .command import Command, CommandMetadata
+from .command import Command, CommandEditedBy, CommandMetadata
 from .command_type_setting import CommandTypeSetting
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCategoryCoding, ConditionCoding
@@ -84,7 +85,7 @@ from .custom_attribute import (
     CustomAttributeAwareManager,
 )
 from .custom_command import CustomCommand
-from .detected_issue import DetectedIssue, DetectedIssueEvidence
+from .detected_issue import DetectedIssue, DetectedIssueEvidence, DetectedIssueMitigation
 from .device import Device, DeviceCoding
 from .diagnostic_report import (
     DiagnosticReport,
@@ -92,10 +93,15 @@ from .diagnostic_report import (
     DiagnosticReportCodeCoding,
     DiagnosticReportStatus,
 )
-from .diagnostic_view import DiagnosticView
+from .diagnostic_view import (
+    DiagnosticView,
+    DiagnosticViewElement,
+    DiagnosticViewElementCodingSystem,
+    DiagnosticViewElementDataType,
+)
 from .discount import Discount
 from .django_content_type import ContentType
-from .dme import DmeOrder, DmeProduct, DmeProductCodeSystem
+from .dme import DmeOrder, DmeOrderActionEvent, DmeProduct, DmeProductCodeSystem
 from .document_history_event import DocumentHistoryEvent, DocumentHistoryEventType
 from .document_reference import (
     DocumentReference,
@@ -125,6 +131,7 @@ from .imaging import (
     ImagingCoding,
     ImagingOrder,
     ImagingOrderActionEvent,
+    ImagingOrderAssessment,
     ImagingReport,
     ImagingReportCoding,
     ImagingReportTemplate,
@@ -208,6 +215,8 @@ from .note import (
     NoteParticipant,
     NoteStateChangeEvent,
     NoteType,
+    NoteTypePossibleDuration,
+    ScheduleDuration,
 )
 from .observation import (
     Observation,
@@ -290,6 +299,7 @@ from .questionnaire import (
     Interview,
     InterviewQuestionnaireMap,
     InterviewQuestionResponse,
+    InterviewSkippedQuestion,
     Question,
     QuestionEnablementCondition,
     Questionnaire,
@@ -338,7 +348,15 @@ from .staff import (
 )
 from .staff_identity_verification import StaffIdentityVerification
 from .stop_medication_event import StopMedicationEvent
-from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from .task import (
+    NoteTask,
+    NoteTaskLabel,
+    Task,
+    TaskComment,
+    TaskLabel,
+    TaskMetadata,
+    TaskTaskLabel,
+)
 from .team import Team, TeamContactPoint
 from .uncategorized_clinical_document import (
     UncategorizedClinicalDocument,
@@ -361,6 +379,7 @@ __all__ = __exports__ = (
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
+    "AppointmentScheduledTogether",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "AllergyIntoleranceReaction",
@@ -422,6 +441,7 @@ __all__ = __exports__ = (
     "CollectionStatus",
     "CollectionStatusHistory",
     "Command",
+    "CommandEditedBy",
     "CommandMetadata",
     "CommandTypeSetting",
     "CompoundMedication",
@@ -442,6 +462,7 @@ __all__ = __exports__ = (
     "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
+    "DetectedIssueMitigation",
     "Device",
     "DeviceCoding",
     "DiagnosticReport",
@@ -449,9 +470,13 @@ __all__ = __exports__ = (
     "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType",
     "Discount",
     "ContentType",
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
     "DocumentCoding",
@@ -491,6 +516,7 @@ __all__ = __exports__ = (
     "HistoryOfPresentIllness",
     "ImagingCoding",
     "ImagingOrder",
+    "ImagingOrderAssessment",
     "ImagingOrderActionEvent",
     "ImagingReport",
     "ImagingReportCoding",
@@ -516,6 +542,7 @@ __all__ = __exports__ = (
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
+    "InterviewSkippedQuestion",
     "Invoice",
     "InvoiceClaim",
     "LabOrder",
@@ -571,7 +598,9 @@ __all__ = __exports__ = (
     "NoteParticipant",
     "NoteStateChangeEvent",
     "NoteTask",
+    "NoteTaskLabel",
     "NoteType",
+    "NoteTypePossibleDuration",
     "Observation",
     "ObservationCoding",
     "ObservationComponent",
@@ -659,6 +688,7 @@ __all__ = __exports__ = (
     "ResponseOptionSet",
     "RemarkCode",
     "ServiceProvider",
+    "ScheduleDuration",
     "ServiceRequest",
     "ServiceRequestCategoryCoding",
     "ServiceRequestCoding",

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 import factory
@@ -9,6 +10,7 @@ from canvas_sdk.v1.data import (
     NoteParticipant,
     NoteStateChangeEvent,
     NoteType,
+    ScheduleDuration,
 )
 from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.note import NoteStates
@@ -69,6 +71,16 @@ class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):
     system = factory.Faker("sentence", nb_words=1)
     icon = factory.Faker("sentence", nb_words=1)
     display = factory.Faker("sentence", nb_words=1)
+
+
+class ScheduleDurationFactory(factory.django.DjangoModelFactory[ScheduleDuration]):
+    """Factory for creating a ScheduleDuration."""
+
+    class Meta:
+        model = ScheduleDuration
+
+    duration = factory.Sequence(lambda n: timedelta(minutes=15 * (n + 1)))
+    is_appointment_duration_option = True
 
 
 class NoteActionEventFactory(factory.django.DjangoModelFactory[NoteActionEvent]):

@@ -1,4 +1,6 @@
 from .allergy_intolerance import AllergyIntoleranceFactory, AllergyIntoleranceReactionFactory
+from .appointment import AppointmentFactory
+from .assessment import AssessmentFactory
 from .authorization import AuthorizationDiagnosisCodeFactory, AuthorizationFactory
 from .billing import BillingLineItemFactory
 from .calendar import CalendarFactory, EventFactory
@@ -42,18 +44,21 @@ from .coding_gap_event import (
     ValidateCodingGapEventFactory,
 )
 from .collection_status_history import CollectionStatusHistoryFactory
+from .command import CommandFactory
 from .command_type_setting import CommandTypeSettingFactory
 from .condition import ConditionCategoryCodingFactory, ConditionFactory
 from .coverage import CoverageFactory
 from .custom_command import CustomCommandFactory
+from .detected_issue import DetectedIssueFactory, DetectedIssueMitigationFactory
 from .device import DeviceCodingFactory, DeviceFactory
 from .diagnostic_report import (
     DiagnosticReportCategoryCodingFactory,
     DiagnosticReportCodeCodingFactory,
     DiagnosticReportFactory,
 )
+from .diagnostic_view import DiagnosticViewElementFactory, DiagnosticViewFactory
 from .django_content_type import ContentTypeFactory
-from .dme import DmeOrderFactory, DmeProductFactory
+from .dme import DmeOrderActionEventFactory, DmeOrderFactory, DmeProductFactory
 from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .document_type import DocumentTypeFactory
@@ -144,6 +149,7 @@ from .note import (
     NoteParticipantFactory,
     NoteStateChangeEventFactory,
     NoteTypeFactory,
+    ScheduleDurationFactory,
 )
 from .observation import (
     ObservationComponentFactory,
@@ -202,6 +208,7 @@ from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
 from .provenance import ProvenanceFactory
+from .questionnaire import InterviewFactory, QuestionFactory
 from .reason_for_visit import (
     ReasonForVisitCodingFactory,
     ReasonForVisitFactory,
@@ -257,6 +264,8 @@ from .vitals import VitalSignFactory, VitalSignReadingFactory
 __all__ = (
     "AllergyIntoleranceFactory",
     "AllergyIntoleranceReactionFactory",
+    "AppointmentFactory",
+    "AssessmentFactory",
     "AuthorizationDiagnosisCodeFactory",
     "AuthorizationFactory",
     "BaseRemittanceAdviceClaimFactory",
@@ -295,6 +304,7 @@ __all__ = (
     "ClaimSubmissionFactory",
     "ClipboardFactory",
     "CollectionStatusHistoryFactory",
+    "CommandFactory",
     "CommandTypeSettingFactory",
     "ConditionCategoryCodingFactory",
     "ConditionFactory",
@@ -316,12 +326,17 @@ __all__ = (
     "ValidateCodingGapEventFactory",
     "CoverageFactory",
     "CustomCommandFactory",
+    "DetectedIssueFactory",
+    "DetectedIssueMitigationFactory",
     "DeviceCodingFactory",
     "DeviceFactory",
     "DiagnosticReportCategoryCodingFactory",
     "DiagnosticReportCodeCodingFactory",
     "DiagnosticReportFactory",
+    "DiagnosticViewElementFactory",
+    "DiagnosticViewFactory",
     "ContentTypeFactory",
+    "DmeOrderActionEventFactory",
     "DmeOrderFactory",
     "DmeProductFactory",
     "DocumentCodingFactory",
@@ -359,6 +374,7 @@ __all__ = (
     "ConsolidatedImmunizationFactory",
     "InpatientFacilityFactory",
     "InpatientStayFactory",
+    "InterviewFactory",
     "IntegrationTaskActionEventFactory",
     "IntegrationTaskFactory",
     "IntegrationTaskReviewFactory",
@@ -435,6 +451,7 @@ __all__ = (
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
     "ProvenanceFactory",
+    "QuestionFactory",
     "SnapshotFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
@@ -449,6 +466,7 @@ __all__ = (
     "RemoveAllergyEventFactory",
     "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
+    "ScheduleDurationFactory",
     "ServiceProviderFactory",
     "ServiceRequestFactory",
     "ServiceRequestCategoryCodingFactory",

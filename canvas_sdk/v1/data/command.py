@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
 
 
 class Command(TimestampedModel, IdentifiableModel):
@@ -31,6 +31,9 @@ class Command(TimestampedModel, IdentifiableModel):
     origination_source = models.CharField(max_length=20)
     anchor_object_type = models.CharField(max_length=100)
     anchor_object_dbid = models.BigIntegerField()
+    edited_by = models.ManyToManyField(
+        "v1.CanvasUser", related_name="commands_edited", through="v1.CommandEditedBy"
+    )
 
     @property
     def anchor_object(self) -> models.Model | None:
@@ -48,6 +51,16 @@ class Command(TimestampedModel, IdentifiableModel):
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
 
 
+class CommandEditedBy(Model):
+    """M2M for Command -> CanvasUsers who edited it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_commands_command_edited_by_001"
+
+    command = models.ForeignKey(Command, on_delete=models.DO_NOTHING, related_name="+")
+    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
+
+
 class CommandMetadata(MetadataModel):
     """A class representing Command Metadata."""
 
@@ -57,4 +70,4 @@ class CommandMetadata(MetadataModel):
     command = models.ForeignKey("v1.Command", on_delete=models.CASCADE, related_name="metadata")
 
 
-__exports__ = ("Command", "CommandMetadata")
+__exports__ = ("Command", "CommandEditedBy", "CommandMetadata")

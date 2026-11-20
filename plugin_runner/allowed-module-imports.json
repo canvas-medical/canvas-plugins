@@ -1301,6 +1301,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AppointmentScheduledTogether",
     "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
@@ -1359,6 +1360,7 @@
     "CollectionStatus",
     "CollectionStatusHistory",
     "Command",
+    "CommandEditedBy",
     "CommandMetadata",
     "CommandTypeSetting",
     "CompoundMedication",
@@ -1380,6 +1382,7 @@
     "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
+    "DetectedIssueMitigation",
     "Device",
     "DeviceCoding",
     "DiagnosticReport",
@@ -1387,8 +1390,12 @@
     "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType",
     "Discount",
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
     "DocumentCoding",
@@ -1429,6 +1436,7 @@
     "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
+    "ImagingOrderAssessment",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportTemplate",
@@ -1453,6 +1461,7 @@
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
+    "InterviewSkippedQuestion",
     "Invoice",
     "InvoiceClaim",
     "LabOrder",
@@ -1509,7 +1518,9 @@
     "NoteParticipant",
     "NoteStateChangeEvent",
     "NoteTask",
+    "NoteTaskLabel",
     "NoteType",
+    "NoteTypePossibleDuration",
     "Observation",
     "ObservationCoding",
     "ObservationComponent",
@@ -1595,6 +1606,7 @@
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "ScheduleDuration",
     "ServiceProvider",
     "ServiceRequest",
     "ServiceRequestCategoryCoding",
@@ -1659,7 +1671,8 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
-    "AppointmentProgressStatus"
+    "AppointmentProgressStatus",
+    "AppointmentScheduledTogether"
   ],
   "canvas_sdk.v1.data.assessment": [
     "Assessment",
@@ -1785,6 +1798,7 @@
   ],
   "canvas_sdk.v1.data.command": [
     "Command",
+    "CommandEditedBy",
     "CommandMetadata"
   ],
   "canvas_sdk.v1.data.command_type_setting": [
@@ -1843,7 +1857,8 @@
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
-    "DetectedIssueEvidence"
+    "DetectedIssueEvidence",
+    "DetectedIssueMitigation"
   ],
   "canvas_sdk.v1.data.device": [
     "Device",
@@ -1856,7 +1871,10 @@
     "DiagnosticReportStatus"
   ],
   "canvas_sdk.v1.data.diagnostic_view": [
-    "DiagnosticView"
+    "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType"
   ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
@@ -1866,6 +1884,7 @@
   ],
   "canvas_sdk.v1.data.dme": [
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem"
   ],
@@ -1940,6 +1959,7 @@
     "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
+    "ImagingOrderAssessment",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportQuerySet",
@@ -2057,8 +2077,10 @@
     "NoteStates",
     "NoteType",
     "NoteTypeCategories",
+    "NoteTypePossibleDuration",
     "NoteTypes",
-    "PracticeLocationPOS"
+    "PracticeLocationPOS",
+    "ScheduleDuration"
   ],
   "canvas_sdk.v1.data.observation": [
     "Observation",
@@ -2196,6 +2218,7 @@
     "InterviewQuerySet",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
+    "InterviewSkippedQuestion",
     "Question",
     "QuestionEnablementCondition",
     "Questionnaire",
@@ -2281,6 +2304,7 @@
   "canvas_sdk.v1.data.task": [
     "EventType",
     "NoteTask",
+    "NoteTaskLabel",
     "Task",
     "TaskComment",
     "TaskLabel",
