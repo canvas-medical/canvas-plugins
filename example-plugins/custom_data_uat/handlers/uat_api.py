@@ -39,6 +39,7 @@ class CustomDataUatAPI(StaffSessionAuthMixin, SimpleAPI):
             ("8_attribute_hub_with_only", self._test_attribute_hub_with_only),
             ("9_attribute_hub_bulk", self._test_attribute_hub_bulk),
             ("10_transactions", self._test_transactions),
+            ("11_generated_timestamps", self._test_generated_timestamps),
         ]
 
         for name, fn in sections:
@@ -533,5 +534,68 @@ class CustomDataUatAPI(StaffSessionAuthMixin, SimpleAPI):
             and section["checks"].get("rollback_tag_gone", False)
             and section["checks"].get("outer_survived", False)
             and section["checks"].get("inner_rolled_back", False)
+        )
+        return section
+
+    # ------------------------------------------------------------------
+    # 11. Generated created/modified columns
+    # ------------------------------------------------------------------
+
+    def _test_generated_timestamps(self) -> dict:
+        """Check created/modified are populated on insert and modified advances on writes."""
+        section: dict[str, Any] = {"passed": False, "checks": {}}
+        checks = section["checks"]
+
+        tag = Tag.objects.create(label="uat-timestamps", color="gray")
+        inserted = Tag.objects.get(dbid=tag.dbid)
+        checks["insert_created"] = inserted.created.isoformat() if inserted.created else None
+        checks["insert_modified"] = inserted.modified.isoformat() if inserted.modified else None
+        checks["insert_populated"] = inserted.created is not None and inserted.modified is not None
+
+        inserted.color = "red"
+        inserted.save()
+        saved = Tag.objects.get(dbid=tag.dbid)
+        checks["save_modified"] = saved.modified.isoformat() if saved.modified else None
+        checks["save_advances_modified"] = bool(
+            saved.modified and inserted.created and saved.modified > inserted.created
+        )
+        checks["save_keeps_created"] = saved.created == inserted.created
+
+        Tag.objects.filter(dbid=tag.dbid).update(color="blue")
+        updated = Tag.objects.get(dbid=tag.dbid)
+        checks["update_modified"] = updated.modified.isoformat() if updated.modified else None
+        checks["update_advances_modified"] = bool(
+            updated.modified and saved.modified and updated.modified > saved.modified
+        )
+
+        updated.color = "green"
+        Tag.objects.bulk_update([updated], ["color"])
+        bulk = Tag.objects.get(dbid=tag.dbid)
+        checks["bulk_update_modified"] = bulk.modified.isoformat() if bulk.modified else None
+        checks["bulk_update_advances_modified"] = bool(
+            bulk.modified and updated.modified and bulk.modified > updated.modified
+        )
+
+        chosen = datetime(2020, 1, 1, tzinfo=UTC)
+        Tag.objects.filter(dbid=tag.dbid).update(modified=chosen)
+        checks["explicit_modified_kept"] = Tag.objects.get(dbid=tag.dbid).modified == chosen
+
+        checks["created_unchanged_throughout"] = (
+            Tag.objects.get(dbid=tag.dbid).created == inserted.created
+        )
+
+        tag.delete()
+
+        section["passed"] = all(
+            checks[name]
+            for name in (
+                "insert_populated",
+                "save_advances_modified",
+                "save_keeps_created",
+                "update_advances_modified",
+                "bulk_update_advances_modified",
+                "explicit_modified_kept",
+                "created_unchanged_throughout",
+            )
         )
         return section
