@@ -157,7 +157,7 @@ def test_a_command_filled_in_from_a_models_output_reaches_the_chart() -> None:
     command.sig = sig
     command.note_to_pharmacist = "Patient prefers ½ tablets. Call if unavailable…"
     command.refills = 2
-    command.quantity_to_dispense = Decimal("30")
+    command.quantity_to_dispense = Decimal(30)
 
     assert command.sig == sig
     assert json.loads(command.originate().payload)["data"]["sig"] == sig
@@ -265,7 +265,7 @@ def test_a_count_that_is_not_a_number_is_still_refused_immediately() -> None:
         PrescribeCommand.model_validate({"refills": "abc"})
 
 
-@pytest.mark.parametrize("value", [-1, -0.5, "-1", Decimal("-2.5"), 0, Decimal("0"), 0.0])
+@pytest.mark.parametrize("value", [-1, -0.5, "-1", Decimal("-2.5"), 0, Decimal(0), 0.0])
 def test_a_quantity_to_dispense_at_or_below_zero_is_refused(value: object) -> None:
     """Nothing to dispense is not a prescription.
 

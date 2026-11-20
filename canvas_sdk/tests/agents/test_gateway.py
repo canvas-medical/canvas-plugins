@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Any
+from typing import Any, Self
 
 import httpx2
 import pytest
@@ -358,7 +358,7 @@ def test_every_call_through_the_client_counts_toward_the_runs_ceiling() -> None:
     made: list[dict] = []
 
     class _Inner:
-        class messages:  # noqa: N801
+        class messages:
             @staticmethod
             def create(**request: Any) -> str:
                 made.append(request)
@@ -382,7 +382,7 @@ def test_a_client_counts_against_the_run_it_was_built_in_from_any_thread() -> No
     made: list[dict] = []
 
     class _Anthropic:
-        class messages:  # noqa: N801
+        class messages:
             @staticmethod
             def create(**request: Any) -> str:
                 made.append(request)
@@ -462,8 +462,9 @@ def test_a_transport_error_while_streaming_reaches_the_caller_without_its_reques
 
     received = []
     with pytest.raises(GatewayError) as raised:
+        # A loop, not list(): the events seen before the error are what this asserts on.
         for event in _converted(events()):
-            received.append(event)
+            received.append(event)  # noqa: PERF402
 
     assert received == ["first"]
     assert raised.value.status_code is None
@@ -477,14 +478,14 @@ def test_a_streamed_call_counts_against_the_runs_ceiling() -> None:
     opened: list[dict] = []
 
     class _Stream:
-        def __enter__(self) -> "_Stream":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *exc: object) -> None:
             return None
 
     class _Anthropic:
-        class messages:  # noqa: N801
+        class messages:
             @staticmethod
             def stream(**request: Any) -> _Stream:
                 opened.append(request)

@@ -838,9 +838,7 @@ def test_handle_plugin_event_returns_expected_result(
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
     event = EventRequest(type=EventType.UNKNOWN)
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1232,7 +1230,7 @@ def test_synchronize_plugins_and_report_errors_captures_after_first_successful_c
     def _sync_side_effect(*args: Any, **kwargs: Any) -> None:
         if not SYNCHRONIZER_HAS_CONNECTED.is_set():
             SYNCHRONIZER_HAS_CONNECTED.set()
-            return None
+            return
         raise RedisConnectionError("redis disappeared mid-run")
 
     with (
@@ -1287,9 +1285,7 @@ def test_changes_to_plugin_modules_should_be_reflected_after_reload(
     """Test that changes to plugin modules are reflected after reloading the plugin."""
     event = EventRequest(type=EventType.UNKNOWN)
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1307,9 +1303,7 @@ def import_me() -> str:
     # Reload the plugin
     reconcile_plugins()
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1372,9 +1366,7 @@ def test_simple_api(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     expected_response = Response(status_code=status_code).apply().to_proto()
     if status_code == HTTPStatus.OK:
@@ -1425,9 +1417,7 @@ def test_simple_api_websocket(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     is_success = (
         context["plugin_name"] == "test_simple_api" and context["channel_name"] != "multi_handler"
@@ -1609,9 +1599,7 @@ def test_payment_processor(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     expected_effects = [
         Effect(

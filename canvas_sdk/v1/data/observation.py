@@ -19,8 +19,6 @@ class ObservationQuerySet(
 ):
     """ObservationQuerySet."""
 
-    pass
-
 
 ObservationManager = BaseModelManager.from_queryset(ObservationQuerySet)
 

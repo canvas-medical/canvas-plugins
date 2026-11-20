@@ -19,8 +19,6 @@ class ResolveConditionEventQuerySet(
 ):
     """ResolveConditionEventQuerySet."""
 
-    pass
-
 
 ResolveConditionEventManager = BaseModelManager.from_queryset(ResolveConditionEventQuerySet)
 

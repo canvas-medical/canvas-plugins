@@ -22,7 +22,7 @@ class HospiceEncounter(ValueSet):
 def line_items(*codes: str) -> None:
     """One billing line item per code."""
     for code in codes:
-        BillingLineItem.objects.create(cpt=code, charge=Decimal("0"), units=1, command_id=1)
+        BillingLineItem.objects.create(cpt=code, charge=Decimal(0), units=1, command_id=1)
 
 
 def found(value_set: type[ValueSet]) -> set[str]:

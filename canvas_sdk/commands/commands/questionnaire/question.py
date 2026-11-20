@@ -20,7 +20,7 @@ class ResponseOption:
         self.code: str = code
         self.value: str = value
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, ResponseOption):
             return (
                 self.dbid == other.dbid

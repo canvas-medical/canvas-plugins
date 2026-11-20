@@ -1,5 +1,6 @@
 from ..value_set import ValueSet
 
+
 class AdvancedIllness(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  advanced illnesses..
@@ -1387,7 +1388,7 @@ class AdvancedIllness(ValueSet):
         "717840005",  # Congestive heart failure stage B (disorder)
         "717919005",  # Neuroendocrine tumor of pancreas (disorder)
         "718685006",  # Orthostatic hypotension co-occurrent and due to Parkinson's disease (disorder)
-        "71892000",   # Cardiac asthma (disorder)
+        "71892000",  # Cardiac asthma (disorder)
         "719717006",  # Psychosis co-occurrent and due to Parkinson's disease (disorder)
         "721710005",  # Fibrosis of liver caused by alcohol (disorder)
         "721977007",  # Lung fibrosis, immunodeficiency, 46,XX gonadal dysgenesis syndrome (disorder)
@@ -2067,6 +2068,7 @@ class Diabetes(ValueSet):
 
     ** Used in:** CMS131v14
     """
+
     VALUE_SET_NAME = "Diabetes"
     OID = "2.16.840.1.113883.3.464.1003.103.12.1001"
     DEFINITION_VERSION = "20250115"
@@ -2128,45 +2130,45 @@ class Diabetes(ValueSet):
         "E103592",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
         "E103593",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
         "E103599",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, unspecified eye
-        "E1036",    # Type 1 diabetes mellitus with diabetic cataract
+        "E1036",  # Type 1 diabetes mellitus with diabetic cataract
         "E1037X1",  # Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, right eye
         "E1037X2",  # Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, left eye
         "E1037X3",  # Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, bilateral
         "E1037X9",  # Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, unspecified eye
-        "E1039",    # Type 1 diabetes mellitus with other diabetic ophthalmic complication
-        "E1040",    # Type 1 diabetes mellitus with diabetic neuropathy, unspecified
-        "E1041",    # Type 1 diabetes mellitus with diabetic mononeuropathy
-        "E1042",    # Type 1 diabetes mellitus with diabetic polyneuropathy
-        "E1043",    # Type 1 diabetes mellitus with diabetic autonomic (poly)neuropathy
-        "E1044",    # Type 1 diabetes mellitus with diabetic amyotrophy
-        "E1049",    # Type 1 diabetes mellitus with other diabetic neurological complication
-        "E1051",    # Type 1 diabetes mellitus with diabetic peripheral angiopathy without gangrene
-        "E1052",    # Type 1 diabetes mellitus with diabetic peripheral angiopathy with gangrene
-        "E1059",    # Type 1 diabetes mellitus with other circulatory complications
-        "E10610",   # Type 1 diabetes mellitus with diabetic neuropathic arthropathy
-        "E10618",   # Type 1 diabetes mellitus with other diabetic arthropathy
-        "E10620",   # Type 1 diabetes mellitus with diabetic dermatitis
-        "E10621",   # Type 1 diabetes mellitus with foot ulcer
-        "E10622",   # Type 1 diabetes mellitus with other skin ulcer
-        "E10628",   # Type 1 diabetes mellitus with other skin complications
-        "E10630",   # Type 1 diabetes mellitus with periodontal disease
-        "E10638",   # Type 1 diabetes mellitus with other oral complications
-        "E10641",   # Type 1 diabetes mellitus with hypoglycemia with coma
-        "E10649",   # Type 1 diabetes mellitus with hypoglycemia without coma
-        "E1065",    # Type 1 diabetes mellitus with hyperglycemia
-        "E1069",    # Type 1 diabetes mellitus with other specified complication
-        "E108",     # Type 1 diabetes mellitus with unspecified complications
-        "E109",     # Type 1 diabetes mellitus without complications
-        "E10A2",    # Type 1 diabetes mellitus, presymptomatic, Stage 2
-        "E1100",    # Type 2 diabetes mellitus with hyperosmolarity without nonketotic hyperglycemic-hyperosmolar coma (NKHHC)
-        "E1101",    # Type 2 diabetes mellitus with hyperosmolarity with coma
-        "E1110",    # Type 2 diabetes mellitus with ketoacidosis without coma
-        "E1111",    # Type 2 diabetes mellitus with ketoacidosis with coma
-        "E1121",    # Type 2 diabetes mellitus with diabetic nephropathy
-        "E1122",    # Type 2 diabetes mellitus with diabetic chronic kidney disease
-        "E1129",    # Type 2 diabetes mellitus with other diabetic kidney complication
-        "E11311",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E11319",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E1039",  # Type 1 diabetes mellitus with other diabetic ophthalmic complication
+        "E1040",  # Type 1 diabetes mellitus with diabetic neuropathy, unspecified
+        "E1041",  # Type 1 diabetes mellitus with diabetic mononeuropathy
+        "E1042",  # Type 1 diabetes mellitus with diabetic polyneuropathy
+        "E1043",  # Type 1 diabetes mellitus with diabetic autonomic (poly)neuropathy
+        "E1044",  # Type 1 diabetes mellitus with diabetic amyotrophy
+        "E1049",  # Type 1 diabetes mellitus with other diabetic neurological complication
+        "E1051",  # Type 1 diabetes mellitus with diabetic peripheral angiopathy without gangrene
+        "E1052",  # Type 1 diabetes mellitus with diabetic peripheral angiopathy with gangrene
+        "E1059",  # Type 1 diabetes mellitus with other circulatory complications
+        "E10610",  # Type 1 diabetes mellitus with diabetic neuropathic arthropathy
+        "E10618",  # Type 1 diabetes mellitus with other diabetic arthropathy
+        "E10620",  # Type 1 diabetes mellitus with diabetic dermatitis
+        "E10621",  # Type 1 diabetes mellitus with foot ulcer
+        "E10622",  # Type 1 diabetes mellitus with other skin ulcer
+        "E10628",  # Type 1 diabetes mellitus with other skin complications
+        "E10630",  # Type 1 diabetes mellitus with periodontal disease
+        "E10638",  # Type 1 diabetes mellitus with other oral complications
+        "E10641",  # Type 1 diabetes mellitus with hypoglycemia with coma
+        "E10649",  # Type 1 diabetes mellitus with hypoglycemia without coma
+        "E1065",  # Type 1 diabetes mellitus with hyperglycemia
+        "E1069",  # Type 1 diabetes mellitus with other specified complication
+        "E108",  # Type 1 diabetes mellitus with unspecified complications
+        "E109",  # Type 1 diabetes mellitus without complications
+        "E10A2",  # Type 1 diabetes mellitus, presymptomatic, Stage 2
+        "E1100",  # Type 2 diabetes mellitus with hyperosmolarity without nonketotic hyperglycemic-hyperosmolar coma (NKHHC)
+        "E1101",  # Type 2 diabetes mellitus with hyperosmolarity with coma
+        "E1110",  # Type 2 diabetes mellitus with ketoacidosis without coma
+        "E1111",  # Type 2 diabetes mellitus with ketoacidosis with coma
+        "E1121",  # Type 2 diabetes mellitus with diabetic nephropathy
+        "E1122",  # Type 2 diabetes mellitus with diabetic chronic kidney disease
+        "E1129",  # Type 2 diabetes mellitus with other diabetic kidney complication
+        "E11311",  # Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E11319",  # Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema
         "E113211",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E113212",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E113213",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -2215,44 +2217,44 @@ class Diabetes(ValueSet):
         "E113592",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
         "E113593",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
         "E113599",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, unspecified eye
-        "E1136",    # Type 2 diabetes mellitus with diabetic cataract
+        "E1136",  # Type 2 diabetes mellitus with diabetic cataract
         "E1137X1",  # Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, right eye
         "E1137X2",  # Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, left eye
         "E1137X3",  # Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, bilateral
         "E1137X9",  # Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, unspecified eye
-        "E1139",    # Type 2 diabetes mellitus with other diabetic ophthalmic complication
-        "E1140",    # Type 2 diabetes mellitus with diabetic neuropathy, unspecified
-        "E1141",    # Type 2 diabetes mellitus with diabetic mononeuropathy
-        "E1142",    # Type 2 diabetes mellitus with diabetic polyneuropathy
-        "E1143",    # Type 2 diabetes mellitus with diabetic autonomic (poly)neuropathy
-        "E1144",    # Type 2 diabetes mellitus with diabetic amyotrophy
-        "E1149",    # Type 2 diabetes mellitus with other diabetic neurological complication
-        "E1151",    # Type 2 diabetes mellitus with diabetic peripheral angiopathy without gangrene
-        "E1152",    # Type 2 diabetes mellitus with diabetic peripheral angiopathy with gangrene
-        "E1159",    # Type 2 diabetes mellitus with other circulatory complications
-        "E11610",   # Type 2 diabetes mellitus with diabetic neuropathic arthropathy
-        "E11618",   # Type 2 diabetes mellitus with other diabetic arthropathy
-        "E11620",   # Type 2 diabetes mellitus with diabetic dermatitis
-        "E11621",   # Type 2 diabetes mellitus with foot ulcer
-        "E11622",   # Type 2 diabetes mellitus with other skin ulcer
-        "E11628",   # Type 2 diabetes mellitus with other skin complications
-        "E11630",   # Type 2 diabetes mellitus with periodontal disease
-        "E11638",   # Type 2 diabetes mellitus with other oral complications
-        "E11641",   # Type 2 diabetes mellitus with hypoglycemia with coma
-        "E11649",   # Type 2 diabetes mellitus with hypoglycemia without coma
-        "E1165",    # Type 2 diabetes mellitus with hyperglycemia
-        "E1169",    # Type 2 diabetes mellitus with other specified complication
-        "E118",     # Type 2 diabetes mellitus with unspecified complications
-        "E119",     # Type 2 diabetes mellitus without complications
-        "E1300",    # Other specified diabetes mellitus with hyperosmolarity without nonketotic hyperglycemic-hyperosmolar coma (NKHHC)
-        "E1301",    # Other specified diabetes mellitus with hyperosmolarity with coma
-        "E1310",    # Other specified diabetes mellitus with ketoacidosis without coma
-        "E1311",    # Other specified diabetes mellitus with ketoacidosis with coma
-        "E1321",    # Other specified diabetes mellitus with diabetic nephropathy
-        "E1322",    # Other specified diabetes mellitus with diabetic chronic kidney disease
-        "E1329",    # Other specified diabetes mellitus with other diabetic kidney complication
-        "E13311",   # Other specified diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E13319",   # Other specified diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E1139",  # Type 2 diabetes mellitus with other diabetic ophthalmic complication
+        "E1140",  # Type 2 diabetes mellitus with diabetic neuropathy, unspecified
+        "E1141",  # Type 2 diabetes mellitus with diabetic mononeuropathy
+        "E1142",  # Type 2 diabetes mellitus with diabetic polyneuropathy
+        "E1143",  # Type 2 diabetes mellitus with diabetic autonomic (poly)neuropathy
+        "E1144",  # Type 2 diabetes mellitus with diabetic amyotrophy
+        "E1149",  # Type 2 diabetes mellitus with other diabetic neurological complication
+        "E1151",  # Type 2 diabetes mellitus with diabetic peripheral angiopathy without gangrene
+        "E1152",  # Type 2 diabetes mellitus with diabetic peripheral angiopathy with gangrene
+        "E1159",  # Type 2 diabetes mellitus with other circulatory complications
+        "E11610",  # Type 2 diabetes mellitus with diabetic neuropathic arthropathy
+        "E11618",  # Type 2 diabetes mellitus with other diabetic arthropathy
+        "E11620",  # Type 2 diabetes mellitus with diabetic dermatitis
+        "E11621",  # Type 2 diabetes mellitus with foot ulcer
+        "E11622",  # Type 2 diabetes mellitus with other skin ulcer
+        "E11628",  # Type 2 diabetes mellitus with other skin complications
+        "E11630",  # Type 2 diabetes mellitus with periodontal disease
+        "E11638",  # Type 2 diabetes mellitus with other oral complications
+        "E11641",  # Type 2 diabetes mellitus with hypoglycemia with coma
+        "E11649",  # Type 2 diabetes mellitus with hypoglycemia without coma
+        "E1165",  # Type 2 diabetes mellitus with hyperglycemia
+        "E1169",  # Type 2 diabetes mellitus with other specified complication
+        "E118",  # Type 2 diabetes mellitus with unspecified complications
+        "E119",  # Type 2 diabetes mellitus without complications
+        "E1300",  # Other specified diabetes mellitus with hyperosmolarity without nonketotic hyperglycemic-hyperosmolar coma (NKHHC)
+        "E1301",  # Other specified diabetes mellitus with hyperosmolarity with coma
+        "E1310",  # Other specified diabetes mellitus with ketoacidosis without coma
+        "E1311",  # Other specified diabetes mellitus with ketoacidosis with coma
+        "E1321",  # Other specified diabetes mellitus with diabetic nephropathy
+        "E1322",  # Other specified diabetes mellitus with diabetic chronic kidney disease
+        "E1329",  # Other specified diabetes mellitus with other diabetic kidney complication
+        "E13311",  # Other specified diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E13319",  # Other specified diabetes mellitus with unspecified diabetic retinopathy without macular edema
         "E133211",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E133212",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E133213",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -2301,59 +2303,59 @@ class Diabetes(ValueSet):
         "E133592",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
         "E133593",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
         "E133599",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, unspecified eye
-        "E1336",    # Other specified diabetes mellitus with diabetic cataract
+        "E1336",  # Other specified diabetes mellitus with diabetic cataract
         "E1337X1",  # Other specified diabetes mellitus with diabetic macular edema, resolved following treatment, right eye
         "E1337X2",  # Other specified diabetes mellitus with diabetic macular edema, resolved following treatment, left eye
         "E1337X3",  # Other specified diabetes mellitus with diabetic macular edema, resolved following treatment, bilateral
         "E1337X9",  # Other specified diabetes mellitus with diabetic macular edema, resolved following treatment, unspecified eye
-        "E1339",    # Other specified diabetes mellitus with other diabetic ophthalmic complication
-        "E1340",    # Other specified diabetes mellitus with diabetic neuropathy, unspecified
-        "E1341",    # Other specified diabetes mellitus with diabetic mononeuropathy
-        "E1342",    # Other specified diabetes mellitus with diabetic polyneuropathy
-        "E1343",    # Other specified diabetes mellitus with diabetic autonomic (poly)neuropathy
-        "E1344",    # Other specified diabetes mellitus with diabetic amyotrophy
-        "E1349",    # Other specified diabetes mellitus with other diabetic neurological complication
-        "E1351",    # Other specified diabetes mellitus with diabetic peripheral angiopathy without gangrene
-        "E1352",    # Other specified diabetes mellitus with diabetic peripheral angiopathy with gangrene
-        "E1359",    # Other specified diabetes mellitus with other circulatory complications
-        "E13610",   # Other specified diabetes mellitus with diabetic neuropathic arthropathy
-        "E13618",   # Other specified diabetes mellitus with other diabetic arthropathy
-        "E13620",   # Other specified diabetes mellitus with diabetic dermatitis
-        "E13621",   # Other specified diabetes mellitus with foot ulcer
-        "E13622",   # Other specified diabetes mellitus with other skin ulcer
-        "E13628",   # Other specified diabetes mellitus with other skin complications
-        "E13630",   # Other specified diabetes mellitus with periodontal disease
-        "E13638",   # Other specified diabetes mellitus with other oral complications
-        "E13641",   # Other specified diabetes mellitus with hypoglycemia with coma
-        "E13649",   # Other specified diabetes mellitus with hypoglycemia without coma
-        "E1365",    # Other specified diabetes mellitus with hyperglycemia
-        "E1369",    # Other specified diabetes mellitus with other specified complication
-        "E138",     # Other specified diabetes mellitus with unspecified complications
-        "E139",     # Other specified diabetes mellitus without complications
-        "O24011",   # Pre-existing type 1 diabetes mellitus, in pregnancy, first trimester
-        "O24012",   # Pre-existing type 1 diabetes mellitus, in pregnancy, second trimester
-        "O24013",   # Pre-existing type 1 diabetes mellitus, in pregnancy, third trimester
-        "O24019",   # Pre-existing type 1 diabetes mellitus, in pregnancy, unspecified trimester
-        "O2402",    # Pre-existing type 1 diabetes mellitus, in childbirth
-        "O2403",    # Pre-existing type 1 diabetes mellitus, in the puerperium
-        "O24111",   # Pre-existing type 2 diabetes mellitus, in pregnancy, first trimester
-        "O24112",   # Pre-existing type 2 diabetes mellitus, in pregnancy, second trimester
-        "O24113",   # Pre-existing type 2 diabetes mellitus, in pregnancy, third trimester
-        "O24119",   # Pre-existing type 2 diabetes mellitus, in pregnancy, unspecified trimester
-        "O2412",    # Pre-existing type 2 diabetes mellitus, in childbirth
-        "O2413",    # Pre-existing type 2 diabetes mellitus, in the puerperium
-        "O24311",   # Unspecified pre-existing diabetes mellitus in pregnancy, first trimester
-        "O24312",   # Unspecified pre-existing diabetes mellitus in pregnancy, second trimester
-        "O24313",   # Unspecified pre-existing diabetes mellitus in pregnancy, third trimester
-        "O24319",   # Unspecified pre-existing diabetes mellitus in pregnancy, unspecified trimester
-        "O2432",    # Unspecified pre-existing diabetes mellitus in childbirth
-        "O2433",    # Unspecified pre-existing diabetes mellitus in the puerperium
-        "O24811",   # Other pre-existing diabetes mellitus in pregnancy, first trimester
-        "O24812",   # Other pre-existing diabetes mellitus in pregnancy, second trimester
-        "O24813",   # Other pre-existing diabetes mellitus in pregnancy, third trimester
-        "O24819",   # Other pre-existing diabetes mellitus in pregnancy, unspecified trimester
-        "O2482",    # Other pre-existing diabetes mellitus in childbirth
-        "O2483",    # Other pre-existing diabetes mellitus in the puerperium
+        "E1339",  # Other specified diabetes mellitus with other diabetic ophthalmic complication
+        "E1340",  # Other specified diabetes mellitus with diabetic neuropathy, unspecified
+        "E1341",  # Other specified diabetes mellitus with diabetic mononeuropathy
+        "E1342",  # Other specified diabetes mellitus with diabetic polyneuropathy
+        "E1343",  # Other specified diabetes mellitus with diabetic autonomic (poly)neuropathy
+        "E1344",  # Other specified diabetes mellitus with diabetic amyotrophy
+        "E1349",  # Other specified diabetes mellitus with other diabetic neurological complication
+        "E1351",  # Other specified diabetes mellitus with diabetic peripheral angiopathy without gangrene
+        "E1352",  # Other specified diabetes mellitus with diabetic peripheral angiopathy with gangrene
+        "E1359",  # Other specified diabetes mellitus with other circulatory complications
+        "E13610",  # Other specified diabetes mellitus with diabetic neuropathic arthropathy
+        "E13618",  # Other specified diabetes mellitus with other diabetic arthropathy
+        "E13620",  # Other specified diabetes mellitus with diabetic dermatitis
+        "E13621",  # Other specified diabetes mellitus with foot ulcer
+        "E13622",  # Other specified diabetes mellitus with other skin ulcer
+        "E13628",  # Other specified diabetes mellitus with other skin complications
+        "E13630",  # Other specified diabetes mellitus with periodontal disease
+        "E13638",  # Other specified diabetes mellitus with other oral complications
+        "E13641",  # Other specified diabetes mellitus with hypoglycemia with coma
+        "E13649",  # Other specified diabetes mellitus with hypoglycemia without coma
+        "E1365",  # Other specified diabetes mellitus with hyperglycemia
+        "E1369",  # Other specified diabetes mellitus with other specified complication
+        "E138",  # Other specified diabetes mellitus with unspecified complications
+        "E139",  # Other specified diabetes mellitus without complications
+        "O24011",  # Pre-existing type 1 diabetes mellitus, in pregnancy, first trimester
+        "O24012",  # Pre-existing type 1 diabetes mellitus, in pregnancy, second trimester
+        "O24013",  # Pre-existing type 1 diabetes mellitus, in pregnancy, third trimester
+        "O24019",  # Pre-existing type 1 diabetes mellitus, in pregnancy, unspecified trimester
+        "O2402",  # Pre-existing type 1 diabetes mellitus, in childbirth
+        "O2403",  # Pre-existing type 1 diabetes mellitus, in the puerperium
+        "O24111",  # Pre-existing type 2 diabetes mellitus, in pregnancy, first trimester
+        "O24112",  # Pre-existing type 2 diabetes mellitus, in pregnancy, second trimester
+        "O24113",  # Pre-existing type 2 diabetes mellitus, in pregnancy, third trimester
+        "O24119",  # Pre-existing type 2 diabetes mellitus, in pregnancy, unspecified trimester
+        "O2412",  # Pre-existing type 2 diabetes mellitus, in childbirth
+        "O2413",  # Pre-existing type 2 diabetes mellitus, in the puerperium
+        "O24311",  # Unspecified pre-existing diabetes mellitus in pregnancy, first trimester
+        "O24312",  # Unspecified pre-existing diabetes mellitus in pregnancy, second trimester
+        "O24313",  # Unspecified pre-existing diabetes mellitus in pregnancy, third trimester
+        "O24319",  # Unspecified pre-existing diabetes mellitus in pregnancy, unspecified trimester
+        "O2432",  # Unspecified pre-existing diabetes mellitus in childbirth
+        "O2433",  # Unspecified pre-existing diabetes mellitus in the puerperium
+        "O24811",  # Other pre-existing diabetes mellitus in pregnancy, first trimester
+        "O24812",  # Other pre-existing diabetes mellitus in pregnancy, second trimester
+        "O24813",  # Other pre-existing diabetes mellitus in pregnancy, third trimester
+        "O24819",  # Other pre-existing diabetes mellitus in pregnancy, unspecified trimester
+        "O2482",  # Other pre-existing diabetes mellitus in childbirth
+        "O2483",  # Other pre-existing diabetes mellitus in the puerperium
     }
 
     SNOMEDCT = {
@@ -2865,15 +2867,15 @@ class DiabeticRetinopathy(ValueSet):
 
     ** Used in:** CMS131v14
     """
+
     VALUE_SET_NAME = "Diabetic Retinopathy"
     OID = "2.16.840.1.113883.3.526.3.327"
     DEFINITION_VERSION = "20210218"
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
-
     ICD10CM = {
-        "E08311",   # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy with macular edema
-        "E08319",   # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy without macular edema
+        "E08311",  # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy with macular edema
+        "E08319",  # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy without macular edema
         "E083211",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E083212",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E083213",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -2910,8 +2912,8 @@ class DiabeticRetinopathy(ValueSet):
         "E083591",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, right eye
         "E083592",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, left eye
         "E083593",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, bilateral
-        "E09311",   # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E09319",   # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E09311",  # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E09319",  # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy without macular edema
         "E093211",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E093212",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E093213",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -2948,8 +2950,8 @@ class DiabeticRetinopathy(ValueSet):
         "E093591",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
         "E093592",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
         "E093593",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
-        "E10311",   # Type 1 diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E10319",   # Type 1 diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E10311",  # Type 1 diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E10319",  # Type 1 diabetes mellitus with unspecified diabetic retinopathy without macular edema
         "E103211",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E103212",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E103213",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -2986,8 +2988,8 @@ class DiabeticRetinopathy(ValueSet):
         "E103591",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
         "E103592",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
         "E103593",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
-        "E11311",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E11319",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E11311",  # Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E11319",  # Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema
         "E113211",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
         "E113212",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
         "E113213",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
@@ -3023,93 +3025,93 @@ class DiabeticRetinopathy(ValueSet):
         "E113553",  # Type 2 diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
         "E113591",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
         "E113592",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
-        "E113593",   # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
-        "E13311",    # Other specified diabetes mellitus with unspecified diabetic retinopathy with macular edema
-        "E13319",    # Other specified diabetes mellitus with unspecified diabetic retinopathy without macular edema
-        "E133211",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
-        "E133212",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
-        "E133213",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
-        "E133291",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
-        "E133292",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
-        "E133293",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
-        "E133311",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
-        "E133312",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
-        "E133313",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
-        "E133391",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
-        "E133392",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
-        "E133393",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
-        "E133411",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
-        "E133412",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
-        "E133413",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
-        "E133491",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
-        "E133492",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
-        "E133493",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
-        "E133511",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
-        "E133512",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
-        "E133513",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
-        "E133521",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
-        "E133522",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
-        "E133523",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
-        "E133531",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
-        "E133532",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
-        "E133533",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
-        "E133541",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
-        "E133542",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
-        "E133543",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
-        "E133551",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, right eye
-        "E133552",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, left eye
-        "E133553",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
-        "E133591",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
-        "E133592",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
-        "E133593",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+        "E113593",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+        "E13311",  # Other specified diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E13319",  # Other specified diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E133211",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133212",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133213",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133291",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133292",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133293",  # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133311",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133312",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133313",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133391",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133392",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133393",  # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133411",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133412",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133413",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133491",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133492",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133493",  # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133511",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
+        "E133512",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
+        "E133513",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
+        "E133521",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E133522",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E133523",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E133531",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E133532",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E133533",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E133541",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E133542",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E133543",  # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E133551",  # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, right eye
+        "E133552",  # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, left eye
+        "E133553",  # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
+        "E133591",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
+        "E133592",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
+        "E133593",  # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
     }
 
     SNOMEDCT = {
         "1306699009",  # Stable treated proliferative retinopathy due to diabetes mellitus (disorder)
         "1306700005",  # Stable treated proliferative retinopathy of bilateral eyes due to diabetes mellitus (disorder)
-        "193349004",   # Preproliferative retinopathy due to diabetes mellitus (disorder)
-        "193350004",   # Advanced maculopathy due to diabetes mellitus (disorder)
-        "232020009",   # Disorder of macula due to diabetes mellitus (disorder)
-        "232021008",   # Proliferative retinopathy with optic disc neovascularization due to diabetes mellitus (disorder)
-        "232022001",   # Proliferative retinopathy with neovascularization elsewhere than the optic disc due to diabetes mellitus (disorder)
-        "232023006",   # Traction detachment of retina due to diabetes mellitus (disorder)
-        "25412000",    # Microaneurysm of retinal artery due to diabetes mellitus (disorder)
-        "311782002",   # Advanced retinal disease due to diabetes mellitus (disorder)
-        "312903003",   # Mild nonproliferative retinopathy due to diabetes mellitus (disorder)
-        "312904009",   # Moderate nonproliferative retinopathy due to diabetes mellitus (disorder)
-        "312905005",   # Severe nonproliferative retinopathy due to diabetes mellitus (disorder)
-        "312906006",   # Non-high-risk proliferative retinopathy due to diabetes mellitus (disorder)
-        "312907002",   # High risk proliferative retinopathy due to diabetes mellitus (disorder)
-        "312908007",   # Quiescent proliferative retinopathy due to diabetes mellitus (disorder)
-        "312909004",   # Proliferative retinopathy with iris neovascularization due to diabetes mellitus (disorder)
-        "312912001",   # Macular edema due to diabetes mellitus (disorder)
-        "314010006",   # Diffuse exudative maculopathy due to diabetes mellitus (disorder)
-        "314011005",   # Focal exudative maculopathy due to diabetes mellitus (disorder)
-        "314014002",   # Ischemic maculopathy due to diabetes mellitus (disorder)
-        "314015001",   # Mixed maculopathy due to diabetes mellitus (disorder)
-        "390834004",   # Nonproliferative retinopathy due to diabetes mellitus (disorder)
-        "399862001",   # High risk proliferative retinopathy without macular edema due to diabetes mellitus (disorder)
-        "399863006",   # Very severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
-        "399864000",   # Macular edema not clinically significant due to diabetes mellitus (disorder)
-        "399865004",   # Very severe proliferative retinopathy due to diabetes mellitus (disorder)
-        "399866003",   # Venous beading of retina due to diabetes mellitus (disorder)
-        "399868002",   # Intraretinal microvascular anomaly due to diabetes mellitus (disorder)
-        "399869005",   # High risk proliferative retinopathy not amenable to photocoagulation due to diabetes mellitus (disorder)
-        "399870006",   # Non-high-risk proliferative retinopathy with no macular edema due to diabetes mellitus (disorder)
-        "399871005",   # Visually threatening retinopathy due to diabetes mellitus (disorder)
-        "399872003",   # Severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
-        "399873008",   # Severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
-        "399874002",   # High risk proliferative retinopathy with clinically significant macula edema due to diabetes mellitus (disorder)
-        "399875001",   # Non-high-risk proliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
-        "399876000",   # Very severe nonproliferative retinopathy due to diabetes mellitus (disorder)
-        "399877009",   # Very severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
-        "420486006",   # Exudative maculopathy due to type 1 diabetes mellitus (disorder)
-        "420789003",   # Retinopathy due to type 1 diabetes mellitus (disorder)
-        "421779007",   # Exudative maculopathy due to type 2 diabetes mellitus (disorder)
-        "422034002",   # Retinopathy due to type 2 diabetes mellitus (disorder)
-        "4855003",     # Retinopathy due to diabetes mellitus (disorder)
-        "59276001",    # Proliferative retinopathy due to diabetes mellitus (disorder)
-        "870420005",   # Severe nonproliferative retinopathy with venous beading of retina due to diabetes mellitus (disorder)
+        "193349004",  # Preproliferative retinopathy due to diabetes mellitus (disorder)
+        "193350004",  # Advanced maculopathy due to diabetes mellitus (disorder)
+        "232020009",  # Disorder of macula due to diabetes mellitus (disorder)
+        "232021008",  # Proliferative retinopathy with optic disc neovascularization due to diabetes mellitus (disorder)
+        "232022001",  # Proliferative retinopathy with neovascularization elsewhere than the optic disc due to diabetes mellitus (disorder)
+        "232023006",  # Traction detachment of retina due to diabetes mellitus (disorder)
+        "25412000",  # Microaneurysm of retinal artery due to diabetes mellitus (disorder)
+        "311782002",  # Advanced retinal disease due to diabetes mellitus (disorder)
+        "312903003",  # Mild nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312904009",  # Moderate nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312905005",  # Severe nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312906006",  # Non-high-risk proliferative retinopathy due to diabetes mellitus (disorder)
+        "312907002",  # High risk proliferative retinopathy due to diabetes mellitus (disorder)
+        "312908007",  # Quiescent proliferative retinopathy due to diabetes mellitus (disorder)
+        "312909004",  # Proliferative retinopathy with iris neovascularization due to diabetes mellitus (disorder)
+        "312912001",  # Macular edema due to diabetes mellitus (disorder)
+        "314010006",  # Diffuse exudative maculopathy due to diabetes mellitus (disorder)
+        "314011005",  # Focal exudative maculopathy due to diabetes mellitus (disorder)
+        "314014002",  # Ischemic maculopathy due to diabetes mellitus (disorder)
+        "314015001",  # Mixed maculopathy due to diabetes mellitus (disorder)
+        "390834004",  # Nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "399862001",  # High risk proliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399863006",  # Very severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399864000",  # Macular edema not clinically significant due to diabetes mellitus (disorder)
+        "399865004",  # Very severe proliferative retinopathy due to diabetes mellitus (disorder)
+        "399866003",  # Venous beading of retina due to diabetes mellitus (disorder)
+        "399868002",  # Intraretinal microvascular anomaly due to diabetes mellitus (disorder)
+        "399869005",  # High risk proliferative retinopathy not amenable to photocoagulation due to diabetes mellitus (disorder)
+        "399870006",  # Non-high-risk proliferative retinopathy with no macular edema due to diabetes mellitus (disorder)
+        "399871005",  # Visually threatening retinopathy due to diabetes mellitus (disorder)
+        "399872003",  # Severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "399873008",  # Severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399874002",  # High risk proliferative retinopathy with clinically significant macula edema due to diabetes mellitus (disorder)
+        "399875001",  # Non-high-risk proliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "399876000",  # Very severe nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "399877009",  # Very severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "420486006",  # Exudative maculopathy due to type 1 diabetes mellitus (disorder)
+        "420789003",  # Retinopathy due to type 1 diabetes mellitus (disorder)
+        "421779007",  # Exudative maculopathy due to type 2 diabetes mellitus (disorder)
+        "422034002",  # Retinopathy due to type 2 diabetes mellitus (disorder)
+        "4855003",  # Retinopathy due to diabetes mellitus (disorder)
+        "59276001",  # Proliferative retinopathy due to diabetes mellitus (disorder)
+        "870420005",  # Severe nonproliferative retinopathy with venous beading of retina due to diabetes mellitus (disorder)
     }
 
 
@@ -3237,13 +3239,13 @@ class FrailtyDiagnosis(ValueSet):
         "L89324",  # Pressure ulcer of left buttock, stage 4
         "L89326",  # Pressure-induced deep tissue damage of left buttock
         "L89329",  # Pressure ulcer of left buttock, unspecified stage
-        "L8940",   # Pressure ulcer of contiguous site of back, buttock and hip, unspecified stage
-        "L8941",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 1
-        "L8942",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 2
-        "L8943",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 3
-        "L8944",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 4
-        "L8945",   # Pressure ulcer of contiguous site of back, buttock and hip, unstageable
-        "L8946",   # Pressure-induced deep tissue damage of contiguous site of back, buttock and hip
+        "L8940",  # Pressure ulcer of contiguous site of back, buttock and hip, unspecified stage
+        "L8941",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 1
+        "L8942",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 2
+        "L8943",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 3
+        "L8944",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 4
+        "L8945",  # Pressure ulcer of contiguous site of back, buttock and hip, unstageable
+        "L8946",  # Pressure-induced deep tissue damage of contiguous site of back, buttock and hip
         "L89500",  # Pressure ulcer of unspecified ankle, unstageable
         "L89501",  # Pressure ulcer of unspecified ankle, stage 1
         "L89502",  # Pressure ulcer of unspecified ankle, stage 2
@@ -3264,146 +3266,146 @@ class FrailtyDiagnosis(ValueSet):
         "L89523",  # Pressure ulcer of left ankle, stage 3
         "L89524",  # Pressure ulcer of left ankle, stage 4
         "L89526",  # Pressure-induced deep tissue damage of left ankle
-        "L89529",   # Pressure ulcer of left ankle, unspecified stage
-        "L89600",   # Pressure ulcer of unspecified heel, unstageable
-        "L89601",   # Pressure ulcer of unspecified heel, stage 1
-        "L89602",   # Pressure ulcer of unspecified heel, stage 2
-        "L89603",   # Pressure ulcer of unspecified heel, stage 3
-        "L89604",   # Pressure ulcer of unspecified heel, stage 4
-        "L89606",   # Pressure-induced deep tissue damage of unspecified heel
-        "L89609",   # Pressure ulcer of unspecified heel, unspecified stage
-        "L89610",   # Pressure ulcer of right heel, unstageable
-        "L89611",   # Pressure ulcer of right heel, stage 1
-        "L89612",   # Pressure ulcer of right heel, stage 2
-        "L89613",   # Pressure ulcer of right heel, stage 3
-        "L89614",   # Pressure ulcer of right heel, stage 4
-        "L89616",   # Pressure-induced deep tissue damage of right heel
-        "L89619",   # Pressure ulcer of right heel, unspecified stage
-        "L89620",   # Pressure ulcer of left heel, unstageable
-        "L89621",   # Pressure ulcer of left heel, stage 1
-        "L89622",   # Pressure ulcer of left heel, stage 2
-        "L89623",   # Pressure ulcer of left heel, stage 3
-        "L89624",   # Pressure ulcer of left heel, stage 4
-        "L89626",   # Pressure-induced deep tissue damage of left heel
-        "L89629",   # Pressure ulcer of left heel, unspecified stage
-        "L89810",   # Pressure ulcer of head, unstageable
-        "L89811",   # Pressure ulcer of head, stage 1
-        "L89812",   # Pressure ulcer of head, stage 2
-        "L89813",   # Pressure ulcer of head, stage 3
-        "L89814",   # Pressure ulcer of head, stage 4
-        "L89816",   # Pressure-induced deep tissue damage of head
-        "L89819",   # Pressure ulcer of head, unspecified stage
-        "L89890",   # Pressure ulcer of other site, unstageable
-        "L89891",   # Pressure ulcer of other site, stage 1
-        "L89892",   # Pressure ulcer of other site, stage 2
-        "L89893",   # Pressure ulcer of other site, stage 3
-        "L89894",   # Pressure ulcer of other site, stage 4
-        "L89896",   # Pressure-induced deep tissue damage of other site
-        "L89899",   # Pressure ulcer of other site, unspecified stage
-        "L8990",    # Pressure ulcer of unspecified site, unspecified stage
-        "L8991",    # Pressure ulcer of unspecified site, stage 1
-        "L8992",    # Pressure ulcer of unspecified site, stage 2
-        "L8993",    # Pressure ulcer of unspecified site, stage 3
-        "L8994",    # Pressure ulcer of unspecified site, stage 4
-        "L8995",    # Pressure ulcer of unspecified site, unstageable
-        "L8996",    # Pressure-induced deep tissue damage of unspecified site
-        "M6250",    # Muscle wasting and atrophy, not elsewhere classified, unspecified site
-        "M6281",    # Muscle weakness (generalized)
-        "M6284",    # Sarcopenia
-        "R296",     # Repeated falls
+        "L89529",  # Pressure ulcer of left ankle, unspecified stage
+        "L89600",  # Pressure ulcer of unspecified heel, unstageable
+        "L89601",  # Pressure ulcer of unspecified heel, stage 1
+        "L89602",  # Pressure ulcer of unspecified heel, stage 2
+        "L89603",  # Pressure ulcer of unspecified heel, stage 3
+        "L89604",  # Pressure ulcer of unspecified heel, stage 4
+        "L89606",  # Pressure-induced deep tissue damage of unspecified heel
+        "L89609",  # Pressure ulcer of unspecified heel, unspecified stage
+        "L89610",  # Pressure ulcer of right heel, unstageable
+        "L89611",  # Pressure ulcer of right heel, stage 1
+        "L89612",  # Pressure ulcer of right heel, stage 2
+        "L89613",  # Pressure ulcer of right heel, stage 3
+        "L89614",  # Pressure ulcer of right heel, stage 4
+        "L89616",  # Pressure-induced deep tissue damage of right heel
+        "L89619",  # Pressure ulcer of right heel, unspecified stage
+        "L89620",  # Pressure ulcer of left heel, unstageable
+        "L89621",  # Pressure ulcer of left heel, stage 1
+        "L89622",  # Pressure ulcer of left heel, stage 2
+        "L89623",  # Pressure ulcer of left heel, stage 3
+        "L89624",  # Pressure ulcer of left heel, stage 4
+        "L89626",  # Pressure-induced deep tissue damage of left heel
+        "L89629",  # Pressure ulcer of left heel, unspecified stage
+        "L89810",  # Pressure ulcer of head, unstageable
+        "L89811",  # Pressure ulcer of head, stage 1
+        "L89812",  # Pressure ulcer of head, stage 2
+        "L89813",  # Pressure ulcer of head, stage 3
+        "L89814",  # Pressure ulcer of head, stage 4
+        "L89816",  # Pressure-induced deep tissue damage of head
+        "L89819",  # Pressure ulcer of head, unspecified stage
+        "L89890",  # Pressure ulcer of other site, unstageable
+        "L89891",  # Pressure ulcer of other site, stage 1
+        "L89892",  # Pressure ulcer of other site, stage 2
+        "L89893",  # Pressure ulcer of other site, stage 3
+        "L89894",  # Pressure ulcer of other site, stage 4
+        "L89896",  # Pressure-induced deep tissue damage of other site
+        "L89899",  # Pressure ulcer of other site, unspecified stage
+        "L8990",  # Pressure ulcer of unspecified site, unspecified stage
+        "L8991",  # Pressure ulcer of unspecified site, stage 1
+        "L8992",  # Pressure ulcer of unspecified site, stage 2
+        "L8993",  # Pressure ulcer of unspecified site, stage 3
+        "L8994",  # Pressure ulcer of unspecified site, stage 4
+        "L8995",  # Pressure ulcer of unspecified site, unstageable
+        "L8996",  # Pressure-induced deep tissue damage of unspecified site
+        "M6250",  # Muscle wasting and atrophy, not elsewhere classified, unspecified site
+        "M6281",  # Muscle weakness (generalized)
+        "M6284",  # Sarcopenia
+        "R296",  # Repeated falls
         "W010XXA",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, initial encounter
         "W010XXD",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, subsequent encounter
         "W010XXS",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, sequela
-        "W0110XA",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, initial encounter
-        "W0110XD",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, subsequent encounter
-        "W0110XS",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, sequela
-        "W01110A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, initial encounter
-        "W01110D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, subsequent encounter
-        "W01110S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, sequela
-        "W01111A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, initial encounter
-        "W01111D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, subsequent encounter
-        "W01111S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, sequela
-        "W01118A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, initial encounter
-        "W01118D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, subsequent encounter
-        "W01118S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, sequela
-        "W01119A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, initial encounter
-        "W01119D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, subsequent encounter
-        "W01119S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, sequela
-        "W01190A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, initial encounter
-        "W01190D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, subsequent encounter
-        "W01190S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, sequela
-        "W01198A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, initial encounter
-        "W01198D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, subsequent encounter
-        "W01198S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, sequela
-        "W06XXXA",   # Fall from bed, initial encounter
-        "W06XXXD",   # Fall from bed, subsequent encounter
-        "W06XXXS",   # Fall from bed, sequela
-        "W07XXXA",   # Fall from chair, initial encounter
-        "W07XXXD",   # Fall from chair, subsequent encounter
-        "W07XXXS",   # Fall from chair, sequela
-        "W08XXXA",   # Fall from other furniture, initial encounter
-        "W08XXXD",   # Fall from other furniture, subsequent encounter
-        "W08XXXS",   # Fall from other furniture, sequela
-        "W100XXA",   # Fall (on)(from) escalator, initial encounter
-        "W100XXD",   # Fall (on)(from) escalator, subsequent encounter
-        "W100XXS",   # Fall (on)(from) escalator, sequela
-        "W101XXA",   # Fall (on)(from) sidewalk curb, initial encounter
-        "W101XXD",   # Fall (on)(from) sidewalk curb, subsequent encounter
-        "W101XXS",   # Fall (on)(from) sidewalk curb, sequela
-        "W102XXA",   # Fall (on)(from) incline, initial encounter
-        "W102XXD",   # Fall (on)(from) incline, subsequent encounter
-        "W102XXS",   # Fall (on)(from) incline, sequela
-        "W108XXA",   # Fall (on) (from) other stairs and steps, initial encounter
-        "W108XXD",   # Fall (on) (from) other stairs and steps, subsequent encounter
-        "W108XXS",   # Fall (on) (from) other stairs and steps, sequela
-        "W109XXA",   # Fall (on) (from) unspecified stairs and steps, initial encounter
-        "W109XXD",   # Fall (on) (from) unspecified stairs and steps, subsequent encounter
-        "W109XXS",   # Fall (on) (from) unspecified stairs and steps, sequela
-        "W1800XA",   # Striking against unspecified object with subsequent fall, initial encounter
-        "W1800XD",   # Striking against unspecified object with subsequent fall, subsequent encounter
-        "W1800XS",   # Striking against unspecified object with subsequent fall, sequela
-        "W1802XA",   # Striking against glass with subsequent fall, initial encounter
-        "W1802XD",   # Striking against glass with subsequent fall, subsequent encounter
-        "W1802XS",   # Striking against glass with subsequent fall, sequela
-        "W1809XA",   # Striking against other object with subsequent fall, initial encounter
-        "W1809XD",   # Striking against other object with subsequent fall, subsequent encounter
-        "W1809XS",   # Striking against other object with subsequent fall, sequela
-        "W1811XA",   # Fall from or off toilet without subsequent striking against object, initial encounter
-        "W1811XD",   # Fall from or off toilet without subsequent striking against object, subsequent encounter
-        "W1811XS",   # Fall from or off toilet without subsequent striking against object, sequela
-        "W1812XA",   # Fall from or off toilet with subsequent striking against object, initial encounter
-        "W1812XD",   # Fall from or off toilet with subsequent striking against object, subsequent encounter
-        "W1812XS",   # Fall from or off toilet with subsequent striking against object, sequela
-        "W182XXA",   # Fall in (into) shower or empty bathtub, initial encounter
-        "W182XXD",   # Fall in (into) shower or empty bathtub, subsequent encounter
-        "W182XXS",   # Fall in (into) shower or empty bathtub, sequela
-        "W1830XA",   # Fall on same level, unspecified, initial encounter
-        "W1830XD",   # Fall on same level, unspecified, subsequent encounter
-        "W1830XS",   # Fall on same level, unspecified, sequela
-        "W1831XA",   # Fall on same level due to stepping on an object, initial encounter
-        "W1831XD",   # Fall on same level due to stepping on an object, subsequent encounter
-        "W1831XS",   # Fall on same level due to stepping on an object, sequela
-        "W1839XA",   # Other fall on same level, initial encounter
-        "W1839XD",   # Other fall on same level, subsequent encounter
-        "W1839XS",   # Other fall on same level, sequela
-        "W19XXXA",   # Unspecified fall, initial encounter
-        "W19XXXD",   # Unspecified fall, subsequent encounter
-        "W19XXXS",   # Unspecified fall, sequela
-        "Y92199",    # Unspecified place in other specified residential institution as the place of occurrence of the external cause
-        "Z593",      # Problems related to living in residential institution
-        "Z736",      # Limitation of activities due to disability
-        "Z7401",     # Bed confinement status
-        "Z7409",     # Other reduced mobility
-        "Z741",      # Need for assistance with personal care
-        "Z742",      # Need for assistance at home and no other household member able to render care
-        "Z743",      # Need for continuous supervision
-        "Z748",      # Other problems related to care provider dependency
-        "Z749",      # Problem related to care provider dependency, unspecified
-        "Z9181",     # History of falling
-        "Z9911",     # Dependence on respirator [ventilator] status
-        "Z993",      # Dependence on wheelchair
-        "Z9981",     # Dependence on supplemental oxygen
-        "Z9989",     # Dependence on other enabling machines and devices
+        "W0110XA",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, initial encounter
+        "W0110XD",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, subsequent encounter
+        "W0110XS",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, sequela
+        "W01110A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, initial encounter
+        "W01110D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, subsequent encounter
+        "W01110S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, sequela
+        "W01111A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, initial encounter
+        "W01111D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, subsequent encounter
+        "W01111S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, sequela
+        "W01118A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, initial encounter
+        "W01118D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, subsequent encounter
+        "W01118S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, sequela
+        "W01119A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, initial encounter
+        "W01119D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, subsequent encounter
+        "W01119S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, sequela
+        "W01190A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, initial encounter
+        "W01190D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, subsequent encounter
+        "W01190S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, sequela
+        "W01198A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, initial encounter
+        "W01198D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, subsequent encounter
+        "W01198S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, sequela
+        "W06XXXA",  # Fall from bed, initial encounter
+        "W06XXXD",  # Fall from bed, subsequent encounter
+        "W06XXXS",  # Fall from bed, sequela
+        "W07XXXA",  # Fall from chair, initial encounter
+        "W07XXXD",  # Fall from chair, subsequent encounter
+        "W07XXXS",  # Fall from chair, sequela
+        "W08XXXA",  # Fall from other furniture, initial encounter
+        "W08XXXD",  # Fall from other furniture, subsequent encounter
+        "W08XXXS",  # Fall from other furniture, sequela
+        "W100XXA",  # Fall (on)(from) escalator, initial encounter
+        "W100XXD",  # Fall (on)(from) escalator, subsequent encounter
+        "W100XXS",  # Fall (on)(from) escalator, sequela
+        "W101XXA",  # Fall (on)(from) sidewalk curb, initial encounter
+        "W101XXD",  # Fall (on)(from) sidewalk curb, subsequent encounter
+        "W101XXS",  # Fall (on)(from) sidewalk curb, sequela
+        "W102XXA",  # Fall (on)(from) incline, initial encounter
+        "W102XXD",  # Fall (on)(from) incline, subsequent encounter
+        "W102XXS",  # Fall (on)(from) incline, sequela
+        "W108XXA",  # Fall (on) (from) other stairs and steps, initial encounter
+        "W108XXD",  # Fall (on) (from) other stairs and steps, subsequent encounter
+        "W108XXS",  # Fall (on) (from) other stairs and steps, sequela
+        "W109XXA",  # Fall (on) (from) unspecified stairs and steps, initial encounter
+        "W109XXD",  # Fall (on) (from) unspecified stairs and steps, subsequent encounter
+        "W109XXS",  # Fall (on) (from) unspecified stairs and steps, sequela
+        "W1800XA",  # Striking against unspecified object with subsequent fall, initial encounter
+        "W1800XD",  # Striking against unspecified object with subsequent fall, subsequent encounter
+        "W1800XS",  # Striking against unspecified object with subsequent fall, sequela
+        "W1802XA",  # Striking against glass with subsequent fall, initial encounter
+        "W1802XD",  # Striking against glass with subsequent fall, subsequent encounter
+        "W1802XS",  # Striking against glass with subsequent fall, sequela
+        "W1809XA",  # Striking against other object with subsequent fall, initial encounter
+        "W1809XD",  # Striking against other object with subsequent fall, subsequent encounter
+        "W1809XS",  # Striking against other object with subsequent fall, sequela
+        "W1811XA",  # Fall from or off toilet without subsequent striking against object, initial encounter
+        "W1811XD",  # Fall from or off toilet without subsequent striking against object, subsequent encounter
+        "W1811XS",  # Fall from or off toilet without subsequent striking against object, sequela
+        "W1812XA",  # Fall from or off toilet with subsequent striking against object, initial encounter
+        "W1812XD",  # Fall from or off toilet with subsequent striking against object, subsequent encounter
+        "W1812XS",  # Fall from or off toilet with subsequent striking against object, sequela
+        "W182XXA",  # Fall in (into) shower or empty bathtub, initial encounter
+        "W182XXD",  # Fall in (into) shower or empty bathtub, subsequent encounter
+        "W182XXS",  # Fall in (into) shower or empty bathtub, sequela
+        "W1830XA",  # Fall on same level, unspecified, initial encounter
+        "W1830XD",  # Fall on same level, unspecified, subsequent encounter
+        "W1830XS",  # Fall on same level, unspecified, sequela
+        "W1831XA",  # Fall on same level due to stepping on an object, initial encounter
+        "W1831XD",  # Fall on same level due to stepping on an object, subsequent encounter
+        "W1831XS",  # Fall on same level due to stepping on an object, sequela
+        "W1839XA",  # Other fall on same level, initial encounter
+        "W1839XD",  # Other fall on same level, subsequent encounter
+        "W1839XS",  # Other fall on same level, sequela
+        "W19XXXA",  # Unspecified fall, initial encounter
+        "W19XXXD",  # Unspecified fall, subsequent encounter
+        "W19XXXS",  # Unspecified fall, sequela
+        "Y92199",  # Unspecified place in other specified residential institution as the place of occurrence of the external cause
+        "Z593",  # Problems related to living in residential institution
+        "Z736",  # Limitation of activities due to disability
+        "Z7401",  # Bed confinement status
+        "Z7409",  # Other reduced mobility
+        "Z741",  # Need for assistance with personal care
+        "Z742",  # Need for assistance at home and no other household member able to render care
+        "Z743",  # Need for continuous supervision
+        "Z748",  # Other problems related to care provider dependency
+        "Z749",  # Problem related to care provider dependency, unspecified
+        "Z9181",  # History of falling
+        "Z9911",  # Dependence on respirator [ventilator] status
+        "Z993",  # Dependence on wheelchair
+        "Z9981",  # Dependence on supplemental oxygen
+        "Z9989",  # Dependence on other enabling machines and devices
     }
 
     SNOMEDCT = {
@@ -3411,68 +3413,68 @@ class FrailtyDiagnosis(ValueSet):
         "10637071000119109",  # Pressure injury of buttock stage II (disorder)
         "10637111000119102",  # Pressure injury of buttock stage III (disorder)
         "10637151000119101",  # Pressure injury of buttock stage IV (disorder)
-        "129588001",          # Adult failure to thrive syndrome (disorder)
-        "138371000119104",    # Paresis as late effect of poliomyelitis (disorder)
-        "17886000",           # Fall from wheelchair (event)
-        "20902002",           # Fall from bed (event)
-        "214436006",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting (event)
-        "214437002",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, driver injured (event)
-        "214438007",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, passenger injured (event)
-        "214439004",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, motor cyclist injured (event)
-        "214441003",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, occupant of tram injured (event)
-        "214442005",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, rider of animal or occupant of animal-drawn vehicle injured (event)
-        "214443000",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedal cyclist injured (event)
-        "214444006",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedestrian injured (event)
-        "217082002",          # Accidental fall (event)
-        "217083007",          # Fall on or from stairs or steps (event)
-        "217084001",          # Fall on or from escalator (event)
-        "217086004",          # Fall from escalator (event)
-        "217088003",          # Fall on or from stairs (event)
-        "217090002",          # Fall from stairs (event)
-        "217092005",          # Fall on or from steps (event)
-        "217093000",          # Fall on steps (event)
-        "217094006",          # Fall from steps (event)
-        "217142006",          # Fall from chair or bed (event)
-        "217154006",          # Fall on same level from slipping, tripping or stumbling (event)
-        "217155007",          # Fall on same level from slipping (event)
-        "217156008",          # Fall on same level from tripping (event)
-        "217157004",          # Fall on same level from stumbling (event)
-        "217158009",          # Fall on moving sidewalk (event)
-        "217173005",          # Fall from bump against object (event)
-        "225558004",          # Pressure injury of back (disorder)
-        "225562005",          # Pressure injury of sacral region of back (disorder)
-        "225563000",          # Pressure injury of buttock (disorder)
-        "242109009",          # Fall down stairs of motor bus while boarding or alighting (event)
-        "242389003",          # Fall due to wet surface (event)
-        "242390007",          # Fall due to polished surface (event)
-        "242391006",          # Fall due to discarded object (event)
-        "242392004",          # Fall in bath or shower (event)
-        "242395002",          # Fall due to trip on loose carpet (event)
-        "242396001",          # Fall due to uneven surface indoors (event)
-        "242413007",          # Fall from furniture (event)
-        "242414001",          # Fall from stool (event)
-        "242419006",          # Fall from toilet seat (event)
-        "269699007",          # Fall on same level from impact against object (event)
-        "274918000",          # Fall on same level due to nature of surface (event)
-        "33036003",           # Fall on same level (event)
-        "40104005",           # Fall in home (event)
-        "414190009",          # Fall on stairs (event)
-        "427849003",          # Fall on hard surface (event)
-        "428484005",          # Organic failure to thrive (disorder)
-        "429621003",          # Fall on concrete (event)
-        "44188002",           # Fall in shower (event)
-        "56307009",           # Fall from table (event)
-        "67223001",           # Fall on escalator (event)
-        "699214007",          # Pressure injury of hip (disorder)
-        "699216009",          # Pressure injury of coccygeal region of back (disorder)
-        "715504003",          # Spastic paraparesis co-occurrent with deafness (disorder)
-        "74541001",           # Fall from bench (event)
-        "763829004",          # Oculopharyngodistal myopathy (disorder)
-        "823018004",          # Muscle paresis due to and following neuromuscular blockade (disorder)
-        "83468000",           # Fall from chair (event)
-        "8960001000004106",   # Pressure injury of ischial tuberosity region of right buttock (disorder)
-        "90619006",           # Fall in bathtub (event)
-        "92341000119107",     # Weakness of extremities as sequela of stroke (disorder)
+        "129588001",  # Adult failure to thrive syndrome (disorder)
+        "138371000119104",  # Paresis as late effect of poliomyelitis (disorder)
+        "17886000",  # Fall from wheelchair (event)
+        "20902002",  # Fall from bed (event)
+        "214436006",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting (event)
+        "214437002",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, driver injured (event)
+        "214438007",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, passenger injured (event)
+        "214439004",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, motor cyclist injured (event)
+        "214441003",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, occupant of tram injured (event)
+        "214442005",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, rider of animal or occupant of animal-drawn vehicle injured (event)
+        "214443000",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedal cyclist injured (event)
+        "214444006",  # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedestrian injured (event)
+        "217082002",  # Accidental fall (event)
+        "217083007",  # Fall on or from stairs or steps (event)
+        "217084001",  # Fall on or from escalator (event)
+        "217086004",  # Fall from escalator (event)
+        "217088003",  # Fall on or from stairs (event)
+        "217090002",  # Fall from stairs (event)
+        "217092005",  # Fall on or from steps (event)
+        "217093000",  # Fall on steps (event)
+        "217094006",  # Fall from steps (event)
+        "217142006",  # Fall from chair or bed (event)
+        "217154006",  # Fall on same level from slipping, tripping or stumbling (event)
+        "217155007",  # Fall on same level from slipping (event)
+        "217156008",  # Fall on same level from tripping (event)
+        "217157004",  # Fall on same level from stumbling (event)
+        "217158009",  # Fall on moving sidewalk (event)
+        "217173005",  # Fall from bump against object (event)
+        "225558004",  # Pressure injury of back (disorder)
+        "225562005",  # Pressure injury of sacral region of back (disorder)
+        "225563000",  # Pressure injury of buttock (disorder)
+        "242109009",  # Fall down stairs of motor bus while boarding or alighting (event)
+        "242389003",  # Fall due to wet surface (event)
+        "242390007",  # Fall due to polished surface (event)
+        "242391006",  # Fall due to discarded object (event)
+        "242392004",  # Fall in bath or shower (event)
+        "242395002",  # Fall due to trip on loose carpet (event)
+        "242396001",  # Fall due to uneven surface indoors (event)
+        "242413007",  # Fall from furniture (event)
+        "242414001",  # Fall from stool (event)
+        "242419006",  # Fall from toilet seat (event)
+        "269699007",  # Fall on same level from impact against object (event)
+        "274918000",  # Fall on same level due to nature of surface (event)
+        "33036003",  # Fall on same level (event)
+        "40104005",  # Fall in home (event)
+        "414190009",  # Fall on stairs (event)
+        "427849003",  # Fall on hard surface (event)
+        "428484005",  # Organic failure to thrive (disorder)
+        "429621003",  # Fall on concrete (event)
+        "44188002",  # Fall in shower (event)
+        "56307009",  # Fall from table (event)
+        "67223001",  # Fall on escalator (event)
+        "699214007",  # Pressure injury of hip (disorder)
+        "699216009",  # Pressure injury of coccygeal region of back (disorder)
+        "715504003",  # Spastic paraparesis co-occurrent with deafness (disorder)
+        "74541001",  # Fall from bench (event)
+        "763829004",  # Oculopharyngodistal myopathy (disorder)
+        "823018004",  # Muscle paresis due to and following neuromuscular blockade (disorder)
+        "83468000",  # Fall from chair (event)
+        "8960001000004106",  # Pressure injury of ischial tuberosity region of right buttock (disorder)
+        "90619006",  # Fall in bathtub (event)
+        "92341000119107",  # Weakness of extremities as sequela of stroke (disorder)
     }
 
 
@@ -3528,6 +3530,7 @@ class PalliativeCareDiagnosis(ValueSet):
         "305824005",  # Seen by palliative care medicine service (finding)
         "441874000",  # Seen by palliative care service (finding)
     }
+
 
 class AtrialFibrillationOrFlutter(ValueSet):
     """
@@ -3585,6 +3588,7 @@ class AtrialFibrillationOrFlutter(ValueSet):
         "720448006",  # Typical atrial flutter (disorder)
         "762247006",  # Preexcited atrial fibrillation (disorder)
     }
+
 
 class VenousThromboembolism(ValueSet):
     """
@@ -3743,6 +3747,7 @@ class VenousThromboembolism(ValueSet):
         "95449003",  # Thrombophlebitis of pelvic vein (disorder)
     }
 
+
 class LimitedLifeExpectancy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of limited life expectancy, including poor prognosis or terminal illness.
@@ -3767,6 +3772,7 @@ class LimitedLifeExpectancy(ValueSet):
         "27143004",  # Patient status determination, pre-terminal (finding)
         "300936002",  # Terminal illness (finding)
     }
+
 
 class PrediabetesBorderlineDiabetes(ValueSet):
     """
@@ -3794,6 +3800,7 @@ class PrediabetesBorderlineDiabetes(ValueSet):
         "16896421000119107",  # Prediabetes in mother during pregnancy (disorder)
         "714628002",  # Prediabetes (finding)
     }
+
 
 class Pregnancy(ValueSet):
     """
@@ -5804,6 +5811,7 @@ class Pregnancy(ValueSet):
         "9279009",  # Extra-amniotic pregnancy (finding)
     }
 
+
 class Hiv(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of human immunodeficiency virus (HIV) disease.
@@ -6057,6 +6065,7 @@ class Hiv(ValueSet):
         "91948008",  # Asymptomatic human immunodeficiency virus infection in pregnancy (disorder)
     }
 
+
 class AnaphylacticReactionToDtapVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of an anaphylactic reaction to DTaP (diphtheria, tetanus, and acellular pertussis) vaccine.
@@ -6077,6 +6086,7 @@ class AnaphylacticReactionToDtapVaccine(ValueSet):
         "428281000124107",  # Anaphylaxis caused by vaccine product containing only Clostridium tetani and Corynebacterium diphtheriae antigens (disorder)
         "428291000124105",  # Anaphylaxis caused by component of vaccine product containing low dose acellular Bordetella pertussis and Clostridium tetani and low dose Corynebacterium diphtheriae antigens (disorder)
     }
+
 
 class DisordersOfTheImmuneSystem(ValueSet):
     """
@@ -6261,6 +6271,7 @@ class DisordersOfTheImmuneSystem(ValueSet):
         "88714009",  # Transient hypogammaglobulinemia of infancy (disorder)
     }
 
+
 class EncephalitisDueToDiphtheriaTetanusOrPertussisVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of an encephalitis due to DTaP, diphtheria, tetanus, or pertussis vaccine.
@@ -6282,6 +6293,7 @@ class EncephalitisDueToDiphtheriaTetanusOrPertussisVaccine(ValueSet):
         "192711008",  # Post diphtheria vaccination encephalitis (disorder)
         "192712001",  # Post pertussis vaccination encephalitis (disorder)
     }
+
 
 class HepatitisA(ValueSet):
     """
@@ -6320,6 +6332,7 @@ class HepatitisA(ValueSet):
         "43634002",  # Relapsing type A viral hepatitis (disorder)
         "79031007",  # Anicteric type A viral hepatitis (disorder)
     }
+
 
 class HepatitisB(ValueSet):
     """
@@ -6376,6 +6389,7 @@ class HepatitisB(ValueSet):
         "838380002",  # Chronic hepatitis B co-occurrent with hepatitis C and hepatitis D (disorder)
     }
 
+
 class Intussusception(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of intussusception.
@@ -6421,6 +6435,7 @@ class Intussusception(ValueSet):
         "721676001",  # Intussusception of large intestine (disorder)
         "91446004",  # Intussusception of appendix (disorder)
     }
+
 
 class MalignantNeoplasmOfLymphaticAndHematopoieticTissue(ValueSet):
     """
@@ -7662,6 +7677,7 @@ class MalignantNeoplasmOfLymphaticAndHematopoieticTissue(ValueSet):
         "95263006",  # Sezary's disease of spleen (disorder)
     }
 
+
 class Measles(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of measles infections.
@@ -7709,6 +7725,7 @@ class Measles(ValueSet):
         "60013002",  # Measles keratoconjunctivitis (disorder)
         "74918002",  # Measles myocarditis (disorder)
     }
+
 
 class Mumps(ValueSet):
     """
@@ -7768,6 +7785,7 @@ class Mumps(ValueSet):
         "89764009",  # Arthritis due to mumps (disorder)
     }
 
+
 class Rubella(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of rubella infections.
@@ -7818,6 +7836,7 @@ class Rubella(ValueSet):
         "64190005",  # Rubella myocarditis (disorder)
         "79303006",  # Expanded rubella syndrome (disorder)
     }
+
 
 class SevereCombinedImmunodeficiency(ValueSet):
     """
@@ -7892,6 +7911,7 @@ class SevereCombinedImmunodeficiency(ValueSet):
         "789777007",  # Short-limb skeletal dysplasia with severe combined immunodeficiency (disorder)
         "987840791000119102",  # Adenosine deaminase 2 deficiency (disorder)
     }
+
 
 class VaricellaZoster(ValueSet):
     """
@@ -8028,6 +8048,7 @@ class VaricellaZoster(ValueSet):
         "98541000119101",  # Herpes zoster myelitis (disorder)
     }
 
+
 class CongenitalOrAcquiredAbsenceOfCervix(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent diagnoses related to absence of a cervix.
@@ -8061,6 +8082,7 @@ class CongenitalOrAcquiredAbsenceOfCervix(ValueSet):
         "723171001",  # Acquired absence of cervix and uterus (disorder)
     }
 
+
 class HistoryOfBilateralMastectomy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of a history of bilateral mastectomy.
@@ -8085,6 +8107,7 @@ class HistoryOfBilateralMastectomy(ValueSet):
         "136071000119101",  # History of bilateral prophylactic mastectomy (situation)
         "428529004",  # History of bilateral mastectomy (situation)
     }
+
 
 class StatusPostLeftMastectomy(ValueSet):
     """
@@ -8111,6 +8134,7 @@ class StatusPostLeftMastectomy(ValueSet):
         "429009003",  # History of left mastectomy (situation)
     }
 
+
 class StatusPostRightMastectomy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of a history of a right mastectomy.
@@ -8135,6 +8159,7 @@ class StatusPostRightMastectomy(ValueSet):
         "137681000119108",  # History of prophylactic mastectomy of right breast (situation)
         "429242008",  # History of right mastectomy (situation)
     }
+
 
 class UnilateralMastectomyUnspecifiedLaterality(ValueSet):
     """
@@ -8164,6 +8189,7 @@ class UnilateralMastectomyUnspecifiedLaterality(ValueSet):
         "88764002",  # Unilateral extended simple mastectomy (situation)
         "248802009",  # Absence of breast (finding)
     }
+
 
 class MajorDepression(ValueSet):
     """
@@ -8254,6 +8280,7 @@ class MajorDepression(ValueSet):
         "87512008",  # Mild major depression (disorder)
     }
 
+
 class PainWarrantingFurtherInvestigationForProstateCancer(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent types of pain or conditions that could cause pain that could be associated with prostate cancer.
@@ -8317,6 +8344,7 @@ class PainWarrantingFurtherInvestigationForProstateCancer(ValueSet):
         "89638008",  # Xiphodynia (finding)
     }
 
+
 class ProstateCancer(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses for prostate cancer.
@@ -8350,6 +8378,7 @@ class ProstateCancer(ValueSet):
         "93974005",  # Primary malignant neoplasm of prostate (disorder)
         "94503003",  # Metastatic malignant neoplasm to prostate (disorder)
     }
+
 
 class MalignantNeoplasmOfColon(ValueSet):
     """
@@ -8524,6 +8553,7 @@ class MalignantNeoplasmOfColon(ValueSet):
         "96281000119107",  # Overlapping malignant neoplasm of colon and rectum (disorder)
     }
 
+
 class AcuteAndSubacuteIridocyclitis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of acute and subacute iridocyclitis.
@@ -8644,6 +8674,7 @@ class AcuteAndSubacuteIridocyclitis(ValueSet):
         "9091006",  # Gonococcal iridocyclitis (disorder)
     }
 
+
 class Amblyopia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of amblyopia.
@@ -8707,6 +8738,7 @@ class Amblyopia(ValueSet):
         "90927000",  # Refractive amblyopia (disorder)
         "965003",  # Toxic amblyopia (disorder)
     }
+
 
 class BurnConfinedToEyeAndAdnexa(ValueSet):
     """
@@ -8813,6 +8845,7 @@ class BurnConfinedToEyeAndAdnexa(ValueSet):
         "770555009",  # Burn of eye proper (disorder)
     }
 
+
 class CataractCongenital(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of congenital cataract.
@@ -8867,6 +8900,7 @@ class CataractCongenital(ValueSet):
         "79410001",  # Congenital cataract (disorder)
     }
 
+
 class CataractMatureOrHypermature(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of mature or hypermature cataract.
@@ -8914,6 +8948,7 @@ class CataractMatureOrHypermature(ValueSet):
         "95724003",  # Intumescent cataract (disorder)
     }
 
+
 class CataractPosteriorPolar(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of posterior polar cataract.
@@ -8952,6 +8987,7 @@ class CataractPosteriorPolar(ValueSet):
         "347561000119108",  # Posterior subcapsular polar senile cataract of bilateral eyes (disorder)
         "5318001",  # Posterior subcapsular polar senile cataract (disorder)
     }
+
 
 class CataractSecondaryToOcularDisorders(ValueSet):
     """
@@ -8996,6 +9032,7 @@ class CataractSecondaryToOcularDisorders(ValueSet):
         "67733005",  # Glaukomflecken (disorder)
     }
 
+
 class CentralCornealUlcer(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of central corneal ulcer.
@@ -9031,6 +9068,7 @@ class CentralCornealUlcer(ValueSet):
         "95732006",  # Necrotizing keratitis (disorder)
         "95733001",  # Eosinophilic keratitis (disorder)
     }
+
 
 class CertainTypesOfIridocyclitis(ValueSet):
     """
@@ -9100,6 +9138,7 @@ class CertainTypesOfIridocyclitis(ValueSet):
         "9091006",  # Gonococcal iridocyclitis (disorder)
     }
 
+
 class ChoroidalDegenerations(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of choroidal degenerations.
@@ -9166,6 +9205,7 @@ class ChoroidalDegenerations(ValueSet):
         "92820007",  # Circumpapillary dystrophy of choroid (disorder)
     }
 
+
 class ChoroidalDetachment(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of choroidal detachment.
@@ -9212,6 +9252,7 @@ class ChoroidalDetachment(ValueSet):
         "78584008",  # Serous choroidal detachment (disorder)
     }
 
+
 class ChoroidalHemorrhageAndRupture(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of choroidal hemorrhage and/or rupture.
@@ -9255,6 +9296,7 @@ class ChoroidalHemorrhageAndRupture(ValueSet):
         "419596007",  # Suprachoroidal hemorrhage (disorder)
     }
 
+
 class ChronicIridocyclitis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of chronic iridocyclitis.
@@ -9290,6 +9332,7 @@ class ChronicIridocyclitis(ValueSet):
         "416449002",  # Chronic iridocyclitis in young girls (disorder)
         "6869001",  # Recurrent iridocyclitis (disorder)
     }
+
 
 class CloudyCornea(ValueSet):
     """
@@ -9345,6 +9388,7 @@ class CloudyCornea(ValueSet):
         "66104007",  # Minor opacity of cornea (disorder)
         "72494008",  # Corneal nebula (disorder)
     }
+
 
 class CornealEdema(ValueSet):
     """
@@ -9404,6 +9448,7 @@ class CornealEdema(ValueSet):
         "678991000119103",  # Pseudophakic bullous keratopathy of left eye (disorder)
         "679011000119100",  # Pseudophakic bullous keratopathy of right eye (disorder)
     }
+
 
 class DegenerationOfMaculaAndPosteriorPole(ValueSet):
     """
@@ -9588,6 +9633,7 @@ class DegenerationOfMaculaAndPosteriorPole(ValueSet):
         "860721006",  # Disorder of macula of bilateral eyes due to diabetes mellitus (disorder)
     }
 
+
 class DegenerativeDisordersOfGlobe(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of degenerative disorders of globe.
@@ -9756,6 +9802,7 @@ class DegenerativeDisordersOfGlobe(ValueSet):
         "95700006",  # Sudden acquired retinal degeneration (disorder)
     }
 
+
 class DiabeticMacularEdema(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of diabetic macular edema.
@@ -9888,6 +9935,7 @@ class DiabeticMacularEdema(ValueSet):
         "97331000119101",  # Macular edema and retinopathy due to type 2 diabetes mellitus (disorder)
     }
 
+
 class DisordersOfCorneaIncludingCornealOpacity(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of corneal opacity and other corneal disorders.
@@ -9969,6 +10017,7 @@ class DisordersOfCorneaIncludingCornealOpacity(ValueSet):
         "95726001",  # Corneal scar (disorder)
     }
 
+
 class DisordersOfOpticChiasm(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of disorders of optic chiasm.
@@ -10007,6 +10056,7 @@ class DisordersOfOpticChiasm(ValueSet):
         "70476006",  # Optic chiasm disorder (disorder)
         "89654006",  # Disorder of optic chiasm associated with vascular disorder (disorder)
     }
+
 
 class DisordersOfVisualCortex(ValueSet):
     """
@@ -10052,6 +10102,7 @@ class DisordersOfVisualCortex(ValueSet):
         "732251003",  # Cortical blindness, intellectual disability, polydactyly syndrome (disorder)
         "773548008",  # Early-onset epileptic encephalopathy, cortical blindness, intellectual disability, facial dysmorphism syndrome (disorder)
     }
+
 
 class DisseminatedChorioretinitisAndDisseminatedRetinochoroiditis(ValueSet):
     """
@@ -10101,6 +10152,7 @@ class DisseminatedChorioretinitisAndDisseminatedRetinochoroiditis(ValueSet):
         "77939001",  # Syphilitic disseminated retinochoroiditis (disorder)
         "78769001",  # Disseminated chorioretinitis (disorder)
     }
+
 
 class FocalChorioretinitisAndFocalRetinochoroiditis(ValueSet):
     """
@@ -10160,6 +10212,7 @@ class FocalChorioretinitisAndFocalRetinochoroiditis(ValueSet):
         "699763005",  # Focal choroiditis of posterior pole of eye (disorder)
         "88290000",  # Focal chorioretinitis due to acquired disseminated toxoplasmosis (disorder)
     }
+
 
 class Glaucoma(ValueSet):
     """
@@ -10564,6 +10617,7 @@ class Glaucoma(ValueSet):
         "95717004",  # Secondary glaucoma (disorder)
     }
 
+
 class GlaucomaAssociatedWithCongenitalAnomaliesAndDystrophiesAndSystemicSyndromes(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of glaucoma associated with congenital anomalies, dystrophies, and systemic syndromes.
@@ -10575,7 +10629,9 @@ class GlaucomaAssociatedWithCongenitalAnomaliesAndDystrophiesAndSystemicSyndrome
     **Exclusion Criteria:** Excludes concepts that represent a diagnosis for 'unspecified eye.'
     """
 
-    VALUE_SET_NAME = "Glaucoma Associated with Congenital Anomalies and Dystrophies and Systemic Syndromes"
+    VALUE_SET_NAME = (
+        "Glaucoma Associated with Congenital Anomalies and Dystrophies and Systemic Syndromes"
+    )
     OID = "2.16.840.1.113883.3.526.3.1461"
     DEFINITION_VERSION = "20210214"
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
@@ -10730,6 +10786,7 @@ class GlaucomaAssociatedWithCongenitalAnomaliesAndDystrophiesAndSystemicSyndrome
         "95717004",  # Secondary glaucoma (disorder)
     }
 
+
 class HereditaryChoroidalDystrophies(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of hereditary choroidal dystrophies.
@@ -10776,6 +10833,7 @@ class HereditaryChoroidalDystrophies(ValueSet):
         "75241009",  # Choroideremia (disorder)
         "92820007",  # Circumpapillary dystrophy of choroid (disorder)
     }
+
 
 class HereditaryCornealDystrophies(ValueSet):
     """
@@ -10854,6 +10912,7 @@ class HereditaryCornealDystrophies(ValueSet):
         "95488001",  # Congenital macular corneal dystrophy (disorder)
     }
 
+
 class HereditaryRetinalDystrophies(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of hereditary retinal dystrophies.
@@ -10916,6 +10975,7 @@ class HereditaryRetinalDystrophies(ValueSet):
         "80328002",  # Progressive cone-rod dystrophy (disorder)
     }
 
+
 class HypotonyOfEye(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of hypotony of eye.
@@ -10959,6 +11019,7 @@ class HypotonyOfEye(ValueSet):
         "700280001",  # Flat anterior chamber of eye with hypotony (disorder)
         "95255005",  # Secondary hypotony of eye (disorder)
     }
+
 
 class InjuryToOpticNerveAndPathways(ValueSet):
     """
@@ -11007,6 +11068,7 @@ class InjuryToOpticNerveAndPathways(ValueSet):
         "80499003",  # Traumatic injury of visual pathways (disorder)
     }
 
+
 class MacularScarOfPosteriorPolar(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of macular scar of posterior polar.
@@ -11047,6 +11109,7 @@ class MacularScarOfPosteriorPolar(ValueSet):
         "774010000",  # Scarred macula of left eye (disorder)
     }
 
+
 class MorgagnianCataract(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of morgagnian cataract.
@@ -11072,6 +11135,7 @@ class MorgagnianCataract(ValueSet):
     SNOMEDCT = {
         "264443002",  # Morgagnian cataract (disorder)
     }
+
 
 class NystagmusAndOtherIrregularEyeMovements(ValueSet):
     """
@@ -11188,6 +11252,7 @@ class NystagmusAndOtherIrregularEyeMovements(ValueSet):
         "95793004",  # Nystagmus inhibited when fixation removed (disorder)
     }
 
+
 class OpenWoundOfEyeball(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of open wound of the eyeball.
@@ -11262,6 +11327,7 @@ class OpenWoundOfEyeball(ValueSet):
         "95725002",  # Corneal laceration (disorder)
     }
 
+
 class OpticAtrophy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses for optic atrophy.
@@ -11329,6 +11395,7 @@ class OpticAtrophy(ValueSet):
         "95775000",  # Retrobulbar optic nerve atrophy (disorder)
     }
 
+
 class OpticNeuritis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of optic neuritis.
@@ -11381,6 +11448,7 @@ class OpticNeuritis(ValueSet):
         "73431005",  # Meningococcal optic neuritis (disorder)
         "82108004",  # Disorder of optic nerve due to nutritional deficiency (disorder)
     }
+
 
 class OtherBackgroundRetinopathyAndRetinalVascularChanges(ValueSet):
     """
@@ -11435,6 +11503,7 @@ class OtherBackgroundRetinopathyAndRetinalVascularChanges(ValueSet):
         "86191000",  # Retinal endarteritis (disorder)
     }
 
+
 class OtherDisordersOfOpticNerve(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis for other disorders of optic nerve.
@@ -11478,6 +11547,7 @@ class OtherDisordersOfOpticNerve(ValueSet):
         "860808008",  # Idiopathic non-arteritic ischemic optic neuropathy (disorder)
         "860884007",  # Idiopathic non-arteritic posterior ischemic optic neuropathy (disorder)
     }
+
 
 class OtherEndophthalmitis(ValueSet):
     """
@@ -11544,6 +11614,7 @@ class OtherEndophthalmitis(ValueSet):
         "870333003",  # Panuveitis caused by Mycobacterium tuberculosis (disorder)
         "870335005",  # Panuveitis caused by Borrelia burgdorferi (disorder)
     }
+
 
 class OtherProliferativeRetinopathy(ValueSet):
     """
@@ -11614,6 +11685,7 @@ class OtherProliferativeRetinopathy(ValueSet):
         "408851008",  # Retinopathy of prematurity stage 5 - total retinal detachment (disorder)
         "415297005",  # Retinopathy of prematurity (disorder)
     }
+
 
 class OtherAndUnspecifiedFormsOfChorioretinitisAndRetinochoroiditis(ValueSet):
     """
@@ -11729,6 +11801,7 @@ class OtherAndUnspecifiedFormsOfChorioretinitisAndRetinochoroiditis(ValueSet):
         "9941009",  # Congenital syphilitic choroiditis (disorder)
     }
 
+
 class PathologicMyopia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis for pathologic myopia.
@@ -11799,6 +11872,7 @@ class PathologicMyopia(ValueSet):
         "846622008",  # Degenerative myopia of right eye (disorder)
     }
 
+
 class PosteriorLenticonus(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis for posterior lenticonus.
@@ -11837,6 +11911,7 @@ class PosteriorLenticonus(ValueSet):
         "95482000",  # Posterior lenticonus (disorder)
         "95483005",  # Posterior lentiglobus (disorder)
     }
+
 
 class PriorPenetratingKeratoplasty(ValueSet):
     """
@@ -11887,6 +11962,7 @@ class PriorPenetratingKeratoplasty(ValueSet):
         "700281002",  # Unstable keratoconus (disorder)
         "75340008",  # Congenital keratoconus posticus circumscriptus (disorder)
     }
+
 
 class PurulentEndophthalmitis(ValueSet):
     """
@@ -11963,6 +12039,7 @@ class PurulentEndophthalmitis(ValueSet):
         "711644007",  # Endophthalmitis caused by Acanthamoeba (disorder)
         "860836003",  # Endophthalmitis caused by Ascaris lumbricoides (disorder)
     }
+
 
 class RetinalDetachmentWithRetinalDefect(ValueSet):
     """
@@ -12043,6 +12120,7 @@ class RetinalDetachmentWithRetinalDefect(ValueSet):
         "82541000119100",  # Traction detachment of retina due to type 2 diabetes mellitus (disorder)
         "82571000119107",  # Traction detachment of retina due to type 1 diabetes mellitus (disorder)
     }
+
 
 class RetinalVascularOcclusion(ValueSet):
     """
@@ -12139,6 +12217,7 @@ class RetinalVascularOcclusion(ValueSet):
         "87224000",  # Transient arterial retinal occlusion (disorder)
     }
 
+
 class RetrolentalFibroplasias(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis for retrolental fibroplasias.
@@ -12187,6 +12266,7 @@ class RetrolentalFibroplasias(ValueSet):
         "408851008",  # Retinopathy of prematurity stage 5 - total retinal detachment (disorder)
         "415297005",  # Retinopathy of prematurity (disorder)
     }
+
 
 class Scleritis(ValueSet):
     """
@@ -12268,6 +12348,7 @@ class Scleritis(ValueSet):
         "95796007",  # Deep scleritis (disorder)
         "95797003",  # Necrotizing scleritis (disorder)
     }
+
 
 class SeparationOfRetinalLayers(ValueSet):
     """
@@ -12381,6 +12462,7 @@ class SeparationOfRetinalLayers(ValueSet):
         "95493003",  # Congenital retinoschisis (disorder)
     }
 
+
 class TraumaticCataract(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses for traumatic cataract.
@@ -12423,6 +12505,7 @@ class TraumaticCataract(ValueSet):
         "8656007",  # Total traumatic cataract (disorder)
         "866114005",  # Localized cataract opacities due to and following traumatic injury (disorder)
     }
+
 
 class Uveitis(ValueSet):
     """
@@ -12552,6 +12635,7 @@ class Uveitis(ValueSet):
         "95680001",  # Sclerouveitis (disorder)
     }
 
+
 class VascularDisordersOfIrisAndCiliaryBody(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of vascular disorders of iris and ciliary body.
@@ -12583,6 +12667,7 @@ class VascularDisordersOfIrisAndCiliaryBody(ValueSet):
         "82551000119103",  # Rubeosis iridis due to type 2 diabetes mellitus (disorder)
         "82581000119105",  # Rubeosis iridis due to type 1 diabetes mellitus (disorder)
     }
+
 
 class VisualFieldDefects(ValueSet):
     """
@@ -12692,6 +12777,7 @@ class VisualFieldDefects(ValueSet):
         "733338003",  # Isolated peripheral scotoma (finding)
     }
 
+
 class AllergyToAceInhibitorOrArb(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnosis of allergy to an angiotensin-converting enzyme (ACE) inhibitor and angiotensin-receptor blocker (ARB).
@@ -12725,6 +12811,7 @@ class AllergyToAceInhibitorOrArb(ValueSet):
         "609549002",  # Non-allergic hypersensitivity to angiotensin II receptor antagonist (finding)
         "609550002",  # History of angiotensin converting enzyme inhibitor pseudoallergy (situation)
     }
+
 
 class HeartFailure(ValueSet):
     """
@@ -12847,6 +12934,7 @@ class HeartFailure(ValueSet):
         "92506005",  # Biventricular congestive heart failure (disorder)
     }
 
+
 class HeartTransplantComplications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts related to complications associated with heart transplants.
@@ -12908,6 +12996,7 @@ class HeartTransplantComplications(ValueSet):
         "792842004",  # Coronary arteriosclerosis in artery of transplanted heart (disorder)
     }
 
+
 class IntoleranceToAceInhibitorOrArb(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses of intolerance to angiotensin-converting enzyme (ACE) inhibitor or angiotensin II receptor blockers (ARB).
@@ -12950,6 +13039,7 @@ class IntoleranceToAceInhibitorOrArb(ValueSet):
         "720678007",  # Adverse reaction caused by azilsartan (disorder)
     }
 
+
 class LeftVentricularAssistDeviceComplications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts related to complications associated with left ventricular assist devices.
@@ -12972,6 +13062,7 @@ class LeftVentricularAssistDeviceComplications(ValueSet):
         "765465004",  # Thrombosis associated with left ventricular assist device (disorder)
     }
 
+
 class ModerateOrSevereLvsd(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of moderate or severe left ventricular systolic dysfunction (LVSD).
@@ -12992,6 +13083,7 @@ class ModerateOrSevereLvsd(ValueSet):
         "981000124106",  # Moderate left ventricular systolic dysfunction (disorder)
         "991000124109",  # Severe left ventricular systolic dysfunction (disorder)
     }
+
 
 class Narcolepsy(ValueSet):
     """
@@ -13026,6 +13118,7 @@ class Narcolepsy(ValueSet):
         "735676003",  # Narcolepsy type 1 (disorder)
         "91521000119104",  # Narcolepsy without cataplexy (disorder)
     }
+
 
 class SubstanceUseDisorder(ValueSet):
     """
@@ -13585,6 +13678,7 @@ class SubstanceUseDisorder(ValueSet):
         "97571000119109",  # Thrombocytopenia co-occurrent and due to alcoholism (disorder)
     }
 
+
 class PrimaryOpenAngleGlaucoma(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of primary open-angle glaucoma (POAG).
@@ -13657,6 +13751,7 @@ class PrimaryOpenAngleGlaucoma(ValueSet):
         "84494001",  # Open-angle glaucoma (disorder)
     }
 
+
 class AllergyToBetaBlockerTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of an allergy to beta blocker therapy.
@@ -13697,6 +13792,7 @@ class AllergyToBetaBlockerTherapy(ValueSet):
         "293983003",  # Allergy to sotalol (finding)
         "293984009",  # Allergy to timolol (finding)
     }
+
 
 class Arrhythmia(ValueSet):
     """
@@ -13906,6 +14002,7 @@ class Arrhythmia(ValueSet):
         "88412007",  # Atrio-ventricular node arrhythmia (disorder)
     }
 
+
 class Asthma(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses for asthma.
@@ -14002,6 +14099,7 @@ class Asthma(ValueSet):
         "93432008",  # Drug-induced asthma (disorder)
     }
 
+
 class AtrioventricularBlock(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of atrioventricular block.
@@ -14047,6 +14145,7 @@ class AtrioventricularBlock(ValueSet):
         "77221000",  # Incomplete atrioventricular block with atrioventricular response (disorder)
     }
 
+
 class Bradycardia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of bradycardia.
@@ -14081,6 +14180,7 @@ class Bradycardia(ValueSet):
         "49710005",  # Sinus bradycardia (disorder)
     }
 
+
 class CardiacPacerInSitu(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of cardiac pacer in situ.
@@ -14109,6 +14209,7 @@ class CardiacPacerInSitu(ValueSet):
         "703396000",  # Combination internal cardiac defibrillator and pacemaker in situ (finding)
         "86041000119107",  # Normally functioning cardiac pacemaker in situ (finding)
     }
+
 
 class Hypotension(ValueSet):
     """
@@ -14159,6 +14260,7 @@ class Hypotension(ValueSet):
         "88887003",  # Maternal hypotension syndrome (disorder)
     }
 
+
 class IntoleranceToBetaBlockerTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a diagnosis of an intolerance to beta blocker therapy.
@@ -14202,6 +14304,7 @@ class IntoleranceToBetaBlockerTherapy(ValueSet):
         "720666008",  # Adverse reaction caused by metoprolol tartrate (disorder)
         "772020009",  # Adverse reaction caused by nebivolol (disorder)
     }
+
 
 class CoronaryArteryDiseaseNoMi(ValueSet):
     """
@@ -14395,6 +14498,7 @@ class CoronaryArteryDiseaseNoMi(ValueSet):
         "92517006",  # Calcific coronary arteriosclerosis (disorder)
     }
 
+
 class InitialMyocardialInfarction(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses for initial myocardial infarction.
@@ -14496,6 +14600,7 @@ class InitialMyocardialInfarction(ValueSet):
         "896697005",  # Acute ST segment elevation myocardial infarction of right ventricle (disorder)
     }
 
+
 class AcutePharyngitis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of bacterial or viral acute pharyngitis.
@@ -14534,6 +14639,7 @@ class AcutePharyngitis(ValueSet):
         "43878008",  # Streptococcal sore throat (disorder)
         "58031004",  # Suppurative pharyngitis (disorder)
     }
+
 
 class AcuteTonsillitis(ValueSet):
     """
@@ -14575,6 +14681,7 @@ class AcuteTonsillitis(ValueSet):
         "195677001",  # Recurrent acute tonsillitis (disorder)
         "302911003",  # Acute lingual tonsillitis (disorder)
     }
+
 
 class ComorbidConditionsForRespiratoryConditions(ValueSet):
     """
@@ -21389,6 +21496,7 @@ class ComorbidConditionsForRespiratoryConditions(ValueSet):
         "99131000119108",  # Astrocytoma of cerebrum (disorder)
     }
 
+
 class CompetingConditionsForRespiratoryConditions(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of competing conditions that may warrant treatment with an antibiotic medication for respiratory conditions.
@@ -24426,6 +24534,7 @@ class CompetingConditionsForRespiratoryConditions(ValueSet):
         "9941009",  # Congenital syphilitic choroiditis (disorder)
     }
 
+
 class DementiaAndMentalDegenerations(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of dementia or mental degenerations.
@@ -24564,6 +24673,7 @@ class DementiaAndMentalDegenerations(ValueSet):
         "90099008",  # Subcortical leukoencephalopathy (disorder)
         "9345005",  # Dialysis dementia (disorder)
     }
+
 
 class ComplicationsOfPregnancyChildbirthAndThePuerperium(ValueSet):
     """
@@ -29849,6 +29959,7 @@ class ComplicationsOfPregnancyChildbirthAndThePuerperium(ValueSet):
         "9901000",  # Essential hypertension complicating AND/OR reason for care during puerperium (disorder)
     }
 
+
 class DiagnosesUsedToIndicateSexualActivity(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent diagnoses indicating history of sexual activity.
@@ -30639,6 +30750,7 @@ class DiagnosesUsedToIndicateSexualActivity(ValueSet):
         "95892003",  # Persistent generalized lymphadenopathy (disorder)
     }
 
+
 class UpperRespiratoryInfection(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of an acute upper respiratory infection.
@@ -30666,6 +30778,7 @@ class UpperRespiratoryInfection(ValueSet):
         "54398005",  # Acute upper respiratory infection (disorder)
         "82272006",  # Common cold (disorder)
     }
+
 
 class AlcoholWithdrawal(ValueSet):
     """
@@ -30698,6 +30811,7 @@ class AlcoholWithdrawal(ValueSet):
         "723926008",  # Perceptual disturbances and seizures co-occurrent and due to alcohol withdrawal (disorder)
         "8635005",  # Alcohol withdrawal delirium (disorder)
     }
+
 
 class BenzodiazepineWithdrawal(ValueSet):
     """
@@ -30747,6 +30861,7 @@ class BenzodiazepineWithdrawal(ValueSet):
         "724671005",  # Perceptual disturbances and seizures co-occurrent and due to sedative withdrawal (disorder)
         "724672003",  # Perceptual disturbances and seizures co-occurrent and due to hypnotic withdrawal (disorder)
     }
+
 
 class BipolarDisorder(ValueSet):
     """
@@ -30918,6 +31033,7 @@ class BipolarDisorder(ValueSet):
         "9340000",  # Bipolar I disorder, single manic episode (disorder)
     }
 
+
 class GeneralizedAnxietyDisorder(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of generalized anxiety disorder.
@@ -31077,6 +31193,7 @@ class GeneralizedAnxietyDisorder(ValueSet):
         "90790003",  # Avoidant disorder of adolescence (disorder)
     }
 
+
 class RemSleepBehaviorDisorder(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of rapid eye movement (REM) sleep behavior disorder.
@@ -31101,6 +31218,7 @@ class RemSleepBehaviorDisorder(ValueSet):
         "415238003",  # Rapid eye movement sleep behavior disorder (disorder)
         "69020003",  # Abnormal rapid eye movement sleep (finding)
     }
+
 
 class Schizophrenia(ValueSet):
     """
@@ -31177,6 +31295,7 @@ class Schizophrenia(ValueSet):
         "83746006",  # Chronic schizophrenia (disorder)
         "85861002",  # Subchronic undifferentiated schizophrenia (disorder)
     }
+
 
 class SeizureDisorder(ValueSet):
     """
@@ -31538,6 +31657,7 @@ class SeizureDisorder(ValueSet):
         "860815000",  # Epilepsy due to neonatal central nervous system infection (disorder)
         "95208000",  # Photogenic epilepsy (disorder)
     }
+
 
 class Cancer(ValueSet):
     """
@@ -39654,6 +39774,7 @@ class Cancer(ValueSet):
         "99131000119108",  # Astrocytoma of cerebrum (disorder)
     }
 
+
 class Dysthymia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses related to dysthymia.
@@ -39686,6 +39807,7 @@ class Dysthymia(ValueSet):
         "83176005",  # Primary dysthymia (disorder)
         "85080004",  # Secondary dysthymia (disorder)
     }
+
 
 class MajorDepressionIncludingRemission(ValueSet):
     """
@@ -39788,6 +39910,7 @@ class MajorDepressionIncludingRemission(ValueSet):
         "87512008",  # Mild major depression (disorder)
     }
 
+
 class PersonalityDisorderEmotionallyLabile(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses related to personality disorders where the patient could not reliably complete a PHQ-9 tool due to their condition.
@@ -39824,6 +39947,7 @@ class PersonalityDisorderEmotionallyLabile(ValueSet):
         "55341008",  # Histrionic personality disorder (disorder)
         "76105009",  # Cyclothymia (disorder)
     }
+
 
 class PervasiveDevelopmentalDisorder(ValueSet):
     """
@@ -39895,6 +40019,7 @@ class PervasiveDevelopmentalDisorder(ValueSet):
         "870307006",  # Pervasive developmental disorder with abscence of functional language (disorder)
         "870308001",  # Pervasive developmental disorder with cognitive developmental delay and complete impairment of functional language (disorder)
     }
+
 
 class SchizophreniaOrPsychoticDisorder(ValueSet):
     """
@@ -40000,6 +40125,7 @@ class SchizophreniaOrPsychoticDisorder(ValueSet):
         "88975006",  # Schizophreniform disorder (disorder)
     }
 
+
 class ChronicKidneyDiseaseStage5(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of Stage 5 chronic kidney disease.
@@ -40023,6 +40149,7 @@ class ChronicKidneyDiseaseStage5(ValueSet):
     SNOMEDCT = {
         "433146000",  # Chronic kidney disease stage 5 (disorder)
     }
+
 
 class EndStageRenalDisease(ValueSet):
     """
@@ -40050,6 +40177,7 @@ class EndStageRenalDisease(ValueSet):
         "236436003",  # End stage renal failure with renal transplant (disorder)
         "46177005",  # End-stage renal disease (disorder)
     }
+
 
 class EssentialHypertension(ValueSet):
     """
@@ -40090,6 +40218,7 @@ class EssentialHypertension(ValueSet):
         "9901000",  # Essential hypertension complicating AND/OR reason for care during puerperium (disorder)
     }
 
+
 class KidneyTransplantRecipient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of a history of kidney transplant.
@@ -40109,6 +40238,7 @@ class KidneyTransplantRecipient(ValueSet):
     ICD10CM = {
         "Z940",  # Kidney transplant status
     }
+
 
 class DiagnosisOfHypertension(ValueSet):
     """
@@ -40212,6 +40342,7 @@ class DiagnosisOfHypertension(ValueSet):
         "8762007",  # Chronic hypertension in obstetric context (disorder)
         "89242004",  # Malignant secondary hypertension (disorder)
     }
+
 
 class AtherosclerosisAndPeripheralArterialDisease(ValueSet):
     """
@@ -40582,6 +40713,7 @@ class AtherosclerosisAndPeripheralArterialDisease(ValueSet):
         "81817003",  # Atherosclerosis of aorta (disorder)
     }
 
+
 class Breastfeeding(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for active breastfeeding.
@@ -40630,6 +40762,7 @@ class Breastfeeding(ValueSet):
         "82374005",  # Lactation normal (finding)
         "866041003",  # Mother currently breastfeeding (situation)
     }
+
 
 class CerebrovascularDiseaseStrokeOrTia(ValueSet):
     """
@@ -41119,6 +41252,7 @@ class CerebrovascularDiseaseStrokeOrTia(ValueSet):
         "99451000119105",  # Cerebral infarction due to stenosis of carotid artery (disorder)
     }
 
+
 class FamilialHypercholesterolemia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for familial hypercholesterolemia.
@@ -41149,6 +41283,7 @@ class FamilialHypercholesterolemia(ValueSet):
         "403830007",  # Familial hypercholesterolemia due to homozygous low density lipoprotein receptor mutation (disorder)
         "403831006",  # Familial hypercholesterolemia due to genetic defect of apolipoprotein B (disorder)
     }
+
 
 class IschemicHeartDiseaseOrRelatedDiagnoses(ValueSet):
     """
@@ -41228,6 +41363,7 @@ class IschemicHeartDiseaseOrRelatedDiagnoses(ValueSet):
         "713405002",  # Subacute ischemic heart disease (disorder)
         "78741000119103",  # Acute coronary artery occlusion not resulting in myocardial infarction (disorder)
     }
+
 
 class LiverDisease(ValueSet):
     """
@@ -41439,6 +41575,7 @@ class LiverDisease(ValueSet):
         "9953008",  # Acute alcoholic liver disease (disorder)
     }
 
+
 class MyocardialInfarction(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of myocardial infarction - both STEMI and NSTEMI.
@@ -41544,6 +41681,7 @@ class MyocardialInfarction(ValueSet):
         "896697005",  # Acute ST segment elevation myocardial infarction of right ventricle (disorder)
     }
 
+
 class Rhabdomyolysis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of rhabdomyolysis.
@@ -41576,6 +41714,7 @@ class Rhabdomyolysis(ValueSet):
         "240133009",  # Familial paroxysmal rhabdomyolysis (disorder)
         "72960004",  # Exertional rhabdomyolysis (disorder)
     }
+
 
 class StableAndUnstableAngina(ValueSet):
     """
@@ -41623,6 +41762,7 @@ class StableAndUnstableAngina(ValueSet):
         "59021001",  # Angina decubitus (disorder)
     }
 
+
 class StatinAssociatedMuscleSymptoms(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for muscle symptoms related to statin therapy.
@@ -41650,6 +41790,7 @@ class StatinAssociatedMuscleSymptoms(ValueSet):
         "16462851000119106",  # Myalgia caused by statin (finding)
         "240101000",  # Drug-induced myopathy (disorder)
     }
+
 
 class CancerRelatedPain(ValueSet):
     """
@@ -41679,6 +41820,7 @@ class CancerRelatedPain(ValueSet):
         "879973007",  # Breakthrough cancer pain (finding)
         "98921000119102",  # Pain due to neoplastic disease (finding)
     }
+
 
 class OpioidUseDisorder(ValueSet):
     """
@@ -41728,6 +41870,7 @@ class OpioidUseDisorder(ValueSet):
         "703845008",  # Buprenorphine dependence (disorder)
         "75544000",  # Opioid dependence (disorder)
     }
+
 
 class SickleCellDiseaseWithAndWithoutCrisis(ValueSet):
     """
@@ -41787,6 +41930,7 @@ class SickleCellDiseaseWithAndWithoutCrisis(ValueSet):
         "444108000",  # Acute sickle cell splenic sequestration crisis (disorder)
         "47024008",  # Sickle cell-hemoglobin E disease (disorder)
     }
+
 
 class LowerBodyFracturesExcludingAnkleAndFoot(ValueSet):
     """
@@ -49097,6 +49241,7 @@ class LowerBodyFracturesExcludingAnkleAndFoot(ValueSet):
         "95853005",  # Metaphyseal fracture of bone of lower limb (disorder)
     }
 
+
 class MalignantNeoplasmsOfLowerAndUnspecifiedLimbs(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of malignant neoplasms of lower and unspecified limbs.
@@ -49240,6 +49385,7 @@ class MalignantNeoplasmsOfLowerAndUnspecifiedLimbs(ValueSet):
         "94630001",  # Metastatic malignant neoplasm to third cuneiform bone of foot (disorder)
         "94635006",  # Metastatic malignant neoplasm to tibia (disorder)
     }
+
 
 class MechanicalComplicationsExcludingUpperBody(ValueSet):
     """
@@ -49459,6 +49605,7 @@ class MechanicalComplicationsExcludingUpperBody(ValueSet):
         "735603007",  # Wear of articular bearing surface of joint prosthesis of knee (disorder)
     }
 
+
 class BladderCancerForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts for diagnosis of bladder cancer.
@@ -49487,6 +49634,7 @@ class BladderCancerForUrologyCare(ValueSet):
         "C678",  # Malignant neoplasm of overlapping sites of bladder
         "C679",  # Malignant neoplasm of bladder, unspecified
     }
+
 
 class ImmunocompromisedConditions(ValueSet):
     """
@@ -50339,6 +50487,7 @@ class ImmunocompromisedConditions(ValueSet):
         "95210003",  # Plasma cell leukemia, disease (disorder)
     }
 
+
 class MixedHistologyUrothelialCellCarcinomaForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts of mixed histology urothelial cell abnormalities.
@@ -50381,6 +50530,7 @@ class MixedHistologyUrothelialCellCarcinomaForUrologyCare(ValueSet):
         "689231000119107",  # Primary squamous cell carcinoma of posterior wall of urinary bladder (disorder)
         "689441000119102",  # Primary squamous cell carcinoma of ureteral orifice (disorder)
     }
+
 
 class TuberculosisForUrologyCare(ValueSet):
     """
@@ -50658,6 +50808,7 @@ class TuberculosisForUrologyCare(ValueSet):
         "91483004",  # Tuberculous encephalitis (disorder)
     }
 
+
 class OverweightOrObese(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts for overweight or obese.
@@ -50709,6 +50860,7 @@ class OverweightOrObese(ValueSet):
         "83911000119104",  # Severe obesity (disorder)
     }
 
+
 class Underweight(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent identifying underweight patients.
@@ -50735,6 +50887,7 @@ class Underweight(ValueSet):
         "717933005",  # Severe thinness in adulthood (finding)
     }
 
+
 class HistoryOfAtrialAblation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a situation of a personal history of an atrial ablation.
@@ -50757,6 +50910,7 @@ class HistoryOfAtrialAblation(ValueSet):
         "429756009",  # History of radiofrequency ablation operation on left atrium for arrhythmia (situation)
     }
 
+
 class IntravenousOrIntraarterialThrombolyticTpaTherapyPriorToArrival(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for procedures of intravenous or intra-arterial thrombolytic (t-PA) therapy.
@@ -50776,6 +50930,7 @@ class IntravenousOrIntraarterialThrombolyticTpaTherapyPriorToArrival(ValueSet):
     ICD10CM = {
         "Z9282",  # Status post administration of tPA (rtPA) in a different facility within the last 24 hours prior to admission to current facility
     }
+
 
 class DentalCaries(ValueSet):
     """
@@ -50882,6 +51037,7 @@ class DentalCaries(ValueSet):
         "95254009",  # Secondary dental caries (disorder)
     }
 
+
 class MorbidObesity(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts for diagnoses of morbid obesity and body mass index (BMI) ranges relating to morbid obesity.
@@ -50916,6 +51072,7 @@ class MorbidObesity(ValueSet):
         "83911000119104",  # Severe obesity (disorder)
     }
 
+
 class UrinaryRetention(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of urinary retention related to drugs or other causes.
@@ -50949,6 +51106,7 @@ class UrinaryRetention(ValueSet):
         "367421000119109",  # Retention of urine caused by drug (disorder)
         "430976005",  # Retention of urine due to occlusion of Foley catheter (disorder)
     }
+
 
 class MalnutritionDiagnosis(ValueSet):
     """
@@ -51020,6 +51178,7 @@ class MalnutritionDiagnosis(ValueSet):
         "77675002",  # Anorexia nervosa, restricting type (disorder)
         "788876001",  # Cachexia due to malignant neoplastic disease (finding)
     }
+
 
 class ActiveBleedingOrBleedingDiathesisExcludingMenses(ValueSet):
     """
@@ -51311,6 +51470,7 @@ class ActiveBleedingOrBleedingDiathesisExcludingMenses(ValueSet):
         "86075001",  # Coagulation factor deficiency syndrome (disorder)
     }
 
+
 class AcutePepticUlcer(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for peptic ulcer.
@@ -51351,6 +51511,7 @@ class AcutePepticUlcer(ValueSet):
         "79118000",  # Acute peptic ulcer with perforation (disorder)
     }
 
+
 class AllergyToThrombolytics(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for allergies to thrombolytic medications used for treatment of ST-segment elevation myocardial infaction (STEMI).
@@ -51375,6 +51536,7 @@ class AllergyToThrombolytics(ValueSet):
         "295110005",  # Allergy to alteplase (finding)
         "295111009",  # Allergy to anistreplase (finding)
     }
+
 
 class AorticDissectionOrRupturedAorticAneurysm(ValueSet):
     """
@@ -51421,6 +51583,7 @@ class AorticDissectionOrRupturedAorticAneurysm(ValueSet):
         "448746009",  # Aneurysm of aortic sinus of Valsalva with rupture to right ventricle (disorder)
         "73067008",  # Ruptured aortic aneurysm (disorder)
     }
+
 
 class CardiopulmonaryEmergency(ValueSet):
     """
@@ -51481,6 +51644,7 @@ class CardiopulmonaryEmergency(ValueSet):
         "78240009",  # Cardiac arrest due to pacemaker failure (disorder)
         "87317003",  # Respiratory arrest (disorder)
     }
+
 
 class CerebralVascularLesion(ValueSet):
     """
@@ -51930,6 +52094,7 @@ class CerebralVascularLesion(ValueSet):
         "99131000119108",  # Astrocytoma of cerebrum (disorder)
     }
 
+
 class ClosedHeadAndFacialTrauma(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for closed head trauma or facial trauma.
@@ -52183,6 +52348,7 @@ class ClosedHeadAndFacialTrauma(ValueSet):
         "95817008",  # Labyrinthine concussion (disorder)
     }
 
+
 class DementiaAndRelatedIntracranialPathologies(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for dementia.
@@ -52404,6 +52570,7 @@ class DementiaAndRelatedIntracranialPathologies(ValueSet):
         "833326008",  # Cortical vascular dementia (disorder)
     }
 
+
 class IschemicStroke(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of ischemic strokes.
@@ -52542,6 +52709,7 @@ class IschemicStroke(ValueSet):
         "426107000",  # Acute lacunar infarction (disorder)
     }
 
+
 class MalignantIntracranialNeoplasmGroup(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for malignant intracranial neoplasm.
@@ -52606,6 +52774,7 @@ class MalignantIntracranialNeoplasmGroup(ValueSet):
         "94766006",  # Neoplasm of uncertain behavior of brain stem (disorder)
         "94767002",  # Neoplasm of uncertain behavior of brain (disorder)
     }
+
 
 class NeurologicImpairment(ValueSet):
     """
@@ -52689,6 +52858,7 @@ class NeurologicImpairment(ValueSet):
         "94782007",  # Neoplasm of uncertain behavior of cauda equina (disorder)
     }
 
+
 class PregnantState(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for pregnant state.
@@ -52714,6 +52884,7 @@ class PregnantState(ValueSet):
         "255409004",  # Pregnant woman (person)
         "77386006",  # Pregnancy (finding)
     }
+
 
 class Stemi(ValueSet):
     """
@@ -52756,6 +52927,7 @@ class Stemi(ValueSet):
         "703213009",  # Acute ST segment elevation myocardial infarction of inferior wall (disorder)
         "703253007",  # Acute ST segment elevation myocardial infarction of inferior wall involving right ventricle (disorder)
     }
+
 
 __exports__ = (
     "AdvancedIllness",

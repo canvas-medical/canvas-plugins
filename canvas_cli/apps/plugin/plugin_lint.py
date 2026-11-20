@@ -302,7 +302,7 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
     # Models present but no `custom_data` block → no namespace, no tables.
     if not manifest.get("custom_data"):
         sample = _rel(definition_files[0], plugin_dir)
-        first_class = sorted(custom_model_names)[0]
+        first_class = min(custom_model_names)
         namespace_hint = f"your_org__{manifest.get('name', 'plugin')}"
         findings.append(
             LintFinding(

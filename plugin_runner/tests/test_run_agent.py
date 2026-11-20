@@ -1105,7 +1105,7 @@ def test_an_agents_exception_reaches_sentry_without_its_frames_locals(
 
     def _run(self: Any, state: Any, gateway: Any, payload: Any) -> AgentRunResult:
         # Built at run time, so it can reach an event only as a local, not as source text.
-        messages = [{"role": "user", "content": "-".join(["MARKER", "CHART", "CONTENT"])}]
+        messages = [{"role": "user", "content": "-".join(["MARKER", "CHART", "CONTENT"])}]  # noqa: FLY002
         raise ValueError(f"boom after {len(messages)} message")
 
     monkeypatch.setattr(agent_cls, "run", _run)

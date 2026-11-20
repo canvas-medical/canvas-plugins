@@ -26,7 +26,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             return [HTMLResponse(content=html_content)]
 
         except Exception as e:
-            log.error(f"Error in VitalsVisualizerAPI: {str(e)}")
+            log.error(f"Error in VitalsVisualizerAPI: {e!s}")
             return [JSONResponse({"error": str(e)}, status_code=500)]
 
     def _get_vitals_data(self, patient_id: str) -> dict[str, list[dict[str, Any]]]:
@@ -99,7 +99,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             return vitals_data
 
         except Exception as e:
-            log.error(f"Error collecting vitals data: {str(e)}")
+            log.error(f"Error collecting vitals data: {e!s}")
             return {"weight": [], "body_temperature": [], "oxygen_saturation": []}
 
     def _generate_visualization_html(self, vitals_data: dict[str, list[dict[str, Any]]]) -> str:
