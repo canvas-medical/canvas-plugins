@@ -49,8 +49,10 @@ from django.db import connections
 
 from canvas_sdk.agents.gateway import GatewayError, LLMGateway
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, current_recorder
-from canvas_sdk.agents.tool_loop import run_tool_loop, streams_reply
+from canvas_sdk.agents.tool_loop import Effort, run_tool_loop, streams_reply
 from canvas_sdk.agents.tool_registry import ToolRegistry
+from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 from canvas_sdk.utils.http import ThreadPoolExecutor
 from canvas_sdk.v1.plugin_database_context import (
     get_access_level,
@@ -94,6 +96,18 @@ class SubAgentSpec:
             gateway's default when unset. A cheap model suits a narrow extraction, a
             stronger one a harder read. The gateway refuses a model the organization has
             not enabled.
+        output_schema: A ``BaseModelLlmJson`` subclass the answer must match, for a
+            caller that parses it rather than reading it: the final text is JSON of that
+            shape. Checked when the spec is built, so a schema structured outputs cannot
+            express fails at import rather than mid-run. The answer is still ``""`` when
+            the loop stops before the model ends its turn, and :func:`run_subagents`
+            reports a failed sub-agent as a ``"(sub-agent ... failed: ...)"`` string, so
+            check for both before parsing.
+        effort: How much the model thinks on each call, an :class:`Effort` such as
+            ``Effort.MEDIUM``. Checked when the spec is built, like ``output_schema``.
+
+        Both apply to the calls the sub-agent's own loop makes; a tool's own model
+        calls, such as ``read_document``'s reader, do not get them.
     """
 
     name: str
@@ -102,6 +116,16 @@ class SubAgentSpec:
     max_turns: int = 4
     max_tokens: int = 2048
     model: str | None = None
+    output_schema: type[BaseModelLlmJson] | None = None
+    effort: Effort | None = None
+
+    def __post_init__(self) -> None:
+        """Refuse an output schema or effort the API cannot take, before any call."""
+        if self.output_schema is not None:
+            LlmAnthropic.output_format(self.output_schema)
+        if self.effort is not None:
+            # Frozen, so the field is set directly: a plain "medium" is stored as its Effort.
+            object.__setattr__(self, "effort", Effort(self.effort))
 
 
 # How many sub-agents the current thread is inside; a pool thread is given its caller's.
@@ -160,6 +184,8 @@ def run_subagent(
             max_turns=spec.max_turns,
             max_tokens=spec.max_tokens,
             model=spec.model,
+            output_schema=spec.output_schema,
+            effort=spec.effort,
         )
     finally:
         streams_reply.reset(token)
