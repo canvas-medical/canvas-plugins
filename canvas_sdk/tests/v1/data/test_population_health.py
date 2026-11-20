@@ -52,7 +52,7 @@ def test_campaign_interventions_resolve_template_and_author() -> None:
 
 @pytest.mark.django_db
 def test_intervention_patients_is_many_to_many() -> None:
-    """intervention.patients and patient.intervention_set traverse api_intervention_patients."""
+    """intervention.patients and patient.interventions traverse api_intervention_patients."""
     first, second = PatientFactory.create_batch(2)
     intervention = InterventionFactory.create()
     intervention.patients.add(first, second)
@@ -60,5 +60,5 @@ def test_intervention_patients_is_many_to_many() -> None:
     other.patients.add(first)
 
     assert set(intervention.patients.all()) == {first, second}
-    assert set(first.intervention_set.all()) == {intervention, other}
+    assert set(first.interventions.all()) == {intervention, other}
     assert list(Intervention.objects.filter(patients=second)) == [intervention]
