@@ -1,6 +1,11 @@
 from .allergy_intolerance import AllergyIntoleranceFactory, AllergyIntoleranceReactionFactory
 from .appointment import AppointmentFactory
 from .assessment import AssessmentFactory
+from .attached_document import (
+    LetterDocumentFactory,
+    PatientChartDocumentFactory,
+    ReferralDocumentFactory,
+)
 from .authorization import AuthorizationDiagnosisCodeFactory, AuthorizationFactory
 from .billing import BillingLineItemFactory
 from .calendar import CalendarFactory, EventFactory
@@ -59,6 +64,7 @@ from .diagnostic_report import (
 from .diagnostic_view import DiagnosticViewElementFactory, DiagnosticViewFactory
 from .django_content_type import ContentTypeFactory
 from .dme import DmeOrderActionEventFactory, DmeOrderFactory, DmeProductFactory
+from .document_annotation import DocumentAnnotationFactory
 from .document_history_event import DocumentHistoryEventFactory
 from .document_review_delegation import DocumentReviewDelegationFactory
 from .document_type import DocumentTypeFactory
@@ -329,6 +335,7 @@ __all__ = (
     "DmeOrderActionEventFactory",
     "DmeOrderFactory",
     "DmeProductFactory",
+    "DocumentAnnotationFactory",
     "DocumentCodingFactory",
     "DocumentHistoryEventFactory",
     "DocumentReviewDelegationFactory",
@@ -392,6 +399,7 @@ __all__ = (
     "LabValuePerformerFactory",
     "LanguageFactory",
     "LetterActionEventFactory",
+    "LetterDocumentFactory",
     "LetterFactory",
     "LetterLanguageTemplateFactory",
     "LetterTemplateFactory",
@@ -421,6 +429,7 @@ __all__ = (
     "OrganizationalEntityFactory",
     "PatientAddressFactory",
     "PatientAdministrativeDocumentFactory",
+    "PatientChartDocumentFactory",
     "PatientContactPersonFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
@@ -457,6 +466,7 @@ __all__ = (
     "ReceiptFactory",
     "ReferenceFactory",
     "ReferralActionEventFactory",
+    "ReferralDocumentFactory",
     "ReferralFactory",
     "ReferralReportCodingFactory",
     "ReferralReportFactory",
