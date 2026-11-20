@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.14.0 (2026-11-20)
+
+### Features
+
+- **data**: Expose the remaining codings and joins in the data module (KOALA-8561)
+  ([#2023](https://github.com/canvas-medical/canvas-plugins/pull/2023),
+  [`379d0df`](https://github.com/canvas-medical/canvas-plugins/commit/379d0df6901b025252a51a844a9a66d43cfbea64))
+
+
 ## v1.13.0 (2026-11-20)
 
 ### Bug Fixes
