@@ -1173,7 +1173,7 @@ def deploy(
             branch=branch,
             record_publisher=picked,
         )
-        print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha[:12]}")
+        print(f"To install this commit on an instance: canvas deploy {plugin_dir} --ref {sha}")
         return
 
     # Resolved before pushing, so a deploy with no clear target moves nothing.
