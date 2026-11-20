@@ -991,11 +991,31 @@ def test_an_effort_the_api_does_not_have_is_refused_before_any_call() -> None:
     assert client.requests == []
 
 
-def test_the_effort_levels_are_the_apis() -> None:
-    """Kept to the Anthropic SDK's own list, so a level it adds or drops shows up here."""
-    allowed = get_args(get_args(get_type_hints(OutputConfigParam)["effort"])[0])
+def test_every_effort_level_maps_to_one_the_api_takes() -> None:
+    """Each level is sent as a value the Anthropic SDK lists, so none is a 400 at the gateway."""
+    allowed = set(get_args(get_args(get_type_hints(OutputConfigParam)["effort"])[0]))
 
-    assert {level.value for level in Effort} == set(allowed)
+    assert {LlmAnthropic.effort(level) for level in Effort} <= allowed
+
+
+def test_a_level_with_no_anthropic_effort_is_refused() -> None:
+    """Anthropic levels Canvas has not chosen to offer have no mapping."""
+    with pytest.raises(ValueError, match="No Anthropic effort for the level 'max'"):
+        LlmAnthropic.effort("max")
+
+
+def test_with_an_output_schema_the_reply_is_not_streamed() -> None:
+    """The answer is JSON for code, so a run that streams its reply does not show it."""
+    recorder = RunRecorder(progress=ProgressFeed("reply"))
+    client = FakeGateway(_response("end_turn", _text('{"allergies": ["latex"]}')))
+    client.stream = None  # type: ignore[assignment]
+
+    result = _with_recorder(recorder, client, output_schema=_Allergies)
+
+    assert result.stopped == "end_turn"
+    feed = recorder.progress
+    assert feed is not None
+    assert _events(feed) == []
 
 
 def test_without_a_schema_or_effort_no_output_config_is_sent() -> None:
