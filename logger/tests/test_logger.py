@@ -7,6 +7,7 @@ formatter's ``labels.plugin`` / ``labels.handler`` emission.
 
 import json
 import logging
+import sys
 
 import pytest
 
@@ -18,7 +19,7 @@ from logger.logger import (
     _current_plugin_name,
     plugin_context,
 )
-from logger.logstash import LogstashFormatterECS
+from logger.logstash import LogstashFormatterECS, LogstashFormatterV1
 from logger.pubsub import PubSubLogHandler
 from pubsub.pubsub import Publisher
 
@@ -126,6 +127,22 @@ def test_logstash_formatter_emits_labels_plugin_and_handler() -> None:
     assert "customer" in output["labels"]
 
 
+def test_logstash_formatter_handles_exception_logged_with_no_active_exception() -> None:
+    """``log.exception()`` outside an ``except`` block records ``(None, None, None)``;
+    the formatter still emits the message instead of raising on ``None.__module__``.
+    """
+    formatter = LogstashFormatterECS()
+    record = _make_record()
+    record.exc_info = (None, None, None)
+    PluginNameFilter().filter(record)
+
+    output = json.loads(formatter.format(record))
+
+    assert output["message"] == "hello"
+    assert "exception_type" not in output
+    assert "stack_trace" not in output
+
+
 def test_logstash_formatter_omits_plugin_labels_when_no_plugin_context() -> None:
     """Without an active plugin the ECS output keeps only the static labels
     (no spurious ``plugin``/``handler`` keys).
@@ -172,3 +189,41 @@ def test_publisher_keeps_its_endpoint_and_client_private() -> None:
 def test_pubsub_log_handler_keeps_its_publisher_private() -> None:
     """The handler attached to the plugin logger has no public route to the publisher."""
     assert not hasattr(PubSubLogHandler(), "publisher")
+
+
+@pytest.mark.parametrize("formatter_class", [LogstashFormatterV1, LogstashFormatterECS])
+def test_logstash_formatters_skip_exception_fields_with_no_active_exception(
+    formatter_class: type[logging.Formatter],
+) -> None:
+    """Both formatters tolerate the ``(None, None, None)`` that ``log.exception()``
+    records outside an ``except`` block.
+    """
+    record = _make_record()
+    record.exc_info = (None, None, None)
+    PluginNameFilter().filter(record)
+
+    output = json.loads(formatter_class().format(record))
+
+    assert output["message"] == "hello"
+    assert "exception_type" not in json.dumps(output)
+    assert "stack_trace" not in json.dumps(output)
+
+
+@pytest.mark.parametrize("formatter_class", [LogstashFormatterV1, LogstashFormatterECS])
+def test_logstash_formatters_emit_exception_fields_for_a_real_exception(
+    formatter_class: type[logging.Formatter],
+) -> None:
+    """A recorded exception still produces its message, type and stack trace."""
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        exc_info = sys.exc_info()
+
+    record = _make_record()
+    record.exc_info = exc_info
+    PluginNameFilter().filter(record)
+
+    output = json.dumps(json.loads(formatter_class().format(record)))
+
+    assert "builtins.ValueError" in output
+    assert "boom" in output
