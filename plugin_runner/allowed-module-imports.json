@@ -1530,6 +1530,7 @@
     "PayorSpecificCharge",
     "Plan",
     "PluginCommand",
+    "PluginData",
     "PortalAccessGrant",
     "PortalAccessLevel",
     "PortalInvitation",
