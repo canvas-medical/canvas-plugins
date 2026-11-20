@@ -26,9 +26,6 @@ COMMANDS_TO_SKIP = [
     "VisualExamFindingCommand",
     "RemovePastMedicalHistoryCommand",
     "ImmunizeCommand",
-    "LabReviewCommand",
-    "ReferralReviewCommand",
-    "ImagingReviewCommand",
     "UncategorizedDocumentReviewCommand",
     "CustomCommand",
     # Refill responses need a pending refill request and cannot be committed from a plugin.
