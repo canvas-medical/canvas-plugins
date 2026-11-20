@@ -20,6 +20,7 @@ from .appointment import (
     AppointmentScheduledTogether,
 )
 from .assessment import Assessment
+from .attached_document import LetterDocument, PatientChartDocument, ReferralDocument
 from .authorization import Authorization, AuthorizationDiagnosisCode
 from .banner_alert import BannerAlert
 from .base import (
@@ -102,6 +103,7 @@ from .diagnostic_view import (
 from .discount import Discount
 from .django_content_type import ContentType
 from .dme import DmeOrder, DmeOrderActionEvent, DmeProduct, DmeProductCodeSystem
+from .document_annotation import DocumentAnnotation
 from .document_history_event import DocumentHistoryEvent, DocumentHistoryEventType
 from .document_reference import (
     DocumentReference,
@@ -479,6 +481,7 @@ __all__ = __exports__ = (
     "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
+    "DocumentAnnotation",
     "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
@@ -570,6 +573,7 @@ __all__ = __exports__ = (
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
     "LetterActionEvent",
+    "LetterDocument",
     "LetterLanguageTemplate",
     "LetterTemplate",
     "LetterTemplateType",
@@ -615,6 +619,7 @@ __all__ = __exports__ = (
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
+    "PatientChartDocument",
     "PatientContactCategory",
     "PatientContactPerson",
     "PatientContactPoint",
@@ -675,6 +680,7 @@ __all__ = __exports__ = (
     "Reference",
     "Referral",
     "ReferralActionEvent",
+    "ReferralDocument",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
