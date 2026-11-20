@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v1.12.0 (2026-11-20)
+
+### Continuous Integration
+
+- Replace Codecov with diff-cover for coverage
+  ([#1982](https://github.com/canvas-medical/canvas-plugins/pull/1982),
+  [`4d847f1`](https://github.com/canvas-medical/canvas-plugins/commit/4d847f120e5c29fc0ee523a53f9e0eecdc6bd827))
+
+### Features
+
+- **data**: Expose the remaining clinical tables in the data module (KOALA-8484)
+  ([#2021](https://github.com/canvas-medical/canvas-plugins/pull/2021),
+  [`59d5f67`](https://github.com/canvas-medical/canvas-plugins/commit/59d5f67679ec82b0e1c2c71d3f38bea1b5f288dc))
+
+
 ## v1.11.0 (2026-11-19)
 
 ### Features
