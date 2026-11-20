@@ -48,8 +48,10 @@ class ClaimAssigneeEventFactory(factory.django.DjangoModelFactory[ClaimAssigneeE
     claim = factory.SubFactory("canvas_sdk.test_utils.factories.ClaimFactory")
     assignee = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     team = factory.SubFactory("canvas_sdk.test_utils.factories.TeamFactory")
-    assignee_name = factory.LazyAttribute(lambda o: o.assignee.credentialed_name)
-    team_name = factory.LazyAttribute(lambda o: o.team.name)
+    assignee_name = factory.LazyAttribute(
+        lambda o: o.assignee.credentialed_name if o.assignee else ""
+    )
+    team_name = factory.LazyAttribute(lambda o: o.team.name if o.team else "")
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
 
 

@@ -95,6 +95,16 @@ def test_claim_assignee_history_allows_unassignment_by_a_plugin() -> None:
 
 
 @pytest.mark.django_db
+def test_claim_assignee_factory_builds_an_unassigned_event() -> None:
+    """The factory builds an event with no assignee and no team, with empty names."""
+    event = ClaimAssigneeEventFactory.create(assignee=None, team=None)
+
+    fetched = event.claim.assignee_events.get()
+
+    assert (fetched.assignee_name, fetched.team_name) == ("", "")
+
+
+@pytest.mark.django_db
 def test_claim_snooze_history_reads_from_the_claim() -> None:
     """Snooze set and clear events are listed on the claim; a clear has no date."""
     claim = ClaimFactory.create()
