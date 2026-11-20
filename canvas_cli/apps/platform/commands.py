@@ -911,7 +911,11 @@ def _push(
     """
     if snapshot:
         return _push_snapshot(client, plugin_dir, publisher, name, platform, branch)
+    created = not git.in_repo(plugin_dir)
     git.ensure_repo(plugin_dir)
+    if created:
+        # Validation ran before this repository existed, so it could not list what is pushed.
+        instance_plugin.lint_pushed(plugin_dir, git.pushed_files(plugin_dir, snapshot=False))
     require_no_ignored_python(plugin_dir)
     _require_package_at_repo_root(plugin_dir)
     if record_publisher:
@@ -921,6 +925,7 @@ def _push(
     target, _ = _target_and_default_branch(registered, branch)
     git.connect_remote(plugin_dir, registered["git_url"], platform)
     git.commit_working_tree(plugin_dir, assume_yes=assume_yes)
+    instance_plugin.check_unpushed_history(git.unpushed_history(plugin_dir))
     git.push_head(plugin_dir, target)
     sha = git.head_sha(plugin_dir)
     print(f"Pushed {name} {sha[:12]} to {target} on Canvas Platform.")
@@ -1151,7 +1156,7 @@ def deploy(
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
-        instance_plugin.validate(plugin_dir)
+        instance_plugin.validate_pushed(plugin_dir, git.pushed_files(plugin_dir, snapshot=snapshot))
 
     publisher, picked = _publisher(
         client,

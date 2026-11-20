@@ -263,6 +263,108 @@ def ignored_python_files(plugin_dir: Path) -> list[str]:
     return listing.splitlines()
 
 
+def pushed_files(plugin_dir: Path, *, snapshot: bool) -> list[tuple[Path, Path]] | None:
+    """``(path, path relative to the package)`` for each file a deploy pushes, or None outside
+    a git repository, where nothing is pushed yet.
+
+    A snapshot pushes the package folder and a plain deploy the whole repository: tracked files
+    and new ones that are not ignored, as ``git add -A`` stages them, hidden ones included.
+    Symbolic links are left out, since reading one would follow it.
+    """
+    require_installed()
+    package = plugin_dir.resolve()
+    if not in_repo(package):
+        return None
+    top = package
+    if not snapshot:
+        top = Path(_output(package, "rev-parse", "--show-toplevel", what="git rev-parse").strip())
+    listing = _output(
+        top,
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "--",
+        ".",
+        what="git ls-files",
+    )
+    files: list[tuple[Path, Path]] = []
+    for name in listing.split("\0"):
+        path = top.resolve() / name
+        if name and not path.is_symlink() and path.is_file():
+            files.append((path, Path(os.path.relpath(path, package))))
+    return files
+
+
+def unpushed_history(plugin_dir: Path) -> list[tuple[Path, str]]:
+    """``(path relative to the package, text)`` of each file version pushing HEAD sends that
+    HEAD's own files do not hold: what earlier commits the plugin's repository lacks carry.
+
+    The repository's branches are read with ``ls-remote``, since ``origin``'s remote-tracking
+    branches can belong to a host it pointed at before. Binary file versions are skipped.
+    """
+    package = plugin_dir.resolve()
+    top = Path(
+        _output(package, "rev-parse", "--show-toplevel", what="git rev-parse").strip()
+    ).resolve()
+    heads = _output(
+        package, "ls-remote", "--heads", REMOTE, what="git ls-remote", isolate_config=True
+    )
+    remote = [line.split("\t", 1)[0] for line in heads.splitlines() if line]
+    present = _output(
+        package,
+        "cat-file",
+        "--batch-check",
+        input="".join(f"{sha}\n" for sha in remote),
+        what="git cat-file",
+    ).splitlines()
+    pushed = [
+        sha for sha, answer in zip(remote, present, strict=True) if not answer.endswith(" missing")
+    ]
+    current = {
+        entry.split("\t", 1)[0].split(" ")[2]
+        for entry in _output(
+            package, "ls-tree", "-r", "-z", "--full-tree", "HEAD", what="git ls-tree"
+        ).split("\0")
+        if entry
+    }
+    objects = _output(
+        package, "rev-list", "--objects", "HEAD", "--not", *pushed, what="git rev-list"
+    )
+    paths: dict[str, str] = {}
+    for line in objects.splitlines():
+        sha, _, path = line.partition(" ")
+        if path and sha not in current:
+            paths.setdefault(sha, path)
+    if not paths:
+        return []
+    # --batch answers "<sha> <type> <size>\n<content>\n" per object; text mode would mangle bytes.
+    batch = subprocess.run(
+        ["git", "-C", str(package), "cat-file", "--batch"],
+        input="".join(f"{sha}\n" for sha in paths).encode(),
+        capture_output=True,
+        check=False,
+    )
+    if batch.returncode != 0:
+        raise GitError(f"git cat-file failed: {batch.stderr.decode(errors='replace').strip()}")
+    versions: list[tuple[Path, str]] = []
+    position = 0
+    for path in paths.values():
+        header_end = batch.stdout.index(b"\n", position)
+        kind, size = batch.stdout[position:header_end].split()[1:3]
+        content = batch.stdout[header_end + 1 : header_end + 1 + int(size)]
+        position = header_end + 1 + int(size) + 1
+        if kind != b"blob":
+            continue
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        versions.append((Path(os.path.relpath(top / path, package)), text))
+    return versions
+
+
 def push_head(plugin_dir: Path, branch: str) -> None:
     """Push HEAD to ``branch`` on ``origin``, with global and system config ignored."""
     result = run(plugin_dir, "push", REMOTE, f"HEAD:refs/heads/{branch}", isolate_config=True)

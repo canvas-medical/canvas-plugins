@@ -206,3 +206,80 @@ def test_clone_surfaces_the_clone_error(tmp_path: Path) -> None:
     """A failed clone reports the failure."""
     with pytest.raises(git.GitError, match="git clone failed"):
         git.clone(str(tmp_path / "does-not-exist.git"), tmp_path / "dest", "https://p.example.com")
+
+
+def test_pushed_files_are_what_the_push_sends(repo: Path) -> None:
+    """A plain deploy pushes the whole repository, tracked or new and not ignored, hidden files
+    included; a snapshot pushes the package folder alone. Symbolic links are not read.
+    """
+    package = repo / "acme__hello"
+    package.mkdir()
+    (package / "CANVAS_MANIFEST.json").write_text("{}")
+    (package / ".hidden.json").write_text("{}")
+    (package / "ignored.json").write_text("{}")
+    (repo / ".gitignore").write_text("acme__hello/ignored.json\n")
+    (repo / "README.md").write_text("readme\n")
+    (package / "link.json").symlink_to(package / "CANVAS_MANIFEST.json")
+    git.run(repo, "add", "-A")
+    git.run(repo, "commit", "-m", "first")
+    (package / "new.json").write_text("{}")
+
+    def listed(snapshot: bool) -> set[str]:
+        files = git.pushed_files(package, snapshot=snapshot)
+        assert files is not None
+        assert all(path == (package / relative).resolve() for path, relative in files)
+        return {str(relative) for _, relative in files}
+
+    assert listed(snapshot=False) == {
+        "CANVAS_MANIFEST.json",
+        ".hidden.json",
+        "new.json",
+        "../.gitignore",
+        "../README.md",
+    }
+    assert listed(snapshot=True) == {"CANVAS_MANIFEST.json", ".hidden.json", "new.json"}
+
+
+def test_pushed_files_outside_a_repository_are_unknown(plugin_dir: Path) -> None:
+    """Before `git init` nothing is pushed yet, so the caller falls back to the package's files."""
+    assert git.pushed_files(plugin_dir, snapshot=False) is None
+
+
+def test_unpushed_history_is_what_earlier_unpushed_commits_carry(
+    repo: Path, tmp_path: Path
+) -> None:
+    """Versions only earlier commits hold come back; HEAD's own files, binary versions and
+    commits the remote already has do not.
+    """
+    package = repo / "acme__hello"
+    package.mkdir()
+    (package / "CANVAS_MANIFEST.json").write_text("{}")
+    (package / "keys.json").write_text("first version\n")
+    (package / "blob.bin").write_bytes(b"\xff\xfe\x00")
+    git.run(repo, "add", "-A")
+    git.run(repo, "commit", "-m", "first")
+    (package / "keys.json").write_text("second version\n")
+    (package / "blob.bin").unlink()
+    git.run(repo, "add", "-A")
+    git.run(repo, "commit", "-m", "second")
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    git.run(repo, "remote", "add", "origin", str(remote))
+
+    assert git.unpushed_history(package) == [(Path("keys.json"), "first version\n")]
+
+    git.run(repo, "push", "origin", "HEAD:refs/heads/main")
+    (package / "keys.json").write_text("third version\n")
+    git.run(repo, "add", "-A")
+    git.run(repo, "commit", "-m", "third")
+
+    assert git.unpushed_history(package) == []
+
+
+def test_unpushed_history_fails_when_the_remote_cannot_be_read(repo: Path) -> None:
+    """Without the remote's branches every commit would count as pushed or unpushed by guess."""
+    (repo / "a.txt").write_text("a")
+    git.commit_working_tree(repo, assume_yes=True)
+    git.run(repo, "remote", "add", "origin", str(repo.parent / "does-not-exist.git"))
+    with pytest.raises(git.GitError, match="git ls-remote failed"):
+        git.unpushed_history(repo)

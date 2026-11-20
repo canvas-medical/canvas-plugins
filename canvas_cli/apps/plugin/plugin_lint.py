@@ -1,7 +1,7 @@
 """Static pre-load lint for ``canvas validate``.
 
-AST-scans a plugin's source for three classes of problem the sandbox handler-load
-can't surface on its own:
+Scans a plugin for four classes of problem the sandbox handler-load can't surface
+on its own (the fourth reads every shipped file, not just the source):
 
   * RestrictedPython constructs that fail at *runtime* inside a method body
     (``compile_restricted`` accepts them, so they load clean and only blow up
@@ -10,6 +10,7 @@ can't surface on its own:
     leave tables uncreated or relations dropped.
   * Request-handling mistakes that run fine but weaken the plugin: a secret
     compared with ``==``, or a ``requests`` call with no timeout.
+  * Credentials written into a file the package ships.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -20,9 +21,15 @@ the lint can't drift the way a hand-maintained allowlist mirror would.
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterator
+import re
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+import pathspec
+
+CANVAS_IGNORE_FILENAME = ".canvasignore"
+_DEFAULT_IGNORE = ["__pycache__", "*.pyc", "*.pyo", "node_modules"]
 
 # Directories that never hold plugin source we should lint — build scratch,
 # virtualenvs, caches, tests, VCS.
@@ -55,6 +62,24 @@ class LintFinding:
     location: str
     code: str
     message: str
+
+
+def shipped_files(package: Path) -> Iterator[tuple[Path, Path]]:
+    """``(path, path inside the package)`` for every entry ``canvas install`` packages: nothing
+    hidden or symlinked, and nothing the working directory's ``.canvasignore`` excludes.
+    """
+    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
+    ignore_lines = _DEFAULT_IGNORE + (
+        ignore_file.read_text().splitlines() if ignore_file.exists() else []
+    )
+    ignore = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+    for path in package.rglob("*"):
+        relative = path.relative_to(package)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if path.is_symlink() or ignore.match_file(relative):
+            continue
+        yield path, relative
 
 
 def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
@@ -202,10 +227,112 @@ def _secret_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
     }
 
 
+_API_BASES = {"SimpleAPI", "SimpleAPIRoute"}
+_REQUEST_READS = _REQUEST_INPUTS | {"json", "form_data", "body", "text"}
+PUBLIC_ACCESS = "PUBLIC_ACCESS"
+
+
+def _always_true(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Whether the body, past a docstring, is only ``return True``."""
+    body = function.body
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        body = body[1:]
+    return (
+        len(body) == 1
+        and isinstance(body[0], ast.Return)
+        and isinstance(body[0].value, ast.Constant)
+        and body[0].value.value is True
+    )
+
+
+def _declares_public_access(cls: ast.ClassDef) -> bool:
+    return any(
+        isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == PUBLIC_ACCESS for t in node.targets)
+        and isinstance(node.value, ast.Constant)
+        and node.value.value is True
+        for node in cls.body
+    )
+
+
+def _reads_request(node: ast.AST) -> bool:
+    return any(
+        isinstance(n, ast.Attribute) and n.attr in _REQUEST_READS and _is_self_request(n.value)
+        for n in ast.walk(node)
+    )
+
+
+def _is_self_request(node: ast.expr) -> bool:
+    """``self.request``."""
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "request"
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+    )
+
+
+def _reads_data(node: ast.AST, helpers: dict[str, ast.FunctionDef], follow: bool = True) -> bool:
+    """Whether ``node`` queries SDK data (``.objects``, ``for_patient``), directly or through
+    one module-level helper in the same file.
+    """
+    for n in ast.walk(node):
+        if isinstance(n, ast.Attribute) and n.attr in ("objects", "for_patient"):
+            return True
+        if (
+            follow
+            and isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Name)
+            and n.func.id in helpers
+            and _reads_data(helpers[n.func.id], helpers, follow=False)
+        ):
+            return True
+    return False
+
+
+def _open_data_route_findings(rel: Path, tree: ast.Module) -> list[LintFinding]:
+    helpers = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+    findings: list[LintFinding] = []
+    for cls in ast.walk(tree):
+        if (
+            not isinstance(cls, ast.ClassDef)
+            or not _API_BASES & set(_base_names(cls))
+            or _declares_public_access(cls)
+        ):
+            continue
+        methods = [n for n in cls.body if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)]
+        authenticate = next((m for m in methods if m.name == "authenticate"), None)
+        if authenticate is None or not _always_true(authenticate):
+            continue
+        route = next(
+            (
+                m
+                for m in methods
+                if m is not authenticate and _reads_request(m) and _reads_data(m, helpers)
+            ),
+            None,
+        )
+        if route is None:
+            continue
+        findings.append(
+            LintFinding(
+                "warning",
+                f"{rel}:{authenticate.lineno}",
+                "unauthenticated-data-route",
+                f"`{cls.name}.authenticate` always returns True, and `{route.name}` reads Canvas "
+                "data using values from the request, so anyone who can reach the URL can read it. "
+                "Use `StaffSessionAuthMixin`, `PatientSessionAuthMixin` or `APIKeyAuthMixin`, or "
+                f"set `{PUBLIC_ACCESS} = True` on the class if the route is public on purpose.",
+            )
+        )
+    return findings
+
+
 def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     findings: list[LintFinding] = []
     for py_file, tree in _iter_python_files(plugin_dir):
         rel = _rel(py_file, plugin_dir)
+        findings += _open_data_route_findings(rel, tree)
         # A nested function is walked again inside its enclosing one; report each comparison once.
         reported: set[int] = set()
         for function in ast.walk(tree):
@@ -258,6 +385,124 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
                         "`canvas_sdk.utils.Http`, which always sets one.",
                     )
                 )
+    return findings
+
+
+# ── Credential rules ──────────────────────────────────────────────────────────
+# Each API-key shape was a live credential in every shipped file it appeared in across
+# installed plugins, so it is an error anywhere but a Markdown or reST document.
+
+_PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
+# A downloaded service-account file: a key with a body in a JSON `private_key` field.
+_SERVICE_ACCOUNT_KEY = re.compile(
+    r'"private_key"\s*:\s*"-----BEGIN (?:RSA )?PRIVATE KEY-----\\n[A-Za-z0-9+/]{40,}'
+)
+_API_KEYS = {
+    "An Anthropic API key": re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}"),
+    "A Slack token": re.compile(r"\bxox[bp]-\d+-\d+-[A-Za-z0-9-]{20,}"),
+    "A Stripe live key": re.compile(r"\b[rs]k_live_[0-9A-Za-z]{24,}"),
+    "A GitHub token": re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{60,})"),
+    "An OpenAI key": re.compile(r"\bsk-proj-[A-Za-z0-9_-]{40,}"),
+}
+_SECRET_ASSIGNMENT = re.compile(
+    r"(?i)(?:api_?key|secret|token|passw(?:or)?d|private_key)\w*[\"']?\s*[:=]\s*"
+    r"[\"']([^\"'\s]{20,})[\"']"
+)
+_DOC_SUFFIXES = {".md", ".rst"}
+_HEX_TOKEN = re.compile(r"[0-9a-f]{32,}")
+
+
+def _looks_random(value: str) -> bool:
+    """Lower, upper and digit characters, or a long lowercase hex run (a Twilio-style token),
+    and not a URL: unlike a CONSTANT_NAME or a link.
+    """
+    if value.startswith(("http://", "https://")):
+        return False
+    return bool(_HEX_TOKEN.fullmatch(value)) or (
+        any(c.islower() for c in value)
+        and any(c.isupper() for c in value)
+        and any(c.isdigit() for c in value)
+    )
+
+
+def _file_texts(files: Iterable[tuple[Path, Path]]) -> Iterator[tuple[Path, str]]:
+    """``(path inside the package, text)`` for each readable text file in ``files``."""
+    for path, rel in files:
+        if not path.is_file():
+            continue
+        try:
+            yield rel, path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+
+def credential_findings(texts: Iterable[tuple[Path, str]]) -> list[LintFinding]:
+    """The credential findings in each ``(path inside the package, text)``."""
+    findings: list[LintFinding] = []
+    for rel, text in texts:
+        is_doc = rel.suffix.lower() in _DOC_SUFFIXES
+        # Placeholder values belong in docs and tests, so a value matched by its shape alone is
+        # not reported there.
+        is_example = is_doc or bool({"test", "tests"} & set(rel.parts))
+        for number, line in enumerate(text.split("\n"), start=1):
+            where = f"{rel}:{number}"
+            has_private_key = bool(_PRIVATE_KEY.search(line))
+            if _SERVICE_ACCOUNT_KEY.search(line):
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        "A service-account private key ships inside the plugin package, where "
+                        "anyone with the package can read it. Store the service-account JSON as a "
+                        "manifest secret read with `self.secrets[...]`, sign with "
+                        '`jwt.encode(claims, key, algorithm="RS256")`, and rotate the key.',
+                    )
+                )
+            elif has_private_key:
+                # A warning until the SDK can load an mTLS client key from a secret: `requests`
+                # takes the key only as a file path, which the sandbox cannot create.
+                findings.append(
+                    LintFinding(
+                        "warning",
+                        where,
+                        "hardcoded-credential",
+                        "A private key ships inside the plugin package, where anyone with the "
+                        "package can read it. Move it to a manifest secret read with "
+                        "`self.secrets[...]` and rotate it, unless it is a mutual-TLS client "
+                        "key, which plugins can only load from a file today.",
+                    )
+                )
+            api_key = next(
+                ((name, match) for name, p in _API_KEYS.items() if (match := p.search(line))),
+                None,
+            )
+            if api_key:
+                name, match = api_key
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        f"{name} (`{match.group(0)[:4]}…`, {len(match.group(0))} characters) "
+                        "ships inside the plugin package, where anyone with the package can read "
+                        "it. Move it to a manifest secret read with `self.secrets[...]`, and "
+                        "rotate it.",
+                    )
+                )
+                continue
+            for value in [] if is_example or has_private_key else _SECRET_ASSIGNMENT.finditer(line):
+                if _looks_random(value.group(1)):
+                    findings.append(
+                        LintFinding(
+                            "warning",
+                            where,
+                            "possible-credential",
+                            f"A secret-like value ({len(value.group(1))} characters) ships inside "
+                            "the plugin package. If it is a real credential, move it to a manifest "
+                            "secret read with `self.secrets[...]`, and rotate it.",
+                        )
+                    )
     return findings
 
 
@@ -368,13 +613,17 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
     return findings
 
 
-def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
-    """Return all construct, request-handling and Custom Data findings for a plugin,
-    most-blocking first (errors before warnings).
+def lint_plugin(
+    plugin_dir: Path, manifest: dict, files: Iterable[tuple[Path, Path]] | None = None
+) -> list[LintFinding]:
+    """Return all construct, request-handling, credential and Custom Data findings for a plugin,
+    most-blocking first (errors before warnings). The credential rule reads ``files``
+    (``(path, path inside the package)``), by default what ``canvas install`` packages.
     """
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
+        + credential_findings(_file_texts(shipped_files(plugin_dir) if files is None else files))
         + _custom_data_findings(plugin_dir, manifest)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
