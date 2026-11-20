@@ -24,19 +24,19 @@ from canvas_sdk.clients.sendgrid.structures import (
 )
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
-from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, StaffSessionAuthMixin, api
 from logger import log
 from sendgrid_email.constants.constants import Constants
 
 
-class EmailManip(SimpleAPI):
-    """API handler for SendGrid email operations including sending, webhooks, and logging."""
+class EmailManip(StaffSessionAuthMixin, SimpleAPI):
+    """API handler for SendGrid email operations including sending, webhooks, and logging.
+
+    Only signed-in staff can call these routes; the app's same-origin requests already carry
+    the staff session. SendGrid's own callbacks are on ``SendGridCallbacks``.
+    """
 
     PREFIX = None
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate the API request. Always returns True (no authentication required)."""
-        return True
 
     def _sendgrid_client(self) -> EmailClient:
         """Create and return a configured SendGrid email client."""
@@ -302,14 +302,6 @@ class EmailManip(SimpleAPI):
             )
         ]
 
-    @api.post("/outbound_email_status")
-    def outbound_status_save(self) -> list[Response | Effect]:
-        """Receive and cache outbound email status events from SendGrid webhook."""
-        events = [EmailEvent.from_dict(item) for item in self.request.json()]
-        self.cache_save("outbound_email_status", [e.to_dict() for e in events])
-        log.info(f"outbound status received:{len(events)}")
-        return [Response(status_code=HTTPStatus(HTTPStatus.OK))]
-
     @api.get("/inbound_email")
     def last_inbound_email(self) -> list[Response | Effect]:
         """Retrieve the most recent inbound email from cache."""
@@ -319,6 +311,40 @@ class EmailManip(SimpleAPI):
                 status_code=HTTPStatus(HTTPStatus.OK),
             )
         ]
+
+    @classmethod
+    def cache_save(cls, key: str, payload: list) -> None:
+        """Store a payload in the plugin cache under the given key."""
+        get_cache().set(key, payload)
+
+    @classmethod
+    def cache_retrieve(cls, key: str) -> list:
+        """Retrieve a cached payload by key, returning an empty list if not found."""
+        return get_cache().get(key) or []
+
+
+class SendGridCallbacks(SimpleAPI):
+    """The two routes SendGrid itself posts to, which can't carry a Canvas session.
+
+    They only store what SendGrid sends; reading it back goes through ``EmailManip``, which
+    requires a staff session. A production plugin should also verify SendGrid's signed event
+    webhook before storing anything.
+    """
+
+    PREFIX = None
+    PUBLIC_ACCESS = True
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Accept SendGrid's callbacks, which arrive without a Canvas session."""
+        return True
+
+    @api.post("/outbound_email_status")
+    def outbound_status_save(self) -> list[Response | Effect]:
+        """Receive and cache outbound email status events from SendGrid webhook."""
+        events = [EmailEvent.from_dict(item) for item in self.request.json()]
+        EmailManip.cache_save("outbound_email_status", [e.to_dict() for e in events])
+        log.info(f"outbound status received:{len(events)}")
+        return [Response(status_code=HTTPStatus(HTTPStatus.OK))]
 
     @api.post("/inbound_email")
     def inbound_email_save(self) -> list[Response | Effect]:
@@ -342,16 +368,6 @@ class EmailManip(SimpleAPI):
                     message[key] = str(value)
 
         parsed = ParsedEmail.from_dict(message)
-        self.cache_save("inbound_treatment", [parsed.to_dict()])
+        EmailManip.cache_save("inbound_treatment", [parsed.to_dict()])
         log.info(f"inbound email received from {parsed.email_from} to {parsed.email_to}")
         return [Response(status_code=HTTPStatus(HTTPStatus.OK))]
-
-    @classmethod
-    def cache_save(cls, key: str, payload: list) -> None:
-        """Store a payload in the plugin cache under the given key."""
-        get_cache().set(key, payload)
-
-    @classmethod
-    def cache_retrieve(cls, key: str) -> list:
-        """Retrieve a cached payload by key, returning an empty list if not found."""
-        return get_cache().get(key) or []

@@ -21,9 +21,12 @@ from textwrap import dedent
 
 import pytest
 import requests
+import typer
 
+from canvas_cli.apps.plugin.plugin import _lint_plugin_static
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
-from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin
+from canvas_sdk.handlers.simple_api import SimpleAPI
+from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin, Credentials
 from plugin_runner.sandbox import ALLOWED_MODULES, sandbox_from_module
 
 
@@ -242,6 +245,131 @@ def test_requests_with_timeout_not_flagged(source: str) -> None:
     """A call that sets or may set a timeout, or goes through the SDK's Http, is not flagged."""
     root = _plugin({"handlers/h.py": source})
     assert "requests-no-timeout" not in _codes(lint_plugin(root, {}))
+
+
+_OPEN_ROUTE = """
+    from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+    from canvas_sdk.v1.data.observation import Observation
+
+    class VitalsApp(SimpleAPI):
+        {extra}
+        def authenticate(self, credentials: Credentials) -> bool:
+            \"\"\"Anyone.\"\"\"
+            return True
+
+        @api.get("/")
+        def index(self):
+            patient = self.request.query_params.get("patient")
+            return list(Observation.objects.for_patient(patient))
+"""
+
+
+def test_unauthenticated_data_route_flagged() -> None:
+    """A route class that admits everyone and reads data keyed from the request is an error
+    on its `authenticate`, naming the route.
+    """
+    root = _plugin({"routes/vitals.py": _OPEN_ROUTE.format(extra="")})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "unauthenticated-data-route"]
+
+    assert [(f.severity, f.location) for f in findings] == [("error", "routes/vitals.py:7")]
+    assert (
+        "`VitalsApp.authenticate` always returns True, so anyone who can reach the URL can call "
+        "`index`" in findings[0].message
+    )
+
+
+def test_unauthenticated_route_actor_check_flagged() -> None:
+    """`self.event.actor is not None` admits everyone, because the SDK always attaches an Actor."""
+    source = _OPEN_ROUTE.replace("return True", "return self.event.actor is not None")
+    root = _plugin({"routes/vitals.py": source.format(extra="")})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "unauthenticated-data-route"]
+
+    assert [f.severity for f in findings] == ["error"]
+    assert "true for every request" in findings[0].message
+
+
+def test_unauthenticated_route_blocks_validate() -> None:
+    """The finding is an error, so `canvas validate` exits non-zero on it."""
+    root = _plugin({"routes/vitals.py": _OPEN_ROUTE.format(extra="")})
+
+    with pytest.raises(typer.Exit) as exit_info:
+        _lint_plugin_static(root)
+
+    assert exit_info.value.exit_code == 1
+
+
+def test_unauthenticated_data_route_through_a_helper_flagged() -> None:
+    """A read done in a module-level helper the route calls counts."""
+    source = """
+        from canvas_sdk.handlers.simple_api import SimpleAPIRoute
+        from canvas_sdk.v1.data import Note
+
+        def notes_for(patient_id):
+            return Note.objects.filter(patient__id=patient_id)
+
+        class Notes(SimpleAPIRoute):
+            PATH = "/notes"
+
+            def authenticate(self, credentials):
+                return True
+
+            def get(self):
+                return notes_for(self.request.path_params["patient"])
+    """
+    root = _plugin({"routes/notes.py": source})
+    assert "unauthenticated-data-route" in _codes(lint_plugin(root, {}), "error")
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param(_OPEN_ROUTE.format(extra="PUBLIC_ACCESS = True"), id="declared_public"),
+        pytest.param(
+            _OPEN_ROUTE.replace("return True", "return self.event.actor.id is not None").format(
+                extra=""
+            ),
+            id="authenticate_checks_something",
+        ),
+        pytest.param(
+            _OPEN_ROUTE.replace('self.request.query_params.get("patient")', '"fixed"')
+            .replace("list(Observation.objects.for_patient(patient))", "[patient]")
+            .format(extra=""),
+            id="no_request_input_or_data_read",
+        ),
+        pytest.param(
+            """
+            from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
+            from canvas_sdk.v1.data import Patient
+
+            class Staff(StaffSessionAuthMixin, SimpleAPI):
+                @api.get("/")
+                def index(self):
+                    return list(Patient.objects.filter(id=self.request.query_params["id"]))
+            """,
+            id="auth_mixin_not_overridden",
+        ),
+        pytest.param(
+            _OPEN_ROUTE.replace("(SimpleAPI)", "(BaseHandler)").format(extra=""),
+            id="not_an_api_class",
+        ),
+    ],
+)
+def test_unauthenticated_data_route_not_flagged(source: str) -> None:
+    """Declared public, real authentication, or a route reading neither the request nor Canvas
+    data is not flagged.
+    """
+    root = _plugin({"routes/r.py": source})
+    assert "unauthenticated-data-route" not in _codes(lint_plugin(root, {}))
+
+
+def test_tripwire_simple_api_denies_unless_authenticate_is_overridden() -> None:
+    """`unauthenticated-data-route` targets an override returning True because the SDK default
+    denies. If the default starts admitting requests, widen the rule in plugin_lint.py.
+    """
+    assert (
+        SimpleAPI.authenticate(SimpleAPI.__new__(SimpleAPI), Credentials.__new__(Credentials))
+        is False
+    )
 
 
 def test_tripwire_requests_is_allowed_and_has_no_default_timeout() -> None:
