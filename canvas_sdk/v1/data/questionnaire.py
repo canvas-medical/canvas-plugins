@@ -10,6 +10,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    Model,
     TimestampedModel,
     ValueSetLookupByNameQuerySet,
     ValueSetLookupByNameQuerySetMixin,
@@ -188,6 +189,7 @@ class Interview(TimestampedModel, IdentifiableModel):
         through="v1.InterviewQuestionnaireMap",
     )
     progress_status = models.CharField(max_length=3)
+    skipped_questions = models.ManyToManyField(Question, through="v1.InterviewSkippedQuestion")
 
 
 class InterviewQuestionnaireMap(TimestampedModel):
@@ -199,6 +201,16 @@ class InterviewQuestionnaireMap(TimestampedModel):
     status = models.CharField(max_length=2)
     interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING, null=True)
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, null=True)
+
+
+class InterviewSkippedQuestion(Model):
+    """M2M for Interview -> Questions skipped in it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_interview_skipped_questions_001"
+
+    interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING, related_name="+")
+    question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, related_name="+")
 
 
 class InterviewQuestionResponse(TimestampedModel):
@@ -238,4 +250,5 @@ __exports__ = (
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
+    "InterviewSkippedQuestion",
 )

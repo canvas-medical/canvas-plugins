@@ -12,6 +12,7 @@ from canvas_sdk.v1.data.base import (
     CommittableModelManager,
     CommittableQuerySet,
     IdentifiableModel,
+    Model,
     TimestampedModel,
     ValueSetLookupQuerySetMixin,
 )
@@ -69,6 +70,9 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
     document = models.FileField(null=True)
 
     task_ids = models.CharField(max_length=1024)
+    assessments = models.ManyToManyField(
+        "v1.Assessment", related_name="imaging_orders", through="v1.ImagingOrderAssessment"
+    )
 
     @property
     def document_url(self) -> str | None:
@@ -90,6 +94,18 @@ class ImagingOrder(AuditedModel, IdentifiableModel):
     def task_list(self) -> list[Task]:
         """Convenience property to get task objects."""
         return list(self.get_task_objects())
+
+
+class ImagingOrderAssessment(Model):
+    """M2M for ImagingOrder -> Assessments."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_imagingorder_assessments_001"
+
+    imaging_order = models.ForeignKey(
+        ImagingOrder, on_delete=models.DO_NOTHING, db_column="imagingorder_id", related_name="+"
+    )
+    assessment = models.ForeignKey("v1.Assessment", on_delete=models.DO_NOTHING, related_name="+")
 
 
 class ImagingCoding(Coding):
@@ -243,6 +259,7 @@ class ImagingOrderActionEvent(BaseActionEvent):
 __exports__ = (
     "ImagingCoding",
     "ImagingOrder",
+    "ImagingOrderAssessment",
     "ImagingReview",
     "ImagingReport",
     "ImagingReportCoding",

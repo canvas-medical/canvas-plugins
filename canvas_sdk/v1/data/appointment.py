@@ -58,6 +58,12 @@ class Appointment(TimestampedModel, IdentifiableModel):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
+    scheduled_together = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        through="v1.AppointmentScheduledTogether",
+        through_fields=("from_appointment", "to_appointment"),
+    )
 
 
 class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
@@ -92,6 +98,16 @@ class AppointmentLabel(Model):
     )
 
 
+class AppointmentScheduledTogether(Model):
+    """M2M for Appointment -> Appointments booked together."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_appointment_scheduled_together_001"
+
+    from_appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, related_name="+")
+    to_appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, related_name="+")
+
+
 class AppointmentMetadata(MetadataModel):
     """A class representing Appointment Metadata."""
 
@@ -109,4 +125,5 @@ __exports__ = (
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
+    "AppointmentScheduledTogether",
 )
