@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v1.13.0 (2026-11-20)
+
+### Bug Fixes
+
+- Low-risk bumps for 2 dependencies (critical)
+  ([#2019](https://github.com/canvas-medical/canvas-plugins/pull/2019),
+  [`9ec6df3`](https://github.com/canvas-medical/canvas-plugins/commit/9ec6df3fec0d99323dec21c7d65b9937533ed2b4))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- **data**: Expose claim lifecycle and remittance tables in the data module (KOALA-8485)
+  ([#2022](https://github.com/canvas-medical/canvas-plugins/pull/2022),
+  [`669f075`](https://github.com/canvas-medical/canvas-plugins/commit/669f0756fb67d193784a6b90fcc0f1bd5c482d98))
+
+
 ## v1.12.0 (2026-11-20)
 
 ### Continuous Integration
