@@ -1,6 +1,6 @@
-import re
+import decimal
 
 
-def is_match(value) -> str:  # type: ignore[no-untyped-def]
-    """Check a value against the match type, as a command display helper does."""
-    return str(isinstance(value, re.Match))
+def has_precision() -> str:
+    """Read the shared decimal context, as a command display helper might."""
+    return str(decimal.getcontext().prec > 0)

@@ -632,8 +632,22 @@ STANDARD_LIBRARY_MODULES = {
     "dateutil.relativedelta": {
         "relativedelta",
     },
+    # The context functions stay ungranted: a decimal context is shared by every plugin on
+    # the thread, so one plugin's rounding or precision would change another's.
     "decimal": {
         "Decimal",
+        "DecimalException",
+        "DivisionByZero",
+        "InvalidOperation",
+        "Overflow",
+        "ROUND_05UP",
+        "ROUND_CEILING",
+        "ROUND_DOWN",
+        "ROUND_FLOOR",
+        "ROUND_HALF_DOWN",
+        "ROUND_HALF_EVEN",
+        "ROUND_HALF_UP",
+        "ROUND_UP",
     },
     "email.mime.multipart": {
         "MIMEMultipart",
@@ -699,8 +713,10 @@ STANDARD_LIBRARY_MODULES = {
         "finditer",
         "fullmatch",
         "M",
+        "Match",
         "match",
         "MULTILINE",
+        "Pattern",
         "S",
         "search",
         "split",
