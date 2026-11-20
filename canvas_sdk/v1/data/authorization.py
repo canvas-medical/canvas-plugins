@@ -1,6 +1,14 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, Model
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    CommittableModelManager,
+    CommittableQuerySet,
+    IdentifiableModel,
+    Model,
+)
 
 
 class Authorization(AuditedModel, IdentifiableModel):
@@ -8,6 +16,8 @@ class Authorization(AuditedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_authorization_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="authorizations"

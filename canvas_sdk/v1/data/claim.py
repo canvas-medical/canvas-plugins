@@ -1,9 +1,16 @@
 from decimal import Decimal
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    CommittableModelManager,
+    CommittableQuerySet,
+    IdentifiableModel,
+    MetadataModel,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.common import PersonSex, TaxIDType
 from canvas_sdk.v1.data.coverage import (
     CoverageRelationshipCode,
@@ -119,6 +126,8 @@ class ClaimComment(IdentifiableModel, AuditedModel):
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_claimcomment_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
 
     claim = models.ForeignKey("Claim", on_delete=models.CASCADE, related_name="comments")
     comment = models.TextField()

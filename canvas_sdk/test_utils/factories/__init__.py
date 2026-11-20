@@ -73,6 +73,7 @@ from .imaging import (
     ImagingReportTemplateFieldOptionFactory,
     ImagingReviewFactory,
 )
+from .immunization import ConsolidatedImmunizationCodingFactory, ConsolidatedImmunizationFactory
 from .inpatient import InpatientFacilityFactory, InpatientStayFactory
 from .integration_task import (
     IntegrationTaskActionEventFactory,
@@ -90,8 +91,10 @@ from .lab import (
     LabPartnerTestQuestionChoiceFactory,
     LabPartnerTestQuestionFactory,
     LabReportFactory,
+    LabReportProducerFactory,
     LabReportRemarkFactory,
     LabReviewFactory,
+    LabTestAOEFactory,
     LabTestFactory,
     LabValueCodingFactory,
     LabValueFactory,
@@ -120,6 +123,7 @@ from .note import (
     NoteActionEventFactory,
     NoteFactory,
     NoteMetadataFactory,
+    NoteParticipantFactory,
     NoteStateChangeEventFactory,
     NoteTypeFactory,
 )
@@ -138,7 +142,10 @@ from .patient import (
     PatientContactPersonFactory,
     PatientFacilityAddressFactory,
     PatientFactory,
+    PatientKnownLocationFactory,
+    PatientParentGuardianFactory,
     PatientPhotoFactory,
+    PatientTribalAffiliationCodingFactory,
 )
 from .patient_administrative_document import (
     DocumentCodingFactory,
@@ -166,6 +173,7 @@ from .prescription_change import (
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
 from .protocol_override import ProtocolOverrideFactory
+from .provenance import ProvenanceFactory
 from .reason_for_visit import (
     ReasonForVisitCodingFactory,
     ReasonForVisitFactory,
@@ -190,6 +198,7 @@ from .service_request import (
     ServiceRequestFactory,
     ServiceRequestReasonConditionFactory,
 )
+from .snapshot import SnapshotFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -294,6 +303,8 @@ __all__ = (
     "ImagingReportTemplateFieldFactory",
     "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
+    "ConsolidatedImmunizationCodingFactory",
+    "ConsolidatedImmunizationFactory",
     "InpatientFacilityFactory",
     "InpatientStayFactory",
     "IntegrationTaskActionEventFactory",
@@ -309,8 +320,10 @@ __all__ = (
     "LabPartnerTestQuestionChoiceFactory",
     "LabPartnerTestQuestionFactory",
     "LabReportFactory",
+    "LabReportProducerFactory",
     "LabReportRemarkFactory",
     "LabReviewFactory",
+    "LabTestAOEFactory",
     "LabTestFactory",
     "LabValueCodingFactory",
     "LabValueFactory",
@@ -331,6 +344,7 @@ __all__ = (
     "NoteActionEventFactory",
     "NoteFactory",
     "NoteMetadataFactory",
+    "NoteParticipantFactory",
     "NoteStateChangeEventFactory",
     "NoteTypeFactory",
     "ObservationComponentFactory",
@@ -348,7 +362,10 @@ __all__ = (
     "PaymentCardFactory",
     "PaymentCollectionFactory",
     "PatientContactPersonFactory",
+    "PatientKnownLocationFactory",
+    "PatientParentGuardianFactory",
     "PatientPhotoFactory",
+    "PatientTribalAffiliationCodingFactory",
     "PlanFactory",
     "PluginCommandFactory",
     "PortalAccessGrantFactory",
@@ -365,6 +382,8 @@ __all__ = (
     "ProcedureCodingFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
+    "ProvenanceFactory",
+    "SnapshotFactory",
     "ReasonForVisitCodingFactory",
     "ReasonForVisitFactory",
     "ReasonForVisitSettingCodingFactory",

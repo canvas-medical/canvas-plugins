@@ -10,7 +10,10 @@ from canvas_sdk.v1.data import (
     PatientAddress,
     PatientContactPerson,
     PatientFacilityAddress,
+    PatientKnownLocation,
+    PatientParentGuardian,
     PatientPhoto,
+    PatientTribalAffiliationCoding,
 )
 
 
@@ -76,3 +79,39 @@ class PatientContactPersonFactory(factory.django.DjangoModelFactory[PatientConta
     patient = factory.SubFactory(PatientFactory)
     name = factory.Faker("name")
     email = factory.Faker("email")
+
+
+class PatientKnownLocationFactory(factory.django.DjangoModelFactory[PatientKnownLocation]):
+    """Factory for creating a PatientKnownLocation."""
+
+    class Meta:
+        model = PatientKnownLocation
+
+    patient = factory.SubFactory(PatientFactory)
+    originator = factory.SubFactory(CanvasUserFactory)
+    known_location = factory.Faker("street_address")
+
+
+class PatientParentGuardianFactory(factory.django.DjangoModelFactory[PatientParentGuardian]):
+    """Factory for creating a PatientParentGuardian."""
+
+    class Meta:
+        model = PatientParentGuardian
+
+    patient = factory.SubFactory(PatientFactory)
+    first_name = factory.Faker("first_name")
+    last_name = factory.Faker("last_name")
+
+
+class PatientTribalAffiliationCodingFactory(
+    factory.django.DjangoModelFactory[PatientTribalAffiliationCoding]
+):
+    """Factory for creating a PatientTribalAffiliationCoding."""
+
+    class Meta:
+        model = PatientTribalAffiliationCoding
+
+    patient = factory.SubFactory(PatientFactory)
+    system = "http://terminology.hl7.org/CodeSystem/v3-TribalEntityUS"
+    code = "40"
+    display = "Cherokee Nation"

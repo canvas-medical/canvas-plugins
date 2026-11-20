@@ -12,6 +12,7 @@ from canvas_sdk.v1.data.base import (
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.django_content_type import resolve_content_object
 
 
 class ImmunizationStatus(models.TextChoices):
@@ -149,6 +150,93 @@ class ImmunizationStatementCoding(Coding):
     )
 
 
+# The SDK model for each content type a consolidated immunization is built from.
+_SOURCE_MODELS: dict[tuple[str, str], type[Immunization | ImmunizationStatement]] = {
+    ("api", "immunization"): Immunization,
+    ("api", "immunizationstatement"): ImmunizationStatement,
+}
+
+
+class ConsolidatedImmunization(AuditedModel, IdentifiableModel):
+    """An immunization or immunization statement, in the consolidated form FHIR Immunization serves.
+
+    ``content_type`` + ``object_id`` link the Immunization or ImmunizationStatement it was
+    built from; ``source`` resolves that link.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_consolidatedimmunization_001"
+
+    # Its codings also use the singular ``coding`` accessor, so the statement queryset fits.
+    objects = cast(ImmunizationStatementQuerySet, ImmunizationStatementManager())
+
+    content_type = models.ForeignKey(
+        "v1.ContentType", on_delete=models.DO_NOTHING, related_name="+"
+    )
+    object_id = models.IntegerField()
+    primary_source = models.BooleanField()
+    status = models.CharField(
+        choices=ImmunizationStatus.choices,
+        max_length=20,
+        default=ImmunizationStatus.STATUS_IN_PROGRESS,
+    )
+    lot_number = models.CharField(max_length=20, blank=True, default="")
+    manufacturer = models.CharField(max_length=100, blank=True, default="")
+    exp_date_original = models.CharField(max_length=50, blank=True, default="")
+    exp_date = models.DateField(null=True)
+    sig_original = models.CharField(max_length=75, blank=True, default="")
+    date_ordered = models.DateField(null=True)
+    given_by = models.ForeignKey(
+        "v1.Staff",
+        on_delete=models.DO_NOTHING,
+        related_name="consolidated_immunizations_given",
+        null=True,
+    )
+    consent_given = models.BooleanField(default=False)
+    take_quantity = models.FloatField(null=True)
+    dose_form = models.CharField(max_length=255, blank=True, default="")
+    route = models.CharField(max_length=255, blank=True, default="")
+    frequency_normalized_per_day = models.FloatField(null=True)
+    evidence = models.CharField(max_length=255, blank=True, default="")
+    comment = models.CharField(max_length=255, blank=True, default="")
+    reason_not_given = models.CharField(
+        max_length=20,
+        choices=ImmunizationReasonsNotGiven.choices,
+        default=ImmunizationReasonsNotGiven.NA,
+    )
+    note = models.ForeignKey(
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="consolidated_immunizations"
+    )
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="consolidated_immunizations"
+    )
+    date_original = models.CharField(max_length=50, blank=True, default="")
+    date = models.DateField(null=True)
+
+    @property
+    def source(self) -> Immunization | ImmunizationStatement | None:
+        """The Immunization or ImmunizationStatement this record was built from."""
+        return resolve_content_object(_SOURCE_MODELS, self.content_type, self.object_id)
+
+
+class ConsolidatedImmunizationCoding(Coding):
+    """A coding of a consolidated immunization.
+
+    ``content_type`` + ``object_id`` link the source coding it was copied from.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_consolidatedimmunizationcoding_001"
+
+    content_type = models.ForeignKey(
+        "v1.ContentType", on_delete=models.DO_NOTHING, related_name="+"
+    )
+    object_id = models.IntegerField()
+    consolidated_immunization = models.ForeignKey(
+        ConsolidatedImmunization, on_delete=models.DO_NOTHING, related_name="coding"
+    )
+
+
 __exports__ = (
     "ImmunizationStatus",
     "ImmunizationReasonsNotGiven",
@@ -156,4 +244,6 @@ __exports__ = (
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
+    "ConsolidatedImmunization",
+    "ConsolidatedImmunizationCoding",
 )

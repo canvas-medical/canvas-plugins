@@ -6,6 +6,7 @@ from canvas_sdk.v1.data import (
     Note,
     NoteActionEvent,
     NoteMetadata,
+    NoteParticipant,
     NoteStateChangeEvent,
     NoteType,
 )
@@ -84,3 +85,16 @@ class NoteActionEventFactory(factory.django.DjangoModelFactory[NoteActionEvent])
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
     note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
+
+
+class NoteParticipantFactory(factory.django.DjangoModelFactory[NoteParticipant]):
+    """Factory for creating a NoteParticipant."""
+
+    class Meta:
+        model = NoteParticipant
+
+    note = factory.SubFactory(NoteFactory)
+    patient_contact_person = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.PatientContactPersonFactory",
+        patient=factory.SelfAttribute("..note.patient"),
+    )

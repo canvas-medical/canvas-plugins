@@ -433,6 +433,20 @@ class NoteActionEvent(BaseActionEvent):
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="action_events")
 
 
+class NoteParticipant(IdentifiableModel):
+    """A patient contact who took part in a note."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_noteparticipant_001"
+
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="participants")
+    patient_contact_person = models.ForeignKey(
+        "v1.PatientContactPerson",
+        on_delete=models.DO_NOTHING,
+        related_name="noteparticipant_set",
+    )
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
@@ -444,4 +458,5 @@ __exports__ = (
     "NoteStateChangeEvent",
     "CurrentNoteStateEvent",
     "NoteActionEvent",
+    "NoteParticipant",
 )
