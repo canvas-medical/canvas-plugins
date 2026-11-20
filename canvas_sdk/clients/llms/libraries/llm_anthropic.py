@@ -62,6 +62,21 @@ class LlmAnthropic(LlmApi):
     Implements the LlmBase interface for Anthropic's Claude API.
     """
 
+    #: The Messages API's ``output_config.effort`` value for each of the agents' effort levels.
+    _EFFORTS = {"low": "low", "medium": "medium", "high": "high"}
+
+    @classmethod
+    def effort(cls, level: str) -> str:
+        """The ``output_config.effort`` value for an agent's effort level (an ``Effort``).
+
+        Raises:
+            ValueError: ``level`` is not one of the levels mapped here.
+        """
+        try:
+            return cls._EFFORTS[level]
+        except KeyError:
+            raise ValueError(f"No Anthropic effort for the level {level!r}.") from None
+
     @classmethod
     def output_format(cls, schema: type[BaseModelLlmJson]) -> dict:
         """The ``output_config.format`` that makes a reply JSON matching ``schema``.

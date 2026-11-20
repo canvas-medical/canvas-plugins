@@ -203,16 +203,18 @@ def _stopped(result: ToolLoopResult) -> ToolLoopResult:
 
 
 class Effort(StrEnum):
-    """How much the model thinks on a call: the Messages API's ``output_config.effort``.
+    """How much the model thinks before it answers, trading speed and cost against depth.
 
-    A model that does not take effort, or not a given level, is refused by the gateway.
+    ``LOW`` answers fastest and cheapest, for extraction and classification the model can
+    do at a glance. ``MEDIUM`` gives a call room to weigh what it read. ``HIGH`` is for
+    answers that need reasoning over many steps, at the most latency and tokens. Left
+    unset, a call thinks at the model's default. A model that does not take effort is
+    refused by the gateway.
     """
 
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
-    XHIGH = "xhigh"
-    MAX = "max"
 
 
 def output_config(
@@ -226,7 +228,7 @@ def output_config(
     """
     config: dict[str, Any] = {}
     if effort is not None:
-        config["effort"] = Effort(effort).value
+        config["effort"] = LlmAnthropic.effort(Effort(effort))
     if output_schema is not None:
         config["format"] = LlmAnthropic.output_format(output_schema)
     return config or None
@@ -285,10 +287,13 @@ def run_tool_loop(
         on_turn: Called with the turn index before each model call. Its exceptions are
             logged and ignored.
         output_schema: A ``BaseModelLlmJson`` subclass the final answer must match.
-            Each call asks for structured output, so the final text is JSON of that
-            shape, read with ``output_schema.model_validate_json(result.text)``; the model
-            still calls tools on the turns before it. The request is the one
-            ``LlmAnthropic`` sends for the same schema.
+            Each call asks for structured output, so when the loop ends on
+            ``result.stopped == "end_turn"`` the final text is JSON of that shape, read
+            with ``output_schema.model_validate_json(result.text)``. On any other stop it
+            is cut-off JSON or the last tool turn's text, so check ``stopped`` first. The
+            model still calls tools on the turns before its answer, and the reply is not
+            streamed, since it is JSON for code rather than text for a person. The
+            request is the one ``LlmAnthropic`` sends for the same schema.
         effort: How much the model thinks on each call, an :class:`Effort` such as
             ``Effort.MEDIUM`` (or its value, ``"medium"``). The gateway refuses it for a
             model that does not take it.
@@ -334,7 +339,12 @@ def run_tool_loop(
         if config:
             request["output_config"] = config
         try:
-            if recorder is not None and recorder.streams_reply and streams_reply.get():
+            if (
+                output_schema is None
+                and recorder is not None
+                and recorder.streams_reply
+                and streams_reply.get()
+            ):
                 # The same call, streamed so the person waiting reads the reply as it is
                 # written; the final message is what the unstreamed call would return.
                 recorder.report_turn()
