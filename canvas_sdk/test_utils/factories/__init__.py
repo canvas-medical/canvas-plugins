@@ -174,6 +174,11 @@ from .payment_card import PaymentCardFactory
 from .payment_collection import PaymentCollectionFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
+from .population_health import (
+    CampaignFactory,
+    InterventionFactory,
+    SuspectHCCFactory,
+)
 from .portal_access_grant import PortalAccessGrantFactory
 from .portal_invitation import PortalInvitationFactory
 from .posting import (
@@ -420,6 +425,9 @@ __all__ = (
     "PatientTribalAffiliationCodingFactory",
     "PlanFactory",
     "PluginCommandFactory",
+    "CampaignFactory",
+    "InterventionFactory",
+    "SuspectHCCFactory",
     "PortalAccessGrantFactory",
     "PortalInvitationFactory",
     "PracticeLocationFactory",

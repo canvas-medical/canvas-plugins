@@ -1317,6 +1317,7 @@
     "BulkPatientPosting",
     "BusinessLine",
     "Calendar",
+    "Campaign",
     "CancelPrescription",
     "CancelPrescriptionResponse",
     "CancelPrescriptionStatus",
@@ -1450,6 +1451,8 @@
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
     "IntegrationTaskStatus",
+    "Intervention",
+    "InterventionPatient",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
@@ -1616,6 +1619,9 @@
     "StaffPhoto",
     "StaffRole",
     "StopMedicationEvent",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -2126,6 +2132,14 @@
   ],
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
+  ],
+  "canvas_sdk.v1.data.population_health": [
+    "Campaign",
+    "Intervention",
+    "InterventionPatient",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus"
   ],
   "canvas_sdk.v1.data.portal_access_grant": [
     "PortalAccessGrant",

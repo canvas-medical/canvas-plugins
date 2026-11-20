@@ -249,6 +249,14 @@ from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
+from .population_health import (
+    Campaign,
+    Intervention,
+    InterventionPatient,
+    SuspectHCC,
+    SuspectHCCKind,
+    SuspectHCCStatus,
+)
 from .portal_access_grant import PortalAccessGrant, PortalAccessLevel
 from .portal_invitation import (
     PortalInvitation,
@@ -610,6 +618,12 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "Plan",
     "PluginCommand",
+    "Campaign",
+    "Intervention",
+    "InterventionPatient",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus",
     "PortalAccessGrant",
     "PortalAccessLevel",
     "PortalInvitation",
