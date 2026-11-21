@@ -763,6 +763,35 @@ def test_deploy_refuses_a_handler_that_fails_to_load_in_the_sandbox(
     assert _git(bare, "branch", "--list", "main") == ""
 
 
+def test_deploy_no_validate_pushes_without_loading_the_handlers(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """--no-validate skips the sandbox load, so a handler it would refuse is pushed."""
+    (package / "handlers").mkdir()
+    (package / "handlers" / "__init__.py").write_text("")
+    (package / "handlers" / "h.py").write_text(
+        "import os\n"
+        "from canvas_sdk.handlers.base import BaseHandler\n\n\n"
+        "class H(BaseHandler):\n"
+        "    def compute(self):\n"
+        "        return []\n"
+    )
+    handler = {"class": f"{NAME}.handlers.h:H", "description": "h"}
+    (package / "CANVAS_MANIFEST.json").write_text(
+        json.dumps({**VALID_MANIFEST, "components": {"handlers": [handler]}})
+    )
+    _git(package, "add", ".")
+    _git(package, "commit", "-m", "add a handler")
+
+    result = runner.invoke(
+        app, ["deploy", str(package), "--instance", "acme-staging", "--no-validate"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "failed to load in the sandbox" not in result.output
+    assert _git(bare, "branch", "--list", "main") != ""
+
+
 @pytest.mark.parametrize(
     "args",
     [["--instance", "acme-staging"], ["--snapshot", "--push-only"]],

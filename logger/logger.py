@@ -5,12 +5,6 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from django.conf import settings
-from logstash_async.handler import AsynchronousLogstashHandler
-
-from logger.logstash import LogstashFormatterECS
-from logger.pubsub import PubSubLogHandler
-
 _current_handler_name: ContextVar[str | None] = ContextVar("_current_handler_name", default=None)
 _current_plugin_name: ContextVar[str | None] = ContextVar("_current_plugin_name", default=None)
 
@@ -84,26 +78,16 @@ class PluginLogger:
             f"plugin-runner {log_prefix}%(plugin_name_prefix)s%(levelname)s %(asctime)s %(message)s"
         )
 
-        streaming_handler = logging.StreamHandler()
-        streaming_handler.setFormatter(formatter)
+        self._formatter = formatter
 
-        self._logger.addHandler(streaming_handler)
+        self.add_handler(logging.StreamHandler())
 
-        if settings.REDIS_ENDPOINT:
-            pubsub_handler = PubSubLogHandler()
-            pubsub_handler.setFormatter(formatter)
-
-            self._logger.addHandler(pubsub_handler)
-
-        if settings.LOGSTASH_HOST:
-            logstash_handler = AsynchronousLogstashHandler(
-                host=settings.LOGSTASH_HOST,
-                port=settings.LOGSTASH_PORT,
-                database_path=None,
-                transport=settings.LOGSTASH_PROTOCOL,
-            )
-            logstash_handler.setFormatter(LogstashFormatterECS())
-            self._logger.addHandler(logstash_handler)
+    def add_handler(
+        self, handler: logging.Handler, formatter: logging.Formatter | None = None
+    ) -> None:
+        """Send records to ``handler``, formatted like the console output unless given a formatter."""
+        handler.setFormatter(formatter or self._formatter)
+        self._logger.addHandler(handler)
 
     def debug(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a debug message."""

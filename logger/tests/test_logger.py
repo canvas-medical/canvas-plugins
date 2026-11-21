@@ -7,8 +7,11 @@ formatter's ``labels.plugin`` / ``labels.handler`` emission.
 
 import json
 import logging
+from collections.abc import Generator
 
 import pytest
+from logstash_async.handler import AsynchronousLogstashHandler
+from pytest_django.fixtures import SettingsWrapper
 
 from logger import log
 from logger.logger import (
@@ -20,6 +23,7 @@ from logger.logger import (
 )
 from logger.logstash import LogstashFormatterECS
 from logger.pubsub import PubSubLogHandler
+from logger.runner_handlers import attach_runner_handlers
 from pubsub.pubsub import Publisher
 
 
@@ -172,3 +176,58 @@ def test_publisher_keeps_its_endpoint_and_client_private() -> None:
 def test_pubsub_log_handler_keeps_its_publisher_private() -> None:
     """The handler attached to the plugin logger has no public route to the publisher."""
     assert not hasattr(PubSubLogHandler(), "publisher")
+
+
+@pytest.fixture
+def plugin_logger_handlers() -> Generator[list[logging.Handler], None, None]:
+    """The plugin logger's handlers, restored after the test adds any."""
+    stdlib_logger = logging.getLogger("plugin_runner_logger")
+    before = list(stdlib_logger.handlers)
+    yield stdlib_logger.handlers
+    stdlib_logger.handlers[:] = before
+
+
+def test_plugin_logger_writes_only_to_the_console(
+    settings: SettingsWrapper, plugin_logger_handlers: list[logging.Handler]
+) -> None:
+    """Even with Redis and Logstash configured, a new plugin logger adds only a console handler."""
+    settings.REDIS_ENDPOINT = "redis://localhost:6379"
+    settings.LOGSTASH_HOST = "logstash.example"
+    before = len(plugin_logger_handlers)
+
+    PluginLogger()
+
+    added = plugin_logger_handlers[before:]
+    assert [type(handler) for handler in added] == [logging.StreamHandler]
+
+
+def test_attach_runner_handlers_adds_pubsub_and_logstash_where_configured(
+    settings: SettingsWrapper, plugin_logger_handlers: list[logging.Handler]
+) -> None:
+    """The runner's handlers go to Redis pub/sub and Logstash, each with its own format."""
+    settings.REDIS_ENDPOINT = "redis://localhost:6379"
+    settings.LOGSTASH_HOST = "logstash.example"
+    before = len(plugin_logger_handlers)
+
+    attach_runner_handlers(PluginLogger())
+
+    added = plugin_logger_handlers[before + 1 :]
+    assert [type(handler) for handler in added] == [
+        PubSubLogHandler,
+        AsynchronousLogstashHandler,
+    ]
+    assert isinstance(added[1].formatter, LogstashFormatterECS)
+    assert not isinstance(added[0].formatter, LogstashFormatterECS)
+
+
+def test_attach_runner_handlers_adds_nothing_unconfigured(
+    settings: SettingsWrapper, plugin_logger_handlers: list[logging.Handler]
+) -> None:
+    """Without Redis or Logstash settings, the logger keeps only its console handler."""
+    settings.REDIS_ENDPOINT = None
+    settings.LOGSTASH_HOST = None
+    before = len(plugin_logger_handlers)
+
+    attach_runner_handlers(PluginLogger())
+
+    assert len(plugin_logger_handlers) == before + 1

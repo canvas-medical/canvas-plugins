@@ -11,9 +11,9 @@ from typing import TypedDict
 
 import psycopg
 import requests
-import sentry_sdk
 from psycopg.rows import dict_row
 
+from canvas_sdk.utils import reporting
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.ddl import generate_plugin_migrations  # noqa: F401 — re-export
@@ -392,14 +392,14 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                 f"{attributes['version']}: HTTP {status}: {e}"
             ) from e
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
-        sentry_sdk.capture_exception(e)
+        reporting.capture_exception(e)
         raise PluginInstallationError() from e
     except PluginInstallationError:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
-        sentry_sdk.capture_exception(e)
+        reporting.capture_exception(e)
         raise PluginInstallationError() from e
 
 
@@ -417,7 +417,7 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
                     archive.extractall(plugin_installation_path, filter="data")
             except tarfile.ReadError as e:
                 log.exception(f"Unreadable tar archive: '{plugin_file_path}'")
-                sentry_sdk.capture_exception(e)
+                reporting.capture_exception(e)
 
                 raise InvalidPluginFormat from e
         else:
@@ -495,7 +495,7 @@ def install_plugins() -> None:
                     f'Namespace wait timed out for plugin "{plugin_name}", version'
                     f" {attributes['version']}; plugin remains enabled and will be retried"
                 )
-                sentry_sdk.capture_exception(e)
+                reporting.capture_exception(e)
                 break
             except TransientPluginInstallationError as e:
                 if attempt < MAX_TRANSIENT_INSTALL_ATTEMPTS:
@@ -516,7 +516,7 @@ def install_plugins() -> None:
                     f" attempts; plugin remains enabled and will be retried on the"
                     f" next sync: {e}"
                 )
-                sentry_sdk.capture_exception(e)
+                reporting.capture_exception(e)
                 break
             except PluginInstallationError as e:
                 disable_plugin(plugin_name)
@@ -526,7 +526,7 @@ def install_plugins() -> None:
                     f" {attributes['version']}; the plugin has been disabled"
                 )
 
-                sentry_sdk.capture_exception(e)
+                reporting.capture_exception(e)
 
                 break
 
