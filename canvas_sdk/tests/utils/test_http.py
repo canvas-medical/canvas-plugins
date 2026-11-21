@@ -688,7 +688,7 @@ def test_http_presents_the_client_certificate_to_its_base_url(
         client_cert=mutual_tls_server.client_cert,
         client_key=mutual_tls_server.client_key,
     )
-    adapter = http._session.get_adapter(mutual_tls_server.url)
+    adapter = http._session.get_adapter(f"{mutual_tls_server.url}/report")
     assert isinstance(adapter, _ClientCertificateAdapter)
     adapter.ssl_context.load_verify_locations(cadata=mutual_tls_server.ca_pem)
 
