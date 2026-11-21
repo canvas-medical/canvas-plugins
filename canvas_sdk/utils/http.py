@@ -230,7 +230,8 @@ class Http:
         """Create a client, optionally presenting a PEM client certificate to `base_url`.
 
         The certificate and its unencrypted private key are PEM strings, typically from
-        sensitive plugin secrets. They are presented only to `base_url`, so it is required.
+        sensitive plugin secrets. They are presented only to the origin of `base_url`, which
+        has to be https.
         """
         self._base_url = base_url
         self._session = requests.Session()
@@ -239,10 +240,15 @@ class Http:
             return
         if not client_cert or not client_key:
             raise ValueError("client_cert and client_key must be given together.")
-        if not base_url:
-            raise ValueError("A client certificate needs a base_url to be presented to.")
+        origin = urllib.parse.urlsplit(base_url)
+        if origin.scheme != "https" or not origin.hostname:
+            raise ValueError("A client certificate needs an https base_url to be presented to.")
 
-        self._session.mount(base_url, _ClientCertificateAdapter(client_cert, client_key))
+        # requests picks an adapter by URL prefix, and follows redirects without `join_url`;
+        # the trailing slash keeps a lookalike host (`<host>.example`) from matching.
+        self._session.mount(
+            f"https://{origin.netloc}/", _ClientCertificateAdapter(client_cert, client_key)
+        )
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name == "_MAX_REQUEST_TIMEOUT_SECONDS":

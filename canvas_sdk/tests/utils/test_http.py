@@ -708,19 +708,27 @@ def test_the_test_server_refuses_a_client_without_a_certificate(
         )
 
 
-def test_http_does_not_present_the_client_certificate_to_other_urls(
-    mutual_tls_server: MutualTlsServer,
+@pytest.mark.parametrize(
+    "other_url",
+    ["https://example.com/", "https://{host}.example.com/", "https://{host}:8443/"],
+    ids=["another-host", "lookalike-host", "another-port"],
+)
+def test_http_does_not_present_the_client_certificate_to_other_origins(
+    mutual_tls_server: MutualTlsServer, other_url: str
 ) -> None:
-    """The certificate adapter is mounted on the base URL alone."""
+    """The certificate adapter is mounted on the base URL's origin alone, which a redirect
+    to a host that merely starts with the same name does not match.
+    """
     http = Http(
         base_url=mutual_tls_server.url,
         client_cert=mutual_tls_server.client_cert,
         client_key=mutual_tls_server.client_key,
     )
+    host = mutual_tls_server.url.removeprefix("https://")
 
-    assert not isinstance(
-        http._session.get_adapter("https://example.com/"), _ClientCertificateAdapter
-    )
+    adapter = http._session.get_adapter(other_url.format(host=host))
+
+    assert not isinstance(adapter, _ClientCertificateAdapter)
 
 
 def _recording_mkstemp(created: list[str]) -> Any:
@@ -788,6 +796,7 @@ def test_a_key_that_does_not_match_the_certificate_is_refused_and_not_left_on_di
         {"base_url": "https://example.com", "client_key": "key"},
         {"base_url": "https://example.com", "client_cert": "", "client_key": "key"},
         {"client_cert": "cert", "client_key": "key"},
+        {"base_url": "http://example.com", "client_cert": "cert", "client_key": "key"},
     ],
 )
 def test_http_refuses_an_incomplete_client_certificate(kwargs: dict[str, str]) -> None:
