@@ -471,9 +471,16 @@ manifest_schema = {
                     "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
                 },
                 "video": {
-                    "description": "A YouTube video the plugin's page plays in its screenshot row, first, behind the poster image.",
+                    "description": "The video the plugin's page plays in its screenshot row, first, behind the poster image: an MP4 Canvas holds, named by its sha256, or a YouTube url.",
                     "type": "object",
                     "properties": {
+                        "sha256": {
+                            "description": "The MP4's SHA-256 in 64 lowercase hex digits. Canvas uploads the MP4 to Platform.",
+                            "type": "string",
+                            "pattern": r"^[0-9a-f]{64}$",
+                            # `$` also matches before a final newline in Python.
+                            "maxLength": 64,
+                        },
                         "url": {
                             "description": "A YouTube watch, youtu.be or embed link, over https. The video must allow embedding.",
                             "type": "string",
@@ -486,7 +493,8 @@ manifest_schema = {
                         },
                         "caption": {"type": "string", "maxLength": 40},
                     },
-                    "required": ["url", "poster"],
+                    "required": ["poster"],
+                    "oneOf": [{"required": ["sha256"]}, {"required": ["url"]}],
                     "additionalProperties": False,
                 },
                 "setup_guide": {
