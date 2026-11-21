@@ -4,11 +4,14 @@ requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
+  "canvas[runner]",
+  "django-stubs[compatible-mypy]>=5.1.1,<6",
+  "factory-boy>=3.3.3",
   "grpcio-tools>=1.78.0,<2",
   "httpretty>=1.1.4",
+  "ipython>=8.21.0,<9",
   "mypy>=1.17.0,<2",
   "pre-commit>=4.3.0,<5",
-  "psutil>=7.0.0",
   "pytest-cov",
   "pytest-django>=4.11,<5",
   "pytest-freezegun>=0.4.2",
@@ -23,41 +26,29 @@ dev = [
 
 [project]
 authors = [{email = "engineering@canvasmedical.com", name = "Canvas Team"}]
+# What the CLI and the sandbox check that `canvas validate` and `canvas deploy` run need.
+# Packages only a running plugin runner uses go in the `runner` extra.
 dependencies = [
   "anthropic>=1.0.0,<2",
+  "arrow",
   "certifi>=2026.10.23",
   "cookiecutter",
   "cron-converter>=1.2.1,<2",
-  "cryptography>=45.0.5",
-  "defusedxml>=0.7.1",
   "deprecation>=2.1.0,<3",
-  "django-stubs[compatible-mypy]>=5.1.1,<6",
   "django-timezone-utils>=0.15.0,<0.16",
   "django>=5.1.1,<6",
   "env-tools>=2.4.0,<3",
-  "factory-boy>=3.3.3",
   "frozendict>=2.4.6",
-  "grpcio>=1.78.0,<2",
-  "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
-  "nh3>=0.3.0,<0.4",
   "packaging>=24.2",
   "pathspec>=0.12.1",
   "protobuf>=6,<7",
-  "psutil>=7.2.2,<8",
-  "psycopg[binary,pool]>=3.3.3,<4",
+  "psycopg[binary]>=3.3.3,<4",
   "pydantic>=2.12.5,<3",
-  "pyjwt>=2.15.0,<3",
+  "python-dateutil",
   "python-dotenv>=1.0.1,<2",
-  "python-logstash-async>=4.0.2",
-  "rapidfuzz>=3.10.1,<4",
-  "redis>=5.0.4,<6",
   "requests",
   "restrictedpython>=8.5,<9",
-  "sentry-sdk>=2.33.2",
-  "snowflake-connector-python>=4.7.2,<5",
-  "statsd>=4.0.1,<5",
-  "stripe>=14.1.0",
   # typer 0.26 bundles its own click and only catches that copy's ClickException, so the
   # CLI's click.ClickException errors would print as tracebacks instead of "Error: ..."
   "typer>=0.19.2,<0.26",
@@ -72,7 +63,26 @@ requires-python = ">=3.11,<3.15"
 version = "1.18.0"
 
 [project.optional-dependencies]
-test-utils = ["pytest-canvas>=0.2.0"]
+# The plugin runner's server and reporting packages, the libraries the sandbox lets plugins
+# import beyond the base install's, and the SDK modules' runtime clients. home-app installs it.
+runner = [
+  "cryptography>=45.0.5",
+  "defusedxml>=0.7.1",
+  "grpcio>=1.78.0,<2",
+  "nh3>=0.3.0,<0.4",
+  "psutil>=7.2.2,<8",
+  "psycopg[pool]>=3.3.3,<4",
+  "pyjwt>=2.15.0,<3",
+  "python-logstash-async>=4.0.2",
+  "rapidfuzz>=3.10.1,<4",
+  "redis>=5.0.4,<6",
+  "sentry-sdk>=2.33.2",
+  "snowflake-connector-python>=4.7.2,<5",
+  "statsd>=4.0.1,<5",
+  "stripe>=14.1.0"
+]
+# Plugin tests run handlers that may use any runner package, so they get the whole set.
+test-utils = ["canvas[runner]", "factory-boy>=3.3.3", "pytest-canvas>=0.2.0"]
 
 [project.scripts]
 canvas = "canvas_cli.main:app"

@@ -4,16 +4,57 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import timedelta
 from functools import wraps
-from typing import Any, TypeVar, cast, overload
+from typing import Any, Protocol, TypeVar, cast, overload
 
-import psutil
 from django.conf import settings
 from django.db import connection
-from statsd.client.base import StatsClientBase
-from statsd.client.udp import Pipeline
-from statsd.defaults.env import statsd as default_statsd_client
 
 from logger import log
+
+
+class StatsClient(Protocol):
+    """The parts of a ``statsd`` client that metrics are sent through."""
+
+    def gauge(self, stat: str, value: float) -> Any:
+        """Send a gauge."""
+        ...
+
+    def timing(self, stat: str, delta: float | timedelta) -> Any:
+        """Send a timing."""
+        ...
+
+    def incr(self, stat: str, count: int, rate: float) -> Any:
+        """Send an increment."""
+        ...
+
+    def pipeline(self) -> "StatsPipeline":
+        """Start a batch of metrics."""
+        ...
+
+
+class StatsPipeline(StatsClient, Protocol):
+    """A ``statsd`` pipeline: a client whose metrics go out together on ``send``."""
+
+    def send(self) -> Any:
+        """Send the batch."""
+        ...
+
+
+_client: StatsClient | None = None
+_process_rss_bytes: Callable[[], int] | None = None
+
+
+def configure(client: StatsClient, process_rss_bytes: Callable[[], int]) -> None:
+    """Send metrics through ``client`` and read this process's memory with ``process_rss_bytes``.
+
+    The plugin runner calls this when it starts. Until then no metrics are sent and memory is
+    not measured, so code that loads outside the runner, such as `canvas validate`, runs
+    without the runner's statsd and psutil packages.
+    """
+    global _client, _process_rss_bytes
+    _client = client
+    _process_rss_bytes = process_rss_bytes
+
 
 LINE_PROTOCOL_TRANSLATION = str.maketrans(
     {
@@ -42,10 +83,12 @@ def get_qualified_name(fn: Callable) -> str:
 
 
 class StatsDClientProxy:
-    """Proxy for a StatsD client."""
+    """Proxy for the StatsD client the plugin runner configures."""
 
-    def __init__(self) -> None:
-        self.client = default_statsd_client
+    @property
+    def client(self) -> StatsClient | None:
+        """The configured client, or None before the plugin runner configures one."""
+        return _client
 
     def gauge(self, metric_name: str, value: float, tags: dict[str, str]) -> None:
         """Sends a gauge metric to StatsD with properly formatted tags.
@@ -55,11 +98,13 @@ class StatsDClientProxy:
             value (float): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
-        if not settings.METRICS_ENABLED:
+        client = self.client
+
+        if not settings.METRICS_ENABLED or client is None:
             return
 
         statsd_tags = tags_to_line_protocol(tags)
-        self.client.gauge(f"{metric_name},{statsd_tags}", value)
+        client.gauge(f"{metric_name},{statsd_tags}", value)
 
     def timing(self, metric_name: str, delta: float | timedelta, tags: dict[str, str]) -> None:
         """Sends a timing metric to StatsD with properly formatted tags.
@@ -69,11 +114,13 @@ class StatsDClientProxy:
             delta (float | timedelta): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
-        if not settings.METRICS_ENABLED:
+        client = self.client
+
+        if not settings.METRICS_ENABLED or client is None:
             return
 
         statsd_tags = tags_to_line_protocol(tags)
-        self.client.timing(f"{metric_name},{statsd_tags}", delta)
+        client.timing(f"{metric_name},{statsd_tags}", delta)
 
     def incr(self, metric_name: str, tags: dict[str, str], count: int = 1, rate: int = 1) -> None:
         """Sends an increment metric to StatsD with properly formatted tags.
@@ -84,11 +131,13 @@ class StatsDClientProxy:
             rate (int): The sample rate.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
-        if not settings.METRICS_ENABLED:
+        client = self.client
+
+        if not settings.METRICS_ENABLED or client is None:
             return
 
         statsd_tags = tags_to_line_protocol(tags)
-        self.client.incr(f"{metric_name},{statsd_tags}", count, rate)
+        client.incr(f"{metric_name},{statsd_tags}", count, rate)
 
     def pipeline(self) -> "PipelineProxy":
         """Returns a pipeline for batching StatsD metrics."""
@@ -98,16 +147,22 @@ class StatsDClientProxy:
 class PipelineProxy(StatsDClientProxy):
     """Proxy for a StatsD pipeline."""
 
-    def __init__(self, client: StatsClientBase | None) -> None:
-        super().__init__()
-        self.client = Pipeline(client or self.client)
+    def __init__(self, client: StatsClient | None) -> None:
+        self._pipeline = client.pipeline() if client is not None else None
+
+    @property
+    def client(self) -> StatsPipeline | None:
+        """The pipeline, or None when there is no client to send it through."""
+        return self._pipeline
 
     def send(self) -> None:
         """Sends the batched metrics to StatsD."""
-        if not settings.METRICS_ENABLED:
+        pipeline = self._pipeline
+
+        if not settings.METRICS_ENABLED or pipeline is None:
             return
 
-        self.client.send()
+        pipeline.send()
 
 
 statsd_client = StatsDClientProxy()
@@ -130,7 +185,8 @@ def measure(
         client: An optional alternate StatsD client.
         track_plugins_usage: Whether to track plugin usage (Adds plugin and handler tags if the caller was a plugin).
         track_queries: Whether to track queries (Adds query count and duration metrics).
-        track_memory_usage: Whether to track memory usage (Adds memory usage metrics).
+        track_memory_usage: Whether to track memory usage (Adds memory usage metrics once the
+            plugin runner has configured a memory reader).
 
     Yields:
         A pipeline for collecting additional metrics in the same batch.
@@ -150,10 +206,10 @@ def measure(
         connection.force_debug_cursor = True
         connection.queries_log.clear()
 
-    if track_memory_usage:
-        pid = os.getpid()
-        process = psutil.Process(pid)
-        rss_before = process.memory_info().rss
+    process_rss_bytes = _process_rss_bytes if track_memory_usage else None
+
+    if process_rss_bytes is not None:
+        rss_before = process_rss_bytes()
 
     tags = {
         "name": name,
@@ -179,8 +235,8 @@ def measure(
             pipeline.timing("plugins.query_count", delta=query_count, tags=tags)
             pipeline.timing("plugins.query_duration_ms", delta=query_duration_ms, tags=tags)
             connection.force_debug_cursor = False
-        if track_memory_usage:
-            rss_after = process.memory_info().rss
+        if process_rss_bytes is not None:
+            rss_after = process_rss_bytes()
             rss_diff = rss_after - rss_before
             pipeline.timing("plugins.rss_delta_in_bytes", delta=rss_diff, tags=tags)
 
