@@ -234,6 +234,12 @@ PLUGIN_DIRECTORY = os.getenv(
 # Container-local file the runner stamps with its event registry version; home-app
 # reads it to decide which events it can skip. Unset disables the stamp.
 PLUGIN_RUNNER_EVENT_REGISTRY_PATH = os.getenv("PLUGIN_RUNNER_EVENT_REGISTRY_PATH")
+# Unix socket the runner also serves gRPC on, for callers outside its network namespace.
+PLUGIN_RUNNER_GRPC_SOCKET = os.getenv("PLUGIN_RUNNER_GRPC_SOCKET")
+# Hosts the runner may reach over HTTP, comma- or space-separated (`example.com`,
+# `*.example.com`). Set, it confines the runner's network to these plus its own
+# services (see `plugin_runner.egress`); unset, the runner's network is not confined.
+PLUGIN_RUNNER_EGRESS_ALLOWLIST = os.getenv("PLUGIN_RUNNER_EGRESS_ALLOWLIST", "")
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
 CHANNEL_NAME = f"{CUSTOMER_IDENTIFIER}:{PLUGINS_PUBSUB_CHANNEL}"
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
