@@ -14,7 +14,7 @@ import typer
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
-from plugin_runner.plugin_runner import HandlerLoadResult
+from plugin_runner.loading import HandlerLoadResult
 from plugin_runner.sandbox import SandboxMode
 
 from .plugin import (
@@ -1860,6 +1860,74 @@ def test_validate_plugin_loads_reports_only_pass_or_fail(
     assert "✓ older_loads_plugin.handlers.my_handler:Handler" in captured.out
     assert "⚠" not in captured.out
     assert "deprecated" not in captured.out.lower()
+
+
+def _failed_on_missing_module(plugin_name: str) -> HandlerLoadResult:
+    """A load that failed because a module the plugin imports is not installed."""
+    try:
+        try:
+            raise ModuleNotFoundError("No module named 'snowflake'", name="snowflake")
+        except ModuleNotFoundError as missing:
+            raise ImportError("could not import snowflake.connector") from missing
+    except ImportError as error:
+        failure = error
+
+    return HandlerLoadResult(
+        handler={"class": f"{plugin_name}.handlers.my_handler:Handler"},
+        name_and_class=f"{plugin_name}.handlers.my_handler:Handler",
+        handler_class="Handler",
+        scope=None,
+        error=failure,
+        report=True,
+    )
+
+
+def test_validate_plugin_loads_says_how_to_install_a_missing_runner_package(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """On a base install, a load that fails on a module the runner extra provides names the
+    module and both ways forward: install the extra, or deploy with --no-validate.
+    """
+    plugin = _scaffold_plugin(tmp_path / "snowflake_plugin", _CLEAN_HANDLER)
+
+    with (
+        patch(
+            "canvas_cli.apps.plugin.plugin.sandbox_plugin_handlers",
+            return_value=[_failed_on_missing_module("snowflake_plugin")],
+        ),
+        patch(
+            "canvas_cli.apps.plugin.plugin.missing_runner_packages",
+            return_value=["snowflake-connector-python"],
+        ),
+        pytest.raises(typer.Exit),
+    ):
+        _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "does not have snowflake" in captured.out
+    assert "pip install 'canvas[runner]'" in captured.out
+    assert "canvas deploy --no-validate" in captured.out
+
+
+def test_validate_plugin_loads_gives_no_install_hint_when_the_runner_extra_is_installed(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """With every runner package installed, a missing module is the plugin's own problem."""
+    plugin = _scaffold_plugin(tmp_path / "snowflake_plugin", _CLEAN_HANDLER)
+
+    with (
+        patch(
+            "canvas_cli.apps.plugin.plugin.sandbox_plugin_handlers",
+            return_value=[_failed_on_missing_module("snowflake_plugin")],
+        ),
+        patch("canvas_cli.apps.plugin.plugin.missing_runner_packages", return_value=[]),
+        pytest.raises(typer.Exit),
+    ):
+        _validate_plugin_loads(plugin)
+
+    captured = capsys.readouterr()
+    assert "failed to load in the sandbox" in captured.out
+    assert "canvas[runner]" not in captured.out
 
 
 def test_validate_plugin_loads_surfaces_sandbox_violation(

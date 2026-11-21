@@ -3,13 +3,13 @@ import json
 from functools import cached_property
 from typing import Any
 
-import sentry_sdk
 from django.apps import apps
 from django.db import models
 
 import settings
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_generated.messages.events_pb2 import EventType
+from canvas_sdk.utils import reporting
 from canvas_sdk.v1.data import CanvasUser
 
 
@@ -63,7 +63,7 @@ class Event:
         except ValueError as e:
             self.name = f"UNKNOWN_EVENT_{self.type}"
             if not settings.IS_TESTING:
-                sentry_sdk.capture_exception(e)
+                reporting.capture_exception(e)
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
         self.actor = Actor(id=event_request.actor)

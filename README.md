@@ -2,6 +2,12 @@
 
 `pip install canvas`
 
+That installs the CLI and what `canvas validate` and `canvas deploy` need to load a plugin in the sandbox. `canvas run-plugin`, `canvas run-plugins` and `canvas emit` start or call a local plugin runner and need its packages too, as does validating a plugin that imports one of them (such as `snowflake.connector`, `rapidfuzz`, `defusedxml` or `jwt`):
+
+`pip install 'canvas[runner]'`
+
+A plugin's own tests install `canvas[test-utils]`, which includes the runner's packages.
+
 ### Authentication
 
 The CLI authenticates in two ways, and which one a command uses depends on where it sends the request:
@@ -229,6 +235,7 @@ $ canvas deploy --plugin [PUBLISHER/]NAME@VERSION [--plugin ...] [OPTIONS]
 - `--branch TEXT`: Push HEAD to this branch on Canvas Platform instead of `main`, and deploy that commit. Platform deploys a commit not on `main` only to your organization's test instances, and refuses other instances with a message naming them. Works with `--push-only` and `--snapshot`. Takes no `--ref` or `--no-push`, and refuses `main` and the plugin's default branch
 - `--snapshot`: Push the committed contents of a plugin inside a larger repository, such as a monorepo, as one new commit on `main`, or on the `--branch` branch, leaving that repository's remotes alone. See [Deploying from a monorepo](#deploying-from-a-monorepo). Takes no `--ref` or `--no-push`
 - `-y, --yes`: Commit uncommitted changes without prompting, with the default message. Does not approve consent requests: a deployment that needs consent exits non-zero and lists them
+- `--no-validate`: Push without first loading the plugin's handlers in the sandbox. A plugin the sandbox refuses still reaches the instance, where it fails to load
 - `--help`: Show this message and exit.
 
 ### Dependencies and bundles

@@ -36,7 +36,9 @@ from canvas_sdk.effects.payment_processor import (
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.utils import metrics
+from plugin_runner import loading
 from plugin_runner.event_registry import NOT_READY, EventRegistry
+from plugin_runner.loading import _load_plugin_handlers
 from plugin_runner.plugin_runner import (
     ENVIRONMENT,
     EVENT_HANDLER_MAP,
@@ -44,7 +46,6 @@ from plugin_runner.plugin_runner import (
     STARTUP_RETRY_LIMIT,
     SYNCHRONIZER_HAS_CONNECTED,
     PluginRunner,
-    _load_plugin_handlers,
     import_plugin,
     main,
     publish_message,
@@ -437,7 +438,7 @@ def test_sandbox_plugin_handlers_executes_each_module_once(install_test_plugin: 
         executed.append(module_name)
         return sandbox_from_module(base_path, module_name, evaluated_modules, mode)
 
-    with patch("plugin_runner.plugin_runner.sandbox_from_module", _counting_sandbox_from_module):
+    with patch("plugin_runner.loading.sandbox_from_module", _counting_sandbox_from_module):
         results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
     assert len(results) == len(handlers)
@@ -1976,7 +1977,7 @@ def test_load_plugin_handlers_falls_back_to_permissive_sandbox(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A listed plugin the strict sandbox rejects still loads, via the permissive fallback."""
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: True)
     handlers = _manifest_handlers(install_test_plugin)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
@@ -2038,9 +2039,7 @@ def test_load_plugin_handlers_does_not_retry_a_healthy_plugin(
     handlers = _manifest_handlers(install_test_plugin)
 
     with patch.object(
-        plugin_runner_module,
-        "_load_plugin_handlers",
-        wraps=plugin_runner_module._load_plugin_handlers,
+        loading, "_load_plugin_handlers", wraps=loading._load_plugin_handlers
     ) as load:
         sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
 
@@ -2054,7 +2053,7 @@ def test_load_plugin_handlers_records_the_mode_each_handler_loaded_under(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Results say which rule set loaded the handler, so callers can flag deprecated ones."""
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: True)
     handlers = _manifest_handlers(install_test_plugin)
 
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
@@ -2112,7 +2111,7 @@ def test_load_plugin_handlers_refuses_an_unlisted_legacy_plugin(
 
     Nothing is executed, and the error names the constructs so the author can fix them.
     """
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: False)
     handlers = _manifest_handlers(install_test_plugin)
 
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
@@ -2153,7 +2152,7 @@ def test_load_plugin_handlers_allows_a_listed_legacy_plugin(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An allowlisted plugin keeps loading under the deprecated rules."""
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: True)
     handlers = _manifest_handlers(install_test_plugin)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
@@ -2176,7 +2175,7 @@ def test_the_allowlist_is_not_consulted_for_a_clean_plugin(
     def _fail(*_: object) -> bool:
         raise AssertionError("the allowlist was consulted for a clean plugin")
 
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", _fail)
+    monkeypatch.setattr(loading, "is_allowlisted", _fail)
     handlers = _manifest_handlers(install_test_plugin)
 
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
@@ -2193,7 +2192,7 @@ def test_a_plugin_listed_to_always_use_the_deprecated_rules_loads_under_them(
     Its incompatibilities only surface when its code runs, so the load-time fallback
     would never reach them.
     """
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: True)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: True)
     handlers = _manifest_handlers(install_test_plugin)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message") as capture_message:
@@ -2209,7 +2208,7 @@ def test_an_unlisted_clean_plugin_stays_on_the_current_rules(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Without an entry on the always list a clean plugin keeps the current rules."""
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: False)
     handlers = _manifest_handlers(install_test_plugin)
 
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)
@@ -2253,7 +2252,7 @@ def test_an_unlisted_plugin_that_fails_to_load_is_not_retried(
     A plugin that fails under the current rules at load time keeps its own errors rather
     than being loaded under the deprecated rules.
     """
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: False)
     handlers = _manifest_handlers(install_test_plugin)
 
     results = sandbox_plugin_handlers(install_test_plugin.name, install_test_plugin, handlers)

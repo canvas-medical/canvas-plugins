@@ -5,11 +5,10 @@ from pathlib import Path
 import typer
 
 from canvas_cli.apps import namespace, platform, plugin
-from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
-from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import show_platform_notice
+from canvas_cli.utils.runner_extra import missing_runner_packages, needs_runner
 from canvas_cli.utils.update_check import check_for_updates
 
 APP_NAME = "canvas_cli"
@@ -38,11 +37,34 @@ app.command(short_help="Validate a plugin's manifest and that its handlers load 
 app.command(
     short_help="Listen and print log streams or fetches historical logs from a Canvas instance."
 )(logs_command)
-app.command(
-    short_help="Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
-)(emit)
-app.command(short_help="Run the specified plugins for local development.")(run_plugins)
-app.command(short_help="Run the specified plugin for local development.")(run_plugin)
+
+# These commands start or call a local plugin runner, so they need the `runner` extra. On a base
+# install each one says how to add it.
+EMIT_HELP = "Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
+RUN_PLUGINS_HELP = "Run the specified plugins for local development."
+RUN_PLUGIN_HELP = "Run the specified plugin for local development."
+
+missing_packages = missing_runner_packages()
+
+if missing_packages:
+    for command_name, command_help in (
+        ("emit", EMIT_HELP),
+        ("run-plugins", RUN_PLUGINS_HELP),
+        ("run-plugin", RUN_PLUGIN_HELP),
+    ):
+        app.command(
+            name=command_name,
+            short_help=command_help,
+            context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+        )(needs_runner(command_name, missing_packages))
+else:
+    from canvas_cli.apps.emit import emit
+    from canvas_cli.apps.run_plugins import run_plugin, run_plugins
+
+    app.command(short_help=EMIT_HELP)(emit)
+    app.command(short_help=RUN_PLUGINS_HELP)(run_plugins)
+    app.command(short_help=RUN_PLUGIN_HELP)(run_plugin)
+
 app.command(
     name="git-credential",
     hidden=True,
