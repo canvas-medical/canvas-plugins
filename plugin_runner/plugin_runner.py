@@ -110,6 +110,7 @@ from plugin_runner.sandbox_allowlists import (
     is_always_legacy,
 )
 from plugin_runner.sandbox_compatibility import find_legacy_constructs
+from plugin_runner.sentry import without_frame_locals
 from plugin_runner.usage import permitted_usage, usage_units
 from settings import (
     CHANNEL_NAME,
@@ -429,15 +430,6 @@ def _stream_progress(
     return outcome[0] if outcome else _AgentExecution(failure=EventResponse(success=False))
 
 
-def _without_frame_locals(event: Any, hint: Any) -> Any:
-    """A Sentry event with every stack frame's local variables removed."""
-    for kind in ("exception", "threads"):
-        for value in (event.get(kind) or {}).get("values") or []:
-            for frame in (value.get("stacktrace") or {}).get("frames") or []:
-                frame.pop("vars", None)
-    return event
-
-
 def _with_type_only(run_id: str) -> Callable[[Any, Any], Any]:
     """An event processor replacing each exception's message with its type and ``run_id``,
     and dropping the event's breadcrumbs.
@@ -467,7 +459,7 @@ def _report_agent_exception(message: str, exc: BaseException, run_id: str) -> No
     # An isolation scope, since that is where breadcrumbs are kept: the publish of this
     # traceback is discarded with it rather than left for the process's next event.
     with sentry_sdk.isolation_scope() as scope:
-        scope.add_event_processor(_without_frame_locals)
+        scope.add_event_processor(without_frame_locals)
         scope.add_event_processor(_with_type_only(run_id))
         log.exception(message)
         sentry_sdk.capture_exception(exc)
@@ -678,7 +670,7 @@ class PluginRunner(PluginRunnerServicer):
                         # A handler's frames hold the event's context, such as a SimpleAPI
                         # request's body, so the report leaves their locals out.
                         with sentry_sdk.new_scope() as scope:
-                            scope.add_event_processor(_without_frame_locals)
+                            scope.add_event_processor(without_frame_locals)
                             log.exception(f"Encountered exception in plugin {plugin_name}")
                             sentry_sdk.capture_exception(e)
                         continue
