@@ -83,8 +83,6 @@ class Referral(AuditedModel, IdentifiableModel):
 class ReferralReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for referral reviews."""
 
-    pass
-
 
 ReferralReviewManager = BaseModelManager.from_queryset(ReferralReviewQuerySet)
 

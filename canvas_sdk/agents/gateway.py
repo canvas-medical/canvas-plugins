@@ -19,7 +19,7 @@ has ended.
 
 import os
 from collections.abc import Iterable, Iterator, Mapping
-from typing import Any
+from typing import Any, Self
 from urllib.parse import urlsplit, urlunsplit
 
 import anthropic
@@ -140,7 +140,7 @@ class GatewayStream:
         self._manager = manager
         self._stream: Any = None
 
-    def __enter__(self) -> "GatewayStream":
+    def __enter__(self) -> Self:
         self._stream = _calling(self._manager.__enter__)
         return self
 

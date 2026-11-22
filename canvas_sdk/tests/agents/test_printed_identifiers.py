@@ -215,7 +215,7 @@ def test_an_illegible_fax_names_no_patient_even_when_the_values_match() -> None:
     """The model's own legibility call gates the match."""
     PatientFactory.create(first_name="John", last_name="Smith", birth_date=BIRTH)
 
-    result, effects = _run(
+    result, _effects = _run(
         "match_patient",
         first_name="John",
         last_name="Smith",

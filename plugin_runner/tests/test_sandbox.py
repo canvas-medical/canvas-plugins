@@ -3760,7 +3760,7 @@ def test_importlib_reload_does_not_strip_sandbox_protections() -> None:
         if "plugin_name.helpers" in _sys.modules:
             del _sys.modules["plugin_name.helpers"]
 
-        import plugin_name.helpers  # noqa: F811
+        import plugin_name.helpers
 
         assert plugin_name.helpers.do_something() == "safe"
 
@@ -3821,7 +3821,7 @@ def test_updated_module_code_is_loaded() -> None:
     _sys.path.insert(0, str(temp_directory))
     try:
         # Import the v1 module so it lands in sys.modules
-        import plugin_name3.helpers  # noqa: F811
+        import plugin_name3.helpers
 
         assert plugin_name3.helpers.get_version() == "v1"
 
@@ -4597,18 +4597,24 @@ def test_an_unblessed_import_is_still_refused(tmp_path: Path) -> None:
                 b"hi",
             ),
             "elementtree_dotted": (
-                "import xml.etree.ElementTree as ET\n\n"
-                "result = ET.fromstring('<r><a>x</a></r>').find('a').text",
+                (
+                    "import xml.etree.ElementTree as ET\n\n"
+                    "result = ET.fromstring('<r><a>x</a></r>').find('a').text"
+                ),
                 "x",
             ),
             "elementtree_from_package": (
-                "from xml.etree import ElementTree\n\n"
-                "result = ElementTree.fromstring('<r>y</r>').text",
+                (
+                    "from xml.etree import ElementTree\n\n"
+                    "result = ElementTree.fromstring('<r>y</r>').text"
+                ),
                 "y",
             ),
             "elementtree_from_module": (
-                "from xml.etree.ElementTree import fromstring\n\n"
-                "result = fromstring('<r>z</r>').text",
+                (
+                    "from xml.etree.ElementTree import fromstring\n\n"
+                    "result = fromstring('<r>z</r>').text"
+                ),
                 "z",
             ),
         }

@@ -122,7 +122,9 @@ class Staff(TimestampedModel):
         if not roles:
             return None
 
-        role = sorted(roles, key=lambda role: role.domain_privilege_level)[-1]
+        # Not max(): on a privilege-level tie, max() returns the first role and home-app's
+        # Staff.top_clinical_role returns the last, so the SDK would disagree with Canvas.
+        role = sorted(roles, key=lambda role: role.domain_privilege_level)[-1]  # noqa: FURB192
 
         return role
 

@@ -161,29 +161,37 @@ def test_document_content_is_required() -> None:
             "coding",
             "consent",
             ConsentCodingReference(system="INTERNAL", code="C1"),
-            "More than one consent coding has system INTERNAL and code C1. "
-            "Delete the duplicate coding.",
+            (
+                "More than one consent coding has system INTERNAL and code C1. "
+                "Delete the duplicate coding."
+            ),
         ),
         (
             "coding",
             "consent",
             ConsentCodingReference(system="INTERNAL", display="Financial policy"),
-            "More than one consent coding has system INTERNAL and display 'Financial policy'. "
-            "Reference the coding by its code.",
+            (
+                "More than one consent coding has system INTERNAL and display 'Financial policy'. "
+                "Reference the coding by its code."
+            ),
         ),
         (
             "rejection",
             "rejection_reason",
             ConsentCodingReference(system="INTERNAL", code="R1"),
-            "More than one rejection coding has system INTERNAL and code R1. "
-            "Delete the duplicate coding.",
+            (
+                "More than one rejection coding has system INTERNAL and code R1. "
+                "Delete the duplicate coding."
+            ),
         ),
         (
             "rejection",
             "rejection_reason",
             ConsentCodingReference(system="INTERNAL", display="Declined"),
-            "More than one rejection coding has system INTERNAL and display 'Declined'. "
-            "Reference the coding by its code.",
+            (
+                "More than one rejection coding has system INTERNAL and display 'Declined'. "
+                "Reference the coding by its code."
+            ),
         ),
     ],
 )

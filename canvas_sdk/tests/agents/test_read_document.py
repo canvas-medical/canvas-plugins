@@ -3,7 +3,7 @@
 import base64
 import importlib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 import anthropic
 import httpx2
@@ -352,7 +352,7 @@ class _Download:
         self._chunks = chunks
         self.read = 0
 
-    def __enter__(self) -> "_Download":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:

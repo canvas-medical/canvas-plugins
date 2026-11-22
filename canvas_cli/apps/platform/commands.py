@@ -40,7 +40,7 @@ import typer
 from canvas_cli.apps.auth.utils import configured_default_host, get_default_host, instance_slug
 from canvas_cli.apps.platform import auth, git
 from canvas_cli.apps.platform.client import PlatformClient, PlatformError
-from canvas_cli.apps.platform.routing import managed_instance as managed_instance
+from canvas_cli.apps.platform.routing import managed_instance as managed_instance  # noqa: PLC0414 — explicit re-export
 from canvas_cli.apps.platform.routing import refuse_unmanaged, require_managed
 from canvas_cli.apps.plugin import plugin as instance_plugin
 from canvas_cli.utils.platform_notice import print_credentials_ini_deprecation
@@ -797,7 +797,7 @@ def git_credential(
     print(f"username={credential.get('username') or 'git'}")
     print(f"password={credential['password']}")
     if expires_at := credential.get("expires_at"):
-        expiry = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+        expiry = datetime.fromisoformat(str(expires_at))
         print(f"password_expiry_utc={int(expiry.timestamp())}")
 
 

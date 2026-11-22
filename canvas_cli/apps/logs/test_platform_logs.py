@@ -560,13 +560,17 @@ CHECKING: str = (
 CONNECTED: list[str] = [CHECKING, "Connecting to log stream...", "Log stream connected."]
 REFUSED: list[str] = [
     CHECKING,
-    '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
-    '"message": "Token authorization failed."}',
+    (
+        '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
+        '"message": "Token authorization failed."}'
+    ),
 ]
 NO_INSTANCE: list[str] = [
     CHECKING,
-    '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
-    '"message": "No instance named \'acme-prod\' was found."}',
+    (
+        '{"timestamp": "2026-11-02T10:00:00", "severity": "error", '
+        '"message": "No instance named \'acme-prod\' was found."}'
+    ),
 ]
 
 

@@ -80,8 +80,8 @@ try:
 
     CANVAS_MODULES: dict[str, Iterable[str]] = json.loads(allowed_module_imports_path.read_text())
 
-    for key in CANVAS_MODULES:
-        CANVAS_MODULES[key] = set(CANVAS_MODULES[key])
+    for key, names in CANVAS_MODULES.items():
+        CANVAS_MODULES[key] = set(names)
 
 except FileNotFoundError:
     print("Error: Unable to load plugin_runner/allowed-module-imports.json, aborting")
@@ -2294,7 +2294,7 @@ class Sandbox:
 
         namespace = self.scope if globals is None else globals
 
-        exec(code, namespace)
+        exec(code, namespace)  # noqa: S102 — code is RestrictedPython-compiled for the sandbox
 
         return namespace
 

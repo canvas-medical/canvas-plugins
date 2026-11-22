@@ -39,8 +39,6 @@ class _FakeAddTaskEffect:
 class _FakeModel:
     """Stand-in for a Django data model in filter_search_tool metadata."""
 
-    pass
-
 
 # ---------------------------------------------------------------------------
 # Substitution

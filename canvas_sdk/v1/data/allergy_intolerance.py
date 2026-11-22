@@ -20,8 +20,6 @@ class AllergyIntoleranceQuerySet(
 ):
     """AllergyIntoleranceQuerySet."""
 
-    pass
-
 
 AllergyIntoleranceManager = BaseModelManager.from_queryset(AllergyIntoleranceQuerySet)
 

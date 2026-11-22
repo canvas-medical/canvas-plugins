@@ -3220,6 +3220,7 @@ def test_git_runs_the_credential_helper_with_the_repository_path(
             text=True,
             env={**os.environ, "HOME": str(home), "GIT_CONFIG_GLOBAL": os.devnull},
             timeout=60,
+            check=False,
         )
     finally:
         server.shutdown()
@@ -4232,6 +4233,7 @@ def test_a_clone_by_publisher_mints_git_tokens_for_that_publisher(
             text=True,
             env={**os.environ, "HOME": str(home), "GIT_CONFIG_GLOBAL": os.devnull},
             timeout=60,
+            check=False,
         )
     finally:
         server.shutdown()

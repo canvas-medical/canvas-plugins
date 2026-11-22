@@ -19,8 +19,6 @@ def log(*message: Any) -> None:
     """
     Log an import tracing line to the file for this PID.
     """
-    global PID
-
     with open(f"./profile-imports-{PID}.txt", "a") as f:
         f.write(" ".join(message) + "\n")
 
@@ -36,9 +34,6 @@ class TraceLoader(importlib.util.LazyLoader):
         """
         Execute a module and trace the memory usage it causes.
         """
-        global CHILDREN
-        global CHAIN
-
         # Reset the loader on the module as super() does (issue #6725)
         module.__spec__.loader = self.loader
         module.__loader__ = self.loader

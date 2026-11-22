@@ -163,7 +163,7 @@ DURATION_REGEX = re.compile(
     (?:(?P<s>\d+)s)?\s*  # optional seconds
     \s*$                 # optional trailing whitespace
 """,
-    re.X,
+    re.VERBOSE,
 )
 DEFAULT_PAGE_SIZE = 200
 LAST_CURSOR: list[str] | None = None
@@ -213,7 +213,7 @@ def _parse_when(s: str) -> datetime:
     if s.lower() == "now":
         return datetime.now(UTC)
     try:
-        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(s)
     except ValueError as e:
         raise typer.BadParameter(f"Invalid datetime '{s}': {e}") from None
     if dt.tzinfo is None:
@@ -578,7 +578,7 @@ def logs(
                 "Connecting to the log stream. Please be patient as there may be a delay before log messages appear."
             )
         else:
-            print("")
+            print()
 
         try:
             stream_logs(host, token, plugin)

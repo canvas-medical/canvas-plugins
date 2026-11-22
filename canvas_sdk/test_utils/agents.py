@@ -30,7 +30,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from time import monotonic
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
 import anthropic
@@ -96,7 +96,7 @@ class FakeStream:
     def __init__(self, answer: ModelReply) -> None:
         self._answer = answer
 
-    def __enter__(self) -> "FakeStream":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:

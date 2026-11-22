@@ -223,7 +223,6 @@ class Coverage(TimestampedModel, IdentifiableModel):
         null=True,
         blank=True,
     )
-    comments = models.TextField(default="", blank=True)
     stack = models.CharField(
         choices=CoverageStack.choices,
         default=CoverageStack.IN_USE,
