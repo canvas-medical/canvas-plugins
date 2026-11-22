@@ -351,14 +351,15 @@ def _looks_random(value: str) -> bool:
 
 
 def _file_texts(files: Iterable[tuple[Path, Path]]) -> Iterator[tuple[Path, str]]:
-    """``(path inside the package, text)`` for each readable text file in ``files``."""
+    """``(path inside the package, text)`` for each text file in ``files``."""
     for path, rel in files:
         if not path.is_file():
             continue
-        try:
-            yield rel, path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
+        content = path.read_bytes()
+        # git's own binary test: a NUL byte near the start. Anything else is read as text, so
+        # one byte that is not UTF-8 does not hide the rest of the file.
+        if b"\0" not in content[:8000]:
+            yield rel, content.decode("utf-8", errors="replace")
 
 
 def credential_findings(texts: Iterable[tuple[Path, str]]) -> list[LintFinding]:

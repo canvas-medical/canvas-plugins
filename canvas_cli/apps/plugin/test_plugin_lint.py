@@ -487,9 +487,9 @@ def test_files_that_do_not_ship_are_not_scanned(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_binary_files_are_skipped() -> None:
-    """A file that is not UTF-8 text is not scanned."""
+    """A file git treats as binary (a NUL byte near the start) is not scanned."""
     root = _plugin({})
-    (root / "icon.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe" + _STRIPE_LIVE.encode())
+    (root / "icon.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + _STRIPE_LIVE.encode())
 
     assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
 

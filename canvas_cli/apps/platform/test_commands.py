@@ -1103,6 +1103,41 @@ def test_deploy_refuses_a_credential_an_earlier_unpushed_commit_holds(
     assert _git(bare, "for-each-ref") == ""
 
 
+_WINDOWS_1252_CONFIG = b"# caf\xe9 settings\nSTRIPE = '" + _STRIPE_LIVE.encode() + b"'\n"
+
+
+def test_deploy_refuses_a_credential_in_a_file_that_is_not_utf8(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """One Windows-1252 byte does not hide the rest of a text file from the check."""
+    (package / "config.txt").write_bytes(_WINDOWS_1252_CONFIG)
+    _git(package, "add", "config.txt")
+    _git(package, "commit", "-m", "config")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "config.txt:2  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_refuses_a_non_utf8_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """The history check reads a file with one Windows-1252 byte as text too."""
+    (package / "config.txt").write_bytes(_WINDOWS_1252_CONFIG)
+    _git(package, "add", "config.txt")
+    _git(package, "commit", "-m", "add config")
+    _git(package, "rm", "-q", "config.txt")
+    _git(package, "commit", "-m", "remove config")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "config.txt:2  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
 def test_deploy_ignores_a_credential_in_a_file_git_ignores(
     api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
 ) -> None:
