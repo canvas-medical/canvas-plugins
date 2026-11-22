@@ -35,6 +35,31 @@ def test_top_clinical_role_returns_highest_privilege_level() -> None:
 
 
 @pytest.mark.django_db
+def test_top_clinical_role_breaks_ties_with_the_last_role() -> None:
+    """Of two roles tied at the top privilege level, the later one wins, as in home-app."""
+    staff = StaffFactory.create()
+    staff.roles.all().delete()
+
+    StaffRoleFactory.create(
+        staff=staff,
+        internal_code="NP",
+        public_abbreviation="NP",
+        domain=StaffRole.RoleDomain.CLINICAL,
+        domain_privilege_level=500,
+    )
+    last = StaffRoleFactory.create(
+        staff=staff,
+        internal_code="PA",
+        public_abbreviation="PA",
+        domain=StaffRole.RoleDomain.CLINICAL,
+        domain_privilege_level=500,
+    )
+
+    assert staff.top_clinical_role == last
+    assert staff.top_role_abbreviation == "PA"
+
+
+@pytest.mark.django_db
 def test_top_clinical_role_ignores_higher_privilege_administrative_role() -> None:
     """Administrative-domain roles are excluded even at a higher privilege level."""
     staff = StaffFactory.create()
