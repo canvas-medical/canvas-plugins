@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.16.0 (2026-11-23)
+
+### Features
+
+- **data**: Expose population health tables in the data module (KOALA-8565)
+  ([#2026](https://github.com/canvas-medical/canvas-plugins/pull/2026),
+  [`f7b42d5`](https://github.com/canvas-medical/canvas-plugins/commit/f7b42d547bf20d9b838e36c6ffad9739f2f522b2))
+
+
 ## v1.15.0 (2026-11-23)
 
 ### Chores
