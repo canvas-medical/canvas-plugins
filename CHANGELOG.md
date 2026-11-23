@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.17.0 (2026-11-23)
+
+### Features
+
+- **data**: Expose questionnaire results and interview details in the data module (KOALA-8563)
+  ([#2025](https://github.com/canvas-medical/canvas-plugins/pull/2025),
+  [`9c2c5f3`](https://github.com/canvas-medical/canvas-plugins/commit/9c2c5f395dd498983c84e6bec6422ccd61eb85c1))
+
+
 ## v1.16.0 (2026-11-23)
 
 ### Features
