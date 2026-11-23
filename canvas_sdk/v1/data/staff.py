@@ -303,6 +303,23 @@ class StaffMetadata(MetadataModel):
     )
 
 
+class StaffSetting(TimestampedModel):
+    """A per-staff setting.
+
+    Readable names are ``conditionDisplayFilters``, ``conditionDisplaySortValues``,
+    ``vitalsDisplay`` and ``labAccounts``; other staff settings are not exposed.
+    ``labAccounts`` maps a lab account key to its account number, as
+    ``{"labAccountCanvasMock": {"accountNumber": "0123456789"}}``.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffsetting_001"
+
+    staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="settings")
+    name = models.CharField(max_length=100)
+    value = models.JSONField(default=dict)
+
+
 __exports__ = (
     "Staff",
     "StaffAddress",
@@ -312,4 +329,5 @@ __exports__ = (
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
+    "StaffSetting",
 )

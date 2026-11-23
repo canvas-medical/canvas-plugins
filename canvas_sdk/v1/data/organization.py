@@ -86,8 +86,29 @@ class OrganizationContactPoint(TimestampedModel, IdentifiableModel):
     )
 
 
+class OrganizationSetting(TimestampedModel):
+    """An organization-level setting.
+
+    Readable names are ``appointmentReminders`` (``{"daysAhead": int, "hourOfDay": int}``) and
+    ``appointmentReminderCustomization`` (the text added to reminder messages); other
+    organization settings are not exposed. The reminder schedule comes from
+    ``appointmentReminders`` here; see ``BusinessLineSetting`` for when a business line's
+    ``appointmentReminderCustomization`` is used instead of this one.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_organizationsetting_001"
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.DO_NOTHING, related_name="settings"
+    )
+    name = models.CharField(max_length=100)
+    value = models.JSONField(default=dict)
+
+
 __exports__ = (
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationSetting",
 )

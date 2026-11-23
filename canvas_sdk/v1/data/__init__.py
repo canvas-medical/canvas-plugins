@@ -17,6 +17,7 @@ from .appointment import (
     AppointmentExternalIdentifier,
     AppointmentLabel,
     AppointmentMetadata,
+    AppointmentReminder,
     AppointmentScheduledTogether,
 )
 from .assessment import Assessment
@@ -33,7 +34,7 @@ from .base import (
     proxy_field,
 )
 from .billing import BillingLineItem, BillingLineItemModifier
-from .business_line import BusinessLine
+from .business_line import BusinessLine, BusinessLineSetting
 from .calendar import Calendar, Event
 from .cancel_prescription import CancelPrescription, CancelPrescriptionStatus
 from .cancel_prescription_response import CancelPrescriptionResponse
@@ -228,7 +229,12 @@ from .observation import (
     ObservationComponentValueCoding,
     ObservationValueCoding,
 )
-from .organization import Organization, OrganizationAddress, OrganizationContactPoint
+from .organization import (
+    Organization,
+    OrganizationAddress,
+    OrganizationContactPoint,
+    OrganizationSetting,
+)
 from .organizational_entity import OrganizationalEntity
 from .patient import (
     ContactCategory,
@@ -363,6 +369,7 @@ from .staff import (
     StaffMetadata,
     StaffPhoto,
     StaffRole,
+    StaffSetting,
 )
 from .staff_identity_verification import StaffIdentityVerification
 from .stop_medication_event import StopMedicationEvent
@@ -397,6 +404,7 @@ __all__ = __exports__ = (
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
+    "AppointmentReminder",
     "AppointmentScheduledTogether",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
@@ -413,6 +421,7 @@ __all__ = __exports__ = (
     "BillingLineItem",
     "BillingLineItemModifier",
     "BusinessLine",
+    "BusinessLineSetting",
     "BulkPatientPosting",
     "Calendar",
     "CancelPrescription",
@@ -634,6 +643,7 @@ __all__ = __exports__ = (
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationSetting",
     "OrganizationalEntity",
     "ContactCategory",
     "Patient",
@@ -744,6 +754,7 @@ __all__ = __exports__ = (
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
+    "StaffSetting",
     "StopMedicationEvent",
     "Task",
     "TaskComment",

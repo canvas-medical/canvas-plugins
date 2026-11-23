@@ -10,6 +10,7 @@ from canvas_sdk.v1.data import (
     StaffLicense,
     StaffPhoto,
     StaffRole,
+    StaffSetting,
 )
 from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse
 
@@ -110,3 +111,14 @@ class StaffFactory(factory.django.DjangoModelFactory[Staff]):
     user = factory.SubFactory(
         "canvas_sdk.test_utils.factories.user.CanvasUserFactory",
     )
+
+
+class StaffSettingFactory(factory.django.DjangoModelFactory[StaffSetting]):
+    """Factory for creating a StaffSetting, by default the staff member's lab accounts."""
+
+    class Meta:
+        model = StaffSetting
+
+    staff = factory.SubFactory(StaffFactory)
+    name = "labAccounts"
+    value = factory.LazyFunction(lambda: {"labAccountCanvasMock": {"accountNumber": "0123456789"}})

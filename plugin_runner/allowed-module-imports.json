@@ -1303,6 +1303,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AppointmentReminder",
     "AppointmentScheduledTogether",
     "AssessCodingGapEvent",
     "Assessment",
@@ -1319,6 +1320,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "BusinessLineSetting",
     "Calendar",
     "Campaign",
     "CancelPrescription",
@@ -1541,6 +1543,7 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationSetting",
     "OrganizationalEntity",
     "Patient",
     "PatientAddress",
@@ -1644,6 +1647,7 @@
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
+    "StaffSetting",
     "StopMedicationEvent",
     "SuspectHCC",
     "SuspectHCCKind",
@@ -1692,6 +1696,8 @@
     "AppointmentLabel",
     "AppointmentMetadata",
     "AppointmentProgressStatus",
+    "AppointmentReminder",
+    "AppointmentReminderStatus",
     "AppointmentScheduledTogether"
   ],
   "canvas_sdk.v1.data.assessment": [
@@ -1727,6 +1733,7 @@
   ],
   "canvas_sdk.v1.data.business_line": [
     "BusinessLine",
+    "BusinessLineSetting",
     "BusinessLineState"
   ],
   "canvas_sdk.v1.data.calendar": [
@@ -2121,7 +2128,8 @@
   "canvas_sdk.v1.data.organization": [
     "Organization",
     "OrganizationAddress",
-    "OrganizationContactPoint"
+    "OrganizationContactPoint",
+    "OrganizationSetting"
   ],
   "canvas_sdk.v1.data.organizational_entity": [
     "OrganizationalEntity"
@@ -2338,7 +2346,8 @@
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
-    "StaffRole"
+    "StaffRole",
+    "StaffSetting"
   ],
   "canvas_sdk.v1.data.staff_identity_verification": [
     "StaffIdentityVerification"
