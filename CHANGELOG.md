@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v1.15.0 (2026-11-23)
+
+### Chores
+
+- Move ruff to 0.17.4 and keep the selected families on top of its defaults
+  ([#2017](https://github.com/canvas-medical/canvas-plugins/pull/2017),
+  [`8a94b25`](https://github.com/canvas-medical/canvas-plugins/commit/8a94b25e1c2af4f6acaaea287316f614f69cde78))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+### Features
+
+- **data**: Expose document annotations and attached documents in the data module (KOALA-8562)
+  ([#2024](https://github.com/canvas-medical/canvas-plugins/pull/2024),
+  [`5724de9`](https://github.com/canvas-medical/canvas-plugins/commit/5724de990ea1b7b7624f09e1b6fc0869b79329c4))
+
+
 ## v1.14.0 (2026-11-20)
 
 ### Features
