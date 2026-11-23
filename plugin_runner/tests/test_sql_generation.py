@@ -7,6 +7,7 @@ Tests cover:
 4. Both PostgreSQL and SQLite SQL generation
 """
 
+from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import MagicMock, patch
 
@@ -17,6 +18,7 @@ from django.db import connection, models
 from canvas_sdk.v1.data.base import CustomModel
 from plugin_runner.ddl import (
     SQL_STATEMENT_DELIMITER,
+    execute_create_table_sql,
     generate_constraint_sql,
     generate_create_table_sql,
     generate_field_sql,
@@ -300,6 +302,19 @@ class ConditionalUniqueModel(CustomModel):
     is_active = models.BooleanField()
 
 
+class Order(CustomModel):
+    """A model whose table and column names are SQL reserved words."""
+
+    class Meta:
+        app_label = "test_plugin"
+        indexes = [models.Index(fields=["-when"], name="idx_when")]
+        constraints = [models.UniqueConstraint(fields=["group"], name="uq_group")]
+
+    when = models.DateTimeField()
+    group = models.TextField()
+    owner = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING, db_column="ownerId")
+
+
 # ===========================================================================
 # Helper to create a mock PostgreSQL connection
 # ===========================================================================
@@ -497,7 +512,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON test_plugin.my_table (name);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON test_plugin."my_table" ("name");'
         )
 
     def test_multi_column_index(self) -> None:
@@ -506,7 +521,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON test_plugin.my_table (first_name, last_name);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON test_plugin."my_table" ("first_name", "last_name");'
         )
 
     def test_descending_single_column_index(self) -> None:
@@ -515,7 +530,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON test_plugin.my_table (created_at DESC);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON test_plugin."my_table" ("created_at" DESC);'
         )
 
     def test_descending_mixed_index(self) -> None:
@@ -524,7 +539,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_cat_pri ON test_plugin.my_table (category, priority DESC);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_cat_pri ON test_plugin."my_table" ("category", "priority" DESC);'
         )
 
     def test_gin_index(self) -> None:
@@ -533,7 +548,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON test_plugin.my_table USING GIN(metadata);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON test_plugin."my_table" USING GIN("metadata");'
         )
 
     def test_gin_index_multiple_fields(self) -> None:
@@ -542,7 +557,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_multi_gin ON test_plugin.my_table USING GIN(data, tags);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_multi_gin ON test_plugin."my_table" USING GIN("data", "tags");'
         )
 
     def test_conditional_index(self) -> None:
@@ -556,7 +571,7 @@ class TestGenerateIndexSqlPostgres:
         )
         assert sql == (
             "CREATE INDEX IF NOT EXISTS test_plugin_conditionalindexmodel_idx_active_email"
-            " ON test_plugin.conditionalindexmodel (email)"
+            ' ON test_plugin."conditionalindexmodel" ("email")'
             ' WHERE "is_active";'
         )
 
@@ -573,7 +588,10 @@ class TestGenerateIndexSqlSqlite:
         """Single column index should not use schema-qualified table name."""
         index = models.Index(fields=["name"], name="idx_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
-        assert sql == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON my_table (name);"
+        assert (
+            sql
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON "my_table" ("name");'
+        )
 
     def test_multi_column_index(self) -> None:
         """Multi-column index should list all columns without schema prefix."""
@@ -581,7 +599,7 @@ class TestGenerateIndexSqlSqlite:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON my_table (first_name, last_name);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON "my_table" ("first_name", "last_name");'
         )
 
     def test_descending_index(self) -> None:
@@ -590,7 +608,7 @@ class TestGenerateIndexSqlSqlite:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON my_table (created_at DESC);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON "my_table" ("created_at" DESC);'
         )
 
     def test_gin_index_falls_back_to_btree(self) -> None:
@@ -600,7 +618,7 @@ class TestGenerateIndexSqlSqlite:
         # GIN falls back to regular index for SQLite
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON my_table (metadata);"
+            == 'CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON "my_table" ("metadata");'
         )
 
     def test_conditional_index(self) -> None:
@@ -614,7 +632,7 @@ class TestGenerateIndexSqlSqlite:
         )
         assert sql == (
             "CREATE INDEX IF NOT EXISTS test_plugin_conditionalindexmodel_idx_active_email"
-            " ON conditionalindexmodel (email)"
+            ' ON "conditionalindexmodel" ("email")'
             ' WHERE "is_active";'
         )
 
@@ -637,20 +655,20 @@ class TestGenerateCreateTableSqlSqlite:
         statements = sql.split(SQL_STATEMENT_DELIMITER)
 
         create_stmt = statements[0]
-        assert "CREATE TABLE IF NOT EXISTS alldatatypesmodel" in create_stmt
+        assert 'CREATE TABLE IF NOT EXISTS "alldatatypesmodel"' in create_stmt
         # No schema prefix for SQLite
         assert "test_plugin.alldatatypesmodel" not in create_stmt
 
         # All fields should be in CREATE TABLE for SQLite
-        assert "dbid integer PRIMARY KEY AUTOINCREMENT" in create_stmt
-        assert "text_field text" in create_stmt
-        assert "char_field text" in create_stmt
-        assert "int_field integer" in create_stmt
-        assert "bool_field bool" in create_stmt
-        assert "date_field date" in create_stmt
-        assert "datetime_field datetime" in create_stmt
-        assert "decimal_field decimal" in create_stmt
-        assert "json_field text" in create_stmt
+        assert '"dbid" integer PRIMARY KEY AUTOINCREMENT' in create_stmt
+        assert '"text_field" text' in create_stmt
+        assert '"char_field" text' in create_stmt
+        assert '"int_field" integer' in create_stmt
+        assert '"bool_field" bool' in create_stmt
+        assert '"date_field" date' in create_stmt
+        assert '"datetime_field" datetime' in create_stmt
+        assert '"decimal_field" decimal' in create_stmt
+        assert '"json_field" text' in create_stmt
 
         # No ALTER TABLE statements for SQLite
         alter_stmts = [s for s in statements if "ALTER TABLE" in s]
@@ -660,14 +678,14 @@ class TestGenerateCreateTableSqlSqlite:
         """SQLite table names should not have a schema prefix."""
         sql = generate_create_table_sql("test_plugin", ParentModel)
 
-        assert "CREATE TABLE IF NOT EXISTS parentmodel" in sql
+        assert 'CREATE TABLE IF NOT EXISTS "parentmodel"' in sql
         assert "test_plugin.parentmodel" not in sql
 
     def test_no_schema_prefix_in_indexes(self) -> None:
         """SQLite index definitions should not use schema-qualified table names."""
         sql = generate_create_table_sql("test_plugin", SingleColumnIndexModel)
 
-        assert "ON singlecolumnindexmodel" in sql
+        assert 'ON "singlecolumnindexmodel"' in sql
         assert "ON test_plugin.singlecolumnindexmodel" not in sql
 
     def test_gin_index_falls_back_to_btree(self) -> None:
@@ -676,7 +694,7 @@ class TestGenerateCreateTableSqlSqlite:
 
         assert "USING GIN" not in sql
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_ginindexmodel_idx_metadata_gin ON ginindexmodel (metadata)"
+            'CREATE INDEX IF NOT EXISTS test_plugin_ginindexmodel_idx_metadata_gin ON "ginindexmodel" ("metadata")'
             in sql
         )
 
@@ -707,7 +725,7 @@ class TestGenerateCreateTableSqlSqlite:
         sql = generate_create_table_sql("test_plugin", SingleColumnIndexModel)
 
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_singlecolumnindexmodel_idx_name ON singlecolumnindexmodel (name)"
+            'CREATE INDEX IF NOT EXISTS test_plugin_singlecolumnindexmodel_idx_name ON "singlecolumnindexmodel" ("name")'
             in sql
         )
 
@@ -716,7 +734,7 @@ class TestGenerateCreateTableSqlSqlite:
         sql = generate_create_table_sql("test_plugin", MultiColumnIndexModel)
 
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_multicolumnindexmodel_idx_full_name ON multicolumnindexmodel (first_name, last_name)"
+            'CREATE INDEX IF NOT EXISTS test_plugin_multicolumnindexmodel_idx_full_name ON "multicolumnindexmodel" ("first_name", "last_name")'
             in sql
         )
 
@@ -724,8 +742,8 @@ class TestGenerateCreateTableSqlSqlite:
         """Descending indexes should include DESC in generated SQL."""
         sql = generate_create_table_sql("test_plugin", DescendingIndexModel)
 
-        assert "created_at DESC" in sql
-        assert "category, priority DESC" in sql
+        assert '"created_at" DESC' in sql
+        assert '"category", "priority" DESC' in sql
 
     def test_mixed_indexes_without_gin(self) -> None:
         """Test that mixed indexes work, with GIN falling back to regular index."""
@@ -733,7 +751,7 @@ class TestGenerateCreateTableSqlSqlite:
 
         assert "idx_status" in sql
         assert "idx_cat_status" in sql
-        assert "updated_at DESC" in sql
+        assert '"updated_at" DESC' in sql
         # GIN falls back to regular index
         assert "idx_tags_gin" in sql
         assert "USING GIN" not in sql
@@ -757,7 +775,7 @@ class TestGenerateCreateTableSqlPostgres:
 
         sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
-        assert "test_plugin.alldatatypesmodel" in sql
+        assert 'test_plugin."alldatatypesmodel"' in sql
 
     @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_uses_alter_table_for_columns(self) -> None:
@@ -777,7 +795,7 @@ class TestGenerateCreateTableSqlPostgres:
 
         sql = generate_create_table_sql("test_plugin", GinIndexModel)
 
-        assert "USING GIN(metadata)" in sql
+        assert 'USING GIN("metadata")' in sql
 
 
 # ===========================================================================
@@ -1250,7 +1268,7 @@ class TestGenerateConstraintSqlPostgres:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON test_plugin.my_table (email);"
+            == 'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON test_plugin."my_table" ("email");'
         )
 
     def test_multi_column_unique(self) -> None:
@@ -1259,7 +1277,7 @@ class TestGenerateConstraintSqlPostgres:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON test_plugin.my_table (tenant_id, slug);"
+            == 'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON test_plugin."my_table" ("tenant_id", "slug");'
         )
 
     def test_conditional_unique(self) -> None:
@@ -1273,7 +1291,7 @@ class TestGenerateConstraintSqlPostgres:
         )
         assert sql == (
             "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_conditionaluniquemodel_uq_active_email"
-            " ON test_plugin.conditionaluniquemodel (email)"
+            ' ON test_plugin."conditionaluniquemodel" ("email")'
             ' WHERE "is_active";'
         )
 
@@ -1287,7 +1305,7 @@ class TestGenerateConstraintSqlSqlite:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON my_table (email);"
+            == 'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON "my_table" ("email");'
         )
 
     def test_multi_column_unique_no_schema(self) -> None:
@@ -1296,7 +1314,7 @@ class TestGenerateConstraintSqlSqlite:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON my_table (tenant_id, slug);"
+            == 'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON "my_table" ("tenant_id", "slug");'
         )
 
     def test_conditional_unique(self) -> None:
@@ -1310,7 +1328,7 @@ class TestGenerateConstraintSqlSqlite:
         )
         assert sql == (
             "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_conditionaluniquemodel_uq_active_email"
-            " ON conditionaluniquemodel (email)"
+            ' ON "conditionaluniquemodel" ("email")'
             ' WHERE "is_active";'
         )
 
@@ -1335,7 +1353,7 @@ class TestCreateTableSqlWithUniqueConstraints:
         sql = generate_create_table_sql("test_plugin", MultiColumnUniqueModel)
         assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
         assert "uq_tenant_slug" in sql
-        assert "tenant_id, slug" in sql
+        assert '"tenant_id", "slug"' in sql
 
     def test_multiple_unique_constraints_in_create_table(self) -> None:
         """Multiple UniqueConstraints should all appear in output."""
@@ -1350,7 +1368,7 @@ class TestCreateTableSqlWithUniqueConstraints:
         from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", SingleColumnUniqueModel)
-        assert "ON test_plugin.singlecolumnuniquemodel" in sql
+        assert 'ON test_plugin."singlecolumnuniquemodel"' in sql
 
     def test_one_to_one_field_generates_unique_index(self) -> None:
         """OneToOneField should automatically get a UNIQUE INDEX on its column."""
@@ -1370,7 +1388,7 @@ class TestCreateTableSqlWithUniqueConstraints:
 
         sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
         assert (
-            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_childwithonetoone_uq_childwithonetoone_parent_id ON test_plugin.childwithonetoone (parent_id);"
+            'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_childwithonetoone_uq_childwithonetoone_parent_id ON test_plugin."childwithonetoone" ("parent_id");'
             in sql
         )
 
@@ -1440,7 +1458,7 @@ class TestOneToOnePrimaryKey:
         from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
-        assert "parent_id bigint PRIMARY KEY" in sql
+        assert '"parent_id" bigint PRIMARY KEY' in sql
         assert "dbid" not in sql
         assert "IDENTITY" not in sql
 
@@ -1473,3 +1491,56 @@ class TestOneToOnePrimaryKey:
                     "custom_id": models.IntegerField(primary_key=True),
                 },
             )
+
+
+# ===========================================================================
+# Tests for identifier quoting
+# ===========================================================================
+
+
+@pytest.mark.django_db
+def test_reserved_word_table_and_columns_round_trip() -> None:
+    """A table and columns named with SQL reserved words should be created and queryable."""
+    execute_create_table_sql(generate_create_table_sql("test_plugin", ParentModel))
+    execute_create_table_sql(generate_create_table_sql("test_plugin", Order))
+    parent = ParentModel._default_manager.create(name="clinic")
+    orders = Order._default_manager
+
+    orders.create(when=datetime(2026, 11, 23, tzinfo=UTC), group="front desk", owner=parent)
+
+    assert list(orders.values_list("group", "owner__name")) == [("front desk", "clinic")]
+
+
+@patch("plugin_runner.ddl.IS_SQLITE", False)
+def test_postgres_quotes_table_columns_and_index_columns() -> None:
+    """PostgreSQL DDL should quote the table and every column so case and reserved words survive."""
+    sql = generate_create_table_sql("test_plugin", Order)
+
+    assert 'CREATE TABLE IF NOT EXISTS test_plugin."order" (' in sql
+    assert 'ALTER TABLE test_plugin."order" ADD COLUMN IF NOT EXISTS "when" ' in sql
+    assert 'ADD COLUMN IF NOT EXISTS "ownerId" ' in sql
+    assert (
+        'CREATE INDEX IF NOT EXISTS test_plugin_order_idx_when ON test_plugin."order" ("when" DESC);'
+        in sql
+    )
+    assert (
+        'CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_order_uq_group ON test_plugin."order" ("group");'
+        in sql
+    )
+
+
+def test_column_name_with_double_quote_is_rejected() -> None:
+    """A db_column containing a double quote should be refused rather than spliced into DDL."""
+    model = type(
+        "QuoteInColumn",
+        (CustomModel,),
+        {
+            "__module__": "some_plugin.models",
+            "__qualname__": "QuoteInColumn",
+            "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+            "name": models.TextField(db_column='name" text); DROP TABLE x; --'),
+        },
+    )
+
+    with pytest.raises(ValueError, match="double quote"):
+        generate_create_table_sql("some_plugin", model)
