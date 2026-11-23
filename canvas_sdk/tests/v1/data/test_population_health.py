@@ -15,22 +15,27 @@ from canvas_sdk.v1.data import Intervention, SuspectHCC, SuspectHCCKind, Suspect
 def test_patient_suspect_hccs_filters_by_status_and_kind() -> None:
     """patient.suspect_hccs returns the patient's suspected HCCs, filterable by status and kind."""
     patient = PatientFactory.create()
-    active = SuspectHCCFactory.create(
+    implied = SuspectHCCFactory.create(patient=patient)
+    previous = SuspectHCCFactory.create(
         patient=patient,
         kind=SuspectHCCKind.PREVIOUS_CONDITION,
+        hcc_description="Bitten by orca, sequela",
+        hcc_code="",
+        reasons=[],
         previous_condition="Bitten by orca, sequela (W56.21XS)",
-        reasons=["Diagnosis: Coded last year"],
     )
     SuspectHCCFactory.create(patient=patient, status=SuspectHCCStatus.INACTIVE)
     SuspectHCCFactory.create()
 
-    fetched = patient.suspect_hccs.get(status=SuspectHCCStatus.ACTIVE)
+    active = patient.suspect_hccs.filter(status=SuspectHCCStatus.ACTIVE)
+    fetched = active.get(kind=SuspectHCCKind.IMPLIED_BY_CLINICAL_DATA)
 
-    assert fetched == active
-    assert fetched.kind == SuspectHCCKind.PREVIOUS_CONDITION
-    assert fetched.reasons == ["Diagnosis: Coded last year"]
-    assert patient.suspect_hccs.count() == 2
-    assert SuspectHCC.objects.count() == 3
+    assert fetched == implied
+    assert fetched.hcc_code == "27"
+    assert fetched.reasons == ["Condition: End-stage liver disease"]
+    assert active.get(kind=SuspectHCCKind.PREVIOUS_CONDITION, hcc_code="") == previous
+    assert patient.suspect_hccs.count() == 3
+    assert SuspectHCC.objects.count() == 4
 
 
 @pytest.mark.django_db

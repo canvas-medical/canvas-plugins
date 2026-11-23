@@ -20,9 +20,9 @@ class SuspectHCCFactory(factory.django.DjangoModelFactory[SuspectHCC]):
     status = SuspectHCCStatus.ACTIVE
     hcc_description = "End-stage liver disease"
     hcc_code = "27"
-    reasons = factory.LazyFunction(list)
+    reasons = factory.LazyFunction(lambda: ["Condition: End-stage liver disease"])
     previous_condition = ""
-    kind = SuspectHCCKind.UNKNOWN
+    kind = SuspectHCCKind.IMPLIED_BY_CLINICAL_DATA
 
 
 class CampaignFactory(factory.django.DjangoModelFactory[Campaign]):
