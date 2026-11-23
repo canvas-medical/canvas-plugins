@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.18.0 (2026-11-23)
+
+### Features
+
+- Add structured output and effort to sub-agents and the tool loop
+  ([#2018](https://github.com/canvas-medical/canvas-plugins/pull/2018),
+  [`3a2893f`](https://github.com/canvas-medical/canvas-plugins/commit/3a2893fa45e1aaf2bf7c8379b21e7fc7e5b054a1))
+
+
 ## v1.17.0 (2026-11-23)
 
 ### Features
