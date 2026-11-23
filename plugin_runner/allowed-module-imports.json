@@ -1398,6 +1398,7 @@
     "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
+    "DocumentAnnotation",
     "DocumentCoding",
     "DocumentHistoryEvent",
     "DocumentHistoryEventType",
@@ -1489,6 +1490,7 @@
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterDocument",
     "LetterLanguageTemplate",
     "LetterTemplate",
     "LetterTemplateType",
@@ -1534,6 +1536,7 @@
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
+    "PatientChartDocument",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
@@ -1594,6 +1597,7 @@
     "Reference",
     "Referral",
     "ReferralActionEvent",
+    "ReferralDocument",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
@@ -1677,6 +1681,11 @@
   "canvas_sdk.v1.data.assessment": [
     "Assessment",
     "AssessmentStatus"
+  ],
+  "canvas_sdk.v1.data.attached_document": [
+    "LetterDocument",
+    "PatientChartDocument",
+    "ReferralDocument"
   ],
   "canvas_sdk.v1.data.authorization": [
     "Authorization",
@@ -1887,6 +1896,9 @@
     "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem"
+  ],
+  "canvas_sdk.v1.data.document_annotation": [
+    "DocumentAnnotation"
   ],
   "canvas_sdk.v1.data.document_history_event": [
     "DocumentHistoryEvent",
