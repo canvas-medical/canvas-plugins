@@ -30,7 +30,7 @@ def _run_db_seed_file(path: Path) -> None:
     """Run the database setup file to initialize the database."""
     code = path.read_text()
     exec_globals = {"__name__": "__main__"}
-    exec(code, exec_globals)
+    exec(code, exec_globals)  # noqa: S102 — running the developer's own seed file is the point
 
 
 def _reset_db(seed_file: Path | None = None) -> None:

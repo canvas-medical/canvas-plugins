@@ -19,8 +19,6 @@ class ObservationQuerySet(
 ):
     """ObservationQuerySet."""
 
-    pass
-
 
 ObservationManager = BaseModelManager.from_queryset(ObservationQuerySet)
 
@@ -45,6 +43,13 @@ class Observation(AuditedModel, IdentifiableModel):
     note_id = models.BigIntegerField()
     name = models.TextField()
     effective_datetime = models.DateTimeField()
+    specimen = models.ForeignKey(
+        "v1.LabOrderSpecimen",
+        on_delete=models.DO_NOTHING,
+        related_name="observations",
+        null=True,
+        blank=True,
+    )
 
 
 class ObservationCoding(Coding):
@@ -83,6 +88,17 @@ class ObservationComponentCoding(Coding):
     )
 
 
+class ObservationComponentValueCoding(Coding):
+    """A value coding on an observation component."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_observationcomponentvaluecoding_001"
+
+    observation_component = models.ForeignKey(
+        ObservationComponent, on_delete=models.DO_NOTHING, related_name="value_codings"
+    )
+
+
 class ObservationValueCoding(Coding):
     """ObservationValueCoding."""
 
@@ -99,5 +115,6 @@ __exports__ = (
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding",
 )

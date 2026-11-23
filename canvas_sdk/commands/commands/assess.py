@@ -1,4 +1,3 @@
-from datetime import date
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -7,6 +6,7 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.constants import ApproximateDate
 from canvas_sdk.v1.data import Condition
 
 CONDITION_VALIDATED_METHODS = frozenset({"originate", "edit"})
@@ -36,7 +36,7 @@ class AssessCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "condition"}
     )
     icd10_code: str | None = None
-    approximate_date_of_onset: date | None = None
+    approximate_date_of_onset: ApproximateDate | None = None
     show_in_problem_list: bool | None = None
     background: str | None = None
     status: Status | None = None

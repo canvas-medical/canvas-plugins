@@ -611,7 +611,7 @@ def _sandbox_raises(source: str) -> Exception | None:
     sandbox = sandbox_from_module(temp, "plugin_name.handlers.handler")
     try:
         sandbox.execute()
-    except Exception as exc:  # noqa: BLE001 — we want to inspect whatever it raised
+    except Exception as exc:  # we want to inspect whatever it raised
         return exc
     return None
 

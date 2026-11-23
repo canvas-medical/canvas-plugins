@@ -36,7 +36,6 @@ class HttpTransport:
 
     def close(self) -> None:
         """Close the transport."""
-        pass
 
 
 ExcInfo = tuple[type[BaseException], BaseException, TracebackType | None]

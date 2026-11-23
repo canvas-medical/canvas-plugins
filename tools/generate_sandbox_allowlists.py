@@ -41,18 +41,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # canvas_sdk configures Django on import, which loading a plugin needs.
-import httpretty  # noqa: E402
+import httpretty
 
-import canvas_sdk  # noqa: E402, F401
-from plugin_runner.plugin_runner import _load_plugin_handlers  # noqa: E402
-from plugin_runner.sandbox import SandboxMode  # noqa: E402
-from plugin_runner.sandbox_allowlists import (  # noqa: E402
+import canvas_sdk  # noqa: F401
+from plugin_runner.plugin_runner import _load_plugin_handlers
+from plugin_runner.sandbox import SandboxMode
+from plugin_runner.sandbox_allowlists import (
     ALLOWLIST_PATH,
     BLESSED_IMPORTS_PATH,
     KEY_VARIABLE,
     digest,
 )
-from plugin_runner.sandbox_compatibility import (  # noqa: E402
+from plugin_runner.sandbox_compatibility import (
     _is_importable,
     find_legacy_constructs,
 )

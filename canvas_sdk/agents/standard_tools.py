@@ -4039,8 +4039,8 @@ standard_tools.originate_command_tool(
         ),
         "approximate_date_of_onset": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date of approximate onset. Optional.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="Approximate onset: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known. Optional.",
             editable=True,
         ),
     },
@@ -4159,8 +4159,8 @@ standard_tools.originate_command_tool(
     fields={
         "requested_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 target date for the follow-up.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="Target date for the follow-up: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
         "comment": EffectField(

@@ -6,6 +6,7 @@ from requests import exceptions
 
 from canvas_sdk.clients.llms.constants.file_type import FileType
 from canvas_sdk.clients.llms.libraries.llm_api import LlmApi
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 from canvas_sdk.clients.llms.structures.file_content import FileContent
 from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
@@ -60,6 +61,41 @@ class LlmAnthropic(LlmApi):
 
     Implements the LlmBase interface for Anthropic's Claude API.
     """
+
+    #: The Messages API's ``output_config.effort`` value for each of the agents' effort levels.
+    _EFFORTS = {"low": "low", "medium": "medium", "high": "high"}
+
+    @classmethod
+    def effort(cls, level: str) -> str:
+        """The ``output_config.effort`` value for an agent's effort level (an ``Effort``).
+
+        Raises:
+            ValueError: ``level`` is not one of the levels mapped here.
+        """
+        try:
+            return cls._EFFORTS[level]
+        except KeyError:
+            raise ValueError(f"No Anthropic effort for the level {level!r}.") from None
+
+    @classmethod
+    def output_format(cls, schema: type[BaseModelLlmJson]) -> dict:
+        """The ``output_config.format`` that makes a reply JSON matching ``schema``.
+
+        Shared with the agent tool loop, so a schema sends the same request through
+        either.
+
+        Raises:
+            ValueError: ``schema`` is not one structured outputs can express, such as a
+                model with a ``dict`` field or a nested model that is not a
+                ``BaseModelLlmJson``.
+        """
+        if not (isinstance(schema, type) and issubclass(schema, BaseModelLlmJson)):
+            raise ValueError("The output schema must be a BaseModelLlmJson subclass.")
+        if not schema.validate_nested_models():
+            raise ValueError(
+                f"Every model nested in {schema.__name__} must be a BaseModelLlmJson subclass."
+            )
+        return {"type": "json_schema", "schema": cls._output_schema(schema.model_json_schema())}
 
     @classmethod
     def _output_schema(cls, schema: dict) -> dict:
@@ -194,10 +230,7 @@ class LlmAnthropic(LlmApi):
         # structured output requested
         structured: dict = {}
         if self.schema and self._uses_structured_outputs():
-            output_format = {
-                "type": "json_schema",
-                "schema": self._output_schema(self.schema.model_json_schema()),
-            }
+            output_format = self.output_format(self.schema)
             # keep any output_config the settings set, such as effort
             structured = {
                 "output_config": settings.get("output_config", {}) | {"format": output_format}

@@ -335,7 +335,7 @@ def test_document_types_are_listed_and_suggested(document: Any) -> None:
     DocumentTypeFactory.create(name="Referral Form")
 
     listed, _ = _run("find_document_types", document, query="lab")
-    result, (effect,) = _run("categorize_document", document, document_type_key=lab.key)
+    _result, (effect,) = _run("categorize_document", document, document_type_key=lab.key)
 
     assert listed == [
         {

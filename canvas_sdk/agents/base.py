@@ -90,7 +90,7 @@ class AgentPlugin(ABC):
     # The plugin's variables (manifest ``variables``), set by the platform with the
     # subject: model names, switches, and other settings an operator configures. The
     # gateway key is left out, since the agent reaches a model only through its gateway.
-    secrets: Mapping[str, str] = {}  # noqa: RUF012  (replaced per run, never mutated)
+    secrets: Mapping[str, str] = {}  # replaced per run, never mutated
 
     @abstractmethod
     def load_state(self, scope_key: str) -> AgentState:
@@ -114,11 +114,11 @@ class AgentPlugin(ABC):
 
     def on_run_start(self, scope_key: str) -> None:
         """Optional hook fired before ``load_state``. Default: no-op."""
-        return None
+        return
 
     def on_turn(self, turn_index: int) -> None:
         """Optional hook fired before each LLM call ``run_tool_loop`` makes. Default: no-op."""
-        return None
+        return
 
     def run_tool_loop(
         self,
@@ -136,7 +136,8 @@ class AgentPlugin(ABC):
         :meth:`tool_context` builds, plus any extra keys in ``ctx``. The effects the
         tools stage come back on :attr:`ToolLoopResult.effects`. ``options`` are the
         remaining ``run_tool_loop`` arguments (``max_turns``, ``max_tokens``,
-        ``model``, ``history_chars``, ``cache_system``).
+        ``model``, ``history_chars``, ``cache_system``, ``output_schema``,
+        ``effort``).
         """
         return run_tool_loop(
             gateway,
@@ -195,11 +196,11 @@ class AgentPlugin(ABC):
 
     def on_run_end(self, result: AgentRunResult) -> None:
         """Optional hook fired after ``run`` returns successfully. Default: no-op."""
-        return None
+        return
 
     def on_run_error(self, exc: BaseException) -> None:
         """Optional hook fired if ``run`` raises. Default: no-op."""
-        return None
+        return
 
 
 __exports__ = ("AgentPlugin",)

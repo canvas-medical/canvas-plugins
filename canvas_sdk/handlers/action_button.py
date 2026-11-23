@@ -159,7 +159,7 @@ class NoteStateActionButton(ActionButton):
                 note.note_type_version.is_sig_required,
                 note.note_type_version.category,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     def transition(self, note_id: str) -> list[Effect]:

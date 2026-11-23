@@ -151,7 +151,7 @@ def test_idempotency_key_is_required() -> None:
         )
 
 
-@pytest.mark.parametrize("amount", [Decimal("0"), Decimal("-1.00")])
+@pytest.mark.parametrize("amount", [Decimal(0), Decimal("-1.00")])
 def test_amount_must_be_positive(amount: Decimal) -> None:
     """A non-positive amount is rejected at construction."""
     with pytest.raises(ValidationError):

@@ -1,6 +1,7 @@
 import factory
 
-from canvas_sdk.v1.data import DmeOrder, DmeProduct, DmeProductCodeSystem
+from canvas_sdk.v1.data import DmeOrder, DmeOrderActionEvent, DmeProduct, DmeProductCodeSystem
+from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 
 
 class DmeProductFactory(factory.django.DjangoModelFactory[DmeProduct]):
@@ -34,3 +35,19 @@ class DmeOrderFactory(factory.django.DjangoModelFactory[DmeOrder]):
     ordering_provider = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     patient_height = ""
     patient_weight = ""
+
+
+class DmeOrderActionEventFactory(factory.django.DjangoModelFactory[DmeOrderActionEvent]):
+    """Factory for creating a DmeOrderActionEvent."""
+
+    class Meta:
+        model = DmeOrderActionEvent
+
+    event_type = EventTypeChoices.FAXED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = True
+    delivered_by_fax = None
+    fax_result_msg = ""
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
+    dme_order = factory.SubFactory(DmeOrderFactory)

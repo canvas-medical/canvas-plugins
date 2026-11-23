@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from canvas_cli.apps.run_plugins.run_plugins import (
     _patch_default_db_connection,
     _reset_db,
+    _run_db_seed_file,
     _run_plugins,
 )
 from canvas_cli.main import app
@@ -135,3 +136,14 @@ def test_run_plugins_reset_db_is_called(
     with tempfile.NamedTemporaryFile(suffix=".py") as tmp:
         cli_runner.invoke(app, f"run-plugins some_dir --db-seed-file {Path(tmp.name)}")
         mock_reset_db.assert_called_once_with(seed_file=Path(tmp.name))
+
+
+def test_run_db_seed_file_executes_as_main(tmp_path: Path) -> None:
+    """The seed file runs with __name__ set to "__main__"."""
+    marker = tmp_path / "ran.txt"
+    seed_file = tmp_path / "seed.py"
+    seed_file.write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text(__name__)\n")
+
+    _run_db_seed_file(seed_file)
+
+    assert marker.read_text() == "__main__"

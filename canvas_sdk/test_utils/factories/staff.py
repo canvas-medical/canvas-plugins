@@ -52,7 +52,7 @@ class StaffRoleFactory(factory.django.DjangoModelFactory[StaffRole]):
     public_abbreviation = "MD"
     domain = StaffRole.RoleDomain.CLINICAL
     domain_privilege_level = 100000
-    permissions = factory.LazyFunction(lambda: {})
+    permissions = factory.LazyFunction(dict)
     staff = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
 
 

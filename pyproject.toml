@@ -16,7 +16,7 @@ dev = [
   "pytest>=9.0.3,<10",
   "python-semantic-release",
   "requests-mock",
-  "ruff",
+  "ruff>=0.17.4",
   "types-protobuf",
   "types-requests"
 ]
@@ -69,13 +69,35 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "1.3.0"
+version = "1.18.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas>=0.2.0"]
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
+
+# Code that never runs under the tests (CLI templates, generated code) and the
+# tests themselves stay out of coverage reports, and so out of CI's
+# changed-line coverage check.
+[tool.coverage.report]
+omit = [
+  "**/conftest.py",
+  "**/test_*.py",
+  "**/tests.py",
+  # Anchored: a bare "settings.py" also matches every nested settings.py.
+  "./settings.py",
+  "canvas_cli/templates/**",
+  "canvas_generated/**",
+  "canvas_sdk/tests/**",
+  "example-plugins/**/tests/**",
+  "import_tracing/**",
+  "protobufs/**"
+]
+
+# The SDK packages, so files no test imports still report, as uncovered.
+[tool.coverage.run]
+source = ["canvas_cli", "canvas_sdk", "logger", "plugin_runner", "pubsub"]
 
 [tool.django-stubs]
 django_settings_module = "settings"
@@ -172,13 +194,15 @@ norecursedirs = [
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
 [tool.ruff]
-exclude = ["canvas_cli/templates/", "canvas_generated/"]
+# *.md: ruff formats Python blocks in Markdown, which the pre-commit hook never does.
+exclude = ["*.md", "canvas_cli/templates/", "canvas_generated/"]
 line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-ignore = ["D100", "D104", "D105", "D106", "D107", "D200", "D205", "D212", "E501"]
-select = [
+# extend-select, not select: ruff's default rule set carries only E722/E902/W605 from
+# pycodestyle and D419 from pydocstyle, so restating the families keeps them enforced.
+extend-select = [
   "B", # flake8-bugbear
   "C4", # flake8-comprehensions
   "D", # pydocstyle
@@ -189,9 +213,36 @@ select = [
   "UP", # pyupgrade
   "W" # pycodestyle warnings
 ]
+ignore = [
+  # Broad `except Exception` isolates one plugin, handler, tool call, or event so the runner
+  # carries on; each one logs or reports the failure.
+  "BLE001",
+  "D100",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  "D200",
+  "D205",
+  "D212",
+  "E501",
+  # Django Meta options, model and effect class attributes are class-level lists by design.
+  "RUF012",
+  # Plugins catch the SDK's ValueError and Exception today; changing the type raised, or
+  # minting new exception classes, is an API decision rather than lint cleanup.
+  "TRY002",
+  "TRY004"
+]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated from VSAC value sets, whose descriptions carry trailing spaces.
+"canvas_sdk/value_set/**" = ["W291"]
+# Fixture plugins pin exactly which source patterns run under the sandbox, so the rules that
+# rewrite a pattern (ascii(), aliased imports, explicit return None, a bare pass) stay off.
+"plugin_runner/tests/fixtures/plugins/**" = ["PIE790", "PLR0402", "RET501", "RUF010"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

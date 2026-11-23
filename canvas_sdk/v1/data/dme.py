@@ -2,6 +2,7 @@ from typing import cast
 
 from django.db import models
 
+from canvas_sdk.v1.data.action_event_base import BaseActionEvent
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     CommittableModelManager,
@@ -66,4 +67,13 @@ class DmeOrder(AuditedModel, IdentifiableModel):
     patient_weight = models.CharField(max_length=64)
 
 
-__exports__ = ("DmeOrder", "DmeProduct", "DmeProductCodeSystem")
+class DmeOrderActionEvent(BaseActionEvent):
+    """Event representing an action taken on a DME order, such as faxing it."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_dmeorderactionevent_001"
+
+    dme_order = models.ForeignKey(DmeOrder, on_delete=models.CASCADE, related_name="action_events")
+
+
+__exports__ = ("DmeOrder", "DmeOrderActionEvent", "DmeProduct", "DmeProductCodeSystem")

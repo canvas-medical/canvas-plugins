@@ -1,8 +1,7 @@
-from datetime import date
-
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.constants import ApproximateDate
 
 
 class AddConditionCommand(_BaseCommand):
@@ -15,7 +14,7 @@ class AddConditionCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "condition"}
     )
     background: str | None = None
-    approximate_date_of_onset: date | None = None
+    approximate_date_of_onset: ApproximateDate | None = None
     comments: str | None = Field(default=None, max_length=1000)
 
 

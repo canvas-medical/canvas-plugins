@@ -84,13 +84,9 @@ class NoAuthMixin:
 class RouteNoAuth(NoAuthMixin, SimpleAPIRoute):
     """Route class that bypasses authentication."""
 
-    pass
-
 
 class APINoAuth(NoAuthMixin, SimpleAPI):
     """API class that bypasses authentication."""
-
-    pass
 
 
 def make_event(
@@ -582,7 +578,7 @@ def test_request_lifecycle() -> None:
                 Effect(type=EffectType.CREATE_TASK, payload="create task"),
             ],
         ),
-        (lambda: [], []),
+        (list, []),
         (
             lambda: [Response(), Response()],
             [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()],
@@ -663,10 +659,12 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 headers=HEADERS,
                 content_type="application/pdf",
             ),
-            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
-            '"accept-encoding": "gzip", "Content-Type": "application/pdf"}, '
-            '"body": "JVBERi0xLjQKJdPr6eE=", "status_code": 202}',
+            (
+                '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+                '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+                '"accept-encoding": "gzip", "Content-Type": "application/pdf"}, '
+                '"body": "JVBERi0xLjQKJdPr6eE=", "status_code": 202}'
+            ),
         ),
         (
             JSONResponse(
@@ -674,32 +672,40 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 status_code=HTTPStatus.ACCEPTED,
                 headers=HEADERS,
             ),
-            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
-            '"accept-encoding": "gzip", "Content-Type": "application/json"},'
-            ' "body": "eyJtZXNzYWdlIjogIkpTT04gcmVzcG9uc2UifQ==", "status_code": 202}',
+            (
+                '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+                '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+                '"accept-encoding": "gzip", "Content-Type": "application/json"},'
+                ' "body": "eyJtZXNzYWdlIjogIkpTT04gcmVzcG9uc2UifQ==", "status_code": 202}'
+            ),
         ),
         (
             PlainTextResponse(
                 content="plain text response", status_code=HTTPStatus.ACCEPTED, headers=HEADERS
             ),
-            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
-            '"accept-encoding": "gzip", "Content-Type": "text/plain"}, '
-            '"body": "cGxhaW4gdGV4dCByZXNwb25zZQ==", "status_code": 202}',
+            (
+                '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+                '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+                '"accept-encoding": "gzip", "Content-Type": "text/plain"}, '
+                '"body": "cGxhaW4gdGV4dCByZXNwb25zZQ==", "status_code": 202}'
+            ),
         ),
         (
             HTMLResponse(content="<html></html>", status_code=HTTPStatus.ACCEPTED, headers=HEADERS),
-            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
-            '"accept-encoding": "gzip", "Content-Type": "text/html"}, '
-            '"body": "PGh0bWw+PC9odG1sPg==", "status_code": 202}',
+            (
+                '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+                '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+                '"accept-encoding": "gzip", "Content-Type": "text/html"}, '
+                '"body": "PGh0bWw+PC9odG1sPg==", "status_code": 202}'
+            ),
         ),
         (
             Response(status_code=HTTPStatus.NO_CONTENT, headers=HEADERS),
-            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
-            '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
-            '"accept-encoding": "gzip"}, "body": "", "status_code": 204}',
+            (
+                '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+                '"canvas-plugins-test-header-2": "test header 2a, test header 2b", '
+                '"accept-encoding": "gzip"}, "body": "", "status_code": 204}'
+            ),
         ),
     ],
     ids=["binary", "JSON", "plain text", "HTML", "no content"],

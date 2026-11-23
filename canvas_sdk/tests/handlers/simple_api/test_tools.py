@@ -61,6 +61,9 @@ def test_multidict(func: Callable[[MultiDict[str, int]], T], expected_value: T) 
             "not in": (lambda m: "d" not in m and "D" not in m, True),
             "get": (lambda m: m.get("a") == m.get("A") == 1, True),
             "get_list": (lambda m: m.get_list("a") == m.get_list("A") == [1, 3], True),
+            "get non-str key": (lambda m: m.get(1), None),
+            "get non-str key default": (lambda m: m.get(1, "default"), "default"),
+            "get_list non-str key": (lambda m: m.get_list(1), []),
         }
     ),
 )

@@ -1,10 +1,8 @@
-from datetime import date
-
 from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.commands.constants import CodeSystems, Coding
+from canvas_sdk.commands.constants import ApproximateDate, CodeSystems, Coding
 
 
 class ImmunizationStatementCommand(BaseCommand):
@@ -16,7 +14,7 @@ class ImmunizationStatementCommand(BaseCommand):
     cpt_code: str | Coding | None = None
     cvx_code: str | Coding | None = None
     unstructured: Coding | None = None
-    approximate_date: date | None = None
+    approximate_date: ApproximateDate | None = None
     comments: str | None = Field(default=None, max_length=255)
 
     def _has_value(self, value: str | Coding | None) -> bool:

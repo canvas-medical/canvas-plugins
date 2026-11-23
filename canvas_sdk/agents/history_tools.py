@@ -288,14 +288,14 @@ standard_tools.originate_command_tool(
         ),
         "approximate_start_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date it began, if known.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="When it began, if known: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
         "approximate_end_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date it ended, if it has.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="When it ended, if it has: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
         "show_on_condition_list": EffectField(
@@ -471,8 +471,8 @@ standard_tools.originate_command_tool(
         ),
         "approximate_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date of onset, if known.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="When it began, if known: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
     },
@@ -548,8 +548,8 @@ standard_tools.originate_command_tool(
         ),
         "approximate_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date of the surgery, if known.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="When the surgery was, if known: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
         "comment": EffectField(
@@ -601,8 +601,8 @@ standard_tools.originate_command_tool(
         ),
         "approximate_date": EffectField(
             type="string",
-            format="date",
-            description="ISO 8601 date it was given, if known.",
+            pattern=r"^(\d{4}|\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})$",
+            description="When it was given, if known: YYYY-MM-DD, or MM/YYYY or YYYY when only the month or year is known.",
             editable=True,
         ),
         "comments": EffectField(

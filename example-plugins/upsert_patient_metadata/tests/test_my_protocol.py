@@ -8,8 +8,6 @@ from upsert_patient_metadata.handlers.my_handler import MyHandler
 class DummyEvent:
     """Dummy event for Handler instantiation in tests."""
 
-    pass
-
 
 @pytest.mark.parametrize(
     "narrative,key,value,should_upsert",

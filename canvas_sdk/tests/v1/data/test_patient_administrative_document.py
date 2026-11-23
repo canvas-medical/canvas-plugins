@@ -10,7 +10,7 @@ from canvas_sdk.v1.data.patient_administrative_document import PatientAdministra
 
 
 def test_document_url_with_document() -> None:
-    """document_url returns a presigned URL when a document is set."""
+    """document_url presigns the document as a PDF, the type Canvas stores these documents as."""
     pad = PatientAdministrativeDocument()
     pad.document = "administrative/doc.pdf"
 
@@ -19,7 +19,7 @@ def test_document_url_with_document() -> None:
         return_value="https://s3.example.com/presigned",
     ) as mock:
         assert pad.document_url == "https://s3.example.com/presigned"
-        mock.assert_called_once_with("administrative/doc.pdf")
+        mock.assert_called_once_with("administrative/doc.pdf", content_type="application/pdf")
 
 
 def test_document_url_returns_none_when_no_document() -> None:

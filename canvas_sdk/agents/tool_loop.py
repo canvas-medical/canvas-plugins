@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from anthropic.types import TextBlock, ToolUseBlock
@@ -23,6 +24,8 @@ from canvas_sdk.agents.run_record import (
     current_recorder,
 )
 from canvas_sdk.agents.tool_registry import ToolRegistry, _CallEffects
+from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 
 if TYPE_CHECKING:
     from canvas_sdk.effects import Effect
@@ -199,6 +202,38 @@ def _stopped(result: ToolLoopResult) -> ToolLoopResult:
     return result
 
 
+class Effort(StrEnum):
+    """How much the model thinks before it answers, trading speed and cost against depth.
+
+    ``LOW`` answers fastest and cheapest, for extraction and classification the model can
+    do at a glance. ``MEDIUM`` gives a call room to weigh what it read. ``HIGH`` is for
+    answers that need reasoning over many steps, at the most latency and tokens. Left
+    unset, a call thinks at the model's default. A model that does not take effort is
+    refused by the gateway.
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+def output_config(
+    output_schema: type[BaseModelLlmJson] | None, effort: Effort | str | None
+) -> dict[str, Any] | None:
+    """The ``output_config`` for a schema and an effort, or ``None`` when neither is set.
+
+    Raises:
+        ValueError: ``effort`` is not an :class:`Effort` level, or ``output_schema`` is
+            not one structured outputs can express.
+    """
+    config: dict[str, Any] = {}
+    if effort is not None:
+        config["effort"] = LlmAnthropic.effort(Effort(effort))
+    if output_schema is not None:
+        config["format"] = LlmAnthropic.output_format(output_schema)
+    return config or None
+
+
 def run_tool_loop(
     gateway: LLMGateway,
     *,
@@ -212,6 +247,8 @@ def run_tool_loop(
     history_chars: int | None = DEFAULT_HISTORY_CHARS,
     cache_system: bool = True,
     on_turn: Callable[[int], None] | None = None,
+    output_schema: type[BaseModelLlmJson] | None = None,
+    effort: Effort | str | None = None,
 ) -> ToolLoopResult:
     """Call the model with ``tools`` until it finishes, dispatching its tool calls.
 
@@ -249,7 +286,23 @@ def run_tool_loop(
         cache_system: Mark the system prompt for prompt caching.
         on_turn: Called with the turn index before each model call. Its exceptions are
             logged and ignored.
+        output_schema: A ``BaseModelLlmJson`` subclass the final answer must match.
+            Each call asks for structured output, so when the loop ends on
+            ``result.stopped == "end_turn"`` the final text is JSON of that shape, read
+            with ``output_schema.model_validate_json(result.text)``. On any other stop it
+            is cut-off JSON or the last tool turn's text, so check ``stopped`` first. The
+            model still calls tools on the turns before its answer, and the reply is not
+            streamed, since it is JSON for code rather than text for a person. The
+            request is the one ``LlmAnthropic`` sends for the same schema.
+        effort: How much the model thinks on each call, an :class:`Effort` such as
+            ``Effort.MEDIUM`` (or its value, ``"medium"``). The gateway refuses it for a
+            model that does not take it.
+
+    Raises:
+        ValueError: ``output_schema`` is not one structured outputs can express, or
+            ``effort`` is not an :class:`Effort` level.
     """
+    config = output_config(output_schema, effort)
     client = gateway.client()
     transcript = list(messages)
     system_param: Any = (
@@ -283,8 +336,15 @@ def run_tool_loop(
             "tools": cast(Any, tools.definitions()),
             "messages": cast(Any, sent),
         }
+        if config:
+            request["output_config"] = config
         try:
-            if recorder is not None and recorder.streams_reply and streams_reply.get():
+            if (
+                output_schema is None
+                and recorder is not None
+                and recorder.streams_reply
+                and streams_reply.get()
+            ):
                 # The same call, streamed so the person waiting reads the reply as it is
                 # written; the final message is what the unstreamed call would return.
                 recorder.report_turn()
@@ -356,4 +416,4 @@ def run_tool_loop(
     return _stopped(result)
 
 
-__exports__ = ("ToolLoopResult", "run_tool_loop")
+__exports__ = ("Effort", "ToolLoopResult", "run_tool_loop")

@@ -4,6 +4,7 @@ Every function here takes the rows the plugin's ``/runs`` endpoint returns: ``ru
 the platform's ``AgentRun`` records, and ``records``, what each probe saw.
 """
 
+import itertools
 import math
 from collections import Counter
 from dataclasses import dataclass, field
@@ -155,7 +156,7 @@ def check_serialized(records: list[dict[str, Any]], counter: int, expected: int)
     ordered = sorted(records, key=lambda record: _required_at(record["started_at"]))
     overlaps = [
         f"{before['run_id']} and {after['run_id']}"
-        for before, after in zip(ordered, ordered[1:], strict=False)
+        for before, after in itertools.pairwise(ordered)
         if _required_at(after["started_at"]) < _required_at(before["finished_at"])
     ]
     if overlaps:
@@ -177,7 +178,7 @@ def check_chat_order(records: list[dict[str, Any]], expected: int) -> Check:
     ordered = sorted(records, key=lambda record: record["seq"])
     out_of_order = [
         f"turn {after['seq']} saw turn {after['saw']}, expected {before['seq']}"
-        for before, after in zip(ordered, ordered[1:], strict=False)
+        for before, after in itertools.pairwise(ordered)
         if after["saw"] != before["seq"]
     ]
     missing = [f"{len(ordered)} of {expected} turns recorded"] if len(ordered) != expected else []

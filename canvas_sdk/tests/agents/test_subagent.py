@@ -4,11 +4,21 @@ from typing import Any
 
 import pytest
 from anthropic.types import TextBlock, ToolUseBlock
+from pydantic import BaseModel
 
-from canvas_sdk.agents import SubAgentSpec, ToolRegistry, run_subagent, run_subagents, subagent
+from canvas_sdk.agents import (
+    Effort,
+    SubAgentSpec,
+    ToolRegistry,
+    run_subagent,
+    run_subagents,
+    subagent,
+)
 from canvas_sdk.agents.gateway import GatewayError, count_model_call
 from canvas_sdk.agents.run_record import RunDeadlineExceeded, RunRecorder, current_recorder
 from canvas_sdk.agents.subagent import MAX_PARALLEL
+from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 from canvas_sdk.test_utils.agents import FakeGateway, reply, text, tool_use
 from canvas_sdk.v1.plugin_database_context import (
     get_access_level,
@@ -245,6 +255,72 @@ def test_a_subagent_calls_the_model_its_spec_names() -> None:
 
     assert answer == "Two values."
     assert gateway.requests[0]["model"] == "claude-haiku-4-5"
+
+
+class _Values(BaseModelLlmJson):
+    values: list[str]
+
+
+class _PlainValues(BaseModel):
+    values: list[str]
+
+
+def test_a_subagent_asks_for_the_schema_and_effort_its_spec_names() -> None:
+    """A caller that parses the answer gets JSON of its schema's shape, at the effort it set."""
+    gateway = FakeGateway(reply(text('{"values": ["a", "b"]}')))
+    spec = SubAgentSpec(
+        name="extract", system_prompt="Extract.", output_schema=_Values, effort=Effort.MEDIUM
+    )
+
+    answer = run_subagent(
+        spec,
+        "Read it.",
+        parent_tools=ToolRegistry(),
+        parent_ctx={"effects": []},
+        gateway=gateway,  # type: ignore[arg-type]
+    )
+
+    assert _Values.model_validate_json(answer).values == ["a", "b"]
+    assert gateway.requests[0]["output_config"] == {
+        "effort": "medium",
+        "format": LlmAnthropic.output_format(_Values),
+    }
+
+
+def test_a_spec_with_a_schema_structured_outputs_cannot_take_is_refused_when_built() -> None:
+    """So a module-level spec fails at import, where canvas validate sees it, not mid-run."""
+    with pytest.raises(ValueError, match="BaseModelLlmJson"):
+        SubAgentSpec(
+            name="extract",
+            system_prompt="Extract.",
+            output_schema=_PlainValues,  # type: ignore[arg-type]
+        )
+
+
+def test_a_spec_with_an_effort_the_api_does_not_have_is_refused_when_built() -> None:
+    """Like a bad schema, a bad effort fails where the spec is defined."""
+    with pytest.raises(ValueError, match="is not a valid Effort"):
+        SubAgentSpec(name="extract", system_prompt="Extract.", effort="medum")  # type: ignore[arg-type]
+
+
+def test_a_spec_given_an_effort_as_text_holds_it_as_an_effort() -> None:
+    """So two specs written either way are the same spec."""
+    spec = SubAgentSpec(name="extract", system_prompt="Extract.", effort="low")  # type: ignore[arg-type]
+
+    assert spec.effort is Effort.LOW
+    assert spec == SubAgentSpec(name="extract", system_prompt="Extract.", effort=Effort.LOW)
+
+
+def test_specs_with_the_same_schema_are_equal_and_hash_alike() -> None:
+    """Specs are frozen and may be kept in sets."""
+    first = SubAgentSpec(name="extract", system_prompt="Extract.", output_schema=_Values)
+    second = SubAgentSpec(name="extract", system_prompt="Extract.", output_schema=_Values)
+    other = SubAgentSpec(name="extract", system_prompt="Extract.", effort=Effort.LOW)
+
+    assert first == second
+    assert hash(first) == hash(second)
+    assert len({first, second}) == 1
+    assert first != other
 
 
 def test_a_subagent_past_the_runs_deadline_ends_the_run() -> None:

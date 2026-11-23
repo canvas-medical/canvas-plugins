@@ -14,6 +14,7 @@ from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     IdentifiableModel,
     MetadataModel,
+    Model,
     TimestampedModel,
 )
 from canvas_sdk.v1.data.claim import Claim
@@ -162,6 +163,36 @@ class NoteType(IdentifiableModel, Coding):
     is_scheduleable_via_patient_portal = models.BooleanField(default=False)
     online_duration = models.IntegerField(default=0)
     is_sig_required = models.BooleanField(default=True)
+    possible_durations = models.ManyToManyField(
+        "v1.ScheduleDuration", related_name="note_types", through="v1.NoteTypePossibleDuration"
+    )
+
+
+class ScheduleDuration(TimestampedModel):
+    """A duration offered when scheduling appointments or schedule events."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_scheduleduration_001"
+
+    duration = models.DurationField(unique=True)
+    is_appointment_duration_option = models.BooleanField(default=True)
+
+
+class NoteTypePossibleDuration(Model):
+    """M2M for NoteType -> ScheduleDurations."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_notetype_possible_durations_001"
+
+    note_type = models.ForeignKey(
+        NoteType, on_delete=models.DO_NOTHING, db_column="notetype_id", related_name="+"
+    )
+    schedule_duration = models.ForeignKey(
+        ScheduleDuration,
+        on_delete=models.DO_NOTHING,
+        db_column="scheduleduration_id",
+        related_name="+",
+    )
 
 
 # The fields holding the body content. Version 1 notes store the body in
@@ -314,8 +345,9 @@ class Note(TimestampedModel, IdentifiableModel):
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField(max_length=32)
     billing_note = models.TextField()
-    # TODO -implement InpatientStay model
-    # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
+    inpatient_stay = models.ForeignKey(
+        "v1.InpatientStay", on_delete=models.DO_NOTHING, related_name="rounding_notes", null=True
+    )
     related_data = models.JSONField(default=dict, blank=True)
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField(default=timezone.now)
@@ -432,15 +464,32 @@ class NoteActionEvent(BaseActionEvent):
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="action_events")
 
 
+class NoteParticipant(IdentifiableModel):
+    """A patient contact who took part in a note."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_noteparticipant_001"
+
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="participants")
+    patient_contact_person = models.ForeignKey(
+        "v1.PatientContactPerson",
+        on_delete=models.DO_NOTHING,
+        related_name="noteparticipant_set",
+    )
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
     "NoteTypes",
     "NoteType",
+    "NoteTypePossibleDuration",
+    "ScheduleDuration",
     "Note",
     "NoteMetadata",
     "NoteStates",
     "NoteStateChangeEvent",
     "CurrentNoteStateEvent",
     "NoteActionEvent",
+    "NoteParticipant",
 )

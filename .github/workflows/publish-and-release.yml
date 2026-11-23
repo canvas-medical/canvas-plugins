@@ -21,6 +21,12 @@ jobs:
     if: ${{ !inputs.publish-tag }}
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit
+    # A called workflow's jobs get at most these; its Coverage job needs all
+    # three.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
 
   release:
     runs-on: ubuntu-latest

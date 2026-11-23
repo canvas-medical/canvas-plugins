@@ -14,7 +14,6 @@ class PaymentCollectionFactory(factory.django.DjangoModelFactory[PaymentCollecti
 
     total_collected = Decimal("50.00")
     method = "card"
-    check_number = ""
     check_date = datetime.date(2026, 1, 1)
     deposit_date = datetime.date(2026, 1, 1)
     description = ""

@@ -28,8 +28,6 @@ class ProcedureQuerySet(
 ):
     """ProcedureQuerySet."""
 
-    pass
-
 
 ProcedureManager = BaseModelManager.from_queryset(ProcedureQuerySet)
 

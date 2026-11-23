@@ -6,15 +6,22 @@ from .agent_run import (
     AgentRunSubject,
     AgentRunToolCall,
 )
-from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .allergy_intolerance import (
+    AllergyIntolerance,
+    AllergyIntoleranceCoding,
+    AllergyIntoleranceReaction,
+)
 from .application import Application
 from .appointment import (
     Appointment,
     AppointmentExternalIdentifier,
     AppointmentLabel,
     AppointmentMetadata,
+    AppointmentScheduledTogether,
 )
 from .assessment import Assessment
+from .attached_document import LetterDocument, PatientChartDocument, ReferralDocument
+from .authorization import Authorization, AuthorizationDiagnosisCode
 from .banner_alert import BannerAlert
 from .base import (
     MAX_BULK_SIZE,
@@ -30,6 +37,7 @@ from .business_line import BusinessLine
 from .calendar import Calendar, Event
 from .cancel_prescription import CancelPrescription, CancelPrescriptionStatus
 from .cancel_prescription_response import CancelPrescriptionResponse
+from .care_plan import CarePlan, CarePlanCoding, CarePlanIntent, CarePlanStatus
 from .care_team import CareTeamMembership, CareTeamRole
 from .change_medication import ChangeMedication
 from .charge_description_master import ChargeDescriptionMaster
@@ -49,7 +57,16 @@ from .claim import (
 )
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
+from .claim_event import (
+    ClaimAssigneeEvent,
+    ClaimCoverageEvent,
+    ClaimCoverageEventType,
+    ClaimSnoozeEvent,
+    ClaimSnoozeState,
+    ClaimStateChangeEvent,
+)
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
+from .claim_response import ClaimResponse, ClaimResponseDetail, ClaimResponseStatus
 from .clipboard import Clipboard
 from .coding_gap_event import (
     AssessCodingGapEvent,
@@ -57,10 +74,11 @@ from .coding_gap_event import (
     DeferCodingGapEvent,
     ValidateCodingGapEvent,
 )
-from .command import Command, CommandMetadata
+from .collection_status_history import CollectionStatus, CollectionStatusHistory
+from .command import Command, CommandEditedBy, CommandMetadata
 from .command_type_setting import CommandTypeSetting
 from .compound_medication import CompoundMedication
-from .condition import Condition, ConditionCoding
+from .condition import Condition, ConditionCategoryCoding, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
 from .custom_attribute import (
     AttributeHub,
@@ -68,13 +86,24 @@ from .custom_attribute import (
     CustomAttributeAwareManager,
 )
 from .custom_command import CustomCommand
-from .detected_issue import DetectedIssue, DetectedIssueEvidence
-from .device import Device
-from .diagnostic_report import DiagnosticReport, DiagnosticReportStatus
-from .diagnostic_view import DiagnosticView
+from .detected_issue import DetectedIssue, DetectedIssueEvidence, DetectedIssueMitigation
+from .device import Device, DeviceCoding
+from .diagnostic_report import (
+    DiagnosticReport,
+    DiagnosticReportCategoryCoding,
+    DiagnosticReportCodeCoding,
+    DiagnosticReportStatus,
+)
+from .diagnostic_view import (
+    DiagnosticView,
+    DiagnosticViewElement,
+    DiagnosticViewElementCodingSystem,
+    DiagnosticViewElementDataType,
+)
 from .discount import Discount
 from .django_content_type import ContentType
-from .dme import DmeOrder, DmeProduct, DmeProductCodeSystem
+from .dme import DmeOrder, DmeOrderActionEvent, DmeProduct, DmeProductCodeSystem
+from .document_annotation import DocumentAnnotation
 from .document_history_event import DocumentHistoryEvent, DocumentHistoryEventType
 from .document_reference import (
     DocumentReference,
@@ -101,8 +130,10 @@ from .google_calendar import GoogleCalendar, GoogleCalendarBusyBlock, GoogleCale
 from .group import Group
 from .history_present_illness import HistoryOfPresentIllness
 from .imaging import (
+    ImagingCoding,
     ImagingOrder,
     ImagingOrderActionEvent,
+    ImagingOrderAssessment,
     ImagingReport,
     ImagingReportCoding,
     ImagingReportTemplate,
@@ -112,11 +143,14 @@ from .imaging import (
     ImagingReview,
 )
 from .immunization import (
+    ConsolidatedImmunization,
+    ConsolidatedImmunizationCoding,
     Immunization,
     ImmunizationCoding,
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .inpatient import InpatientFacility, InpatientStay
 from .instruction import Instruction, InstructionCoding
 from .integration_task import (
     IntegrationTask,
@@ -125,18 +159,20 @@ from .integration_task import (
     IntegrationTaskReview,
     IntegrationTaskStatus,
 )
-from .invoice import Invoice
+from .invoice import Invoice, InvoiceClaim
 from .lab import (
     FieldType,
     LabOrder,
     LabOrderActionEvent,
     LabOrderReason,
     LabOrderReasonCondition,
+    LabOrderSpecimen,
     LabPartner,
     LabPartnerTest,
     LabPartnerTestQuestion,
     LabPartnerTestQuestionChoice,
     LabReport,
+    LabReportProducer,
     LabReportRemark,
     LabReportTemplate,
     LabReportTemplateField,
@@ -144,14 +180,25 @@ from .lab import (
     LabReportTemplateQuerySet,
     LabReview,
     LabTest,
+    LabTestAOE,
     LabValue,
     LabValueCoding,
+    LabValuePerformer,
 )
-from .letter import Language, Letter, LetterActionEvent
+from .letter import (
+    Language,
+    Letter,
+    LetterActionEvent,
+    LetterLanguageTemplate,
+    LetterTemplate,
+    LetterTemplateType,
+)
 from .line_item_transaction import (
+    LineItemAllowed,
     LineItemTransfer,
     NewLineItemAdjustment,
     NewLineItemPayment,
+    RemarkCode,
 )
 from .medication import Medication, MedicationCoding
 from .medication_history import (
@@ -167,14 +214,18 @@ from .note import (
     Note,
     NoteActionEvent,
     NoteMetadata,
+    NoteParticipant,
     NoteStateChangeEvent,
     NoteType,
+    NoteTypePossibleDuration,
+    ScheduleDuration,
 )
 from .observation import (
     Observation,
     ObservationCoding,
     ObservationComponent,
     ObservationComponentCoding,
+    ObservationComponentValueCoding,
     ObservationValueCoding,
 )
 from .organization import Organization, OrganizationAddress, OrganizationContactPoint
@@ -189,9 +240,12 @@ from .patient import (
     PatientExternalIdentifier,
     PatientFacilityAddress,
     PatientIdentificationCard,
+    PatientKnownLocation,
     PatientMetadata,
+    PatientParentGuardian,
     PatientPhoto,
     PatientSetting,
+    PatientTribalAffiliationCoding,
 )
 from .patient_administrative_document import DocumentCoding, PatientAdministrativeDocument
 from .patient_consent import (
@@ -206,6 +260,14 @@ from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
+from .population_health import (
+    Campaign,
+    Intervention,
+    InterventionPatient,
+    SuspectHCC,
+    SuspectHCCKind,
+    SuspectHCCStatus,
+)
 from .portal_access_grant import PortalAccessGrant, PortalAccessLevel
 from .portal_invitation import (
     PortalInvitation,
@@ -215,8 +277,12 @@ from .portal_invitation import (
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
+    BaseRemittanceAdviceClaim,
     BulkPatientPosting,
     CoveragePosting,
+    ElectronicRemittanceAdvice,
+    ManualRemittanceAdvice,
+    NewRemittanceDocument,
     PatientPosting,
 )
 from .practicelocation import (
@@ -238,14 +304,24 @@ from .prescription_change import (
 from .procedure import Procedure, ProcedureCoding, ProcedureStatus
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
+from .provenance import Provenance
 from .questionnaire import (
     Interview,
     InterviewQuestionnaireMap,
     InterviewQuestionResponse,
+    InterviewSendEvent,
+    InterviewSkippedQuestion,
+    InterviewTemplate,
+    InterviewTemplateQuestionnaireMap,
+    InterviewVisualFinding,
     Question,
     QuestionEnablementCondition,
     Questionnaire,
+    QuestionnaireItemGroup,
     QuestionnaireQuestionMap,
+    QuestionnaireResult,
+    QuestionnaireStatus,
+    QuestionnaireUseCase,
     ResponseOption,
     ResponseOptionSet,
 )
@@ -265,6 +341,13 @@ from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .report import Report
 from .resolve_condition_event import ResolveConditionEvent
 from .service_provider import ServiceProvider
+from .service_request import (
+    ServiceRequest,
+    ServiceRequestCategoryCoding,
+    ServiceRequestCoding,
+    ServiceRequestReasonCondition,
+    ServiceRequestStatus,
+)
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
     SpecialtyReportTemplate,
@@ -283,7 +366,15 @@ from .staff import (
 )
 from .staff_identity_verification import StaffIdentityVerification
 from .stop_medication_event import StopMedicationEvent
-from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from .task import (
+    NoteTask,
+    NoteTaskLabel,
+    Task,
+    TaskComment,
+    TaskLabel,
+    TaskMetadata,
+    TaskTaskLabel,
+)
 from .team import Team, TeamContactPoint
 from .uncategorized_clinical_document import (
     UncategorizedClinicalDocument,
@@ -306,14 +397,19 @@ __all__ = __exports__ = (
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
+    "AppointmentScheduledTogether",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction",
     "AssessCodingGapEvent",
     "Assessment",
+    "Authorization",
+    "AuthorizationDiagnosisCode",
     "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BillingLineItem",
     "BillingLineItemModifier",
     "BusinessLine",
@@ -323,6 +419,10 @@ __all__ = __exports__ = (
     "CancelPrescriptionResponse",
     "CancelPrescriptionStatus",
     "CanvasUser",
+    "CarePlan",
+    "CarePlanCoding",
+    "CarePlanIntent",
+    "CarePlanStatus",
     "CareTeamMembership",
     "CareTeamRole",
     "ChangeMedication",
@@ -331,10 +431,13 @@ __all__ = __exports__ = (
     "ChartSectionReviewSection",
     "Claim",
     "ClaimBannerAlert",
+    "ClaimAssigneeEvent",
     "BannerAlertStatus",
     "BannerAlertIntent",
     "ClaimComment",
     "ClaimCoverage",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
@@ -344,15 +447,27 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
     "Clipboard",
+    "CollectionStatus",
+    "CollectionStatusHistory",
     "Command",
+    "CommandEditedBy",
     "CommandMetadata",
     "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding",
+    "ConsolidatedImmunization",
+    "ConsolidatedImmunizationCoding",
     "Coverage",
     "CustomAttribute",
     "CustomAttributeAwareManager",
@@ -365,15 +480,24 @@ __all__ = __exports__ = (
     "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
+    "DetectedIssueMitigation",
     "Device",
+    "DeviceCoding",
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType",
     "Discount",
     "ContentType",
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
+    "DocumentAnnotation",
     "DocumentCoding",
     "DocumentReference",
     "DocumentReferenceCategory",
@@ -384,6 +508,7 @@ __all__ = __exports__ = (
     "DocumentReviewDelegation",
     "DocumentType",
     "EducationalMaterial",
+    "ElectronicRemittanceAdvice",
     "EligibilityRequest",
     "EligibilityResponse",
     "EligibilityResponseStatus",
@@ -408,7 +533,9 @@ __all__ = __exports__ = (
     "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
+    "ImagingCoding",
     "ImagingOrder",
+    "ImagingOrderAssessment",
     "ImagingOrderActionEvent",
     "ImagingReport",
     "ImagingReportCoding",
@@ -421,6 +548,8 @@ __all__ = __exports__ = (
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
+    "InpatientFacility",
+    "InpatientStay",
     "InstallmentPlan",
     "Instruction",
     "InstructionCoding",
@@ -432,21 +561,31 @@ __all__ = __exports__ = (
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
+    "InterviewSendEvent",
+    "InterviewSkippedQuestion",
+    "InterviewTemplate",
+    "InterviewTemplateQuestionnaireMap",
+    "InterviewVisualFinding",
     "Invoice",
+    "InvoiceClaim",
     "LabOrder",
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
+    "LabReportProducer",
     "LabReportRemark",
     "LabReview",
     "LabTest",
+    "LabTestAOE",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "Language",
     "Letter",
     "LabReportTemplate",
@@ -454,9 +593,15 @@ __all__ = __exports__ = (
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
     "LetterActionEvent",
+    "LetterDocument",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
     "LineItemTransfer",
+    "LineItemAllowed",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
+    "ManualRemittanceAdvice",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -470,16 +615,21 @@ __all__ = __exports__ = (
     "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
+    "NewRemittanceDocument",
     "Note",
     "NoteActionEvent",
     "NoteMetadata",
+    "NoteParticipant",
     "NoteStateChangeEvent",
     "NoteTask",
+    "NoteTaskLabel",
     "NoteType",
+    "NoteTypePossibleDuration",
     "Observation",
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding",
     "Organization",
     "OrganizationAddress",
@@ -489,16 +639,20 @@ __all__ = __exports__ = (
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
+    "PatientChartDocument",
     "PatientContactCategory",
     "PatientContactPerson",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientIdentificationCard",
+    "PatientKnownLocation",
+    "PatientParentGuardian",
     "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
+    "PatientTribalAffiliationCoding",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
@@ -510,6 +664,12 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "Plan",
     "PluginCommand",
+    "Campaign",
+    "Intervention",
+    "InterventionPatient",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus",
     "PortalAccessGrant",
     "PortalAccessLevel",
     "PortalInvitation",
@@ -534,10 +694,15 @@ __all__ = __exports__ = (
     "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
+    "Provenance",
     "Question",
     "QuestionEnablementCondition",
     "Questionnaire",
+    "QuestionnaireItemGroup",
     "QuestionnaireQuestionMap",
+    "QuestionnaireResult",
+    "QuestionnaireStatus",
+    "QuestionnaireUseCase",
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
@@ -545,6 +710,7 @@ __all__ = __exports__ = (
     "Reference",
     "Referral",
     "ReferralActionEvent",
+    "ReferralDocument",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
@@ -556,7 +722,14 @@ __all__ = __exports__ = (
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "RemarkCode",
     "ServiceProvider",
+    "ScheduleDuration",
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus",
     "SpecialtyReportTemplate",
     "SpecialtyReportTemplateField",
     "SpecialtyReportTemplateFieldOption",

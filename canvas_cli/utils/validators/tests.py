@@ -215,6 +215,8 @@ MINIMAL: dict[str, Any] = {
 }
 AGENT: dict[str, Any] = LISTING["agent"]
 VIDEO: dict[str, Any] = {"url": "https://youtu.be/dQw4w9WgXcQ", "poster": "assets/poster.png"}
+MP4: dict[str, Any] = {"sha256": "6b64b25f1397bc44e0a4f9d16a30a95e51861f7c1b88c69a4b89b7257404198b"}
+MP4_VIDEO: dict[str, Any] = {**MP4, "poster": "assets/poster.png"}
 
 ACCEPTED = {
     "full": LISTING,
@@ -238,6 +240,7 @@ ACCEPTED = {
         "video": {**VIDEO, "url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"},
     },
     "video-without-caption": {**MINIMAL, "video": VIDEO},
+    "video-sha256": {**MINIMAL, "video": {**MP4_VIDEO, "caption": "Drafting a note"}},
     "maintainer-publisher": {**MINIMAL, "maintainer": "publisher"},
     "maintainer-installer": {**MINIMAL, "maintainer": "installer"},
 }
@@ -301,6 +304,18 @@ REFUSED = {
         "video": {**VIDEO, "url": "https://youtu.be.example.com/dQw4w9WgXcQ"},
     },
     "video-extra-field": {**MINIMAL, "video": {**VIDEO, "autoplay": True}},
+    "video-url-and-sha256": {**MINIMAL, "video": {**VIDEO, **MP4}},
+    "video-sha256-uppercase": {
+        **MINIMAL,
+        "video": {**MP4_VIDEO, "sha256": MP4["sha256"].upper()},
+    },
+    "video-sha256-short": {**MINIMAL, "video": {**MP4_VIDEO, "sha256": MP4["sha256"][:63]}},
+    "video-sha256-trailing-newline": {
+        **MINIMAL,
+        "video": {**MP4_VIDEO, "sha256": MP4["sha256"] + "\n"},
+    },
+    "video-sha256-number": {**MINIMAL, "video": {**MP4_VIDEO, "sha256": 42}},
+    "video-sha256-no-poster": {**MINIMAL, "video": MP4},
     "unknown-maintainer": {**MINIMAL, "maintainer": "canvas"},
     "null-maintainer": {**MINIMAL, "maintainer": None},
     "video-long-caption": {**MINIMAL, "video": {**VIDEO, "caption": "x" * 41}},

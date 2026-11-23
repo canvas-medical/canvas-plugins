@@ -64,7 +64,7 @@ _MONTHS = {
     for name in names
 }
 _DATE_LABEL = re.compile(
-    r"^\s*(dob|d\.o\.b\.?|birth\s*date|date\s*of\s*birth|born)\s*[:#]?\s*", re.I
+    r"^\s*(dob|d\.o\.b\.?|birth\s*date|date\s*of\s*birth|born)\s*[:#]?\s*", re.IGNORECASE
 )
 # A day printed as an ordinal, such as the "9th" of "March 9th, 1971".
 _ORDINAL = re.compile(r"\b(\d{1,2})(st|nd|rd|th)\b")

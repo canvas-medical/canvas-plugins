@@ -77,8 +77,20 @@ class ConditionCoding(Coding):
     )
 
 
+class ConditionCategoryCoding(Coding):
+    """A category coding on a condition."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_conditioncategorycoding_001"
+
+    condition = models.ForeignKey(
+        Condition, on_delete=models.DO_NOTHING, related_name="category_codings"
+    )
+
+
 __exports__ = (
     "ClinicalStatus",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding",
 )

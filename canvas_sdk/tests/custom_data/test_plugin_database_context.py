@@ -495,7 +495,7 @@ class TestConfigurableThreadCount:
         assert len(errors) == 0, f"Errors: {errors}"
         assert len(results) == num_threads
 
-        for _thread_id, (expected, actual) in results.items():
+        for expected, actual in results.values():
             assert actual == expected
 
 

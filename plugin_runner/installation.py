@@ -16,7 +16,7 @@ from psycopg.rows import dict_row
 
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
-from plugin_runner.ddl import generate_plugin_migrations  # noqa: F401 — re-export
+from plugin_runner.ddl import generate_plugin_migrations  # re-export
 from plugin_runner.exceptions import (
     InvalidPluginFormat,
     NamespaceWaitTimeout,
@@ -25,15 +25,15 @@ from plugin_runner.exceptions import (
     TransientPluginInstallationError,
 )
 from plugin_runner.namespace import (
-    compute_models_hash,  # noqa: F401 — re-export
-    is_schema_manager,  # noqa: F401 — re-export
+    compute_models_hash,  # re-export
+    is_schema_manager,  # re-export
     is_valid_namespace_name,
-    mark_namespace_ready,  # noqa: F401 — re-export
+    mark_namespace_ready,  # re-export
     namespace_exists,
-    open_database_connection,  # noqa: F401 — re-export
-    setup_read_write_namespace,  # noqa: F401 — re-export
-    verify_read_namespace_access,  # noqa: F401 — re-export
-    wait_for_namespace,  # noqa: F401 — re-export
+    open_database_connection,  # re-export
+    setup_read_write_namespace,  # re-export
+    verify_read_namespace_access,  # re-export
+    wait_for_namespace,  # re-export
 )
 from settings import (
     AWS_ACCESS_KEY_ID,
@@ -529,5 +529,3 @@ def install_plugins() -> None:
                 sentry_sdk.capture_exception(e)
 
                 break
-
-    return None

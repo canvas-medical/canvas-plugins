@@ -6,6 +6,7 @@
     "Capability",
     "DEFAULT_HISTORY_CHARS",
     "EffectField",
+    "Effort",
     "FilterSpec",
     "GatewayClient",
     "GatewayError",
@@ -76,6 +77,7 @@
     "RunSubject"
   ],
   "canvas_sdk.agents.tool_loop": [
+    "Effort",
     "ToolLoopResult",
     "run_tool_loop"
   ],
@@ -292,10 +294,12 @@
     "AddConditionCommand",
     "AdjustPrescriptionCommand",
     "AllergyCommand",
+    "ApproveRefillCommand",
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
     "CustomCommand",
+    "DenyRefillCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -458,6 +462,10 @@
   "canvas_sdk.commands.commands.refill": [
     "RefillCommand"
   ],
+  "canvas_sdk.commands.commands.refill_response": [
+    "ApproveRefillCommand",
+    "DenyRefillCommand"
+  ],
   "canvas_sdk.commands.commands.remove_allergy": [
     "RemoveAllergyCommand"
   ],
@@ -511,6 +519,7 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.constants": [
+    "ApproximateDate",
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
@@ -983,6 +992,9 @@
   "canvas_sdk.effects.redirect": [
     "RedirectEffect"
   ],
+  "canvas_sdk.effects.refill_request": [
+    "UpdateRefillRequest"
+  ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
@@ -1285,28 +1297,38 @@
     "AgentRunToolCall",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction",
     "Application",
     "Appointment",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AppointmentScheduledTogether",
     "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
+    "Authorization",
+    "AuthorizationDiagnosisCode",
     "BannerAlert",
     "BannerAlertIntent",
     "BannerAlertStatus",
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BillingLineItem",
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
     "Calendar",
+    "Campaign",
     "CancelPrescription",
     "CancelPrescriptionResponse",
     "CancelPrescriptionStatus",
     "CanvasUser",
+    "CarePlan",
+    "CarePlanCoding",
+    "CarePlanIntent",
+    "CarePlanStatus",
     "CareTeamMembership",
     "CareTeamRole",
     "ChangeMedication",
@@ -1314,9 +1336,12 @@
     "ChartSectionReview",
     "ChartSectionReviewSection",
     "Claim",
+    "ClaimAssigneeEvent",
     "ClaimBannerAlert",
     "ClaimComment",
     "ClaimCoverage",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
@@ -1326,15 +1351,27 @@
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent",
     "ClaimSubmission",
     "ClaimSupervisingProvider",
     "Clipboard",
+    "CollectionStatus",
+    "CollectionStatusHistory",
     "Command",
+    "CommandEditedBy",
     "CommandMetadata",
     "CommandTypeSetting",
     "CompoundMedication",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding",
+    "ConsolidatedImmunization",
+    "ConsolidatedImmunizationCoding",
     "ContactCategory",
     "ContentType",
     "Coverage",
@@ -1348,14 +1385,23 @@
     "DeferCodingGapEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
+    "DetectedIssueMitigation",
     "Device",
+    "DeviceCoding",
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
     "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType",
     "Discount",
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem",
+    "DocumentAnnotation",
     "DocumentCoding",
     "DocumentHistoryEvent",
     "DocumentHistoryEventType",
@@ -1366,6 +1412,7 @@
     "DocumentReviewDelegation",
     "DocumentType",
     "EducationalMaterial",
+    "ElectronicRemittanceAdvice",
     "EligibilityRequest",
     "EligibilityResponse",
     "EligibilityResponseStatus",
@@ -1390,8 +1437,10 @@
     "GoogleCalendarConnection",
     "Group",
     "HistoryOfPresentIllness",
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
+    "ImagingOrderAssessment",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportTemplate",
@@ -1403,6 +1452,8 @@
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
+    "InpatientFacility",
+    "InpatientStay",
     "InstallmentPlan",
     "Instruction",
     "InstructionCoding",
@@ -1411,19 +1462,29 @@
     "IntegrationTaskChannel",
     "IntegrationTaskReview",
     "IntegrationTaskStatus",
+    "Intervention",
+    "InterventionPatient",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
+    "InterviewSendEvent",
+    "InterviewSkippedQuestion",
+    "InterviewTemplate",
+    "InterviewTemplateQuestionnaireMap",
+    "InterviewVisualFinding",
     "Invoice",
+    "InvoiceClaim",
     "LabOrder",
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
+    "LabReportProducer",
     "LabReportRemark",
     "LabReportTemplate",
     "LabReportTemplateField",
@@ -1431,14 +1492,22 @@
     "LabReportTemplateQuerySet",
     "LabReview",
     "LabTest",
+    "LabTestAOE",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "Language",
     "Letter",
     "LetterActionEvent",
+    "LetterDocument",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType",
+    "LineItemAllowed",
     "LineItemTransfer",
     "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
+    "ManualRemittanceAdvice",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -1453,16 +1522,21 @@
     "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
+    "NewRemittanceDocument",
     "Note",
     "NoteActionEvent",
     "NoteMetadata",
+    "NoteParticipant",
     "NoteStateChangeEvent",
     "NoteTask",
+    "NoteTaskLabel",
     "NoteType",
+    "NoteTypePossibleDuration",
     "Observation",
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding",
     "Organization",
     "OrganizationAddress",
@@ -1471,6 +1545,7 @@
     "Patient",
     "PatientAddress",
     "PatientAdministrativeDocument",
+    "PatientChartDocument",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
@@ -1483,10 +1558,13 @@
     "PatientGroup",
     "PatientGroupMember",
     "PatientIdentificationCard",
+    "PatientKnownLocation",
     "PatientMetadata",
+    "PatientParentGuardian",
     "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
+    "PatientTribalAffiliationCoding",
     "PaymentCard",
     "PaymentCollection",
     "PayorSpecificCharge",
@@ -1516,10 +1594,15 @@
     "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
+    "Provenance",
     "Question",
     "QuestionEnablementCondition",
     "Questionnaire",
+    "QuestionnaireItemGroup",
     "QuestionnaireQuestionMap",
+    "QuestionnaireResult",
+    "QuestionnaireStatus",
+    "QuestionnaireUseCase",
     "ReasonForVisit",
     "ReasonForVisitCoding",
     "ReasonForVisitSettingCoding",
@@ -1527,18 +1610,26 @@
     "Reference",
     "Referral",
     "ReferralActionEvent",
+    "ReferralDocument",
     "ReferralReport",
     "ReferralReportCoding",
     "ReferralReview",
     "RefillRequest",
     "RefillRequestCoding",
+    "RemarkCode",
     "RemoveAllergyEvent",
     "RemovePastMedicalHistoryEvent",
     "Report",
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "ScheduleDuration",
     "ServiceProvider",
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus",
     "Snapshot",
     "SnapshotImage",
     "SpecialtyReportTemplate",
@@ -1554,6 +1645,9 @@
     "StaffPhoto",
     "StaffRole",
     "StopMedicationEvent",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -1586,7 +1680,8 @@
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
-    "AllergyIntoleranceCoding"
+    "AllergyIntoleranceCoding",
+    "AllergyIntoleranceReaction"
   ],
   "canvas_sdk.v1.data.application": [
     "Application"
@@ -1596,11 +1691,21 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
-    "AppointmentProgressStatus"
+    "AppointmentProgressStatus",
+    "AppointmentScheduledTogether"
   ],
   "canvas_sdk.v1.data.assessment": [
     "Assessment",
     "AssessmentStatus"
+  ],
+  "canvas_sdk.v1.data.attached_document": [
+    "LetterDocument",
+    "PatientChartDocument",
+    "ReferralDocument"
+  ],
+  "canvas_sdk.v1.data.authorization": [
+    "Authorization",
+    "AuthorizationDiagnosisCode"
   ],
   "canvas_sdk.v1.data.banner_alert": [
     "BannerAlert"
@@ -1634,6 +1739,12 @@
   ],
   "canvas_sdk.v1.data.cancel_prescription_response": [
     "CancelPrescriptionResponse"
+  ],
+  "canvas_sdk.v1.data.care_plan": [
+    "CarePlan",
+    "CarePlanCoding",
+    "CarePlanIntent",
+    "CarePlanStatus"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
@@ -1676,6 +1787,14 @@
   "canvas_sdk.v1.data.claim_diagnosis_code": [
     "ClaimDiagnosisCode"
   ],
+  "canvas_sdk.v1.data.claim_event": [
+    "ClaimAssigneeEvent",
+    "ClaimCoverageEvent",
+    "ClaimCoverageEventType",
+    "ClaimSnoozeEvent",
+    "ClaimSnoozeState",
+    "ClaimStateChangeEvent"
+  ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
     "ClaimLineItemDiagnosisCode",
@@ -1683,6 +1802,11 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.claim_response": [
+    "ClaimResponse",
+    "ClaimResponseDetail",
+    "ClaimResponseStatus"
   ],
   "canvas_sdk.v1.data.clipboard": [
     "Clipboard"
@@ -1693,8 +1817,13 @@
     "DeferCodingGapEvent",
     "ValidateCodingGapEvent"
   ],
+  "canvas_sdk.v1.data.collection_status_history": [
+    "CollectionStatus",
+    "CollectionStatusHistory"
+  ],
   "canvas_sdk.v1.data.command": [
     "Command",
+    "CommandEditedBy",
     "CommandMetadata"
   ],
   "canvas_sdk.v1.data.command_type_setting": [
@@ -1722,6 +1851,7 @@
   "canvas_sdk.v1.data.condition": [
     "ClinicalStatus",
     "Condition",
+    "ConditionCategoryCoding",
     "ConditionCoding"
   ],
   "canvas_sdk.v1.data.coverage": [
@@ -1752,17 +1882,24 @@
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
-    "DetectedIssueEvidence"
+    "DetectedIssueEvidence",
+    "DetectedIssueMitigation"
   ],
   "canvas_sdk.v1.data.device": [
-    "Device"
+    "Device",
+    "DeviceCoding"
   ],
   "canvas_sdk.v1.data.diagnostic_report": [
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus"
   ],
   "canvas_sdk.v1.data.diagnostic_view": [
-    "DiagnosticView"
+    "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType"
   ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
@@ -1772,8 +1909,12 @@
   ],
   "canvas_sdk.v1.data.dme": [
     "DmeOrder",
+    "DmeOrderActionEvent",
     "DmeProduct",
     "DmeProductCodeSystem"
+  ],
+  "canvas_sdk.v1.data.document_annotation": [
+    "DocumentAnnotation"
   ],
   "canvas_sdk.v1.data.document_history_event": [
     "DocumentHistoryEvent",
@@ -1843,8 +1984,10 @@
     "HistoryOfPresentIllness"
   ],
   "canvas_sdk.v1.data.imaging": [
+    "ImagingCoding",
     "ImagingOrder",
     "ImagingOrderActionEvent",
+    "ImagingOrderAssessment",
     "ImagingReport",
     "ImagingReportCoding",
     "ImagingReportQuerySet",
@@ -1855,12 +1998,18 @@
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
+    "ConsolidatedImmunization",
+    "ConsolidatedImmunizationCoding",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationReasonsNotGiven",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.inpatient": [
+    "InpatientFacility",
+    "InpatientStay"
   ],
   "canvas_sdk.v1.data.instruction": [
     "Instruction",
@@ -1877,6 +2026,7 @@
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
+    "InvoiceClaim",
     "InvoiceRecipients",
     "InvoiceSentMeans",
     "InvoiceStatus",
@@ -1888,11 +2038,13 @@
     "LabOrderActionEvent",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabOrderSpecimen",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
     "LabReport",
+    "LabReportProducer",
     "LabReportRemark",
     "LabReportTemplate",
     "LabReportTemplateField",
@@ -1901,19 +2053,27 @@
     "LabReview",
     "LabReviewQuerySet",
     "LabTest",
+    "LabTestAOE",
+    "LabTestAOEAnswerType",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "TransmissionType"
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
     "Letter",
-    "LetterActionEvent"
+    "LetterActionEvent",
+    "LetterLanguageTemplate",
+    "LetterTemplate",
+    "LetterTemplateType"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
+    "LineItemAllowed",
     "LineItemTransfer",
     "NewLineItemAdjustment",
-    "NewLineItemPayment"
+    "NewLineItemPayment",
+    "RemarkCode"
   ],
   "canvas_sdk.v1.data.medication": [
     "Medication",
@@ -1940,18 +2100,22 @@
     "Note",
     "NoteActionEvent",
     "NoteMetadata",
+    "NoteParticipant",
     "NoteStateChangeEvent",
     "NoteStates",
     "NoteType",
     "NoteTypeCategories",
+    "NoteTypePossibleDuration",
     "NoteTypes",
-    "PracticeLocationPOS"
+    "PracticeLocationPOS",
+    "ScheduleDuration"
   ],
   "canvas_sdk.v1.data.observation": [
     "Observation",
     "ObservationCoding",
     "ObservationComponent",
     "ObservationComponentCoding",
+    "ObservationComponentValueCoding",
     "ObservationValueCoding"
   ],
   "canvas_sdk.v1.data.organization": [
@@ -1974,10 +2138,13 @@
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientIdentificationCard",
+    "PatientKnownLocation",
     "PatientMetadata",
+    "PatientParentGuardian",
     "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
+    "PatientTribalAffiliationCoding",
     "SexAtBirth"
   ],
   "canvas_sdk.v1.data.patient_administrative_document": [
@@ -2010,6 +2177,14 @@
   "canvas_sdk.v1.data.plugin_command": [
     "PluginCommand"
   ],
+  "canvas_sdk.v1.data.population_health": [
+    "Campaign",
+    "Intervention",
+    "InterventionPatient",
+    "SuspectHCC",
+    "SuspectHCCKind",
+    "SuspectHCCStatus"
+  ],
   "canvas_sdk.v1.data.portal_access_grant": [
     "PortalAccessGrant",
     "PortalAccessLevel"
@@ -2022,8 +2197,12 @@
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
     "BaseRemittanceAdvice",
+    "BaseRemittanceAdviceClaim",
     "BulkPatientPosting",
     "CoveragePosting",
+    "ElectronicRemittanceAdvice",
+    "ManualRemittanceAdvice",
+    "NewRemittanceDocument",
     "PatientPosting"
   ],
   "canvas_sdk.v1.data.practicelocation": [
@@ -2065,15 +2244,30 @@
     "ProtocolResult",
     "ProtocolResultStatus"
   ],
+  "canvas_sdk.v1.data.provenance": [
+    "Provenance",
+    "ProvenanceAction",
+    "ProvenanceParticipantType"
+  ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",
     "InterviewQuerySet",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
+    "InterviewSendEvent",
+    "InterviewSkippedQuestion",
+    "InterviewTemplate",
+    "InterviewTemplateQuestionnaireMap",
+    "InterviewVisualFinding",
     "Question",
     "QuestionEnablementCondition",
     "Questionnaire",
+    "QuestionnaireItemGroup",
     "QuestionnaireQuestionMap",
+    "QuestionnaireResult",
+    "QuestionnaireResultQuerySet",
+    "QuestionnaireStatus",
+    "QuestionnaireUseCase",
     "ResponseOption",
     "ResponseOptionSet"
   ],
@@ -2120,6 +2314,13 @@
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
   ],
+  "canvas_sdk.v1.data.service_request": [
+    "ServiceRequest",
+    "ServiceRequestCategoryCoding",
+    "ServiceRequestCoding",
+    "ServiceRequestReasonCondition",
+    "ServiceRequestStatus"
+  ],
   "canvas_sdk.v1.data.snapshot": [
     "Snapshot",
     "SnapshotImage"
@@ -2148,6 +2349,7 @@
   "canvas_sdk.v1.data.task": [
     "EventType",
     "NoteTask",
+    "NoteTaskLabel",
     "Task",
     "TaskComment",
     "TaskLabel",
