@@ -1138,6 +1138,42 @@ def test_deploy_refuses_a_non_utf8_credential_an_earlier_unpushed_commit_holds(
     assert _git(bare, "for-each-ref") == ""
 
 
+# What Windows PowerShell 5.1's `>` and `Out-File` write by default: UTF-16 LE with a BOM.
+_UTF16_SETTINGS = ('{"stripe": "' + _STRIPE_LIVE + '"}\r\n').encode("utf-16")
+
+
+def test_deploy_refuses_a_credential_in_a_utf16_file(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A UTF-16 text file holds a NUL byte after every ASCII character, and it is text."""
+    (package / "settings.json").write_bytes(_UTF16_SETTINGS)
+    _git(package, "add", "settings.json")
+    _git(package, "commit", "-m", "settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert "settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_refuses_a_utf16_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """The history check reads a UTF-16 file version too."""
+    (package / "settings.json").write_bytes(_UTF16_SETTINGS)
+    _git(package, "add", "settings.json")
+    _git(package, "commit", "-m", "add settings")
+    _git(package, "rm", "-q", "settings.json")
+    _git(package, "commit", "-m", "remove settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert "settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
 def test_deploy_ignores_a_credential_in_a_file_git_ignores(
     api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
 ) -> None:

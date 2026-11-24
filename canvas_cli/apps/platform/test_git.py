@@ -255,7 +255,7 @@ def test_unpushed_history_is_what_earlier_unpushed_commits_carry(
     package.mkdir()
     (package / "CANVAS_MANIFEST.json").write_text("{}")
     (package / "keys.json").write_text("first version\n")
-    (package / "blob.bin").write_bytes(b"\xff\xfe\x00")
+    (package / "blob.bin").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
     git.run(repo, "add", "-A")
     git.run(repo, "commit", "-m", "first")
     (package / "keys.json").write_text("second version\n")

@@ -28,6 +28,8 @@ from urllib.parse import urlparse
 import click
 import typer
 
+from canvas_cli.apps.plugin.plugin_lint import file_text
+
 REMOTE = "origin"
 
 
@@ -355,9 +357,9 @@ def unpushed_history(plugin_dir: Path) -> list[tuple[Path, str]]:
         kind, size = batch.stdout[position:header_end].split()[1:3]
         content = batch.stdout[header_end + 1 : header_end + 1 + int(size)]
         position = header_end + 1 + int(size) + 1
-        if kind != b"blob" or b"\0" in content[:8000]:
+        text = file_text(content) if kind == b"blob" else None
+        if text is None:
             continue
-        text = content.decode("utf-8", errors="replace")
         versions.append((Path(os.path.relpath(top / path, package)), text))
     return versions
 

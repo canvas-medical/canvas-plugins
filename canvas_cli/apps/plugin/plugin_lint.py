@@ -24,6 +24,7 @@ the lint can't drift the way a hand-maintained allowlist mirror would.
 from __future__ import annotations
 
 import ast
+import codecs
 import re
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -104,7 +105,9 @@ def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
             continue
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
-        except (OSError, SyntaxError):
+        # ValueError: bytes that are not UTF-8, or a NUL byte on Python 3.11. A macOS `._`
+        # AppleDouble file beside a module holds both, and the runner never imports it.
+        except (OSError, SyntaxError, ValueError):
             continue
         yield py_file, tree
 
@@ -350,16 +353,32 @@ def _looks_random(value: str) -> bool:
     )
 
 
+def file_text(content: bytes) -> str | None:
+    """The text a file holds, or None when it is binary.
+
+    UTF-16 (what Windows PowerShell's ``>`` and ``Out-File`` write) and UTF-32 hold NUL bytes
+    beside every ASCII character, so a byte-order mark is read before git's own binary test, a
+    NUL byte near the start. UTF-32's little-endian mark starts with UTF-16's, so it goes first.
+    Anything else is read as UTF-8, so one byte that is not UTF-8 does not hide the rest of the
+    file.
+    """
+    if content.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        return content.decode("utf-32", errors="replace")
+    if content.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return content.decode("utf-16", errors="replace")
+    if b"\0" in content[:8000]:
+        return None
+    return content.decode("utf-8", errors="replace")
+
+
 def _file_texts(files: Iterable[tuple[Path, Path]]) -> Iterator[tuple[Path, str]]:
     """``(path inside the package, text)`` for each text file in ``files``."""
     for path, rel in files:
         if not path.is_file():
             continue
-        content = path.read_bytes()
-        # git's own binary test: a NUL byte near the start. Anything else is read as text, so
-        # one byte that is not UTF-8 does not hide the rest of the file.
-        if b"\0" not in content[:8000]:
-            yield rel, content.decode("utf-8", errors="replace")
+        text = file_text(path.read_bytes())
+        if text is not None:
+            yield rel, text
 
 
 def credential_findings(texts: Iterable[tuple[Path, str]]) -> list[LintFinding]:

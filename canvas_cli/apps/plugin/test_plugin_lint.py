@@ -494,6 +494,24 @@ def test_binary_files_are_skipped() -> None:
     assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
 
 
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+def test_a_unicode_file_with_a_byte_order_mark_is_scanned(encoding: str) -> None:
+    """UTF-16 and UTF-32 text holds NUL bytes, but its byte-order mark says it is text."""
+    root = _plugin({})
+    text = "﻿" + f'{{"stripe": "{_STRIPE_LIVE}"}}\n'
+    (root / "settings.json").write_bytes(text.encode(encoding))
+
+    assert "hardcoded-credential" in _codes(lint_plugin(root, {}), "error")
+
+
+def test_a_python_file_that_is_not_utf8_is_skipped_and_the_rest_linted() -> None:
+    """A macOS `._` AppleDouble file beside a module neither stops the lint nor hides the module."""
+    root = _plugin({"handlers/h.py": "d = {}\nd['a'] += 1\n"})
+    (root / "handlers" / "._h.py").write_bytes(b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X\xa3")
+
+    assert "augmented-subscript" in _codes(lint_plugin(root, {}), "error")
+
+
 @pytest.mark.parametrize(
     ("source", "found"),
     [
