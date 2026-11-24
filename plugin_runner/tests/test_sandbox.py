@@ -885,64 +885,71 @@ def test_sdk_model_meta_is_readable_for_introspection() -> None:
     assert result["related"] == "Staff"
 
 
+_RELATION_OWNER = "reverse_relation_owner"
+
+
 @pytest.fixture
-def plugin_a_staff_relation() -> Iterator[None]:
-    """Install plugin_a's CustomModel with a FK to its own proxy of Staff."""
+def staff_relation_owner() -> Iterator[None]:
+    """Install a plugin whose CustomModel has a FK to its own proxy of Staff."""
     custom_staff = type(
-        "PluginAStaff",
+        "OwnerStaff",
         (Staff, ModelExtension),
-        {"__module__": "plugin_a.models", "__qualname__": "PluginAStaff"},
+        {"__module__": f"{_RELATION_OWNER}.models", "__qualname__": "OwnerStaff"},
     )
     type(
-        "PluginAAssignment",
+        "OwnerAssignment",
         (CustomModel,),
         {
-            "__module__": "plugin_a.models",
-            "__qualname__": "PluginAAssignment",
+            "__module__": f"{_RELATION_OWNER}.models",
+            "__qualname__": "OwnerAssignment",
             "provider": django_models.ForeignKey(
                 custom_staff,
                 on_delete=django_models.DO_NOTHING,
-                related_name="plugin_a_assignments",
+                related_name="owner_assignments",
             ),
         },
     )
-    register_plugin_app_config("plugin_a")
+    register_plugin_app_config(_RELATION_OWNER)
     yield
-    clear_registered_models("plugin_a")
+    # Django sets a proxy target's reverse accessor on the concrete model.
+    delattr(Staff, "owner_assignments")
+    clear_registered_models(_RELATION_OWNER)
 
 
 _STAFF_RELATIONS_SOURCE = """
 from canvas_sdk.v1.data import Staff
 
 try:
-    Staff._meta.get_field("plugin_a_assignments")
+    Staff._meta.get_field("owner_assignments")
     get_field = "found"
 except Exception as exc:
     get_field = type(exc).__name__
 
 names = {f.name for f in Staff._meta.get_fields()}
 result = {
-    "listed": "plugin_a_assignments" in names,
+    "listed": "owner_assignments" in names,
     "get_field": get_field,
     "core_relation": "default_patients" in names,
 }
 """
 
 
-@pytest.mark.usefixtures("plugin_a_staff_relation")
+@pytest.mark.usefixtures("staff_relation_owner")
 def test_other_plugins_custom_model_reverse_relation_is_hidden() -> None:
     """Another plugin's CustomModel relation to a core model is not in that model's metadata."""
-    sandbox = _sandbox_from_code(_STAFF_RELATIONS_SOURCE, "plugin_b.handlers.handler")
+    sandbox = _sandbox_from_code(
+        _STAFF_RELATIONS_SOURCE, "reverse_relation_reader.handlers.handler"
+    )
 
     result = sandbox.execute()["result"]
 
     assert result == {"listed": False, "get_field": "FieldDoesNotExist", "core_relation": True}
 
 
-@pytest.mark.usefixtures("plugin_a_staff_relation")
+@pytest.mark.usefixtures("staff_relation_owner")
 def test_own_custom_model_reverse_relation_is_visible() -> None:
     """A plugin sees its own CustomModel relation on a core model."""
-    sandbox = _sandbox_from_code(_STAFF_RELATIONS_SOURCE, "plugin_a.handlers.handler")
+    sandbox = _sandbox_from_code(_STAFF_RELATIONS_SOURCE, f"{_RELATION_OWNER}.handlers.handler")
 
     result = sandbox.execute()["result"]
 
