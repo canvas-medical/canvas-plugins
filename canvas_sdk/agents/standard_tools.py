@@ -57,6 +57,7 @@ from canvas_sdk.commands import (
     ReferCommand,
     StopMedicationCommand,
 )
+from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
 from canvas_sdk.effects.banner_alert.remove_banner_alert import RemoveBannerAlert
@@ -207,8 +208,10 @@ def _patients_record_check(
     description=(
         "Search the patient's medications with optional filters. Returns each "
         "matching medication as an object with `name` (display from the first "
-        'coding, typically RxNorm), `status` ("active" or "inactive"), '
-        "`start_date` (ISO 8601 or null), and `end_date` (ISO 8601 or null). "
+        "coding, typically RxNorm), `fdb_code` (its FDB code, the one the "
+        "prescription commands take, or null for one charted without it), `status` "
+        '("active" or "inactive"), `start_date` (ISO 8601 or null), and `end_date` '
+        "(ISO 8601 or null). "
         "Patient scope is enforced — the tool only returns records for the "
         "current agent's patient. If no filters are supplied, returns the most "
         "recent records by start_date."
@@ -252,16 +255,19 @@ def _patients_record_check(
     categories=("clinical_reads",),
     model=Medication,
     returns_description=(
-        "Array of objects with `id`, `name`, `status` (active|inactive), "
-        "`start_date` (ISO 8601 or null), `end_date` (ISO 8601 or null)."
+        "Array of objects with `id`, `name`, `fdb_code` (or null), `status` "
+        "(active|inactive), `start_date` (ISO 8601 or null), `end_date` (ISO 8601 or null)."
     ),
 )
 def _serialize_medication(medication: Any) -> dict[str, Any]:
     """Per-row serializer for find_medications."""
-    coding = next(iter(medication.codings.all()), None)
+    codings = list(medication.codings.all())
+    coding = next(iter(codings), None)
+    fdb = next((c.code for c in codings if c.system == CodeSystems.FDB and c.code), None)
     return {
         "id": str(medication.id),
         "name": coding.display if coding else "(unknown)",
+        "fdb_code": fdb,
         "status": medication.status,
         "start_date": medication.start_date.isoformat() if medication.start_date else None,
         "end_date": medication.end_date.isoformat() if medication.end_date else None,

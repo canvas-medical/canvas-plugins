@@ -93,6 +93,25 @@ def _medical_history_rows(query: str) -> list[dict[str, Any]]:
     ]
 
 
+def _clinical_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
+    """The units a medication is dispensed in, as the chart's prescribe picker offers them."""
+    return [
+        {
+            "quantity": str(unit.get("erx_quantity") or ""),
+            "description": str(unit.get("clinical_quantity_description") or ""),
+            "ncpdp_quantity_qualifier_code": str(
+                unit.get("erx_ncpdp_script_quantity_qualifier_code") or ""
+            ),
+            "ncpdp_quantity_qualifier_description": str(
+                unit.get("erx_ncpdp_script_quantity_qualifier_description") or ""
+            ),
+            "representative_ndc": str(unit.get("representative_ndc") or ""),
+        }
+        for unit in row.get("clinical_quantities") or []
+        if isinstance(unit, dict)
+    ]
+
+
 def _medication_rows(query: str) -> list[dict[str, Any]]:
     body = _get(science_http, f"/search/grouped-medication/?query={quote(query, safe='')}&limit=50")
     return [
@@ -102,6 +121,7 @@ def _medication_rows(query: str) -> list[dict[str, Any]]:
                 row.get("med_medication_description") or row.get("description_and_quantity") or ""
             ),
             "rxnorm_rxcui": str(row.get("rxnorm_rxcui") or ""),
+            "clinical_quantities": _clinical_quantities(row),
         }
         for row in _items(body)
         if row.get("med_medication_id")
@@ -217,7 +237,10 @@ CODE_SEARCHES = {
     returns_description=(
         "Array of up to 10 candidates, each with `display` and its codes: `icd10_code` "
         "(condition, medical_history), `snomed_code` (condition, family_history, "
-        "surgical_history), `fdb_code` and `rxnorm_rxcui` (medication), `concept_id` and "
+        "surgical_history), `fdb_code`, `rxnorm_rxcui` and `clinical_quantities` (medication: "
+        "the units it is dispensed in, each with `quantity`, `description`, "
+        "`ncpdp_quantity_qualifier_code`, `ncpdp_quantity_qualifier_description` and "
+        "`representative_ndc`), `concept_id` and "
         "`concept_type` (allergen), `cvx_code` and `cpt_code` (immunization), or "
         "`image_code` (imaging_study)."
     ),

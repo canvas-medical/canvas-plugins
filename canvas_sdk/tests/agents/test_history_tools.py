@@ -77,6 +77,15 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
                     "med_medication_id": 1,
                     "med_medication_description": "lisinopril 10 mg",
                     "rxnorm_rxcui": "314076",
+                    "clinical_quantities": [
+                        {
+                            "erx_quantity": "1",
+                            "clinical_quantity_description": "tablet",
+                            "erx_ncpdp_script_quantity_qualifier_code": "C48542",
+                            "erx_ncpdp_script_quantity_qualifier_description": "Tablet",
+                            "representative_ndc": "00093111101",
+                        }
+                    ],
                 },
                 {
                     "med_medication_id": 2,
@@ -91,8 +100,82 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
         "find_clinical_codes", {"kind": "medication", "query": "lisinopril 10"}, ctx={}
     )
 
-    assert rows == [{"fdb_code": "1", "display": "lisinopril 10 mg", "rxnorm_rxcui": "314076"}]
+    assert rows == [
+        {
+            "fdb_code": "1",
+            "display": "lisinopril 10 mg",
+            "rxnorm_rxcui": "314076",
+            "clinical_quantities": [
+                {
+                    "quantity": "1",
+                    "description": "tablet",
+                    "ncpdp_quantity_qualifier_code": "C48542",
+                    "ncpdp_quantity_qualifier_description": "Tablet",
+                    "representative_ndc": "00093111101",
+                }
+            ],
+        }
+    ]
     assert science.paths == ["/search/grouped-medication/?query=lisinopril%2010&limit=50"]
+
+
+def test_a_medication_without_dispense_units_has_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A row with no clinical quantities, or a malformed one, answers an empty list."""
+    _serve(
+        monkeypatch,
+        "science_http",
+        lambda path: {
+            "results": [
+                {"med_medication_id": 1, "med_medication_description": "a"},
+                {
+                    "med_medication_id": 2,
+                    "med_medication_description": "b",
+                    "clinical_quantities": [7],
+                },
+            ]
+        },
+    )
+
+    rows = standard_tools.execute(
+        "find_clinical_codes", {"kind": "medication", "query": "a"}, ctx={}
+    )
+
+    assert [row["clinical_quantities"] for row in rows] == [[], []]
+
+
+@pytest.mark.django_db
+def test_a_patients_medications_carry_their_fdb_code() -> None:
+    """The code the prescription commands take, whichever coding comes first; none without one."""
+    patient = PatientFactory.create()
+    coded = MedicationFactory.create(patient=patient)
+    for system, code in (
+        ("http://www.nlm.nih.gov/research/umls/rxnorm", "314076"),
+        ("http://www.fdbhealth.com/", "123456"),
+    ):
+        MedicationCoding.objects.create(
+            medication=coded,
+            system=system,
+            code=code,
+            display="lisinopril 10 mg tablet",
+            version="",
+            user_selected=False,
+        )
+    free_text = MedicationFactory.create(patient=patient)
+    MedicationCoding.objects.create(
+        medication=free_text,
+        system="UNSTRUCTURED",
+        code="fish oil",
+        display="fish oil",
+        version="",
+        user_selected=False,
+    )
+
+    rows, _ = _run("find_medications", patient)
+
+    assert {row["id"]: row["fdb_code"] for row in rows} == {
+        str(coded.id): "123456",
+        str(free_text.id): None,
+    }
 
 
 def test_allergens_and_vaccines_carry_the_codes_their_commands_take(
