@@ -4325,15 +4325,21 @@ def test_config_on_a_name_two_publishers_share_fails_closed(
     """S7: an ambiguous name is refused with Platform's sentence rather than written through
     credentials.ini, which would change an instance behind Platform's back.
     """
-    sentence = "Two publishers have a plugin named 'intake': acme, big-leap. Pass ?publisher=."
+    sentence = (
+        "Acme and Big Leap Health both publish intake. Name the publisher to choose one "
+        "(publisher acme or big-leap-health)."
+    )
     requests_mock.get(
         f"{API}/plugins/intake", status_code=409, json={"error": sentence, "code": "ambiguous"}
+    )
+    requests_mock.get(
+        f"{API}/instances", json={"instances": [_instance("acme-staging", "configure_plugin")]}
     )
 
     result = runner.invoke(app, ["config", "set", "intake", "A=1", "--instance", "acme-staging"])
 
     assert result.exit_code == 1, result.output
-    assert sentence in result.output
+    assert sentence in " ".join(result.output.split())
     assert "does not manage" not in result.output
     assert not [r for r in requests_mock.request_history if r.method == "PUT"]
     mock_update.assert_not_called()

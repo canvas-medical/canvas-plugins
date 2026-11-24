@@ -1402,9 +1402,18 @@ def _managed(
                 require_managed(client, slug)
             return client, plugin
         cause: str = f"Canvas Platform does not manage {name}."
-        if isinstance(plugin, PlatformError):
-            cause = plugin.message
-            if not instances:
+        if isinstance(plugin, tuple):
+            error, answered = plugin
+            # An instance the person cannot use is the more useful refusal than the
+            # publisher sentence Platform gives for it.
+            for slug in dict.fromkeys(instances):
+                require_managed(client, slug)
+            cause = error.message
+            if instances:
+                named: str = ", ".join(answered[:-1])
+                named = f"{named} and {answered[-1]}" if named else answered[-1]
+                cause += f" Canvas Platform could not choose one by the install on {named}."
+            else:
                 cause += " Name an instance with --instance to choose the one installed there."
         if not (instances or host) and configured_default_host() is None:
             raise refuse_unmanaged(cause, name)
@@ -1416,8 +1425,12 @@ def _managed(
 
 def _managed_record(
     client: PlatformClient, name: str, instances: list[str]
-) -> dict[str, Any] | PlatformError | None:
-    """Platform's record of ``name`` when Platform manages it for the person, else None.
+) -> dict[str, Any] | tuple[PlatformError, list[str]] | None:
+    """Platform's record of ``name`` when it manages it for the person, or its 409 ``ambiguous``.
+
+    The result is the record when Platform manages the plugin for the person; the 409
+    ``ambiguous`` error, with the instances that answered it, when Platform cannot choose one
+    publisher; else None.
 
     With no ``--instance`` Platform is asked once for the bare name. With ``--instance`` it is
     asked once per distinct slug, so several publishers that share the name are told apart by
@@ -1436,9 +1449,10 @@ def _managed_record(
         instances (list[str]): The ``--instance`` slugs.
 
     Returns:
-        dict[str, Any] | PlatformError | None: The plugin record; the first 409 ``ambiguous``
-            Platform answered (several publishers, none chosen), whose message names them; or
-            None when Platform does not manage it for the person.
+        dict[str, Any] | tuple[PlatformError, list[str]] | None: The plugin record; the first
+            409 ``ambiguous`` Platform answered (several publishers, none chosen), whose message
+            names them, with every instance slug that got one; or None when Platform does not
+            manage it for the person.
 
     Raises:
         typer.BadParameter: The instances' plugins have different publishers.
@@ -1446,6 +1460,7 @@ def _managed_record(
     slugs: list[str | None] = list(dict.fromkeys(instances)) or [None]
     records: dict[str | None, dict[str, Any]] = {}
     ambiguous: PlatformError | None = None
+    answered: list[str] = []
     for slug in slugs:
         try:
             found: dict[str, Any] | None = client.plugin(name, instance=slug)
@@ -1453,15 +1468,17 @@ def _managed_record(
             if error.code != "ambiguous":
                 raise
             ambiguous = ambiguous or error
+            if slug is not None:
+                answered.append(slug)
             continue
         if found is not None:
             records[slug] = found
     if ambiguous is not None:
-        return ambiguous
+        return ambiguous, answered
     if not records:
         return None
     publishers: dict[str | None, str] = {
-        slug: str(record.get("publisher") or "") for slug, record in records.items()
+        slug: _record_publisher(record) or "" for slug, record in records.items()
     }
     if len(set(publishers.values())) > 1:
         each: str = " and ".join(f"on {slug} is {pub}'s" for slug, pub in publishers.items())
@@ -1469,7 +1486,7 @@ def _managed_record(
             f"{name} {each}; run the command once per publisher, with one --instance each."
         )
     plugin: dict[str, Any] = next(iter(records.values()))
-    publisher: str = str(plugin.get("publisher") or "")
+    publisher: str = _record_publisher(plugin) or ""
     if publisher and name.startswith(f"{publisher.lower().replace('-', '_')}__"):
         return plugin
     me: dict[str, Any] = client.me()

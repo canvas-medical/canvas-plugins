@@ -1101,14 +1101,17 @@ def test_instance_chooses_between_publishers_that_share_a_name(
         force: list[str] = ["--force"] if command == ["uninstall"] else []
         result = runner.invoke(app, [*command, PDMP, *extra, "--instance", "training", *force])
 
+    assert result.exit_code == 0, result.output + result.stderr
     assert "publish pdmp_bamboo" not in result.stderr
     assert "does not manage" not in result.stderr
     mock.assert_not_called()
     if command[0] == "config":
-        # Config goes through Platform's per-instance variables, never the deployments.
-        assert any(r.url.startswith(variables) for r in requests_mock.request_history)
+        # Config goes through Platform's per-instance variables, with the publisher the
+        # instance settled; set and unset also POST a configure deployment.
+        reads: list[Any] = [r for r in requests_mock.request_history if r.url.startswith(variables)]
+        assert reads
+        assert all(r.qs == {"publisher": ["canvas-medical-dashboard-team"]} for r in reads)
     else:
-        assert result.exit_code == 0, result.output + result.stderr
         assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
             {"name": PDMP, "publisher": "canvas-medical-dashboard-team"}
         ]
@@ -1161,8 +1164,87 @@ def test_a_platform_that_ignores_instance_still_answers_with_its_sentence(
     assert result.exit_code == 1
     assert PDMP_SENTENCE in result.stderr
     assert INSTANCE_HINT not in result.stderr
+    assert PDMP_SENTENCE + " Canvas Platform could not choose one by the install on training." in (
+        result.stderr
+    )
     assert "sign out with `canvas logout`" in result.stderr
     assert "does not manage" not in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+    mock.assert_not_called()
+
+
+def test_every_instance_that_settles_nothing_is_named(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Platform's sentence asks for a publisher these commands cannot take, so the person is
+    told which instances' installs did not settle it.
+    """
+    _pdmp_ambiguous(requests_mock)
+
+    result = runner.invoke(
+        app, ["enable", PDMP, "--instance", "training", "--instance", "metamorphosis"]
+    )
+
+    assert result.exit_code == 1
+    assert (
+        "Canvas Platform could not choose one by the install on training and metamorphosis."
+        in result.stderr
+    )
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_a_mistyped_instance_on_a_shared_name_is_not_one_of_your_instances(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform drops an instance the person cannot see and answers 409 for the bare name, so
+    the refusal says the instance is not theirs instead of listing publishers.
+    """
+    _pdmp_ambiguous(requests_mock)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, PDMP, *extra, "--instance", "trainnig"])
+
+    assert result.exit_code == 1
+    assert "trainnig is not one of your instances on Canvas Platform." in result.stderr
+    assert "publish pdmp_bamboo" not in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_an_out_of_scope_instance_shows_platforms_message_and_changes_nothing(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """A deploy-scoped token naming another instance is a 403, not an ambiguity, so Platform's
+    message reaches the person and nothing is written.
+    """
+    message: str = "This token cannot act on other."
+    _pdmp_ambiguous(requests_mock)
+    requests_mock.get(
+        f"{API}/plugins/{PDMP}?instance=other",
+        status_code=403,
+        json={"code": "out_of_scope", "error": message},
+    )
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, PDMP, *extra, "--instance", "other"])
+
+    assert result.exit_code == 1
+    assert message in result.stderr
+    assert "sign out" not in result.stderr
     assert not _calls(requests_mock, "POST", f"{API}/deployments")
     mock.assert_not_called()
 
@@ -1260,13 +1342,24 @@ def test_an_instance_that_settles_nothing_refuses_the_whole_command(
         json={"error": PDMP_SENTENCE, "code": "ambiguous"},
     )
     requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.get(
+        f"{API}/instances",
+        json={
+            "instances": [
+                _instance("training", "deploy_plugin"),
+                _instance("acme", "deploy_plugin"),
+            ]
+        },
+    )
 
     result = runner.invoke(app, ["enable", PDMP, "--instance", "training", "--instance", "acme"])
 
     # Product reason: nothing on acme says which publisher's plugin belongs there, and one
     # deployment carries one publisher, so none is guessed.
     assert result.exit_code == 1
-    assert PDMP_SENTENCE in result.stderr
+    assert PDMP_SENTENCE + " Canvas Platform could not choose one by the install on acme." in (
+        result.stderr
+    )
     assert INSTANCE_HINT not in result.stderr
     assert "sign out with `canvas logout`" in result.stderr
     assert _calls(requests_mock, "GET", f"{API}/plugins/{PDMP}?instance=training")
