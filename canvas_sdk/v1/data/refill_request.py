@@ -1,6 +1,7 @@
 from typing import Self, cast
 
 from django.db import models
+from django.db.models import Exists, OuterRef
 
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
@@ -9,14 +10,25 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.prescription import Prescription, PrescriptionStatus
 
 
 class RefillRequestQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """RefillRequestQuerySet."""
 
     def pending(self) -> Self:
-        """Requests in the refill queue: not ignored and without a committed response."""
-        return self.exclude(ignored=True).exclude(response__committer__isnull=False)
+        """Requests in the refill queue: not ignored, and not answered by a sent response.
+
+        A sent response answers its request unless it failed to reach the pharmacy or was entered
+        in error, so a request whose only responses are unsent, failed or entered in error stays
+        in the queue.
+        """
+        answering = (
+            Prescription.objects.committed()
+            .filter(refill_request=OuterRef("pk"))
+            .exclude(status=PrescriptionStatus.ERROR)
+        )
+        return self.exclude(ignored=True).exclude(Exists(answering))
 
 
 class RefillRequest(TimestampedModel, IdentifiableModel):
