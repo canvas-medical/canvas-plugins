@@ -25,6 +25,7 @@ CODING = SimpleNamespace(
     name="Hemoglobin A1c",
     code="4548-4",
     system="http://loinc.org",
+    dbid=1,
 )
 
 

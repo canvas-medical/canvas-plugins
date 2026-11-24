@@ -12,7 +12,9 @@ from canvas_sdk.agents import history_tools, standard_tools
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     MedicationFactory,
+    MedicationStatementFactory,
     PatientFactory,
+    PrescriptionFactory,
 )
 from canvas_sdk.tests.agents.test_standard_tools import _allergy
 from canvas_sdk.v1.data import Condition, MedicationCoding
@@ -430,3 +432,53 @@ def test_resolving_another_patients_condition_is_refused() -> None:
         "originate_resolve_condition", patient, condition_id=str(_active_condition(patient).id)
     )
     assert len(effects) == 1
+
+
+def _coded_twice(patient: Any) -> Any:
+    """A medication with an RxNorm coding and an FDB coding, both named the same."""
+    medication = MedicationFactory.create(patient=patient)
+    for system, code in (
+        ("http://www.nlm.nih.gov/research/umls/rxnorm", "314076"),
+        ("http://www.fdbhealth.com/", "123456"),
+    ):
+        MedicationCoding.objects.create(
+            medication=medication,
+            system=system,
+            code=code,
+            display="lisinopril 10 mg tablet",
+            version="",
+            user_selected=False,
+        )
+    return medication
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("tool", "seed"),
+    [
+        ("find_medications", lambda patient, medication: None),
+        (
+            "find_prescriptions",
+            lambda patient, medication: PrescriptionFactory.create(
+                patient=patient, committer=CanvasUserFactory.create(), medication=medication
+            ),
+        ),
+        (
+            "find_medication_statements",
+            lambda patient, medication: MedicationStatementFactory.create(
+                patient=patient, committer=CanvasUserFactory.create(), medication=medication
+            ),
+        ),
+    ],
+)
+def test_a_medication_found_by_name_comes_back_once_with_its_fdb_code(
+    tool: str, seed: Callable[[Any, Any], Any]
+) -> None:
+    """Two codings carrying the name match the search once, not once per coding."""
+    patient = PatientFactory.create()
+    medication = _coded_twice(patient)
+    seed(patient, medication)
+
+    rows, _ = _run(tool, patient, name_contains="lisinopril")
+
+    assert [row["fdb_code"] for row in rows] == ["123456"]
