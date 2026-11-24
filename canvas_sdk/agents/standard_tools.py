@@ -36,7 +36,7 @@ from django.db.models import Q
 from canvas_sdk.agents.dispense_units import dispense_unit
 from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.agents.note_helpers import find_open_note
-from canvas_sdk.agents.ontology_lookup import CodeNotFound, CodeSearchUnavailable
+from canvas_sdk.agents.ontology_lookup import CodeNotFound
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
@@ -2689,7 +2689,7 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
         "distinct from `find_medications`, which is the medication list, and from "
         "`find_pharmacy_fills`, which is what pharmacies dispensed). Each result has "
         "`medication_name`, `fdb_code` (the medication's FDB code, or null for a "
-        "compound), `status` (where the prescription stands on its way to the "
+        "compound or a medication without one), `status` (where the prescription stands on its way to the "
         "pharmacy), `written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
         "`dispense_quantity`, `days_supply`, `refills` (refills allowed), `pharmacy`, "
         "`prescriber`, `dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`, "
@@ -3959,7 +3959,7 @@ def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict
         extra["quantity_to_dispense"] = Decimal(str(quantity))
     if not ndc:
         return extra
-    fdb_code = str(arguments.get("fdb_code") or "")
+    fdb_code = str(arguments.get("fdb_code") or "").strip()
     if not fdb_code:
         raise ValueError("A dispense unit needs the medication's fdb_code.")
     try:
@@ -3969,8 +3969,6 @@ def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict
             "That fdb_code is not a medication FDB has; look it up with find_clinical_codes "
             "(kind 'medication')."
         ) from exc
-    except CodeSearchUnavailable as exc:
-        raise ValueError(str(exc)) from exc
     if unit is None:
         raise ValueError(
             "That representative_ndc is not one of this medication's dispense units; "

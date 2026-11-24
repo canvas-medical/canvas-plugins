@@ -21,6 +21,13 @@ def _unit_quantity(value: Any) -> str:
         return ""
 
 
+def _ndc(value: Any) -> str:
+    """An NDC as text, whether the service sent it as a string or a number; empty for none."""
+    if isinstance(value, bool) or not isinstance(value, str | int):
+        return ""
+    return str(value).strip()
+
+
 def dispense_units(row: dict[str, Any]) -> list[dict[str, str]]:
     """A grouped medication's dispense units, each one a Prescribe command can take.
 
@@ -28,7 +35,7 @@ def dispense_units(row: dict[str, Any]) -> list[dict[str, str]]:
     """
     return [
         {
-            "representative_ndc": unit["representative_ndc"],
+            "representative_ndc": _ndc(unit.get("representative_ndc")),
             "description": str(unit.get("clinical_quantity_description") or ""),
             "unit_quantity": _unit_quantity(unit.get("erx_quantity")),
             "ncpdp_quantity_qualifier_code": str(
@@ -39,9 +46,7 @@ def dispense_units(row: dict[str, Any]) -> list[dict[str, str]]:
             ),
         }
         for unit in row.get("clinical_quantities") or []
-        if isinstance(unit, dict)
-        and isinstance(unit.get("representative_ndc"), str)
-        and unit["representative_ndc"]
+        if isinstance(unit, dict) and _ndc(unit.get("representative_ndc"))
     ]
 
 

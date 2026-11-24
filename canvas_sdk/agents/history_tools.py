@@ -313,14 +313,8 @@ def _dea_schedule(fdb_code: str) -> str | None:
     """
     try:
         medication = _get(ontologies_http, f"/fdb/grouped-medication/{quote(fdb_code, safe='')}/")
-        ndc = next(
-            (
-                str(quantity["representative_ndc"])
-                for quantity in (medication or {}).get("clinical_quantities") or []
-                if quantity.get("representative_ndc")
-            ),
-            "",
-        )
+        units = dispense_units(medication) if isinstance(medication, dict) else []
+        ndc = units[0]["representative_ndc"] if units else ""
         if not ndc:
             return None
         code = str(

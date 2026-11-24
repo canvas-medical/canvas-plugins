@@ -9,6 +9,7 @@ from urllib.parse import unquote
 import pytest
 
 from canvas_sdk.agents import dispense_units, history_tools, standard_tools
+from canvas_sdk.agents.ontology_lookup import CodeSearchUnavailable
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     MedicationFactory,
@@ -575,6 +576,15 @@ def test_a_prescription_with_no_dispense_unit_still_says_whether_to_substitute(
             "greater than 0",
         ),
         (
+            {
+                "fdb_code": "123456",
+                "representative_ndc": "00093111101",
+                "quantity_to_dispense": "30 tabs",
+            },
+            lambda path: LISINOPRIL,
+            "is not of type 'number'",
+        ),
+        (
             {"fdb_code": "999999", "representative_ndc": "00093111101"},
             lambda path: _Response({}, status_code=404),
             "not a medication FDB has",
@@ -596,7 +606,7 @@ def test_a_dispense_unit_that_cannot_be_confirmed_is_refused(
     _ontologies(monkeypatch, answer)
     patient = PatientFactory.create()
 
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises((ValueError, CodeSearchUnavailable), match=message):
         _run("originate_prescribe_medication", patient, sig="Take 1 daily", **arguments)
 
 
