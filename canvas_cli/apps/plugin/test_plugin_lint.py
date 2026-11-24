@@ -375,6 +375,162 @@ def test_tripwire_simple_api_denies_unless_authenticate_is_overridden() -> None:
     )
 
 
+# ── lint-logic: credential rules ──────────────────────────────────────────────
+
+# Fake credentials, joined at runtime so this public repository never holds one whole.
+_STRIPE_LIVE = "sk_" + "live_" + "Ab3" * 9
+_API_KEYS = {
+    "An Anthropic API key": "sk-ant-" + "api03-" + "A1b2C3" * 15,
+    "A Slack token": "xox" + "b-" + "123456789012-123456789012-" + "AbCdEf123456" * 2,
+    "A Stripe live key": _STRIPE_LIVE,
+    "A GitHub token": "gh" + "p_" + "A1b2C3d4E5f6" * 3,
+    "An OpenAI key": "sk-" + "proj-" + "A1b2C3d4" * 6,
+}
+_PRIVATE_KEY_PEM = (
+    "-----BEGIN " + "PRIVATE KEY-----\\nMIIEvQIBADANBg\\n-----END " + "PRIVATE KEY-----"
+)
+
+
+@pytest.mark.parametrize("name", list(_API_KEYS))
+def test_api_key_in_a_shipped_file_is_an_error(name: str) -> None:
+    """Each API-key shape in a shipped file blocks validation, showing only its vendor prefix."""
+    value = _API_KEYS[name]
+    root = _plugin({"config/settings.json": json.dumps({"service": {"secret": value}})})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "hardcoded-credential"]
+
+    assert [(f.severity, f.location) for f in findings] == [("error", "config/settings.json:1")]
+    assert findings[0].message.startswith(f"{name} (`{value[:4]}…`, {len(value)} characters)")
+    assert value not in findings[0].message
+
+
+@pytest.mark.parametrize("path", ["cert/client.key", "tests/cert/client.key", "cert/client.txt"])
+def test_private_key_warns_wherever_it_ships(path: str) -> None:
+    """A private key warns rather than blocks until the SDK can load an mTLS client key from a
+    secret; no part of the key is printed.
+    """
+    root = _plugin({path: f"{_PRIVATE_KEY_PEM}\n"})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "hardcoded-credential"]
+
+    assert [(f.severity, f.location) for f in findings] == [("warning", f"{path}:1")]
+    assert "mutual-TLS client key" in findings[0].message
+    assert "MIIE" not in findings[0].message
+
+
+_SERVICE_ACCOUNT_JSON = json.dumps(
+    {
+        "type": "service_account",
+        "private_key": "-----BEGIN "
+        + "PRIVATE KEY-----\n"
+        + "MIIEvQIBADANBgkqhkiG9w0BAQEF" * 3
+        + "\n",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    "path, severity",
+    [
+        ("config/service_account.json", "error"),
+        ("tests/fixtures/service_account.json", "error"),
+        ("README.md", "warning"),
+    ],
+)
+def test_a_service_account_private_key_is_an_error(path: str, severity: str) -> None:
+    """A service-account key signs a JWT, which works from a secret, so a key with a body in a
+    JSON `private_key` field blocks outside documents and points at that pattern.
+    """
+    root = _plugin({path: _SERVICE_ACCOUNT_JSON})
+    findings = [f for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert [(f.severity, f.location) for f in findings] == [(severity, f"{path}:1")]
+    assert "jwt.encode" in findings[0].message
+    assert "MIIE" not in findings[0].message
+
+
+def test_a_private_key_field_without_a_body_stays_a_warning() -> None:
+    """A header-only placeholder is no usable key."""
+    root = _plugin(
+        {"tests/fixture.json": json.dumps({"private_key": "-----BEGIN " + "PRIVATE KEY-----"})}
+    )
+    findings = [f for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert [(f.severity, "mutual-TLS client key" in f.message) for f in findings] == [
+        ("warning", True)
+    ]
+
+
+@pytest.mark.parametrize("path", ["README.md", "docs/guide.rst"])
+def test_api_key_in_a_markdown_or_rest_document_only_warns(path: str) -> None:
+    """Documents hold example keys, so an API-key shape there warns instead of blocks."""
+    root = _plugin({path: f'KEY = "{_STRIPE_LIVE}"\n'})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "hardcoded-credential"]
+
+    assert [(f.severity, f.location) for f in findings] == [("warning", f"{path}:1")]
+
+
+@pytest.mark.parametrize("path", ["tests/test_billing.py", "docs/setup.txt"])
+def test_api_key_moved_to_tests_or_text_still_blocks(path: str) -> None:
+    """Files under tests/ and .txt files ship like any other, so moving a key there is no way out."""
+    root = _plugin({path: f'KEY = "{_STRIPE_LIVE}"\n'})
+    assert "hardcoded-credential" in _codes(lint_plugin(root, {}), "error")
+
+
+def test_files_that_do_not_ship_are_not_scanned(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hidden files and what `.canvasignore` excludes never reach the package, so they are not read."""
+    root = _plugin(
+        {".env": f"KEY={_STRIPE_LIVE}\n", "scratch/notes.py": f'KEY = "{_STRIPE_LIVE}"\n'}
+    )
+    (root.parent / ".canvasignore").write_text("scratch/\n")
+    monkeypatch.chdir(root.parent)
+
+    assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
+
+
+def test_binary_files_are_skipped() -> None:
+    """A file that is not UTF-8 text is not scanned."""
+    root = _plugin({})
+    (root / "icon.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe" + _STRIPE_LIVE.encode())
+
+    assert "hardcoded-credential" not in _codes(lint_plugin(root, {}))
+
+
+@pytest.mark.parametrize(
+    ("source", "found"),
+    [
+        pytest.param('API_TOKEN = "aB3dE5fG7hJ9kL1mN3pQ"\n', True, id="random_value"),
+        pytest.param('auth_token = "' + "0123456789abcdef" * 2 + '"\n', True, id="hex_token"),
+        pytest.param('session_token = "' + "abcxyz" * 6 + '"\n', False, id="lowercase_not_hex"),
+        pytest.param('API_KEY_SECRET_NAME = "CANVAS_PLUGIN_SIMPLE_API_KEY"\n', False, id="a_name"),
+        pytest.param('TOKEN_URL = "https://auth.Example.com/oauth2/Token1"\n', False, id="a_url"),
+    ],
+)
+def test_possible_credential_warns(source: str, found: bool) -> None:
+    """A random-looking value on a secret-like name warns; secret names and URLs do not."""
+    root = _plugin({"handlers/h.py": source})
+    assert ("possible-credential" in _codes(lint_plugin(root, {}), "warning")) is found
+
+
+def test_possible_credential_prints_only_the_length() -> None:
+    """A shape-only match could be the secret itself, so no character of it is printed."""
+    root = _plugin({"handlers/h.py": 'API_TOKEN = "aB3dE5fG7hJ9kL1mN3pQ"\n'})
+    [finding] = [f for f in lint_plugin(root, {}) if f.code == "possible-credential"]
+
+    assert "(20 characters)" in finding.message
+    assert "aB3d" not in finding.message
+
+
+def test_a_hardcoded_credential_stops_validation(capsys: pytest.CaptureFixture[str]) -> None:
+    """The error severity makes `canvas validate`, and so install and deploy, exit non-zero."""
+    root = _plugin({"handlers/h.py": f'KEY = "{_STRIPE_LIVE}"\n'})
+
+    with pytest.raises(typer.Exit):
+        _lint_plugin_static(root)
+
+    out = capsys.readouterr().out
+    assert "[hardcoded-credential]" in out
+    assert _STRIPE_LIVE not in out
+
+
 def test_tripwire_requests_is_allowed_and_has_no_default_timeout() -> None:
     """`requests-no-timeout` exists because plugins may call `requests`, which waits forever by
     default. If either changes, drop the rule in plugin_lint.py.
@@ -871,3 +1027,20 @@ def test_secret_compared_with_eq_in_a_nested_function_is_reported_once() -> None
     findings = [f.location for f in lint_plugin(root, {}) if f.code == "secret-compared-with-eq"]
 
     assert findings == ["handlers/a.py:5"]
+
+
+def test_possible_credential_skips_docs_and_tests() -> None:
+    """Placeholder values belong in docs and tests, so a value matched by its shape alone is not
+    reported there.
+    """
+    root = _plugin({"GUIDE.md": '"access_token": "aB3dE5fG7hJ9kL1mN3pQ"\n'})
+    assert "possible-credential" not in _codes(lint_plugin(root, {}))
+
+
+def test_a_private_key_does_not_hide_an_api_key_on_the_same_line() -> None:
+    """A line holding both reports the private-key warning and still blocks on the API key."""
+    line = json.dumps({"private_key": "-----BEGIN " + "PRIVATE KEY-----", "stripe": _STRIPE_LIVE})
+    root = _plugin({"config/settings.json": line})
+    found = [(f.severity, f.code) for f in lint_plugin(root, {}) if "credential" in f.code]
+
+    assert sorted(found) == [("error", "hardcoded-credential"), ("warning", "hardcoded-credential")]
