@@ -13,7 +13,38 @@ from canvas_sdk.v1.data import (
     QuestionnaireResult,
     QuestionnaireStatus,
     QuestionnaireUseCase,
+    ResponseOption,
+    ResponseOptionSet,
 )
+
+
+class ResponseOptionSetFactory(factory.django.DjangoModelFactory[ResponseOptionSet]):
+    """Factory for creating a ResponseOptionSet."""
+
+    class Meta:
+        model = ResponseOptionSet
+
+    status = "AC"
+    name = factory.Faker("word")
+    code_system = "http://loinc.org"
+    code = factory.Sequence(lambda n: f"LL{1000 + n}-1")
+    type = "TXT"
+    use_in_shx = False
+
+
+class ResponseOptionFactory(factory.django.DjangoModelFactory[ResponseOption]):
+    """Factory for creating a ResponseOption."""
+
+    class Meta:
+        model = ResponseOption
+
+    status = "AC"
+    name = factory.Faker("word")
+    code = factory.Sequence(lambda n: f"LA{1000 + n}-1")
+    code_description = ""
+    value = factory.Sequence(str)
+    response_option_set = factory.SubFactory(ResponseOptionSetFactory, type="SING")
+    ordering = factory.Sequence(int)
 
 
 class QuestionFactory(factory.django.DjangoModelFactory[Question]):
