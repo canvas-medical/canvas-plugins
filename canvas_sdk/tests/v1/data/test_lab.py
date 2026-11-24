@@ -104,7 +104,7 @@ def test_with_result_tests_and_values_prefetches_test_values() -> None:
     LabValueFactory.create(report=report, test=result_test)
 
     fetched = LabReport.objects.with_result_tests_and_values().get(id=report.id)
-    test = list(fetched.tests.all())[0]
+    test = next(iter(fetched.tests.all()))
 
     with CaptureQueriesContext(connection) as ctx:
         values = list(test.values.all())

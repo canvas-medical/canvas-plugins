@@ -23,8 +23,6 @@ from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 class NotACommand:
     """A class that is not a _BaseCommand subclass."""
 
-    pass
-
 
 def test_apply_method_succeeds_with_patient_id_and_key() -> None:
     """Test that the apply method succeeds with all required fields."""

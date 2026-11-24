@@ -5,6 +5,7 @@ import pytest
 from jsonschema import ValidationError
 
 from canvas_cli.utils.validators import validate_manifest_file
+from canvas_sdk.agents.run_record import DEFAULT_RUN_SECONDS, MAX_RUN_SECONDS
 
 
 @pytest.fixture
@@ -214,6 +215,8 @@ MINIMAL: dict[str, Any] = {
 }
 AGENT: dict[str, Any] = LISTING["agent"]
 VIDEO: dict[str, Any] = {"url": "https://youtu.be/dQw4w9WgXcQ", "poster": "assets/poster.png"}
+MP4: dict[str, Any] = {"sha256": "6b64b25f1397bc44e0a4f9d16a30a95e51861f7c1b88c69a4b89b7257404198b"}
+MP4_VIDEO: dict[str, Any] = {**MP4, "poster": "assets/poster.png"}
 
 ACCEPTED = {
     "full": LISTING,
@@ -237,6 +240,9 @@ ACCEPTED = {
         "video": {**VIDEO, "url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"},
     },
     "video-without-caption": {**MINIMAL, "video": VIDEO},
+    "video-sha256": {**MINIMAL, "video": {**MP4_VIDEO, "caption": "Drafting a note"}},
+    "maintainer-publisher": {**MINIMAL, "maintainer": "publisher"},
+    "maintainer-installer": {**MINIMAL, "maintainer": "installer"},
 }
 
 VISIT = {"unit": "visit", "price_per_unit": "5.75"}
@@ -298,6 +304,20 @@ REFUSED = {
         "video": {**VIDEO, "url": "https://youtu.be.example.com/dQw4w9WgXcQ"},
     },
     "video-extra-field": {**MINIMAL, "video": {**VIDEO, "autoplay": True}},
+    "video-url-and-sha256": {**MINIMAL, "video": {**VIDEO, **MP4}},
+    "video-sha256-uppercase": {
+        **MINIMAL,
+        "video": {**MP4_VIDEO, "sha256": MP4["sha256"].upper()},
+    },
+    "video-sha256-short": {**MINIMAL, "video": {**MP4_VIDEO, "sha256": MP4["sha256"][:63]}},
+    "video-sha256-trailing-newline": {
+        **MINIMAL,
+        "video": {**MP4_VIDEO, "sha256": MP4["sha256"] + "\n"},
+    },
+    "video-sha256-number": {**MINIMAL, "video": {**MP4_VIDEO, "sha256": 42}},
+    "video-sha256-no-poster": {**MINIMAL, "video": MP4},
+    "unknown-maintainer": {**MINIMAL, "maintainer": "canvas"},
+    "null-maintainer": {**MINIMAL, "maintainer": None},
     "video-long-caption": {**MINIMAL, "video": {**VIDEO, "caption": "x" * 41}},
     "video-list": {**MINIMAL, "video": [VIDEO]},
     "video-playlist-embed": {
@@ -556,3 +576,80 @@ def test_manifest_refuses_a_dependency_on_itself(publisher: str | None) -> None:
         overrides["publisher"] = publisher
     with pytest.raises(ValidationError, match="is the plugin itself"):
         validate_manifest_file(_bundle_manifest(**overrides))
+
+
+def _agent_manifest(tools: dict) -> dict:
+    """Return a valid manifest with one agent carrying the given tool grant."""
+    return {
+        "sdk_version": "0.3.1",
+        "plugin_version": "1.0.1",
+        "name": "agent plugin",
+        "description": "An agent",
+        "components": {
+            "agents": [
+                {"class": "my_plugin.agents.chat:ChatAgent", "description": "chat", "tools": tools}
+            ]
+        },
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "README.MD",
+    }
+
+
+def test_manifest_accepts_tools_that_need_approval() -> None:
+    """An agent's grant can list tools whose changes the requester approves."""
+    validate_manifest_file(
+        _agent_manifest({"allowed": ["@task_writes"], "approve": ["@task_writes"]})
+    )
+
+
+def test_manifest_rejects_an_unknown_tools_key() -> None:
+    """A misspelled key is refused rather than ignored."""
+    with pytest.raises(ValidationError):
+        validate_manifest_file(_agent_manifest({"allowed": [], "aprove": ["create_task"]}))
+
+
+def _with_run_seconds(run_seconds: object) -> dict:
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["run_seconds"] = run_seconds
+    return manifest
+
+
+def test_manifest_accepts_run_seconds_up_to_the_ceiling() -> None:
+    """An agent may ask for more time per run, up to the platform's ceiling."""
+    validate_manifest_file(_with_run_seconds(MAX_RUN_SECONDS))
+
+
+def test_manifest_accepts_run_seconds_at_the_default() -> None:
+    """The default is the least an agent may ask for."""
+    validate_manifest_file(_with_run_seconds(DEFAULT_RUN_SECONDS))
+
+
+@pytest.mark.parametrize(
+    "run_seconds", [MAX_RUN_SECONDS + 1, DEFAULT_RUN_SECONDS - 1, 20, 0, "900"]
+)
+def test_manifest_rejects_run_seconds_outside_the_ceiling(run_seconds: object) -> None:
+    """More than the ceiling, less than the default (which leaves no model time past the
+    deadline margin), or a string fails validation.
+    """
+    with pytest.raises(ValidationError):
+        validate_manifest_file(_with_run_seconds(run_seconds))
+
+
+@pytest.mark.parametrize("level", ["status", "activity", "reply"])
+def test_manifest_accepts_a_progress_level(level: str) -> None:
+    """An agent may declare how much of a run's progress its user sees."""
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["progress"] = level
+    validate_manifest_file(manifest)
+
+
+@pytest.mark.parametrize("level", ["everything", "replies", 1])
+def test_manifest_rejects_an_unknown_progress_level(level: object) -> None:
+    """Only the levels the platform streams can be declared."""
+    manifest = _agent_manifest({"allowed": []})
+    manifest["components"]["agents"][0]["progress"] = level
+    with pytest.raises(ValidationError):
+        validate_manifest_file(manifest)

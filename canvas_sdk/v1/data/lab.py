@@ -115,10 +115,21 @@ class LabReportRemark(TimestampedModel):
     comment = models.CharField(max_length=512)
 
 
+class LabReportProducer(TimestampedModel, IdentifiableModel):
+    """A facility or person that produced a lab report, as the lab sent it (free text)."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labreportproducer_001"
+
+    unstructured_name = models.CharField(max_length=128, blank=True, default="")
+    unstructured_address = models.CharField(max_length=512, blank=True, default="")
+    report = models.ForeignKey(
+        LabReport, on_delete=models.DO_NOTHING, related_name="producers", null=True
+    )
+
+
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
-
-    pass
 
 
 LabReviewManager = BaseModelManager.from_queryset(LabReviewQuerySet)
@@ -154,8 +165,6 @@ class LabValueTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
 class LabValueQuerySet(LabValueTimeframeLookupQuerySetMixin, ValueSetLookupQuerySet):
     """LabValueQuerySet."""
 
-    pass
-
 
 class LabValue(TimestampedModel, IdentifiableModel):
     """A class representing a lab value."""
@@ -179,6 +188,27 @@ class LabValue(TimestampedModel, IdentifiableModel):
     test = models.ForeignKey(
         "LabTest", related_name="values", null=True, on_delete=models.DO_NOTHING
     )
+    performer = models.ForeignKey(
+        "v1.LabValuePerformer", on_delete=models.DO_NOTHING, related_name="values", null=True
+    )
+
+
+class LabValuePerformer(TimestampedModel, IdentifiableModel):
+    """The lab that performed a lab value, with its address and contact."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labvalueperformer_001"
+
+    name = models.CharField(max_length=100)
+    ordinal = models.IntegerField(default=0)
+    line1 = models.CharField(max_length=255, blank=True, default="")
+    line2 = models.CharField(max_length=255, blank=True, default="")
+    city = models.CharField(max_length=255, blank=True, default="")
+    state_code = models.CharField(max_length=2, blank=True, default="")
+    postal_code = models.CharField(max_length=255, blank=True, default="")
+    contact_name = models.CharField(max_length=255, blank=True, default="")
+    phone = models.CharField(max_length=10, blank=True, default="")
+    email = models.CharField(max_length=255, blank=True, default="")
 
 
 class LabValueCoding(TimestampedModel):
@@ -262,6 +292,28 @@ class LabOrder(AuditedModel, IdentifiableModel):
     reports = models.ManyToManyField("v1.LabReport", through="v1.LabTest")
 
 
+class LabOrderSpecimen(AuditedModel, IdentifiableModel):
+    """A specimen collected for a lab order."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_laborderspecimen_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
+    order = models.ForeignKey(
+        "v1.LabOrder", on_delete=models.DO_NOTHING, related_name="specimens", null=True
+    )
+    identifier = models.CharField(max_length=2, default="")
+    specimen_type = models.CharField(max_length=500, default="")
+    quantity = models.FloatField(null=True)
+    units = models.CharField(max_length=50, default="")
+    source = models.CharField(max_length=255, default="")
+    source_additional = models.CharField(max_length=255, default="")
+    collection_date_time = models.DateTimeField(null=True)
+    # The body-site table has no SDK model, so its key is exposed as a plain column.
+    body_site_id = models.IntegerField(null=True)
+
+
 class LabOrderReason(AuditedModel):
     """A class representing a lab order reason."""
 
@@ -338,6 +390,37 @@ class LabTest(TimestampedModel, IdentifiableModel):
 
     def __str__(self) -> str:
         return f"{self.ontology_test_name}: f{self.ontology_test_code}"
+
+
+class LabTestAOEAnswerType(models.TextChoices):
+    """The type of an ask-at-order-entry answer."""
+
+    STRING = "string", "string"
+    DATE = "date", "date"
+    CHOICE = "choice", "choice"
+    BOOLEAN = "boolean", "boolean"
+    OPEN_CHOICE = "open-choice", "open-choice"
+
+
+class LabTestAOE(TimestampedModel, IdentifiableModel):
+    """An ask-at-order-entry (AOE) answer on a lab test.
+
+    The answer is in ``boolean_value``, ``date_value`` or ``text_value`` depending on
+    ``aoe_type``; a date that could not be parsed is kept in ``text_value``.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_labtestaoe_001"
+
+    test = models.ForeignKey(LabTest, on_delete=models.DO_NOTHING, related_name="aoes", null=True)
+    code = models.CharField(max_length=20, null=True)
+    aoe_type = models.CharField(
+        max_length=30, choices=LabTestAOEAnswerType.choices, default=LabTestAOEAnswerType.STRING
+    )
+    boolean_value = models.BooleanField(null=True)
+    text_value = models.TextField(null=True)
+    date_value = models.DateField(null=True)
+    display = models.TextField(null=True)
 
 
 class LabPartner(TimestampedModel, IdentifiableModel):
@@ -494,14 +577,19 @@ __exports__ = (
     "TransmissionType",
     "LabReport",
     "LabReportRemark",
+    "LabReportProducer",
     "LabReviewQuerySet",
     "LabReview",
     "LabValue",
     "LabValueCoding",
+    "LabValuePerformer",
     "LabOrder",
+    "LabOrderSpecimen",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabTest",
+    "LabTestAOE",
+    "LabTestAOEAnswerType",
     "LabPartner",
     "LabPartnerTest",
     "LabPartnerTestQuestion",

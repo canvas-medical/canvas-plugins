@@ -1,3 +1,6 @@
+from canvas_sdk.agents.progress import PROGRESS_LEVELS
+from canvas_sdk.agents.run_record import DEFAULT_RUN_SECONDS, MAX_RUN_SECONDS
+
 # A video's YouTube address: a watch link, a youtu.be link or an embed link, each naming
 # an 11-character id, never the embed words for a playlist or a live stream. No named
 # groups, since editors read the schema as ECMA regex.
@@ -55,6 +58,7 @@ manifest_schema = {
                 "views": {"$ref": "#/$defs/component"},
                 "applications": {"$ref": "#/$defs/applications"},
                 "questionnaires": {"$ref": "#/$defs/questionnaires"},
+                "agents": {"$ref": "#/$defs/agent"},
             },
             "additionalProperties": False,
             "minProperties": 1,
@@ -194,6 +198,56 @@ manifest_schema = {
                 "additionalProperties": False,
             },
         },
+        "agent": {
+            # Same shape as `component` plus an optional `tools` block:
+            # `allowed` lists tool names and `@category` groups, and `denied`
+            # subtracts from them. The plugin runner's `RunAgent` RPC resolves
+            # both against the agent's registry (`ToolRegistry.resolve_allowed`)
+            # and swaps in a scoped registry before any lifecycle hook runs.
+            # An entry without `tools.allowed` grants no tools, and
+            # the agent may return only effect types its granted tools declare.
+            # `run_seconds` asks for more than the default time per run, up to
+            # MAX_RUN_SECONDS; a run above the default is extended, and the plugin
+            # runner admits only a few of those at once. `progress` is the most of
+            # a run's progress the person waiting on it sees: "status" (heartbeats,
+            # the default), "activity" (adds a label per tool call), or "reply" (adds
+            # the reply text as it is written).
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "class": {"type": "string"},
+                    "description": {"type": "string"},
+                    "meta": {"type": "object"},
+                    "run_seconds": {
+                        "type": "integer",
+                        "minimum": DEFAULT_RUN_SECONDS,
+                        "maximum": MAX_RUN_SECONDS,
+                    },
+                    "progress": {"type": "string", "enum": list(PROGRESS_LEVELS)},
+                    "tools": {
+                        "type": "object",
+                        "properties": {
+                            "allowed": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "denied": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "approve": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "required": ["class", "description"],
+                "additionalProperties": False,
+            },
+        },
         "applications": {
             "type": "array",
             "items": {
@@ -302,6 +356,11 @@ manifest_schema = {
                     "description": "'agent' calls a model and acts with latitude; 'plugin' is deterministic.",
                     "enum": ["agent", "plugin"],
                     "default": "plugin",
+                },
+                "maintainer": {
+                    "description": "Who maintains the plugin: 'publisher', its publisher, or 'installer', each organization that installs it.",
+                    "enum": ["publisher", "installer"],
+                    "default": "publisher",
                 },
                 "category": {
                     "enum": [
@@ -412,9 +471,16 @@ manifest_schema = {
                     "pattern": r"^(?!/)(?!.*\.\.)[^\\]+\.(?:png|jpe?g|webp)$",
                 },
                 "video": {
-                    "description": "A YouTube video the plugin's page plays in its screenshot row, first, behind the poster image.",
+                    "description": "The video the plugin's page plays in its screenshot row, first, behind the poster image: an MP4 Canvas holds, named by its sha256, or a YouTube url.",
                     "type": "object",
                     "properties": {
+                        "sha256": {
+                            "description": "The MP4's SHA-256 in 64 lowercase hex digits. Canvas uploads the MP4 to Platform.",
+                            "type": "string",
+                            "pattern": r"^[0-9a-f]{64}$",
+                            # `$` also matches before a final newline in Python.
+                            "maxLength": 64,
+                        },
                         "url": {
                             "description": "A YouTube watch, youtu.be or embed link, over https. The video must allow embedding.",
                             "type": "string",
@@ -427,7 +493,8 @@ manifest_schema = {
                         },
                         "caption": {"type": "string", "maxLength": 40},
                     },
-                    "required": ["url", "poster"],
+                    "required": ["poster"],
+                    "oneOf": [{"required": ["sha256"]}, {"required": ["url"]}],
                     "additionalProperties": False,
                 },
                 "setup_guide": {

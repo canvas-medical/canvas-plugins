@@ -6,6 +6,7 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class DiagnosticReportStatus(models.TextChoices):
@@ -55,7 +56,31 @@ class DiagnosticReport(TimestampedModel, IdentifiableModel):
     )
 
 
+class DiagnosticReportCategoryCoding(Coding):
+    """A category coding on a diagnostic report."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_diagnosticreportcategorycoding_001"
+
+    diagnostic_report = models.ForeignKey(
+        DiagnosticReport, on_delete=models.DO_NOTHING, related_name="category_codings"
+    )
+
+
+class DiagnosticReportCodeCoding(Coding):
+    """A code coding on a diagnostic report."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_diagnosticreportcodecoding_001"
+
+    diagnostic_report = models.ForeignKey(
+        DiagnosticReport, on_delete=models.DO_NOTHING, related_name="codings"
+    )
+
+
 __exports__ = (
     "DiagnosticReport",
+    "DiagnosticReportCategoryCoding",
+    "DiagnosticReportCodeCoding",
     "DiagnosticReportStatus",
 )

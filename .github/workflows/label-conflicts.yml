@@ -1,11 +1,13 @@
 name: "Label conflicts"
 on:
   push:
-  pull_request_target:
+  pull_request:
     types: [synchronize]
 
 jobs:
   main:
+    # fork PRs get a read-only token and cannot add labels
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check for and label conflicts

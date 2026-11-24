@@ -476,8 +476,8 @@ def generate_plugin_migrations(
                             f"namespace."
                         )
 
-    except Exception as e:
+    except Exception:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
-        raise e
+        raise
 
     return discovered_models

@@ -17,8 +17,6 @@ version = importlib.metadata.version("canvas")
 class AddClaimLabel(_AddClaimLabel):
     """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::add_labels."""
 
-    pass
-
 
 @deprecation.deprecated(
     deprecated_in="0.95.0",
@@ -28,8 +26,6 @@ class AddClaimLabel(_AddClaimLabel):
 )
 class RemoveClaimLabel(_RemoveClaimLabel):
     """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::remove_labels."""
-
-    pass
 
 
 __all__ = __exports__ = (

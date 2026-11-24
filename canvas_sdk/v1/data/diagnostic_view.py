@@ -16,4 +16,42 @@ class DiagnosticView(TimestampedModel, IdentifiableModel):
     tags = models.CharField("Search tags", max_length=500, default="", blank=True)
 
 
-__exports__ = ("DiagnosticView",)
+class DiagnosticViewElementDataType(models.TextChoices):
+    """The kind of value a diagnostic view element reads."""
+
+    LAB_VALUE = "LabValue", "lab value"
+    QUESTIONNAIRE_SCORE = "QuestionnaireScore", "questionnaire score"
+
+
+class DiagnosticViewElementCodingSystem(models.TextChoices):
+    """The coding system of a diagnostic view element's code."""
+
+    LOINC = "loinc", "loinc"
+    SNOMED = "snomed", "snomed"
+    ICD10 = "icd-10", "icd-10"
+    CPT = "cpt", "cpt"
+    CANVAS = "canvas", "canvas"
+    INTERNAL = "internal", "internal"
+
+
+class DiagnosticViewElement(TimestampedModel):
+    """A lab test or questionnaire score shown as one row of a DiagnosticView."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_diagnosticviewelement_001"
+
+    view = models.ForeignKey(DiagnosticView, on_delete=models.CASCADE, related_name="elements")
+    data_type = models.CharField(max_length=100, choices=DiagnosticViewElementDataType.choices)
+    system = models.CharField(max_length=20, choices=DiagnosticViewElementCodingSystem.choices)
+    code = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
+    units = models.CharField(max_length=30, default="", blank=True)
+    ordering = models.IntegerField(default=0)
+
+
+__exports__ = (
+    "DiagnosticView",
+    "DiagnosticViewElement",
+    "DiagnosticViewElementCodingSystem",
+    "DiagnosticViewElementDataType",
+)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2] / "tools"))
 
-from generate_sandbox_allowlists import static_constructs  # noqa: E402
+from generate_sandbox_allowlists import static_constructs
 
 HANDLER = """
 from canvas_sdk.effects import Effect

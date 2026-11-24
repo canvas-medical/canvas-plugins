@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Self, cast
 
 from django.db import models
 
@@ -13,6 +13,10 @@ from canvas_sdk.v1.data.coding import Coding
 
 class RefillRequestQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """RefillRequestQuerySet."""
+
+    def pending(self) -> Self:
+        """Requests in the refill queue: not ignored and without a committed response."""
+        return self.exclude(ignored=True).exclude(response__committer__isnull=False)
 
 
 class RefillRequest(TimestampedModel, IdentifiableModel):

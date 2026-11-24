@@ -1,10 +1,17 @@
 import pytest
 
 from canvas_sdk.test_utils.factories import (
+    DiagnosticReportCategoryCodingFactory,
+    DiagnosticReportCodeCodingFactory,
     DiagnosticReportFactory,
     LabReportFactory,
 )
-from canvas_sdk.v1.data.diagnostic_report import DiagnosticReport, DiagnosticReportStatus
+from canvas_sdk.v1.data.diagnostic_report import (
+    DiagnosticReport,
+    DiagnosticReportCategoryCoding,
+    DiagnosticReportCodeCoding,
+    DiagnosticReportStatus,
+)
 
 
 @pytest.mark.django_db
@@ -44,3 +51,45 @@ def test_diagnostic_report_for_patient_filters_by_subject() -> None:
     results = list(DiagnosticReport.objects.for_patient(report.patient.id))
 
     assert [r.id for r in results] == [matching.id]
+
+
+@pytest.mark.django_db
+def test_diagnostic_report_category_codings_return_only_its_codings() -> None:
+    """DiagnosticReport.category_codings returns only that report's codings."""
+    parent = DiagnosticReportFactory.create()
+    coding = DiagnosticReportCategoryCodingFactory.create(diagnostic_report=parent)
+    DiagnosticReportCategoryCodingFactory.create()
+
+    assert list(parent.category_codings.all()) == [coding]
+
+
+@pytest.mark.django_db
+def test_diagnostic_report_category_coding_resolves_to_its_diagnostic_report() -> None:
+    """The diagnostic_report foreign key resolves to the parent DiagnosticReport."""
+    parent = DiagnosticReportFactory.create()
+    coding = DiagnosticReportCategoryCodingFactory.create(diagnostic_report=parent)
+
+    fetched = DiagnosticReportCategoryCoding.objects.get(dbid=coding.dbid)
+
+    assert fetched.diagnostic_report == parent
+
+
+@pytest.mark.django_db
+def test_diagnostic_report_codings_return_only_its_codings() -> None:
+    """DiagnosticReport.codings returns only that report's codings."""
+    parent = DiagnosticReportFactory.create()
+    coding = DiagnosticReportCodeCodingFactory.create(diagnostic_report=parent)
+    DiagnosticReportCodeCodingFactory.create()
+
+    assert list(parent.codings.all()) == [coding]
+
+
+@pytest.mark.django_db
+def test_diagnostic_report_code_coding_resolves_to_its_diagnostic_report() -> None:
+    """The diagnostic_report foreign key resolves to the parent DiagnosticReport."""
+    parent = DiagnosticReportFactory.create()
+    coding = DiagnosticReportCodeCodingFactory.create(diagnostic_report=parent)
+
+    fetched = DiagnosticReportCodeCoding.objects.get(dbid=coding.dbid)
+
+    assert fetched.diagnostic_report == parent

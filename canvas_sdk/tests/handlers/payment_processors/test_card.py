@@ -42,31 +42,25 @@ class DummyCardProcessor(CardPaymentProcessor):
 
     def payment_form(self, patient: Patient | None = None) -> PaymentProcessorForm:  # type: ignore[empty-body]
         """Return a mock payment form."""
-        pass
 
     def add_card_form(self, patient: Patient | None = None) -> PaymentProcessorForm:  # type: ignore[empty-body]
         """Return a mock form for adding a card."""
-        pass
 
     def charge(  # type: ignore[empty-body]
         self, amount: Decimal, token: str, patient: Patient | None = None, **kwargs: Any
     ) -> CardTransaction:
         """Return a mock credit card transaction."""
-        pass
 
     def payment_methods(self, patient: Patient | None = None) -> list[PaymentMethod]:  # type: ignore[empty-body]
         """Return a list of mock payment methods."""
-        pass
 
     def add_payment_method(  # type: ignore[empty-body]
         self, token: str, patient: Patient, **kwargs: Any
     ) -> AddPaymentMethodResponse:
         """Return a mock response for adding a payment method."""
-        pass
 
     def remove_payment_method(self, token: str, patient: Patient) -> RemovePaymentMethodResponse:  # type: ignore[empty-body]
         """Return a mock response for removing a payment method."""
-        pass
 
 
 @pytest.mark.parametrize(

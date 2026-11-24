@@ -17,6 +17,10 @@ dist/
 # SQLite databases
 *.sqlite3
 
+# Coverage data
+.coverage
+.coverage.*
+
 profile-imports-*.txt
 
 # mypy cache

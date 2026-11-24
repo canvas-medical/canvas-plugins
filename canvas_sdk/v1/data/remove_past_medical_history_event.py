@@ -19,8 +19,6 @@ class RemovePastMedicalHistoryEventQuerySet(
 ):
     """RemovePastMedicalHistoryEventQuerySet."""
 
-    pass
-
 
 RemovePastMedicalHistoryEventManager = BaseModelManager.from_queryset(
     RemovePastMedicalHistoryEventQuerySet

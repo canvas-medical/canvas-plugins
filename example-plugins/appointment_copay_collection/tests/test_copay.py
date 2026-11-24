@@ -100,7 +100,7 @@ def test_copay_rows_statuses(patient: Patient, make_appointment: AppointmentMake
 
     rows = copay_rows(
         patient.id,
-        {"paid": Decimal("25"), "not-billable": Decimal("25"), "no-claim": Decimal("25")},
+        {"paid": Decimal(25), "not-billable": Decimal(25), "no-claim": Decimal(25)},
     )
 
     assert [(row["appointment"].note_type.code, row["status"], row["amount"]) for row in rows] == [

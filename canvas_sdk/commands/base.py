@@ -114,6 +114,13 @@ class _BaseCommand(TrackableFieldsModel):
                 annotation_args[0],
             )
 
+        # An Annotated type (``ApproximateDate``) reports the first type it wraps, so a field
+        # that also takes a partial-date string still reads as a ``date``.
+        if get_origin(annotation) is Annotated:
+            annotation = get_args(annotation)[0]
+            if get_origin(annotation) in (UnionType, Union):
+                annotation = get_args(annotation)[0]
+
         if type(annotation) is EnumType:
             return str
 

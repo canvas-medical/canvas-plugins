@@ -23,8 +23,6 @@ MAX_BULK_SIZE = 10_000
 class BulkOperationTooLarge(ValueError):
     """Raised when a bulk operation exceeds the maximum allowed size."""
 
-    pass
-
 
 class ModelMetaclass(ModelBase):
     """A metaclass for configuring data models."""
@@ -50,13 +48,9 @@ class ModelMetaclass(ModelBase):
 class NamespaceWriteDenied(Exception):
     """Raised when a write operation is attempted without write access."""
 
-    pass
-
 
 class FieldValueTooLarge(ValueError):
     """Raised when a field value exceeds the maximum allowed size."""
-
-    pass
 
 
 def _check_write_permission() -> None:
@@ -469,8 +463,6 @@ class BaseModelManager(models.Manager):
 class BaseQuerySet(models.QuerySet):
     """A base QuerySet inherited from Django's model.Queryset."""
 
-    pass
-
 
 if TYPE_CHECKING:
     # For type checking: Define the Protocol with method signatures
@@ -627,8 +619,6 @@ class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
 class CommittableQuerySet(CommittableQuerySetMixin, BaseQuerySet):
     """A queryset for committable objects."""
 
-    pass
-
 
 CommittableModelManager = BaseModelManager.from_queryset(CommittableQuerySet)
 
@@ -636,19 +626,13 @@ CommittableModelManager = BaseModelManager.from_queryset(CommittableQuerySet)
 class ValueSetLookupQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """A class that includes methods for looking up value sets."""
 
-    pass
-
 
 class ValueSetLookupByNameQuerySet(ValueSetLookupByNameQuerySetMixin, BaseQuerySet):
     """A class that includes methods for looking up value sets by name."""
 
-    pass
-
 
 class ValueSetTimeframeLookupQuerySet(TimeframeLookupQuerySetMixin, ValueSetLookupQuerySet):
     """A class that includes methods for looking up value sets and using timeframes."""
-
-    pass
 
 
 class ModelExtensionMetaClass(ModelMetaclass):

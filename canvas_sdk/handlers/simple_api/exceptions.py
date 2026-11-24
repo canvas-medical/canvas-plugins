@@ -8,8 +8,6 @@ class SimpleAPIException(Exception):
 class AuthenticationError(SimpleAPIException):
     """Base class for all authentication exceptions."""
 
-    pass
-
 
 class NoAuthorizationHeaderError(AuthenticationError):
     """Exception class for requests without an Authorization header."""

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 import factory
@@ -6,8 +7,10 @@ from canvas_sdk.v1.data import (
     Note,
     NoteActionEvent,
     NoteMetadata,
+    NoteParticipant,
     NoteStateChangeEvent,
     NoteType,
+    ScheduleDuration,
 )
 from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.note import NoteStates
@@ -70,6 +73,16 @@ class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):
     display = factory.Faker("sentence", nb_words=1)
 
 
+class ScheduleDurationFactory(factory.django.DjangoModelFactory[ScheduleDuration]):
+    """Factory for creating a ScheduleDuration."""
+
+    class Meta:
+        model = ScheduleDuration
+
+    duration = factory.Sequence(lambda n: timedelta(minutes=15 * (n + 1)))
+    is_appointment_duration_option = True
+
+
 class NoteActionEventFactory(factory.django.DjangoModelFactory[NoteActionEvent]):
     """Factory for creating NoteActionEvent."""
 
@@ -84,3 +97,16 @@ class NoteActionEventFactory(factory.django.DjangoModelFactory[NoteActionEvent])
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     fax = factory.SubFactory("canvas_sdk.test_utils.factories.FaxFactory")
     note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
+
+
+class NoteParticipantFactory(factory.django.DjangoModelFactory[NoteParticipant]):
+    """Factory for creating a NoteParticipant."""
+
+    class Meta:
+        model = NoteParticipant
+
+    note = factory.SubFactory(NoteFactory)
+    patient_contact_person = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.PatientContactPersonFactory",
+        patient=factory.SelfAttribute("..note.patient"),
+    )

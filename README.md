@@ -1,5 +1,3 @@
-[![codecov](https://codecov.io/gh/canvas-medical/canvas-plugins/graph/badge.svg?token=P8JJUOJ8FH)](https://codecov.io/gh/canvas-medical/canvas-plugins)
-
 ### Getting Started
 
 `pip install canvas`

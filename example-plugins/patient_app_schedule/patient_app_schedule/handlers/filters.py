@@ -64,7 +64,7 @@ class Providers(BaseHandler):
             return self._create_effect(filtered_providers)
 
         except Exception as e:
-            log.error(f"Error filtering providers by care team: {str(e)}")
+            log.error(f"Error filtering providers by care team: {e!s}")
             # Fail gracefully - return all providers on error
             return self._create_effect(providers)
 
@@ -85,7 +85,7 @@ class Providers(BaseHandler):
             return set(care_team_members)
 
         except Exception as e:
-            log.error(f"Error fetching care team members: {str(e)}")
+            log.error(f"Error fetching care team members: {e!s}")
             return set()
 
     def _create_effect(self, providers: list[dict[str, Any]]) -> list[Effect]:
@@ -159,7 +159,7 @@ class Locations(BaseHandler):
             return self._create_effect(filtered_locations)
 
         except Exception as e:
-            log.error(f"Error filtering locations by appointment history: {str(e)}")
+            log.error(f"Error filtering locations by appointment history: {e!s}")
             # Fail gracefully - return all locations on error
             return self._create_effect(locations)
 
@@ -185,7 +185,7 @@ class Locations(BaseHandler):
             return {str(location_id) for location_id in location_ids}
 
         except Exception as e:
-            log.error(f"Error fetching patient appointment locations: {str(e)}")
+            log.error(f"Error fetching patient appointment locations: {e!s}")
             return set()
 
     def _create_effect(self, locations: list[dict[str, Any]]) -> list[Effect]:

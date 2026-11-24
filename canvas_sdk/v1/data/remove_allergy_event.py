@@ -19,8 +19,6 @@ class RemoveAllergyEventQuerySet(
 ):
     """RemoveAllergyEventQuerySet."""
 
-    pass
-
 
 RemoveAllergyEventManager = BaseModelManager.from_queryset(RemoveAllergyEventQuerySet)
 

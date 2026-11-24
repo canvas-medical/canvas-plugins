@@ -83,8 +83,6 @@ class Referral(AuditedModel, IdentifiableModel):
 class ReferralReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for referral reviews."""
 
-    pass
-
 
 ReferralReviewManager = BaseModelManager.from_queryset(ReferralReviewQuerySet)
 
@@ -137,6 +135,11 @@ class ReferralReport(TimestampedModel, IdentifiableModel, DelegatedDocumentMixin
     )
     referral = models.ForeignKey(
         Referral, on_delete=models.DO_NOTHING, related_name="reports", null=True
+    )
+    # The review of the incoming fax or upload the report was filed from; its task holds
+    # the report's file.
+    integration_task_review = models.ForeignKey(
+        "v1.IntegrationTaskReview", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
     specialty = models.CharField(max_length=250)
     review = models.ForeignKey(

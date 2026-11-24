@@ -97,6 +97,9 @@ class TaskLabel(TimestampedModel, IdentifiableModel):
         db_table = "canvas_sdk_data_api_tasklabel_001"
 
     tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
+    note_tasks = models.ManyToManyField(
+        "v1.NoteTask", related_name="labels", through="v1.NoteTaskLabel"
+    )
     claims = models.ManyToManyField("v1.Claim", related_name="labels", through="v1.ClaimLabel")
     appointments = models.ManyToManyField(
         "v1.Appointment", related_name="labels", through="v1.AppointmentLabel"
@@ -163,6 +166,16 @@ class NoteTask(AuditedModel, IdentifiableModel):
     internal_comment = models.TextField(blank=True, default="")
 
 
+class NoteTaskLabel(Model):
+    """M2M for NoteTask -> TaskLabels."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_userselectedtasklabel_note_tasks_001"
+
+    task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING, related_name="+")
+    note_task = models.ForeignKey(NoteTask, on_delete=models.DO_NOTHING, related_name="+")
+
+
 class TaskMetadata(MetadataModel):
     """TaskMetadata."""
 
@@ -176,6 +189,7 @@ __exports__ = (
     "TaskType",
     "EventType",
     "NoteTask",
+    "NoteTaskLabel",
     "TaskStatus",
     "TaskLabelModule",
     "TaskPriority",

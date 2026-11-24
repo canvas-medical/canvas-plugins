@@ -1,4 +1,3 @@
-from datetime import date
 from typing import Literal
 from uuid import UUID
 
@@ -6,7 +5,7 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.commands.assessment_link import _AssessmentLinkedCommand
-from canvas_sdk.commands.constants import Coding
+from canvas_sdk.commands.constants import ApproximateDate, Coding
 from canvas_sdk.v1.data import NoteType, ReasonForVisitSettingCoding
 
 
@@ -17,7 +16,7 @@ class FollowUpCommand(_AssessmentLinkedCommand):
         key = "followUp"
 
     structured: bool = False
-    requested_date: date | None = None
+    requested_date: ApproximateDate | None = None
     note_type_id: UUID | str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "note_type"}
     )

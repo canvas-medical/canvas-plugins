@@ -1,0 +1,1795 @@
+import copy
+import json
+import re
+import threading
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from datetime import datetime
+from types import SimpleNamespace
+from typing import Any, Protocol
+from uuid import uuid4
+
+from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry
+
+from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.agents.approval import PROPOSAL_EFFECT_TYPE, proposal_id, propose
+from canvas_sdk.agents.capabilities import Capability
+from canvas_sdk.agents.progress import DEFAULT_PROGRESS_LABEL
+from canvas_sdk.v1.data.command_type_setting import CommandTypeSetting
+
+# The most of one tool's result the model is sent, unless the tool registers its own
+# limit. The history window cannot drop the current turn's results, so an uncapped
+# result could push a call past the context window.
+DEFAULT_TOOL_RESULT_CHARS = 50_000
+# The highest limit a tool may register: about 50k tokens, which holds one patient's
+# full set of outside records. A larger result costs tokens on every later call in the
+# run, so a tool that needs more should page its results instead.
+MAX_TOOL_RESULT_CHARS = 200_000
+# A tool name the Messages API accepts.
+TOOL_NAME = re.compile(r"[a-zA-Z0-9_-]{1,64}")
+
+
+def _effect_type_name(effect_class: type, effect_method: str) -> str:
+    """The ``EffectType`` name ``effect_class(...).<effect_method>()`` produces.
+
+    ``apply()`` stamps ``Meta.effect_type``, an ``EffectType`` value. The note-family
+    verbs (``create()``, ``edit()``, ...) stamp ``"<VERB>_<Meta.effect_type>"``,
+    where ``Meta.effect_type`` is a bare resource name such as ``"MESSAGE"``.
+    """
+    effect_type = effect_class.Meta.effect_type  # type: ignore[attr-defined]
+    if effect_method == "apply":
+        return EffectType.Name(effect_type)
+    return f"{effect_method.upper()}_{effect_type}"
+
+
+class ToolExecutor(Protocol):
+    """Executor signature: ``fn(arguments, *, ctx)`` returning a JSON-serializable value.
+
+    ``arguments`` is the model's ``tool_use.input`` dict — values the model chose.
+    ``ctx`` is the platform's per-run context (``patient_id``, ``note_id``,
+    ``effects`` accumulator, etc.) — values the model never sees and never chooses.
+    """
+
+    def __call__(self, arguments: dict[str, Any], *, ctx: dict[str, Any]) -> Any:
+        """Run the tool with model-supplied ``arguments`` and platform-supplied ``ctx``."""
+        ...
+
+
+@dataclass(frozen=True)
+class EffectField:
+    """One field on the argument schema for an effect tool.
+
+    Used by :meth:`ToolRegistry.originate_command_tool` (and future
+    effect-tool helpers) to declare what arguments the model can pass and
+    how they map onto the underlying Effect/Command class.
+
+    Attributes:
+        type: JSON Schema type — ``"string"``, ``"integer"``, ``"boolean"``,
+            ``"number"``, or ``"array"``.
+        description: Human-readable description for the model. Drives the
+            model's argument-selection quality more than the schema does.
+        required: When ``True``, the field is added to the JSON Schema's
+            ``required`` list. Default ``False``.
+        format: Optional JSON-Schema ``format`` hint (e.g., ``"date"`` for
+            ISO 8601 dates).
+        minimum: Optional minimum value for numeric/integer fields.
+        maximum: Optional maximum value for numeric/integer fields.
+        enum: Optional list of allowed string values, advertised as
+            JSON-Schema ``enum``. Use for fields backed by a closed set
+            (e.g., banner-alert intent: ``"info" / "warning" / "alert"``).
+            The model is constrained to choose one of these values. For
+            arrays of enums, pass the enum inside ``items`` instead.
+        items: For ``type="array"`` — the JSON Schema for each item
+            (e.g., ``{"type": "string"}``, or ``{"type": "string",
+            "enum": [...]}`` for arrays of enum values).
+        min_items: For ``type="array"`` — minimum array length.
+        max_items: For ``type="array"`` — maximum array length.
+        max_length: For ``type="string"`` — the longest value accepted.
+        pattern: For ``type="string"`` — a regular expression the value must match.
+        command_field: When the LLM-facing argument name differs from the
+            underlying Command/Effect field name, set this to the target
+            field name. Defaults to the LLM-facing name (which is the
+            dict key in the ``fields`` mapping).
+        pre_build_only: When ``True``, the argument is not set on the
+            Command; only the tool's ``pre_build`` hook reads it, as when two
+            arguments combine into one Command field.
+        editable: When ``True``, ``edit_staged_command`` may change the field on a
+            staged draft of the tool's command. Leave it ``False`` for a field the
+            tool's ``pre_build`` checks or derives (a code, an id from the chart), so
+            an edit cannot set what the tool would have refused to stage.
+    """
+
+    type: str
+    description: str
+    required: bool = False
+    format: str | None = None
+    minimum: int | None = None
+    maximum: int | None = None
+    enum: list[str] | None = None
+    items: dict[str, Any] | None = None
+    min_items: int | None = None
+    max_items: int | None = None
+    max_length: int | None = None
+    pattern: str | None = None
+    command_field: str | None = None
+    pre_build_only: bool = False
+    editable: bool = False
+
+
+# The longest free-text argument a tool accepts unless its field says otherwise.
+MAX_TEXT_CHARS = 10_000
+# The longest string a tool's schema matches with a ``pattern`` or checks with a ``format``,
+# unless its field says otherwise: a pattern can backtrack on long input.
+PATTERN_TEXT_CHARS = 2_048
+
+# The formats a tool's schema may name, each checked when the tool is called. jsonschema
+# checks ``date-time`` only with an extra installed, so it is checked here.
+FORMAT_CHECKER = FormatChecker()
+
+
+@FORMAT_CHECKER.checks("date-time", raises=ValueError)
+def _is_date_time(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    if "T" not in value.upper() and " " not in value:
+        raise ValueError(f"{value!r} has no time")
+    datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
+    return True
+
+
+# Keywords a tool's schema may use: Draft 2020-12's, plus its annotations.
+_SCHEMA_KEYWORDS = frozenset(Draft202012Validator.VALIDATORS) | {
+    "$schema",
+    "$id",
+    "$anchor",
+    "$defs",
+    "$comment",
+    "title",
+    "description",
+    "default",
+    "examples",
+    "deprecated",
+    "readOnly",
+    "writeOnly",
+    "contentEncoding",
+    "contentMediaType",
+}
+# Where a schema holds other schemas: one, a list, or a map of them.
+_SUBSCHEMA_KEYS = frozenset(
+    {
+        "items",
+        "additionalProperties",
+        "not",
+        "if",
+        "then",
+        "else",
+        "contains",
+        "propertyNames",
+        "unevaluatedItems",
+        "unevaluatedProperties",
+    }
+)
+_SUBSCHEMA_LIST_KEYS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+_SUBSCHEMA_MAP_KEYS = frozenset({"properties", "patternProperties", "$defs", "dependentSchemas"})
+
+
+def _schema_problems(schema: dict[str, Any]) -> list[str]:
+    """What in a tool's input schema would fail every call or go unenforced.
+
+    A top-level ``anyOf``, ``oneOf``, or ``allOf``, which the Messages API refuses; a keyword
+    that is not JSON Schema's, such as a misspelled ``maximun``, which nothing enforces; a
+    ``$ref`` that does not resolve inside the schema; and a ``format`` nothing checks.
+    """
+    problems = [
+        f"a top-level {keyword}, which the Messages API refuses"
+        for keyword in ("anyOf", "oneOf", "allOf")
+        if keyword in schema
+    ]
+
+    def walk(node: Any, where: str) -> None:
+        if not isinstance(node, dict):
+            return
+        problems.extend(
+            f"{where}: unknown keyword {keyword!r}"
+            for keyword in sorted(node.keys() - _SCHEMA_KEYWORDS)
+        )
+        if isinstance(ref := node.get("$ref"), str) and not _resolves(schema, ref):
+            problems.append(f"{where}: $ref {ref!r} does not resolve inside the schema")
+        if "format" in node and node["format"] not in FORMAT_CHECKER.checkers:
+            problems.append(f"{where}: format {node['format']!r} is not checked")
+        for key in _SUBSCHEMA_KEYS & node.keys():
+            walk(node[key], f"{where}.{key}")
+        for key in _SUBSCHEMA_LIST_KEYS & node.keys():
+            for index, child in enumerate(node[key] if isinstance(node[key], list) else []):
+                walk(child, f"{where}.{key}[{index}]")
+        for key in _SUBSCHEMA_MAP_KEYS & node.keys():
+            for name, child in (node[key] if isinstance(node[key], dict) else {}).items():
+                walk(child, f"{where}.{key}.{name}")
+
+    walk(schema, "input_schema")
+    return problems
+
+
+def _resolves(schema: dict[str, Any], ref: str) -> bool:
+    """Whether ``ref`` is a JSON pointer into ``schema`` that names something there."""
+    if not ref.startswith("#"):
+        return False
+    node: Any = schema
+    for part in [p for p in ref[1:].split("/") if p]:
+        part = part.replace("~1", "/").replace("~0", "~")
+        if isinstance(node, dict) and part in node:
+            node = node[part]
+        elif isinstance(node, list) and part.isdigit() and int(part) < len(node):
+            node = node[int(part)]
+        else:
+            return False
+    return True
+
+
+# Effect types an approval-listed tool stages bare: a usage record meters the call, and a
+# proposal inside it would pass the runner's usage gate, which checks bare effects only.
+NEVER_PROPOSED = frozenset({"RECORD_USAGE"})
+
+# Serializes removals from a run's effects list. Sub-agent threads append to the same
+# list, which only adds to its end, so a removal's index stays valid while it holds this.
+_RUN_EFFECTS_LOCK = threading.RLock()
+
+
+def remove_first(effects: Any, matches: Callable[[Any], bool]) -> Any | None:
+    """Remove and return the first of ``effects`` that ``matches`` accepts, or None."""
+    if isinstance(effects, _CallEffects):
+        return effects.remove_first(matches)
+    with _RUN_EFFECTS_LOCK:
+        for index, effect in enumerate(effects):
+            if matches(effect):
+                return effects.pop(index)
+    return None
+
+
+def _proposed_changes(effect: Any) -> list[Any]:
+    """The changes a proposal effect wraps, each with its ``type`` and ``payload``; else []."""
+    if EffectType.Name(effect.type) != PROPOSAL_EFFECT_TYPE:
+        return []
+    return [
+        SimpleNamespace(type=EffectType.Value(inner["type"]), payload=inner["payload"])
+        for inner in json.loads(effect.payload)["data"]["effects"]
+    ]
+
+
+def staged_in_run(effects: Any, matches: Callable[[Any], bool]) -> bool:
+    """Whether this run staged a change ``matches`` accepts, bare or in a proposal."""
+    return any(
+        matches(effect) or any(matches(change) for change in _proposed_changes(effect))
+        for effect in effects
+    )
+
+
+def withdraw_staged(effects: Any, matches: Callable[[Any], bool]) -> bool:
+    """Take back a change this run staged that ``matches`` accepts; whether one was found.
+
+    A bare one is removed. One waiting in a proposal is taken out of it; the proposal keeps
+    its id and its other changes, and is withdrawn when it has none left.
+    """
+    if remove_first(effects, matches) is not None:
+        return True
+    proposal = remove_first(
+        effects, lambda effect: any(matches(change) for change in _proposed_changes(effect))
+    )
+    if proposal is None:
+        return False
+    payload = json.loads(proposal.payload)
+    payload["data"]["effects"] = [
+        inner
+        for inner, change in zip(
+            payload["data"]["effects"], _proposed_changes(proposal), strict=True
+        )
+        if not matches(change)
+    ]
+    if payload["data"]["effects"]:
+        effects.append(type(proposal)(type=proposal.type, payload=json.dumps(payload)))
+    return True
+
+
+def _bounded_strings(schema: dict[str, Any]) -> dict[str, Any]:
+    """``schema`` with a length limit on every string: :data:`MAX_TEXT_CHARS` for free text,
+    :data:`PATTERN_TEXT_CHARS` for one with a ``pattern`` or ``format``.
+
+    A string with its own ``maxLength``, ``enum``, or ``const`` keeps it; the limit reaches
+    strings inside object properties and array items too.
+    """
+    bounded = dict(schema)
+    if bounded.get("type") == "string" and not ({"maxLength", "enum", "const"} & bounded.keys()):
+        patterned = {"format", "pattern"} & bounded.keys()
+        bounded["maxLength"] = PATTERN_TEXT_CHARS if patterned else MAX_TEXT_CHARS
+    if isinstance(bounded.get("properties"), dict):
+        bounded["properties"] = {
+            key: _bounded_strings(value) if isinstance(value, dict) else value
+            for key, value in bounded["properties"].items()
+        }
+    if isinstance(bounded.get("items"), dict):
+        bounded["items"] = _bounded_strings(bounded["items"])
+    return bounded
+
+
+def _restorer(effects: list[Any], index: int, effect: Any) -> Callable[[], None]:
+    """Put ``effect`` back at ``index`` of ``effects``, once, however often it is called.
+
+    Both a failed call and the failed call around it may restore the same removal.
+    """
+    done: list[bool] = []
+
+    def restore() -> None:
+        if not done:
+            done.append(True)
+            effects.insert(min(index, len(effects)), effect)
+
+    return restore
+
+
+class _CallEffects:
+    """A run's effects list as one tool call sees it.
+
+    Reads, appends, and pops go to the run's own list, so a tool sees and can remove
+    drafts earlier calls staged, and other threads see what this call stages. What this
+    call appends is remembered, so a call that fails takes back exactly its own effects,
+    never one a concurrent sub-agent staged after them.
+    """
+
+    def __init__(self, run_effects: Any) -> None:
+        self._run_effects = run_effects
+        self._appended: list[Any] = []
+        # How to put back each effect this call removed, so a call that fails leaves the
+        # drafts it removed where they were.
+        self._restores: list[Callable[[], None]] = []
+
+    def append(self, effect: Any) -> None:
+        self._run_effects.append(effect)
+        self._appended.append(effect)
+
+    def extend(self, effects: Iterable[Any]) -> None:
+        for effect in effects:
+            self.append(effect)
+
+    def pop(self, index: int = -1) -> Any:
+        with _RUN_EFFECTS_LOCK:
+            return self._run_effects.pop(index)
+
+    def remove_first(self, matches: Callable[[Any], bool]) -> Any | None:
+        """Remove and return the first effect ``matches`` accepts, or None.
+
+        The search and the removal hold the lock together, so a concurrent sub-agent's
+        append cannot shift what is removed, as it can between finding an index and a
+        ``pop``.
+        """
+        with _RUN_EFFECTS_LOCK:
+            found = self._pop_match(matches)
+        return found[0] if found is not None else None
+
+    def _pop_match(self, matches: Callable[[Any], bool]) -> tuple[Any, Callable[[], None]] | None:
+        """Remove the first match from the run's list; it and a way to put it back."""
+        if isinstance(self._run_effects, _CallEffects):
+            found = self._run_effects._pop_match(matches)
+        else:
+            found = None
+            for index, effect in enumerate(self._run_effects):
+                if matches(effect):
+                    del self._run_effects[index]
+                    found = (effect, _restorer(self._run_effects, index, effect))
+                    break
+        if found is not None:
+            self._restores.append(found[1])
+        return found
+
+    def __iter__(self) -> Any:
+        return iter(list(self._run_effects))
+
+    def __len__(self) -> int:
+        return len(self._run_effects)
+
+    def __getitem__(self, index: Any) -> Any:
+        return self._run_effects[index]
+
+    def take_back(self) -> None:
+        """Put back what this call removed, then remove what it appended, by identity.
+
+        In that order, so an effect the call staged and then removed itself is not left.
+        """
+        with _RUN_EFFECTS_LOCK:
+            for restore in reversed(self._restores):
+                restore()
+            self._restores.clear()
+            for effect in self._appended:
+                self._remove(effect)
+            self._appended.clear()
+
+    def _remove(self, effect: Any) -> None:
+        if isinstance(self._run_effects, _CallEffects):
+            self._run_effects._remove(effect)
+            return
+        for index, staged in enumerate(self._run_effects):
+            if staged is effect:
+                del self._run_effects[index]
+                return
+
+
+class _ProposedEffects(_CallEffects):
+    """The run's effects as one call of an approval-listed tool sees them.
+
+    Reads and removals see the run's list, so the tool finds drafts earlier calls staged,
+    but what the call stages is held here rather than added to the run, for the registry
+    to wrap in a proposal.
+    """
+
+    def append(self, effect: Any) -> None:
+        self._appended.append(effect)
+
+    def staged(self) -> list[Any]:
+        """What the call staged, in order."""
+        return list(self._appended)
+
+    def _pop_match(self, matches: Callable[[Any], bool]) -> tuple[Any, Callable[[], None]] | None:
+        """Remove the first match, among what this call staged or else the run's list."""
+        for index, effect in enumerate(self._appended):
+            if matches(effect):
+                del self._appended[index]
+                found = (effect, _restorer(self._appended, index, effect))
+                self._restores.append(found[1])
+                return found
+        return super()._pop_match(matches)
+
+    def _remove(self, effect: Any) -> None:
+        """Drop ``effect`` from what this call staged, as a nested call's take-back does."""
+        for index, staged in enumerate(self._appended):
+            if staged is effect:
+                del self._appended[index]
+                return
+
+    def __iter__(self) -> Any:
+        return iter([*self._run_effects, *self._appended])
+
+    def __len__(self) -> int:
+        return len(self._run_effects) + len(self._appended)
+
+    def __getitem__(self, index: Any) -> Any:
+        return [*self._run_effects, *self._appended][index]
+
+
+def require_patient_id(ctx: dict[str, Any]) -> str:
+    """The run's patient, for a tool that only makes sense on one.
+
+    Raises when the run is not about a patient, which the agent's loop returns
+    to the model as a failed tool result, so a patient-less run never reads an
+    empty chart as a patient with no records.
+    """
+    patient_id: str | None = ctx.get("patient_id")
+    if not patient_id:
+        raise ValueError("This run is not about a patient, so patient tools are unavailable")
+    return patient_id
+
+
+def command_type_active(schema_key: str) -> bool:
+    """Whether the instance has the command type with this schema key turned on.
+
+    Canvas leaves a command type it disabled out of the settings, so a type missing from
+    them is off, as it is in the chart's command menu.
+    """
+    return CommandTypeSetting.objects.filter(schema_key=schema_key, active=True).exists()
+
+
+def command_type_off_error(schema_key: str) -> dict[str, Any]:
+    """The result a tool returns for a command type the instance has turned off."""
+    return {
+        "ok": False,
+        "error": (
+            f"The {schema_key} command is turned off on this instance, so it cannot be "
+            "staged. Tell the clinician rather than trying another command in its place."
+        ),
+    }
+
+
+def _note_id_from_ctx(ctx: dict[str, Any]) -> str | None:
+    """Default note resolver: read ``ctx["note_id"]``.
+
+    :meth:`AgentPlugin.tool_context` sets it to the run subject's note, or for
+    a run a staff member started, that staff member's open note on the patient.
+
+    Returns ``None`` if absent — the helper's executor reports a structured
+    error to the model in that case.
+    """
+    return ctx.get("note_id")
+
+
+@dataclass(frozen=True)
+class FilterSpec:
+    """One filter parameter advertised on a :meth:`ToolRegistry.filter_search_tool`.
+
+    Captures both the JSON-Schema entry the model sees and the runtime
+    semantics — either a Django-lookup-style transformation via
+    ``apply``, or "schema-only" when ``apply`` is ``None`` and the
+    queryset factory consumes the argument directly (typical use:
+    queryset-mode selection like ``active_only``).
+
+    Attributes:
+        type: JSON Schema type. One of ``"string"``, ``"integer"``,
+            ``"boolean"``, ``"number"``.
+        description: Human-readable description for the model. Drives
+            tool / parameter selection more than the schema does — be
+            specific.
+        format: Optional JSON-Schema ``format`` hint (e.g., ``"date"``
+            for ISO 8601 dates).
+        minimum: Optional minimum value for numeric/integer filters.
+        maximum: Optional maximum value for numeric/integer filters.
+        enum: Optional list of allowed string values, advertised as
+            JSON-Schema ``enum``. Use for closed-set filters (e.g.,
+            note_type ∈ {office, inpatient, message, ...}). The LLM
+            picks from the listed values — without this, it has to
+            guess from natural-language hints in the description.
+        apply: Optional ``(queryset, value) -> queryset`` callable that
+            applies the filter to the queryset. Invoked only when the
+            argument, or its ``default``, is truthy. When ``None``, the filter
+            is schema-only — the queryset factory is expected to read
+            the argument and act on it itself.
+        default: The value used when the model leaves the filter out, advertised
+            as the schema's ``default``.
+    """
+
+    type: str
+    description: str
+    format: str | None = None
+    minimum: int | None = None
+    maximum: int | None = None
+    enum: list[str] | None = None
+    apply: Callable[[Any, Any], Any] | None = None
+    default: Any = None
+
+
+class ToolNotAllowed(LookupError):
+    """Raised by :meth:`ToolRegistry.execute` when a registered tool is filtered out.
+
+    Distinct from ``ValueError("Unknown tool: ...")`` (raised when the tool
+    isn't registered at all). A ``ToolNotAllowed`` means the tool exists in
+    the registry but is excluded by the caller's allowlist — typically
+    because the agent's manifest doesn't grant it, or because the agent
+    deliberately narrows its tool surface for a particular run.
+    """
+
+
+def _refuse_fields_targeting(tool: str, field_map: dict[str, str], injected: set[str]) -> None:
+    """Refuse a model-facing field that would set a kwarg the platform injects.
+
+    The injected value (the run's patient, the clinician's note) comes from the run, so a
+    field mapped onto it would let the model's argument replace it.
+    """
+    if clashes := sorted(arg_name for arg_name, target in field_map.items() if target in injected):
+        raise ValueError(
+            f"Tool {tool!r}: fields {clashes} target {sorted(injected)}, which the run sets."
+        )
+
+
+class ToolRegistry:
+    """A composable catalog of agent tools.
+
+    Pairs each tool's JSON-Schema definition with its executor so they can't
+    drift apart. Supports two registration styles:
+
+    1. **Decorator** for inline definition::
+
+        @registry.tool(
+            name="find_medications",
+            description="...",
+            input_schema={...},
+        )
+        def _find_medications(arguments, *, ctx):
+            ...
+
+    2. **Imperative** ``register(definition, executor)`` for cases where the
+       definition is built elsewhere (e.g., auto-generated from an effect proto).
+
+    The platform-provided :data:`canvas_sdk.agents.standard_tools` is the
+    canonical SDK-side registry; plugin authors call
+    ``my_registry.extend(standard_tools)`` to adopt the SDK catalog and then
+    layer their own tools on top. Every plugin's agents adopt that one catalog, so
+    it is frozen once the SDK has built it (see :meth:`freeze`), and each registry
+    holds its own copy of every definition.
+    """
+
+    def __init__(self) -> None:
+        self._definitions: list[dict[str, Any]] = []
+        self._executors: dict[str, ToolExecutor] = {}
+        # category name → set of tool names tagged with that category. Used by
+        # `resolve_allowed` to expand `@category` references in manifest
+        # allowlists.
+        self._categories: dict[str, set[str]] = {}
+        # tool name → docs-oriented metadata that the LLM-facing definition
+        # doesn't carry (returns description, backing model/command/effect
+        # class). Populated by the helper methods; consumed by the docs
+        # generator. Tools registered via the raw ``tool()`` decorator can
+        # opt in via ``returns_description=`` etc.
+        self._metadata: dict[str, dict[str, Any]] = {}
+        # tool name → the EffectType names the tool can stage. The plugin runner
+        # drops any effect an agent returns whose type no granted tool declares.
+        self._effect_types: dict[str, frozenset[str]] = {}
+        # tool name → the platform permissions and capabilities a run's requester
+        # needs before the tool is offered to the model.
+        self._required_permissions: dict[str, frozenset[str]] = {}
+        self._required_capabilities: dict[str, frozenset[Capability]] = {}
+        # tool name → the most of its result the model is sent, for a tool that set its
+        # own limit; every other tool's is DEFAULT_TOOL_RESULT_CHARS.
+        self._max_result_chars: dict[str, int] = {}
+        # tool name → what the person waiting on a run sees while the tool runs, such
+        # as "Reading lab results"; a tool without one shows DEFAULT_PROGRESS_LABEL.
+        self._progress_labels: dict[str, str] = {}
+        # Tools a run a patient started may use; every other tool is for staff.
+        self._for_patients: set[str] = set()
+        # tool name → the validator its arguments are checked with before it runs.
+        self._validators: dict[str, Any] = {}
+        # Tools whose staged effects become proposals for the requester to approve, set
+        # by the platform from the manifest's tools.approve; see with_approval.
+        self._approval: frozenset[str] = frozenset()
+        self._frozen = False
+
+    def freeze(self) -> None:
+        """Refuse any further change to this registry's tools or their labels.
+
+        A frozen registry can still be read, copied with :meth:`extend`, and narrowed with
+        :meth:`scope` and :meth:`with_approval`, which return new registries.
+        """
+        self._frozen = True
+
+    def _ensure_mutable(self) -> None:
+        if self._frozen:
+            raise RuntimeError(
+                "This tool registry is read-only. Register tools on your plugin's own "
+                "ToolRegistry, and adopt the standard tools with extend(standard_tools)."
+            )
+
+    def register(
+        self,
+        definition: dict[str, Any],
+        executor: ToolExecutor,
+        *,
+        categories: Iterable[str] = (),
+        metadata: dict[str, Any] | None = None,
+        effect_types: Iterable[str] = (),
+        required_permissions: Iterable[str] = (),
+        required_capabilities: Iterable[Capability] = (),
+        max_result_chars: int | None = None,
+        progress_label: str | None = None,
+        for_patients: bool = False,
+    ) -> None:
+        """Register a tool by passing the definition and executor directly.
+
+        Args:
+            definition: Anthropic-shaped tool spec (``name``, ``description``,
+                ``input_schema``).
+            executor: The runtime function to invoke.
+            categories: Optional category tags for the tool. Used by
+                :meth:`resolve_allowed` to expand ``@category`` references in
+                manifest allowlists. Tools may have zero or more categories.
+            metadata: Optional docs-oriented metadata about the tool — e.g.,
+                ``returns_description`` (free-text summary of the return
+                shape), ``model`` (Django data model backing a read tool),
+                ``command_class`` / ``effect_class`` (Effect class for write
+                tools). Not used at runtime; consumed by the docs generator.
+            effect_types: ``EffectType`` names the tool stages (e.g.
+                ``"CREATE_TASK"``). Granting the tool to an agent lets the agent
+                return effects of these types; the plugin runner drops any
+                other effect the agent returns. A read-only tool declares none.
+            required_permissions: Platform permission names, such as
+                ``"api.change_task"``, the staff member behind a run must hold for
+                the tool to be offered: the permission the chart checks for the same
+                action. The platform hides the tool otherwise, and checks the
+                permission again when it applies the tool's effects.
+            required_capabilities: :class:`Capability` values the run must be
+                granted for the tool to be offered.
+            max_result_chars: The most of the tool's result the model is sent, up to
+                :data:`MAX_TOOL_RESULT_CHARS`; a longer result is cut, with a note
+                saying so. Defaults to :data:`DEFAULT_TOOL_RESULT_CHARS`. Raise it only
+                for a tool whose answer cannot be split, since the result is sent again
+                on every later call in the run.
+            progress_label: What the person waiting on a run sees while the tool runs,
+                for an agent whose manifest sets ``"progress": "activity"``, such as
+                ``"Reading lab results"``. Name what the tool does, never its arguments.
+                Defaults to :data:`DEFAULT_PROGRESS_LABEL`.
+            for_patients: Whether a run a patient started, such as from the portal, may
+                use the tool. Such a run is offered only tools that say so, since every
+                other tool reads or changes clinician work; no standard tool does.
+
+        Raises:
+            ValueError: If ``definition`` is missing a ``"name"`` key, if the name is not
+                1 to 64 letters, digits, ``_`` or ``-`` as the Messages API requires, if
+                a non-empty ``input_schema`` is not an object schema, if a
+                tool with that name is already registered, if an effect
+                type is not an ``EffectType`` name, or if ``max_result_chars`` is
+                not between 1 and :data:`MAX_TOOL_RESULT_CHARS`.
+            RuntimeError: If the registry is frozen.
+        """
+        self._ensure_mutable()
+        name = definition.get("name")
+        if not name:
+            raise ValueError("Tool definition is missing a 'name' key")
+        if not isinstance(name, str) or not TOOL_NAME.fullmatch(name):
+            raise ValueError(
+                f"Tool name {name!r} must be 1 to 64 letters, digits, '_' or '-', "
+                "which the Messages API requires"
+            )
+        given_schema = definition.get("input_schema")
+        if given_schema and (
+            not isinstance(given_schema, dict) or given_schema.get("type") != "object"
+        ):
+            raise ValueError(
+                f"Tool {name!r} input_schema must be a JSON Schema with type 'object', "
+                "which the Messages API requires"
+            )
+        if name in self._executors:
+            raise ValueError(f"Tool {name!r} is already registered")
+        declared = frozenset(effect_types)
+        unknown = sorted(declared - set(EffectType.keys()))
+        if unknown:
+            raise ValueError(f"Tool {name!r} declares unknown effect types: {unknown}")
+        if max_result_chars is not None and not 0 < max_result_chars <= MAX_TOOL_RESULT_CHARS:
+            raise ValueError(
+                f"Tool {name!r} sets max_result_chars={max_result_chars}; it must be "
+                f"between 1 and {MAX_TOOL_RESULT_CHARS}. Page a larger result instead."
+            )
+        definition = {
+            **copy.deepcopy(definition),
+            "input_schema": _bounded_strings(definition.get("input_schema") or {"type": "object"}),
+        }
+        schema = definition["input_schema"]
+        # Checked before anything is stored, so a refused schema leaves no half-registered tool.
+        Draft202012Validator.check_schema(schema)
+        if problems := _schema_problems(schema):
+            raise ValueError(f"Tool {name!r} input_schema: {'; '.join(problems)}")
+        # An empty registry resolves no reference outside the schema, so a plugin's schema
+        # cannot make the runner fetch a URL or read a file.
+        validator = Draft202012Validator(schema, registry=Registry(), format_checker=FORMAT_CHECKER)
+        self._definitions.append(definition)
+        self._executors[name] = executor
+        self._validators[name] = validator
+        for category in categories:
+            self._categories.setdefault(category, set()).add(name)
+        if metadata:
+            self._metadata[name] = dict(metadata)
+        if declared:
+            self._effect_types[name] = declared
+        if permissions := frozenset(required_permissions):
+            self._required_permissions[name] = permissions
+        if capabilities := frozenset(required_capabilities):
+            self._required_capabilities[name] = capabilities
+        if max_result_chars is not None:
+            self._max_result_chars[name] = max_result_chars
+        if progress_label:
+            self._progress_labels[name] = progress_label
+        if for_patients:
+            self._for_patients.add(name)
+
+    def for_patients(self, name: str) -> bool:
+        """Whether a run a patient started may use ``name``."""
+        return name in self._for_patients
+
+    def progress_label_for(self, name: str) -> str:
+        """What the person waiting on a run sees while ``name`` runs."""
+        return self._progress_labels.get(name, DEFAULT_PROGRESS_LABEL)
+
+    def set_progress_labels(self, labels: dict[str, str]) -> None:
+        """Give registered tools their progress labels, by tool name.
+
+        For tools registered through a helper that takes no ``progress_label``.
+
+        Raises:
+            ValueError: If a name is not a registered tool.
+            RuntimeError: If the registry is frozen.
+        """
+        self._ensure_mutable()
+        unknown = sorted(set(labels) - set(self._executors))
+        if unknown:
+            raise ValueError(f"No such tools to label: {unknown}")
+        self._progress_labels.update(labels)
+
+    def max_result_chars_for(self, name: str) -> int:
+        """The most of ``name``'s result the model is sent."""
+        return self._max_result_chars.get(name, DEFAULT_TOOL_RESULT_CHARS)
+
+    def metadata_for(self, name: str) -> dict[str, Any]:
+        """Return the docs-oriented metadata for a tool, or an empty dict.
+
+        Used by the docs generator and other introspection callers; the
+        runtime tool-dispatch path does not consult this. The metadata is a copy, nested
+        values included, so editing it leaves the registry unchanged.
+        """
+        return copy.deepcopy(self._metadata.get(name, {}))
+
+    def categories_for(self, name: str) -> tuple[str, ...]:
+        """Return the categories a tool is tagged with, in registration order."""
+        return tuple(c for c, names in self._categories.items() if name in names)
+
+    def effect_types_for(self, name: str) -> frozenset[str]:
+        """Return the ``EffectType`` names a tool declares it stages."""
+        return self._effect_types.get(name, frozenset())
+
+    def required_permissions_for(self, name: str) -> frozenset[str]:
+        """Return the permissions a run's requester needs for the tool to be offered."""
+        return self._required_permissions.get(name, frozenset())
+
+    def required_capabilities_for(self, name: str) -> frozenset[Capability]:
+        """Return the capabilities a run needs for the tool to be offered."""
+        return self._required_capabilities.get(name, frozenset())
+
+    def _missing_requirements(
+        self,
+        name: str,
+        permissions: frozenset[str] | None,
+        capabilities: frozenset[Capability],
+    ) -> list[str]:
+        """What ``name`` requires that the run lacks; ``permissions`` None means no limit."""
+        missing: list[str] = sorted(
+            f"the {capability.value!r} capability"
+            for capability in self.required_capabilities_for(name) - capabilities
+        )
+        if permissions is not None:
+            missing += sorted(self.required_permissions_for(name) - permissions)
+        return missing
+
+    def usable_by(
+        self,
+        permissions: frozenset[str] | None,
+        capabilities: frozenset[Capability],
+        *,
+        patient_run: bool = False,
+    ) -> "ToolRegistry":
+        """Return a new registry of the tools a run with these grants may use.
+
+        ``permissions`` are the requester's platform permissions, or None when model
+        permissions do not limit the run (Canvas Bot is behind it, or a superuser is).
+        ``patient_run`` says a patient started the run, which keeps only the tools
+        registered ``for_patients``. The platform uses this to hide tools the requester
+        could not use.
+        """
+        return self.scope(
+            definition["name"]
+            for definition in self._definitions
+            if not self._missing_requirements(definition["name"], permissions, capabilities)
+            and (not patient_run or definition["name"] in self._for_patients)
+        )
+
+    def with_approval(self, names: Iterable[str]) -> "ToolRegistry":
+        """Return a copy in which the named tools propose their changes instead of making them.
+
+        The platform calls this with the manifest's ``tools.approve`` for the agent. The
+        effects one call of such a tool stages are wrapped, in order, in one proposal the
+        requester approves or denies as a whole; the model is told the change awaits
+        approval. Names not registered here are ignored.
+        """
+        approving = self.scope(definition["name"] for definition in self._definitions)
+        approving._approval = frozenset(names) & frozenset(self._executors)
+        return approving
+
+    def requires_approval(self, name: str) -> bool:
+        """Whether ``name`` proposes its changes for the requester to approve."""
+        return name in self._approval
+
+    def effect_types(self) -> frozenset[str]:
+        """Every ``EffectType`` name a tool in this registry can stage.
+
+        On the manifest-scoped registry the runner hands an agent, this is the
+        set of effect types the agent may return, directly or, for a tool that needs
+        approval, as proposals; see :meth:`direct_effect_types`.
+        """
+        return frozenset().union(*self._effect_types.values())
+
+    def direct_effect_types(self) -> frozenset[str]:
+        """The effect types an agent may return bare.
+
+        Those a tool that needs no approval stages, and usage records from any tool: usage
+        is metering rather than a change to approve, so it is never proposed.
+        """
+        return frozenset().union(
+            *(
+                types if name not in self._approval else types & NEVER_PROPOSED
+                for name, types in self._effect_types.items()
+            )
+        )
+
+    def proposable_effect_types(self) -> frozenset[str]:
+        """The effect types a tool that needs approval stages, which an agent may only propose."""
+        return (
+            frozenset().union(
+                *(types for name, types in self._effect_types.items() if name in self._approval)
+            )
+            - NEVER_PROPOSED
+        )
+
+    def tool(
+        self,
+        *,
+        name: str,
+        description: str,
+        input_schema: dict[str, Any],
+        categories: Iterable[str] = (),
+        returns_description: str | None = None,
+        effect_types: Iterable[str] = (),
+        required_permissions: Iterable[str] = (),
+        required_capabilities: Iterable[Capability] = (),
+        cites: str | None = None,
+        max_result_chars: int | None = None,
+        progress_label: str | None = None,
+        for_patients: bool = False,
+    ) -> Callable[[ToolExecutor], ToolExecutor]:
+        """Decorator form for registering a tool inline with its executor.
+
+        ``categories`` tags the tool for shorthand allowlist references — see
+        :meth:`resolve_allowed`. ``returns_description`` is an optional
+        free-text summary of the tool's return shape, consumed by the docs
+        generator. ``effect_types``, ``required_permissions``,
+        ``required_capabilities``, ``max_result_chars``, ``progress_label``, and
+        ``for_patients`` are as in :meth:`register`. ``cites`` names the
+        record type of the rows the tool returns, which makes them citable (see
+        :mod:`canvas_sdk.agents.citations`), keyed by each row's ``id``.
+        """
+
+        def decorator(fn: ToolExecutor) -> ToolExecutor:
+            metadata: dict[str, Any] = {}
+            if returns_description is not None:
+                metadata["returns_description"] = returns_description
+            if cites is not None:
+                metadata["record_type"] = cites
+                metadata["citable"] = True
+            self.register(
+                {"name": name, "description": description, "input_schema": input_schema},
+                fn,
+                categories=categories,
+                metadata=metadata or None,
+                effect_types=effect_types,
+                required_permissions=required_permissions,
+                required_capabilities=required_capabilities,
+                max_result_chars=max_result_chars,
+                progress_label=progress_label,
+                for_patients=for_patients,
+            )
+            return fn
+
+        return decorator
+
+    def filter_search_tool(
+        self,
+        *,
+        name: str,
+        description: str,
+        queryset_factory: Callable[[dict[str, Any], str | None], Any],
+        filters: dict[str, FilterSpec] | None = None,
+        ordering: tuple[str, ...] = (),
+        prefetch_related: tuple[str, ...] = (),
+        select_related: tuple[str, ...] = (),
+        limit_default: int = 25,
+        limit_max: int = 100,
+        limit_description: str | None = None,
+        categories: Iterable[str] = (),
+        model: type | None = None,
+        returns_description: str | None = None,
+        citable: bool = True,
+        max_result_chars: int | None = None,
+        progress_label: str | None = None,
+        patient_scoped: bool = True,
+    ) -> Callable[[Callable[[Any], dict[str, Any]]], Callable[[Any], dict[str, Any]]]:
+        """Register a filter-spec read tool, patient-scoped unless ``patient_scoped=False``.
+
+        The decorated function is the per-row serializer — it receives one
+        model instance and returns a JSON-serializable dict. The helper
+        handles everything else: JSON-Schema synthesis from ``filters``,
+        queryset-factory invocation with the model's ``arguments`` and the
+        ``patient_id`` from ``ctx``, filter application, ordering,
+        ``prefetch_related`` / ``select_related``, limit clamping,
+        iteration, and registration on the registry.
+
+        Patient-scope enforcement is the ``queryset_factory``'s
+        responsibility — it receives the ``patient_id`` from ``ctx`` and
+        is expected to apply it. The helper passes the patient_id through
+        but does not itself enforce scope; some clinical models require
+        traversal through a related table (e.g.
+        ``report__patient__id`` for ``LabValue``) and only the factory
+        knows the right path.
+
+        Args:
+            name: Tool name as advertised to the model.
+            description: Tool description as advertised to the model.
+                Description quality drives tool-selection accuracy more
+                than schema quality does.
+            queryset_factory: ``(arguments, patient_id) -> QuerySet``.
+                Builds the base queryset with patient scope applied and
+                any queryset-mode selection done (e.g., ``.active()`` vs
+                ``.committed()``).
+            filters: Filter parameters. Keys are model-facing argument
+                names; values are :class:`FilterSpec` entries. Filters
+                with ``apply=None`` are schema-only — included in the
+                JSON Schema so the model can pass them, but consumed by
+                ``queryset_factory`` rather than applied via ``apply``.
+            ordering: Tuple passed to ``queryset.order_by(*ordering)``.
+            prefetch_related: Tuple passed to
+                ``queryset.prefetch_related(*prefetch_related)``.
+            select_related: Tuple passed to
+                ``queryset.select_related(*select_related)``.
+            limit_default: Default value for the auto-added ``limit``
+                parameter when the model omits it.
+            limit_max: Hard cap on the ``limit`` parameter. The helper
+                clamps to this maximum regardless of what the model
+                requests.
+            limit_description: Optional override for the ``limit``
+                parameter's description. Defaults to a sensible message
+                including the default and max.
+            categories: Optional category tags for shorthand allowlist
+                references (e.g., ``"clinical_reads"``). See
+                :meth:`resolve_allowed` for how categories are used.
+            model: Optional Django model class backing this read tool
+                (e.g., :class:`canvas_sdk.v1.data.Medication`). Surfaced
+                via :meth:`metadata_for` for docs generation, and makes the
+                rows the tool returns citable (see
+                :mod:`canvas_sdk.agents.citations`), keyed by their ``id``.
+            returns_description: Optional free-text summary of the
+                tool's return shape (e.g., ``"Each row: id, name,
+                status."``). Not used at runtime; consumed by the docs
+                generator.
+            citable: Whether a reply may cite the rows this tool returns.
+                ``False`` for tools that read configuration rather than a
+                patient's records.
+            max_result_chars: As in :meth:`register`. A lower ``limit_max`` is
+                usually the better way to keep a list's result small.
+            progress_label: As in :meth:`register`.
+            patient_scoped: Whether the tool reads one patient's records. A
+                patient-scoped tool refuses a run with no patient; one that reads
+                the practice's configuration (``False``) runs without one, and its
+                ``queryset_factory`` receives ``None`` for the patient.
+
+        Returns:
+            A decorator. Apply it to a ``(row) -> dict`` function; the
+            helper builds the tool's executor around it and registers
+            the tool on this registry.
+
+        Raises:
+            ValueError: If ``filters`` already contains a ``"limit"``
+                key (reserved by the helper) or if a tool with ``name``
+                is already registered on this registry.
+
+        Example::
+
+            @standard_tools.filter_search_tool(
+                name="find_medications",
+                description="Search the patient's medications...",
+                queryset_factory=lambda args, pid: (
+                    Medication.objects.active()
+                    if args.get("active_only")
+                    else Medication.objects.committed()
+                ).filter(patient__id=pid),
+                filters={
+                    "name_contains": FilterSpec(
+                        type="string",
+                        description="...",
+                        apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+                    ),
+                    "active_only": FilterSpec(
+                        type="boolean",
+                        description="...",
+                        # No apply — consumed by queryset_factory.
+                    ),
+                },
+                ordering=("-start_date",),
+                prefetch_related=("codings",),
+            )
+            def _serialize_medication(medication):
+                coding = next(iter(medication.codings.all()), None)
+                return {
+                    "name": coding.display if coding else "(unknown)",
+                    "status": medication.status,
+                    ...,
+                }
+        """
+        filters_dict = dict(filters or {})
+        if "limit" in filters_dict:
+            raise ValueError(
+                "'limit' is reserved by filter_search_tool; pass "
+                "limit_default / limit_max / limit_description instead."
+            )
+
+        # Build the JSON Schema from filter specs plus the auto-added `limit`.
+        properties: dict[str, dict[str, Any]] = {}
+        for filter_name, spec in filters_dict.items():
+            prop: dict[str, Any] = {"type": spec.type, "description": spec.description}
+            if spec.format:
+                prop["format"] = spec.format
+            if spec.minimum is not None:
+                prop["minimum"] = spec.minimum
+            if spec.maximum is not None:
+                prop["maximum"] = spec.maximum
+            if spec.enum is not None:
+                prop["enum"] = list(spec.enum)
+            if spec.default is not None:
+                prop["default"] = spec.default
+            properties[filter_name] = prop
+        # No schema maximum: a larger limit is clamped to limit_max rather than refused.
+        properties["limit"] = {
+            "type": "integer",
+            "minimum": 1,
+            "description": (
+                limit_description
+                or f"Max results. Defaults to {limit_default}; capped at {limit_max}."
+            ),
+        }
+
+        input_schema: dict[str, Any] = {"type": "object", "properties": properties}
+
+        def decorator(
+            serializer: Callable[[Any], dict[str, Any]],
+        ) -> Callable[[Any], dict[str, Any]]:
+            def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+                patient_id = require_patient_id(ctx) if patient_scoped else None
+                queryset = queryset_factory(arguments, patient_id)
+
+                for filter_name, spec in filters_dict.items():
+                    if spec.apply is None:
+                        continue
+                    value = arguments.get(filter_name, spec.default)
+                    # Skip falsy values — matches the truthy-check pattern the
+                    # SDK's hand-written tools used before this helper existed.
+                    # Filters that need to distinguish False from None should
+                    # use queryset_factory (apply=None) instead.
+                    if not value:
+                        continue
+                    queryset = spec.apply(queryset, value)
+
+                if select_related:
+                    queryset = queryset.select_related(*select_related)
+                if prefetch_related:
+                    queryset = queryset.prefetch_related(*prefetch_related)
+                if ordering:
+                    queryset = queryset.order_by(*ordering)
+
+                limit = min(max(int(arguments.get("limit", limit_default)), 1), limit_max)
+                queryset = queryset[:limit]
+
+                return [serializer(row) for row in queryset]
+
+            metadata: dict[str, Any] = {
+                "kind": "filter_search",
+                "serializer": serializer,
+                "patient_scoped": patient_scoped,
+            }
+            if model is not None:
+                metadata["model"] = model
+                metadata["citable"] = citable
+            if returns_description is not None:
+                metadata["returns_description"] = returns_description
+            self.register(
+                {"name": name, "description": description, "input_schema": input_schema},
+                executor,
+                categories=categories,
+                metadata=metadata,
+                max_result_chars=max_result_chars,
+                progress_label=progress_label,
+            )
+            return serializer
+
+        return decorator
+
+    def originate_command_tool(
+        self,
+        *,
+        name: str,
+        description: str,
+        command_class: type,
+        fields: dict[str, EffectField],
+        note_resolver: Callable[[dict[str, Any]], str | None] = _note_id_from_ctx,
+        no_note_error: str = (
+            "No note available for this run; ask the clinician to open or "
+            "create a note before requesting this command."
+        ),
+        pre_build: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None,
+        categories: Iterable[str] = (),
+        returns_description: str | None = None,
+    ) -> None:
+        """Register a tool that originates a Canvas Command on a note.
+
+        The platform's analogue to :meth:`filter_search_tool` for write
+        tools. Handles the boilerplate of: resolving the target note,
+        validating it's available, constructing the Command with the
+        model's arguments, calling ``.originate()`` to produce an Effect,
+        appending it to ``ctx["effects"]``, and returning a confirmation
+        dict.
+
+        The author declares the Command class, the fields the model can
+        pass, and (optionally) where to find the target note. The helper
+        does the rest. ``.originate()`` is called — never ``.commit()`` —
+        per the SDK's "originate but never commit" convention; the
+        clinician reviews/edits/commits the draft in the chart UI.
+
+        Args:
+            name: Tool name as advertised to the model.
+            description: Tool description as advertised to the model.
+            command_class: The :class:`canvas_sdk.commands.*` Command
+                subclass to instantiate.
+            fields: Mapping of LLM-facing argument name to
+                :class:`EffectField`. The helper synthesizes the JSON
+                Schema from these and maps each argument to the
+                corresponding Command field (using
+                ``EffectField.command_field`` to rename where the LLM
+                name and Command field differ).
+            note_resolver: Callable returning the target note's UUID
+                (a string) given ``ctx``. Defaults to
+                :func:`_note_id_from_ctx` which reads ``ctx["note_id"]``,
+                the run's note or the requesting staff member's open note.
+            no_note_error: Error message returned to the model when
+                ``note_resolver`` returns ``None``. The model surfaces
+                this to the clinician (e.g., "open a note before
+                requesting prescription drafts").
+            pre_build: Optional ``(arguments, ctx) -> dict`` hook for
+                custom logic before the Command is built. Return a dict
+                of extra keyword arguments to pass to
+                ``command_class(...)``. Typical use: normalize values
+                (e.g., truncate strings), generate IDs, look up
+                external codes. The hook's return value is *merged on
+                top of* the helper's argument mapping — keys in the
+                hook's return take precedence over the model's
+                arguments.
+            categories: Optional category tags for the tool. See
+                :meth:`resolve_allowed`.
+            returns_description: Optional free-text summary of the
+                tool's return shape. Not used at runtime; consumed by
+                the docs generator.
+
+        Example::
+
+            standard_tools.originate_command_tool(
+                name="originate_plan",
+                description="Stage a Plan command on the patient's current note...",
+                command_class=PlanCommand,
+                fields={
+                    "narrative": EffectField(
+                        type="string",
+                        description="The Plan narrative as plain text.",
+                        required=True,
+                    ),
+                },
+                categories=("clinical_writes",),
+            )
+        """
+        # Synthesize the JSON Schema from the fields dict.
+        properties: dict[str, dict[str, Any]] = {}
+        required: list[str] = []
+        for field_name, spec in fields.items():
+            prop: dict[str, Any] = {"type": spec.type, "description": spec.description}
+            if spec.format:
+                prop["format"] = spec.format
+            if spec.minimum is not None:
+                prop["minimum"] = spec.minimum
+            if spec.maximum is not None:
+                prop["maximum"] = spec.maximum
+            if spec.enum is not None:
+                prop["enum"] = list(spec.enum)
+            if spec.items is not None:
+                prop["items"] = spec.items
+            if spec.min_items is not None:
+                prop["minItems"] = spec.min_items
+            if spec.max_items is not None:
+                prop["maxItems"] = spec.max_items
+            if spec.max_length is not None:
+                prop["maxLength"] = spec.max_length
+            if spec.pattern is not None:
+                prop["pattern"] = spec.pattern
+            properties[field_name] = prop
+            if spec.required:
+                required.append(field_name)
+
+        input_schema: dict[str, Any] = {"type": "object", "properties": properties}
+        if required:
+            input_schema["required"] = required
+
+        # Map LLM-facing arg name to Command field name (defaults to identity).
+        command_field_map: dict[str, str] = {
+            arg_name: (spec.command_field or arg_name)
+            for arg_name, spec in fields.items()
+            if not spec.pre_build_only
+        }
+        _refuse_fields_targeting(name, command_field_map, {"note_uuid", "command_uuid"})
+
+        # Canvas Command classes carry a Meta inner class with a `key` (e.g., "plan",
+        # "prescribe"), the command type's schema key; fall back to the class name if
+        # Meta.key isn't set so non-Command effect classes work too.
+        meta_cls = getattr(command_class, "Meta", None)
+        command_key: str | None = getattr(meta_cls, "key", None) if meta_cls else None
+
+        def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+            note_uuid = note_resolver(ctx)
+            if not note_uuid:
+                return {"ok": False, "error": no_note_error}
+            if command_key and not command_type_active(command_key):
+                return command_type_off_error(command_key)
+
+            # Build the Command's kwargs from the model's arguments, applying
+            # any per-field rename via command_field. Falsy values (including
+            # None / missing) are skipped — Commands have their own field
+            # defaults and we don't want to override them with explicit Nones.
+            # The command's id is chosen here so the model can edit or delete the draft.
+            command_uuid = str(uuid4())
+            command_kwargs: dict[str, Any] = {"note_uuid": note_uuid, "command_uuid": command_uuid}
+            for arg_name, target_field in command_field_map.items():
+                value = arguments.get(arg_name)
+                if value is None:
+                    continue
+                command_kwargs[target_field] = value
+
+            # Optional pre_build hook for custom transformations.
+            if pre_build is not None:
+                extra = pre_build(arguments, ctx)
+                if extra:
+                    command_kwargs.update(extra)
+
+            effects: list[Any] = ctx["effects"]
+            command = command_class(**command_kwargs)
+            effects.append(command.originate())
+
+            return {
+                "ok": True,
+                "note_id": note_uuid,
+                "command_id": command_uuid,
+                "command": command_key or command_class.__name__,
+                "committed": False,
+            }
+
+        metadata: dict[str, Any] = {
+            "kind": "originate_command",
+            "command_class": command_class,
+            "editable_fields": {
+                arg_name: spec
+                for arg_name, spec in fields.items()
+                if spec.editable and not spec.pre_build_only
+            },
+        }
+        if returns_description is not None:
+            metadata["returns_description"] = returns_description
+        self.register(
+            {"name": name, "description": description, "input_schema": input_schema},
+            executor,
+            categories=categories,
+            metadata=metadata,
+            # Matches the type `_BaseCommand.originate()` stamps on its Effect.
+            effect_types=(f"ORIGINATE_{command_class.constantized_key()}_COMMAND",),  # type: ignore[attr-defined]
+        )
+
+    def add_effect_tool(
+        self,
+        *,
+        name: str,
+        description: str,
+        effect_class: type,
+        fields: dict[str, EffectField],
+        inject_ctx: dict[str, str] | None = None,
+        pre_build: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None,
+        response_builder: Callable[[Any], dict[str, Any]] | None = None,
+        categories: Iterable[str] = (),
+        returns_description: str | None = None,
+        effect_method: str = "apply",
+        required_permissions: Iterable[str] = (),
+    ) -> None:
+        """Register a tool that stages a non-note-bound Effect.
+
+        Companion to :meth:`originate_command_tool` for the "stage an
+        Effect that isn't pinned to a specific note" pattern. Handles
+        JSON-Schema synthesis, ctx-key injection (patient_id by default),
+        Effect construction, ``.apply()`` invocation, accumulator append,
+        and response shaping.
+
+        Use this for effects like ``AddTask``, ``AddBannerAlert``,
+        ``RemoveBannerAlert`` — anything where the agent is staging a
+        platform-side action that's patient-scoped but doesn't land on
+        a specific encounter note. For note-bound originate-command
+        patterns, use :meth:`originate_command_tool` instead.
+
+        Args:
+            name: Tool name as advertised to the model.
+            description: Tool description as advertised to the model.
+            effect_class: The :class:`canvas_sdk.effects.*` Effect
+                subclass to instantiate. The helper calls ``.apply()``
+                on the constructed instance and appends the result to
+                ``ctx["effects"]``.
+            fields: Mapping of LLM-facing argument name to
+                :class:`EffectField`. Same semantics as
+                :meth:`originate_command_tool`'s ``fields`` — type,
+                description, required, format/minimum/maximum, items/
+                min_items/max_items for arrays, ``command_field`` for
+                LLM-name → Effect-field rename.
+            inject_ctx: Mapping of ``ctx_key`` → ``effect_kwarg_name``,
+                used to auto-pass platform-supplied values into the
+                Effect's constructor. Defaults to
+                ``{"patient_id": "patient_id"}`` — most patient-bound
+                effects need this. Set to ``{}`` to inject nothing;
+                override to add other ctx keys (e.g., ``encounter_id``).
+            pre_build: Optional ``(arguments, ctx) -> dict`` hook for
+                custom logic before the Effect is built. Return a dict
+                of extra/replacement kwargs. Typical use: generate UUIDs
+                for client-side IDs, truncate strings to model-friendly
+                lengths, look up external codes. Hook return values
+                merge over (override) both the model's arguments and
+                the ctx-injected fields.
+            response_builder: Optional ``(effect) -> dict`` callable
+                that produces the model-facing response. The default is
+                ``{"ok": True}``. Use this to surface details that
+                inform the next turn (e.g., a generated ``task_id``
+                that the model can reference later).
+            categories: Optional category tags for the tool. See
+                :meth:`resolve_allowed`.
+            returns_description: Optional free-text summary of the
+                tool's return shape. Not used at runtime; consumed by
+                the docs generator.
+            effect_method: Name of the Effect class method to invoke
+                to produce the wire-format ``Effect``. Defaults to
+                ``"apply"`` — the convention used by ``_BaseEffect``
+                subclasses (AddTask, AddBannerAlert, etc.). Set to
+                ``"create"`` / ``"edit"`` / ``"send"`` for the Message
+                effect family (``canvas_sdk.effects.note.message.Message``),
+                which uses explicit verbs instead of a single ``.apply()``.
+            required_permissions: As in :meth:`register`.
+
+        Example::
+
+            from uuid import uuid4
+            from canvas_sdk.effects.task.task import AddTask
+
+            standard_tools.add_effect_tool(
+                name="create_task",
+                description="Create a follow-up task for the patient...",
+                effect_class=AddTask,
+                fields={
+                    "title": EffectField(type="string", description="...", required=True),
+                },
+                pre_build=lambda args, ctx: {
+                    "id": str(uuid4()),
+                    "title": args["title"].strip()[:200],
+                },
+                response_builder=lambda effect: {
+                    "ok": True, "task_id": str(effect.id)
+                },
+                categories=("task_writes",),
+            )
+        """
+        ctx_field_map: dict[str, str] = (
+            {"patient_id": "patient_id"} if inject_ctx is None else dict(inject_ctx)
+        )
+
+        # Synthesize the JSON Schema from the fields dict.
+        properties: dict[str, dict[str, Any]] = {}
+        required: list[str] = []
+        for field_name, spec in fields.items():
+            prop: dict[str, Any] = {"type": spec.type, "description": spec.description}
+            if spec.format:
+                prop["format"] = spec.format
+            if spec.minimum is not None:
+                prop["minimum"] = spec.minimum
+            if spec.maximum is not None:
+                prop["maximum"] = spec.maximum
+            if spec.enum is not None:
+                prop["enum"] = list(spec.enum)
+            if spec.items is not None:
+                prop["items"] = spec.items
+            if spec.min_items is not None:
+                prop["minItems"] = spec.min_items
+            if spec.max_items is not None:
+                prop["maxItems"] = spec.max_items
+            if spec.max_length is not None:
+                prop["maxLength"] = spec.max_length
+            if spec.pattern is not None:
+                prop["pattern"] = spec.pattern
+            properties[field_name] = prop
+            if spec.required:
+                required.append(field_name)
+
+        input_schema: dict[str, Any] = {"type": "object", "properties": properties}
+        if required:
+            input_schema["required"] = required
+
+        effect_field_map: dict[str, str] = {
+            arg_name: (spec.command_field or arg_name) for arg_name, spec in fields.items()
+        }
+        _refuse_fields_targeting(name, effect_field_map, set(ctx_field_map.values()))
+
+        def executor(arguments: dict[str, Any], *, ctx: dict[str, Any]) -> dict[str, Any]:
+            # Start with ctx-injected fields.
+            effect_kwargs: dict[str, Any] = {}
+            for ctx_key, target_field in ctx_field_map.items():
+                # A tool built for the run's patient refuses a run with none, rather
+                # than staging the effect for no one.
+                value = require_patient_id(ctx) if ctx_key == "patient_id" else ctx.get(ctx_key)
+                if value is not None:
+                    effect_kwargs[target_field] = value
+
+            # Layer model-supplied arguments on top.
+            for arg_name, target_field in effect_field_map.items():
+                value = arguments.get(arg_name)
+                if value is None:
+                    continue
+                effect_kwargs[target_field] = value
+
+            # pre_build override last, so transformations (truncation,
+            # generated UUIDs) take precedence.
+            if pre_build is not None:
+                extra = pre_build(arguments, ctx)
+                if extra:
+                    effect_kwargs.update(extra)
+
+            effects: list[Any] = ctx["effects"]
+            effect = effect_class(**effect_kwargs)
+            # Most _BaseEffect subclasses expose ``.apply()``; the Message
+            # effect family (canvas_sdk.effects.note.message.Message) uses
+            # explicit method names (``.create()`` / ``.edit()`` / ``.send()``)
+            # instead. ``effect_method`` defaults to "apply" so existing
+            # callers are unaffected.
+            effects.append(getattr(effect, effect_method)())
+
+            if response_builder is not None:
+                return response_builder(effect)
+            return {"ok": True}
+
+        metadata: dict[str, Any] = {
+            "kind": "add_effect",
+            "effect_class": effect_class,
+        }
+        if returns_description is not None:
+            metadata["returns_description"] = returns_description
+        self.register(
+            {"name": name, "description": description, "input_schema": input_schema},
+            executor,
+            categories=categories,
+            metadata=metadata,
+            effect_types=(_effect_type_name(effect_class, effect_method),),
+            required_permissions=required_permissions,
+        )
+
+    def extend(self, other: "ToolRegistry") -> None:
+        """Copy every tool from ``other`` into this registry.
+
+        Mutations to ``self`` after the call don't affect ``other`` and vice
+        versa — this is a shallow copy of definitions and an executor-ref copy
+        of executors. Plugin code typically calls this once at module import
+        time to adopt the SDK's :data:`standard_tools` catalog.
+
+        Raises:
+            ValueError: On name collisions between the two registries.
+            RuntimeError: If this registry is frozen.
+        """
+        self._ensure_mutable()
+        for definition in other._definitions:
+            name = definition["name"]
+            categories = other.categories_for(name)
+            metadata = other.metadata_for(name)
+            self.register(
+                dict(definition),
+                other._executors[name],
+                categories=categories,
+                metadata=metadata,
+                effect_types=other.effect_types_for(name),
+                required_permissions=other.required_permissions_for(name),
+                required_capabilities=other.required_capabilities_for(name),
+                max_result_chars=other._max_result_chars.get(name),
+                progress_label=other._progress_labels.get(name),
+                for_patients=name in other._for_patients,
+            )
+        self._approval |= other._approval
+
+    def scope(self, allowed: Iterable[str]) -> "ToolRegistry":
+        """Return a *new* registry containing only the named tools.
+
+        The platform's enforcement seam. The plugin author
+        registers their full tool surface in a module-level registry;
+        the platform calls ``scope`` with the manifest's
+        ``components.agents[].tools.allowed`` set and substitutes the
+        scoped registry on ``agent.tools`` before ``run()`` fires. The
+        agent then uses ``self.tools.definitions()`` /
+        ``.execute(...)`` directly — the disallowed entries simply
+        aren't reachable. Defense in depth: even if the agent tries to
+        invoke a tool by name, the scoped registry's ``execute`` raises
+        ``ValueError("Unknown tool: ...")`` because the entry was never
+        registered into the scope.
+
+        Names in ``allowed`` that aren't registered in this source
+        registry are silently dropped (a manifest typo can't surface
+        phantom tools to the model).
+
+        The source registry is unaffected — ``scope`` is non-destructive.
+        Multiple agents sharing a plugin-level registry can each receive
+        their own scoped view.
+        """
+        allowed_set = set(allowed)
+        scoped = ToolRegistry()
+        for definition in self._definitions:
+            name = definition["name"]
+            if name in allowed_set:
+                scoped.register(
+                    dict(definition),
+                    self._executors[name],
+                    categories=self.categories_for(name),
+                    metadata=self.metadata_for(name),
+                    effect_types=self.effect_types_for(name),
+                    required_permissions=self.required_permissions_for(name),
+                    required_capabilities=self.required_capabilities_for(name),
+                    max_result_chars=self._max_result_chars.get(name),
+                    progress_label=self._progress_labels.get(name),
+                    for_patients=name in self._for_patients,
+                )
+        scoped._approval = self._approval & allowed_set
+        return scoped
+
+    def resolve_allowed(
+        self,
+        allowed: Iterable[str],
+        *,
+        denied: Iterable[str] | None = None,
+    ) -> frozenset[str]:
+        """Expand ``@category`` references in an allowlist; apply optional ``denied``.
+
+        Entries in ``allowed`` and ``denied`` come in two shapes:
+
+        - A literal tool name (e.g., ``"find_medications"``) — included
+          verbatim if the tool is registered on this registry. Unknown
+          names are silently dropped (defense in depth: a manifest typo
+          can't surface phantom tools to the model).
+        - A ``@category`` reference (e.g., ``"@clinical_reads"``) —
+          expanded to the names of every tool tagged with that category
+          on this registry. Unknown categories resolve to nothing.
+
+        ``denied`` is applied *after* ``allowed`` expansion; subtractions
+        win over additions. Use it to opt into a category broadly and
+        carve out specific tools or categories.
+
+        Args:
+            allowed: Iterable of literal tool names and ``@category``
+                references to include.
+            denied: Optional iterable in the same shape. Subtracted from
+                the resolved set.
+
+        Returns:
+            The frozenset of resolved tool names — the platform passes
+            this to :meth:`scope` to produce the agent's
+            manifest-authorized tool surface.
+        """
+        result: set[str] = set()
+        for entry in allowed:
+            if entry.startswith("@"):
+                result.update(self._categories.get(entry[1:], set()))
+            elif entry in self._executors:
+                result.add(entry)
+
+        if denied:
+            denied_set: set[str] = set()
+            for entry in denied:
+                if entry.startswith("@"):
+                    denied_set.update(self._categories.get(entry[1:], set()))
+                else:
+                    denied_set.add(entry)
+            result -= denied_set
+
+        return frozenset(result)
+
+    def definitions(self, *, allowed: Iterable[str] | None = None) -> list[dict[str, Any]]:
+        """Tool list suitable for ``client.messages.create(tools=...)``.
+
+        Args:
+            allowed: Optional iterable of tool names to include. When supplied,
+                only tools whose ``name`` appears in the iterable are returned;
+                others are filtered out before the model ever sees them. Names
+                in ``allowed`` that aren't registered are silently ignored
+                (defense in depth — a manifest typo doesn't surface anything
+                extra to the model). When ``None`` (the default), every
+                registered tool is returned.
+
+        Each definition is a copy, so editing one leaves the registry unchanged.
+        """
+        allowed_set = None if allowed is None else set(allowed)
+        return [
+            copy.deepcopy(d)
+            for d in self._definitions
+            if allowed_set is None or d["name"] in allowed_set
+        ]
+
+    def execute(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        *,
+        ctx: dict[str, Any],
+        allowed: Iterable[str] | None = None,
+    ) -> Any:
+        """Dispatch a model-issued tool call to the registered executor.
+
+        Args:
+            name: The tool's registered name (the ``"name"`` key from its
+                JSON-Schema definition).
+            arguments: The model's ``tool_use.input`` dict — values the model
+                chose. Passed through to the executor as-is.
+            ctx: Platform-supplied per-run context (``patient_id``, ``note_id``,
+                the effects accumulator, etc.) the model never sees.
+            allowed: If supplied, ``name`` must be in this iterable in addition
+                to being registered — otherwise raises :class:`ToolNotAllowed`.
+                Pass the same allowlist you passed to :meth:`definitions` so
+                the model can't sneak past the catalog filter (e.g., by
+                replaying a tool name it remembers from a previous turn that
+                used a different allowlist).
+
+        Raises:
+            ValueError: If ``name`` is not a registered tool. The caller is
+                expected to translate this into a ``tool_result`` with
+                ``is_error=True`` rather than crashing the run.
+            ToolNotAllowed: If ``allowed`` was supplied and ``name`` is not in it, or the
+                run lacks a permission or capability the tool requires. ``ctx`` without
+                a ``permissions`` key, as in a direct call, is not limited by permissions.
+        """
+        executor = self._executors.get(name)
+        if executor is None:
+            raise ValueError(f"Unknown tool: {name!r}")
+        if allowed is not None and name not in set(allowed):
+            raise ToolNotAllowed(f"Tool {name!r} is registered but not in the caller's allowed set")
+        granted = ctx.get("capabilities")
+        if missing := self._missing_requirements(
+            name,
+            ctx.get("permissions"),
+            frozenset(granted) if isinstance(granted, set | frozenset) else frozenset(),
+        ):
+            raise ToolNotAllowed(f"Tool {name!r} needs {', '.join(missing)}, which this run lacks")
+        if ctx.get("patient_run") and name not in self._for_patients:
+            raise ToolNotAllowed(f"Tool {name!r} is for staff, and a run a patient started")
+        # The schema's bounds hold in code: an enum, a range, an item cap, or a format the
+        # model was told about is refused here rather than trusted.
+        if problems := sorted(
+            self._validators[name].iter_errors(arguments), key=lambda error: list(error.path)
+        ):
+            where = ".".join(str(part) for part in problems[0].path) or "arguments"
+            raise ValueError(f"Invalid arguments for {name!r}: {where}: {problems[0].message}")
+        if name not in self._approval:
+            if "effects" not in ctx:
+                # Nothing to stage into, as in a direct call to a read tool.
+                return executor(arguments, ctx=ctx)
+            # A call that raises keeps none of what it staged: the model is told it failed,
+            # and a retry would duplicate it.
+            call_effects = _CallEffects(ctx["effects"])
+            try:
+                return executor(arguments, ctx={**ctx, "effects": call_effects})
+            except Exception:
+                call_effects.take_back()
+                raise
+        call_effects = _ProposedEffects(ctx["effects"])
+        try:
+            result = executor(arguments, ctx={**ctx, "effects": call_effects})
+        except Exception:
+            # Nothing it staged is proposed, and the drafts it removed are put back.
+            call_effects.take_back()
+            raise
+        # Approval covers changes, not this tool's name: a sub-agent's proposal stays as it
+        # is, and a change no approval-listed tool stages is made as any granted tool's is.
+        proposable = self.proposable_effect_types() - {PROPOSAL_EFFECT_TYPE}
+        wrapped: list[Any] = []
+        passed: list[Any] = []
+        for effect in call_effects.staged():
+            (wrapped if EffectType.Name(effect.type) in proposable else passed).append(effect)
+        ctx["effects"].extend(passed)
+        if not wrapped:
+            return result
+        # One proposal for the whole call, so its changes are decided and applied together.
+        proposal = propose(wrapped, name, arguments)
+        ctx["effects"].append(proposal)
+        return {
+            "status": "awaiting_approval",
+            "proposal_ids": [proposal_id(proposal)],
+            "message": (
+                "Nothing has changed yet: this change is proposed, and takes effect only if "
+                "the user approves it. Tell the user it is waiting for their approval."
+            ),
+            "tool_result": result,
+        }
+
+
+__exports__ = (
+    "DEFAULT_TOOL_RESULT_CHARS",
+    "MAX_TOOL_RESULT_CHARS",
+    "EffectField",
+    "FilterSpec",
+    "ToolNotAllowed",
+    "ToolRegistry",
+)

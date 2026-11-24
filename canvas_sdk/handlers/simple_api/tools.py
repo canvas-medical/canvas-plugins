@@ -2,7 +2,8 @@ from collections.abc import ItemsView, Iterable, Iterator, KeysView, Mapping, Va
 from typing import Any, TypeVar, overload
 
 KeyType = TypeVar("KeyType")
-ValueType = TypeVar("ValueType", covariant=True)
+# Not ValueType_co: the plugin sandbox's import allowlist exposes this name to plugins.
+ValueType = TypeVar("ValueType", covariant=True)  # noqa: PLC0105
 
 
 class MultiDict(Mapping[KeyType, ValueType]):
@@ -29,18 +30,18 @@ class MultiDict(Mapping[KeyType, ValueType]):
         return x in self._dict
 
     @overload
-    def get(self, __key: KeyType, /) -> Any: ...
+    def get(self, key: KeyType, /) -> Any: ...
 
     @overload
-    def get(self, __key: KeyType, /, __default: Any = None) -> Any: ...
+    def get(self, key: KeyType, default: Any = None, /) -> Any: ...
 
-    def get(self, __key: KeyType, __default: Any | None = None) -> Any:
+    def get(self, key: KeyType, default: Any | None = None, /) -> Any:
         """Get a value for a key if present, and if not, return the default value."""
-        return self._dict.get(__key, __default)
+        return self._dict.get(key, default)
 
-    def get_list(self, __key: KeyType) -> list[ValueType]:
+    def get_list(self, key: KeyType, /) -> list[ValueType]:
         """Get the values for a key if present, and if not, return an empty list."""
-        return [value for key, value in self._items if key == __key]
+        return [value for item_key, value in self._items if item_key == key]
 
     def items(self) -> ItemsView[KeyType, ValueType]:
         """Return an items view of the dict."""
@@ -87,19 +88,19 @@ class CaseInsensitiveMultiDict(MultiDict[str, ValueType]):
 
         return super().__contains__(x.lower())
 
-    def get(self, __key: KeyType, __default: Any | None = None) -> Any:
+    def get(self, key: KeyType, default: Any | None = None, /) -> Any:
         """Get a value for a key if present, and if not, return the default value."""
-        if not isinstance(__key, str):
-            return __default
+        if not isinstance(key, str):
+            return default
 
-        return super().get(__key.lower(), __default)
+        return super().get(key.lower(), default)
 
-    def get_list(self, __key: KeyType) -> list[ValueType]:
+    def get_list(self, key: KeyType, /) -> list[ValueType]:
         """Get the values for a key if present, and if not, return an empty list."""
-        if not isinstance(__key, str):
+        if not isinstance(key, str):
             return []
 
-        return super().get_list(__key.lower())
+        return super().get_list(key.lower())
 
 
 # Headers whose grammar permits a comma-separated list of values (RFC 7230

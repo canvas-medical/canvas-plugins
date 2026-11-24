@@ -302,6 +302,7 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
 @pytest.mark.integtest
 @patch("canvas_cli.apps.auth.utils.get_token")
 @patch("canvas_cli.apps.auth.utils.set_token")
+# The steps are an ordered scenario, so a step that repeats (disable, list empty) is deliberate.
 @pytest.mark.parametrize(
     "step",
     [
@@ -318,9 +319,9 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
         (list_disabled_plugin),
         (enable_plugin),
         (uninstall_enabled_plugin),
-        (disable_plugin),
+        (disable_plugin),  # noqa: PT014
         (uninstall_disabled_plugin),
-        (list_empty_plugins),
+        (list_empty_plugins),  # noqa: PT014
     ],
 )
 def test_canvas_list_install_disable_enable_uninstall(

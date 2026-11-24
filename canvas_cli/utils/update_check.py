@@ -1,5 +1,6 @@
 """Check PyPI for newer versions of the canvas CLI and notify the user."""
 
+import contextlib
 import json
 import os
 import sys
@@ -59,7 +60,8 @@ def check_for_updates(current_version: str, app_dir: str) -> None:
     if os.environ.get("CANVAS_NO_UPDATE_CHECK"):
         return
 
-    try:
+    # Never let the update check break the CLI.
+    with contextlib.suppress(Exception):
         cache_path = _get_cache_path(app_dir)
         cache = _read_cache(cache_path)
 
@@ -72,6 +74,3 @@ def check_for_updates(current_version: str, app_dir: str) -> None:
 
         if Version(latest_version) > Version(current_version):
             _print_notice(current_version, latest_version)
-    except Exception:
-        # Never let the update check break the CLI.
-        pass

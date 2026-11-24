@@ -54,11 +54,17 @@ def create_plugin_custom_model_tables(
     if "sqlite3" not in settings.DATABASES["default"]["ENGINE"]:
         return
 
-    # Detect plugin name and path from the test directory structure
-    # Expected structure: /path/to/plugin_name/tests/...
+    # Detect plugin name and path from the test directory structure. The plugin
+    # package is the directory holding CANVAS_MANIFEST.json: nested under the
+    # rootdir as `canvas init` scaffolds it (plugin_name/plugin_name/, tests in
+    # plugin_name/tests/), or the rootdir itself in a flat layout (plugin_name/
+    # with tests in plugin_name/tests/).
     test_dir = Path(request.config.rootpath)
     plugin_name = test_dir.name.replace("-", "_")  # Convert plugin-name to plugin_name
-    plugin_path = test_dir / plugin_name
+    if (test_dir / "CANVAS_MANIFEST.json").exists():
+        plugin_path = test_dir
+    else:
+        plugin_path = test_dir / plugin_name
 
     # Check if this is a plugin with custom models
     models_path = plugin_path / "models"

@@ -16,7 +16,5 @@ version = importlib.metadata.version("canvas")
 class PostClaimPayment(_PostClaimPayment):
     """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::post_payment."""
 
-    pass
-
 
 __exports__ = ("PostClaimPayment",)

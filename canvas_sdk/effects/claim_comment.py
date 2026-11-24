@@ -16,7 +16,5 @@ version = importlib.metadata.version("canvas")
 class AddClaimComment(_AddClaimComment):
     """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::add_comment."""
 
-    pass
-
 
 __all__ = __exports__ = ("AddClaimComment",)

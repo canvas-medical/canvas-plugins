@@ -1,6 +1,237 @@
 # CHANGELOG
 
 
+## v1.18.0 (2026-11-23)
+
+### Features
+
+- Add structured output and effort to sub-agents and the tool loop
+  ([#2018](https://github.com/canvas-medical/canvas-plugins/pull/2018),
+  [`3a2893f`](https://github.com/canvas-medical/canvas-plugins/commit/3a2893fa45e1aaf2bf7c8379b21e7fc7e5b054a1))
+
+
+## v1.17.0 (2026-11-23)
+
+### Features
+
+- **data**: Expose questionnaire results and interview details in the data module (KOALA-8563)
+  ([#2025](https://github.com/canvas-medical/canvas-plugins/pull/2025),
+  [`9c2c5f3`](https://github.com/canvas-medical/canvas-plugins/commit/9c2c5f395dd498983c84e6bec6422ccd61eb85c1))
+
+
+## v1.16.0 (2026-11-23)
+
+### Features
+
+- **data**: Expose population health tables in the data module (KOALA-8565)
+  ([#2026](https://github.com/canvas-medical/canvas-plugins/pull/2026),
+  [`f7b42d5`](https://github.com/canvas-medical/canvas-plugins/commit/f7b42d547bf20d9b838e36c6ffad9739f2f522b2))
+
+
+## v1.15.0 (2026-11-23)
+
+### Chores
+
+- Move ruff to 0.17.4 and keep the selected families on top of its defaults
+  ([#2017](https://github.com/canvas-medical/canvas-plugins/pull/2017),
+  [`8a94b25`](https://github.com/canvas-medical/canvas-plugins/commit/8a94b25e1c2af4f6acaaea287316f614f69cde78))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+### Features
+
+- **data**: Expose document annotations and attached documents in the data module (KOALA-8562)
+  ([#2024](https://github.com/canvas-medical/canvas-plugins/pull/2024),
+  [`5724de9`](https://github.com/canvas-medical/canvas-plugins/commit/5724de990ea1b7b7624f09e1b6fc0869b79329c4))
+
+
+## v1.14.0 (2026-11-20)
+
+### Features
+
+- **data**: Expose the remaining codings and joins in the data module (KOALA-8561)
+  ([#2023](https://github.com/canvas-medical/canvas-plugins/pull/2023),
+  [`379d0df`](https://github.com/canvas-medical/canvas-plugins/commit/379d0df6901b025252a51a844a9a66d43cfbea64))
+
+
+## v1.13.0 (2026-11-20)
+
+### Bug Fixes
+
+- Low-risk bumps for 2 dependencies (critical)
+  ([#2019](https://github.com/canvas-medical/canvas-plugins/pull/2019),
+  [`9ec6df3`](https://github.com/canvas-medical/canvas-plugins/commit/9ec6df3fec0d99323dec21c7d65b9937533ed2b4))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- **data**: Expose claim lifecycle and remittance tables in the data module (KOALA-8485)
+  ([#2022](https://github.com/canvas-medical/canvas-plugins/pull/2022),
+  [`669f075`](https://github.com/canvas-medical/canvas-plugins/commit/669f0756fb67d193784a6b90fcc0f1bd5c482d98))
+
+
+## v1.12.0 (2026-11-20)
+
+### Continuous Integration
+
+- Replace Codecov with diff-cover for coverage
+  ([#1982](https://github.com/canvas-medical/canvas-plugins/pull/1982),
+  [`4d847f1`](https://github.com/canvas-medical/canvas-plugins/commit/4d847f120e5c29fc0ee523a53f9e0eecdc6bd827))
+
+### Features
+
+- **data**: Expose the remaining clinical tables in the data module (KOALA-8484)
+  ([#2021](https://github.com/canvas-medical/canvas-plugins/pull/2021),
+  [`59d5f67`](https://github.com/canvas-medical/canvas-plugins/commit/59d5f67679ec82b0e1c2c71d3f38bea1b5f288dc))
+
+
+## v1.11.0 (2026-11-19)
+
+### Features
+
+- **data**: Expose CarePlan in the data module (KOALA-8482)
+  ([#2020](https://github.com/canvas-medical/canvas-plugins/pull/2020),
+  [`7068f17`](https://github.com/canvas-medical/canvas-plugins/commit/7068f17ce2e682396da4a8c71959fd365b96f151))
+
+
+## v1.10.0 (2026-11-19)
+
+### Features
+
+- **sdk**: Allow UpdateRefillRequest to ignore a refill request (KOALA-8146)
+  ([#2008](https://github.com/canvas-medical/canvas-plugins/pull/2008),
+  [`e0e88b7`](https://github.com/canvas-medical/canvas-plugins/commit/e0e88b754f05b30b2f16a8a9192b195eee8a64fd))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+
+## v1.9.0 (2026-11-19)
+
+### Features
+
+- **data**: Expose the KOALA-7282 models in the data module and wire their FKs (KOALA-7282)
+  ([#2013](https://github.com/canvas-medical/canvas-plugins/pull/2013),
+  [`5a1cf7a`](https://github.com/canvas-medical/canvas-plugins/commit/5a1cf7ae717e9238f268d5072ef947d1c40d514a))
+
+
+## v1.8.0 (2026-11-19)
+
+### Bug Fixes
+
+- Low-risk bumps for 3 dependencies (critical)
+  ([#2016](https://github.com/canvas-medical/canvas-plugins/pull/2016),
+  [`4b9a099`](https://github.com/canvas-medical/canvas-plugins/commit/4b9a0994c89c0d2ebf756bb462565ab06c5924a0))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- Add effect and events for refill requests
+  ([#1801](https://github.com/canvas-medical/canvas-plugins/pull/1801),
+  [`bb02736`](https://github.com/canvas-medical/canvas-plugins/commit/bb027368a4dd07c076b17a072a227911117694a2))
+
+
+## v1.7.0 (2026-11-19)
+
+### Chores
+
+- Bump urllib3 (high, major) ([#2015](https://github.com/canvas-medical/canvas-plugins/pull/2015),
+  [`5cded94`](https://github.com/canvas-medical/canvas-plugins/commit/5cded9421b98b80e561f488cd282b77a5fce2a3a))
+
+Co-authored-by: themis <security@canvasmedical.com>
+
+### Features
+
+- **data**: Expose ServiceRequest in the data module (KOALA-8457)
+  ([#2012](https://github.com/canvas-medical/canvas-plugins/pull/2012),
+  [`a441be5`](https://github.com/canvas-medical/canvas-plugins/commit/a441be54b93be31567ed415ddf79d0e00d69b429))
+
+
+## v1.6.0 (2026-11-18)
+
+### Features
+
+- Let approximate-date command fields take a year or a month
+  ([#2010](https://github.com/canvas-medical/canvas-plugins/pull/2010),
+  [`f6c7958`](https://github.com/canvas-medical/canvas-plugins/commit/f6c795877099c17207a7d3662b119b9d08f0a6c0))
+
+
+## v1.5.0 (2026-11-18)
+
+### Features
+
+- **data**: Expose codings of exposed clinical models in the data module (KOALA-8454)
+  ([#2011](https://github.com/canvas-medical/canvas-plugins/pull/2011),
+  [`9a2c786`](https://github.com/canvas-medical/canvas-plugins/commit/9a2c7863d3c3d9798cd9bc5c136ea76f17beea94))
+
+
+## v1.4.0 (2026-11-18)
+
+### Features
+
+- Let plugins start, edit and delete Approve Refill and Deny Refill cards
+  ([#2006](https://github.com/canvas-medical/canvas-plugins/pull/2006),
+  [`861edf0`](https://github.com/canvas-medical/canvas-plugins/commit/861edf0c1d33b120d38cd3b0fd59e36211a49816))
+
+
+## v1.3.2 (2026-11-18)
+
+### Bug Fixes
+
+- **sdk**: Serve extension-less documents with their type and a matching filename
+  ([#2007](https://github.com/canvas-medical/canvas-plugins/pull/2007),
+  [`4366fe0`](https://github.com/canvas-medical/canvas-plugins/commit/4366fe0df6f474ce45b040a44975861090cd9931))
+
+
+## v1.3.1 (2026-11-17)
+
+### Bug Fixes
+
+- Match CPT and HCPCS Level II codes in BillingLineItem.find()
+  ([#2004](https://github.com/canvas-medical/canvas-plugins/pull/2004),
+  [`7c0f9da`](https://github.com/canvas-medical/canvas-plugins/commit/7c0f9daa33b2d4381ce8adf16030d6e6c63d22d5))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+- Support Claude Opus 5.5 in the Anthropic LLM client
+  ([#1905](https://github.com/canvas-medical/canvas-plugins/pull/1905),
+  [`5a76813`](https://github.com/canvas-medical/canvas-plugins/commit/5a76813703902434c20fef8d65a4a4a684e2d011))
+
+- **plugin_runner**: Keep serving for a drain window after SIGTERM
+  ([#1990](https://github.com/canvas-medical/canvas-plugins/pull/1990),
+  [`d88b16e`](https://github.com/canvas-medical/canvas-plugins/commit/d88b16e4e98f1554ef07c86bd714c1c885d4fca4))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+
+## v1.3.0 (2026-11-14)
+
+### Chores
+
+- Move PR workflows off pull_request_target
+  ([#1972](https://github.com/canvas-medical/canvas-plugins/pull/1972),
+  [`dfd14fc`](https://github.com/canvas-medical/canvas-plugins/commit/dfd14fc6c863526ff529d1d0bd1f51cac651800f))
+
+### Features
+
+- [koala-5544] - Agent Development Kit PoC
+  ([#1713](https://github.com/canvas-medical/canvas-plugins/pull/1713),
+  [`2b12b62`](https://github.com/canvas-medical/canvas-plugins/commit/2b12b62cbe1c2ad94f78add6ade5739b79c0e338))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+Co-authored-by: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+
+Co-authored-by: aaryanxshah <130312042+aaryanxshah@users.noreply.github.com>
+
+- Accept a maintainer in a plugin's catalog listing (PLATFORM-132)
+  ([#1998](https://github.com/canvas-medical/canvas-plugins/pull/1998),
+  [`4d37283`](https://github.com/canvas-medical/canvas-plugins/commit/4d37283fb22ef82bccdfea8f875ef287dc91acf0))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+
 ## v1.2.0 (2026-11-12)
 
 ### Features

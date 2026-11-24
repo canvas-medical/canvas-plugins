@@ -62,4 +62,28 @@ class DetectedIssueEvidence(IdentifiableModel, Coding):
     )
 
 
-__exports__ = ("DetectedIssue", "DetectedIssueEvidence")
+class DetectedIssueMitigation(IdentifiableModel):
+    """A mitigation action recorded against a DetectedIssue."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_detectedissuemitigation_001"
+
+    class Action(models.TextChoices):
+        ACCEPTED = "accepted", "Accepted"
+        CORRECTED = "corrected", "Corrected"
+        REFUTED = "refuted", "Refuted"
+        DEFERRED = "deferred", "Deferred"
+        VALID = "valid", "Valid"
+        INVALID = "invalid", "Invalid"
+
+    action = models.CharField(max_length=15, choices=Action.choices)
+    date = models.DateTimeField()
+    author = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="detected_issue_mitigations"
+    )
+    detected_issue = models.ForeignKey(
+        DetectedIssue, on_delete=models.DO_NOTHING, related_name="mitigations"
+    )
+
+
+__exports__ = ("DetectedIssue", "DetectedIssueEvidence", "DetectedIssueMitigation")

@@ -1,0 +1,32 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "anthropic>=1.0.0,<2",
+  "pytest"
+]
+
+[project]
+dependencies = [
+  "fastapi",
+  "httpx",
+  "uvicorn"
+]
+description = "Load test the Agent Development Kit: a fake inference gateway and a scenario driver"
+name = "adk-loadtest"
+requires-python = ">=3.12"
+version = "0.1.0"
+
+[project.scripts]
+adk-loadtest = "adk_loadtest.driver:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["adk_loadtest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+exclude-newer = "7 days"

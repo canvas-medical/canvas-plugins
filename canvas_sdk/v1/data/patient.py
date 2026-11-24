@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -8,10 +8,14 @@ from django.db import models
 from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    CommittableModelManager,
+    CommittableQuerySet,
     IdentifiableModel,
     MetadataModel,
     TimestampedModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -424,6 +428,51 @@ class PatientIdentificationCard(TimestampedModel):
         return None
 
 
+class PatientKnownLocation(AuditedModel, IdentifiableModel):
+    """A free-text place a patient was last seen."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientknownlocation_001"
+
+    objects = cast(CommittableQuerySet, CommittableModelManager())
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="known_locations"
+    )
+    known_location = models.TextField(max_length=300)
+
+
+class PatientParentGuardian(TimestampedModel, IdentifiableModel):
+    """The parent or guardian on a patient's profile."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientparentguardian_001"
+
+    patient = models.OneToOneField(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="parent_guardian"
+    )
+    first_name = models.CharField(max_length=255, blank=True, default="")
+    middle_name = models.CharField(max_length=255, blank=True, default="")
+    last_name = models.CharField(max_length=255, blank=True, default="")
+    phone_number = models.CharField(max_length=10, blank=True, default="")
+    line1 = models.CharField(max_length=255, blank=True, default="")
+    line2 = models.CharField(max_length=255, blank=True, default="")
+    city = models.CharField(max_length=255, blank=True, default="")
+    state_code = models.CharField(max_length=2, blank=True, default="")
+    postal_code = models.CharField(max_length=255, blank=True, default="")
+
+
+class PatientTribalAffiliationCoding(Coding):
+    """A coding of a patient's tribal affiliation."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patienttribalaffiliationcoding_001"
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="tribal_affiliation_coding"
+    )
+
+
 __exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
@@ -439,6 +488,9 @@ __exports__ = (
     "PatientPhoto",
     "PatientSetting",
     "PatientMetadata",
+    "PatientKnownLocation",
+    "PatientParentGuardian",
+    "PatientTribalAffiliationCoding",
     # not defined here but used by current plugins
     "ContactPointState",
     "ContactPointSystem",

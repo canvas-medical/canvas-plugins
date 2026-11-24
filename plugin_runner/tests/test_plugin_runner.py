@@ -5,6 +5,8 @@ import pickle
 import shutil
 import signal
 import sys
+import threading
+import time
 from base64 import b64encode
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
@@ -15,6 +17,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 import plugin_runner.plugin_runner as plugin_runner_module
+import settings
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     GetRegisteredEventTypesRequest,
@@ -835,9 +838,7 @@ def test_handle_plugin_event_returns_expected_result(
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
     event = EventRequest(type=EventType.UNKNOWN)
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1229,7 +1230,7 @@ def test_synchronize_plugins_and_report_errors_captures_after_first_successful_c
     def _sync_side_effect(*args: Any, **kwargs: Any) -> None:
         if not SYNCHRONIZER_HAS_CONNECTED.is_set():
             SYNCHRONIZER_HAS_CONNECTED.set()
-            return None
+            return
         raise RedisConnectionError("redis disappeared mid-run")
 
     with (
@@ -1284,9 +1285,7 @@ def test_changes_to_plugin_modules_should_be_reflected_after_reload(
     """Test that changes to plugin modules are reflected after reloading the plugin."""
     event = EventRequest(type=EventType.UNKNOWN)
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1304,9 +1303,7 @@ def import_me() -> str:
     # Reload the plugin
     reconcile_plugins()
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -1369,9 +1366,7 @@ def test_simple_api(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     expected_response = Response(status_code=status_code).apply().to_proto()
     if status_code == HTTPStatus.OK:
@@ -1422,9 +1417,7 @@ def test_simple_api_websocket(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     is_success = (
         context["plugin_name"] == "test_simple_api" and context["channel_name"] != "multi_handler"
@@ -1606,9 +1599,7 @@ def test_payment_processor(
         context=json.dumps(context),
     )
 
-    result = []
-    for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
+    result = list(plugin_runner.HandleEvent(event, None))
 
     expected_effects = [
         Effect(
@@ -1660,6 +1651,115 @@ def test_main_logs_sigterm_on_signal(
 
     assert any("Server shutting down (reason: SIGTERM)" in r.message for r in caplog.records)
     assert any("Server stopped" in r.message for r in caplog.records)
+
+
+def _run_main_and_signal(
+    mock_grpc: MagicMock,
+    send_signals: Callable[[dict[int, Any], MagicMock], None],
+) -> MagicMock:
+    """Run main() with a fake server, calling send_signals while it waits for termination.
+
+    The fake server's wait_for_termination returns once server.stop() is called, as the real
+    one does. Returns the fake server.
+    """
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    stopped = threading.Event()
+    mock_server.stop.side_effect = lambda grace: stopped.set()
+
+    registered_handlers: dict[int, Any] = {}
+
+    def capture_signal(signum: int, handler: Any) -> None:
+        registered_handlers[signum] = handler
+
+    def fake_wait() -> None:
+        send_signals(registered_handlers, mock_server)
+        assert stopped.wait(timeout=5), "server.stop() was never called"
+
+    mock_server.wait_for_termination.side_effect = fake_wait
+
+    with patch("plugin_runner.plugin_runner.signal.signal", side_effect=capture_signal):
+        main(specified_plugin_paths=[])
+
+    return mock_server
+
+
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_keeps_serving_for_the_drain_window_after_sigterm(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+) -> None:
+    """SIGTERM leaves the server answering calls for the drain window before it stops.
+
+    Processes that call the runner (Celery, the web server) are drained by the same stop,
+    so a runner that stopped at once would drop the plugin events their last work fires.
+    """
+    drain_seconds = 0.3
+    signalled_at = 0.0
+
+    def send_sigterm(handlers: dict[int, Any], server: MagicMock) -> None:
+        nonlocal signalled_at
+        signalled_at = time.monotonic()
+        handlers[signal.SIGTERM](signal.SIGTERM, None)
+        assert not server.stop.called, "the server stopped as soon as SIGTERM arrived"
+
+    with patch.object(settings, "PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", drain_seconds):
+        server = _run_main_and_signal(mock_grpc, send_sigterm)
+
+    assert time.monotonic() - signalled_at >= drain_seconds
+    server.stop.assert_called_once_with(grace=0)
+
+
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_stops_at_once_on_a_second_sigterm_during_the_drain(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+) -> None:
+    """A second SIGTERM during the drain window stops the server without waiting it out."""
+
+    def send_two_sigterms(handlers: dict[int, Any], server: MagicMock) -> None:
+        handlers[signal.SIGTERM](signal.SIGTERM, None)
+        handlers[signal.SIGTERM](signal.SIGTERM, None)
+        assert server.stop.called, "the second SIGTERM did not stop the server"
+
+    with patch.object(settings, "PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", 60):
+        server = _run_main_and_signal(mock_grpc, send_two_sigterms)
+
+    server.stop.assert_called_once_with(grace=0)
+
+
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_stops_at_once_on_sigint(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+) -> None:
+    """SIGINT (Ctrl+C on `canvas run-plugins`) stops the server without a drain window."""
+
+    def send_sigint(handlers: dict[int, Any], server: MagicMock) -> None:
+        handlers[signal.SIGINT](signal.SIGINT, None)
+        assert server.stop.called, "SIGINT did not stop the server"
+
+    with patch.object(settings, "PLUGIN_RUNNER_SHUTDOWN_DRAIN_SECONDS", 60):
+        server = _run_main_and_signal(mock_grpc, send_sigint)
+
+    server.stop.assert_called_once_with(grace=0)
 
 
 @patch("plugin_runner.plugin_runner.reconcile_plugins")
@@ -2192,3 +2292,29 @@ def test_sentry_release_falls_back_to_the_public_pin(monkeypatch: pytest.MonkeyP
     monkeypatch.delenv("CANVAS_PLUGINS_RUNNER_SOURCE", raising=False)
 
     assert plugin_runner_module.sentry_release() == "0.261.0"
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_a_handler_never_receives_the_plugins_gateway_key(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """Only the runner builds the gateway from the key, for the plugin's agents."""
+    handler_key = next(key for key in LOADED_PLUGINS if key.startswith("example_plugin:"))
+    LOADED_PLUGINS[handler_key]["secrets"] = {"INFERENCE_GATEWAY_KEY": "k", "OTHER": "v"}
+    handler_class = LOADED_PLUGINS[handler_key]["class"]
+    seen: list[dict] = []
+    original_init = handler_class.__init__
+
+    def _init(self: Any, event: Any, secrets: Any = None, environment: Any = None) -> None:
+        seen.append(dict(secrets or {}))
+        original_init(self, event, secrets, environment)
+
+    with patch.object(handler_class, "__init__", _init):
+        list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    assert seen and "INFERENCE_GATEWAY_KEY" not in seen[0]
+    assert seen[0]["OTHER"] == "v"
+    assert LOADED_PLUGINS[handler_key]["secrets"] == {"INFERENCE_GATEWAY_KEY": "k", "OTHER": "v"}

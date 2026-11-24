@@ -164,9 +164,9 @@ def measure(
     timing_start = time.perf_counter_ns()
     try:
         yield pipeline
-    except BaseException as ex:
+    except BaseException:
         tags = {**tags, "status": "error"}
-        raise ex
+        raise
     else:
         tags = {**tags, "status": "success"}
     finally:
@@ -184,7 +184,7 @@ def measure(
             rss_diff = rss_after - rss_before
             pipeline.timing("plugins.rss_delta_in_bytes", delta=rss_diff, tags=tags)
 
-            if rss_diff > int(os.getenv("PLUGIN_MEMORY_GROWTH_THRESHOLD_MB", 5)) * 1024 * 1024:
+            if rss_diff > int(os.getenv("PLUGIN_MEMORY_GROWTH_THRESHOLD_MB", "5")) * 1024 * 1024:
                 plugin_name = (extra_tags or {}).get("plugin")
                 identifier = f"{plugin_name} ({name})" if plugin_name else name
                 log.warning(
