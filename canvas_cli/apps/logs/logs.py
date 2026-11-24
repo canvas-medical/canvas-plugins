@@ -7,6 +7,7 @@ import re
 import shlex
 import shutil
 import sys
+import threading
 import time
 import zlib
 from collections.abc import Callable, Iterator
@@ -23,6 +24,7 @@ from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_toke
 from canvas_cli.apps.platform.client import PlatformError
 from canvas_cli.apps.platform.routing import managed_instance, platform_sign_out
 from canvas_cli.apps.plugin.plugin import plugin_url
+from canvas_cli.utils.platform_notice import notice_label
 
 # Seconds before a minted token's expiry at which it is replaced.
 EXPIRY_MARGIN_SECONDS = 30
@@ -41,6 +43,11 @@ RECONNECT_FIRST_DELAY_SECONDS = 1.0
 RECONNECT_MAX_DELAY_SECONDS = 60.0
 # A stream open at least this long resets the reconnect delay to its first value.
 HEALTHY_STREAM_SECONDS = 60
+# A guess at how long a line takes to become searchable in history, waited before fetching a
+# gap so its last lines are found.
+BACKFILL_DELAY_SECONDS = 10
+# Held while printing log lines, so a backfill prints as one block between live lines.
+_OUTPUT_LOCK = threading.Lock()
 
 
 def _instance_answer(response: requests.Response) -> str:
@@ -692,7 +699,8 @@ def _stream_once(url: str, on_start: Callable[[], None]) -> StreamResult:
             on_start()
         elif notice is not None and not opened[0] and notice.get("severity") == "error":
             refusal[0] = str(notice.get("message", ""))
-        _on_message(ws, message)
+        with _OUTPUT_LOCK:
+            _on_message(ws, message)
 
     def on_control_frame(ws: websocket.WebSocket, data: bytes) -> None:
         last_received[0] = datetime.now(UTC)
@@ -716,6 +724,25 @@ def _stream_once(url: str, on_start: Callable[[], None]) -> StreamResult:
     )
 
 
+def _notice(message: str) -> None:
+    """Print ``message`` to stderr as a labeled CLI notice."""
+    typer.echo(f"{notice_label()} {message}", err=True)
+
+
+def _gap_window(dropped: datetime, resumed: datetime) -> tuple[str, str]:
+    """Return a stream gap's start and end, rounded outward to whole seconds.
+
+    Args:
+        dropped (datetime): When the dropped stream last received anything.
+        resumed (datetime): When the reconnected stream started.
+
+    Returns:
+        tuple[str, str]: The start and end as ISO timestamps.
+    """
+    end: datetime = resumed + timedelta(seconds=1)
+    return dropped.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")
+
+
 def _gap_notice(slug: str, plugins: list[str], dropped: datetime, resumed: datetime) -> str:
     """Return the line naming a stream gap and the history command that prints it.
 
@@ -726,10 +753,9 @@ def _gap_notice(slug: str, plugins: list[str], dropped: datetime, resumed: datet
         resumed (datetime): When the reconnected stream started.
 
     Returns:
-        str: The notice, with ``--start`` and ``--end`` rounded outward to whole seconds.
+        str: The notice, with ``--start`` and ``--end`` from ``_gap_window``.
     """
-    start: str = dropped.isoformat(timespec="seconds")
-    end: str = (resumed + timedelta(seconds=1)).isoformat(timespec="seconds")
+    start, end = _gap_window(dropped, resumed)
     command: list[str] = ["canvas", "logs", "--host", slug, "--start", start, "--end", end]
     command += ["--no-follow", "--all"]
     for plugin in plugins:
@@ -741,6 +767,65 @@ def _gap_notice(slug: str, plugins: list[str], dropped: datetime, resumed: datet
     )
 
 
+def _backfill(
+    host: str,
+    token: LogToken,
+    plugins: list[str],
+    dropped: datetime,
+    resumed: datetime,
+    cancelled: threading.Event,
+) -> None:
+    """Print a stream gap's lines from history, oldest first, formatted as live lines are.
+
+    Runs on its own thread, because websocket-client calls ``on_start`` on the thread that
+    reads pongs. A failed fetch prints the gap's history command instead. Nothing prints once
+    ``cancelled`` is set, which ``stream_logs`` does under ``_OUTPUT_LOCK`` before it returns.
+
+    Args:
+        host (str): The Canvas instance URL.
+        token (LogToken): The token source.
+        plugins (list[str]): The stream's ``--plugin`` filter.
+        dropped (datetime): When the dropped stream last received anything.
+        resumed (datetime): When the reconnected stream started.
+        cancelled (threading.Event): Set when the run ends.
+    """
+    if cancelled.wait(BACKFILL_DELAY_SECONDS):
+        return
+    start, end = _gap_window(dropped, resumed)
+    hits: list[dict[str, Any]] | None
+    try:
+        hits = list(
+            iter_history(
+                token=token,
+                host=host,
+                source=None,
+                levels=[],
+                plugins=plugins,
+                start_time=start,
+                end_time=end,
+                page_size=DEFAULT_PAGE_SIZE,
+                limit=None,
+                fetch_all=True,
+            )
+        )
+    except (requests.RequestException, click.ClickException):
+        hits = None
+    with _OUTPUT_LOCK:
+        if cancelled.is_set():
+            return
+        if hits is None:
+            _notice(_gap_notice(token.slug, plugins, dropped, resumed))
+            return
+        sys.stdout.flush()
+        _notice(
+            f"Printing the {len(hits)} lines sent while the log stream was down, {start} to {end}."
+        )
+        # History answers newest first.
+        for hit in reversed(hits):
+            print(f"{hit.get('ts')} | {hit.get('message') or ''}")
+        sys.stdout.flush()
+
+
 def stream_logs(host: str, token: LogToken, plugins: list[str] | None = None) -> None:
     """Print the instance's live log stream from Console until Ctrl-C.
 
@@ -750,7 +835,7 @@ def stream_logs(host: str, token: LogToken, plugins: list[str] | None = None) ->
     and resets after a stream open 60s. Each Platform reconnect mints a fresh token, which
     re-checks access and replaces one Console closed with ``STREAM_TOKEN_INACTIVE``; a 4401
     on a credentials.ini stream ends the run. Only a token refusal ends a reconnect; other
-    failures retry. Console cannot replay a gap, so stderr gives the history command for it.
+    failures retry. Console cannot replay a gap, so ``_backfill`` prints it from history.
 
     Args:
         host (str): The Canvas instance URL.
@@ -769,61 +854,70 @@ def stream_logs(host: str, token: LogToken, plugins: list[str] | None = None) ->
     dropped_at: datetime | None = None
     started_at: list[float] = [0.0]
     delay: float = RECONNECT_FIRST_DELAY_SECONDS
+    cancelled: threading.Event = threading.Event()
 
     def on_start() -> None:
         started_at[0] = time.monotonic()
         if dropped_at is not None:
-            notice: str = _gap_notice(token.slug, plugins or [], dropped_at, datetime.now(UTC))
-            typer.echo(notice, err=True)
+            gap: tuple[datetime, datetime] = (dropped_at, datetime.now(UTC))
+            threading.Thread(
+                target=lambda: _backfill(host, token, plugins or [], *gap, cancelled),
+                name="canvas-logs-backfill",
+                daemon=True,
+            ).start()
 
-    while True:
-        if streamed:
-            pause: float = delay / 2 + random.uniform(0, delay / 2)
-            typer.echo(f"Reconnecting to the log stream in {pause:.1f}s.", err=True)
-            time.sleep(pause)
-            delay = min(delay * 2, RECONNECT_MAX_DELAY_SECONDS)
-            try:
-                bearer: str = token.refresh() if token.reissuable else token.get()
-            except click.ClickException as error:
-                if not isinstance(error.__cause__, requests.RequestException):
-                    raise
-                typer.echo(error.message, err=True)
-                continue
-        else:
-            bearer = token.get()
-        url = f"wss://logs.console.canvasmedical.com/{instance}?token={bearer}"
-        result: StreamResult = _stream_once(
-            f"{url}&{plugin_query}" if plugin_query else url, on_start
-        )
-        if result.interrupted:
-            return
-        if (
-            not result.opened
-            and (result.close_code is not None or result.error)
-            and (not streamed or result.refusal == STREAM_TOKEN_REFUSAL)
-        ):
-            if not result.refusal and result.close_code is None:
-                raise click.ClickException(
-                    f"Could not reach Console's log stream for {token.slug}: {result.error}. "
-                    "Run the command again."
-                )
-            if not result.refusal:
-                raise click.ClickException(
-                    f"Console closed the log stream for {token.slug} before starting it "
-                    f"(close code {result.close_code}). Run the command again."
-                )
-            answer: str = f"Console answered: {result.refusal} "
-            if token.reissuable and result.refusal == STREAM_TOKEN_REFUSAL:
-                raise _refused_platform_token(token, answer)
-            raise click.ClickException(
-                f"Console refused the log stream for {token.slug}. {answer}".rstrip()
+    try:
+        while True:
+            if streamed:
+                pause: float = delay / 2 + random.uniform(0, delay / 2)
+                _notice(f"Reconnecting to the log stream in {pause:.1f}s.")
+                time.sleep(pause)
+                delay = min(delay * 2, RECONNECT_MAX_DELAY_SECONDS)
+                try:
+                    bearer: str = token.refresh() if token.reissuable else token.get()
+                except click.ClickException as error:
+                    if not isinstance(error.__cause__, requests.RequestException):
+                        raise
+                    _notice(error.message)
+                    continue
+            else:
+                bearer = token.get()
+            url = f"wss://logs.console.canvasmedical.com/{instance}?token={bearer}"
+            result: StreamResult = _stream_once(
+                f"{url}&{plugin_query}" if plugin_query else url, on_start
             )
-        if result.opened:
-            streamed = True
-            dropped_at = result.last_received
-            if time.monotonic() - started_at[0] >= HEALTHY_STREAM_SECONDS:
-                delay = RECONNECT_FIRST_DELAY_SECONDS
-            if result.close_code == STREAM_TOKEN_INACTIVE and not token.reissuable:
+            if result.interrupted:
                 return
-        elif not streamed:
-            return
+            if (
+                not result.opened
+                and (result.close_code is not None or result.error)
+                and (not streamed or result.refusal == STREAM_TOKEN_REFUSAL)
+            ):
+                if not result.refusal and result.close_code is None:
+                    raise click.ClickException(
+                        f"Could not reach Console's log stream for {token.slug}: {result.error}. "
+                        "Run the command again."
+                    )
+                if not result.refusal:
+                    raise click.ClickException(
+                        f"Console closed the log stream for {token.slug} before starting it "
+                        f"(close code {result.close_code}). Run the command again."
+                    )
+                answer: str = f"Console answered: {result.refusal} "
+                if token.reissuable and result.refusal == STREAM_TOKEN_REFUSAL:
+                    raise _refused_platform_token(token, answer)
+                raise click.ClickException(
+                    f"Console refused the log stream for {token.slug}. {answer}".rstrip()
+                )
+            if result.opened:
+                streamed = True
+                dropped_at = result.last_received
+                if time.monotonic() - started_at[0] >= HEALTHY_STREAM_SECONDS:
+                    delay = RECONNECT_FIRST_DELAY_SECONDS
+                if result.close_code == STREAM_TOKEN_INACTIVE and not token.reissuable:
+                    return
+            elif not streamed:
+                return
+    finally:
+        with _OUTPUT_LOCK:
+            cancelled.set()

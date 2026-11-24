@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import re
+import threading
 import time
-from collections.abc import Iterator, Sequence
-from datetime import datetime
+from collections.abc import Callable, Iterator, Sequence
+from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests
@@ -645,16 +648,33 @@ class _FakeStream:
         return False
 
 
+class _InlineThread:
+    """Runs a thread's target at ``start()``, so a backfill ends before the next scripted message."""
+
+    def __init__(self, target: Callable[[], None], name: str, daemon: bool) -> None:
+        self.target: Callable[[], None] = target
+
+    def start(self) -> None:
+        """Run the target on the calling thread."""
+        self.target()
+
+
+INLINE_THREADING = SimpleNamespace(Thread=_InlineThread, Event=threading.Event)
+
+
 @pytest.fixture
-def fake_stream() -> Iterator[type[_FakeStream]]:
-    """Patch the websocket client with ``_FakeStream`` and the clock, and reset its script."""
+def fake_stream(requests_mock: requests_mock_module.Mocker) -> Iterator[type[_FakeStream]]:
+    """Patch the websocket client with ``_FakeStream``, the clock, and an empty, inline backfill."""
     _FakeStream.script = []
     _FakeStream.urls = []
     _FakeStream.run_kwargs = []
     _FakeStream.clock = _Clock()
+    requests_mock.get(LOGS_URL, json={"hits": [], "next": {}})
     with (
         patch("canvas_cli.apps.logs.logs.websocket.WebSocketApp", _FakeStream),
         patch("canvas_cli.apps.logs.logs.time", _FakeStream.clock),
+        patch("canvas_cli.apps.logs.logs.threading", INLINE_THREADING),
+        patch("canvas_cli.apps.logs.logs.BACKFILL_DELAY_SECONDS", 0),
     ):
         yield _FakeStream
 
@@ -1010,25 +1030,124 @@ def test_reconnect_backoff_doubles_to_a_cap_and_resets_after_a_healthy_stream(
         assert delay / 2 <= slept <= delay
 
 
-def test_reconnect_prints_the_gap_and_a_backfill_command(
+def test_reconnect_lines_carry_the_notice_label(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
     credentials_token: Mock,
     fake_stream: type[_FakeStream],
 ) -> None:
-    """Each reconnect names the gap on stderr with a history command that fetches it."""
+    """Every line the reconnect path writes is a labeled notice, so a follower can skip it."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [
+            {"json": MINTED},
+            {"exc": requests.ConnectionError("network is unreachable")},
+            {"json": {**MINTED, "access_token": "plat-tok-2"}},
+        ],
+    )
     fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    stderr_lines = result.stderr.splitlines()
+    assert any("Reconnecting to the log stream" in line for line in stderr_lines)
+    assert any("Could not reach Canvas Platform" in line for line in stderr_lines)
+    assert any("Printing the 0 lines sent while" in line for line in stderr_lines)
+    assert all(line.startswith("[notice] ") for line in stderr_lines), result.stderr
+
+
+def test_reconnect_backfills_the_gap_oldest_first(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Once the stream resumes, the gap is fetched from history for the same plugins and printed oldest first."""
+    requests_mock.get(
+        LOGS_URL,
+        json={
+            "hits": [
+                {**HIT, "ts": "2026-11-02T10:00:05Z", "message": "second missed line"},
+                {**HIT, "ts": "2026-11-02T10:00:01Z", "message": "first missed line"},
+            ],
+            "next": {},
+        },
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), ([*CONNECTED, "live again", CTRL_C], None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
+
+    assert result.exit_code == 0, result.output
+    header = re.search(
+        r"\[notice\] Printing the 2 lines sent while the log stream was down, (\S+) to (\S+)\.",
+        result.output,
+    )
+    assert header is not None, result.output
+    first = result.output.index("2026-11-02T10:00:01Z | first missed line")
+    second = result.output.index("2026-11-02T10:00:05Z | second missed line")
+    assert header.end() < first < second < result.output.index("live again")
+    (history,) = [r for r in requests_mock.request_history if r.url.split("?")[0] == LOGS_URL]
+    params = parse_qs(urlparse(history.url).query)
+    assert params["start_time"] == [header.group(1)]
+    assert params["end_time"] == [header.group(2)]
+    assert params["plugin"] == ["foo"]
+    start, end = datetime.fromisoformat(header.group(1)), datetime.fromisoformat(header.group(2))
+    assert timedelta(0) < end - start < timedelta(seconds=5)
+
+
+def test_failed_backfill_prints_the_history_command_and_keeps_streaming(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A backfill the history endpoint fails prints a labeled history command; streaming goes on."""
+    requests_mock.get(LOGS_URL, status_code=500)
+    fake_stream.script = [
+        ([*CONNECTED, LOST], None),
+        ([*CONNECTED, "still streaming", CTRL_C], None),
+    ]
 
     result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod --plugin foo")
 
     assert result.exit_code == 0, result.output
+    assert "still streaming" in result.stdout
     gap = re.search(
-        r"The log stream dropped after (\S+) and resumed at (\S+)\. .*"
-        r"canvas logs --host acme-prod --start (\S+) --end (\S+) --no-follow --all --plugin foo",
+        r"^\[notice\] The log stream dropped after (\S+) and resumed at (\S+)\. .*"
+        r"canvas logs --host acme-prod --start (\S+) --end (\S+) --no-follow --all --plugin foo$",
         result.stderr,
+        re.MULTILINE,
     )
-    assert gap is not None, (result.stderr, result.stdout)
+    assert gap is not None, result.stderr
     dropped, resumed, start, end = (datetime.fromisoformat(value) for value in gap.groups())
     assert start <= dropped <= resumed <= end
-    assert "dropped after" not in result.stdout
+    assert "Printing the" not in result.stderr
+
+
+def test_ctrl_c_while_a_backfill_waits_ends_cleanly(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Ctrl-C with a backfill pending exits 0, and the backfill stops without fetching."""
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    with (
+        patch("canvas_cli.apps.logs.logs.threading", threading),
+        patch("canvas_cli.apps.logs.logs.BACKFILL_DELAY_SECONDS", 30),
+    ):
+        result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod")
+        backfills = [t for t in threading.enumerate() if t.name == "canvas-logs-backfill"]
+        for backfill in backfills:
+            backfill.join(timeout=5)
+
+    assert result.exit_code == 0, result.output
+    assert result.exception is None
+    assert len(backfills) == 1
+    assert not backfills[0].is_alive()
+    assert _calls_to(requests_mock, LOGS_URL) == 0
+    assert "Printing the" not in result.stderr
 
 
 def test_stream_pings_console(
