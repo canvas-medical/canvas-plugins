@@ -1,7 +1,7 @@
 """Static pre-load lint for ``canvas validate``.
 
-AST-scans a plugin's source for three classes of problem the sandbox handler-load
-can't surface on its own:
+Scans a plugin for four classes of problem the sandbox handler-load can't surface
+on its own (the fourth reads every shipped file, not just the source):
 
   * RestrictedPython constructs that fail at *runtime* inside a method body
     (``compile_restricted`` accepts them, so they load clean and only blow up
@@ -12,6 +12,7 @@ can't surface on its own:
     ``authenticate`` admits every caller (an error; the check itself lives in
     ``plugin_runner/open_routes.py``, which the runner also runs at load), a
     secret compared with ``==``, or a ``requests`` call with no timeout.
+  * Credentials written into a file the package ships.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -22,11 +23,17 @@ the lint can't drift the way a hand-maintained allowlist mirror would.
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+import pathspec
+
 from plugin_runner.open_routes import PUBLIC_ACCESS, open_routes_in_module
+
+CANVAS_IGNORE_FILENAME = ".canvasignore"
+_DEFAULT_IGNORE = ["__pycache__", "*.pyc", "*.pyo", "node_modules"]
 
 # Directories that never hold plugin source we should lint — build scratch,
 # virtualenvs, caches, tests, VCS.
@@ -59,6 +66,24 @@ class LintFinding:
     location: str
     code: str
     message: str
+
+
+def shipped_files(package: Path) -> Iterator[tuple[Path, Path]]:
+    """``(path, path inside the package)`` for every entry ``canvas install`` packages: nothing
+    hidden or symlinked, and nothing the working directory's ``.canvasignore`` excludes.
+    """
+    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
+    ignore_lines = _DEFAULT_IGNORE + (
+        ignore_file.read_text().splitlines() if ignore_file.exists() else []
+    )
+    ignore = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+    for path in package.rglob("*"):
+        relative = path.relative_to(package)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if path.is_symlink() or ignore.match_file(relative):
+            continue
+        yield path, relative
 
 
 def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
@@ -287,6 +312,118 @@ def _request_findings(plugin_dir: Path) -> list[LintFinding]:
     return findings
 
 
+# ── Credential rules ──────────────────────────────────────────────────────────
+# Each API-key shape was a live credential in every shipped file it appeared in across
+# installed plugins, so it is an error anywhere but a Markdown or reST document.
+
+_PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
+# A downloaded service-account file: a key with a body in a JSON `private_key` field.
+_SERVICE_ACCOUNT_KEY = re.compile(
+    r'"private_key"\s*:\s*"-----BEGIN (?:RSA )?PRIVATE KEY-----\\n[A-Za-z0-9+/]{40,}'
+)
+_API_KEYS = {
+    "An Anthropic API key": re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}"),
+    "A Slack token": re.compile(r"\bxox[bp]-\d+-\d+-[A-Za-z0-9-]{20,}"),
+    "A Stripe live key": re.compile(r"\b[rs]k_live_[0-9A-Za-z]{24,}"),
+    "A GitHub token": re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{60,})"),
+    "An OpenAI key": re.compile(r"\bsk-proj-[A-Za-z0-9_-]{40,}"),
+}
+_SECRET_ASSIGNMENT = re.compile(
+    r"(?i)(?:api_?key|secret|token|passw(?:or)?d|private_key)\w*[\"']?\s*[:=]\s*"
+    r"[\"']([^\"'\s]{20,})[\"']"
+)
+_DOC_SUFFIXES = {".md", ".rst"}
+_HEX_TOKEN = re.compile(r"[0-9a-f]{32,}")
+
+
+def _looks_random(value: str) -> bool:
+    """Lower, upper and digit characters, or a long lowercase hex run (a Twilio-style token),
+    and not a URL: unlike a CONSTANT_NAME or a link.
+    """
+    if value.startswith(("http://", "https://")):
+        return False
+    return bool(_HEX_TOKEN.fullmatch(value)) or (
+        any(c.islower() for c in value)
+        and any(c.isupper() for c in value)
+        and any(c.isdigit() for c in value)
+    )
+
+
+def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
+    findings: list[LintFinding] = []
+    for path, rel in shipped_files(plugin_dir):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        is_doc = rel.suffix.lower() in _DOC_SUFFIXES
+        # Placeholder values belong in docs and tests, so a value matched by its shape alone is
+        # not reported there.
+        is_example = is_doc or bool({"test", "tests"} & set(rel.parts))
+        for number, line in enumerate(text.split("\n"), start=1):
+            where = f"{rel}:{number}"
+            has_private_key = bool(_PRIVATE_KEY.search(line))
+            if _SERVICE_ACCOUNT_KEY.search(line):
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        "A service-account private key ships inside the plugin package, where "
+                        "anyone with the package can read it. Store the service-account JSON as a "
+                        "manifest secret read with `self.secrets[...]`, sign with "
+                        '`jwt.encode(claims, key, algorithm="RS256")`, and rotate the key.',
+                    )
+                )
+            elif has_private_key:
+                # A warning until the SDK can load an mTLS client key from a secret: `requests`
+                # takes the key only as a file path, which the sandbox cannot create.
+                findings.append(
+                    LintFinding(
+                        "warning",
+                        where,
+                        "hardcoded-credential",
+                        "A private key ships inside the plugin package, where anyone with the "
+                        "package can read it. Move it to a manifest secret read with "
+                        "`self.secrets[...]` and rotate it, unless it is a mutual-TLS client "
+                        "key, which plugins can only load from a file today.",
+                    )
+                )
+            api_key = next(
+                ((name, match) for name, p in _API_KEYS.items() if (match := p.search(line))),
+                None,
+            )
+            if api_key:
+                name, match = api_key
+                findings.append(
+                    LintFinding(
+                        "warning" if is_doc else "error",
+                        where,
+                        "hardcoded-credential",
+                        f"{name} (`{match.group(0)[:4]}…`, {len(match.group(0))} characters) "
+                        "ships inside the plugin package, where anyone with the package can read "
+                        "it. Move it to a manifest secret read with `self.secrets[...]`, and "
+                        "rotate it.",
+                    )
+                )
+                continue
+            for value in [] if is_example or has_private_key else _SECRET_ASSIGNMENT.finditer(line):
+                if _looks_random(value.group(1)):
+                    findings.append(
+                        LintFinding(
+                            "warning",
+                            where,
+                            "possible-credential",
+                            f"A secret-like value ({len(value.group(1))} characters) ships inside "
+                            "the plugin package. If it is a real credential, move it to a manifest "
+                            "secret read with `self.secrets[...]`, and rotate it.",
+                        )
+                    )
+    return findings
+
+
 # ── Custom Data rules ─────────────────────────────────────────────────────────
 # Grounded in the runner: models are discovered only from `<plugin>/models/`
 # (plugin_runner/ddl.py), table creation is gated on the manifest `custom_data`
@@ -395,12 +532,13 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
 
 
 def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
-    """Return all construct, request-handling and Custom Data findings for a plugin,
+    """Return all construct, request-handling, credential and Custom Data findings for a plugin,
     most-blocking first (errors before warnings).
     """
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
+        + _credential_findings(plugin_dir)
         + _custom_data_findings(plugin_dir, manifest)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
