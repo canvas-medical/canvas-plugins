@@ -223,9 +223,11 @@ class PlatformClient:
         """``GET /api/v1/instances/<slug>/plugins``: Platform's inventory of the instance."""
         return self.get(f"/api/v1/instances/{segment(slug)}/plugins")
 
-    def variables(self, slug: str, name: str) -> list[dict[str, Any]]:
-        """``GET /api/v1/instances/<slug>/plugins/<name>/variables``: each variable's state."""
-        body = self.get(f"/api/v1/instances/{segment(slug)}/plugins/{segment(name)}/variables")
+    def variables(self, slug: str, name: str, publisher: str | None = None) -> list[dict[str, Any]]:
+        """``GET /api/v1/instances/<slug>/plugins/<name>/variables[?publisher=<slug>]``: each
+        variable's state. ``publisher`` selects between publishers' plugins that share ``name``.
+        """
+        body = self.get(self._variables_path(slug, name, publisher))
         return body.get("variables", [])
 
     def namespaces(self, slug: str) -> dict[str, Any]:
@@ -279,24 +281,37 @@ class PlatformClient:
         )
 
     def set_variable(
-        self, instance: str, name: str, key: str, value: str, sensitive: bool | None
+        self,
+        instance: str,
+        name: str,
+        key: str,
+        value: str,
+        sensitive: bool | None,
+        publisher: str | None = None,
     ) -> Any:
-        """``PUT`` one variable value on one instance."""
+        """``PUT`` one variable value on one instance, for ``publisher``'s plugin when given."""
         body: dict[str, Any] = {"value": value}
         if sensitive is not None:
             body["sensitive"] = sensitive
-        return self.put(self._variable_path(instance, name, key), body)
+        return self.put(self._variables_path(instance, name, publisher, key), body)
 
-    def clear_variable(self, instance: str, name: str, key: str) -> Any:
-        """``DELETE`` one variable value on one instance."""
-        return self.delete(self._variable_path(instance, name, key))
+    def clear_variable(
+        self, instance: str, name: str, key: str, publisher: str | None = None
+    ) -> Any:
+        """``DELETE`` one variable value on one instance, for ``publisher``'s plugin when given."""
+        return self.delete(self._variables_path(instance, name, publisher, key))
 
     @staticmethod
-    def _variable_path(instance: str, name: str, key: str) -> str:
-        return (
-            f"/api/v1/instances/{segment(instance)}/plugins/{segment(name)}"
-            f"/variables/{segment(key)}"
-        )
+    def _variables_path(
+        instance: str, name: str, publisher: str | None, key: str | None = None
+    ) -> str:
+        """The variables route for a plugin, or for one ``key``, with ``?publisher=`` if given."""
+        path: str = f"/api/v1/instances/{segment(instance)}/plugins/{segment(name)}/variables"
+        if key is not None:
+            path += f"/{segment(key)}"
+        if publisher:
+            path += f"?publisher={segment(publisher)}"
+        return path
 
     def create_deployment(
         self, action: str, plugins: list[dict[str, str]], instances: list[str]

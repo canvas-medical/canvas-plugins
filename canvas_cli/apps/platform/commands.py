@@ -1479,10 +1479,16 @@ def _managed_record(
     return plugin if publisher in yours else None
 
 
+def _record_publisher(plugin: dict[str, Any]) -> str | None:
+    """The publisher slug Platform gave for a managed plugin, or None when it named none."""
+    publisher: Any = plugin.get("publisher")
+    return str(publisher) if publisher else None
+
+
 def _entry(name: str, plugin: dict[str, Any]) -> dict[str, str]:
     """The deployment entry for a managed plugin, naming its publisher when Platform gave one."""
-    publisher: Any = plugin.get("publisher")
-    return {"name": name} | ({"publisher": str(publisher)} if publisher else {})
+    publisher: str | None = _record_publisher(plugin)
+    return {"name": name} | ({"publisher": publisher} if publisher else {})
 
 
 def _direct_hosts(instances: list[str], host: str | None) -> list[str]:
@@ -1571,7 +1577,7 @@ def set_variables(
     )
     for slug in targets:
         for key, value, sensitive in parsed:
-            client.set_variable(slug, plugin_name, key, value, sensitive)
+            client.set_variable(slug, plugin_name, key, value, sensitive, _record_publisher(plugin))
     print(f"Stored {len(parsed)} value(s) for {plugin_name} on {', '.join(targets)}.")
     _dispatch(
         client,
@@ -1617,7 +1623,7 @@ def unset_variables(
     )
     for slug in targets:
         for key in keys:
-            client.clear_variable(slug, plugin_name, key)
+            client.clear_variable(slug, plugin_name, key, _record_publisher(plugin))
     print(f"Cleared {len(keys)} value(s) for {plugin_name} on {', '.join(targets)}.")
     _dispatch(
         client,
@@ -1726,7 +1732,7 @@ def list_variables(
     for slug in targets:
         if len(targets) > 1:
             print(f"{slug}:")
-        variables = client.variables(slug, plugin_name)
+        variables = client.variables(slug, plugin_name, _record_publisher(plugin))
         if not variables:
             print("No variables configured.")
         for variable in variables:

@@ -180,6 +180,34 @@ def test_set_variable_sends_sensitive_only_when_given(
     assert _last(requests_mock).json() == {"value": "v", "sensitive": True}
 
 
+def test_variable_calls_send_the_publisher_when_given(
+    requests_mock: requests_mock_module.Mocker,
+) -> None:
+    """Each variables call carries the publisher that selects between plugins sharing a name;
+    without it, none is sent.
+    """
+    _sign_in()
+    base = f"{PLATFORM}/api/v1/instances/acme-staging/plugins/intake/variables"
+    requests_mock.get(base, json={"variables": []})
+    requests_mock.put(f"{base}/API_KEY", json={})
+    requests_mock.delete(f"{base}/API_KEY", status_code=204)
+    client = PlatformClient(PLATFORM)
+
+    client.variables("acme-staging", "intake", "acme")
+    assert _last(requests_mock).qs == {"publisher": ["acme"]}
+    client.set_variable("acme-staging", "intake", "API_KEY", "v", None, "acme")
+    assert _last(requests_mock).qs == {"publisher": ["acme"]}
+    client.clear_variable("acme-staging", "intake", "API_KEY", "acme")
+    assert _last(requests_mock).qs == {"publisher": ["acme"]}
+
+    client.variables("acme-staging", "intake")
+    assert _last(requests_mock).qs == {}
+    client.set_variable("acme-staging", "intake", "API_KEY", "v", None)
+    assert _last(requests_mock).qs == {}
+    client.clear_variable("acme-staging", "intake", "API_KEY")
+    assert _last(requests_mock).qs == {}
+
+
 def test_calls_without_a_session_ask_for_a_login(
     requests_mock: requests_mock_module.Mocker,
 ) -> None:
