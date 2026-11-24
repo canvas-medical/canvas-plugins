@@ -13,6 +13,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    Model,
     TimeframeLookupQuerySetMixin,
     TimestampedModel,
     ValueSetLookupQuerySet,
@@ -438,6 +439,58 @@ class LabPartner(TimestampedModel, IdentifiableModel):
     default_lab_account_number = models.CharField(max_length=256)
 
 
+class PracticeLocationLabAccountNumber(IdentifiableModel):
+    """A practice location's account number with a lab partner."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_health_gorilla_practicelocationlabaccount_001"
+
+    objects: models.Manager["PracticeLocationLabAccountNumber"]
+
+    lab_partner = models.ForeignKey(
+        "v1.LabPartner", on_delete=models.DO_NOTHING, related_name="location_account_numbers"
+    )
+    practice_location = models.ForeignKey(
+        "v1.PracticeLocation", on_delete=models.DO_NOTHING, related_name="lab_account_numbers"
+    )
+    account_number = models.CharField(max_length=256)
+
+
+class StaffLabAccountNumber(IdentifiableModel):
+    """A staff account number under a practice location's lab account."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_health_gorilla_stafflabaccountnumber_001"
+
+    objects: models.Manager["StaffLabAccountNumber"]
+
+    practice_location_lab_account = models.ForeignKey(
+        "v1.PracticeLocationLabAccountNumber",
+        on_delete=models.DO_NOTHING,
+        related_name="staff_account_numbers",
+    )
+    account_number = models.CharField(max_length=256)
+    use_for_all_staff_at_location = models.BooleanField()
+    staff = models.ManyToManyField(
+        "v1.Staff", related_name="lab_account_numbers", through="v1.StaffLabAccountNumberStaff"
+    )
+
+
+class StaffLabAccountNumberStaff(Model):
+    """M2M for StaffLabAccountNumber -> Staff."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_health_gorilla_stafflabaccountnumber_staff_001"
+
+    staff_lab_account_number = models.ForeignKey(
+        StaffLabAccountNumber,
+        on_delete=models.DO_NOTHING,
+        db_column="stafflabaccountnumber_id",
+        related_name="+",
+    )
+    staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, related_name="+")
+
+
 class LabPartnerTest(TimestampedModel, IdentifiableModel):
     """A class representing a lab partner's test."""
 
@@ -594,6 +647,9 @@ __exports__ = (
     "LabPartnerTest",
     "LabPartnerTestQuestion",
     "LabPartnerTestQuestionChoice",
+    "PracticeLocationLabAccountNumber",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "FieldType",
     "LabReportTemplate",
     "LabReportTemplateField",
