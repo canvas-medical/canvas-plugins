@@ -2,12 +2,11 @@ from abc import ABC
 from functools import cached_property
 from typing import Any, ClassVar
 
-import sentry_sdk
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
+from canvas_sdk.utils import reporting
 from logger import log
 
 from .exceptions import AuthenticationError, InvalidCredentialsError, PortalAccessError
@@ -81,7 +80,7 @@ class WebSocketAPI(BaseHandler, ABC):
         except Exception as exception:
             log.exception(f"Error handling '{EventType.Name(self.event.type)}' event")
 
-            sentry_sdk.capture_exception(exception)
+            reporting.capture_exception(exception)
 
             return [DenyConnection(message="Internal server error").apply()]
 

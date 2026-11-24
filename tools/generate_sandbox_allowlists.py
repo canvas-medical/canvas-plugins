@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import httpretty
 
 import canvas_sdk  # noqa: F401
-from plugin_runner.plugin_runner import _load_plugin_handlers
+from plugin_runner.loading import _load_plugin_handlers
 from plugin_runner.sandbox import SandboxMode
 from plugin_runner.sandbox_allowlists import (
     ALLOWLIST_PATH,

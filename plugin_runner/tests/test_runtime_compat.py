@@ -12,8 +12,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from plugin_runner import loading
 from plugin_runner import plugin_runner as plugin_runner_module
-from plugin_runner.plugin_runner import HandlerLoadResult, sandbox_plugin_handlers
+from plugin_runner.loading import HandlerLoadResult, sandbox_plugin_handlers
 from plugin_runner.sandbox import SandboxMode
 
 
@@ -57,8 +58,8 @@ def test_helper_patterns_work_under_the_current_rules(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch, handler: str, expected: str
 ) -> None:
     """Each pattern runs under the current rules with the plugin on no list."""
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: False)
 
     result = _load(install_test_plugin)[handler]
 
@@ -79,7 +80,7 @@ def test_listed_patterns_work_under_the_deprecated_rules(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch, handler: str, expected: str
 ) -> None:
     """A plugin on the always list runs these patterns when its handlers run."""
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: True)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: True)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message"):
         result = _load(install_test_plugin)[handler]
@@ -97,8 +98,8 @@ def test_listed_patterns_fail_when_the_plugin_is_not_listed(
 
     They load cleanly and fail only once the handler runs.
     """
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: False)
 
     result = _load(install_test_plugin)[handler]
 
@@ -114,8 +115,8 @@ def test_an_allowlisted_load_time_dependency_loads_and_runs(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An allowlisted plugin that reads an ungranted module name loads and runs."""
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: True)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: True)
 
     with patch.object(plugin_runner_module.sentry_sdk, "capture_message"):
         result = _load(install_test_plugin)["MatchCheck"]
@@ -129,8 +130,8 @@ def test_an_unlisted_load_time_dependency_is_refused_naming_it(
     install_test_plugin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Without an entry the same plugin is refused at load, naming what to change."""
-    monkeypatch.setattr(plugin_runner_module, "is_always_legacy", lambda *_: False)
-    monkeypatch.setattr(plugin_runner_module, "is_allowlisted", lambda *_: False)
+    monkeypatch.setattr(loading, "is_always_legacy", lambda *_: False)
+    monkeypatch.setattr(loading, "is_allowlisted", lambda *_: False)
 
     result = _load(install_test_plugin)["MatchCheck"]
 

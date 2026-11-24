@@ -27,10 +27,11 @@ from canvas_cli.apps.platform.routing import managed_instance
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_cli.utils.context import context
 from canvas_cli.utils.platform_notice import print_install_deprecation
+from canvas_cli.utils.runner_extra import INSTALL_RUNNER_EXTRA, missing_runner_packages
 from canvas_cli.utils.validators import validate_manifest_file
 from canvas_sdk.agents import ToolRegistry
 from canvas_sdk.agents.grant import grant_problems
-from plugin_runner.plugin_runner import sandbox_plugin_handlers
+from plugin_runner.loading import sandbox_plugin_handlers
 from plugin_runner.sandbox import collect_missing_attribute_reads
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
@@ -819,6 +820,20 @@ def validate_manifest(
     print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
 
 
+def _missing_module(error: BaseException | None) -> str | None:
+    """The module a load could not find, following the error's cause and context."""
+    seen: set[int] = set()
+
+    while error is not None and id(error) not in seen:
+        if isinstance(error, ModuleNotFoundError) and error.name:
+            return error.name
+
+        seen.add(id(error))
+        error = error.__cause__ or error.__context__
+
+    return None
+
+
 def _validate_plugin_loads(plugin_name: Path) -> None:
     """Sandbox-load every handler and agent declared in the manifest and report failures.
 
@@ -888,6 +903,17 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
 
     if failures:
         print(f"\n{len(failures)} of {len(results)} component(s) failed to load in the sandbox.")
+
+        unfound = sorted({module for r in failures if (module := _missing_module(r.error))})
+
+        if unfound and missing_runner_packages():
+            print(
+                f"\nThis install does not have {', '.join(unfound)}, which loading the plugin "
+                "needs. "
+                f"Install it with `{INSTALL_RUNNER_EXTRA}`, or deploy without this check with "
+                "`canvas deploy --no-validate`."
+            )
+
         raise typer.Exit(1)
 
     print(f"All {len(results)} component(s) load cleanly in the sandbox.")

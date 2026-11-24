@@ -4,8 +4,9 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 
-from canvas_sdk.utils.metrics import PipelineProxy, StatsDClientProxy, measure
+from canvas_sdk.utils.metrics import PipelineProxy, StatsDClientProxy, configure, measure
 
 
 def _make_client() -> tuple[MagicMock, MagicMock]:
@@ -192,20 +193,13 @@ def test_track_plugins_usage_non_plugin_caller(mock_time: MagicMock) -> None:
 # ---------------------------------------------------------------------------
 
 
-@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics._process_rss_bytes")
 @patch("canvas_sdk.utils.metrics.time")
-def test_track_memory_usage_captures_rss_delta(
-    mock_time: MagicMock, mock_psutil: MagicMock
-) -> None:
+def test_track_memory_usage_captures_rss_delta(mock_time: MagicMock, mock_rss: MagicMock) -> None:
     """track_memory_usage should record the RSS delta in bytes."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
-    mock_process = MagicMock()
-    mock_process.memory_info.side_effect = [
-        MagicMock(rss=100 * mb),
-        MagicMock(rss=101 * mb),
-    ]
-    mock_psutil.Process.return_value = mock_process
+    mock_rss.side_effect = [100 * mb, 101 * mb]
     client, pipeline = _make_client()
 
     with measure("block", track_memory_usage=True, client=client):
@@ -216,20 +210,15 @@ def test_track_memory_usage_captures_rss_delta(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics._process_rss_bytes")
 @patch("canvas_sdk.utils.metrics.time")
 def test_memory_excessive_growth_logs_warning_with_name(
-    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
+    mock_time: MagicMock, mock_rss: MagicMock, mock_log: MagicMock
 ) -> None:
     """RSS growth above threshold should trigger a warning using the measure name."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
-    mock_process = MagicMock()
-    mock_process.memory_info.side_effect = [
-        MagicMock(rss=100 * mb),
-        MagicMock(rss=110 * mb),  # 10 MB growth, default threshold is 5 MB
-    ]
-    mock_psutil.Process.return_value = mock_process
+    mock_rss.side_effect = [100 * mb, 110 * mb]  # 10 MB growth, default threshold is 5 MB
     client, _pipeline = _make_client()
 
     with measure("my_handler.compute", track_memory_usage=True, client=client):
@@ -242,20 +231,15 @@ def test_memory_excessive_growth_logs_warning_with_name(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics._process_rss_bytes")
 @patch("canvas_sdk.utils.metrics.time")
 def test_memory_excessive_growth_logs_plugin_name_from_extra_tags(
-    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
+    mock_time: MagicMock, mock_rss: MagicMock, mock_log: MagicMock
 ) -> None:
     """RSS growth warning should include both plugin name and measure name."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
-    mock_process = MagicMock()
-    mock_process.memory_info.side_effect = [
-        MagicMock(rss=100 * mb),
-        MagicMock(rss=110 * mb),  # 10 MB growth, default threshold is 5 MB
-    ]
-    mock_psutil.Process.return_value = mock_process
+    mock_rss.side_effect = [100 * mb, 110 * mb]  # 10 MB growth, default threshold is 5 MB
     client, _pipeline = _make_client()
 
     with measure(
@@ -274,20 +258,15 @@ def test_memory_excessive_growth_logs_plugin_name_from_extra_tags(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics._process_rss_bytes")
 @patch("canvas_sdk.utils.metrics.time")
 def test_memory_below_threshold_no_warning(
-    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
+    mock_time: MagicMock, mock_rss: MagicMock, mock_log: MagicMock
 ) -> None:
     """RSS growth below threshold should not trigger a warning."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
-    mock_process = MagicMock()
-    mock_process.memory_info.side_effect = [
-        MagicMock(rss=100 * mb),
-        MagicMock(rss=101 * mb),  # 1 MB growth, below 5 MB threshold
-    ]
-    mock_psutil.Process.return_value = mock_process
+    mock_rss.side_effect = [100 * mb, 101 * mb]  # 1 MB growth, below 5 MB threshold
     client, _pipeline = _make_client()
 
     with measure("block", track_memory_usage=True, client=client):
@@ -297,24 +276,73 @@ def test_memory_below_threshold_no_warning(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics._process_rss_bytes")
 @patch("canvas_sdk.utils.metrics.time")
 @patch.dict(os.environ, {"PLUGIN_MEMORY_GROWTH_THRESHOLD_MB": "2"})
 def test_memory_threshold_respects_env_var(
-    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
+    mock_time: MagicMock, mock_rss: MagicMock, mock_log: MagicMock
 ) -> None:
     """The warning threshold should be configurable via env var."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
-    mock_process = MagicMock()
-    mock_process.memory_info.side_effect = [
-        MagicMock(rss=100 * mb),
-        MagicMock(rss=103 * mb),  # 3 MB growth, above 2 MB threshold
-    ]
-    mock_psutil.Process.return_value = mock_process
+    mock_rss.side_effect = [100 * mb, 103 * mb]  # 3 MB growth, above 2 MB threshold
     client, _pipeline = _make_client()
 
     with measure("block", track_memory_usage=True, client=client):
         pass
 
     mock_log.warning.assert_called_once()
+
+
+@patch("canvas_sdk.utils.metrics._process_rss_bytes", None)
+@patch("canvas_sdk.utils.metrics.time")
+def test_track_memory_usage_without_a_reader_records_no_rss(mock_time: MagicMock) -> None:
+    """Outside the plugin runner no memory reader is configured, so no RSS metric is sent."""
+    mock_time.perf_counter_ns.side_effect = [0, 0]
+    client, pipeline = _make_client()
+
+    with measure("block", track_memory_usage=True, client=client):
+        pass
+
+    metric_names = [call.args[0] for call in pipeline.timing.call_args_list]
+    assert metric_names == ["plugins.timings"]
+
+
+def test_proxy_sends_nothing_before_a_client_is_configured(
+    settings: SettingsWrapper,
+) -> None:
+    """Before the plugin runner configures a client, the proxy and its pipeline send nothing."""
+    settings.METRICS_ENABLED = True
+
+    with patch("canvas_sdk.utils.metrics._client", None):
+        proxy = StatsDClientProxy()
+        proxy.gauge("m", 1.0, tags={"a": "b"})
+        proxy.timing("m", 1.0, tags={"a": "b"})
+        proxy.incr("m", tags={"a": "b"})
+        pipeline = proxy.pipeline()
+        pipeline.timing("m", 1.0, tags={"a": "b"})
+        pipeline.send()
+
+        assert proxy.client is None
+        assert pipeline.client is None
+
+
+def test_proxy_sends_through_the_configured_client(settings: SettingsWrapper) -> None:
+    """Once configured, metrics go to the client and pipelines batch through its pipeline."""
+    settings.METRICS_ENABLED = True
+    client = MagicMock()
+
+    with (
+        patch("canvas_sdk.utils.metrics._client", None),
+        patch("canvas_sdk.utils.metrics._process_rss_bytes", None),
+    ):
+        configure(client, lambda: 0)
+        proxy = StatsDClientProxy()
+        proxy.gauge("m", 1.0, tags={"a": "b"})
+        pipeline = proxy.pipeline()
+        pipeline.timing("m", 2.0, tags={"a": "b"})
+        pipeline.send()
+
+    client.gauge.assert_called_once_with("m,a=b", 1.0)
+    client.pipeline.return_value.timing.assert_called_once_with("m,a=b", 2.0)
+    client.pipeline.return_value.send.assert_called_once_with()

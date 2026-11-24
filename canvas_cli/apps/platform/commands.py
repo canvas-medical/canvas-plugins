@@ -1032,6 +1032,14 @@ def deploy(
             "non-zero and lists them."
         ),
     ),
+    no_validate: bool = typer.Option(
+        False,
+        "--no-validate",
+        help=(
+            "Push without first loading the plugin's handlers in the sandbox. A plugin the "
+            "sandbox refuses still reaches the instance, where it fails to load."
+        ),
+    ),
 ) -> None:
     """Publish the plugin's code to Canvas Platform and deploy it.
 
@@ -1044,8 +1052,8 @@ def deploy(
     accepted, so the push commits it; --ref, --no-push and --snapshot print the
     manifest line to add instead.
 
-    Without --ref or --no-push, deploy first runs the same checks as `canvas
-    validate` and stops on a failure. It then registers the plugin, points the
+    Without --ref, --no-push or --no-validate, deploy first runs the same checks as
+    `canvas validate` and stops on a failure. It then registers the plugin, points the
     repository's `origin` at Canvas Platform with a credential helper, commits any
     uncommitted changes after you confirm, pushes HEAD to `main` and deploys that
     commit. A plugin that is not in a git repository yet is offered one.
@@ -1151,7 +1159,9 @@ def deploy(
     pushing = ref is None and not no_push
     if pushing:
         require_folder_matches_name(plugin_dir, name)
-        instance_plugin.validate(plugin_dir)
+
+        if not no_validate:
+            instance_plugin.validate(plugin_dir)
 
     publisher, picked = _publisher(
         client,

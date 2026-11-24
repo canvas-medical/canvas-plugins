@@ -9,12 +9,11 @@ from http import HTTPStatus
 from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
 from urllib.parse import parse_qsl
 
-import sentry_sdk
-
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSON, JSONResponse, Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
+from canvas_sdk.utils import reporting
 from logger import log
 from plugin_runner.exceptions import PluginError
 
@@ -557,7 +556,7 @@ class SimpleAPIBase(BaseHandler, ABC):
         except Exception as exception:
             log.exception(f"Error handling '{EventType.Name(self.event.type)}' event")
 
-            sentry_sdk.capture_exception(exception)
+            reporting.capture_exception(exception)
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
