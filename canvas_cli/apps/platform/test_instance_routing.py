@@ -1221,6 +1221,135 @@ def test_an_ambiguous_name_with_a_canvas_credentials_ini_default_is_refused_with
     mock.assert_not_called()
 
 
+def test_the_same_instance_named_twice_is_asked_and_deployed_once(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A repeated --instance is one target: Platform is asked once and the deployment names
+    the instance once, for the publisher installed there.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    result = runner.invoke(
+        app, ["enable", PDMP, "--instance", "training", "--instance", "training"]
+    )
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert len(_calls(requests_mock, "GET", f"{API}/plugins/{PDMP}?instance=training")) == 1
+    posted: list[Any] = _calls(requests_mock, "POST", f"{API}/deployments")
+    assert len(posted) == 1
+    assert posted[0].json()["plugins"] == [
+        {"name": PDMP, "publisher": "canvas-medical-dashboard-team"}
+    ]
+    assert posted[0].json()["instances"] == ["training"]
+
+
+def test_an_instance_that_settles_nothing_refuses_the_whole_command(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Platform answers an instance holding no copy of the name as it answers the bare name
+    (409 ``ambiguous``), so one resolved instance does not carry the other.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    requests_mock.get(
+        f"{API}/plugins/{PDMP}?instance=acme",
+        status_code=409,
+        json={"error": PDMP_SENTENCE, "code": "ambiguous"},
+    )
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+
+    result = runner.invoke(app, ["enable", PDMP, "--instance", "training", "--instance", "acme"])
+
+    # Product reason: nothing on acme says which publisher's plugin belongs there, and one
+    # deployment carries one publisher, so none is guessed.
+    assert result.exit_code == 1
+    assert PDMP_SENTENCE in result.stderr
+    assert INSTANCE_HINT not in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    assert _calls(requests_mock, "GET", f"{API}/plugins/{PDMP}?instance=training")
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+
+
+def test_a_refusal_for_mixed_publishers_names_every_instance(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Each --instance is named with its publisher, so the person can split the command."""
+    # Mocked mappings: training's is from prod; the other two are illustrative.
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    _pdmp_on(requests_mock, "metamorphosis", "metamorphosis")
+    _pdmp_on(requests_mock, "bigleaphealth-dev", "big-leap-health")
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+
+    result = runner.invoke(
+        app,
+        [
+            "enable",
+            PDMP,
+            "--instance",
+            "training",
+            "--instance",
+            "metamorphosis",
+            "--instance",
+            "bigleaphealth-dev",
+        ],
+    )
+
+    output: str = " ".join((result.output + result.stderr).split())
+    assert result.exit_code != 0
+    assert "on training is canvas-medical-dashboard-team's" in output
+    assert "on metamorphosis is metamorphosis's" in output
+    assert "on bigleaphealth-dev is big-leap-health's" in output
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+
+
+def test_a_customer_in_two_publishers_chooses_theirs_by_instance(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """A person in two organizations that both publish the name gets 409 for the bare name;
+    their instance settles it to one of their own organizations' plugins.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "neuroglow", "neuroglow")
+    requests_mock.get(
+        f"{API}/instances", json={"instances": [_instance("neuroglow", "deploy_plugin")]}
+    )
+    requests_mock.get(
+        f"{API}/me", json={"organizations": [{"slug": "neuroglow"}, {"slug": "innermost"}]}
+    )
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+
+    result = runner.invoke(app, ["enable", PDMP, "--instance", "neuroglow"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
+        {"name": PDMP, "publisher": "neuroglow"}
+    ]
+
+
+def test_config_list_reads_the_variables_of_the_publisher_the_instance_chose(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """The variables route resolves the name again, so it is told the publisher the
+    instance settled; otherwise Platform can answer 409 there after choosing one here.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    variables: str = f"{API}/instances/training/plugins/{PDMP}/variables"
+    requests_mock.get(variables, json={"variables": []})
+
+    result = runner.invoke(app, ["config", "list", PDMP, "--instance", "training"])
+
+    assert result.exit_code == 0, result.output + result.stderr
+    read: list[Any] = _calls(requests_mock, "GET", variables)
+    assert len(read) == 1
+    assert read[0].qs == {"publisher": ["canvas-medical-dashboard-team"]}
+
+
 def test_prefixed_plugin_its_publisher_owns_goes_through_platform_for_an_employee(
     requests_mock: requests_mock_module.Mocker, managed_plugin: None
 ) -> None:
