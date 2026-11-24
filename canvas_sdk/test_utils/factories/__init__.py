@@ -194,7 +194,6 @@ from .plugin_command import PluginCommandFactory
 from .population_health import (
     CampaignFactory,
     InterventionFactory,
-    SuspectHCCFactory,
 )
 from .portal_access_grant import PortalAccessGrantFactory
 from .portal_invitation import PortalInvitationFactory
@@ -226,10 +225,6 @@ from .protocol_override import ProtocolOverrideFactory, ProtocolOverrideSnoozeRe
 from .provenance import ProvenanceFactory
 from .questionnaire import (
     InterviewFactory,
-    InterviewSendEventFactory,
-    InterviewTemplateFactory,
-    InterviewTemplateQuestionnaireMapFactory,
-    InterviewVisualFindingFactory,
     QuestionFactory,
     QuestionnaireFactory,
     QuestionnaireItemGroupFactory,
@@ -405,10 +400,6 @@ __all__ = (
     "IntegrationTaskReviewFactory",
     "InterventionFactory",
     "InterviewFactory",
-    "InterviewSendEventFactory",
-    "InterviewTemplateFactory",
-    "InterviewTemplateQuestionnaireMapFactory",
-    "InterviewVisualFindingFactory",
     "InvoiceClaimFactory",
     "InvoiceFactory",
     "LabOrderActionEventFactory",
@@ -538,7 +529,6 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
-    "SuspectHCCFactory",
     "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
