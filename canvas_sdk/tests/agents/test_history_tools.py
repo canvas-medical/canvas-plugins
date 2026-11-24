@@ -18,6 +18,7 @@ from canvas_sdk.test_utils.factories import (
 )
 from canvas_sdk.tests.agents.test_standard_tools import _allergy
 from canvas_sdk.v1.data import Condition, MedicationCoding
+from canvas_sdk.v1.data.condition import ConditionCoding
 
 NOTE = "00000000-0000-0000-0000-000000000001"
 
@@ -571,7 +572,12 @@ def test_a_prescription_with_no_dispense_unit_still_says_whether_to_substitute(
         (
             {"fdb_code": "123456", "representative_ndc": "00093111101", "quantity_to_dispense": 0},
             lambda path: LISINOPRIL,
-            "more than 0",
+            "greater than 0",
+        ),
+        (
+            {"fdb_code": "999999", "representative_ndc": "00093111101"},
+            lambda path: _Response({}, status_code=404),
+            "not a medication FDB has",
         ),
         (
             {"fdb_code": "123456", "representative_ndc": "00093111101"},
@@ -592,3 +598,41 @@ def test_a_dispense_unit_that_cannot_be_confirmed_is_refused(
 
     with pytest.raises(ValueError, match=message):
         _run("originate_prescribe_medication", patient, sig="Take 1 daily", **arguments)
+
+
+@pytest.mark.django_db
+def test_a_quantity_with_a_fraction_is_sent_as_written(monkeypatch: pytest.MonkeyPatch) -> None:
+    """1.2 mL stays 1.2, never the float's binary expansion."""
+    _ontologies(monkeypatch, lambda path: LISINOPRIL)
+    patient = PatientFactory.create()
+
+    _, effects = _run(
+        "originate_prescribe_medication",
+        patient,
+        fdb_code="123456",
+        sig="Take 1.2 mL by mouth daily",
+        representative_ndc="00093111101",
+        quantity_to_dispense=1.2,
+    )
+
+    assert _data(effects[0])["data"]["quantity_to_dispense"] == "1.2"
+
+
+@pytest.mark.django_db
+def test_a_condition_found_by_code_comes_back_once() -> None:
+    """Two codings carrying the searched digits match the search once."""
+    patient = PatientFactory.create()
+    condition = _active_condition(patient)
+    for system, code in (("ICD-10", "E119"), ("http://snomed.info/sct", "44054006E119")):
+        ConditionCoding.objects.create(
+            condition=condition,
+            system=system,
+            code=code,
+            display="Type 2 diabetes",
+            version="",
+            user_selected=False,
+        )
+
+    rows, _ = _run("find_conditions", patient, code_contains="E119")
+
+    assert len(rows) == 1

@@ -1065,7 +1065,7 @@ class ToolRegistry:
                     "name_contains": FilterSpec(
                         type="string",
                         description="...",
-                        apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+                        apply=lambda qs, v: qs.filter(codings__display__icontains=v).distinct(),
                     ),
                     "active_only": FilterSpec(
                         type="boolean",

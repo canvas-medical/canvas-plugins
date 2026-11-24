@@ -9,11 +9,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote
 
+from canvas_sdk.agents.ontology_lookup import CodeNotFound, get_json
 from canvas_sdk.utils.http import ontologies_http
-
-
-class DispenseUnitsUnavailable(RuntimeError):
-    """The ontologies service did not answer; the model is told to try again."""
 
 
 def _unit_quantity(value: Any) -> str:
@@ -52,19 +49,12 @@ def dispense_unit(fdb_code: str, representative_ndc: str) -> dict[str, str] | No
     """The dispense unit of ``fdb_code`` with this NDC, or ``None`` when it has none.
 
     Raises:
-        DispenseUnitsUnavailable: The ontologies service did not answer.
+        CodeNotFound: FDB has no medication with ``fdb_code``.
+        CodeSearchUnavailable: The ontologies service did not answer.
     """
-    try:
-        response = ontologies_http.get_json(f"/fdb/grouped-medication/{quote(fdb_code, safe='')}/")
-    except Exception as exc:
-        raise DispenseUnitsUnavailable("The medication lookup did not answer; try again.") from exc
-    if response.status_code == 404:
-        return None
-    if response.status_code != 200:
-        raise DispenseUnitsUnavailable(
-            f"The medication lookup answered {response.status_code}; try again."
-        )
-    body = response.json()
+    if not fdb_code.isdigit():
+        raise CodeNotFound("The code search found no such record.")
+    body = get_json(ontologies_http, f"/fdb/grouped-medication/{quote(fdb_code, safe='')}/")
     units = dispense_units(body) if isinstance(body, dict) else []
     return next((unit for unit in units if unit["representative_ndc"] == representative_ndc), None)
 

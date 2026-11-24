@@ -26,15 +26,17 @@ import re
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
 import requests
 from django.db.models import Q
 
-from canvas_sdk.agents.dispense_units import DispenseUnitsUnavailable, dispense_unit
+from canvas_sdk.agents.dispense_units import dispense_unit
 from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.agents.note_helpers import find_open_note
+from canvas_sdk.agents.ontology_lookup import CodeNotFound, CodeSearchUnavailable
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
@@ -204,7 +206,7 @@ def _patients_record_check(
     return pre_build
 
 
-def _medication_codes(medication: Any) -> tuple[str, str | None]:
+def _medication_codes(medication: Medication) -> tuple[str, str | None]:
     """A medication's name, from its first coding, and the code of its FDB coding.
 
     The codings are taken in the order they were recorded, so the name is the same on every
@@ -315,7 +317,7 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the coding code "
                 "(e.g. 'E11' for type-2 diabetes ICD-10 family)."
             ),
-            apply=lambda qs, v: qs.filter(codings__code__icontains=v),
+            apply=lambda qs, v: qs.filter(codings__code__icontains=v).distinct(),
         ),
         "active_only": FilterSpec(
             type="boolean",
@@ -384,7 +386,7 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the lab's coding name "
                 "(e.g. 'a1c', 'hemoglobin')."
             ),
-            apply=lambda qs, v: qs.filter(codings__name__icontains=v),
+            apply=lambda qs, v: qs.filter(codings__name__icontains=v).distinct(),
         ),
         "observed_on_or_after": FilterSpec(
             type="string",
@@ -3164,11 +3166,7 @@ def _serialize_interview(interview: Any) -> dict[str, Any]:
 def _serialize_stop_med_event(event: Any) -> dict[str, Any]:
     """Per-row serializer for find_stop_medication_events."""
     medication = event.medication
-    medication_name = ""
-    if medication is not None:
-        coding = next(iter(medication.codings.all()), None)
-        if coding is not None:
-            medication_name = coding.display or ""
+    medication_name = _medication_codes(medication)[0] if medication is not None else ""
     return {
         "id": str(event.id),
         "medication_name": medication_name or "(unknown)",
@@ -3954,10 +3952,11 @@ def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict
     }
     ndc = str(arguments.get("representative_ndc") or "")
     quantity = arguments.get("quantity_to_dispense")
-    if quantity is not None and quantity <= 0:
-        raise ValueError("The quantity to dispense must be more than 0.")
-    if quantity is not None and not ndc:
-        raise ValueError("A quantity to dispense needs the dispense unit (representative_ndc).")
+    if quantity is not None:
+        if not ndc:
+            raise ValueError("A quantity to dispense needs the dispense unit (representative_ndc).")
+        # Through its text, so 1.2 is sent as 1.2 rather than the float's binary expansion.
+        extra["quantity_to_dispense"] = Decimal(str(quantity))
     if not ndc:
         return extra
     fdb_code = str(arguments.get("fdb_code") or "")
@@ -3965,7 +3964,12 @@ def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict
         raise ValueError("A dispense unit needs the medication's fdb_code.")
     try:
         unit = dispense_unit(fdb_code, ndc)
-    except DispenseUnitsUnavailable as exc:
+    except CodeNotFound as exc:
+        raise ValueError(
+            "That fdb_code is not a medication FDB has; look it up with find_clinical_codes "
+            "(kind 'medication')."
+        ) from exc
+    except CodeSearchUnavailable as exc:
         raise ValueError(str(exc)) from exc
     if unit is None:
         raise ValueError(
@@ -4015,7 +4019,6 @@ standard_tools.originate_command_tool(
                 "How many of the dispense unit to dispense (e.g. 30 tablets), more than 0. "
                 "Optional; set it only with `representative_ndc`."
             ),
-            editable=True,
         ),
         "substitutions": EffectField(
             type="string",

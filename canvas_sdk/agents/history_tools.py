@@ -13,6 +13,9 @@ from typing import Any
 from urllib.parse import quote
 
 from canvas_sdk.agents.dispense_units import dispense_units
+from canvas_sdk.agents.ontology_lookup import CodeSearchUnavailable
+from canvas_sdk.agents.ontology_lookup import get_json as _get
+from canvas_sdk.agents.ontology_lookup import items as _items
 from canvas_sdk.agents.standard_tools import (
     _ORIGINATE_RETURNS,
     _patients_record_check,
@@ -34,7 +37,6 @@ from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.utils.http import ontologies_http, science_http
 from canvas_sdk.v1.data import AllergyIntolerance, Condition, Medication
-from logger import log
 
 # The most candidates one search returns; past this the model should narrow its words.
 MAX_CODE_CANDIDATES = 10
@@ -43,28 +45,6 @@ OBSOLETE_FDB_STATUS = "3"
 # FDB's DEA schedule codes: "1" to "5" are schedules I to V, "0" unscheduled.
 DEA_SCHEDULED = frozenset({"1", "2", "3", "4", "5"})
 DEA_UNSCHEDULED = "0"
-
-
-class CodeSearchUnavailable(RuntimeError):
-    """An ontology service did not answer; the model is told to try again."""
-
-
-def _get(client: Any, path: str) -> Any:
-    """The JSON body of a GET on an ontology service, raising when it did not answer."""
-    try:
-        response = client.get_json(path)
-    except Exception as exc:
-        log.warning(f"history_tools lookup failed: {type(exc).__name__}")
-        raise CodeSearchUnavailable("The code search did not answer; try again.") from exc
-    if response.status_code != 200:
-        raise CodeSearchUnavailable(f"The code search answered {response.status_code}; try again.")
-    return response.json()
-
-
-def _items(body: Any) -> list[dict[str, Any]]:
-    """The rows of a paginated (``{"results": [...]}``) or bare-list response."""
-    rows = body.get("results") if isinstance(body, dict) else body
-    return [row for row in rows or [] if isinstance(row, dict)]
 
 
 def _condition_rows(query: str) -> list[dict[str, Any]]:
