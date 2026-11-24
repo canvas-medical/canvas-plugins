@@ -32,6 +32,7 @@ class IntegrationTaskChannel(models.TextChoices):
     DOCUMENT_UPLOAD = "document_upload", "Document Upload"
     FROM_INTEGRATION_ENGINE = "from_integration_engine", "From Integration Engine"
     FROM_PATIENT_PORTAL = "from_patient_portal", "From Patient Portal"
+    ELECTRONIC_LAB = "electronic_lab", "Electronic Lab"
 
 
 class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
@@ -74,6 +75,10 @@ class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     def uploads(self) -> Self:
         """Filter to document upload tasks."""
         return self.filter(channel=IntegrationTaskChannel.DOCUMENT_UPLOAD)
+
+    def electronic_labs(self) -> Self:
+        """Filter to electronic lab tasks."""
+        return self.filter(channel=IntegrationTaskChannel.ELECTRONIC_LAB)
 
     def from_integration_engine(self) -> Self:
         """Filter to tasks from integration engine."""

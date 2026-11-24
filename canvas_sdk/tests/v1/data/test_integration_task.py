@@ -111,6 +111,17 @@ def test_uploads_filters_to_document_upload_channel() -> None:
 
 
 @pytest.mark.django_db
+def test_electronic_labs_filters_to_electronic_lab_channel() -> None:
+    """Test that electronic_labs() filters to tasks with ELECTRONIC_LAB channel."""
+    lab_task = IntegrationTaskFactory.create(channel="electronic_lab")
+    IntegrationTaskFactory.create(channel=IntegrationTaskChannel.FAX)
+
+    result = IntegrationTask.objects.electronic_labs()
+
+    assert list(result) == [lab_task]
+
+
+@pytest.mark.django_db
 def test_from_integration_engine_filters_correctly() -> None:
     """Test that from_integration_engine() filters to correct channel."""
     engine_task = IntegrationTaskFactory.create(
