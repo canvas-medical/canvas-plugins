@@ -1379,7 +1379,12 @@ def _managed(
 
     Raises:
         click.ClickException: Signed in, and platform does not manage the plugin or an
-            ``--instance``.
+            ``--instance``. When several publishers share the name and none could be chosen,
+            the message is Platform's sentence naming them, then "Canvas Platform could not
+            choose one by the install on <slugs>." (the ``--instance`` slugs that answered
+            ambiguously), or a hint to pass ``--instance`` when none was given. Each
+            ``--instance`` is checked with ``require_managed`` before that cause is shown,
+            so an instance the person cannot use is named first.
         typer.BadParameter: The ``--instance`` slugs' plugins have different publishers.
     """
     if (instances or host) and all(
@@ -1455,7 +1460,12 @@ def _managed_record(
             manage it for the person.
 
     Raises:
-        typer.BadParameter: The instances' plugins have different publishers.
+        PlatformError: Platform refused a lookup for a reason other than ``ambiguous`` (for
+            example a 403 ``out_of_scope`` for an ``--instance`` the token cannot act on).
+        click.ClickException: The instances' plugins have different publishers and an
+            ``--instance`` is not one platform manages for the person.
+        typer.BadParameter: The instances' plugins have different publishers, and each
+            ``--instance`` is one platform manages for the person.
     """
     slugs: list[str | None] = list(dict.fromkeys(instances)) or [None]
     records: dict[str | None, dict[str, Any]] = {}
@@ -1481,6 +1491,11 @@ def _managed_record(
         slug: _record_publisher(record) or "" for slug, record in records.items()
     }
     if len(set(publishers.values())) > 1:
+        # A mistyped instance beside a real one resolves to a different record, so each
+        # instance must be the person's before the publishers are compared.
+        for slug in records:
+            if slug is not None:
+                require_managed(client, slug)
         each: str = " and ".join(f"on {slug} is {pub}'s" for slug, pub in publishers.items())
         raise typer.BadParameter(
             f"{name} {each}; run the command once per publisher, with one --instance each."

@@ -1221,6 +1221,71 @@ def test_a_mistyped_instance_on_a_shared_name_is_not_one_of_your_instances(
 @pytest.mark.parametrize(
     ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
 )
+def test_a_mistyped_instance_beside_a_real_one_is_not_one_of_your_instances(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform drops the unseen instance and resolves the bare name to the person's own
+    organization, so the two records differ; the refusal still names the mistyped instance
+    instead of asking for one command per publisher.
+    """
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    _pdmp_on(requests_mock, "trainnig", "innermost")
+    requests_mock.get(
+        f"{API}/instances", json={"instances": [_instance("training", "deploy_plugin")]}
+    )
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(
+            app, [*command, PDMP, *extra, "--instance", "training", "--instance", "trainnig"]
+        )
+
+    assert result.exit_code == 1
+    assert "trainnig is not one of your instances on Canvas Platform." in result.stderr
+    assert "run the command once per publisher" not in result.output + result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+    mock.assert_not_called()
+
+
+def test_the_first_ambiguity_sentence_is_the_one_shown(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """Platform's sentence can differ per instance for staff and actor tokens, and the person
+    reads the first instance's.
+    """
+    first: str = "Name the publisher to choose one (publisher alpha or beta)."
+    second: str = "Name the publisher to choose one (publisher gamma or delta)."
+    for slug, sentence in (("training", first), ("metamorphosis", second)):
+        requests_mock.get(
+            f"{API}/plugins/{PDMP}?instance={slug}",
+            status_code=409,
+            json={"code": "ambiguous", "error": sentence},
+        )
+    requests_mock.get(
+        f"{API}/instances",
+        json={
+            "instances": [
+                _instance("training", "deploy_plugin"),
+                _instance("metamorphosis", "deploy_plugin"),
+            ]
+        },
+    )
+
+    result = runner.invoke(
+        app, ["enable", PDMP, "--instance", "training", "--instance", "metamorphosis"]
+    )
+
+    assert result.exit_code == 1
+    assert first in result.stderr
+    assert second not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
 def test_an_out_of_scope_instance_shows_platforms_message_and_changes_nothing(
     command: list[str],
     direct: str,
@@ -1376,6 +1441,15 @@ def test_a_refusal_for_mixed_publishers_names_every_instance(
     _pdmp_on(requests_mock, "metamorphosis", "metamorphosis")
     _pdmp_on(requests_mock, "bigleaphealth-dev", "big-leap-health")
     requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.get(
+        f"{API}/instances",
+        json={
+            "instances": [
+                _instance(slug, "deploy_plugin")
+                for slug in ("training", "metamorphosis", "bigleaphealth-dev")
+            ]
+        },
+    )
 
     result = runner.invoke(
         app,
