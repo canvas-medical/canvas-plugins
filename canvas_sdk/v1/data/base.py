@@ -148,9 +148,10 @@ class CustomModelMetaclass(ModelMetaclass):
                 # target SDK models. SDK models are shared across plugins, so an
                 # unqualified related_name like "status" would collide if two
                 # plugins chose the same name. Plugin-private targets (CustomModels
-                # and proxy models) don't need namespacing — each plugin's proxy
-                # has its own app_label, so reverse relations are scoped to the
-                # proxy class, not the shared concrete base.
+                # and proxy models) are exempt from namespacing. For a proxy
+                # target, Django puts both the reverse accessor and the _meta
+                # relation on the concrete model, shared by every plugin, and the
+                # sandbox hides other plugins' relations from model metadata.
                 rel_name = value.remote_field.related_name
                 target = value.remote_field.model
                 if isinstance(target, str):

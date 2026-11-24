@@ -26,15 +26,18 @@ from canvas_sdk.agents.command_edit_tools import DRAFT_KINDS
 from canvas_sdk.agents.gateway import build_gateway
 from canvas_sdk.tests.shared import params_from_dict
 from canvas_sdk.utils.http import Http, ontologies_http
+from canvas_sdk.v1.data import Staff
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
     BulkOperationTooLarge,
     CustomModel,
     FieldValueTooLarge,
+    ModelExtension,
     NamespaceWriteDenied,
 )
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
+from plugin_runner.installation import clear_registered_models, register_plugin_app_config
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     PROTECTED_SCOPE_NAMES,
@@ -880,6 +883,70 @@ def test_sdk_model_meta_is_readable_for_introspection() -> None:
     assert result["field"] == ("first_name", False, "CharField")
     assert result["missing"] == "raised"
     assert result["related"] == "Staff"
+
+
+@pytest.fixture
+def plugin_a_staff_relation() -> Iterator[None]:
+    """Install plugin_a's CustomModel with a FK to its own proxy of Staff."""
+    custom_staff = type(
+        "PluginAStaff",
+        (Staff, ModelExtension),
+        {"__module__": "plugin_a.models", "__qualname__": "PluginAStaff"},
+    )
+    type(
+        "PluginAAssignment",
+        (CustomModel,),
+        {
+            "__module__": "plugin_a.models",
+            "__qualname__": "PluginAAssignment",
+            "provider": django_models.ForeignKey(
+                custom_staff,
+                on_delete=django_models.DO_NOTHING,
+                related_name="plugin_a_assignments",
+            ),
+        },
+    )
+    register_plugin_app_config("plugin_a")
+    yield
+    clear_registered_models("plugin_a")
+
+
+_STAFF_RELATIONS_SOURCE = """
+from canvas_sdk.v1.data import Staff
+
+try:
+    Staff._meta.get_field("plugin_a_assignments")
+    get_field = "found"
+except Exception as exc:
+    get_field = type(exc).__name__
+
+names = {f.name for f in Staff._meta.get_fields()}
+result = {
+    "listed": "plugin_a_assignments" in names,
+    "get_field": get_field,
+    "core_relation": "default_patients" in names,
+}
+"""
+
+
+@pytest.mark.usefixtures("plugin_a_staff_relation")
+def test_other_plugins_custom_model_reverse_relation_is_hidden() -> None:
+    """Another plugin's CustomModel relation to a core model is not in that model's metadata."""
+    sandbox = _sandbox_from_code(_STAFF_RELATIONS_SOURCE, "plugin_b.handlers.handler")
+
+    result = sandbox.execute()["result"]
+
+    assert result == {"listed": False, "get_field": "FieldDoesNotExist", "core_relation": True}
+
+
+@pytest.mark.usefixtures("plugin_a_staff_relation")
+def test_own_custom_model_reverse_relation_is_visible() -> None:
+    """A plugin sees its own CustomModel relation on a core model."""
+    sandbox = _sandbox_from_code(_STAFF_RELATIONS_SOURCE, "plugin_a.handlers.handler")
+
+    result = sandbox.execute()["result"]
+
+    assert result == {"listed": True, "get_field": "found", "core_relation": True}
 
 
 @pytest.mark.parametrize(
