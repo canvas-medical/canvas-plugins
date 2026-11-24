@@ -265,7 +265,6 @@ from .staff import (
     StaffLicenseFactory,
     StaffPhotoFactory,
     StaffRoleFactory,
-    StaffSettingFactory,
 )
 from .staff_identity_verification import StaffIdentityVerificationFactory
 from .task import (
@@ -522,7 +521,6 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
-    "StaffSettingFactory",
     "SuspectHCCFactory",
     "TaskCommentFactory",
     "TaskFactory",

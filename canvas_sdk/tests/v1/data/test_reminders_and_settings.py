@@ -7,14 +7,11 @@ from canvas_sdk.test_utils.factories import (
     BusinessLineSettingFactory,
     OrganizationFactory,
     OrganizationSettingFactory,
-    StaffFactory,
-    StaffSettingFactory,
 )
 from canvas_sdk.v1.data import (
     AppointmentReminder,
     BusinessLineSetting,
     OrganizationSetting,
-    StaffSetting,
 )
 from canvas_sdk.v1.data.appointment import AppointmentReminderStatus
 
@@ -48,27 +45,6 @@ def test_appointment_reminder_status_is_null_before_the_send_finishes() -> None:
     reminder = AppointmentReminderFactory.create(status=None)
 
     assert AppointmentReminder.objects.get(id=reminder.id).status is None
-
-
-@pytest.mark.django_db
-def test_staff_settings_are_read_from_the_staff_member() -> None:
-    """Each readable staff setting carries the JSON value Canvas writes for it."""
-    staff = StaffFactory.create()
-    expected = {
-        "labAccounts": {"labAccountCanvasMock": {"accountNumber": "0123456789"}},
-        "conditionDisplayFilters": {"active": True, "resolved": False},
-        "conditionDisplaySortValues": [{"value": "active", "label": "active", "order": "DESC"}],
-        "vitalsDisplay": {"height": True, "weight": True, "bmi": False},
-    }
-    StaffSettingFactory.create(staff=staff)
-    for name in ("conditionDisplayFilters", "conditionDisplaySortValues", "vitalsDisplay"):
-        StaffSettingFactory.create(staff=staff, name=name, value=expected[name])
-    StaffSettingFactory.create()
-
-    values = {s.name: s.value for s in staff.settings.all()}
-
-    assert values == expected
-    assert StaffSetting.objects.get(staff=staff, name="labAccounts").staff == staff
 
 
 @pytest.mark.django_db

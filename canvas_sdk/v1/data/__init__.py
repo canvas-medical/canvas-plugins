@@ -369,7 +369,6 @@ from .staff import (
     StaffMetadata,
     StaffPhoto,
     StaffRole,
-    StaffSetting,
 )
 from .staff_identity_verification import StaffIdentityVerification
 from .stop_medication_event import StopMedicationEvent
@@ -754,7 +753,6 @@ __all__ = __exports__ = (
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
-    "StaffSetting",
     "StopMedicationEvent",
     "Task",
     "TaskComment",

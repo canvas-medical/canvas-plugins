@@ -1647,7 +1647,6 @@
     "StaffMetadata",
     "StaffPhoto",
     "StaffRole",
-    "StaffSetting",
     "StopMedicationEvent",
     "SuspectHCC",
     "SuspectHCCKind",
@@ -2346,8 +2345,7 @@
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
-    "StaffRole",
-    "StaffSetting"
+    "StaffRole"
   ],
   "canvas_sdk.v1.data.staff_identity_verification": [
     "StaffIdentityVerification"
