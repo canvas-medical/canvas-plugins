@@ -32,6 +32,7 @@ from uuid import UUID, uuid4
 import requests
 from django.db.models import Q
 
+from canvas_sdk.agents.dispense_units import DispenseUnitsUnavailable, dispense_unit
 from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.agents.note_helpers import find_open_note
 from canvas_sdk.agents.tool_loop import run_tool_loop
@@ -57,7 +58,7 @@ from canvas_sdk.commands import (
     ReferCommand,
     StopMedicationCommand,
 )
-from canvas_sdk.commands.constants import CodeSystems
+from canvas_sdk.commands.constants import ClinicalQuantity, CodeSystems
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
 from canvas_sdk.effects.banner_alert.remove_banner_alert import RemoveBannerAlert
@@ -3940,13 +3941,56 @@ standard_tools.originate_command_tool(
 )
 
 
+def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    """The dispense unit, checked against the medication, and whether it may be substituted.
+
+    The draft carries ``substitutions`` either way: the chart's Prescribe command sets it when
+    the clinician opens the row, and a draft accepted without opening it would have none.
+    """
+    extra: dict[str, Any] = {
+        "substitutions": PrescribeCommand.Substitutions(
+            arguments.get("substitutions") or PrescribeCommand.Substitutions.ALLOWED.value
+        )
+    }
+    ndc = str(arguments.get("representative_ndc") or "")
+    quantity = arguments.get("quantity_to_dispense")
+    if quantity is not None and quantity <= 0:
+        raise ValueError("The quantity to dispense must be more than 0.")
+    if quantity is not None and not ndc:
+        raise ValueError("A quantity to dispense needs the dispense unit (representative_ndc).")
+    if not ndc:
+        return extra
+    fdb_code = str(arguments.get("fdb_code") or "")
+    if not fdb_code:
+        raise ValueError("A dispense unit needs the medication's fdb_code.")
+    try:
+        unit = dispense_unit(fdb_code, ndc)
+    except DispenseUnitsUnavailable as exc:
+        raise ValueError(str(exc)) from exc
+    if unit is None:
+        raise ValueError(
+            "That representative_ndc is not one of this medication's dispense units; "
+            "use one from find_clinical_codes."
+        )
+    extra["type_to_dispense"] = ClinicalQuantity(
+        representative_ndc=unit["representative_ndc"],
+        ncpdp_quantity_qualifier_code=unit["ncpdp_quantity_qualifier_code"],
+        description=unit["description"],
+    )
+    return extra
+
+
 standard_tools.originate_command_tool(
     name="originate_prescribe_medication",
     description=(
         "Stage a draft Prescribe command on the patient's current open note "
         "for the clinician to review, edit, and commit. NEVER commits — the "
         "clinician sees the draft in the chart and decides whether to send "
-        "it. Use only when the clinician explicitly asks to prescribe."
+        "it. Use only when the clinician explicitly asks to prescribe. Look the "
+        "medication up with `find_clinical_codes` (kind 'medication') and pass its "
+        "`fdb_code`, and the `representative_ndc` of the dispense unit with "
+        "`quantity_to_dispense` counted in that unit. A unit the medication does not "
+        "have is refused."
     ),
     command_class=PrescribeCommand,
     fields={
@@ -3956,6 +4000,28 @@ standard_tools.originate_command_tool(
                 "FDB code identifying the medication. If unknown, omit; "
                 "the clinician will fill it in when reviewing the draft."
             ),
+        ),
+        "representative_ndc": EffectField(
+            type="string",
+            description=(
+                "The dispense unit: the `representative_ndc` of one of the medication's "
+                "`dispense_units` from find_clinical_codes. Needs `fdb_code`. Optional."
+            ),
+            pre_build_only=True,
+        ),
+        "quantity_to_dispense": EffectField(
+            type="number",
+            description=(
+                "How many of the dispense unit to dispense (e.g. 30 tablets), more than 0. "
+                "Optional; set it only with `representative_ndc`."
+            ),
+            editable=True,
+        ),
+        "substitutions": EffectField(
+            type="string",
+            enum=[choice.value for choice in PrescribeCommand.Substitutions],
+            description="Whether the pharmacy may substitute a generic. Defaults to allowed.",
+            pre_build_only=True,
         ),
         "sig": EffectField(
             type="string",
@@ -3983,6 +4049,7 @@ standard_tools.originate_command_tool(
             editable=True,
         ),
     },
+    pre_build=_prescribe_pre_build,
     categories=("clinical_writes",),
     returns_description=_ORIGINATE_RETURNS,
 )

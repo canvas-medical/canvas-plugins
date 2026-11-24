@@ -12,6 +12,7 @@ from datetime import date
 from typing import Any
 from urllib.parse import quote
 
+from canvas_sdk.agents.dispense_units import dispense_units
 from canvas_sdk.agents.standard_tools import (
     _ORIGINATE_RETURNS,
     _patients_record_check,
@@ -93,27 +94,15 @@ def _medical_history_rows(query: str) -> list[dict[str, Any]]:
     ]
 
 
-def _clinical_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
-    """The units a medication is dispensed in, as the chart's prescribe picker offers them."""
-    return [
-        {
-            "quantity": str(unit.get("erx_quantity") or ""),
-            "description": str(unit.get("clinical_quantity_description") or ""),
-            "ncpdp_quantity_qualifier_code": str(
-                unit.get("erx_ncpdp_script_quantity_qualifier_code") or ""
-            ),
-            "ncpdp_quantity_qualifier_description": str(
-                unit.get("erx_ncpdp_script_quantity_qualifier_description") or ""
-            ),
-            "representative_ndc": str(unit.get("representative_ndc") or ""),
-        }
-        for unit in row.get("clinical_quantities") or []
-        if isinstance(unit, dict)
-    ]
-
-
 def _medication_rows(query: str) -> list[dict[str, Any]]:
     body = _get(science_http, f"/search/grouped-medication/?query={quote(query, safe='')}&limit=50")
+    current = [
+        row
+        for row in _items(body)
+        if row.get("med_medication_id")
+        and str(row.get("med_medication_status_code", "0")) != OBSOLETE_FDB_STATUS
+    ]
+    # Cut before the dispense units are built: only the candidates returned need them.
     return [
         {
             "fdb_code": str(row["med_medication_id"]),
@@ -121,11 +110,9 @@ def _medication_rows(query: str) -> list[dict[str, Any]]:
                 row.get("med_medication_description") or row.get("description_and_quantity") or ""
             ),
             "rxnorm_rxcui": str(row.get("rxnorm_rxcui") or ""),
-            "clinical_quantities": _clinical_quantities(row),
+            "dispense_units": dispense_units(row),
         }
-        for row in _items(body)
-        if row.get("med_medication_id")
-        and str(row.get("med_medication_status_code", "0")) != OBSOLETE_FDB_STATUS
+        for row in current[:MAX_CODE_CANDIDATES]
     ]
 
 
@@ -215,7 +202,8 @@ CODE_SEARCHES = {
         "vocabularies, as the chart's pickers do. `kind` is what to look up: "
         "`medical_history` (past conditions, for `originate_medical_history`), "
         "`condition` (ICD-10 diagnoses), `medication` (FDB, for "
-        "`originate_medication_statement`), `allergen` (for `originate_allergy`), "
+        "`originate_medication_statement` and `originate_prescribe_medication`, with "
+        "the units each is dispensed in), `allergen` (for `originate_allergy`), "
         "`family_history` and `surgical_history` (SNOMED, for the history tools), "
         "`immunization` (CVX and CPT, for `originate_immunization_statement`), or "
         "`imaging_study` (for `originate_imaging_order`). Use the "
@@ -237,10 +225,11 @@ CODE_SEARCHES = {
     returns_description=(
         "Array of up to 10 candidates, each with `display` and its codes: `icd10_code` "
         "(condition, medical_history), `snomed_code` (condition, family_history, "
-        "surgical_history), `fdb_code`, `rxnorm_rxcui` and `clinical_quantities` (medication: "
-        "the units it is dispensed in, each with `quantity`, `description`, "
-        "`ncpdp_quantity_qualifier_code`, `ncpdp_quantity_qualifier_description` and "
-        "`representative_ndc`), `concept_id` and "
+        "surgical_history), `fdb_code`, `rxnorm_rxcui` and `dispense_units` (medication: "
+        "each unit with `representative_ndc`, which `originate_prescribe_medication` "
+        "takes, `description`, `unit_quantity` (the size of one unit, not an amount to "
+        "dispense), `ncpdp_quantity_qualifier_code` and "
+        "`ncpdp_quantity_qualifier_description`), `concept_id` and "
         "`concept_type` (allergen), `cvx_code` and `cpt_code` (immunization), or "
         "`image_code` (imaging_study)."
     ),

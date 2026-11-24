@@ -8,7 +8,7 @@ from urllib.parse import unquote
 
 import pytest
 
-from canvas_sdk.agents import history_tools, standard_tools
+from canvas_sdk.agents import dispense_units, history_tools, standard_tools
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     MedicationFactory,
@@ -81,7 +81,7 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
                     "rxnorm_rxcui": "314076",
                     "clinical_quantities": [
                         {
-                            "erx_quantity": "1",
+                            "erx_quantity": "1.0000000",
                             "clinical_quantity_description": "tablet",
                             "erx_ncpdp_script_quantity_qualifier_code": "C48542",
                             "erx_ncpdp_script_quantity_qualifier_description": "Tablet",
@@ -107,13 +107,13 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
             "fdb_code": "1",
             "display": "lisinopril 10 mg",
             "rxnorm_rxcui": "314076",
-            "clinical_quantities": [
+            "dispense_units": [
                 {
-                    "quantity": "1",
+                    "representative_ndc": "00093111101",
                     "description": "tablet",
+                    "unit_quantity": "1",
                     "ncpdp_quantity_qualifier_code": "C48542",
                     "ncpdp_quantity_qualifier_description": "Tablet",
-                    "representative_ndc": "00093111101",
                 }
             ],
         }
@@ -122,7 +122,7 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
 
 
 def test_a_medication_without_dispense_units_has_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A row with no clinical quantities, or a malformed one, answers an empty list."""
+    """No units, a malformed one, or one with no NDC to prescribe it by: an empty list."""
     _serve(
         monkeypatch,
         "science_http",
@@ -132,7 +132,7 @@ def test_a_medication_without_dispense_units_has_none(monkeypatch: pytest.Monkey
                 {
                     "med_medication_id": 2,
                     "med_medication_description": "b",
-                    "clinical_quantities": [7],
+                    "clinical_quantities": [7, {"erx_quantity": "1", "representative_ndc": None}],
                 },
             ]
         },
@@ -142,7 +142,7 @@ def test_a_medication_without_dispense_units_has_none(monkeypatch: pytest.Monkey
         "find_clinical_codes", {"kind": "medication", "query": "a"}, ctx={}
     )
 
-    assert [row["clinical_quantities"] for row in rows] == [[], []]
+    assert [row["dispense_units"] for row in rows] == [[], []]
 
 
 @pytest.mark.django_db
@@ -482,3 +482,113 @@ def test_a_medication_found_by_name_comes_back_once_with_its_fdb_code(
     rows, _ = _run(tool, patient, name_contains="lisinopril")
 
     assert [row["fdb_code"] for row in rows] == ["123456"]
+
+
+# Prescribing ------------------------------------------------------------------------
+
+LISINOPRIL = {
+    "med_medication_id": 123456,
+    "clinical_quantities": [
+        {
+            "erx_quantity": "1.0000000",
+            "clinical_quantity_description": "tablet",
+            "erx_ncpdp_script_quantity_qualifier_code": "C48542",
+            "erx_ncpdp_script_quantity_qualifier_description": "Tablet",
+            "representative_ndc": "00093111101",
+        }
+    ],
+}
+
+
+def _ontologies(monkeypatch: pytest.MonkeyPatch, answer: Callable[[str], Any]) -> _Service:
+    service = _Service(answer)
+    monkeypatch.setattr(dispense_units, "ontologies_http", service)
+    return service
+
+
+@pytest.mark.django_db
+def test_a_prescription_is_drafted_with_its_dispense_unit_and_quantity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The unit comes from the medication's own, with the NCPDP code the pharmacy reads."""
+    service = _ontologies(monkeypatch, lambda path: LISINOPRIL)
+    patient = PatientFactory.create()
+
+    result, effects = _run(
+        "originate_prescribe_medication",
+        patient,
+        fdb_code="123456",
+        sig="Take 1 tablet by mouth daily",
+        representative_ndc="00093111101",
+        quantity_to_dispense=30,
+    )
+
+    assert result["ok"] is True
+    data = _data(effects[0])["data"]
+    assert data["type_to_dispense"] == {
+        "representative_ndc": "00093111101",
+        "ncpdp_quantity_qualifier_code": "C48542",
+        "description": "tablet",
+    }
+    assert data["quantity_to_dispense"] == "30"
+    assert data["substitutions"] == "allowed"
+    assert service.paths == ["/fdb/grouped-medication/123456/"]
+
+
+@pytest.mark.django_db
+def test_a_prescription_with_no_dispense_unit_still_says_whether_to_substitute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Allowed unless asked otherwise, with no lookup when no unit is named."""
+    service = _ontologies(monkeypatch, lambda path: pytest.fail("looked up"))
+    patient = PatientFactory.create()
+
+    _, allowed = _run("originate_prescribe_medication", patient, sig="Take 1 daily")
+    _, not_allowed = _run(
+        "originate_prescribe_medication", patient, sig="Take 1 daily", substitutions="not_allowed"
+    )
+
+    assert _data(allowed[0])["data"]["substitutions"] == "allowed"
+    assert _data(not_allowed[0])["data"]["substitutions"] == "not_allowed"
+    assert service.paths == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("arguments", "answer", "message"),
+    [
+        (
+            {"fdb_code": "123456", "representative_ndc": "99999999999"},
+            lambda path: LISINOPRIL,
+            "not one of this medication's dispense units",
+        ),
+        ({"representative_ndc": "00093111101"}, lambda path: LISINOPRIL, "needs the medication"),
+        (
+            {"fdb_code": "123456", "quantity_to_dispense": 30},
+            lambda path: LISINOPRIL,
+            "needs the dispense unit",
+        ),
+        (
+            {"fdb_code": "123456", "representative_ndc": "00093111101", "quantity_to_dispense": 0},
+            lambda path: LISINOPRIL,
+            "more than 0",
+        ),
+        (
+            {"fdb_code": "123456", "representative_ndc": "00093111101"},
+            lambda path: _Response({}, status_code=503),
+            "try again",
+        ),
+    ],
+)
+def test_a_dispense_unit_that_cannot_be_confirmed_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: dict[str, Any],
+    answer: Callable[[str], Any],
+    message: str,
+) -> None:
+    """Nothing is staged with a unit the medication does not have, or one not checked."""
+    _ontologies(monkeypatch, answer)
+    patient = PatientFactory.create()
+
+    with pytest.raises(ValueError, match=message):
+        _run("originate_prescribe_medication", patient, sig="Take 1 daily", **arguments)
