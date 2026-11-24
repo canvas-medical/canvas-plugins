@@ -775,7 +775,7 @@ def _backfill(
     resumed: datetime,
     cancelled: threading.Event,
 ) -> None:
-    """Print a stream gap's lines from history, oldest first, formatted as live lines are.
+    """Print a stream gap's lines from history, oldest first, formatted as history lines are.
 
     Runs on its own thread, because websocket-client calls ``on_start`` on the thread that
     reads pongs. A failed fetch prints the gap's history command instead. Nothing prints once
@@ -822,7 +822,7 @@ def _backfill(
         )
         # History answers newest first.
         for hit in reversed(hits):
-            print(f"{hit.get('ts')} | {hit.get('message') or ''}")
+            print(_format_line(hit))
         sys.stdout.flush()
 
 

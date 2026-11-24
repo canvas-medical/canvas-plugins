@@ -1069,7 +1069,15 @@ def test_reconnect_backfills_the_gap_oldest_first(
         LOGS_URL,
         json={
             "hits": [
-                {**HIT, "ts": "2026-11-02T10:00:05Z", "message": "second missed line"},
+                {
+                    **HIT,
+                    "ts": "2026-11-02T10:00:05Z",
+                    "message": "second missed line",
+                    "log": {"level": "ERROR"},
+                    "error": {
+                        "stack_trace": ["Traceback (most recent call last):\n", "KeyError: 'x'\n"]
+                    },
+                },
                 {**HIT, "ts": "2026-11-02T10:00:01Z", "message": "first missed line"},
             ],
             "next": {},
@@ -1085,9 +1093,10 @@ def test_reconnect_backfills_the_gap_oldest_first(
         result.output,
     )
     assert header is not None, result.output
-    first = result.output.index("2026-11-02T10:00:01Z | first missed line")
-    second = result.output.index("2026-11-02T10:00:05Z | second missed line")
-    assert header.end() < first < second < result.output.index("live again")
+    first = result.output.index("plugin-runner INFO 2026-11-02T10:00:01Z first missed line")
+    second = result.output.index("plugin-runner ERROR 2026-11-02T10:00:05Z second missed line")
+    trace = result.output.index("KeyError: 'x'")
+    assert header.end() < first < second < trace < result.output.index("live again")
     (history,) = [r for r in requests_mock.request_history if r.url.split("?")[0] == LOGS_URL]
     params = parse_qs(urlparse(history.url).query)
     assert params["start_time"] == [header.group(1)]
