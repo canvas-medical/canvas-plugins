@@ -2820,7 +2820,7 @@ def test_config_on_a_plain_name_is_refused_for_an_instance_platform_does_not_man
 
     assert result.exit_code == 1
     assert "Canvas Platform does not manage intake." in result.output
-    assert _requests_to(requests_mock, "GET", "/plugins/intake")
+    assert _requests_to(requests_mock, "GET", "/plugins/intake?instance=legacy")
     mock_update.assert_not_called()
 
 
@@ -4278,8 +4278,8 @@ def test_a_platform_that_still_requires_a_prefix_stops_the_deploy_before_git(
 def test_config_on_a_name_two_publishers_share_fails_closed(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """S7: an ambiguous name is not one Platform manages for the person, and is refused rather
-    than written through credentials.ini, which would change an instance behind Platform's back.
+    """S7: an ambiguous name is refused with Platform's sentence rather than written through
+    credentials.ini, which would change an instance behind Platform's back.
     """
     sentence = "Two publishers have a plugin named 'intake': acme, big-leap. Pass ?publisher=."
     requests_mock.get(
@@ -4289,7 +4289,8 @@ def test_config_on_a_name_two_publishers_share_fails_closed(
     result = runner.invoke(app, ["config", "set", "intake", "A=1", "--instance", "acme-staging"])
 
     assert result.exit_code == 1, result.output
-    assert "Canvas Platform does not manage intake." in result.output
+    assert sentence in result.output
+    assert "does not manage" not in result.output
     assert not [r for r in requests_mock.request_history if r.method == "PUT"]
     mock_update.assert_not_called()
 

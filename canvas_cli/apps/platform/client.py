@@ -174,14 +174,25 @@ class PlatformClient:
         """``GET /api/v1/instances``: what the person may reach and do on each."""
         return self.get("/api/v1/instances").get("instances", [])
 
-    def plugin(self, name: str, publisher: str | None = None) -> dict[str, Any] | None:
-        """``GET /api/v1/plugins/<name>[?publisher=<slug>]``, or None when platform has no
-        such plugin the person may see (platform answers 404 for both). ``publisher``
-        selects between two publishers' plugins that share ``name``.
+    def plugin(
+        self,
+        name: str,
+        publisher: str | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any] | None:
+        """``GET /api/v1/plugins/<name>[?publisher=<slug>][&instance=<slug>]``, or None when
+        platform has no such plugin the person may see (platform answers 404 for both).
+        ``publisher`` and ``instance`` each select between publishers' plugins that share
+        ``name``: ``publisher`` by the organization, ``instance`` by the install on that instance.
         """
         path: str = f"/api/v1/plugins/{segment(name)}"
+        pairs: list[str] = []
         if publisher:
-            path += f"?publisher={segment(publisher)}"
+            pairs.append(f"publisher={segment(publisher)}")
+        if instance:
+            pairs.append(f"instance={segment(instance)}")
+        if pairs:
+            path += "?" + "&".join(pairs)
         try:
             return self.get(path)
         except PlatformError as error:

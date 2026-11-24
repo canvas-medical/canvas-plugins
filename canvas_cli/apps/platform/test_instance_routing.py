@@ -9,6 +9,7 @@ Platform and home-app contracts document.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -984,16 +985,6 @@ def test_signed_in_unknown_plugin_without_credentials_ini_is_refused(
             {"json": {"name": "intake", "publisher": "other", "installs": [{"instance": "acme"}]}},
         ),
         (
-            "intake",
-            {
-                "status_code": 409,
-                "json": {
-                    "error": "Two publishers have a plugin named 'intake'.",
-                    "code": "ambiguous",
-                },
-            },
-        ),
-        (
             "acme__intake",
             {
                 "json": {
@@ -1013,23 +1004,11 @@ def test_signed_in_unknown_plugin_without_credentials_ini_is_refused(
                 }
             },
         ),
-        (
-            "acme__intake",
-            {
-                "status_code": 409,
-                "json": {
-                    "error": "Two publishers have a plugin named 'acme__intake'.",
-                    "code": "ambiguous",
-                },
-            },
-        ),
     ],
     ids=[
         "another-organizations-plugin",
-        "ambiguous",
         "your-prefix-another-publisher",
         "unknown-prefix-another-publisher",
-        "prefixed-ambiguous",
     ],
 )
 def test_plugin_none_of_your_organizations_publishes_is_not_managed(
@@ -1042,8 +1021,8 @@ def test_plugin_none_of_your_organizations_publishes_is_not_managed(
     managed_plugin: None,
 ) -> None:
     """A plugin Platform shows only as another organization's plugin whose prefix the name
-    does not carry, or as several publishers' plugins, is not one Platform manages for the
-    person, with or without a prefix, so it is refused rather than changed through Platform.
+    does not carry is not one Platform manages for the person, with or without a prefix, so
+    it is refused rather than changed through Platform.
     """
     requests_mock.get(f"{API}/me", json={"organizations": [{"slug": "acme"}]})
     requests_mock.get(f"{API}/plugins/{name}", **answer)
@@ -1056,6 +1035,189 @@ def test_plugin_none_of_your_organizations_publishes_is_not_managed(
     assert "sign out with `canvas logout`" in result.stderr
     assert not _calls(requests_mock, "POST", f"{API}/")
     assert not _calls(requests_mock, "PUT", f"{API}/")
+    mock.assert_not_called()
+
+
+PDMP: str = "pdmp_bamboo"
+PDMP_SENTENCE: str = (
+    "Big Leap Health, Canvas Medical Dashboard Team, InnerMost Psychiatric Services, "
+    "Metamorphosis, NeuroGlow and Transformative Wellness all publish pdmp_bamboo. Name the "
+    "publisher to choose one (publisher big-leap-health or canvas-medical-dashboard-team or "
+    "innermost or metamorphosis or neuroglow or transformtxk)."
+)
+INSTANCE_HINT: str = " Name an instance with --instance to choose the one installed there."
+
+
+def _pdmp_ambiguous(mock: requests_mock_module.Mocker) -> None:
+    """The bare pdmp_bamboo lookup answers 409, and each ``?instance=`` answer follows it
+    (requests-mock tries the newest matcher first).
+    """
+    mock.get(
+        f"{API}/plugins/{PDMP}",
+        status_code=409,
+        json={"error": PDMP_SENTENCE, "code": "ambiguous"},
+    )
+    mock.get(
+        f"{API}/instances",
+        json={
+            "instances": [
+                _instance("training", "deploy_plugin"),
+                _instance("metamorphosis", "deploy_plugin"),
+            ]
+        },
+    )
+
+
+def _pdmp_on(mock: requests_mock_module.Mocker, instance: str, publisher: str) -> None:
+    mock.get(
+        f"{API}/plugins/{PDMP}?instance={instance}",
+        json={"name": PDMP, "publisher": publisher, "installs": [{"instance": instance}]},
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_instance_chooses_between_publishers_that_share_a_name(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """A name six organizations publish is settled by the instance the person names, so the
+    command goes through Platform for the publisher installed there.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+    requests_mock.post(f"{API}/deployments", status_code=202, json=_deployment("enable"))
+    variables: str = f"{API}/instances/training/plugins/{PDMP}/variables"
+    requests_mock.register_uri(
+        requests_mock_module.ANY, re.compile(f"^{re.escape(variables)}"), json={"variables": []}
+    )
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        force: list[str] = ["--force"] if command == ["uninstall"] else []
+        result = runner.invoke(app, [*command, PDMP, *extra, "--instance", "training", *force])
+
+    assert "publish pdmp_bamboo" not in result.stderr
+    assert "does not manage" not in result.stderr
+    mock.assert_not_called()
+    if command[0] == "config":
+        # Config goes through Platform's per-instance variables, never the deployments.
+        assert any(r.url.startswith(variables) for r in requests_mock.request_history)
+    else:
+        assert result.exit_code == 0, result.output + result.stderr
+        assert _calls(requests_mock, "POST", f"{API}/deployments")[0].json()["plugins"] == [
+            {"name": PDMP, "publisher": "canvas-medical-dashboard-team"}
+        ]
+
+
+def test_instances_with_different_publishers_are_refused(
+    requests_mock: requests_mock_module.Mocker, signed_in: None
+) -> None:
+    """One command cannot name two publishers' plugins, so the person is told to run it once
+    per publisher rather than have a deployment silently pick one.
+    """
+    _pdmp_ambiguous(requests_mock)
+    _pdmp_on(requests_mock, "training", "canvas-medical-dashboard-team")
+    _pdmp_on(requests_mock, "metamorphosis", "metamorphosis")
+    requests_mock.get(f"{API}/me", json=EMPLOYEE_ME)
+
+    result = runner.invoke(
+        app, ["enable", PDMP, "--instance", "training", "--instance", "metamorphosis"]
+    )
+
+    # One deployment names one publisher, so mixed publishers would act on the wrong plugin.
+    assert result.exit_code != 0
+    output = result.output + result.stderr
+    assert "training" in output
+    assert "canvas-medical-dashboard-team" in output
+    assert "metamorphosis" in output
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_a_platform_that_ignores_instance_still_answers_with_its_sentence(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """Platform's own sentence naming the publishers is what the person needs to read, so a
+    Platform that keeps answering 409 for `?instance=` gets it, with the way to sign out,
+    rather than a flat "does not manage".
+    """
+    _pdmp_ambiguous(requests_mock)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, PDMP, *extra, "--instance", "training"])
+
+    # The person must learn which publishers exist; writing through credentials.ini would hide it.
+    assert result.exit_code == 1
+    assert PDMP_SENTENCE in result.stderr
+    assert INSTANCE_HINT not in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    assert "does not manage" not in result.stderr
+    assert not _calls(requests_mock, "POST", f"{API}/deployments")
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_an_ambiguous_name_without_an_instance_says_to_name_one(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+) -> None:
+    """With no --instance the person has not yet said which publisher's plugin they mean, so
+    the refusal adds that --instance chooses it.
+    """
+    _pdmp_ambiguous(requests_mock)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, PDMP, *extra])
+
+    # Nothing says which publisher's plugin is meant, so the person is told how to say so.
+    assert result.exit_code == 1
+    assert PDMP_SENTENCE + INSTANCE_HINT in result.stderr
+    assert "sign out with `canvas logout`" in result.stderr
+    mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "direct", "extra"), PLUGIN_COMMANDS, ids=[" ".join(c[0]) for c in PLUGIN_COMMANDS]
+)
+def test_an_ambiguous_name_with_a_canvas_credentials_ini_default_is_refused_with_platforms_sentence(
+    command: list[str],
+    direct: str,
+    extra: list[str],
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A credentials.ini default that is a Canvas instance gets the same refusal as any plugin
+    Platform does not manage, carrying Platform's sentence and the --instance hint.
+    """
+    config = tmp_path / "credentials.ini"
+    config.write_text("[acme]\nclient_id=id\nclient_secret=secret\nis_default=true\n")
+    monkeypatch.setattr(auth_utils, "CONFIG_PATH", config)
+    _pdmp_ambiguous(requests_mock)
+
+    with patch(f"canvas_cli.apps.platform.commands.instance_plugin.{direct}") as mock:
+        result = runner.invoke(app, [*command, PDMP, *extra])
+
+    # Writing through credentials.ini would change an instance behind Platform's back.
+    assert result.exit_code == 1
+    assert PDMP_SENTENCE + INSTANCE_HINT in result.stderr
     mock.assert_not_called()
 
 

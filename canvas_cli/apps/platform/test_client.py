@@ -135,6 +135,18 @@ def test_plugin_sends_the_publisher_when_given(requests_mock: requests_mock_modu
     assert _last(requests_mock).qs == {}
 
 
+def test_plugin_sends_the_instance_when_given(requests_mock: requests_mock_module.Mocker) -> None:
+    """The instance selects between publishers that share a name; both keys go together."""
+    _sign_in()
+    requests_mock.get(f"{PLATFORM}/api/v1/plugins/pdmp_bamboo", json={"name": "pdmp_bamboo"})
+
+    PlatformClient(PLATFORM).plugin("pdmp_bamboo", instance="training")
+    assert _last(requests_mock).qs == {"instance": ["training"]}
+
+    PlatformClient(PLATFORM).plugin("pdmp_bamboo", "metamorphosis", instance="training")
+    assert _last(requests_mock).qs == {"publisher": ["metamorphosis"], "instance": ["training"]}
+
+
 def test_git_credentials_sends_the_publisher_when_given(
     requests_mock: requests_mock_module.Mocker,
 ) -> None:

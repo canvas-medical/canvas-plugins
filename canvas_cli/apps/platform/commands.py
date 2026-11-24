@@ -1359,7 +1359,9 @@ def _managed(
     plugin platform manages for the person (see ``_managed_record``) goes through platform, each
     ``--instance`` must be one platform manages for the person, and any other plugin
     aimed at a Canvas instance, or named with no ``--instance``, ``--host`` or
-    credentials.ini default, is refused with the way to sign out; with no ``--instance``
+    credentials.ini default, is refused with the way to sign out, led by Platform's own
+    sentence when several publishers share the name (plus a hint to pass ``--instance``
+    when none was given); with no ``--instance``
     or ``--host`` and no credentials.ini default, or a default that is a Canvas instance,
     platform is asked first. Signed out, the answer is None: the caller uses
     credentials.ini, and the deprecation notice for ``command`` is printed when the
@@ -1378,6 +1380,7 @@ def _managed(
     Raises:
         click.ClickException: Signed in, and platform does not manage the plugin or an
             ``--instance``.
+        typer.BadParameter: The ``--instance`` slugs' plugins have different publishers.
     """
     if (instances or host) and all(
         instance_slug(url) is None for url in _direct_hosts(instances, host)
@@ -1393,47 +1396,79 @@ def _managed(
         # instance (or none at all), platform chooses the targets from the plugin's
         # installs, so it is asked first.
         client = PlatformClient(platform)
-        plugin = _managed_record(client, name)
-        if plugin is not None:
+        plugin = _managed_record(client, name, instances)
+        if isinstance(plugin, dict):
             for slug in dict.fromkeys(instances):
                 require_managed(client, slug)
             return client, plugin
+        cause: str = f"Canvas Platform does not manage {name}."
+        if isinstance(plugin, PlatformError):
+            cause = plugin.message
+            if not instances:
+                cause += " Name an instance with --instance to choose the one installed there."
         if not (instances or host) and configured_default_host() is None:
-            raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
+            raise refuse_unmanaged(cause, name)
         if any(instance_slug(url) is not None for url in _direct_hosts(instances, host)):
-            raise refuse_unmanaged(f"Canvas Platform does not manage {name}.", name)
+            raise refuse_unmanaged(cause, name)
     print_credentials_ini_deprecation(command)
     return None
 
 
-def _managed_record(client: PlatformClient, name: str) -> dict[str, Any] | None:
+def _managed_record(
+    client: PlatformClient, name: str, instances: list[str]
+) -> dict[str, Any] | PlatformError | None:
     """Platform's record of ``name`` when Platform manages it for the person, else None.
 
-    An instance can hold a plugin of that name from a direct ``canvas install`` while
-    another organization publishes one of that name on Platform, and Platform does not tie
-    a name's prefix to a publisher, so the record counts only when one of the person's
-    organizations publishes it, which Platform prefers when several share the name, or when
-    the name carries its publisher's prefix (the slug lowercased, ``-`` to ``_``, then
-    ``__``). A Canvas employee reaches every organization, so for one the record always
-    counts, and Platform's capability check on each request decides what the command may do.
-    A 409 ``ambiguous`` (several publishers, none the person's) counts as unmanaged.
+    With no ``--instance`` Platform is asked once for the bare name. With ``--instance`` it is
+    asked once per distinct slug, so several publishers that share the name are told apart by
+    the install on each instance. An instance can hold a plugin of that name from a direct
+    ``canvas install`` while another organization publishes one of that name on Platform, and
+    Platform does not tie a name's prefix to a publisher, so the record counts only when one of
+    the person's organizations publishes it, which Platform prefers when several share the
+    name, or when the name carries its publisher's prefix (the slug lowercased, ``-`` to
+    ``_``, then ``__``). A Canvas employee reaches every organization, so for one the record
+    always counts, and Platform's capability check on each request decides what the command
+    may do.
 
     Args:
         client (PlatformClient): The signed-in platform client.
         name (str): The plugin name.
+        instances (list[str]): The ``--instance`` slugs.
 
     Returns:
-        dict[str, Any] | None: The plugin record, or None when Platform does not manage it
-            for the person.
+        dict[str, Any] | PlatformError | None: The plugin record; the first 409 ``ambiguous``
+            Platform answered (several publishers, none chosen), whose message names them; or
+            None when Platform does not manage it for the person.
+
+    Raises:
+        typer.BadParameter: The instances' plugins have different publishers.
     """
-    try:
-        plugin: dict[str, Any] | None = client.plugin(name)
-    except PlatformError as error:
-        if error.code == "ambiguous":
-            return None
-        raise
-    if plugin is None:
+    slugs: list[str | None] = list(dict.fromkeys(instances)) or [None]
+    records: dict[str | None, dict[str, Any]] = {}
+    ambiguous: PlatformError | None = None
+    for slug in slugs:
+        try:
+            found: dict[str, Any] | None = client.plugin(name, instance=slug)
+        except PlatformError as error:
+            if error.code != "ambiguous":
+                raise
+            ambiguous = ambiguous or error
+            continue
+        if found is not None:
+            records[slug] = found
+    if ambiguous is not None:
+        return ambiguous
+    if not records:
         return None
+    publishers: dict[str | None, str] = {
+        slug: str(record.get("publisher") or "") for slug, record in records.items()
+    }
+    if len(set(publishers.values())) > 1:
+        each: str = " and ".join(f"on {slug} is {pub}'s" for slug, pub in publishers.items())
+        raise typer.BadParameter(
+            f"{name} {each}; run the command once per publisher, with one --instance each."
+        )
+    plugin: dict[str, Any] = next(iter(records.values()))
     publisher: str = str(plugin.get("publisher") or "")
     if publisher and name.startswith(f"{publisher.lower().replace('-', '_')}__"):
         return plugin
