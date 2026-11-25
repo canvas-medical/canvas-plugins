@@ -1,5 +1,13 @@
+import ipaddress
 import logging
+import os
+import ssl
+import tempfile
+import threading
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -7,6 +15,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
 from canvas_sdk.utils import Http
@@ -14,6 +24,7 @@ from canvas_sdk.utils.http import (
     SURESCRIPTS_CA_BUNDLE,
     JsonOnlyResponse,
     ServiceClient,
+    _ClientCertificateAdapter,
     _SurescriptsTrustAdapter,
     ontologies_http,
     pharmacy_http,
@@ -542,3 +553,253 @@ def test_get_pharmacy_by_ncpdp_id(mock_get: MagicMock) -> None:
     assert mock_get.call_args.args[0] == (
         "https://pharmacy-2017071.canvasmedical.com/surescripts/pharmacy/ncpdp_id/1234567/"
     )
+
+
+@dataclass
+class MutualTlsServer:
+    """A local HTTPS server that requires a client certificate signed by its CA."""
+
+    url: str
+    ca_pem: str
+    ca_path: Path
+    client_cert: str
+    client_key: str
+    unrelated_key: str
+
+
+class _PeerNameHandler(BaseHTTPRequestHandler):
+    """Answers with the common name of the client certificate the caller presented."""
+
+    def do_GET(self) -> None:
+        """Write the peer certificate's common name as the body."""
+        peer = self.connection.getpeercert()
+        body = dict(field for rdn in peer["subject"] for field in rdn)["commonName"].encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: Any) -> None:
+        """Keep test output quiet."""
+
+
+def _private_key() -> ec.EllipticCurvePrivateKey:
+    return ec.generate_private_key(ec.SECP256R1())
+
+
+def _signed_certificate(
+    common_name: str,
+    key: ec.EllipticCurvePrivateKey,
+    issuer_name: str,
+    issuer_key: ec.EllipticCurvePrivateKey,
+    is_ca: bool = False,
+) -> x509.Certificate:
+    now = datetime.now(UTC)
+    return (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)]))
+        .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer_name)]))
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=5))
+        .not_valid_after(now + timedelta(days=1))
+        .add_extension(x509.BasicConstraints(ca=is_ca, path_length=None), critical=True)
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=True,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=is_ca,
+                crl_sign=is_ca,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+        .add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_key.public_key()),
+            critical=False,
+        )
+        .add_extension(
+            x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]),
+            critical=False,
+        )
+        .sign(issuer_key, hashes.SHA256())
+    )
+
+
+def _certificate_pem(certificate: x509.Certificate) -> str:
+    return certificate.public_bytes(serialization.Encoding.PEM).decode()
+
+
+def _key_pem(key: ec.EllipticCurvePrivateKey) -> str:
+    return key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    ).decode()
+
+
+@pytest.fixture
+def mutual_tls_server(tmp_path: Path) -> Iterator[MutualTlsServer]:
+    """Serve HTTPS on 127.0.0.1, refusing any client without a certificate from the test CA."""
+    ca_key, server_key, client_key = _private_key(), _private_key(), _private_key()
+    ca = _signed_certificate("test-ca", ca_key, "test-ca", ca_key, is_ca=True)
+    server = _signed_certificate("127.0.0.1", server_key, "test-ca", ca_key)
+    client = _signed_certificate("plugin-client", client_key, "test-ca", ca_key)
+
+    ca_path = tmp_path / "ca.pem"
+    ca_path.write_text(_certificate_pem(ca))
+    server_pem = tmp_path / "server.pem"
+    server_pem.write_text(_certificate_pem(server) + _key_pem(server_key))
+
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=ca_path)
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.load_cert_chain(server_pem)
+
+    httpd = HTTPServer(("127.0.0.1", 0), _PeerNameHandler)
+    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+
+    yield MutualTlsServer(
+        url=f"https://127.0.0.1:{httpd.server_address[1]}",
+        ca_pem=_certificate_pem(ca),
+        ca_path=ca_path,
+        client_cert=_certificate_pem(client),
+        client_key=_key_pem(client_key),
+        unrelated_key=_key_pem(_private_key()),
+    )
+
+    httpd.shutdown()
+    httpd.server_close()
+    thread.join()
+
+
+def test_http_presents_the_client_certificate_to_its_base_url(
+    mutual_tls_server: MutualTlsServer,
+) -> None:
+    """A server that requires a client certificate accepts the one given as PEM strings."""
+    http = Http(
+        base_url=mutual_tls_server.url,
+        client_cert=mutual_tls_server.client_cert,
+        client_key=mutual_tls_server.client_key,
+    )
+    adapter = http._session.get_adapter(f"{mutual_tls_server.url}/report")
+    assert isinstance(adapter, _ClientCertificateAdapter)
+    adapter.ssl_context.load_verify_locations(cadata=mutual_tls_server.ca_pem)
+
+    response = http.get("/report")
+
+    assert response.status_code == 200
+    assert response.text == "plugin-client"
+
+
+def test_the_test_server_refuses_a_client_without_a_certificate(
+    mutual_tls_server: MutualTlsServer,
+) -> None:
+    """Without a client certificate the handshake fails, so the test above proves presentation."""
+    with pytest.raises(requests.exceptions.SSLError, match="certificate required"):
+        requests.get(
+            f"{mutual_tls_server.url}/report", verify=str(mutual_tls_server.ca_path), timeout=5
+        )
+
+
+@pytest.mark.parametrize(
+    "other_url",
+    ["https://example.com/", "https://{host}.example.com/", "https://{host}:8443/"],
+    ids=["another-host", "lookalike-host", "another-port"],
+)
+def test_http_does_not_present_the_client_certificate_to_other_origins(
+    mutual_tls_server: MutualTlsServer, other_url: str
+) -> None:
+    """The certificate adapter is mounted on the base URL's origin alone, which a redirect
+    to a host that merely starts with the same name does not match.
+    """
+    http = Http(
+        base_url=mutual_tls_server.url,
+        client_cert=mutual_tls_server.client_cert,
+        client_key=mutual_tls_server.client_key,
+    )
+    host = mutual_tls_server.url.removeprefix("https://")
+
+    adapter = http._session.get_adapter(other_url.format(host=host))
+
+    assert not isinstance(adapter, _ClientCertificateAdapter)
+
+
+def _recording_mkstemp(created: list[str]) -> Any:
+    real_mkstemp = tempfile.mkstemp
+
+    def mkstemp(*args: Any, **kwargs: Any) -> tuple[int, str]:
+        fd, path = real_mkstemp(*args, **kwargs)
+        created.append(path)
+        return fd, path
+
+    return mkstemp
+
+
+def test_client_certificate_file_is_removed_once_loaded(
+    mutual_tls_server: MutualTlsServer,
+) -> None:
+    """The PEM written for `load_cert_chain` is owner-only and gone once the client exists."""
+    created: list[str] = []
+    modes: list[int] = []
+    real_load_cert_chain = ssl.SSLContext.load_cert_chain
+
+    def load_cert_chain(context: ssl.SSLContext, certfile: str, *args: Any) -> None:
+        modes.append(os.stat(certfile).st_mode & 0o777)
+        real_load_cert_chain(context, certfile, *args)
+
+    with (
+        patch("canvas_sdk.utils.http.tempfile.mkstemp", _recording_mkstemp(created)),
+        patch.object(ssl.SSLContext, "load_cert_chain", load_cert_chain),
+    ):
+        Http(
+            base_url=mutual_tls_server.url,
+            client_cert=mutual_tls_server.client_cert,
+            client_key=mutual_tls_server.client_key,
+        )
+
+    assert modes == [0o600]
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
+
+
+def test_a_key_that_does_not_match_the_certificate_is_refused_and_not_left_on_disk(
+    mutual_tls_server: MutualTlsServer,
+) -> None:
+    """A mismatched pair fails when the client is built, and its PEM file is still removed."""
+    created: list[str] = []
+
+    with (
+        patch("canvas_sdk.utils.http.tempfile.mkstemp", _recording_mkstemp(created)),
+        pytest.raises(ssl.SSLError),
+    ):
+        Http(
+            base_url=mutual_tls_server.url,
+            client_cert=mutual_tls_server.client_cert,
+            client_key=mutual_tls_server.unrelated_key,
+        )
+
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"base_url": "https://example.com", "client_cert": "cert"},
+        {"base_url": "https://example.com", "client_key": "key"},
+        {"base_url": "https://example.com", "client_cert": "", "client_key": "key"},
+        {"client_cert": "cert", "client_key": "key"},
+        {"base_url": "http://example.com", "client_cert": "cert", "client_key": "key"},
+    ],
+)
+def test_http_refuses_an_incomplete_client_certificate(kwargs: dict[str, str]) -> None:
+    """A certificate needs its key and a base URL to be presented to."""
+    with pytest.raises(ValueError):
+        Http(**kwargs)

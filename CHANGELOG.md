@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v1.19.0 (2026-11-24)
+
+### Features
+
+- Accept a catalog video named by its mp4's sha256
+  ([#2029](https://github.com/canvas-medical/canvas-plugins/pull/2029),
+  [`cc76fdb`](https://github.com/canvas-medical/canvas-plugins/commit/cc76fdb43456789d3f60aa930ef97591cecc8ab2))
+
+- Refuse plugin routes that admit every caller, and report them at load
+  ([#1993](https://github.com/canvas-medical/canvas-plugins/pull/1993),
+  [`12c7180`](https://github.com/canvas-medical/canvas-plugins/commit/12c718092883695bd9a960e9eb60f930eda3bab5))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- **cli**: Stop validation when a shipped file holds a live-format credential
+  ([#1994](https://github.com/canvas-medical/canvas-plugins/pull/1994),
+  [`9862b93`](https://github.com/canvas-medical/canvas-plugins/commit/9862b93b401afb381d593eb8ad62943e19920f24))
+
+- **data**: Add the electronic lab channel to integration tasks (KOALA-8652)
+  ([#2036](https://github.com/canvas-medical/canvas-plugins/pull/2036),
+  [`2e4fc5a`](https://github.com/canvas-medical/canvas-plugins/commit/2e4fc5a4c0352ebce2e7b50f40e92a78fe2d2889))
+
+
 ## v1.18.0 (2026-11-23)
 
 ### Features
