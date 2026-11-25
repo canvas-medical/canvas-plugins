@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.22.1 (2026-11-25)
+
+### Bug Fixes
+
+- **sandbox**: Hide other plugins' custom model reverse relations from model metadata (KOALA-8650)
+  ([#2039](https://github.com/canvas-medical/canvas-plugins/pull/2039),
+  [`15553b1`](https://github.com/canvas-medical/canvas-plugins/commit/15553b1d3319ceb9f31da4d90d01d815688f6ffb))
+
+
 ## v1.22.0 (2026-11-25)
 
 ### Features
