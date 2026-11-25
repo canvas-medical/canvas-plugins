@@ -184,6 +184,9 @@ from .lab import (
     LabValue,
     LabValueCoding,
     LabValuePerformer,
+    PracticeLocationLabAccountNumber,
+    StaffLabAccountNumber,
+    StaffLabAccountNumberStaff,
 )
 from .letter import (
     Language,
@@ -678,6 +681,7 @@ __all__ = __exports__ = (
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
+    "PracticeLocationLabAccountNumber",
     "PracticeLocationSetting",
     "Prescription",
     "PrescriptionChangeRequest",
@@ -740,6 +744,8 @@ __all__ = __exports__ = (
     "StaffContactPoint",
     "StaffExternalIdentifier",
     "StaffIdentityVerification",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",

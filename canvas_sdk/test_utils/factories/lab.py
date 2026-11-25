@@ -22,6 +22,9 @@ from canvas_sdk.v1.data import (
     LabValue,
     LabValueCoding,
     LabValuePerformer,
+    PracticeLocationLabAccountNumber,
+    StaffLabAccountNumber,
+    StaffLabAccountNumberStaff,
 )
 from canvas_sdk.v1.data.action_event_base import EventTypeChoices
 from canvas_sdk.v1.data.common import (
@@ -197,6 +200,44 @@ class LabPartnerFactory(factory.django.DjangoModelFactory[LabPartner]):
     electronic_ordering_enabled = True
     keywords = factory.Faker("words", nb=5)
     default_lab_account_number = factory.Faker("bothify", text="LAB-######")
+
+
+class PracticeLocationLabAccountNumberFactory(
+    factory.django.DjangoModelFactory[PracticeLocationLabAccountNumber],
+):
+    """Factory for creating a PracticeLocationLabAccountNumber."""
+
+    class Meta:
+        model = PracticeLocationLabAccountNumber
+
+    lab_partner = factory.SubFactory(LabPartnerFactory)
+    practice_location = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.PracticeLocationFactory"
+    )
+    account_number = factory.Faker("bothify", text="ACCT-######")
+
+
+class StaffLabAccountNumberFactory(factory.django.DjangoModelFactory[StaffLabAccountNumber]):
+    """Factory for creating a StaffLabAccountNumber."""
+
+    class Meta:
+        model = StaffLabAccountNumber
+
+    practice_location_lab_account = factory.SubFactory(PracticeLocationLabAccountNumberFactory)
+    account_number = factory.Faker("bothify", text="STAFF-######")
+    use_for_all_staff_at_location = True
+
+
+class StaffLabAccountNumberStaffFactory(
+    factory.django.DjangoModelFactory[StaffLabAccountNumberStaff],
+):
+    """Factory for linking a StaffLabAccountNumber to a Staff."""
+
+    class Meta:
+        model = StaffLabAccountNumberStaff
+
+    staff_lab_account_number = factory.SubFactory(StaffLabAccountNumberFactory)
+    staff = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
 
 
 class LabPartnerTestFactory(factory.django.DjangoModelFactory[LabPartnerTest]):

@@ -121,6 +121,9 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
     LabValuePerformerFactory,
+    PracticeLocationLabAccountNumberFactory,
+    StaffLabAccountNumberFactory,
+    StaffLabAccountNumberStaffFactory,
 )
 from .lab_report_template import (
     LabReportTemplateFactory,
@@ -473,6 +476,7 @@ __all__ = (
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationFactory",
+    "PracticeLocationLabAccountNumberFactory",
     "PracticeLocationSettingFactory",
     "PrescriptionChangeRequestCodingFactory",
     "PrescriptionChangeRequestFactory",
@@ -516,6 +520,8 @@ __all__ = (
     "StaffContactPointFactory",
     "StaffFactory",
     "StaffIdentityVerificationFactory",
+    "StaffLabAccountNumberFactory",
+    "StaffLabAccountNumberStaffFactory",
     "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
