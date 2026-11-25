@@ -58,7 +58,8 @@ def _response(refill_request: RefillRequest, **fields: Any) -> Prescription:
 @pytest.mark.django_db
 def test_pending_keeps_requests_no_sent_response_answered() -> None:
     """A request stays in the queue until a sent response answers it: one with no response, an
-    unsent one, one that failed to reach the pharmacy, or one entered in error all stay.
+    unsent one, one that failed to reach the pharmacy, or one entered in error before the
+    pharmacy received it all stay.
     """
     user = CanvasUserFactory.create()
     untouched = _refill_request()
@@ -67,7 +68,7 @@ def test_pending_keeps_requests_no_sent_response_answered() -> None:
     failed = _refill_request()
     _response(failed, committer=user, status=PrescriptionStatus.ERROR)
     entered_in_error = _refill_request()
-    _response(entered_in_error, committer=user, entered_in_error=user)
+    _response(entered_in_error, committer=user, entered_in_error=user, message_id="")
 
     assert set(RefillRequest.objects.pending()) == {untouched, unsent, failed, entered_in_error}
 
@@ -75,7 +76,8 @@ def test_pending_keeps_requests_no_sent_response_answered() -> None:
 @pytest.mark.django_db
 def test_pending_drops_ignored_and_answered_requests() -> None:
     """Ignored requests, and requests a sent response answered, leave the queue, including one
-    whose first response failed and whose second was sent.
+    whose first response failed and whose second was sent, and one whose response the pharmacy
+    received before it was entered in error.
     """
     user = CanvasUserFactory.create()
     _refill_request(ignored=True)
@@ -84,5 +86,13 @@ def test_pending_drops_ignored_and_answered_requests() -> None:
     retried = _refill_request()
     _response(retried, committer=user, status=PrescriptionStatus.ERROR)
     _response(retried, committer=user, status=PrescriptionStatus.DELIVERED)
+    received_then_entered_in_error = _refill_request()
+    _response(
+        received_then_entered_in_error,
+        committer=user,
+        status=PrescriptionStatus.DELIVERED,
+        entered_in_error=user,
+        message_id="a1b2c3",
+    )
 
     assert not RefillRequest.objects.pending().exists()
