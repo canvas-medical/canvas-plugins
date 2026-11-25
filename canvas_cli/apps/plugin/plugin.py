@@ -865,7 +865,9 @@ def _validate_plugin_loads(plugin_name: Path) -> None:
     print(f"All {len(results)} component(s) load cleanly in the sandbox.")
 
 
-def _lint_plugin_static(plugin_name: Path) -> None:
+def _lint_plugin_static(
+    plugin_name: Path, files: Iterable[tuple[Path, Path]] | None = None
+) -> None:
     """Static pre-load lint (:func:`lint_plugin`): sandbox constructs, request handling,
     API routes that admit every caller, shipped credentials and Custom Data setup. Prints
     warnings and raises ``typer.Exit(1)`` on any error-severity finding.
@@ -876,7 +878,7 @@ def _lint_plugin_static(plugin_name: Path) -> None:
     except (OSError, json.JSONDecodeError):
         manifest = {}
 
-    findings = lint_plugin(plugin_name, manifest)
+    findings = lint_plugin(plugin_name, manifest, files)
     if not findings:
         return
 
@@ -900,6 +902,39 @@ def validate(
     validate_manifest(plugin_name)
     _lint_plugin_static(plugin_name)
     _validate_plugin_loads(plugin_name)
+
+
+def check_unpushed_history(versions: Iterable[tuple[Path, str]]) -> None:
+    """Print the credential findings in file versions that earlier unpushed commits hold, and
+    raise ``typer.Exit(1)`` on an error, since the push sends those commits too.
+    """
+    findings = plugin_lint.credential_findings(versions)
+    if not findings:
+        return
+    print("Earlier commits this deploy pushes hold these, though the current files do not:")
+    for w in (f for f in findings if f.severity == "warning"):
+        print(f"  ⚠ {w.location}  [{w.code}]  {w.message}")
+    errors = [f for f in findings if f.severity == "error"]
+    if errors:
+        print(
+            "\nThese must be removed before the plugin can be deployed. Rewrite the commits "
+            "that add them, which are not pushed yet, and rotate each credential:"
+        )
+        for e in errors:
+            print(f"  ✗ {e.location}  [{e.code}]  {e.message}")
+        raise typer.Exit(code=1)
+
+
+def lint_pushed(plugin_dir: Path, pushed: Iterable[tuple[Path, Path]] | None) -> None:
+    """The static lint, with the credential rule reading ``pushed``, the files a deploy sends."""
+    _lint_plugin_static(plugin_dir, pushed)
+
+
+def validate_pushed(plugin_dir: Path, pushed: Iterable[tuple[Path, Path]] | None) -> None:
+    """`validate`, with the credential rule reading ``pushed``, the files a deploy sends."""
+    validate_manifest(plugin_dir)
+    _lint_plugin_static(plugin_dir, pushed)
+    _validate_plugin_loads(plugin_dir)
 
 
 def update(

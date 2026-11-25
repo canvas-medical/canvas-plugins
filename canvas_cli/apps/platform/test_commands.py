@@ -1037,6 +1037,158 @@ def test_deploy_refuses_a_dirty_tree_without_a_terminal(
     assert _git(bare, "for-each-ref") == ""
 
 
+_STRIPE_LIVE = "sk_" + "live_" + "Ab3" * 9
+
+
+def test_deploy_refuses_a_credential_in_a_committed_hidden_file(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """`canvas install` never packages a hidden file, but deploy pushes every committed one, so
+    the credential check reads what the push sends.
+    """
+    (package / ".local_settings.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package, "add", ".local_settings.json")
+    _git(package, "commit", "-m", "settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert ".local_settings.json:1  [hardcoded-credential]" in result.output
+    assert _STRIPE_LIVE not in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_a_first_deploy_checks_the_repository_it_creates(
+    api: requests_mock_module.Mocker,
+    bare: Path,
+    tmp_path: Path,
+    signed_in: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A deploy from outside any repository creates one at the package's parent and pushes
+    everything in it, hidden files included, so that repository is what gets checked.
+    """
+    monkeypatch.setattr(git, "interactive", lambda: True)
+    directory = tmp_path / "fresh" / NAME
+    directory.mkdir(parents=True)
+    (directory / "CANVAS_MANIFEST.json").write_text(MANIFEST)
+    (directory / ".local_settings.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+
+    result = runner.invoke(
+        app, ["deploy", str(directory), "--instance", "acme-staging"], input="y\ny\n\n"
+    )
+
+    assert result.exit_code == 1
+    assert ".local_settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_refuses_a_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A key added and then deleted in commits not pushed yet still travels with the push."""
+    (package / "old.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package, "add", "old.json")
+    _git(package, "commit", "-m", "add settings")
+    _git(package, "rm", "-q", "old.json")
+    _git(package, "commit", "-m", "remove settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "Earlier commits this deploy pushes hold these" in result.output
+    assert f"{NAME}/old.json:1  [hardcoded-credential]" not in result.output
+    assert "old.json:1  [hardcoded-credential]" in result.output
+    assert _STRIPE_LIVE not in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+_WINDOWS_1252_CONFIG = b"# caf\xe9 settings\nSTRIPE = '" + _STRIPE_LIVE.encode() + b"'\n"
+
+
+def test_deploy_refuses_a_credential_in_a_file_that_is_not_utf8(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """One Windows-1252 byte does not hide the rest of a text file from the check."""
+    (package / "config.txt").write_bytes(_WINDOWS_1252_CONFIG)
+    _git(package, "add", "config.txt")
+    _git(package, "commit", "-m", "config")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "config.txt:2  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_refuses_a_non_utf8_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """The history check reads a file with one Windows-1252 byte as text too."""
+    (package / "config.txt").write_bytes(_WINDOWS_1252_CONFIG)
+    _git(package, "add", "config.txt")
+    _git(package, "commit", "-m", "add config")
+    _git(package, "rm", "-q", "config.txt")
+    _git(package, "commit", "-m", "remove config")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1
+    assert "config.txt:2  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+# What Windows PowerShell 5.1's `>` and `Out-File` write by default: UTF-16 LE with a BOM.
+_UTF16_SETTINGS = ('{"stripe": "' + _STRIPE_LIVE + '"}\r\n').encode("utf-16")
+
+
+def test_deploy_refuses_a_credential_in_a_utf16_file(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A UTF-16 text file holds a NUL byte after every ASCII character, and it is text."""
+    (package / "settings.json").write_bytes(_UTF16_SETTINGS)
+    _git(package, "add", "settings.json")
+    _git(package, "commit", "-m", "settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert "settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_refuses_a_utf16_credential_an_earlier_unpushed_commit_holds(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """The history check reads a UTF-16 file version too."""
+    (package / "settings.json").write_bytes(_UTF16_SETTINGS)
+    _git(package, "add", "settings.json")
+    _git(package, "commit", "-m", "add settings")
+    _git(package, "rm", "-q", "settings.json")
+    _git(package, "commit", "-m", "remove settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 1, result.output
+    assert "settings.json:1  [hardcoded-credential]" in result.output
+    assert _git(bare, "for-each-ref") == ""
+
+
+def test_deploy_ignores_a_credential_in_a_file_git_ignores(
+    api: requests_mock_module.Mocker, bare: Path, package: Path, signed_in: None
+) -> None:
+    """A gitignored file is never pushed, so a key in it does not stop the deploy."""
+    (package.parent / ".gitignore").write_text(f"{NAME}/local.json\n")
+    (package / "local.json").write_text(f'{{"stripe": "{_STRIPE_LIVE}"}}\n')
+    _git(package.parent, "add", ".gitignore")
+    _git(package.parent, "commit", "-m", "ignore local settings")
+
+    result = runner.invoke(app, ["deploy", str(package), "--instance", "acme-staging"])
+
+    assert result.exit_code == 0, result.output
+    assert _git(bare, "branch", "--list", "main") != ""
+
+
 def test_deploy_refuses_a_package_nested_deeper_in_a_repository(
     api: requests_mock_module.Mocker, signed_in: None, tmp_path: Path
 ) -> None:

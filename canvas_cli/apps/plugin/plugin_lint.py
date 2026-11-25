@@ -24,8 +24,9 @@ the lint can't drift the way a hand-maintained allowlist mirror would.
 from __future__ import annotations
 
 import ast
+import codecs
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -104,7 +105,9 @@ def _iter_python_files(root: Path) -> Iterator[tuple[Path, ast.Module]]:
             continue
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
-        except (OSError, SyntaxError):
+        # ValueError: bytes that are not UTF-8, or a NUL byte on Python 3.11. A macOS `._`
+        # AppleDouble file beside a module holds both, and the runner never imports it.
+        except (OSError, SyntaxError, ValueError):
             continue
         yield py_file, tree
 
@@ -350,15 +353,38 @@ def _looks_random(value: str) -> bool:
     )
 
 
-def _credential_findings(plugin_dir: Path) -> list[LintFinding]:
-    findings: list[LintFinding] = []
-    for path, rel in shipped_files(plugin_dir):
+def file_text(content: bytes) -> str | None:
+    """The text a file holds, or None when it is binary.
+
+    UTF-16 (what Windows PowerShell's ``>`` and ``Out-File`` write) and UTF-32 hold NUL bytes
+    beside every ASCII character, so a byte-order mark is read before git's own binary test, a
+    NUL byte near the start. UTF-32's little-endian mark starts with UTF-16's, so it goes first.
+    Anything else is read as UTF-8, so one byte that is not UTF-8 does not hide the rest of the
+    file.
+    """
+    if content.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        return content.decode("utf-32", errors="replace")
+    if content.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return content.decode("utf-16", errors="replace")
+    if b"\0" in content[:8000]:
+        return None
+    return content.decode("utf-8", errors="replace")
+
+
+def _file_texts(files: Iterable[tuple[Path, Path]]) -> Iterator[tuple[Path, str]]:
+    """``(path inside the package, text)`` for each text file in ``files``."""
+    for path, rel in files:
         if not path.is_file():
             continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
+        text = file_text(path.read_bytes())
+        if text is not None:
+            yield rel, text
+
+
+def credential_findings(texts: Iterable[tuple[Path, str]]) -> list[LintFinding]:
+    """The credential findings in each ``(path inside the package, text)``."""
+    findings: list[LintFinding] = []
+    for rel, text in texts:
         is_doc = rel.suffix.lower() in _DOC_SUFFIXES
         # Placeholder values belong in docs and tests, so a value matched by its shape alone is
         # not reported there.
@@ -711,14 +737,17 @@ def _query_in_loop_findings(plugin_dir: Path) -> list[LintFinding]:
     return findings
 
 
-def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
+def lint_plugin(
+    plugin_dir: Path, manifest: dict, files: Iterable[tuple[Path, Path]] | None = None
+) -> list[LintFinding]:
     """Return all construct, request-handling, credential, Custom Data and query findings for
-    a plugin, most-blocking first (errors before warnings).
+    a plugin, most-blocking first (errors before warnings). The credential rule reads ``files``
+    (``(path, path inside the package)``), by default what ``canvas install`` packages.
     """
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
-        + _credential_findings(plugin_dir)
+        + credential_findings(_file_texts(shipped_files(plugin_dir) if files is None else files))
         + _custom_data_findings(plugin_dir, manifest)
         + _query_in_loop_findings(plugin_dir)
     )
