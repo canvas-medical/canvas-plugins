@@ -17,6 +17,7 @@ from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
+from plugin_runner.sentry import without_frame_locals
 
 from .exceptions import AuthenticationError, InvalidCredentialsError, PortalAccessError
 from .security import (
@@ -555,9 +556,10 @@ class SimpleAPIBase(BaseHandler, ABC):
             else:
                 raise AssertionError(f"Cannot handle event type {EventType.Name(self.event.type)}")
         except Exception as exception:
-            log.exception(f"Error handling '{EventType.Name(self.event.type)}' event")
-
-            sentry_sdk.capture_exception(exception)
+            with sentry_sdk.new_scope() as scope:
+                scope.add_event_processor(without_frame_locals)
+                log.exception(f"Error handling '{EventType.Name(self.event.type)}' event")
+                sentry_sdk.capture_exception(exception)
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 

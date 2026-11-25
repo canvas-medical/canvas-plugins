@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v1.20.0 (2026-11-25)
+
+### Bug Fixes
+
+- Quote custom model table and column names in generated ddl
+  ([#2034](https://github.com/canvas-medical/canvas-plugins/pull/2034),
+  [`eba29d1`](https://github.com/canvas-medical/canvas-plugins/commit/eba29d10ecc0b94cf216adb005475e6838e14268))
+
+- **cli**: Reconnect canvas logs after a dropped connection
+  ([#2041](https://github.com/canvas-medical/canvas-plugins/pull/2041),
+  [`4d83e3f`](https://github.com/canvas-medical/canvas-plugins/commit/4d83e3f5decc81afd9b8defe0d9239e9d90abf8c))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add questionnaire tools for agents
+  ([#2042](https://github.com/canvas-medical/canvas-plugins/pull/2042),
+  [`061adf3`](https://github.com/canvas-medical/canvas-plugins/commit/061adf3aec6fd831ff3091c24500a71edbd063e0))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Present a client certificate for mutual TLS from Http
+  ([#2030](https://github.com/canvas-medical/canvas-plugins/pull/2030),
+  [`9be42b3`](https://github.com/canvas-medical/canvas-plugins/commit/9be42b31eb591488f5f320a020d314c0c91ed234))
+
+- **cli**: Warn when a query runs once per item of a loop
+  ([#2032](https://github.com/canvas-medical/canvas-plugins/pull/2032),
+  [`028ff89`](https://github.com/canvas-medical/canvas-plugins/commit/028ff89c5ed26a6af76fabc44f876c373c21c218))
+
+
 ## v1.19.0 (2026-11-24)
 
 ### Features

@@ -1,6 +1,6 @@
 """Static pre-load lint for ``canvas validate``.
 
-Scans a plugin for four classes of problem the sandbox handler-load can't surface
+Scans a plugin for five classes of problem the sandbox handler-load can't surface
 on its own (the fourth reads every shipped file, not just the source):
 
   * RestrictedPython constructs that fail at *runtime* inside a method body
@@ -13,6 +13,7 @@ on its own (the fourth reads every shipped file, not just the source):
     ``plugin_runner/open_routes.py``, which the runner also runs at load), a
     secret compared with ``==``, or a ``requests`` call with no timeout.
   * Credentials written into a file the package ships.
+  * Queries that run once per item of a loop, which slow the handler as data grows.
 
 The runner's sandbox (``plugin_runner/sandbox.py``) and model loader
 (``plugin_runner/ddl.py``) are the source of truth; every rule here is pinned to
@@ -531,15 +532,195 @@ def _custom_data_findings(plugin_dir: Path, manifest: dict) -> list[LintFinding]
     return findings
 
 
+# ── Query rules ───────────────────────────────────────────────────────────────
+# A loop over a queryset or an HTTP response that runs a query per item. Only loops whose
+# iterable is visibly one of those count, so a loop over a plain list stays quiet.
+
+_RELATED_READS = {
+    "all",
+    "filter",
+    "exclude",
+    "first",
+    "last",
+    "exists",
+    "order_by",
+    "values_list",
+    "aggregate",
+    "latest",
+    "earliest",
+    "count",
+}
+_SERVED_BY_PREFETCH = {"all", "count", "exists"}
+_QUERY_IN_LOOP = (
+    "This query runs once per item of the loop, so N items cost N database round trips and "
+    "the handler slows as data grows. Fetch the rows before the loop (`prefetch_related(...)`, "
+    "or one `filter(<field>__in=[...])` read into a dict) and look them up inside it."
+)
+_PREFETCH_BYPASSED = (
+    "The loop's queryset already prefetches this relation, but this read starts its own query "
+    "for every item: only `all()`, `count()` and `exists()` read the prefetch. Read `.all()` "
+    "and pick from it in Python, such as `next(iter(item.codings.all()), None)` for `first()`."
+)
+_WRITES = {
+    "create",
+    "bulk_create",
+    "bulk_update",
+    "update",
+    "delete",
+    "get_or_create",
+    "update_or_create",
+}
+_COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)
+_ITERABLE_WRAPPERS = {"list", "tuple", "sorted", "reversed", "enumerate"}
+
+
+def _chain(node: ast.expr) -> Iterator[ast.expr]:
+    """Each link of a call and attribute chain, outermost first (``a.b().c`` … ``a``)."""
+    while isinstance(node, ast.Call | ast.Attribute | ast.Subscript):
+        yield node
+        node = node.func if isinstance(node, ast.Call) else node.value
+    yield node
+
+
+def _reaches_objects(node: ast.expr) -> bool:
+    return any(isinstance(link, ast.Attribute) and link.attr == "objects" for link in _chain(node))
+
+
+def _calls_json(node: ast.expr) -> bool:
+    return any(isinstance(link, ast.Call) and _call_name(link) == "json" for link in _chain(node))
+
+
+def _local_values(function: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, list[ast.expr]]:
+    """Every value assigned to each plain local name in ``function``."""
+    values: dict[str, list[ast.expr]] = {}
+    for node in ast.walk(function):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    values.setdefault(target.id, []).append(node.value)
+    return values
+
+
+def _sources(node: ast.expr, local_values: dict[str, list[ast.expr]]) -> list[ast.expr]:
+    """``node`` plus, when its chain starts at a local name, every value that name was assigned,
+    looking through ``list(...)``, ``sorted(...)`` and the other wrappers in ``_ITERABLE_WRAPPERS``.
+    """
+    found, pending, seen = [], [node], set()
+    while pending:
+        expr = pending.pop()
+        found.append(expr)
+        if (
+            isinstance(expr, ast.Call)
+            and isinstance(expr.func, ast.Name)
+            and expr.func.id in _ITERABLE_WRAPPERS
+            and expr.args
+        ):
+            pending.append(expr.args[0])
+            continue
+        root = list(_chain(expr))[-1]
+        if isinstance(root, ast.Name) and root.id not in seen:
+            seen.add(root.id)
+            pending.extend(local_values.get(root.id, []))
+    return found
+
+
+def _prefetched(sources: list[ast.expr]) -> set[str]:
+    """Relations named in a ``prefetch_related(...)`` anywhere in ``sources``."""
+    names: set[str] = set()
+    for source in sources:
+        for link in _chain(source):
+            if not (isinstance(link, ast.Call) and _call_name(link) == "prefetch_related"):
+                continue
+            for arg in link.args:
+                if isinstance(arg, ast.Call) and _call_name(arg) == "Prefetch" and arg.args:
+                    if any(keyword.arg == "to_attr" for keyword in arg.keywords):
+                        continue  # the rows land on `to_attr`; the relation's manager is uncached
+                    arg = arg.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    names.add(arg.value.split("__")[0])
+    return names
+
+
+def _loops(function: ast.AST) -> Iterator[tuple[ast.expr, ast.expr, list[ast.AST]]]:
+    """``(target, iterable, body)`` for each for-loop and comprehension in ``function``."""
+    for node in ast.walk(function):
+        if isinstance(node, ast.For | ast.AsyncFor):
+            yield node.target, node.iter, list(node.body)
+        elif isinstance(node, _COMPREHENSIONS):
+            first, *rest = node.generators
+            results = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
+            yield first.target, first.iter, [*results, *first.ifs, *rest]
+
+
+def _is_related_read(call: ast.Call, loop_name: str) -> str | None:
+    """The relation name when ``call`` is ``<loop_name>.<relation>.<read>(...)``."""
+    fn = call.func
+    if not (
+        isinstance(fn, ast.Attribute)
+        and fn.attr in _RELATED_READS
+        and isinstance(fn.value, ast.Attribute)
+        and isinstance(fn.value.value, ast.Name)
+        and fn.value.value.id == loop_name
+    ):
+        return None
+    if fn.attr == "count" and (call.args or call.keywords):
+        return None  # str.count / list.count take an argument; a queryset's count does not
+    return fn.value.attr
+
+
+def _query_in_loop_findings(plugin_dir: Path) -> list[LintFinding]:
+    findings: list[LintFinding] = []
+    for py_file, tree in _iter_python_files(plugin_dir):
+        rel = _rel(py_file, plugin_dir)
+        # A call reached from two enclosing loops, or a call inside another call's chain, is
+        # reported at most once.
+        seen: set[int] = set()
+        for function in ast.walk(tree):
+            if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            local_values = _local_values(function)
+            for target, iterable, body in _loops(function):
+                sources = _sources(iterable, local_values)
+                over_queryset = any(_reaches_objects(s) for s in sources)
+                if not (over_queryset or any(_calls_json(s) for s in sources)):
+                    continue
+                loop_name = target.id if isinstance(target, ast.Name) else None
+                prefetched = _prefetched(sources) if over_queryset else set()
+                for part in body:
+                    for call in ast.walk(part):
+                        if not isinstance(call, ast.Call) or id(call) in seen:
+                            continue
+                        relation = None
+                        if _reaches_objects(call):
+                            seen.update(id(link) for link in _chain(call))
+                            if _call_name(call) in _WRITES:
+                                continue
+                        elif over_queryset and loop_name:
+                            relation = _is_related_read(call, loop_name)
+                            if relation is None or (
+                                relation in prefetched and _call_name(call) in _SERVED_BY_PREFETCH
+                            ):
+                                continue
+                            seen.add(id(call))
+                        else:
+                            continue
+                        message = _PREFETCH_BYPASSED if relation in prefetched else _QUERY_IN_LOOP
+                        findings.append(
+                            LintFinding("warning", f"{rel}:{call.lineno}", "query-in-loop", message)
+                        )
+    return findings
+
+
 def lint_plugin(plugin_dir: Path, manifest: dict) -> list[LintFinding]:
-    """Return all construct, request-handling, credential and Custom Data findings for a plugin,
-    most-blocking first (errors before warnings).
+    """Return all construct, request-handling, credential, Custom Data and query findings for
+    a plugin, most-blocking first (errors before warnings).
     """
     findings = (
         _construct_findings(plugin_dir)
         + _request_findings(plugin_dir)
         + _credential_findings(plugin_dir)
         + _custom_data_findings(plugin_dir, manifest)
+        + _query_in_loop_findings(plugin_dir)
     )
     findings.sort(key=lambda f: 0 if f.severity == "error" else 1)
     return findings

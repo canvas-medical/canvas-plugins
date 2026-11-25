@@ -233,6 +233,8 @@ from .questionnaire import (
     QuestionnaireItemGroupFactory,
     QuestionnaireQuestionMapFactory,
     QuestionnaireResultFactory,
+    ResponseOptionFactory,
+    ResponseOptionSetFactory,
 )
 from .reason_for_visit import (
     ReasonForVisitCodingFactory,
@@ -505,6 +507,8 @@ __all__ = (
     "RemoveAllergyEventFactory",
     "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
+    "ResponseOptionFactory",
+    "ResponseOptionSetFactory",
     "ScheduleDurationFactory",
     "ServiceProviderFactory",
     "ServiceRequestCategoryCodingFactory",
