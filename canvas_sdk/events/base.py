@@ -11,6 +11,7 @@ import settings
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_generated.messages.events_pb2 import EventType
 from canvas_sdk.v1.data import CanvasUser
+from plugin_runner.sentry import without_frame_locals
 
 
 @dataclasses.dataclass
@@ -63,7 +64,9 @@ class Event:
         except ValueError as e:
             self.name = f"UNKNOWN_EVENT_{self.type}"
             if not settings.IS_TESTING:
-                sentry_sdk.capture_exception(e)
+                with sentry_sdk.new_scope() as scope:
+                    scope.add_event_processor(without_frame_locals)
+                    sentry_sdk.capture_exception(e)
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
         self.actor = Actor(id=event_request.actor)

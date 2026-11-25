@@ -3,6 +3,7 @@ import functools
 import logging
 import os
 import ssl
+import tempfile
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
@@ -132,6 +133,33 @@ class _SurescriptsTrustAdapter(HTTPAdapter):
         super().init_poolmanager(connections, maxsize, block, **pool_kwargs)  # type: ignore[no-untyped-call]
 
 
+class _ClientCertificateAdapter(HTTPAdapter):
+    """Presents a client certificate for mutual TLS and verifies the server against the public roots."""
+
+    def __init__(self, client_cert: str, client_key: str) -> None:
+        self.ssl_context = ssl.create_default_context(cafile=DEFAULT_CA_BUNDLE_PATH)
+        # `load_cert_chain` reads only from a path, so the PEM exists on disk (mode 0600) just
+        # for the call; the sandboxed plugin can neither name nor open the file.
+        fd, path = tempfile.mkstemp(suffix=".pem")
+        try:
+            with os.fdopen(fd, "w") as pem:
+                pem.write(f"{client_cert.strip()}\n{client_key.strip()}\n")
+            self.ssl_context.load_cert_chain(path)
+        finally:
+            os.unlink(path)
+        super().__init__()
+
+    def init_poolmanager(
+        self,
+        connections: int,
+        maxsize: int,
+        block: bool = False,
+        **pool_kwargs: Any,
+    ) -> None:
+        pool_kwargs["ssl_context"] = self.ssl_context
+        super().init_poolmanager(connections, maxsize, block, **pool_kwargs)  # type: ignore[no-untyped-call]
+
+
 def _origin(parts: urllib.parse.SplitResult) -> tuple[str, str | None, int | None]:
     return (
         parts.scheme,
@@ -193,9 +221,34 @@ class Http:
 
         return joined
 
-    def __init__(self, base_url: str = "") -> None:
+    def __init__(
+        self,
+        base_url: str = "",
+        client_cert: str | None = None,
+        client_key: str | None = None,
+    ) -> None:
+        """Create a client, optionally presenting a PEM client certificate to `base_url`.
+
+        The certificate and its unencrypted private key are PEM strings, typically from
+        sensitive plugin secrets. They are presented only to the origin of `base_url`, which
+        has to be https.
+        """
         self._base_url = base_url
         self._session = requests.Session()
+
+        if client_cert is None and client_key is None:
+            return
+        if not client_cert or not client_key:
+            raise ValueError("client_cert and client_key must be given together.")
+        origin = urllib.parse.urlsplit(base_url)
+        if origin.scheme != "https" or not origin.hostname:
+            raise ValueError("A client certificate needs an https base_url to be presented to.")
+
+        # requests picks an adapter by URL prefix, and follows redirects without `join_url`;
+        # the trailing slash keeps a lookalike host (`<host>.example`) from matching.
+        self._session.mount(
+            f"https://{origin.netloc}/", _ClientCertificateAdapter(client_cert, client_key)
+        )
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name == "_MAX_REQUEST_TIMEOUT_SECONDS":
