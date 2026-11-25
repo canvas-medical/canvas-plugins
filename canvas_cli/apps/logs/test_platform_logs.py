@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+import re
+import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
+from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+import requests
 import requests_mock as requests_mock_module
 import websocket
 from typer.testing import CliRunner
 
 from canvas_cli.apps.auth.utils import instance_slug
+from canvas_cli.apps.logs.logs import GAP_MARGIN_SECONDS
 from canvas_cli.apps.platform import auth
 from canvas_cli.apps.platform.auth import PLATFORM_URL_ENV, SERVICE_TOKEN_ENV
 from canvas_cli.apps.plugin.plugin import plugin_url
@@ -574,19 +581,45 @@ NO_INSTANCE: list[str] = [
 ]
 
 
+# websocket-client hands both to ``on_error``, then fires ``on_close`` with no code and returns.
+LOST = websocket.WebSocketConnectionClosedException("Connection to remote host was lost.")
+CTRL_C = KeyboardInterrupt()
+INTERRUPTED: list[str | float | BaseException] = [*CONNECTED, CTRL_C]
+
+
+class _Clock:
+    """Stands in for the ``time`` module the logs command reads; sleeping advances it."""
+
+    def __init__(self) -> None:
+        self.now: float = 1000.0
+        self.sleeps: list[float] = []
+
+    def monotonic(self) -> float:
+        """Return the fake clock's reading."""
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        """Record the sleep and advance the clock by it."""
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
 class _FakeStream:
     """A ``WebSocketApp`` stand-in that replays one scripted connection per instance.
 
     Each script entry is ``(messages, close_code)``: the messages Console sends after the
     upgrade, and the close code it sends. A connection fires ``on_open`` first, as
-    websocket-client does at the HTTP upgrade. An exception in place of the messages is a
-    connection that fails before the upgrade or is interrupted before any message:
-    websocket-client then fires ``on_error`` with it and ``on_close`` with no code. Every
-    instance records the URL it was built with.
+    websocket-client does at the HTTP upgrade. A number among the messages is seconds the
+    connection stays open. An exception among the messages ends the connection the way
+    websocket-client does on a lost connection or Ctrl-C: ``on_error`` with it, then
+    ``on_close`` with no code. An exception in place of the messages is a connection that fails
+    before the upgrade. Every instance records the URL it was built with.
     """
 
-    script: list[tuple[list[str] | BaseException, int | None]] = []
+    script: list[tuple[Sequence[str | float | BaseException] | BaseException, int | None]] = []
     urls: list[str] = []
+    run_kwargs: list[dict[str, Any]] = []
+    clock: _Clock = _Clock()
 
     def __init__(self, url: str, **callbacks: Any) -> None:
         self.url: str = url
@@ -594,7 +627,9 @@ class _FakeStream:
         self.on_open: Any = None
         _FakeStream.urls.append(url)
 
-    def run_forever(self) -> bool:
+    def run_forever(self, **kwargs: Any) -> bool:
+        """Replay the next scripted connection."""
+        _FakeStream.run_kwargs.append(kwargs)
         messages, close_code = _FakeStream.script.pop(0)
         if isinstance(messages, BaseException):
             self.callbacks["on_error"](self, messages)
@@ -602,17 +637,46 @@ class _FakeStream:
             return True
         self.on_open(self)
         for message in messages:
+            if isinstance(message, BaseException):
+                self.callbacks["on_error"](self, message)
+                self.callbacks["on_close"](self, None, None)
+                return True
+            if isinstance(message, float | int):
+                _FakeStream.clock.now += message
+                continue
             self.callbacks["on_message"](self, message)
         self.callbacks["on_close"](self, close_code, "")
         return False
 
 
+class _InlineThread:
+    """Runs a thread's target at ``start()``, so a backfill ends before the next scripted message."""
+
+    def __init__(self, target: Callable[[], None], name: str, daemon: bool) -> None:
+        self.target: Callable[[], None] = target
+
+    def start(self) -> None:
+        """Run the target on the calling thread."""
+        self.target()
+
+
+INLINE_THREADING = SimpleNamespace(Thread=_InlineThread, Event=threading.Event)
+
+
 @pytest.fixture
-def fake_stream() -> Iterator[type[_FakeStream]]:
-    """Patch the websocket client with ``_FakeStream`` and reset its script."""
+def fake_stream(requests_mock: requests_mock_module.Mocker) -> Iterator[type[_FakeStream]]:
+    """Patch the websocket client with ``_FakeStream``, the clock, and an empty, inline backfill."""
     _FakeStream.script = []
     _FakeStream.urls = []
-    with patch("canvas_cli.apps.logs.logs.websocket.WebSocketApp", _FakeStream):
+    _FakeStream.run_kwargs = []
+    _FakeStream.clock = _Clock()
+    requests_mock.get(LOGS_URL, json={"hits": [], "next": {}})
+    with (
+        patch("canvas_cli.apps.logs.logs.websocket.WebSocketApp", _FakeStream),
+        patch("canvas_cli.apps.logs.logs.time", _FakeStream.clock),
+        patch("canvas_cli.apps.logs.logs.threading", INLINE_THREADING),
+        patch("canvas_cli.apps.logs.logs.BACKFILL_DELAY_SECONDS", 0),
+    ):
         yield _FakeStream
 
 
@@ -633,7 +697,7 @@ def test_stream_reconnects_with_fresh_token_after_4401(
         LOG_TOKEN_URL,
         [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
     )
-    fake_stream.script = [(CONNECTED, 4401), (CONNECTED, 1000)]
+    fake_stream.script = [(CONNECTED, 4401), (INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
@@ -806,8 +870,13 @@ def test_stream_refused_after_reconnect_ends(
     assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
 
 
-@pytest.mark.parametrize("close_code", [1000, 1011, None], ids=["normal", "error", "interrupt"])
-def test_stream_other_closes_end_the_run(
+@pytest.mark.parametrize(
+    ("ending", "close_code"),
+    [([LOST], None), ([], 1000), ([], 1011)],
+    ids=["lost", "normal", "error"],
+)
+def test_stream_reconnects_after_a_drop(
+    ending: list[str | float | BaseException],
     close_code: int | None,
     cli_runner: CliRunner,
     requests_mock: requests_mock_module.Mocker,
@@ -815,16 +884,320 @@ def test_stream_other_closes_end_the_run(
     credentials_token: Mock,
     fake_stream: type[_FakeStream],
 ) -> None:
-    """Only 4401 reconnects; any other close, or Ctrl-C (no code), ends the stream."""
+    """A started stream that ends any way but Ctrl-C reconnects with a fresh token and keeps printing."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
+    )
+    fake_stream.script = [
+        ([*CONNECTED, "before the drop", *ending], close_code),
+        ([*CONNECTED, "after the drop", CTRL_C], None),
+    ]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
+    assert "before the drop" in result.output
+    assert "after the drop" in result.output
+
+
+def test_credentials_ini_stream_reconnects_after_a_drop(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A credentials.ini stream reconnects after a lost connection with the same token."""
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("ini-tok"), _stream_url("ini-tok")]
+    credentials_token.assert_called_once()
+
+
+def test_stream_interrupted_after_start_ends_cleanly(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Ctrl-C on a started stream ends the run with exit 0 and no reconnect."""
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    fake_stream.script = [(CONNECTED, close_code)]
+    fake_stream.script = [(INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod")
 
     assert result.exit_code == 0, result.output
     assert len(fake_stream.urls) == 1
     assert _calls_to(requests_mock, LOG_TOKEN_URL) == 1
+    assert fake_stream.clock.sleeps == []
+
+
+def test_stream_keeps_retrying_while_console_is_unavailable(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """After a drop, reconnects Console fails or refuses for reasons other than the token are retried."""
+    refused_upgrade = websocket.WebSocketBadStatusException(
+        "Handshake status 503 Service Unavailable", 503
+    )
+    fake_stream.script = [
+        ([*CONNECTED, LOST], None),
+        (refused_upgrade, None),
+        ([CHECKING], 1011),
+        (NO_INSTANCE, 1000),
+        ([*CONNECTED, "back again", CTRL_C], None),
+    ]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert len(fake_stream.urls) == 5
+    assert "back again" in result.output
+
+
+def test_credentials_ini_stream_refused_on_reconnect_ends(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Console refusing the token on a reconnect ends the run, quoting Console."""
+    fake_stream.script = [([*CONNECTED, LOST], None), (REFUSED, 1000)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 1
+    assert "Console refused the log stream for acme-prod." in result.output
+    assert "Console answered: Token authorization failed." in result.output
+    assert len(fake_stream.urls) == 2
+
+
+def test_stream_retries_when_platform_cannot_be_reached_for_a_fresh_token(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A network failure minting the reconnect's token is retried rather than ending the run."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [
+            {"json": MINTED},
+            {"exc": requests.ConnectionError("network is unreachable")},
+            {"json": {**MINTED, "access_token": "plat-tok-2"}},
+        ],
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
+    assert len(fake_stream.clock.sleeps) == 2
+
+
+def test_stream_retries_when_platform_answers_503_for_a_fresh_token(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Platform answering 503 while it restarts is retried like an unreachable Platform."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [
+            {"json": MINTED},
+            {"status_code": 503, "text": "Service Unavailable"},
+            {"json": {**MINTED, "access_token": "plat-tok-2"}},
+        ],
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
+
+
+def test_reconnect_backoff_doubles_to_a_cap_and_resets_after_a_healthy_stream(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Waits double from 1s to 60s, with jitter, and start over after a stream open 60s or more."""
+    refused_upgrade = websocket.WebSocketBadStatusException(
+        "Handshake status 503 Service Unavailable", 503
+    )
+    fake_stream.script = [
+        ([*CONNECTED, LOST], None),
+        *[(refused_upgrade, None)] * 7,
+        ([*CONNECTED, 61.0, LOST], None),
+        ([*CONNECTED, 5.0, LOST], None),
+        (INTERRUPTED, None),
+    ]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    expected = [1, 2, 4, 8, 16, 32, 60, 60, 1, 2]
+    sleeps = fake_stream.clock.sleeps
+    assert len(sleeps) == len(expected)
+    for slept, delay in zip(sleeps, expected, strict=True):
+        assert delay / 2 <= slept <= delay
+
+
+def test_reconnect_lines_carry_the_notice_label(
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Every line the reconnect path writes is a labeled notice, so a follower can skip it."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [
+            {"json": MINTED},
+            {"exc": requests.ConnectionError("network is unreachable")},
+            {"json": {**MINTED, "access_token": "plat-tok-2"}},
+        ],
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    stderr_lines = result.stderr.splitlines()
+    assert any("Reconnecting to the log stream" in line for line in stderr_lines)
+    assert any("Could not reach Canvas Platform" in line for line in stderr_lines)
+    assert any("Printing the 0 lines sent while" in line for line in stderr_lines)
+    assert all(line.startswith("[notice] ") for line in stderr_lines), result.stderr
+
+
+def test_reconnect_backfills_the_gap_oldest_first(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Once the stream resumes, the gap is fetched from history for the same plugins and printed oldest first."""
+    requests_mock.get(
+        LOGS_URL,
+        json={
+            "hits": [
+                {
+                    **HIT,
+                    "ts": "2026-11-02T10:00:05Z",
+                    "message": "second missed line",
+                    "log": {"level": "ERROR"},
+                    "error": {
+                        "stack_trace": ["Traceback (most recent call last):\n", "KeyError: 'x'\n"]
+                    },
+                },
+                {**HIT, "ts": "2026-11-02T10:00:01Z", "message": "first missed line"},
+            ],
+            "next": {},
+        },
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), ([*CONNECTED, "live again", CTRL_C], None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
+
+    assert result.exit_code == 0, result.output
+    header = re.search(
+        r"\[notice\] Printing the 2 lines sent while the log stream was down, (\S+) to (\S+)\.",
+        result.output,
+    )
+    assert header is not None, result.output
+    first = result.output.index("plugin-runner INFO 2026-11-02T10:00:01Z first missed line")
+    second = result.output.index("plugin-runner ERROR 2026-11-02T10:00:05Z second missed line")
+    trace = result.output.index("KeyError: 'x'")
+    assert header.end() < first < second < trace < result.output.index("live again")
+    (history,) = [r for r in requests_mock.request_history if r.url.split("?")[0] == LOGS_URL]
+    params = parse_qs(urlparse(history.url).query)
+    assert params["start_time"] == [header.group(1)]
+    assert params["end_time"] == [header.group(2)]
+    assert params["plugin"] == ["foo"]
+    start, end = datetime.fromisoformat(header.group(1)), datetime.fromisoformat(header.group(2))
+    margins = timedelta(seconds=2 * GAP_MARGIN_SECONDS)
+    assert margins <= end - start < margins + timedelta(seconds=5)
+
+
+def test_failed_backfill_prints_the_history_command_and_keeps_streaming(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """A backfill the history endpoint fails prints a labeled history command; streaming goes on."""
+    requests_mock.get(LOGS_URL, status_code=500)
+    fake_stream.script = [
+        ([*CONNECTED, LOST], None),
+        ([*CONNECTED, "still streaming", CTRL_C], None),
+    ]
+
+    result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod --plugin foo")
+
+    assert result.exit_code == 0, result.output
+    assert "still streaming" in result.stdout
+    gap = re.search(
+        r"^\[notice\] The log stream dropped after (\S+) and resumed at (\S+)\. .*"
+        r"canvas logs --host acme-prod --start (\S+) --end (\S+) --no-follow --all --plugin foo$",
+        result.stderr,
+        re.MULTILINE,
+    )
+    assert gap is not None, result.stderr
+    dropped, resumed, start, end = (datetime.fromisoformat(value) for value in gap.groups())
+    assert start <= dropped <= resumed <= end
+    assert "Printing the" not in result.stderr
+
+
+def test_ctrl_c_while_a_backfill_waits_ends_cleanly(
+    requests_mock: requests_mock_module.Mocker,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Ctrl-C with a backfill pending exits 0, and the backfill stops without fetching."""
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    with (
+        patch("canvas_cli.apps.logs.logs.threading", threading),
+        patch("canvas_cli.apps.logs.logs.BACKFILL_DELAY_SECONDS", 30),
+    ):
+        result = CliRunner(mix_stderr=False).invoke(app, "logs --host acme-prod")
+        backfills = [t for t in threading.enumerate() if t.name == "canvas-logs-backfill"]
+        for backfill in backfills:
+            backfill.join(timeout=5)
+
+    assert result.exit_code == 0, result.output
+    assert result.exception is None
+    assert len(backfills) == 1
+    assert not backfills[0].is_alive()
+    assert _calls_to(requests_mock, LOGS_URL) == 0
+    assert "Printing the" not in result.stderr
+
+
+def test_stream_pings_console(
+    cli_runner: CliRunner,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """The stream pings Console, so a silently dead connection is noticed and reconnected."""
+    fake_stream.script = [(INTERRUPTED, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.run_kwargs == [{"ping_interval": 30, "ping_timeout": 10}]
 
 
 def test_credentials_ini_stream_does_not_reconnect_on_4401(
@@ -921,7 +1294,7 @@ def test_platform_stream_url_carries_each_plugin(
     """--plugin values reach Console on the live stream, so it sends only those plugins' lines."""
     requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
     requests_mock.post(LOG_TOKEN_URL, json=MINTED)
-    fake_stream.script = [(CONNECTED, 1000)]
+    fake_stream.script = [(INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo --plugin bar")
 
@@ -942,7 +1315,7 @@ def test_reconnected_stream_keeps_the_plugin_filter(
         LOG_TOKEN_URL,
         [{"json": MINTED}, {"json": {**MINTED, "access_token": "plat-tok-2"}}],
     )
-    fake_stream.script = [(CONNECTED, 4401), (CONNECTED, 1000)]
+    fake_stream.script = [(CONNECTED, 4401), (INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
 
@@ -959,7 +1332,7 @@ def test_credentials_ini_stream_url_carries_the_plugin(
     fake_stream: type[_FakeStream],
 ) -> None:
     """A credentials.ini stream sends the --plugin filter too."""
-    fake_stream.script = [(CONNECTED, 1000)]
+    fake_stream.script = [(INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, "logs --host acme-prod --plugin foo")
 
@@ -973,7 +1346,7 @@ def test_stream_plugin_values_are_url_encoded(
     fake_stream: type[_FakeStream],
 ) -> None:
     """A plugin value is encoded, so it can't add a second token parameter to the URL."""
-    fake_stream.script = [(CONNECTED, 1000)]
+    fake_stream.script = [(INTERRUPTED, None)]
 
     result = cli_runner.invoke(app, ["logs", "--host", "acme-prod", "--plugin", "x&token=evil"])
 
