@@ -37,6 +37,7 @@ def test_appointment_reminders_are_read_from_the_appointment() -> None:
     assert reminders[email.id].email == "patient@example.com"
     assert reminders[email.id].status == AppointmentReminderStatus.FAILED
     assert AppointmentReminder.objects.get(id=text.id).appointment == appointment
+    assert all(r.dbid == r.id for r in reminders.values())
 
 
 @pytest.mark.django_db

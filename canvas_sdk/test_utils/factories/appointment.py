@@ -25,6 +25,8 @@ class AppointmentReminderFactory(factory.django.DjangoModelFactory[AppointmentRe
     class Meta:
         model = AppointmentReminder
 
+    dbid = factory.Faker("uuid4", cast_to=None)
+    id = factory.SelfAttribute("dbid")
     appointment = factory.SubFactory(AppointmentFactory)
     phone_number = "5555550100"
     email = None

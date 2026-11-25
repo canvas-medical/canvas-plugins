@@ -1,5 +1,3 @@
-import uuid
-
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
@@ -142,9 +140,8 @@ class AppointmentReminder(TimestampedModel):
     class Meta:
         db_table = "canvas_sdk_data_api_appointmentreminder_001"
 
-    # Reminders are identified by a UUID only; they have no dbid.
-    dbid = None  # type: ignore[assignment]
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    dbid = models.UUIDField(primary_key=True, editable=False)  # type: ignore[assignment]
+    id = models.UUIDField(editable=False, unique=True)
     appointment = models.ForeignKey(
         Appointment, on_delete=models.DO_NOTHING, related_name="reminders"
     )
