@@ -1544,3 +1544,42 @@ def test_column_name_with_double_quote_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="double quote"):
         generate_create_table_sql("some_plugin", model)
+
+
+INJECTED_NAME = "x ON some_plugin.room (name); DROP TABLE other_ns.secrets; --"
+
+
+def _model_with_meta(qualname: str, meta_attrs: dict) -> type[CustomModel]:
+    """Build a one-field CustomModel whose Meta carries the given attributes."""
+    return type(
+        qualname,
+        (CustomModel,),
+        {
+            "__module__": "some_plugin.models",
+            "__qualname__": qualname,
+            "Meta": type("Meta", (), {"app_label": "some_plugin", **meta_attrs}),
+            "name": models.TextField(),
+        },
+    )
+
+
+@patch("plugin_runner.ddl.IS_SQLITE", False)
+def test_index_name_is_not_spliced_into_ddl() -> None:
+    """An index name that is not a plain identifier should be refused rather than spliced into DDL."""
+    model = _model_with_meta(
+        "RoomA", {"indexes": [models.Index(fields=["name"], name=INJECTED_NAME)]}
+    )
+
+    with pytest.raises(ValueError, match="letters, digits"):
+        generate_create_table_sql("some_plugin", model)
+
+
+@patch("plugin_runner.ddl.IS_SQLITE", False)
+def test_constraint_name_is_not_spliced_into_ddl() -> None:
+    """A constraint name that is not a plain identifier should be refused rather than spliced into DDL."""
+    model = _model_with_meta(
+        "RoomB", {"constraints": [models.UniqueConstraint(fields=["name"], name=INJECTED_NAME)]}
+    )
+
+    with pytest.raises(ValueError, match="letters, digits"):
+        generate_create_table_sql("some_plugin", model)

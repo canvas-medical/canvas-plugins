@@ -1,3 +1,4 @@
+import re
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -21,6 +22,15 @@ def _quote_identifier(name: str) -> str:
     if '"' in name or "\x00" in name:
         raise ValueError(f"Identifier {name!r} contains a double quote or NUL character")
     return connection.ops.quote_name(name)
+
+
+def _bare_index_name(name: str) -> str:
+    """Refuse an index or constraint name that is not a plain identifier, since it is emitted unquoted."""
+    if not re.fullmatch(r"[A-Za-z0-9_]+", name):
+        raise ValueError(
+            f"Index or constraint name {name!r} may contain only letters, digits and _"
+        )
+    return name
 
 
 def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) -> str:
@@ -244,7 +254,7 @@ def generate_index_sql(
     Returns:
         CREATE INDEX SQL statement.
     """
-    index_name = f"{schema_name}_{table_name}_{index.name}"
+    index_name = f"{schema_name}_{table_name}_{_bare_index_name(index.name)}"
 
     # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
     quoted_table = _quote_identifier(table_name)
@@ -299,7 +309,7 @@ def generate_constraint_sql(
     Returns:
         CREATE UNIQUE INDEX IF NOT EXISTS SQL statement.
     """
-    index_name = f"{schema_name}_{table_name}_{constraint.name}"
+    index_name = f"{schema_name}_{table_name}_{_bare_index_name(constraint.name)}"
     quoted_table = _quote_identifier(table_name)
     table_full_name = quoted_table if is_sqlite else f"{schema_name}.{quoted_table}"
     columns = (
