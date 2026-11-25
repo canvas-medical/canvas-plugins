@@ -242,7 +242,8 @@ def _medication_codes(medication: Medication) -> tuple[str, str | None]:
                 "first-coding display. E.g. 'metformin' matches "
                 "'Metformin 500 mg tablet'."
             ),
-            apply=lambda qs, v: qs.filter(codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "active_only": FilterSpec(
             type="boolean",
@@ -309,7 +310,8 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
             description=(
                 "Case-insensitive substring match on the coding display (e.g. 'diabetes')."
             ),
-            apply=lambda qs, v: qs.filter(codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "code_contains": FilterSpec(
             type="string",
@@ -317,7 +319,8 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the coding code "
                 "(e.g. 'E11' for type-2 diabetes ICD-10 family)."
             ),
-            apply=lambda qs, v: qs.filter(codings__code__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__code__icontains=v),
+            distinct=True,
         ),
         "active_only": FilterSpec(
             type="boolean",
@@ -386,7 +389,8 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the lab's coding name "
                 "(e.g. 'a1c', 'hemoglobin')."
             ),
-            apply=lambda qs, v: qs.filter(codings__name__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__name__icontains=v),
+            distinct=True,
         ),
         "observed_on_or_after": FilterSpec(
             type="string",
@@ -496,7 +500,8 @@ def _serialize_assessment(assessment: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the allergen's display "
                 "(e.g., 'penicillin', 'peanut', 'sulfa')."
             ),
-            apply=lambda qs, v: qs.filter(codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "severity": FilterSpec(
             type="string",
@@ -550,7 +555,8 @@ def _serialize_allergy(allergy: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the vaccine's display "
                 "(e.g., 'influenza', 'covid', 'tdap', 'mmr')."
             ),
-            apply=lambda qs, v: qs.filter(codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "given_on_or_after": FilterSpec(
             type="string",
@@ -2590,7 +2596,8 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
             description=(
                 "Case-insensitive substring match on the medication's first-coding display."
             ),
-            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "started_on_or_after": FilterSpec(
             type="string",
@@ -2705,7 +2712,8 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
             description=(
                 "Case-insensitive substring match on the medication's first-coding display."
             ),
-            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "status": FilterSpec(
             type="string",
@@ -3140,7 +3148,8 @@ def _serialize_interview(interview: Any) -> dict[str, Any]:
             description=(
                 "Case-insensitive substring match on the stopped medication's first-coding display."
             ),
-            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v).distinct(),
+            apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "rationale_contains": FilterSpec(
             type="string",
@@ -4017,6 +4026,7 @@ standard_tools.originate_command_tool(
                 "How many of the dispense unit to dispense (e.g. 30 tablets), more than 0. "
                 "Optional; set it only with `representative_ndc`."
             ),
+            pre_build_only=True,
         ),
         "substitutions": EffectField(
             type="string",
