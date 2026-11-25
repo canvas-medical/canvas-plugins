@@ -312,7 +312,7 @@ from .prescription_change import (
 )
 from .procedure import Procedure, ProcedureCoding, ProcedureStatus
 from .protocol_current import ProtocolCurrent
-from .protocol_override import ProtocolOverride
+from .protocol_override import ProtocolOverride, ProtocolOverrideSnoozeReason
 from .provenance import Provenance
 from .questionnaire import (
     Interview,
@@ -711,6 +711,7 @@ __all__ = __exports__ = (
     "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
+    "ProtocolOverrideSnoozeReason",
     "Provenance",
     "Question",
     "QuestionEnablementCondition",

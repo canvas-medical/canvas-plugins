@@ -222,7 +222,7 @@ from .prescription_change import (
 )
 from .procedure import ProcedureCodingFactory, ProcedureFactory
 from .protocol_current import ProtocolCurrentFactory
-from .protocol_override import ProtocolOverrideFactory
+from .protocol_override import ProtocolOverrideFactory, ProtocolOverrideSnoozeReasonFactory
 from .provenance import ProvenanceFactory
 from .questionnaire import (
     InterviewFactory,
@@ -495,6 +495,7 @@ __all__ = (
     "ProcedureFactory",
     "ProtocolCurrentFactory",
     "ProtocolOverrideFactory",
+    "ProtocolOverrideSnoozeReasonFactory",
     "ProvenanceFactory",
     "QuestionFactory",
     "QuestionnaireFactory",

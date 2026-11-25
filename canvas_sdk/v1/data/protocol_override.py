@@ -43,6 +43,21 @@ class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin
         return self.filter(protocol_key=protocol_key, is_snooze=True)
 
 
+class ProtocolOverrideSnoozeReason(IdentifiableModel):
+    """A reason a protocol can be snoozed for."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_protocoloverridesnoozereason_001"
+
+    objects: models.Manager["ProtocolOverrideSnoozeReason"]
+
+    snooze_reason = models.CharField(max_length=64)
+    description = models.CharField(max_length=256)
+    snomed_code = models.CharField(max_length=64)
+    active = models.BooleanField()
+    sort = models.PositiveIntegerField()
+
+
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
 
 
@@ -71,7 +86,9 @@ class ProtocolOverride(TimestampedModel, IdentifiableModel):
     is_snooze = models.BooleanField()
     snooze_date = models.DateField()
     snoozed_days = models.IntegerField()
-    # reason_id = models.BigIntegerField()
+    reason = models.ForeignKey(
+        "v1.ProtocolOverrideSnoozeReason", on_delete=models.DO_NOTHING, related_name="overrides"
+    )
     snooze_comment = models.TextField()
     narrative = models.CharField(max_length=512)
     # note_id = models.BigIntegerField()
@@ -84,4 +101,5 @@ __exports__ = (
     "IntervalUnit",
     "Status",
     "ProtocolOverride",
+    "ProtocolOverrideSnoozeReason",
 )

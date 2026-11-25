@@ -3,8 +3,23 @@ import datetime
 import factory
 from django.utils import timezone
 
-from canvas_sdk.v1.data import ProtocolOverride
+from canvas_sdk.v1.data import ProtocolOverride, ProtocolOverrideSnoozeReason
 from canvas_sdk.v1.data.protocol_override import IntervalUnit, Status
+
+
+class ProtocolOverrideSnoozeReasonFactory(
+    factory.django.DjangoModelFactory[ProtocolOverrideSnoozeReason],
+):
+    """Factory for creating a ProtocolOverrideSnoozeReason."""
+
+    class Meta:
+        model = ProtocolOverrideSnoozeReason
+
+    snooze_reason = factory.Sequence(lambda n: f"REASON_{n}")
+    description = factory.Faker("sentence", nb_words=3)
+    snomed_code = "105480006"
+    active = True
+    sort = 1
 
 
 class ProtocolOverrideFactory(factory.django.DjangoModelFactory[ProtocolOverride]):
@@ -24,6 +39,7 @@ class ProtocolOverrideFactory(factory.django.DjangoModelFactory[ProtocolOverride
     is_snooze = False
     snooze_date = datetime.date(1000, 1, 1)
     snoozed_days = 0
+    reason = factory.SubFactory(ProtocolOverrideSnoozeReasonFactory)
     snooze_comment = ""
     narrative = ""
     cycle_quantity = 1
