@@ -447,10 +447,29 @@ class _SafeModelMeta:
         "verbose_name",
         "verbose_name_plural",
     )
-    __slots__ = ("_options",)
+    __slots__ = ("_options", "_package_name")
 
-    def __init__(self, options: Any) -> None:
+    def __init__(self, options: Any, package_name: str) -> None:
         object.__setattr__(self, "_options", options)
+        object.__setattr__(self, "_package_name", package_name)
+
+    def _is_other_plugins_relation(self, field: Any) -> bool:
+        """Whether `field` is a reverse relation from another plugin's CustomModel.
+
+        Django lists a reverse relation on the concrete model for every plugin, but its
+        table lives in the owning plugin's schema, outside every other plugin's search path.
+        """
+        # Imported lazily, like this module's other Django and SDK imports.
+        from canvas_sdk.v1.data.base import CustomModel
+
+        related_model = field.related_model
+        return (
+            field.auto_created
+            and not field.concrete
+            and isinstance(related_model, type)
+            and issubclass(related_model, CustomModel)
+            and related_model._meta.app_label != object.__getattribute__(self, "_package_name")
+        )
 
     def __getattr__(self, name: str) -> Any:
         if name not in _SafeModelMeta.__exports__:
@@ -459,7 +478,7 @@ class _SafeModelMeta:
         options = object.__getattribute__(self, "_options")
 
         if name == "get_field":
-            return lambda field_name: _SafeField(options.get_field(field_name))
+            return self._get_field
 
         if name == "get_fields":
             return lambda include_parents=True, include_hidden=False: tuple(
@@ -467,6 +486,7 @@ class _SafeModelMeta:
                 for field in options.get_fields(
                     include_parents=include_parents, include_hidden=include_hidden
                 )
+                if not self._is_other_plugins_relation(field)
             )
 
         if name in ("concrete_fields", "fields", "local_fields"):
@@ -476,6 +496,15 @@ class _SafeModelMeta:
             return _SafeField(options.pk) if options.pk is not None else None
 
         return str(getattr(options, name))
+
+    def _get_field(self, field_name: str) -> _SafeField:
+        from django.core.exceptions import FieldDoesNotExist
+
+        options = object.__getattribute__(self, "_options")
+        field = options.get_field(field_name)
+        if self._is_other_plugins_relation(field):
+            raise FieldDoesNotExist(f"{options.object_name} has no field named '{field_name}'")
+        return _SafeField(field)
 
     def __setattr__(self, attr: str, value: Any) -> NoReturn:
         raise AttributeError("Cannot set attributes on model metadata")
@@ -2057,7 +2086,7 @@ class Sandbox:
             else:
                 # An SDK model's metadata is readable as a field-introspection view.
                 if name == "_meta" and _is_model_options(raw_meta := getattr(_ob, "_meta", None)):
-                    return _SafeModelMeta(raw_meta)
+                    return _SafeModelMeta(raw_meta, self.package_name)
 
                 # Nothing can read dunder attributes except those on our safe list
                 if (

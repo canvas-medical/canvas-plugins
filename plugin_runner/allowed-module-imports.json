@@ -1303,6 +1303,7 @@
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AppointmentMetadata",
+    "AppointmentReminder",
     "AppointmentScheduledTogether",
     "AssessCodingGapEvent",
     "Assessment",
@@ -1319,6 +1320,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "BusinessLineSetting",
     "Calendar",
     "Campaign",
     "CancelPrescription",
@@ -1541,6 +1543,7 @@
     "Organization",
     "OrganizationAddress",
     "OrganizationContactPoint",
+    "OrganizationSetting",
     "OrganizationalEntity",
     "Patient",
     "PatientAddress",
@@ -1578,6 +1581,7 @@
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
+    "PracticeLocationLabAccountNumber",
     "PracticeLocationSetting",
     "Prescription",
     "PrescriptionChangeRequest",
@@ -1640,6 +1644,8 @@
     "StaffContactPoint",
     "StaffExternalIdentifier",
     "StaffIdentityVerification",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
@@ -1692,6 +1698,8 @@
     "AppointmentLabel",
     "AppointmentMetadata",
     "AppointmentProgressStatus",
+    "AppointmentReminder",
+    "AppointmentReminderStatus",
     "AppointmentScheduledTogether"
   ],
   "canvas_sdk.v1.data.assessment": [
@@ -1727,6 +1735,7 @@
   ],
   "canvas_sdk.v1.data.business_line": [
     "BusinessLine",
+    "BusinessLineSetting",
     "BusinessLineState"
   ],
   "canvas_sdk.v1.data.calendar": [
@@ -2058,6 +2067,9 @@
     "LabValue",
     "LabValueCoding",
     "LabValuePerformer",
+    "PracticeLocationLabAccountNumber",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "TransmissionType"
   ],
   "canvas_sdk.v1.data.letter": [
@@ -2121,7 +2133,8 @@
   "canvas_sdk.v1.data.organization": [
     "Organization",
     "OrganizationAddress",
-    "OrganizationContactPoint"
+    "OrganizationContactPoint",
+    "OrganizationSetting"
   ],
   "canvas_sdk.v1.data.organizational_entity": [
     "OrganizationalEntity"

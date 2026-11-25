@@ -1,6 +1,11 @@
 import factory
 
-from canvas_sdk.v1.data import Organization, OrganizationAddress, OrganizationContactPoint
+from canvas_sdk.v1.data import (
+    Organization,
+    OrganizationAddress,
+    OrganizationContactPoint,
+    OrganizationSetting,
+)
 from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse
 
 
@@ -48,3 +53,19 @@ class OrganizationContactPointFactory(factory.django.DjangoModelFactory[Organiza
     value = "8003701416"
     use = ContactPointUse.WORK
     rank = 1
+
+
+class OrganizationSettingFactory(factory.django.DjangoModelFactory[OrganizationSetting]):
+    """Factory for creating an OrganizationSetting, by default the appointment reminder schedule.
+
+    Setting names are unique, so creating a name that already exists returns the existing row
+    and ignores the other arguments; update that row to change its value.
+    """
+
+    class Meta:
+        model = OrganizationSetting
+        django_get_or_create = ("name",)
+
+    organization = factory.SubFactory(OrganizationFactory)
+    name = "appointmentReminders"
+    value = factory.LazyFunction(lambda: {"daysAhead": 4, "hourOfDay": 13})

@@ -1,6 +1,64 @@
 # CHANGELOG
 
 
+## v1.22.1 (2026-11-25)
+
+### Bug Fixes
+
+- **sandbox**: Hide other plugins' custom model reverse relations from model metadata (KOALA-8650)
+  ([#2039](https://github.com/canvas-medical/canvas-plugins/pull/2039),
+  [`15553b1`](https://github.com/canvas-medical/canvas-plugins/commit/15553b1d3319ceb9f31da4d90d01d815688f6ffb))
+
+
+## v1.22.0 (2026-11-25)
+
+### Features
+
+- **data**: Expose appointment reminders and reminder configuration in the data module (KOALA-8625)
+  ([#2031](https://github.com/canvas-medical/canvas-plugins/pull/2031),
+  [`f89dd1d`](https://github.com/canvas-medical/canvas-plugins/commit/f89dd1d69efa604b0ea2fe232a6ce1ef11b19757))
+
+
+## v1.21.0 (2026-11-25)
+
+### Features
+
+- **data**: Expose Health Gorilla lab account numbers in the data module (KOALA-8653)
+  ([#2037](https://github.com/canvas-medical/canvas-plugins/pull/2037),
+  [`c0ca185`](https://github.com/canvas-medical/canvas-plugins/commit/c0ca185a3f11966cc174470e090071a4b2aef18e))
+
+
+## v1.20.0 (2026-11-25)
+
+### Bug Fixes
+
+- Quote custom model table and column names in generated ddl
+  ([#2034](https://github.com/canvas-medical/canvas-plugins/pull/2034),
+  [`eba29d1`](https://github.com/canvas-medical/canvas-plugins/commit/eba29d10ecc0b94cf216adb005475e6838e14268))
+
+- **cli**: Reconnect canvas logs after a dropped connection
+  ([#2041](https://github.com/canvas-medical/canvas-plugins/pull/2041),
+  [`4d83e3f`](https://github.com/canvas-medical/canvas-plugins/commit/4d83e3f5decc81afd9b8defe0d9239e9d90abf8c))
+
+Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+- Add questionnaire tools for agents
+  ([#2042](https://github.com/canvas-medical/canvas-plugins/pull/2042),
+  [`061adf3`](https://github.com/canvas-medical/canvas-plugins/commit/061adf3aec6fd831ff3091c24500a71edbd063e0))
+
+Co-authored-by: canvas-sisyphus[bot] <281418598+canvas-sisyphus[bot]@users.noreply.github.com>
+
+- Present a client certificate for mutual TLS from Http
+  ([#2030](https://github.com/canvas-medical/canvas-plugins/pull/2030),
+  [`9be42b3`](https://github.com/canvas-medical/canvas-plugins/commit/9be42b31eb591488f5f320a020d314c0c91ed234))
+
+- **cli**: Warn when a query runs once per item of a loop
+  ([#2032](https://github.com/canvas-medical/canvas-plugins/pull/2032),
+  [`028ff89`](https://github.com/canvas-medical/canvas-plugins/commit/028ff89c5ed26a6af76fabc44f876c373c21c218))
+
+
 ## v1.19.0 (2026-11-24)
 
 ### Features
