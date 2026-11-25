@@ -37,7 +37,33 @@ class BusinessLine(TimestampedModel, IdentifiableModel):
         return None
 
 
+class BusinessLineSetting(TimestampedModel):
+    """A business line setting.
+
+    Readable names are ``appointmentReminders`` (``{"daysAhead": int, "hourOfDay": int}``) and
+    ``appointmentReminderCustomization`` (the text added to reminder messages); other
+    business line settings are not exposed.
+
+    Canvas uses a business line's ``appointmentReminderCustomization`` in place of the
+    organization's when business lines are enabled, the business line is active, the reminder
+    is for one of its patients, and the business line's value is not empty; otherwise the
+    organization's text is used. The text may hold ``{{...}}`` template variables that
+    Canvas fills in when it sends. The reminder schedule always comes from the organization's
+    ``appointmentReminders``.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_businesslinesetting_001"
+
+    business_line = models.ForeignKey(
+        BusinessLine, on_delete=models.DO_NOTHING, related_name="settings"
+    )
+    name = models.CharField(max_length=100)
+    value = models.JSONField(default=dict)
+
+
 __exports__ = (
     "BusinessLineState",
     "BusinessLine",
+    "BusinessLineSetting",
 )

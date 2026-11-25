@@ -119,8 +119,44 @@ class AppointmentMetadata(MetadataModel):
     )
 
 
+class AppointmentReminderStatus(models.TextChoices):
+    """AppointmentReminderStatus."""
+
+    SENT = "sent", "Successfully sent"
+    FAILED = "failed", "Failed to send"
+
+
+class AppointmentReminder(TimestampedModel):
+    """A reminder Canvas sent, or failed to send, for an appointment.
+
+    Canvas creates one row per channel it tries: ``phone_number`` is set for a text message and
+    ``email`` for an email. ``status`` is null while the send is in progress, and stays null if
+    the attempt raised before recording a result.
+
+    For telehealth appointments, the connection instructions Canvas sends before the visit, and
+    any resend from the note, also create rows; a row does not record which message it was.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_appointmentreminder_001"
+
+    # The reminder's internal id is sensitive and never exposed, so dbid holds the same public UUID as id.
+    dbid = models.UUIDField(primary_key=True, editable=False)  # type: ignore[assignment]
+    id = models.UUIDField(editable=False, unique=True)
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.DO_NOTHING, related_name="reminders"
+    )
+    phone_number = models.CharField(max_length=100, null=True, blank=True, default=None)
+    email = models.CharField(max_length=100, null=True, blank=True, default=None)
+    status = models.CharField(
+        max_length=10, choices=AppointmentReminderStatus.choices, null=True, default=None
+    )
+
+
 __exports__ = (
     "AppointmentProgressStatus",
+    "AppointmentReminder",
+    "AppointmentReminderStatus",
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
