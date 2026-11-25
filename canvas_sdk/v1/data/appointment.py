@@ -140,6 +140,7 @@ class AppointmentReminder(TimestampedModel):
     class Meta:
         db_table = "canvas_sdk_data_api_appointmentreminder_001"
 
+    # The reminder's internal id is sensitive and never exposed, so dbid holds the same public UUID as id.
     dbid = models.UUIDField(primary_key=True, editable=False)  # type: ignore[assignment]
     id = models.UUIDField(editable=False, unique=True)
     appointment = models.ForeignKey(
