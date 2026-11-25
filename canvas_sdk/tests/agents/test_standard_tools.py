@@ -46,6 +46,7 @@ from canvas_sdk.test_utils.factories import (
     PatientFactory,
     PracticeLocationFactory,
     ProtocolCurrentFactory,
+    QuestionnaireFactory,
     ReasonForVisitSettingCodingFactory,
     ServiceProviderFactory,
     StaffFactory,
@@ -1360,6 +1361,7 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
     specialist = ServiceProviderFactory.create()
     provider = StaffFactory.create()
     location = PracticeLocationFactory.create()
+    questionnaire = QuestionnaireFactory.create()
     visit = NoteTypeFactory.create(category="encounter", is_scheduleable=True, is_active=True)
     note = NoteFactory.create(patient=patient)
     booked = Appointment.objects.create(
@@ -1460,6 +1462,7 @@ def _write_tool_arguments(patient: Any) -> dict[str, dict[str, Any]]:
         "originate_refer": {"service_provider_id": str(specialist.id)},
         "originate_reason_for_visit": {"coding_id": str(reason.id)},
         "originate_hpi": {"narrative": "Two days of cough."},
+        "originate_questionnaire": {"questionnaire_id": str(questionnaire.id)},
         "book_appointment": {
             "provider_id": str(provider.id),
             "practice_location_id": str(location.id),

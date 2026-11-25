@@ -15,7 +15,8 @@ NOTICE_INTERVAL_SECONDS = 24 * 60 * 60
 END_OF_SUPPORT = "December 14, 2026"
 
 
-def _notice_label() -> str:
+def notice_label() -> str:
+    """Return the label that starts a CLI notice on stderr, in yellow on a terminal."""
     return "\033[1;33m[notice]\033[0m" if sys.stderr.isatty() else "[notice]"
 
 
@@ -33,7 +34,7 @@ def print_install_deprecation(host: str) -> None:
         return
 
     print(
-        f"{_notice_label()} Installing plugins straight onto an instance with credentials.ini "
+        f"{notice_label()} Installing plugins straight onto an instance with credentials.ini "
         "is deprecated in favor of `canvas login` and `canvas deploy`, and is no longer "
         f"supported as of {END_OF_SUPPORT}. See {MIGRATION_URL}",
         file=sys.stderr,
@@ -48,7 +49,7 @@ def print_credentials_ini_deprecation(command: str) -> None:
             ``namespace list``.
     """
     print(
-        f"{_notice_label()} `canvas {command}` with credentials.ini is deprecated in favor of "
+        f"{notice_label()} `canvas {command}` with credentials.ini is deprecated in favor of "
         f"`canvas login`, and is no longer supported as of {END_OF_SUPPORT}. See {MIGRATION_URL}",
         file=sys.stderr,
         flush=True,
@@ -68,7 +69,7 @@ def show_platform_notice(app_dir: str) -> None:
         return
 
     print(
-        f"{_notice_label()} Changes to authentication and deployment are coming to the canvas "
+        f"{notice_label()} Changes to authentication and deployment are coming to the canvas "
         f"CLI: installing plugins with credentials.ini is no longer supported as of "
         f"{END_OF_SUPPORT}. See {MIGRATION_URL} for more.",
         file=sys.stderr,

@@ -22,11 +22,14 @@ from textwrap import dedent
 import pytest
 import requests
 import typer
+from pytest_django import DjangoAssertNumQueries
 
 from canvas_cli.apps.plugin.plugin import _lint_plugin_static
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
 from canvas_sdk.handlers.simple_api import SimpleAPI
 from canvas_sdk.handlers.simple_api.security import APIKeyAuthMixin, Credentials
+from canvas_sdk.test_utils.factories import ConditionFactory, PatientFactory
+from canvas_sdk.v1.data import Patient
 from plugin_runner.sandbox import ALLOWED_MODULES, sandbox_from_module
 
 
@@ -620,6 +623,188 @@ def test_clean_plugin_no_findings() -> None:
         _CUSTOM_DATA,
     )
     assert lint_plugin(root, _CUSTOM_DATA) == []
+
+
+# ── lint-logic: query rules ───────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "source, line",
+    [
+        pytest.param(
+            """
+            def compute(self):
+                for note in Note.objects.filter(patient__id=self.target):
+                    staff = Staff.objects.get(dbid=note.provider_id)
+            """,
+            4,
+            id="lookup_per_row_of_a_queryset",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                patients = Patient.objects.filter(active=True)
+                for patient in patients:
+                    if patient.conditions.filter(clinical_status="active").exists():
+                        pass
+            """,
+            5,
+            id="related_manager_per_row_of_a_queryset_held_in_a_local",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                return [p.conditions.count() for p in Patient.objects.all()]
+            """,
+            3,
+            id="related_count_in_a_comprehension",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                events = requests.get(url, timeout=10).json()["items"]
+                for event in events:
+                    Appointment.objects.filter(external_id=event["id"]).first()
+            """,
+            5,
+            id="lookup_per_item_of_an_http_response",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                mappings = list(StaffCalendarMapping.objects.filter(active=True))
+                for i, mapping in enumerate(sorted(mappings, key=str)):
+                    Appointment.objects.filter(provider__id=mapping.staff_id).count()
+            """,
+            5,
+            id="queryset_wrapped_in_list_sorted_and_enumerate",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                for p in Patient.objects.prefetch_related("conditions"):
+                    p.notes.all()
+            """,
+            4,
+            id="a_different_relation_than_the_one_prefetched",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                for p in Patient.objects.prefetch_related(Prefetch("conditions", to_attr="open")):
+                    p.conditions.all()
+            """,
+            4,
+            id="manager_read_when_the_prefetch_lands_on_another_attribute",
+        ),
+    ],
+)
+def test_query_in_loop_flagged(source: str, line: int) -> None:
+    """A query run once per row of a queryset or per item of an HTTP response is a warning."""
+    root = _plugin({"handlers/h.py": source})
+    findings = [f for f in lint_plugin(root, {}) if f.code == "query-in-loop"]
+
+    assert [(f.severity, f.location) for f in findings] == [("warning", f"handlers/h.py:{line}")]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param(
+            """
+            def compute(self):
+                for p in Patient.objects.prefetch_related("conditions"):
+                    p.conditions.all()
+            """,
+            id="prefetched_relation",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                patients = Patient.objects.prefetch_related(Prefetch("conditions"))
+                for p in patients:
+                    p.conditions.count()
+            """,
+            id="prefetched_relation_through_a_prefetch_object",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                for event in self.response.json():
+                    Appointment.objects.create(external_id=event["id"])
+            """,
+            id="write_in_a_loop",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                staff = {s.dbid: s for s in Staff.objects.all()}
+                for note in Note.objects.filter(patient__id=self.target):
+                    staff.get(note.provider_id)
+            """,
+            id="lookup_built_before_the_loop",
+        ),
+        pytest.param(
+            """
+            def compute(self):
+                for note in Note.objects.all():
+                    note.tags.count(" ")
+            """,
+            id="count_with_an_argument_is_not_a_queryset_count",
+        ),
+    ],
+)
+def test_query_in_loop_not_flagged(source: str) -> None:
+    """A prefetched relation, a write, or a query run once before the loop is not flagged."""
+    root = _plugin({"handlers/h.py": source})
+    assert "query-in-loop" not in _codes(lint_plugin(root, {}))
+
+
+def test_query_in_nested_loops_is_reported_once() -> None:
+    """A query inside two queryset loops is one finding, not one per enclosing loop."""
+    source = """
+        def compute(self):
+            for patient in Patient.objects.all():
+                for note in Note.objects.filter(patient=patient):
+                    Staff.objects.get(dbid=note.provider_id)
+    """
+    root = _plugin({"handlers/h.py": source})
+    findings = [f.location for f in lint_plugin(root, {}) if f.code == "query-in-loop"]
+
+    assert findings == ["handlers/h.py:4", "handlers/h.py:5"]
+
+
+def test_query_in_loop_on_a_prefetched_relation_points_at_all() -> None:
+    """`first()` on a prefetched relation starts its own query, so the advice is to read `all()`."""
+    source = """
+        def compute(self):
+            for m in Medication.objects.prefetch_related("codings"):
+                m.codings.first()
+    """
+    root = _plugin({"handlers/h.py": source})
+    (finding,) = [f for f in lint_plugin(root, {}) if f.code == "query-in-loop"]
+
+    assert "already prefetches" in finding.message
+
+
+@pytest.mark.django_db
+def test_tripwire_prefetch_serves_all_count_and_exists_but_not_filter(
+    django_assert_num_queries: DjangoAssertNumQueries,
+) -> None:
+    """`query-in-loop` exempts a prefetched relation's all/count/exists and still flags its
+    filter. If Django changes which of these reads the prefetch cache, change
+    `_SERVED_BY_PREFETCH` in plugin_lint.py.
+    """
+    patient = PatientFactory.create()
+    ConditionFactory.create_batch(2, patient=patient)
+    (prefetched,) = Patient.objects.filter(dbid=patient.dbid).prefetch_related("conditions")
+
+    with django_assert_num_queries(0):
+        assert len(prefetched.conditions.all()) == 2
+        assert prefetched.conditions.count() == 2
+        assert prefetched.conditions.exists()
+    with django_assert_num_queries(1):
+        assert len(prefetched.conditions.filter(deleted=False)) == 2
 
 
 # ── lint-logic: file traversal & edge cases ───────────────────────────────────

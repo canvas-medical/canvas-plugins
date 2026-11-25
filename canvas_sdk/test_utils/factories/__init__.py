@@ -122,6 +122,9 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
     LabValuePerformerFactory,
+    PracticeLocationLabAccountNumberFactory,
+    StaffLabAccountNumberFactory,
+    StaffLabAccountNumberStaffFactory,
 )
 from .lab_report_template import (
     LabReportTemplateFactory,
@@ -232,6 +235,8 @@ from .questionnaire import (
     QuestionnaireItemGroupFactory,
     QuestionnaireQuestionMapFactory,
     QuestionnaireResultFactory,
+    ResponseOptionFactory,
+    ResponseOptionSetFactory,
 )
 from .reason_for_visit import (
     ReasonForVisitCodingFactory,
@@ -477,6 +482,7 @@ __all__ = (
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationFactory",
+    "PracticeLocationLabAccountNumberFactory",
     "PracticeLocationSettingFactory",
     "PrescriptionChangeRequestCodingFactory",
     "PrescriptionChangeRequestFactory",
@@ -507,6 +513,8 @@ __all__ = (
     "RemoveAllergyEventFactory",
     "RemovePastMedicalHistoryEventFactory",
     "ResolveConditionEventFactory",
+    "ResponseOptionFactory",
+    "ResponseOptionSetFactory",
     "ScheduleDurationFactory",
     "ServiceProviderFactory",
     "ServiceRequestCategoryCodingFactory",
@@ -518,6 +526,8 @@ __all__ = (
     "StaffContactPointFactory",
     "StaffFactory",
     "StaffIdentityVerificationFactory",
+    "StaffLabAccountNumberFactory",
+    "StaffLabAccountNumberStaffFactory",
     "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",

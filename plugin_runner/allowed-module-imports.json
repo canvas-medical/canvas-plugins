@@ -1581,6 +1581,7 @@
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
+    "PracticeLocationLabAccountNumber",
     "PracticeLocationSetting",
     "Prescription",
     "PrescriptionChangeRequest",
@@ -1643,6 +1644,8 @@
     "StaffContactPoint",
     "StaffExternalIdentifier",
     "StaffIdentityVerification",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "StaffLicense",
     "StaffMetadata",
     "StaffPhoto",
@@ -2064,6 +2067,9 @@
     "LabValue",
     "LabValueCoding",
     "LabValuePerformer",
+    "PracticeLocationLabAccountNumber",
+    "StaffLabAccountNumber",
+    "StaffLabAccountNumberStaff",
     "TransmissionType"
   ],
   "canvas_sdk.v1.data.letter": [

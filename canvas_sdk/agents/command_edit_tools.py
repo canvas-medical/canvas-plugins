@@ -17,7 +17,12 @@ from typing import Any
 from uuid import UUID
 
 # Every module whose originate tools stage a draft registers before DRAFT_KINDS is read.
-from canvas_sdk.agents import history_tools, order_tools, visit_tools  # noqa: F401
+from canvas_sdk.agents import (  # noqa: F401
+    history_tools,
+    order_tools,
+    questionnaire_tools,
+    visit_tools,
+)
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_registry import (
     EffectField,
