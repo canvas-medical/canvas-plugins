@@ -1,7 +1,7 @@
 """What reaches Sentry from an agent run's or a handler's exception."""
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock
@@ -26,7 +26,13 @@ from canvas_sdk.tests.utils.test_http import (
     _signed_certificate,
 )
 from canvas_sdk.utils import Http
-from plugin_runner.plugin_runner import LOADED_PLUGINS, PluginRunner, _report_agent_exception
+from plugin_runner.plugin_runner import (
+    LOADED_PLUGINS,
+    PluginRunner,
+    _report_agent_exception,
+    reconcile_plugins,
+    reload_plugin,
+)
 
 CHART_TEXT = "Jane Doe, A1c 9.1"
 
@@ -240,3 +246,105 @@ def test_an_unknown_event_type_reaches_sentry_without_the_events_context(
     assert event.name == "UNKNOWN_EVENT_99999"
     assert sentry_events
     assert CHART_TEXT not in json.dumps(sentry_events)
+
+
+def _plugin_with_secrets(
+    root: Path, manifest: dict[str, Any], secrets_text: str, name: str = "pdmp_probe"
+) -> Path:
+    plugin = root / name
+    plugin.mkdir()
+    (plugin / "CANVAS_MANIFEST.json").write_text(json.dumps({"name": name, **manifest}))
+    (plugin / "SECRETS.json").write_text(secrets_text)
+    return plugin
+
+
+def _load_by_reload(plugin: Path) -> None:
+    reload_plugin(plugin)
+
+
+def _load_by_reconcile(plugin: Path) -> None:
+    reconcile_plugins([plugin.as_posix()])
+
+
+@pytest.mark.parametrize("load", [_load_by_reload, _load_by_reconcile])
+def test_a_namespace_access_error_never_sends_the_plugins_secrets_to_sentry(
+    tmp_path: Path,
+    sentry_events: list[dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+    load: Callable[[Path], None],
+) -> None:
+    """A plugin installed before its namespace key is set fails to load with its secrets loaded."""
+    monkeypatch.setattr("plugin_runner.plugin_runner.IS_SQLITE", False)
+    plugin = _plugin_with_secrets(
+        tmp_path,
+        {
+            "components": {"handlers": []},
+            "custom_data": {"namespace": "acme__pdmp", "access": "read"},
+        },
+        json.dumps({"client_cert": "cert", "client_key": CLIENT_KEY_PEM}),
+    )
+
+    load(plugin)
+    sentry_sdk.flush()
+
+    assert sentry_events
+    assert "PRIVATE KEY" not in json.dumps(sentry_events), "the plugin's secrets reached Sentry"
+
+
+def test_a_failed_namespace_key_check_never_sends_the_access_key_to_sentry(
+    tmp_path: Path,
+    sentry_events: list[dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """verify_plugin_namespace_access holds the key when the auth table lookup raises."""
+    monkeypatch.setattr("plugin_runner.plugin_runner.IS_SQLITE", False)
+
+    def unreachable(namespace: str, key: str) -> str:
+        raise RuntimeError("namespace auth table unreachable")
+
+    monkeypatch.setattr("plugin_runner.namespace.check_namespace_auth_key", unreachable)
+    plugin = _plugin_with_secrets(
+        tmp_path,
+        {
+            "components": {"handlers": []},
+            "custom_data": {"namespace": "acme__pdmp", "access": "read"},
+        },
+        json.dumps({"namespace_read_access_key": CLIENT_KEY_PEM}),
+    )
+
+    reload_plugin(plugin)
+    sentry_sdk.flush()
+
+    assert sentry_events
+    assert "PRIVATE KEY" not in json.dumps(sentry_events), "the access key reached Sentry"
+
+
+@pytest.mark.parametrize(
+    "manifest,secrets_text",
+    [
+        pytest.param(
+            {"components": {"handlers": []}},
+            '{"client_key": ' + json.dumps(CLIENT_KEY_PEM),
+            id="malformed SECRETS.json",
+        ),
+        pytest.param(
+            {},
+            json.dumps({"client_key": CLIENT_KEY_PEM}),
+            id="manifest without components",
+        ),
+    ],
+)
+def test_a_plugin_that_fails_to_load_never_sends_its_secrets_to_sentry(
+    tmp_path: Path,
+    sentry_events: list[dict[str, Any]],
+    manifest: dict[str, Any],
+    secrets_text: str,
+) -> None:
+    """import_plugin's own reports come from frames that hold the secrets or their file's text."""
+    plugin = _plugin_with_secrets(tmp_path, manifest, secrets_text)
+
+    reload_plugin(plugin)
+    sentry_sdk.flush()
+
+    assert sentry_events
+    assert "PRIVATE KEY" not in json.dumps(sentry_events), "the plugin's secrets reached Sentry"

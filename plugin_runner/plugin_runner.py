@@ -1219,8 +1219,11 @@ def synchronize_plugins(run_once: bool = False) -> None:
             if plugin_name:
                 message += f' for plugin "{plugin_name}"'
 
-            log.exception(f"synchronize_plugins: {message}")
-            sentry_sdk.capture_exception(e)
+            # This frame and install_plugin's hold the plugin's secrets.
+            with sentry_sdk.new_scope() as scope:
+                scope.add_event_processor(without_frame_locals)
+                log.exception(f"synchronize_plugins: {message}")
+                sentry_sdk.capture_exception(e)
 
         if run_once:
             break
@@ -1256,8 +1259,11 @@ def synchronize_plugins_and_report_errors() -> None:
                     f"(startup retry {startup_retries}/{STARTUP_RETRY_LIMIT})"
                 )
             else:
-                log.exception("synchronize_plugins: error")
-                sentry_sdk.capture_exception(e)
+                # synchronize_plugins' frame keeps the last plugin's secrets.
+                with sentry_sdk.new_scope() as scope:
+                    scope.add_event_processor(without_frame_locals)
+                    log.exception("synchronize_plugins: error")
+                    sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
         sleep(0.5)
@@ -1423,8 +1429,11 @@ def verify_plugin_namespace_access(
     except NamespaceAccessError:
         raise
     except Exception as e:
-        log.exception(f"Failed to verify namespace access for plugin '{plugin_name}'")
-        sentry_sdk.capture_exception(e)
+        # This frame holds the plugin's secrets and the access key.
+        with sentry_sdk.new_scope() as scope:
+            scope.add_event_processor(without_frame_locals)
+            log.exception(f"Failed to verify namespace access for plugin '{plugin_name}'")
+            sentry_sdk.capture_exception(e)
         raise NamespaceAccessError(
             f"Unexpected error verifying namespace access for plugin '{plugin_name}': {e}"
         ) from e
@@ -1855,8 +1864,11 @@ def import_plugin(path: pathlib.Path) -> bool:
             try:
                 secrets_json = json.load(secrets_file.open())
             except Exception as e:
-                log.exception(f'Unable to load secrets for plugin "{name}"')
-                sentry_sdk.capture_exception(e)
+                # The JSON decoder's frames hold the file's text.
+                with sentry_sdk.new_scope() as scope:
+                    scope.add_event_processor(without_frame_locals)
+                    log.exception(f'Unable to load secrets for plugin "{name}"')
+                    sentry_sdk.capture_exception(e)
 
         # Process custom_data configuration
         namespace_config: dict | None = None
@@ -1914,8 +1926,10 @@ def import_plugin(path: pathlib.Path) -> bool:
                 + cast(list, components.get("agents", []))
             )
         except Exception as e:
-            log.exception(f'Unable to load plugin "{name}"')
-            sentry_sdk.capture_exception(e)
+            with sentry_sdk.new_scope() as scope:
+                scope.add_event_processor(without_frame_locals)
+                log.exception(f'Unable to load plugin "{name}"')
+                sentry_sdk.capture_exception(e)
 
             return False
 
@@ -2075,12 +2089,15 @@ def reconcile_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     for plugin_path in plugin_paths:
         try:
             import_plugin(plugin_path)
-        except NamespaceAccessError as e:
-            log.error(f"Namespace access error loading plugin from '{plugin_path}': {e}")
-            sentry_sdk.capture_exception(e)
         except Exception as e:
-            log.exception(f"Unexpected error loading plugin from '{plugin_path}'")
-            sentry_sdk.capture_exception(e)
+            # import_plugin's frames hold the plugin's secrets.
+            with sentry_sdk.new_scope() as scope:
+                scope.add_event_processor(without_frame_locals)
+                if isinstance(e, NamespaceAccessError):
+                    log.error(f"Namespace access error loading plugin from '{plugin_path}': {e}")
+                else:
+                    log.exception(f"Unexpected error loading plugin from '{plugin_path}'")
+                sentry_sdk.capture_exception(e)
 
     # if a plugin has been uninstalled/disabled remove it from LOADED_PLUGINS
     for name, plugin in LOADED_PLUGINS.copy().items():
@@ -2117,14 +2134,16 @@ def reload_plugin(path: pathlib.Path) -> None:
 
     try:
         loaded = import_plugin(path)
-    except NamespaceAccessError as e:
-        loaded = False
-        log.error(f"Namespace access error loading plugin from '{path}': {e}")
-        sentry_sdk.capture_exception(e)
     except Exception as e:
         loaded = False
-        log.exception(f"Unexpected error loading plugin from '{path}'")
-        sentry_sdk.capture_exception(e)
+        # import_plugin's frames hold the plugin's secrets.
+        with sentry_sdk.new_scope() as scope:
+            scope.add_event_processor(without_frame_locals)
+            if isinstance(e, NamespaceAccessError):
+                log.error(f"Namespace access error loading plugin from '{path}': {e}")
+            else:
+                log.exception(f"Unexpected error loading plugin from '{path}'")
+            sentry_sdk.capture_exception(e)
 
     if loaded:
         # Remove handlers that existed in the previous version but are gone from
