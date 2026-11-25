@@ -551,6 +551,16 @@ _RELATED_READS = {
     "count",
 }
 _SERVED_BY_PREFETCH = {"all", "count", "exists"}
+_QUERY_IN_LOOP = (
+    "This query runs once per item of the loop, so N items cost N database round trips and "
+    "the handler slows as data grows. Fetch the rows before the loop (`prefetch_related(...)`, "
+    "or one `filter(<field>__in=[...])` read into a dict) and look them up inside it."
+)
+_PREFETCH_BYPASSED = (
+    "The loop's queryset already prefetches this relation, but this read starts its own query "
+    "for every item: only `all()`, `count()` and `exists()` read the prefetch. Read `.all()` "
+    "and pick from it in Python, such as `next(iter(item.codings.all()), None)` for `first()`."
+)
 _WRITES = {
     "create",
     "bulk_create",
@@ -623,6 +633,8 @@ def _prefetched(sources: list[ast.expr]) -> set[str]:
                 continue
             for arg in link.args:
                 if isinstance(arg, ast.Call) and _call_name(arg) == "Prefetch" and arg.args:
+                    if any(keyword.arg == "to_attr" for keyword in arg.keywords):
+                        continue  # the rows land on `to_attr`; the relation's manager is uncached
                     arg = arg.args[0]
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                     names.add(arg.value.split("__")[0])
@@ -678,6 +690,7 @@ def _query_in_loop_findings(plugin_dir: Path) -> list[LintFinding]:
                     for call in ast.walk(part):
                         if not isinstance(call, ast.Call) or id(call) in seen:
                             continue
+                        relation = None
                         if _reaches_objects(call):
                             seen.update(id(link) for link in _chain(call))
                             if _call_name(call) in _WRITES:
@@ -691,17 +704,9 @@ def _query_in_loop_findings(plugin_dir: Path) -> list[LintFinding]:
                             seen.add(id(call))
                         else:
                             continue
+                        message = _PREFETCH_BYPASSED if relation in prefetched else _QUERY_IN_LOOP
                         findings.append(
-                            LintFinding(
-                                "warning",
-                                f"{rel}:{call.lineno}",
-                                "query-in-loop",
-                                "This query runs once per item of the loop, so N items cost N "
-                                "database round trips and the handler slows as data grows. "
-                                "Fetch the rows before the loop (`prefetch_related(...)`, or one "
-                                "`filter(<field>__in=[...])` read into a dict) and look them up "
-                                "inside it.",
-                            )
+                            LintFinding("warning", f"{rel}:{call.lineno}", "query-in-loop", message)
                         )
     return findings
 

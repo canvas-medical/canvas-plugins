@@ -18,11 +18,11 @@ import json
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
-from typing import Any
 
 import pytest
 import requests
 import typer
+from pytest_django import DjangoAssertNumQueries
 
 from canvas_cli.apps.plugin.plugin import _lint_plugin_static
 from canvas_cli.apps.plugin.plugin_lint import lint_plugin
@@ -688,6 +688,15 @@ def test_clean_plugin_no_findings() -> None:
             4,
             id="a_different_relation_than_the_one_prefetched",
         ),
+        pytest.param(
+            """
+            def compute(self):
+                for p in Patient.objects.prefetch_related(Prefetch("conditions", to_attr="open")):
+                    p.conditions.all()
+            """,
+            4,
+            id="manager_read_when_the_prefetch_lands_on_another_attribute",
+        ),
     ],
 )
 def test_query_in_loop_flagged(source: str, line: int) -> None:
@@ -765,9 +774,22 @@ def test_query_in_nested_loops_is_reported_once() -> None:
     assert findings == ["handlers/h.py:4", "handlers/h.py:5"]
 
 
+def test_query_in_loop_on_a_prefetched_relation_points_at_all() -> None:
+    """`first()` on a prefetched relation starts its own query, so the advice is to read `all()`."""
+    source = """
+        def compute(self):
+            for m in Medication.objects.prefetch_related("codings"):
+                m.codings.first()
+    """
+    root = _plugin({"handlers/h.py": source})
+    (finding,) = [f for f in lint_plugin(root, {}) if f.code == "query-in-loop"]
+
+    assert "already prefetches" in finding.message
+
+
 @pytest.mark.django_db
 def test_tripwire_prefetch_serves_all_count_and_exists_but_not_filter(
-    django_assert_num_queries: Any,
+    django_assert_num_queries: DjangoAssertNumQueries,
 ) -> None:
     """`query-in-loop` exempts a prefetched relation's all/count/exists and still flags its
     filter. If Django changes which of these reads the prefetch cache, change
