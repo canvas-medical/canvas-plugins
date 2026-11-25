@@ -188,7 +188,7 @@ from .patient_administrative_document import (
 )
 from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
 from .payment_card import PaymentCardFactory
-from .payment_collection import PaymentCollectionFactory
+from .payment_collection import CreditCardChargeFactory, PaymentCollectionFactory
 from .plan import PlanFactory
 from .plugin_command import PluginCommandFactory
 from .population_health import (
@@ -255,6 +255,7 @@ from .referral import (
 from .remove_allergy_event import RemoveAllergyEventFactory
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEventFactory
 from .resolve_condition_event import ResolveConditionEventFactory
+from .role import AuthGroupFactory, RoleFactory, RoleGroupFactory, RoleGroupGroupFactory
 from .service_provider import ServiceProviderFactory
 from .service_request import (
     ServiceRequestCategoryCodingFactory,
@@ -297,6 +298,7 @@ __all__ = (
     "AppointmentReminderFactory",
     "AssessCodingGapEventFactory",
     "AssessmentFactory",
+    "AuthGroupFactory",
     "AuthorizationDiagnosisCodeFactory",
     "AuthorizationFactory",
     "BaseRemittanceAdviceClaimFactory",
@@ -348,6 +350,7 @@ __all__ = (
     "CoverageFactory",
     "CoveragePostingFactory",
     "CreateCodingGapEventFactory",
+    "CreditCardChargeFactory",
     "CustomCommandFactory",
     "DeferCodingGapEventFactory",
     "DetectedIssueFactory",
@@ -515,6 +518,9 @@ __all__ = (
     "ResolveConditionEventFactory",
     "ResponseOptionFactory",
     "ResponseOptionSetFactory",
+    "RoleFactory",
+    "RoleGroupFactory",
+    "RoleGroupGroupFactory",
     "ScheduleDurationFactory",
     "ServiceProviderFactory",
     "ServiceRequestCategoryCodingFactory",

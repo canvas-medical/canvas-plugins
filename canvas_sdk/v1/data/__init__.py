@@ -265,7 +265,7 @@ from .patient_consent import (
 )
 from .patient_group import PatientGroup, PatientGroupMember
 from .payment_card import PaymentCard
-from .payment_collection import PaymentCollection
+from .payment_collection import CreditCardCharge, CreditCardChargeState, PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
@@ -349,6 +349,7 @@ from .remove_allergy_event import RemoveAllergyEvent
 from .remove_past_medical_history_event import RemovePastMedicalHistoryEvent
 from .report import Report
 from .resolve_condition_event import ResolveConditionEvent
+from .role import AuthGroup, Role, RoleGroup, RoleGroupGroup
 from .service_provider import ServiceProvider
 from .service_request import (
     ServiceRequest,
@@ -415,6 +416,7 @@ __all__ = __exports__ = (
     "Assessment",
     "Authorization",
     "AuthorizationDiagnosisCode",
+    "AuthGroup",
     "AttributeHub",
     "BannerAlert",
     "BasePosting",
@@ -487,6 +489,8 @@ __all__ = __exports__ = (
     "CustomModel",
     "CoveragePosting",
     "CreateCodingGapEvent",
+    "CreditCardCharge",
+    "CreditCardChargeState",
     "CurrentNoteStateEvent",
     "DeferCodingGapEvent",
     "DetectedIssue",
@@ -733,6 +737,9 @@ __all__ = __exports__ = (
     "RemovePastMedicalHistoryEvent",
     "Report",
     "ResolveConditionEvent",
+    "Role",
+    "RoleGroup",
+    "RoleGroupGroup",
     "ResponseOption",
     "ResponseOptionSet",
     "RemarkCode",
