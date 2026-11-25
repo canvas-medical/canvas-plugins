@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.22.0 (2026-11-25)
+
+### Features
+
+- **data**: Expose appointment reminders and reminder configuration in the data module (KOALA-8625)
+  ([#2031](https://github.com/canvas-medical/canvas-plugins/pull/2031),
+  [`f89dd1d`](https://github.com/canvas-medical/canvas-plugins/commit/f89dd1d69efa604b0ea2fe232a6ce1ef11b19757))
+
+
 ## v1.21.0 (2026-11-25)
 
 ### Features
