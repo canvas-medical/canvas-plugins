@@ -141,7 +141,7 @@ def test_a_delete_names_the_draft() -> None:
             lambda patient: staged_command(patient, note=NoteFactory.create(patient=patient)),
             "No command with that id",
         ),
-        (lambda patient: staged_command(patient, "questionnaire"), "not one these tools change"),
+        (lambda patient: staged_command(patient, "exam"), "not one these tools change"),
     ],
     ids=["committed", "another patient", "another note", "a kind no tool stages"],
 )
