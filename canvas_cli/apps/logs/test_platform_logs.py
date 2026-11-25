@@ -19,6 +19,7 @@ import websocket
 from typer.testing import CliRunner
 
 from canvas_cli.apps.auth.utils import instance_slug
+from canvas_cli.apps.logs.logs import GAP_MARGIN_SECONDS
 from canvas_cli.apps.platform import auth
 from canvas_cli.apps.platform.auth import PLATFORM_URL_ENV, SERVICE_TOKEN_ENV
 from canvas_cli.apps.plugin.plugin import plugin_url
@@ -1003,6 +1004,31 @@ def test_stream_retries_when_platform_cannot_be_reached_for_a_fresh_token(
     assert len(fake_stream.clock.sleeps) == 2
 
 
+def test_stream_retries_when_platform_answers_503_for_a_fresh_token(
+    cli_runner: CliRunner,
+    requests_mock: requests_mock_module.Mocker,
+    signed_in: None,
+    credentials_token: Mock,
+    fake_stream: type[_FakeStream],
+) -> None:
+    """Platform answering 503 while it restarts is retried like an unreachable Platform."""
+    requests_mock.get(f"{PLATFORM}/api/v1/instances", json={"instances": [_instance("acme-prod")]})
+    requests_mock.post(
+        LOG_TOKEN_URL,
+        [
+            {"json": MINTED},
+            {"status_code": 503, "text": "Service Unavailable"},
+            {"json": {**MINTED, "access_token": "plat-tok-2"}},
+        ],
+    )
+    fake_stream.script = [([*CONNECTED, LOST], None), (INTERRUPTED, None)]
+
+    result = cli_runner.invoke(app, "logs --host acme-prod")
+
+    assert result.exit_code == 0, result.output
+    assert fake_stream.urls == [_stream_url("plat-tok"), _stream_url("plat-tok-2")]
+
+
 def test_reconnect_backoff_doubles_to_a_cap_and_resets_after_a_healthy_stream(
     cli_runner: CliRunner,
     credentials_token: Mock,
@@ -1103,7 +1129,8 @@ def test_reconnect_backfills_the_gap_oldest_first(
     assert params["end_time"] == [header.group(2)]
     assert params["plugin"] == ["foo"]
     start, end = datetime.fromisoformat(header.group(1)), datetime.fromisoformat(header.group(2))
-    assert timedelta(0) < end - start < timedelta(seconds=5)
+    margins = timedelta(seconds=2 * GAP_MARGIN_SECONDS)
+    assert margins <= end - start < margins + timedelta(seconds=5)
 
 
 def test_failed_backfill_prints_the_history_command_and_keeps_streaming(

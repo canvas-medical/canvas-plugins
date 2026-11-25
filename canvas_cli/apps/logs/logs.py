@@ -46,6 +46,9 @@ HEALTHY_STREAM_SECONDS = 60
 # A guess at how long a line takes to become searchable in history, waited before fetching a
 # gap so its last lines are found.
 BACKFILL_DELAY_SECONDS = 10
+# Seconds added to each side of a gap: Console subscribes to the instance's log channel only
+# after it sends "Log stream connected.", and this machine's clock can differ from the instance's.
+GAP_MARGIN_SECONDS = 5
 # Held while printing log lines, so a backfill prints as one block between live lines.
 _OUTPUT_LOCK = threading.Lock()
 
@@ -730,7 +733,7 @@ def _notice(message: str) -> None:
 
 
 def _gap_window(dropped: datetime, resumed: datetime) -> tuple[str, str]:
-    """Return a stream gap's start and end, rounded outward to whole seconds.
+    """Return a stream gap's start and end, widened by GAP_MARGIN_SECONDS on each side.
 
     Args:
         dropped (datetime): When the dropped stream last received anything.
@@ -739,8 +742,10 @@ def _gap_window(dropped: datetime, resumed: datetime) -> tuple[str, str]:
     Returns:
         tuple[str, str]: The start and end as ISO timestamps.
     """
-    end: datetime = resumed + timedelta(seconds=1)
-    return dropped.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")
+    margin: timedelta = timedelta(seconds=GAP_MARGIN_SECONDS)
+    start: datetime = dropped - margin
+    end: datetime = resumed + margin
+    return start.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")
 
 
 def _gap_notice(slug: str, plugins: list[str], dropped: datetime, resumed: datetime) -> str:
@@ -876,7 +881,13 @@ def stream_logs(host: str, token: LogToken, plugins: list[str] | None = None) ->
                 try:
                     bearer: str = token.refresh() if token.reissuable else token.get()
                 except click.ClickException as error:
-                    if not isinstance(error.__cause__, requests.RequestException):
+                    unreachable: bool = isinstance(error.__cause__, requests.RequestException)
+                    unavailable: bool = (
+                        isinstance(error, PlatformError)
+                        and error.status is not None
+                        and error.status >= requests.codes.internal_server_error
+                    )
+                    if not (unreachable or unavailable):
                         raise
                     _notice(error.message)
                     continue
