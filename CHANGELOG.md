@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.21.0 (2026-11-25)
+
+### Features
+
+- **data**: Expose Health Gorilla lab account numbers in the data module (KOALA-8653)
+  ([#2037](https://github.com/canvas-medical/canvas-plugins/pull/2037),
+  [`c0ca185`](https://github.com/canvas-medical/canvas-plugins/commit/c0ca185a3f11966cc174470e090071a4b2aef18e))
+
+
 ## v1.20.0 (2026-11-25)
 
 ### Bug Fixes
