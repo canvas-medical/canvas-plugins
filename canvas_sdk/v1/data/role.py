@@ -13,7 +13,7 @@ class AuthGroup(Model):
     name = models.CharField(max_length=150)
 
 
-class Role(TimestampedModel):
+class Role(TimestampedModel, IdentifiableModel):
     """A role that can be assigned to staff."""
 
     class Meta:

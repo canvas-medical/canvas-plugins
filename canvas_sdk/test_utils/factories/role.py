@@ -17,6 +17,7 @@ class RoleFactory(factory.django.DjangoModelFactory[Role]):
 
     class Meta:
         model = Role
+        django_get_or_create = ("internal_code",)
 
     internal_code = factory.Sequence(lambda n: f"R{n}")
     public_abbreviation = "MD"
