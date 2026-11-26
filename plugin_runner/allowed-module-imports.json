@@ -18,11 +18,14 @@
     "SPEAKER_ROLES",
     "SpeakerRole",
     "SpeakerRoles",
+    "StructuredVisitNote",
     "SubAgentSpec",
     "ToolCall",
     "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
+    "VisitProblem",
+    "VisitVital",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
     "identify_speaker_roles",
@@ -31,6 +34,7 @@
     "run_subagents",
     "run_tool_loop",
     "standard_tools",
+    "structure_note_from_transcript",
     "window_messages"
   ],
   "canvas_sdk.agents.base": [
@@ -98,6 +102,12 @@
     "MAX_TOOL_RESULT_CHARS",
     "ToolNotAllowed",
     "ToolRegistry"
+  ],
+  "canvas_sdk.agents.transcript_tools": [
+    "StructuredVisitNote",
+    "VisitProblem",
+    "VisitVital",
+    "structure_note_from_transcript"
   ],
   "canvas_sdk.caching.client": [
     "get_cache"
