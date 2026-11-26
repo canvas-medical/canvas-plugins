@@ -14,6 +14,8 @@ copies a whole visit into a tool call.
 import json
 from typing import Any
 
+from pydantic import ValidationError
+
 from canvas_sdk.agents.gateway import GatewayError, LLMGateway
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_loop import Effort, run_tool_loop
@@ -99,6 +101,7 @@ def structure_note_from_transcript(
     gateway: LLMGateway,
     model: str | None = None,
     effort: Effort | None = None,
+    max_tokens: int = STRUCTURE_MAX_TOKENS,
 ) -> StructuredVisitNote | None:
     """File a visit transcript into the sections of a clinical note, in one model call.
 
@@ -108,16 +111,18 @@ def structure_note_from_transcript(
         gateway: The run's :class:`LLMGateway`.
         model: The model to call; defaults to ``gateway.model``.
         effort: How much the model thinks; the model's default when unset.
+        max_tokens: The most tokens the structured note may take. A long visit with many
+            problems may need more than the default.
 
     Returns:
-        The structured note, or None when the model stopped before finishing it, as when
-        the note would run past :data:`STRUCTURE_MAX_TOKENS`.
+        The structured note, or None when the model did not finish it: the note ran past
+        ``max_tokens``, the run had no model calls left, or the answer was outside the schema.
 
     Raises:
-        ValueError: ``transcript`` is empty.
+        ValueError: ``transcript`` is not text, or is empty.
         GatewayError: The gateway refused the call or could not reach the model.
     """
-    if not transcript.strip():
+    if not isinstance(transcript, str) or not transcript.strip():
         raise ValueError("There is no transcript to structure.")
     result = run_tool_loop(
         gateway,
@@ -128,18 +133,21 @@ def structure_note_from_transcript(
         messages=[
             {
                 "role": "user",
-                "content": f"The visit transcript, as a JSON string:\n{json.dumps(transcript)}",
+                "content": f"The visit transcript, as a JSON string:\n{json.dumps(transcript, ensure_ascii=False)}",
             }
         ],
         max_turns=1,
-        max_tokens=STRUCTURE_MAX_TOKENS,
+        max_tokens=max_tokens,
         model=model,
         output_schema=StructuredVisitNote,
         effort=effort,
     )
     if result.stopped != "end_turn":
         return None
-    return StructuredVisitNote.model_validate_json(result.text)
+    try:
+        return StructuredVisitNote.model_validate_json(result.text)
+    except ValidationError:
+        return None
 
 
 @standard_tools.tool(
@@ -183,7 +191,7 @@ def _structure_note_from_transcript(
             raise
         return {"ok": False, "error": f"The visit could not be structured: {exc.message}"}
     if note is None:
-        return {"ok": False, "error": "The visit was too long to structure in one pass."}
+        return {"ok": False, "error": "The model did not finish structuring the visit."}
     return {"ok": True, "note": note.model_dump()}
 
 

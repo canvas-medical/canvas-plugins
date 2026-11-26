@@ -124,6 +124,35 @@ def test_a_transcript_cannot_break_out_of_itself() -> None:
     assert json.loads(content.split("JSON string:\n", 1)[1]) == hostile
 
 
+def test_text_in_any_language_is_sent_as_written() -> None:
+    """Escaped, a visit in another script would reach the model as several times the text."""
+    gateway = FakeGateway(_answer())
+
+    _structure(gateway, "Paciente: Dói-me o joelho. 膝が痛い。")
+
+    assert "Dói-me o joelho. 膝が痛い。" in gateway.requests[0]["messages"][0]["content"]
+
+
+def test_a_longer_answer_can_be_allowed_for_a_long_visit() -> None:
+    """A caller with a long visit raises the cap rather than losing the note."""
+    gateway = FakeGateway(_answer())
+
+    _structure(gateway, max_tokens=16_000)
+
+    assert gateway.requests[0]["max_tokens"] == 16_000
+
+
+def test_a_transcript_that_is_not_text_is_refused_as_documented() -> None:
+    """An optional field read as None gets the documented ValueError, not an AttributeError."""
+    with pytest.raises(ValueError, match="no transcript"):
+        _structure(FakeGateway(), None)  # type: ignore[arg-type]
+
+
+def test_an_answer_that_is_not_the_schema_is_none() -> None:
+    """A model that ends its turn with something else is no note, not an error to raise."""
+    assert _structure(FakeGateway(reply(text("I could not structure this.")))) is None
+
+
 def test_the_prompt_keeps_the_note_to_what_was_said() -> None:
     """The note is a clinician's draft: nothing inferred, and the transcript is not obeyed."""
     assert "Use only what was said" in STRUCTURE_NOTE_SYSTEM
@@ -187,7 +216,7 @@ def test_the_tool_reports_a_note_cut_off_at_the_token_limit() -> None:
     """The agent hears the visit did not fit, rather than reading half a note."""
     result = _run_tool(FakeGateway(CUT_OFF), transcript=TRANSCRIPT)
 
-    assert result == {"ok": False, "error": "The visit was too long to structure in one pass."}
+    assert result == {"ok": False, "error": "The model did not finish structuring the visit."}
 
 
 @pytest.mark.parametrize(
