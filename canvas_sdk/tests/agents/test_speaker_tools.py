@@ -91,8 +91,7 @@ def test_a_line_cannot_break_out_of_the_transcript() -> None:
 
     _identify(gateway, [{"speaker": "speaker_0", "text": hostile}])
 
-    content = gateway.requests[0]["messages"][0]["content"]
-    assert json.loads(content.split("JSON lines:\n", 1)[1]) == [["speaker_0", hostile]]
+    assert _sent(gateway) == [["speaker_0", hostile]]
 
 
 def test_the_prompt_reads_roles_from_what_is_said() -> None:
@@ -177,7 +176,7 @@ def test_the_tool_reports_an_answer_cut_off_at_the_token_limit() -> None:
     """The agent hears the speakers were not identified, rather than reading half an answer."""
     result = _run_tool(FakeGateway(CUT_OFF), transcript_lines=LINES)
 
-    assert result == {"ok": False, "error": "The model stopped before naming the speakers."}
+    assert result == {"ok": False, "error": "The model did not finish naming the speakers."}
 
 
 def test_an_agent_calls_the_tool_and_reads_the_roles() -> None:
@@ -207,16 +206,81 @@ def test_identifying_speakers_is_granted_with_the_transcript_reads() -> None:
     assert standard_tools.categories_for("identify_speaker_roles") == ("transcript_reads",)
 
 
-def test_a_long_transcript_is_read_from_the_start_in_whole_lines(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Who is who shows early, so the cap keeps the opening lines and never half of one."""
-    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 40)
+def _sent(gateway: FakeGateway) -> Any:
+    """The lines a request carried, decoded."""
+    content = gateway.requests[0]["messages"][0]["content"]
+    return json.loads(content.split("JSON lines:\n", 1)[1])
+
+
+def _labels(gateway: FakeGateway) -> str:
+    """The label list a request carried."""
+    return gateway.requests[0]["messages"][0]["content"].split("\n", 1)[0]
+
+
+def test_a_long_transcript_is_read_from_the_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Who is who shows early, so the cap keeps the opening lines and cuts the one it crosses."""
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 50)
+    gateway = FakeGateway(_answer(("speaker_0", "patient"), ("speaker_1", "clinician")))
+
+    _identify(gateway)
+
+    assert _sent(gateway) == [
+        ["speaker_0", "Hey, doctor. How's it going?"],
+        ["speaker_1", "Not bad. What brings"],
+    ]
+
+
+def test_a_first_line_longer_than_the_cap_is_still_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A long opening monologue is cut, never dropped: the model must have something to read."""
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 20)
     gateway = FakeGateway(_answer(("speaker_0", "patient")))
 
     _identify(gateway)
 
-    content = gateway.requests[0]["messages"][0]["content"]
-    assert json.loads(content.split("JSON lines:\n", 1)[1]) == [
-        ["speaker_0", "Hey, doctor. How's it going?"],
-    ]
+    assert _sent(gateway) == [["speaker_0", "Hey, doctor. How's"]]
+
+
+def test_a_voice_heard_only_past_the_cap_is_not_labelled_blind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A label with none of its lines sent is neither listed nor answered for."""
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 20)
+    gateway = FakeGateway(_answer(("speaker_0", "patient"), ("speaker_1", "clinician")))
+
+    roles = _identify(gateway)
+
+    assert _labels(gateway) == "Labels: speaker_0"
+    assert roles == {"speaker_0": "patient"}
+
+
+def test_text_in_any_language_is_sent_as_written() -> None:
+    """Escaped, a visit in another script would reach the model as several times the text."""
+    gateway = FakeGateway(_answer(("speaker_0", "patient")))
+
+    _identify(gateway, [{"speaker": "speaker_0", "text": "Dói-me o joelho. 膝が痛い。"}])
+
+    assert "Dói-me o joelho. 膝が痛い。" in gateway.requests[0]["messages"][0]["content"]
+
+
+def test_labels_are_listed_in_the_order_they_first_speak() -> None:
+    """Numbered voices sort as text, which would put speaker_10 before speaker_2."""
+    lines = [{"speaker": f"speaker_{n}", "text": "Yes."} for n in (0, 2, 10, 1)]
+    gateway = FakeGateway(_answer(("speaker_0", "patient")))
+
+    _identify(gateway, lines)
+
+    assert _labels(gateway) == "Labels: speaker_0, speaker_2, speaker_10, speaker_1"
+
+
+def test_an_answer_that_is_not_the_schema_is_none() -> None:
+    """A model that ends its turn with something else is no answer, not an error to raise."""
+    assert _identify(FakeGateway(reply(text("I could not tell.")))) is None
+
+
+def test_the_tool_reads_lines_given_as_any_sequence() -> None:
+    """An agent's code may hand the lines over as a tuple."""
+    gateway = FakeGateway(_answer(("speaker_0", "patient"), ("speaker_1", "clinician")))
+
+    result = _run_tool(gateway, transcript_lines=tuple(LINES))
+
+    assert result["ok"] is True

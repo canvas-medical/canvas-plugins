@@ -16,6 +16,8 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
+from pydantic import ValidationError
+
 from canvas_sdk.agents.gateway import GatewayError, LLMGateway
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_loop import Effort, run_tool_loop
@@ -74,9 +76,9 @@ def identify_speaker_roles(
         effort: How much the model thinks; the model's default when unset.
 
     Returns:
-        A role from :data:`SPEAKER_ROLES` for each label the model placed, only for labels the
-        lines carry; ``{}`` when no line has a label; None when the model stopped before
-        answering.
+        A role from :data:`SPEAKER_ROLES` for each label the model placed, only for labels
+        whose lines were read; ``{}`` when no line has a label; None when the model stopped
+        before answering or answered outside the schema.
 
     Raises:
         GatewayError: The gateway refused the call or could not reach the model.
@@ -86,19 +88,27 @@ def identify_speaker_roles(
         for line in lines
     ]
     said = [(label, text) for label, text in said if label and text]
-    labels = sorted({label for label, _ in said})
+
+    # The opening of the visit, up to the cap, the line that crosses it cut at a word: who is
+    # who shows early, and a long opening monologue still leaves something to read.
+    kept: list[list[str]] = []
+    room = MAX_TRANSCRIPT_CHARS
+    for label, text in said:
+        if room <= 0:
+            break
+        if len(text) > room:
+            kept.append(
+                [label, text[:room].rsplit(" ", 1)[0] if " " in text[:room] else text[:room]]
+            )
+            break
+        kept.append([label, text])
+        room -= len(text)
+    # Only voices with lines sent, in the order they first speak: a label listed with none of
+    # its lines would be labelled blind.
+    labels = list(dict.fromkeys(label for label, _ in kept))
     if not labels:
         return {}
 
-    # Sent as JSON, so a line holding what looks like the end of the transcript, or an
-    # instruction, stays one string value inside it. Whole lines, up to the cap.
-    kept: list[list[str]] = []
-    length = 0
-    for label, text in said:
-        length += len(label) + len(text)
-        if length > MAX_TRANSCRIPT_CHARS:
-            break
-        kept.append([label, text])
     result = run_tool_loop(
         gateway,
         tools=ToolRegistry(),
@@ -108,7 +118,7 @@ def identify_speaker_roles(
             {
                 "role": "user",
                 "content": (
-                    f"Labels: {', '.join(labels)}\n\nTranscript, as JSON lines:\n{json.dumps(kept)}"
+                    f"Labels: {', '.join(labels)}\n\nTranscript, as JSON lines:\n{json.dumps(kept, ensure_ascii=False)}"
                 ),
             }
         ],
@@ -120,7 +130,10 @@ def identify_speaker_roles(
     )
     if result.stopped != "end_turn":
         return None
-    answered = SpeakerRoles.model_validate_json(result.text)
+    try:
+        answered = SpeakerRoles.model_validate_json(result.text)
+    except ValidationError:
+        return None
     return {voice.label: voice.role for voice in answered.speakers if voice.label in labels}
 
 
@@ -146,7 +159,11 @@ def _identify_speaker_roles(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
     if gateway is None:
         raise ValueError("identify_speaker_roles needs the run's gateway on ctx")
     lines = ctx.get(TRANSCRIPT_LINES_CTX_KEY)
-    if not isinstance(lines, list) or not all(isinstance(line, Mapping) for line in lines):
+    if (
+        not isinstance(lines, Sequence)
+        or isinstance(lines, str | bytes)
+        or not all(isinstance(line, Mapping) for line in lines)
+    ):
         return {"ok": False, "error": "This run has no transcript lines to read."}
     try:
         roles = identify_speaker_roles(lines, gateway=gateway)
@@ -157,7 +174,7 @@ def _identify_speaker_roles(arguments: dict[str, Any], *, ctx: dict[str, Any]) -
             raise
         return {"ok": False, "error": f"The speakers could not be identified: {exc.message}"}
     if roles is None:
-        return {"ok": False, "error": "The model stopped before naming the speakers."}
+        return {"ok": False, "error": "The model did not finish naming the speakers."}
     return {"ok": True, "roles": roles}
 
 
