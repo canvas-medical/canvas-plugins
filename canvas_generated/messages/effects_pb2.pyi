@@ -288,6 +288,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_LAB_REPORT: _ClassVar[EffectType]
     ENTER_IN_ERROR_LAB_REPORT: _ClassVar[EffectType]
     ATTACH_LAB_REPORT_RESULTS: _ClassVar[EffectType]
+    FIELD_ACTION_VALUE: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     SHOW_APPLICATION: _ClassVar[EffectType]
     SET_APPLICATION_NOTIFICATION_BADGE: _ClassVar[EffectType]
@@ -737,6 +738,7 @@ CREATE_LAB_REPORT: EffectType
 UPDATE_LAB_REPORT: EffectType
 ENTER_IN_ERROR_LAB_REPORT: EffectType
 ATTACH_LAB_REPORT_RESULTS: EffectType
+FIELD_ACTION_VALUE: EffectType
 SHOW_ACTION_BUTTON: EffectType
 SHOW_APPLICATION: EffectType
 SET_APPLICATION_NOTIFICATION_BADGE: EffectType

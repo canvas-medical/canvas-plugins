@@ -768,6 +768,9 @@
     "FaxNoteEffect",
     "FaxReferralEffect"
   ],
+  "canvas_sdk.effects.field_action_value": [
+    "FieldActionValue"
+  ],
   "canvas_sdk.effects.generate_full_chart_pdf": [
     "GenerateFullChartPDFEffect"
   ],
