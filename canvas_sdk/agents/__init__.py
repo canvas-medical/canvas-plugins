@@ -7,6 +7,7 @@ from canvas_sdk.agents import (
     questionnaire_tools,  # noqa: F401  (importing it registers the questionnaire tools)
     scheduling_tools,  # noqa: F401  (importing it registers the scheduling tools)
     speaker_tools,  # noqa: F401  (importing it registers the speaker roles tool)
+    transcript_tools,  # noqa: F401  (importing it registers the transcript tool)
     visit_tools,  # noqa: F401  (importing it registers the reason for visit and HPI tools)
 )
 from canvas_sdk.agents.base import AgentPlugin
@@ -39,6 +40,12 @@ from canvas_sdk.agents.tool_registry import (
     ToolRegistry,
     require_patient_id,
 )
+from canvas_sdk.agents.transcript_tools import (
+    StructuredVisitNote,
+    VisitProblem,
+    VisitVital,
+    structure_note_from_transcript,
+)
 
 # The modules above have registered every standard tool. Every plugin's agents adopt
 # this one catalog in the runner's shared process, so no plugin may add to it.
@@ -63,11 +70,14 @@ __all__ = __exports__ = (
     "SPEAKER_ROLES",
     "SpeakerRole",
     "SpeakerRoles",
+    "StructuredVisitNote",
     "SubAgentSpec",
     "ToolCall",
     "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
+    "VisitProblem",
+    "VisitVital",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
     "identify_speaker_roles",
@@ -76,5 +86,6 @@ __all__ = __exports__ = (
     "run_subagents",
     "run_tool_loop",
     "standard_tools",
+    "structure_note_from_transcript",
     "window_messages",
 )
