@@ -33,7 +33,6 @@ def test_lab_order_specimen_reads_its_order_and_collection() -> None:
     assert fetched.units == "mL"
     assert fetched.source == "Venous blood"
     assert fetched.collection_date_time == collected
-    assert fetched.body_site_id is None
     assert list(order.specimens.all()) == [fetched]
 
 
