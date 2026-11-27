@@ -232,6 +232,7 @@ class StaffRole(TimestampedModel):
         PROVIDER = "PROVIDER", "Provider"
 
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="roles")
+    role = models.ForeignKey("v1.Role", on_delete=models.DO_NOTHING, related_name="staff_roles")
     internal_code = models.CharField(max_length=10)
     public_abbreviation = models.CharField(max_length=10, default="", blank=True)
     domain = models.CharField(max_length=3, choices=RoleDomain.choices, db_index=True)

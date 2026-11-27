@@ -1308,6 +1308,7 @@
     "AssessCodingGapEvent",
     "Assessment",
     "AttributeHub",
+    "AuthGroup",
     "Authorization",
     "AuthorizationDiagnosisCode",
     "BannerAlert",
@@ -1379,6 +1380,8 @@
     "Coverage",
     "CoveragePosting",
     "CreateCodingGapEvent",
+    "CreditCardCharge",
+    "CreditCardChargeState",
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
@@ -1627,6 +1630,9 @@
     "ResolveConditionEvent",
     "ResponseOption",
     "ResponseOptionSet",
+    "Role",
+    "RoleGroup",
+    "RoleGroupGroup",
     "ScheduleDuration",
     "ServiceProvider",
     "ServiceRequest",
@@ -2178,6 +2184,8 @@
     "PaymentCard"
   ],
   "canvas_sdk.v1.data.payment_collection": [
+    "CreditCardCharge",
+    "CreditCardChargeState",
     "PaymentCollection",
     "PostingMethods"
   ],
@@ -2323,6 +2331,12 @@
   ],
   "canvas_sdk.v1.data.resolve_condition_event": [
     "ResolveConditionEvent"
+  ],
+  "canvas_sdk.v1.data.role": [
+    "AuthGroup",
+    "Role",
+    "RoleGroup",
+    "RoleGroupGroup"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
