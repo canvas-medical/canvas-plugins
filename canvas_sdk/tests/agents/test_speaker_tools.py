@@ -235,22 +235,74 @@ def test_a_first_line_longer_than_the_cap_is_still_read(monkeypatch: pytest.Monk
     monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 20)
     gateway = FakeGateway(_answer(("speaker_0", "patient")))
 
-    _identify(gateway)
+    _identify(gateway, LINES[:1])
 
     assert _sent(gateway) == [["speaker_0", "Hey, doctor. How's"]]
 
 
-def test_a_voice_heard_only_past_the_cap_is_not_labelled_blind(
+def test_a_voice_first_heard_past_the_opening_is_read_from_where_it_joins(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A label with none of its lines sent is neither listed nor answered for."""
+    """A relative joining a long visit is read from the line before they join, not left out."""
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 32)
+    lines = [
+        *LINES,
+        {"speaker": "speaker_1", "text": "Since when?"},
+        {"speaker": "speaker_0", "text": "Last week. My daughter came along."},
+        {"speaker": "speaker_2", "text": "Hi, I'm her daughter."},
+        {"speaker": "speaker_1", "text": "Nice to meet you."},
+    ]
+    gateway = FakeGateway(
+        _answer(("speaker_0", "patient"), ("speaker_1", "clinician"), ("speaker_2", "family"))
+    )
+
+    roles = _identify(gateway, lines)
+
+    assert _labels(gateway) == "Labels: speaker_0, speaker_1, speaker_2"
+    assert _sent(gateway) == [
+        ["speaker_0", "Hey, doctor. How's it going?"],
+        ["speaker_1", "Not"],
+        ["speaker_0", "Last week. My daughter came along."],
+        ["speaker_2", "Hi, I'm her daughter."],
+        ["speaker_1", "Nice to meet you."],
+    ]
+    assert roles == {"speaker_0": "patient", "speaker_1": "clinician", "speaker_2": "family"}
+
+
+def test_a_voice_heard_only_past_every_cap_is_not_labelled_blind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Once the late voices' room is spent, a later label is neither listed nor answered for."""
     monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 20)
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_LATE_VOICES_CHARS", 0)
     gateway = FakeGateway(_answer(("speaker_0", "patient"), ("speaker_1", "clinician")))
 
     roles = _identify(gateway)
 
     assert _labels(gateway) == "Labels: speaker_0"
     assert roles == {"speaker_0": "patient"}
+
+
+def test_a_late_voice_is_read_up_to_its_own_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A talkative late voice, or the line before one, cannot crowd out the voices after it."""
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.MAX_TRANSCRIPT_CHARS", 10)
+    monkeypatch.setattr("canvas_sdk.agents.speaker_tools.LATE_VOICE_CHARS", 16)
+    lines = [
+        {"speaker": "speaker_0", "text": "Hello there."},
+        {"speaker": "speaker_1", "text": "Hi, I'm the nurse today."},
+        {"speaker": "speaker_1", "text": "Let me take your blood pressure."},
+        {"speaker": "speaker_2", "text": "I'm his son."},
+    ]
+    gateway = FakeGateway(_answer(("speaker_0", "patient")))
+
+    _identify(gateway, lines)
+
+    assert _sent(gateway) == [
+        ["speaker_0", "Hello"],
+        ["speaker_1", "Hi, I'm the"],
+        ["speaker_1", "Let"],
+        ["speaker_2", "I'm his son."],
+    ]
 
 
 def test_text_in_any_language_is_sent_as_written() -> None:
