@@ -1601,6 +1601,7 @@
     "ProcedureStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
+    "ProtocolOverrideSnoozeReason",
     "Provenance",
     "Question",
     "QuestionEnablementCondition",
@@ -2259,6 +2260,7 @@
   "canvas_sdk.v1.data.protocol_override": [
     "IntervalUnit",
     "ProtocolOverride",
+    "ProtocolOverrideSnoozeReason",
     "Status"
   ],
   "canvas_sdk.v1.data.protocol_result": [

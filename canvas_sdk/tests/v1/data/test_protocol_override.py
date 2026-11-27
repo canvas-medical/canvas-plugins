@@ -3,8 +3,35 @@ import pytest
 from canvas_sdk.test_utils.factories import (
     PatientFactory,
     ProtocolOverrideFactory,
+    ProtocolOverrideSnoozeReasonFactory,
 )
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride, Status
+
+
+@pytest.mark.django_db
+def test_snooze_reason_resolves_from_override_and_back() -> None:
+    """An override reads its snooze reason, and a reason lists its overrides."""
+    reason = ProtocolOverrideSnoozeReasonFactory.create(
+        snooze_reason="PATIENT_REFUSED",
+        description="Patient refused",
+        snomed_code="183944003",
+        active=False,
+        sort=3,
+    )
+    override = ProtocolOverrideFactory.create(reason=reason, is_snooze=True)
+    ProtocolOverrideFactory.create()
+
+    fetched = ProtocolOverride.objects.get(id=override.id).reason
+
+    assert fetched == reason
+    assert (
+        fetched.snooze_reason,
+        fetched.description,
+        fetched.snomed_code,
+        fetched.active,
+        fetched.sort,
+    ) == ("PATIENT_REFUSED", "Patient refused", "183944003", False, 3)
+    assert list(reason.overrides.all()) == [override]
 
 
 @pytest.mark.django_db
