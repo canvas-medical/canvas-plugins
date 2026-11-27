@@ -7,25 +7,27 @@ every visit needs the structure, and maps the result onto its own note shape.
 
 The same call is the standard tool ``structure_note_from_transcript``, for an agent that
 decides for itself when a visit needs structuring. The transcript reaches the tool on the
-run's context under ``transcript``, put there by the agent's code, so the model never
-copies a whole visit into a tool call.
+run's context as lines under ``transcript_lines``, the same key the speaker roles tool reads,
+put there by the agent's code, so the model never copies a whole visit into a tool call.
 """
 
 import json
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from pydantic import ValidationError
 
 from canvas_sdk.agents.gateway import GatewayError, LLMGateway
+from canvas_sdk.agents.speaker_tools import TRANSCRIPT_LINES_CTX_KEY
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.tool_loop import Effort, run_tool_loop
 from canvas_sdk.agents.tool_registry import ToolRegistry
 from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
 
-# The ctx key the tool reads the visit's transcript from.
-TRANSCRIPT_CTX_KEY = "transcript"
 # Most tokens of the structured note asked for.
 STRUCTURE_MAX_TOKENS = 8192
+# Most tokens asked for when the tool's first answer is cut off: a long visit with many problems.
+STRUCTURE_RETRY_MAX_TOKENS = 16_384
 
 STRUCTURE_NOTE_SYSTEM = (
     "You file a transcript of a clinical visit into the sections of a visit note, for "
@@ -122,6 +124,21 @@ def structure_note_from_transcript(
         ValueError: ``transcript`` is not text, or is empty.
         GatewayError: The gateway refused the call or could not reach the model.
     """
+    note, _ = _structure(
+        transcript, gateway=gateway, model=model, effort=effort, max_tokens=max_tokens
+    )
+    return note
+
+
+def _structure(
+    transcript: str,
+    *,
+    gateway: LLMGateway,
+    model: str | None,
+    effort: Effort | None,
+    max_tokens: int,
+) -> tuple[StructuredVisitNote | None, bool]:
+    """The structured note, or None, and whether the answer was cut off at ``max_tokens``."""
     if not isinstance(transcript, str) or not transcript.strip():
         raise ValueError("There is no transcript to structure.")
     result = run_tool_loop(
@@ -143,11 +160,23 @@ def structure_note_from_transcript(
         effort=effort,
     )
     if result.stopped != "end_turn":
-        return None
+        return None, result.stop_reason == "max_tokens"
     try:
-        return StructuredVisitNote.model_validate_json(result.text)
+        return StructuredVisitNote.model_validate_json(result.text), False
     except ValidationError:
-        return None
+        return None, False
+
+
+def _transcript_from_lines(lines: Sequence[Mapping[str, Any]]) -> str:
+    """The lines as text, one utterance a line, each named by its speaker when it has one."""
+    said = []
+    for line in lines:
+        text = str(line.get("text") or "").strip()
+        if not text:
+            continue
+        speaker = str(line.get("speaker") or "").strip()
+        said.append(f"{speaker}: {text}" if speaker else text)
+    return "\n".join(said)
 
 
 @standard_tools.tool(
@@ -156,7 +185,7 @@ def structure_note_from_transcript(
         "File the run's visit transcript into the sections of a clinical note: reason for "
         "visit, history of present illness, review of systems, exam, vitals, medications, "
         "allergies, histories, each problem with its assessment and plan, other plan items, "
-        "and follow-up. Takes no arguments: it reads the transcript the agent was given. "
+        "and follow-up. Takes no arguments: it reads the transcript lines the agent was given. "
         "Reads the whole visit with a separate model call, so it is slow and costly: call "
         "it once per visit and work from its result."
     ),
@@ -179,11 +208,29 @@ def _structure_note_from_transcript(
     gateway = ctx.get("gateway")
     if gateway is None:
         raise ValueError("structure_note_from_transcript needs the run's gateway on ctx")
-    transcript = ctx.get(TRANSCRIPT_CTX_KEY)
-    if not isinstance(transcript, str) or not transcript.strip():
+    lines = ctx.get(TRANSCRIPT_LINES_CTX_KEY)
+    transcript = (
+        _transcript_from_lines(lines)
+        if isinstance(lines, Sequence)
+        and not isinstance(lines, str | bytes)
+        and all(isinstance(line, Mapping) for line in lines)
+        else ""
+    )
+    if not transcript:
         return {"ok": False, "error": "This run has no visit transcript to structure."}
     try:
-        note = structure_note_from_transcript(transcript, gateway=gateway)
+        note, cut_off = _structure(
+            transcript, gateway=gateway, model=None, effort=None, max_tokens=STRUCTURE_MAX_TOKENS
+        )
+        if cut_off:
+            # A long visit with many problems outgrew the answer; one more try with room for it.
+            note, _ = _structure(
+                transcript,
+                gateway=gateway,
+                model=None,
+                effort=None,
+                max_tokens=STRUCTURE_RETRY_MAX_TOKENS,
+            )
     except GatewayError as exc:
         # The model's limits (400) or the gateway's budget hold (402) refused this
         # transcript; the run goes on without it. Anything else is the platform's to classify.

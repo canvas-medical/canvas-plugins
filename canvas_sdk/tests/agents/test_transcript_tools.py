@@ -15,7 +15,11 @@ from canvas_sdk.agents import (
     structure_note_from_transcript,
 )
 from canvas_sdk.agents.gateway import GatewayError
-from canvas_sdk.agents.transcript_tools import STRUCTURE_MAX_TOKENS, STRUCTURE_NOTE_SYSTEM
+from canvas_sdk.agents.transcript_tools import (
+    STRUCTURE_MAX_TOKENS,
+    STRUCTURE_NOTE_SYSTEM,
+    STRUCTURE_RETRY_MAX_TOKENS,
+)
 from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
 from canvas_sdk.test_utils.agents import FakeGateway, ModelReply, reply, text, tool_use
 
@@ -25,6 +29,12 @@ TRANSCRIPT = (
     "Clinician: Your blood pressure is 128 over 82. I think it's a sprain. Ice it, take "
     "ibuprofen 400 milligrams as needed, and come back in two weeks if it isn't better."
 )
+
+# The same visit as the lines an agent puts on the run's context.
+LINES = [
+    {"speaker": speaker, "text": said}
+    for speaker, said in (line.split(": ", 1) for line in TRANSCRIPT.split("\n"))
+]
 
 # Built as the model writes it: JSON keyed as the schema it is sent.
 NOTE = StructuredVisitNote.model_validate(
@@ -190,7 +200,7 @@ def test_the_tool_reads_the_transcript_from_the_run() -> None:
     """The model passes nothing: the transcript is on the run's context."""
     gateway = FakeGateway(_answer())
 
-    result = _run_tool(gateway, transcript=TRANSCRIPT)
+    result = _run_tool(gateway, transcript_lines=LINES)
 
     assert result == {"ok": True, "note": NOTE.model_dump()}
     assert json.dumps(TRANSCRIPT) in gateway.requests[0]["messages"][0]["content"]
@@ -209,14 +219,72 @@ def test_the_tool_without_a_transcript_says_so_without_a_model_call() -> None:
 def test_the_tool_without_a_gateway_refuses() -> None:
     """Outside a model call, as in load_state, there is no gateway to spend."""
     with pytest.raises(ValueError, match="gateway"):
-        standard_tools.execute("structure_note_from_transcript", {}, ctx={"transcript": TRANSCRIPT})
+        standard_tools.execute(
+            "structure_note_from_transcript", {}, ctx={"transcript_lines": LINES}
+        )
 
 
-def test_the_tool_reports_a_note_cut_off_at_the_token_limit() -> None:
+def test_the_tool_reports_a_note_cut_off_even_with_more_room() -> None:
     """The agent hears the visit did not fit, rather than reading half a note."""
-    result = _run_tool(FakeGateway(CUT_OFF), transcript=TRANSCRIPT)
+    gateway = FakeGateway(CUT_OFF, CUT_OFF)
+
+    result = _run_tool(gateway, transcript_lines=LINES)
 
     assert result == {"ok": False, "error": "The model did not finish structuring the visit."}
+    assert [request["max_tokens"] for request in gateway.requests] == [
+        STRUCTURE_MAX_TOKENS,
+        STRUCTURE_RETRY_MAX_TOKENS,
+    ]
+
+
+def test_the_tool_asks_once_more_with_room_for_a_long_visit() -> None:
+    """A visit with many problems can outgrow the first answer; the second has room for it."""
+    gateway = FakeGateway(CUT_OFF, _answer())
+
+    result = _run_tool(gateway, transcript_lines=LINES)
+
+    assert result == {"ok": True, "note": NOTE.model_dump()}
+    assert gateway.requests[1]["max_tokens"] == STRUCTURE_RETRY_MAX_TOKENS
+    assert gateway.requests[1]["messages"] == gateway.requests[0]["messages"]
+
+
+def test_the_tool_does_not_ask_again_for_an_answer_outside_the_schema() -> None:
+    """Only a cut-off answer is worth more room; any other failure is reported at once."""
+    gateway = FakeGateway(reply(text("I could not file this visit.")))
+
+    result = _run_tool(gateway, transcript_lines=LINES)
+
+    assert result["ok"] is False
+    assert len(gateway.requests) == 1
+
+
+def test_the_tool_sends_each_line_under_its_speaker() -> None:
+    """The lines are the ones the speaker roles tool reads; the model reads them as text."""
+    gateway = FakeGateway(_answer())
+    lines = [
+        {"speaker": "Clinician", "text": "What brings you in?"},
+        {"speaker": "", "text": "My knee."},
+        {"speaker": "Patient", "text": "  "},
+    ]
+
+    _run_tool(gateway, transcript_lines=tuple(lines))
+
+    sent = json.dumps("Clinician: What brings you in?\nMy knee.")
+    assert sent in gateway.requests[0]["messages"][0]["content"]
+
+
+@pytest.mark.parametrize(
+    "lines",
+    ["Clinician: Hello.", [["Clinician", "Hello."]], [{"speaker": "Clinician", "text": " "}]],
+)
+def test_the_tool_without_readable_lines_says_so_without_a_model_call(lines: Any) -> None:
+    """Text, pairs, or lines with nothing said are no transcript to structure."""
+    gateway = FakeGateway()
+
+    result = _run_tool(gateway, transcript_lines=lines)
+
+    assert result == {"ok": False, "error": "This run has no visit transcript to structure."}
+    assert gateway.requests == []
 
 
 @pytest.mark.parametrize(
@@ -227,7 +295,7 @@ def test_a_transcript_the_gateway_refuses_fails_the_tool_not_the_run(
     status: int, message: str
 ) -> None:
     """The model's limits or the budget hold refuse this transcript alone."""
-    result = _run_tool(FakeGateway(_refusal(status, message)), transcript=TRANSCRIPT)
+    result = _run_tool(FakeGateway(_refusal(status, message)), transcript_lines=LINES)
 
     assert result == {"ok": False, "error": f"The visit could not be structured: {message}"}
 
@@ -239,7 +307,7 @@ def test_an_outage_still_ends_the_run() -> None:
     )
 
     with pytest.raises(GatewayError):
-        _run_tool(FakeGateway(outage), transcript=TRANSCRIPT)
+        _run_tool(FakeGateway(outage), transcript_lines=LINES)
 
 
 def test_an_agent_calls_the_tool_and_reads_the_note() -> None:
@@ -253,7 +321,7 @@ def test_an_agent_calls_the_tool_and_reads_the_note() -> None:
     result = run_tool_loop(
         gateway,  # type: ignore[arg-type]
         tools=standard_tools.scope(["structure_note_from_transcript"]),
-        ctx={"gateway": gateway, "transcript": TRANSCRIPT},
+        ctx={"gateway": gateway, "transcript_lines": LINES},
         system="You chart visits.",
         messages=[{"role": "user", "content": "File this visit."}],
     )
