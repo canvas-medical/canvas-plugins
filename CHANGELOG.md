@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.26.0 (2026-11-27)
+
+### Features
+
+- Add a tool that structures a visit transcript into note sections
+  ([#2045](https://github.com/canvas-medical/canvas-plugins/pull/2045),
+  [`651aeec`](https://github.com/canvas-medical/canvas-plugins/commit/651aeec56b3385c1606dd4a1b39335e6ddb9a318))
+
+
 ## v1.25.0 (2026-11-27)
 
 ### Features
