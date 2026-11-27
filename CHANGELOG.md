@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.23.0 (2026-11-27)
+
+### Features
+
+- **cli**: Check the files a deploy pushes for credentials
+  ([#2001](https://github.com/canvas-medical/canvas-plugins/pull/2001),
+  [`6e0b36f`](https://github.com/canvas-medical/canvas-plugins/commit/6e0b36f46c77ab89b2e133af46d12625d5b9a557))
+
+- **data**: Expose role groups and credit card charges in the data module (KOALA-8709)
+  ([#2043](https://github.com/canvas-medical/canvas-plugins/pull/2043),
+  [`64c800a`](https://github.com/canvas-medical/canvas-plugins/commit/64c800a1f5cca60801a04237a81df7b0f425d383))
+
+
 ## v1.22.1 (2026-11-25)
 
 ### Bug Fixes

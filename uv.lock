@@ -157,7 +157,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "1.22.1"
+version = "1.23.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
