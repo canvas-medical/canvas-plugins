@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.25.0 (2026-11-27)
+
+### Features
+
+- Add a tool that identifies the role of each voice in a visit transcript
+  ([#2046](https://github.com/canvas-medical/canvas-plugins/pull/2046),
+  [`16d06ae`](https://github.com/canvas-medical/canvas-plugins/commit/16d06ae97e71b271561f934cf4567e55c2845821))
+
+
 ## v1.24.0 (2026-11-27)
 
 ### Features
