@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.24.0 (2026-11-27)
+
+### Features
+
+- **data**: Expose protocol snooze reasons in the data module (KOALA-8708)
+  ([#2044](https://github.com/canvas-medical/canvas-plugins/pull/2044),
+  [`370e973`](https://github.com/canvas-medical/canvas-plugins/commit/370e973d21165ee68727a1b3bad05c58616ff869))
+
+
 ## v1.23.0 (2026-11-27)
 
 ### Features
