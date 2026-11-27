@@ -15,6 +15,9 @@
     "ModelCallLimitReached",
     "RunRequester",
     "RunSubject",
+    "SPEAKER_ROLES",
+    "SpeakerRole",
+    "SpeakerRoles",
     "SubAgentSpec",
     "ToolCall",
     "ToolLoopResult",
@@ -22,6 +25,7 @@
     "ToolRegistry",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
+    "identify_speaker_roles",
     "require_patient_id",
     "run_subagent",
     "run_subagents",
@@ -60,6 +64,12 @@
   ],
   "canvas_sdk.agents.result": [
     "AgentRunResult"
+  ],
+  "canvas_sdk.agents.speaker_tools": [
+    "SPEAKER_ROLES",
+    "SpeakerRole",
+    "SpeakerRoles",
+    "identify_speaker_roles"
   ],
   "canvas_sdk.agents.standard_tools": [
     "standard_tools"
