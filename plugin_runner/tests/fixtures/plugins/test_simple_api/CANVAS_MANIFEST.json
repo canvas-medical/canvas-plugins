@@ -15,6 +15,15 @@
                 }
             },
             {
+                "class": "test_simple_api.api.handler:PatternRoute",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
                 "class": "test_simple_api.api.handler:ErrorRoute1",
                 "description": "A protocol that does xyz...",
                 "data_access": {
