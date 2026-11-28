@@ -41,6 +41,7 @@ class PanelConfiguration(_BaseEffect):
         INPATIENT_STAY = "inpatientStay"
         LAB_REPORT = "labReport"
         PRESCRIPTION_ALERT = "prescriptionAlert"
+        PROTOCOL = "protocol"
         REFERRAL_REPORT = "referralReport"
         REFILL_REQUEST = "refillRequest"
         TASK = "task"
