@@ -269,6 +269,7 @@ from .payment_collection import CreditCardCharge, CreditCardChargeState, Payment
 from .payor_specific_charge import PayorSpecificCharge
 from .plan import Plan
 from .plugin_command import PluginCommand
+from .plugin_data import PluginData
 from .population_health import (
     Campaign,
     Intervention,
@@ -680,6 +681,7 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "Plan",
     "PluginCommand",
+    "PluginData",
     "Campaign",
     "Intervention",
     "InterventionPatient",
