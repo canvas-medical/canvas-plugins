@@ -20,7 +20,13 @@ from canvas_sdk.agents.standard_tools import (
     _serialize_vital,
 )
 
-CODING = SimpleNamespace(display="Metformin 500 mg tablet", name="Hemoglobin A1c", code="4548-4")
+CODING = SimpleNamespace(
+    display="Metformin 500 mg tablet",
+    name="Hemoglobin A1c",
+    code="4548-4",
+    system="http://loinc.org",
+    dbid=1,
+)
 
 
 def _coded() -> Any:

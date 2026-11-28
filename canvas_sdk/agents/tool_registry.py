@@ -532,6 +532,9 @@ class FilterSpec:
             the argument and act on it itself.
         default: The value used when the model leaves the filter out, advertised
             as the schema's ``default``.
+        distinct: When ``True`` and the filter is applied, the search returns each
+            row once. Set it on a filter that joins a to-many relation (``codings__``),
+            where a row with two matching related rows comes back twice.
     """
 
     type: str
@@ -542,6 +545,7 @@ class FilterSpec:
     enum: list[str] | None = None
     apply: Callable[[Any, Any], Any] | None = None
     default: Any = None
+    distinct: bool = False
 
 
 class ToolNotAllowed(LookupError):
@@ -1066,6 +1070,7 @@ class ToolRegistry:
                         type="string",
                         description="...",
                         apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+                        distinct=True,
                     ),
                     "active_only": FilterSpec(
                         type="boolean",
@@ -1125,6 +1130,7 @@ class ToolRegistry:
                 patient_id = require_patient_id(ctx) if patient_scoped else None
                 queryset = queryset_factory(arguments, patient_id)
 
+                joined_to_many = False
                 for filter_name, spec in filters_dict.items():
                     if spec.apply is None:
                         continue
@@ -1136,6 +1142,9 @@ class ToolRegistry:
                     if not value:
                         continue
                     queryset = spec.apply(queryset, value)
+                    joined_to_many = joined_to_many or spec.distinct
+                if joined_to_many:
+                    queryset = queryset.distinct()
 
                 if select_related:
                     queryset = queryset.select_related(*select_related)

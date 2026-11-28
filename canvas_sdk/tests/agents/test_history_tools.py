@@ -8,14 +8,18 @@ from urllib.parse import unquote
 
 import pytest
 
-from canvas_sdk.agents import history_tools, standard_tools
+from canvas_sdk.agents import dispense_units, history_tools, standard_tools
+from canvas_sdk.agents.ontology_lookup import CodeSearchUnavailable
 from canvas_sdk.test_utils.factories import (
     CanvasUserFactory,
     MedicationFactory,
+    MedicationStatementFactory,
     PatientFactory,
+    PrescriptionFactory,
 )
 from canvas_sdk.tests.agents.test_standard_tools import _allergy
 from canvas_sdk.v1.data import Condition, MedicationCoding
+from canvas_sdk.v1.data.condition import ConditionCoding
 
 NOTE = "00000000-0000-0000-0000-000000000001"
 
@@ -77,6 +81,15 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
                     "med_medication_id": 1,
                     "med_medication_description": "lisinopril 10 mg",
                     "rxnorm_rxcui": "314076",
+                    "clinical_quantities": [
+                        {
+                            "erx_quantity": "1.0000000",
+                            "clinical_quantity_description": "tablet",
+                            "erx_ncpdp_script_quantity_qualifier_code": "C48542",
+                            "erx_ncpdp_script_quantity_qualifier_description": "Tablet",
+                            "representative_ndc": "00093111101",
+                        }
+                    ],
                 },
                 {
                     "med_medication_id": 2,
@@ -91,8 +104,82 @@ def test_medications_come_back_coded_and_obsolete_ones_are_left_out(
         "find_clinical_codes", {"kind": "medication", "query": "lisinopril 10"}, ctx={}
     )
 
-    assert rows == [{"fdb_code": "1", "display": "lisinopril 10 mg", "rxnorm_rxcui": "314076"}]
+    assert rows == [
+        {
+            "fdb_code": "1",
+            "display": "lisinopril 10 mg",
+            "rxnorm_rxcui": "314076",
+            "dispense_units": [
+                {
+                    "representative_ndc": "00093111101",
+                    "description": "tablet",
+                    "unit_quantity": "1",
+                    "ncpdp_quantity_qualifier_code": "C48542",
+                    "ncpdp_quantity_qualifier_description": "Tablet",
+                }
+            ],
+        }
+    ]
     assert science.paths == ["/search/grouped-medication/?query=lisinopril%2010&limit=50"]
+
+
+def test_a_medication_without_dispense_units_has_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No units, a malformed one, or one with no NDC to prescribe it by: an empty list."""
+    _serve(
+        monkeypatch,
+        "science_http",
+        lambda path: {
+            "results": [
+                {"med_medication_id": 1, "med_medication_description": "a"},
+                {
+                    "med_medication_id": 2,
+                    "med_medication_description": "b",
+                    "clinical_quantities": [7, {"erx_quantity": "1", "representative_ndc": None}],
+                },
+            ]
+        },
+    )
+
+    rows = standard_tools.execute(
+        "find_clinical_codes", {"kind": "medication", "query": "a"}, ctx={}
+    )
+
+    assert [row["dispense_units"] for row in rows] == [[], []]
+
+
+@pytest.mark.django_db
+def test_a_patients_medications_carry_their_fdb_code() -> None:
+    """The code the prescription commands take, whichever coding comes first; none without one."""
+    patient = PatientFactory.create()
+    coded = MedicationFactory.create(patient=patient)
+    for system, code in (
+        ("http://www.nlm.nih.gov/research/umls/rxnorm", "314076"),
+        ("http://www.fdbhealth.com/", "123456"),
+    ):
+        MedicationCoding.objects.create(
+            medication=coded,
+            system=system,
+            code=code,
+            display="lisinopril 10 mg tablet",
+            version="",
+            user_selected=False,
+        )
+    free_text = MedicationFactory.create(patient=patient)
+    MedicationCoding.objects.create(
+        medication=free_text,
+        system="UNSTRUCTURED",
+        code="fish oil",
+        display="fish oil",
+        version="",
+        user_selected=False,
+    )
+
+    rows, _ = _run("find_medications", patient)
+
+    assert {row["id"]: row["fdb_code"] for row in rows} == {
+        str(coded.id): "123456",
+        str(free_text.id): None,
+    }
 
 
 def test_allergens_and_vaccines_carry_the_codes_their_commands_take(
@@ -347,3 +434,215 @@ def test_resolving_another_patients_condition_is_refused() -> None:
         "originate_resolve_condition", patient, condition_id=str(_active_condition(patient).id)
     )
     assert len(effects) == 1
+
+
+def _coded_twice(patient: Any) -> Any:
+    """A medication with an RxNorm coding and an FDB coding, both named the same."""
+    medication = MedicationFactory.create(patient=patient)
+    for system, code in (
+        ("http://www.nlm.nih.gov/research/umls/rxnorm", "314076"),
+        ("http://www.fdbhealth.com/", "123456"),
+    ):
+        MedicationCoding.objects.create(
+            medication=medication,
+            system=system,
+            code=code,
+            display="lisinopril 10 mg tablet",
+            version="",
+            user_selected=False,
+        )
+    return medication
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("tool", "seed"),
+    [
+        ("find_medications", lambda patient, medication: None),
+        (
+            "find_prescriptions",
+            lambda patient, medication: PrescriptionFactory.create(
+                patient=patient, committer=CanvasUserFactory.create(), medication=medication
+            ),
+        ),
+        (
+            "find_medication_statements",
+            lambda patient, medication: MedicationStatementFactory.create(
+                patient=patient, committer=CanvasUserFactory.create(), medication=medication
+            ),
+        ),
+    ],
+)
+def test_a_medication_found_by_name_comes_back_once_with_its_fdb_code(
+    tool: str, seed: Callable[[Any, Any], Any]
+) -> None:
+    """Two codings carrying the name match the search once, not once per coding."""
+    patient = PatientFactory.create()
+    medication = _coded_twice(patient)
+    seed(patient, medication)
+
+    rows, _ = _run(tool, patient, name_contains="lisinopril")
+
+    assert [row["fdb_code"] for row in rows] == ["123456"]
+
+
+# Prescribing ------------------------------------------------------------------------
+
+LISINOPRIL = {
+    "med_medication_id": 123456,
+    "clinical_quantities": [
+        {
+            "erx_quantity": "1.0000000",
+            "clinical_quantity_description": "tablet",
+            "erx_ncpdp_script_quantity_qualifier_code": "C48542",
+            "erx_ncpdp_script_quantity_qualifier_description": "Tablet",
+            "representative_ndc": "00093111101",
+        }
+    ],
+}
+
+
+def _ontologies(monkeypatch: pytest.MonkeyPatch, answer: Callable[[str], Any]) -> _Service:
+    service = _Service(answer)
+    monkeypatch.setattr(dispense_units, "ontologies_http", service)
+    return service
+
+
+@pytest.mark.django_db
+def test_a_prescription_is_drafted_with_its_dispense_unit_and_quantity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The unit comes from the medication's own, with the NCPDP code the pharmacy reads."""
+    service = _ontologies(monkeypatch, lambda path: LISINOPRIL)
+    patient = PatientFactory.create()
+
+    result, effects = _run(
+        "originate_prescribe_medication",
+        patient,
+        fdb_code="123456",
+        sig="Take 1 tablet by mouth daily",
+        representative_ndc="00093111101",
+        quantity_to_dispense=30,
+    )
+
+    assert result["ok"] is True
+    data = _data(effects[0])["data"]
+    assert data["type_to_dispense"] == {
+        "representative_ndc": "00093111101",
+        "ncpdp_quantity_qualifier_code": "C48542",
+        "description": "tablet",
+    }
+    assert data["quantity_to_dispense"] == "30"
+    assert data["substitutions"] == "allowed"
+    assert service.paths == ["/fdb/grouped-medication/123456/"]
+
+
+@pytest.mark.django_db
+def test_a_prescription_with_no_dispense_unit_still_says_whether_to_substitute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Allowed unless asked otherwise, with no lookup when no unit is named."""
+    service = _ontologies(monkeypatch, lambda path: pytest.fail("looked up"))
+    patient = PatientFactory.create()
+
+    _, allowed = _run("originate_prescribe_medication", patient, sig="Take 1 daily")
+    _, not_allowed = _run(
+        "originate_prescribe_medication", patient, sig="Take 1 daily", substitutions="not_allowed"
+    )
+
+    assert _data(allowed[0])["data"]["substitutions"] == "allowed"
+    assert _data(not_allowed[0])["data"]["substitutions"] == "not_allowed"
+    assert service.paths == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("arguments", "answer", "message"),
+    [
+        (
+            {"fdb_code": "123456", "representative_ndc": "99999999999"},
+            lambda path: LISINOPRIL,
+            "not one of this medication's dispense units",
+        ),
+        ({"representative_ndc": "00093111101"}, lambda path: LISINOPRIL, "needs the medication"),
+        (
+            {"fdb_code": "123456", "quantity_to_dispense": 30},
+            lambda path: LISINOPRIL,
+            "needs the dispense unit",
+        ),
+        (
+            {"fdb_code": "123456", "representative_ndc": "00093111101", "quantity_to_dispense": 0},
+            lambda path: LISINOPRIL,
+            "greater than 0",
+        ),
+        (
+            {
+                "fdb_code": "123456",
+                "representative_ndc": "00093111101",
+                "quantity_to_dispense": "30 tabs",
+            },
+            lambda path: LISINOPRIL,
+            "is not of type 'number'",
+        ),
+        (
+            {"fdb_code": "999999", "representative_ndc": "00093111101"},
+            lambda path: _Response({}, status_code=404),
+            "not a medication FDB has",
+        ),
+        (
+            {"fdb_code": "123456", "representative_ndc": "00093111101"},
+            lambda path: _Response({}, status_code=503),
+            "try again",
+        ),
+    ],
+)
+def test_a_dispense_unit_that_cannot_be_confirmed_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: dict[str, Any],
+    answer: Callable[[str], Any],
+    message: str,
+) -> None:
+    """Nothing is staged with a unit the medication does not have, or one not checked."""
+    _ontologies(monkeypatch, answer)
+    patient = PatientFactory.create()
+
+    with pytest.raises((ValueError, CodeSearchUnavailable), match=message):
+        _run("originate_prescribe_medication", patient, sig="Take 1 daily", **arguments)
+
+
+@pytest.mark.django_db
+def test_a_quantity_with_a_fraction_is_sent_as_written(monkeypatch: pytest.MonkeyPatch) -> None:
+    """1.2 mL stays 1.2, never the float's binary expansion."""
+    _ontologies(monkeypatch, lambda path: LISINOPRIL)
+    patient = PatientFactory.create()
+
+    _, effects = _run(
+        "originate_prescribe_medication",
+        patient,
+        fdb_code="123456",
+        sig="Take 1.2 mL by mouth daily",
+        representative_ndc="00093111101",
+        quantity_to_dispense=1.2,
+    )
+
+    assert _data(effects[0])["data"]["quantity_to_dispense"] == "1.2"
+
+
+@pytest.mark.django_db
+def test_a_condition_found_by_code_comes_back_once() -> None:
+    """Two codings carrying the searched digits match the search once."""
+    patient = PatientFactory.create()
+    condition = _active_condition(patient)
+    for system, code in (("ICD-10", "E119"), ("http://snomed.info/sct", "44054006E119")):
+        ConditionCoding.objects.create(
+            condition=condition,
+            system=system,
+            code=code,
+            display="Type 2 diabetes",
+            version="",
+            user_selected=False,
+        )
+
+    rows, _ = _run("find_conditions", patient, code_contains="E119")
+
+    assert len(rows) == 1

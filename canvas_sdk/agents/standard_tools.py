@@ -26,14 +26,17 @@ import re
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
 import requests
 from django.db.models import Q
 
+from canvas_sdk.agents.dispense_units import dispense_unit
 from canvas_sdk.agents.gateway import GatewayError
 from canvas_sdk.agents.note_helpers import find_open_note
+from canvas_sdk.agents.ontology_lookup import CodeNotFound
 from canvas_sdk.agents.tool_loop import run_tool_loop
 from canvas_sdk.agents.tool_registry import (
     EffectField,
@@ -57,6 +60,7 @@ from canvas_sdk.commands import (
     ReferCommand,
     StopMedicationCommand,
 )
+from canvas_sdk.commands.constants import ClinicalQuantity, CodeSystems
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.banner_alert.add_banner_alert import AddBannerAlert
 from canvas_sdk.effects.banner_alert.remove_banner_alert import RemoveBannerAlert
@@ -202,13 +206,27 @@ def _patients_record_check(
     return pre_build
 
 
+def _medication_codes(medication: Medication) -> tuple[str, str | None]:
+    """A medication's name, from its first coding, and the code of its FDB coding.
+
+    The codings are taken in the order they were recorded, so the name is the same on every
+    read. Read from the prefetched codings, so neither costs a query.
+    """
+    codings = sorted(medication.codings.all(), key=lambda coding: coding.dbid)
+    name = (codings[0].display or "") if codings else ""
+    fdb = next((c.code for c in codings if c.system == CodeSystems.FDB and c.code), None)
+    return name, fdb
+
+
 @standard_tools.filter_search_tool(
     name="find_medications",
     description=(
         "Search the patient's medications with optional filters. Returns each "
         "matching medication as an object with `name` (display from the first "
-        'coding, typically RxNorm), `status` ("active" or "inactive"), '
-        "`start_date` (ISO 8601 or null), and `end_date` (ISO 8601 or null). "
+        "coding, typically RxNorm), `fdb_code` (its FDB code, the one the "
+        "prescription commands take, or null for one charted without it), `status` "
+        '("active" or "inactive"), `start_date` (ISO 8601 or null), and `end_date` '
+        "(ISO 8601 or null). "
         "Patient scope is enforced — the tool only returns records for the "
         "current agent's patient. If no filters are supplied, returns the most "
         "recent records by start_date."
@@ -225,6 +243,7 @@ def _patients_record_check(
                 "'Metformin 500 mg tablet'."
             ),
             apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "active_only": FilterSpec(
             type="boolean",
@@ -252,16 +271,17 @@ def _patients_record_check(
     categories=("clinical_reads",),
     model=Medication,
     returns_description=(
-        "Array of objects with `id`, `name`, `status` (active|inactive), "
-        "`start_date` (ISO 8601 or null), `end_date` (ISO 8601 or null)."
+        "Array of objects with `id`, `name`, `fdb_code` (or null), `status` "
+        "(active|inactive), `start_date` (ISO 8601 or null), `end_date` (ISO 8601 or null)."
     ),
 )
 def _serialize_medication(medication: Any) -> dict[str, Any]:
     """Per-row serializer for find_medications."""
-    coding = next(iter(medication.codings.all()), None)
+    name, fdb = _medication_codes(medication)
     return {
         "id": str(medication.id),
-        "name": coding.display if coding else "(unknown)",
+        "name": name or "(unknown)",
+        "fdb_code": fdb,
         "status": medication.status,
         "start_date": medication.start_date.isoformat() if medication.start_date else None,
         "end_date": medication.end_date.isoformat() if medication.end_date else None,
@@ -291,6 +311,7 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the coding display (e.g. 'diabetes')."
             ),
             apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "code_contains": FilterSpec(
             type="string",
@@ -299,6 +320,7 @@ def _serialize_medication(medication: Any) -> dict[str, Any]:
                 "(e.g. 'E11' for type-2 diabetes ICD-10 family)."
             ),
             apply=lambda qs, v: qs.filter(codings__code__icontains=v),
+            distinct=True,
         ),
         "active_only": FilterSpec(
             type="boolean",
@@ -368,6 +390,7 @@ def _serialize_condition(condition: Any) -> dict[str, Any]:
                 "(e.g. 'a1c', 'hemoglobin')."
             ),
             apply=lambda qs, v: qs.filter(codings__name__icontains=v),
+            distinct=True,
         ),
         "observed_on_or_after": FilterSpec(
             type="string",
@@ -478,6 +501,7 @@ def _serialize_assessment(assessment: Any) -> dict[str, Any]:
                 "(e.g., 'penicillin', 'peanut', 'sulfa')."
             ),
             apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "severity": FilterSpec(
             type="string",
@@ -532,6 +556,7 @@ def _serialize_allergy(allergy: Any) -> dict[str, Any]:
                 "(e.g., 'influenza', 'covid', 'tdap', 'mmr')."
             ),
             apply=lambda qs, v: qs.filter(codings__display__icontains=v),
+            distinct=True,
         ),
         "given_on_or_after": FilterSpec(
             type="string",
@@ -2557,7 +2582,8 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
         "Search the patient's recorded medication statements — patient-reported "
         "or self-administered medications (distinct from active prescriptions "
         "which `find_medications` covers). Returns each statement with "
-        "`medication_name`, `start_date` (ISO 8601 or null), `end_date` (ISO "
+        "`medication_name`, `fdb_code` (the medication's FDB code, or null), "
+        "`start_date` (ISO 8601 or null), `end_date` (ISO "
         "8601 or null), `dose_form`, `dose_route`, `dose_frequency_interval`, "
         "and `sig_original_input` (the patient's verbatim sig)."
     ),
@@ -2571,6 +2597,7 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the medication's first-coding display."
             ),
             apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "started_on_or_after": FilterSpec(
             type="string",
@@ -2588,21 +2615,19 @@ def _serialize_lab_partner_test(test: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=MedicationStatement,
     returns_description=(
-        "Array of objects with `id`, `medication_name`, `start_date`, `end_date`, "
-        "`dose_form`, `dose_route`, `dose_frequency_interval`, `sig_original_input`."
+        "Array of objects with `id`, `medication_name`, `fdb_code`, `start_date`, "
+        "`end_date`, `dose_form`, `dose_route`, `dose_frequency_interval`, "
+        "`sig_original_input`."
     ),
 )
 def _serialize_medication_statement(statement: Any) -> dict[str, Any]:
     """Per-row serializer for find_medication_statements."""
     medication = statement.medication
-    medication_name = ""
-    if medication is not None:
-        coding = next(iter(medication.codings.all()), None)
-        if coding is not None:
-            medication_name = coding.display or ""
+    medication_name, fdb = _medication_codes(medication) if medication is not None else ("", None)
     return {
         "id": str(statement.id),
         "medication_name": medication_name or "(unknown)",
+        "fdb_code": fdb,
         "start_date": statement.start_date.isoformat() if statement.start_date else None,
         "end_date": statement.end_date.isoformat() if statement.end_date else None,
         "dose_form": statement.dose_form or None,
@@ -2670,7 +2695,8 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
         "Search the prescriptions written for the patient here (actual Rx events, "
         "distinct from `find_medications`, which is the medication list, and from "
         "`find_pharmacy_fills`, which is what pharmacies dispensed). Each result has "
-        "`medication_name`, `status` (where the prescription stands on its way to the "
+        "`medication_name`, `fdb_code` (the medication's FDB code, or null for a "
+        "compound or a medication without one), `status` (where the prescription stands on its way to the "
         "pharmacy), `written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
         "`dispense_quantity`, `days_supply`, `refills` (refills allowed), `pharmacy`, "
         "`prescriber`, `dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`, "
@@ -2687,6 +2713,7 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the medication's first-coding display."
             ),
             apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "status": FilterSpec(
             type="string",
@@ -2713,7 +2740,7 @@ def _serialize_external_event(event: Any) -> dict[str, Any]:
     categories=("clinical_reads",),
     model=Prescription,
     returns_description=(
-        "Array of objects with `id`, `medication_name`, `status`, "
+        "Array of objects with `id`, `medication_name`, `fdb_code`, `status`, "
         "`written_date`, `dispensed_date`, `end_date`, `sig_original_input`, "
         "`dispense_quantity`, `days_supply`, `refills`, `pharmacy`, `prescriber`, "
         "`dose_form`, `dose_route`, `dose_frequency_interval`, `is_refill`, `response`, "
@@ -2724,16 +2751,16 @@ def _serialize_prescription(prescription: Any) -> dict[str, Any]:
     """Per-row serializer for find_prescriptions."""
     medication = prescription.medication
     medication_name = ""
+    fdb: str | None = None
     if medication is not None:
-        coding = next(iter(medication.codings.all()), None)
-        if coding is not None:
-            medication_name = coding.display or ""
+        medication_name, fdb = _medication_codes(medication)
     elif prescription.compound_medication is not None:
         medication_name = prescription.compound_medication.formulation
     prescriber = prescription.prescriber
     return {
         "id": str(prescription.id),
         "medication_name": medication_name or "(unknown)",
+        "fdb_code": fdb,
         "status": prescription.status or None,
         "written_date": (
             prescription.written_date.isoformat() if prescription.written_date else None
@@ -3122,6 +3149,7 @@ def _serialize_interview(interview: Any) -> dict[str, Any]:
                 "Case-insensitive substring match on the stopped medication's first-coding display."
             ),
             apply=lambda qs, v: qs.filter(medication__codings__display__icontains=v),
+            distinct=True,
         ),
         "rationale_contains": FilterSpec(
             type="string",
@@ -3147,11 +3175,7 @@ def _serialize_interview(interview: Any) -> dict[str, Any]:
 def _serialize_stop_med_event(event: Any) -> dict[str, Any]:
     """Per-row serializer for find_stop_medication_events."""
     medication = event.medication
-    medication_name = ""
-    if medication is not None:
-        coding = next(iter(medication.codings.all()), None)
-        if coding is not None:
-            medication_name = coding.display or ""
+    medication_name = _medication_codes(medication)[0] if medication is not None else ""
     return {
         "id": str(event.id),
         "medication_name": medication_name or "(unknown)",
@@ -3924,13 +3948,60 @@ standard_tools.originate_command_tool(
 )
 
 
+def _prescribe_pre_build(arguments: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    """The dispense unit, checked against the medication, and whether it may be substituted.
+
+    The draft carries ``substitutions`` either way: the chart's Prescribe command sets it when
+    the clinician opens the row, and a draft accepted without opening it would have none.
+    """
+    extra: dict[str, Any] = {
+        "substitutions": PrescribeCommand.Substitutions(
+            arguments.get("substitutions") or PrescribeCommand.Substitutions.ALLOWED.value
+        )
+    }
+    ndc = str(arguments.get("representative_ndc") or "")
+    quantity = arguments.get("quantity_to_dispense")
+    if quantity is not None:
+        if not ndc:
+            raise ValueError("A quantity to dispense needs the dispense unit (representative_ndc).")
+        # Through its text, so 1.2 is sent as 1.2 rather than the float's binary expansion.
+        extra["quantity_to_dispense"] = Decimal(str(quantity))
+    if not ndc:
+        return extra
+    fdb_code = str(arguments.get("fdb_code") or "").strip()
+    if not fdb_code:
+        raise ValueError("A dispense unit needs the medication's fdb_code.")
+    try:
+        unit = dispense_unit(fdb_code, ndc)
+    except CodeNotFound as exc:
+        raise ValueError(
+            "That fdb_code is not a medication FDB has; look it up with find_clinical_codes "
+            "(kind 'medication')."
+        ) from exc
+    if unit is None:
+        raise ValueError(
+            "That representative_ndc is not one of this medication's dispense units; "
+            "use one from find_clinical_codes."
+        )
+    extra["type_to_dispense"] = ClinicalQuantity(
+        representative_ndc=unit["representative_ndc"],
+        ncpdp_quantity_qualifier_code=unit["ncpdp_quantity_qualifier_code"],
+        description=unit["description"],
+    )
+    return extra
+
+
 standard_tools.originate_command_tool(
     name="originate_prescribe_medication",
     description=(
         "Stage a draft Prescribe command on the patient's current open note "
         "for the clinician to review, edit, and commit. NEVER commits — the "
         "clinician sees the draft in the chart and decides whether to send "
-        "it. Use only when the clinician explicitly asks to prescribe."
+        "it. Use only when the clinician explicitly asks to prescribe. Look the "
+        "medication up with `find_clinical_codes` (kind 'medication') and pass its "
+        "`fdb_code`, and the `representative_ndc` of the dispense unit with "
+        "`quantity_to_dispense` counted in that unit. A unit the medication does not "
+        "have is refused."
     ),
     command_class=PrescribeCommand,
     fields={
@@ -3940,6 +4011,28 @@ standard_tools.originate_command_tool(
                 "FDB code identifying the medication. If unknown, omit; "
                 "the clinician will fill it in when reviewing the draft."
             ),
+        ),
+        "representative_ndc": EffectField(
+            type="string",
+            description=(
+                "The dispense unit: the `representative_ndc` of one of the medication's "
+                "`dispense_units` from find_clinical_codes. Needs `fdb_code`. Optional."
+            ),
+            pre_build_only=True,
+        ),
+        "quantity_to_dispense": EffectField(
+            type="number",
+            description=(
+                "How many of the dispense unit to dispense (e.g. 30 tablets), more than 0. "
+                "Optional; set it only with `representative_ndc`."
+            ),
+            pre_build_only=True,
+        ),
+        "substitutions": EffectField(
+            type="string",
+            enum=[choice.value for choice in PrescribeCommand.Substitutions],
+            description="Whether the pharmacy may substitute a generic. Defaults to allowed.",
+            pre_build_only=True,
         ),
         "sig": EffectField(
             type="string",
@@ -3967,6 +4060,7 @@ standard_tools.originate_command_tool(
             editable=True,
         ),
     },
+    pre_build=_prescribe_pre_build,
     categories=("clinical_writes",),
     returns_description=_ORIGINATE_RETURNS,
 )
