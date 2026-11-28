@@ -386,6 +386,7 @@ def should_create_table(model_class: type, schema_name: str) -> bool:
 
     Returns False for:
     - Objects without _meta (not Django models)
+    - Abstract models, whose fields live on their concrete subclasses' tables
     - Proxy models
     - Models whose db_table references a different schema
 
@@ -398,7 +399,7 @@ def should_create_table(model_class: type, schema_name: str) -> bool:
     """
     if not hasattr(model_class, "_meta"):
         return False
-    if model_class._meta.proxy:
+    if model_class._meta.abstract or model_class._meta.proxy:
         return False
     db_table = model_class._meta.original_attrs["db_table"]
     return "." not in db_table or db_table.startswith(f"{schema_name}.")
@@ -489,6 +490,8 @@ def generate_plugin_migrations(
                         log.info(f"Generated SQL for {model_class.__name__}:")
                         log.info(create_sql)
                         execute_create_table_sql(create_sql)
+                    elif hasattr(model_class, "_meta") and model_class._meta.abstract:
+                        log.info(f"Skipping abstract model {model_class.__name__}")
                     elif hasattr(model_class, "_meta") and model_class._meta.proxy:
                         log.info(f"Skipping proxy model {model_class.__name__}")
                     elif hasattr(model_class, "_meta"):
