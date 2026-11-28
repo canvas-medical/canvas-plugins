@@ -24,7 +24,7 @@ def unit_name(value: str) -> str:
 
 
 def usage_units(manifest: Mapping[str, Any]) -> frozenset[str]:
-    """The units a manifest's `catalog.pricing` lists, `token` aside."""
+    """The units a manifest's `catalog.pricing` lists, unlisted ones included, `token` aside."""
     catalog = manifest.get("catalog")
     pricing = catalog.get("pricing") if isinstance(catalog, Mapping) else None
     if not isinstance(pricing, list):
