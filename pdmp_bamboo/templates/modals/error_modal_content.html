@@ -1,0 +1,20 @@
+<!-- PDMP Error Modal Start -->
+<div data-modal-content="pdmp-modal"
+     data-component="error-modal"
+     data-modal-type="error"
+     class="shell pdmp-modal-shell">
+  <main class="app pdmp-modal-app"
+        data-component="modal-main-content">
+    {{ error_details|safe }}
+
+    {% if api_details %}
+      {{ api_details|safe }}
+    {% endif %}
+
+    {{ help_section|safe }}
+
+        <!-- Add bottom spacing to prevent Canvas Chat bot from covering content -->
+    <div class="pdmp-spacer-bottom"></div>
+  </main>
+</div>
+<!-- PDMP Error Modal End -->
