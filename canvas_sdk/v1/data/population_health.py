@@ -3,38 +3,6 @@ from django.db import models
 from canvas_sdk.v1.data.base import Model, TimestampedModel
 
 
-class SuspectHCCStatus(models.TextChoices):
-    """Whether a suspected HCC is still open on the patient."""
-
-    ACTIVE = "active", "Active"
-    INACTIVE = "inactive", "Inactive"
-
-
-class SuspectHCCKind(models.TextChoices):
-    """Why an HCC is suspected."""
-
-    IMPLIED_BY_CLINICAL_DATA = "implied_by_clinical_data", "Implied by Clinical Data"
-    PREVIOUS_CONDITION = "previous_condition", "Previous Condition"
-    UNKNOWN = "unknown", "Unknown"
-
-
-class SuspectHCC(TimestampedModel):
-    """A Hierarchical Condition Category suspected on a patient."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_suspecthcc_001"
-
-    patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="suspect_hccs"
-    )
-    status = models.CharField(max_length=20, choices=SuspectHCCStatus.choices)
-    hcc_description = models.TextField()
-    hcc_code = models.TextField()
-    reasons = models.JSONField(default=list)
-    previous_condition = models.TextField()
-    kind = models.CharField(max_length=50, choices=SuspectHCCKind.choices)
-
-
 class Campaign(Model):
     """An outreach campaign built on a protocol."""
 
@@ -88,7 +56,4 @@ __exports__ = (
     "Campaign",
     "Intervention",
     "InterventionPatient",
-    "SuspectHCC",
-    "SuspectHCCKind",
-    "SuspectHCCStatus",
 )

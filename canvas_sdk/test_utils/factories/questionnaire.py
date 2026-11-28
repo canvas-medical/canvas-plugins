@@ -2,10 +2,6 @@ import factory
 
 from canvas_sdk.v1.data import (
     Interview,
-    InterviewSendEvent,
-    InterviewTemplate,
-    InterviewTemplateQuestionnaireMap,
-    InterviewVisualFinding,
     Question,
     Questionnaire,
     QuestionnaireItemGroup,
@@ -138,53 +134,3 @@ class QuestionnaireResultFactory(factory.django.DjangoModelFactory[Questionnaire
     narrative = ""
     code_system = "http://loinc.org"
     code = "44261-6"
-
-
-class InterviewTemplateFactory(factory.django.DjangoModelFactory[InterviewTemplate]):
-    """Factory for creating an InterviewTemplate."""
-
-    class Meta:
-        model = InterviewTemplate
-
-    status = QuestionnaireStatus.ACTIVE
-    name = factory.Faker("sentence", nb_words=3)
-    language_id = 1
-    use_case_in_charting = QuestionnaireUseCase.QUESTIONNAIRE
-
-
-class InterviewTemplateQuestionnaireMapFactory(
-    factory.django.DjangoModelFactory[InterviewTemplateQuestionnaireMap]
-):
-    """Factory for creating an InterviewTemplateQuestionnaireMap."""
-
-    class Meta:
-        model = InterviewTemplateQuestionnaireMap
-
-    status = QuestionnaireStatus.ACTIVE
-    interview_template = factory.SubFactory(InterviewTemplateFactory)
-    questionnaire = factory.SubFactory(QuestionnaireFactory)
-
-
-class InterviewSendEventFactory(factory.django.DjangoModelFactory[InterviewSendEvent]):
-    """Factory for creating an InterviewSendEvent."""
-
-    class Meta:
-        model = InterviewSendEvent
-
-    interview = factory.SubFactory(InterviewFactory)
-    consent_remark = ""
-    to_email = factory.Faker("email")
-    email_succeeded = True
-    to_phone = ""
-    text_message_succeeded = False
-
-
-class InterviewVisualFindingFactory(factory.django.DjangoModelFactory[InterviewVisualFinding]):
-    """Factory for creating an InterviewVisualFinding."""
-
-    class Meta:
-        model = InterviewVisualFinding
-
-    interview = factory.SubFactory(InterviewFactory)
-    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
-    media_url = factory.Sequence(lambda n: f"https://example.com/interview-media/{n}.png")

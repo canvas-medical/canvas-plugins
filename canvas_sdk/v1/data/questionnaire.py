@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
-    AuditedModel,
     BaseModelManager,
     BaseQuerySet,
     CommittableQuerySetMixin,
@@ -314,76 +313,12 @@ class QuestionnaireResult(TimestampedModel):
     code = models.CharField(max_length=100)
 
 
-class InterviewTemplate(TimestampedModel):
-    """A reusable set of questionnaires an interview can start from."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_interviewtemplate_001"
-
-    status = models.CharField(max_length=2, choices=QuestionnaireStatus.choices)
-    name = models.CharField(max_length=255)
-    language_id = models.IntegerField()
-    use_case_in_charting = models.CharField(max_length=4, choices=QuestionnaireUseCase.choices)
-    questionnaires = models.ManyToManyField(
-        Questionnaire,
-        through="v1.InterviewTemplateQuestionnaireMap",
-        related_name="interview_templates",
-    )
-
-
-class InterviewTemplateQuestionnaireMap(TimestampedModel):
-    """A questionnaire included in an interview template."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_interviewtemplatequestionnairemap_001"
-
-    status = models.CharField(max_length=2, choices=QuestionnaireStatus.choices)
-    interview_template = models.ForeignKey(
-        InterviewTemplate, on_delete=models.DO_NOTHING, related_name="+"
-    )
-    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, related_name="+")
-
-
-class InterviewSendEvent(TimestampedModel):
-    """An attempt to send an interview to the patient by email or text message."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_interviewsendevent_001"
-
-    interview = models.ForeignKey(
-        Interview, on_delete=models.DO_NOTHING, related_name="send_events"
-    )
-    consent_remark = models.CharField(max_length=100)
-    to_email = models.CharField(max_length=255)
-    email_succeeded = models.BooleanField()
-    to_phone = models.CharField(max_length=50)
-    text_message_succeeded = models.BooleanField()
-
-
-class InterviewVisualFinding(AuditedModel):
-    """Media attached to an interview."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_interviewvisualfinding_001"
-
-    objects = BaseModelManager()
-
-    interview = models.ForeignKey(
-        Interview, on_delete=models.DO_NOTHING, related_name="visual_findings"
-    )
-    media_url = models.URLField(null=True)
-
-
 __exports__ = (
     "QuestionnaireStatus",
     "QuestionnaireUseCase",
     "QuestionnaireItemGroup",
     "QuestionnaireResult",
     "QuestionnaireResultQuerySet",
-    "InterviewTemplate",
-    "InterviewTemplateQuestionnaireMap",
-    "InterviewSendEvent",
-    "InterviewVisualFinding",
     "ResponseOptionSet",
     "ResponseOption",
     "Question",

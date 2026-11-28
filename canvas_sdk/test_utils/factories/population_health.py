@@ -1,28 +1,7 @@
 import factory
 from django.utils import timezone
 
-from canvas_sdk.v1.data import (
-    Campaign,
-    Intervention,
-    SuspectHCC,
-    SuspectHCCKind,
-    SuspectHCCStatus,
-)
-
-
-class SuspectHCCFactory(factory.django.DjangoModelFactory[SuspectHCC]):
-    """Factory for creating a SuspectHCC."""
-
-    class Meta:
-        model = SuspectHCC
-
-    patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
-    status = SuspectHCCStatus.ACTIVE
-    hcc_description = "End-stage liver disease"
-    hcc_code = "27"
-    reasons = factory.LazyFunction(lambda: ["Condition: End-stage liver disease"])
-    previous_condition = ""
-    kind = SuspectHCCKind.IMPLIED_BY_CLINICAL_DATA
+from canvas_sdk.v1.data import Campaign, Intervention
 
 
 class CampaignFactory(factory.django.DjangoModelFactory[Campaign]):
