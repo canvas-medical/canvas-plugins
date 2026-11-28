@@ -1,6 +1,7 @@
 from typing import Self, cast
 
 from django.db import models
+from django.db.models import Exists, OuterRef, Q
 
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
@@ -9,14 +10,26 @@ from canvas_sdk.v1.data.base import (
     TimestampedModel,
 )
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.prescription import Prescription, PrescriptionStatus
 
 
 class RefillRequestQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """RefillRequestQuerySet."""
 
     def pending(self) -> Self:
-        """Requests in the refill queue: not ignored and without a committed response."""
-        return self.exclude(ignored=True).exclude(response__committer__isnull=False)
+        """Requests in the refill queue: not ignored, and not answered by a sent response.
+
+        A sent response answers its request unless it failed to reach the pharmacy, so a request
+        whose only responses are unsent or failed stays in the queue. Entering a response in
+        error doesn't retract a message the pharmacy received (one with a `message_id`), so only
+        a response the pharmacy never got stops answering when entered in error.
+        """
+        answering = (
+            Prescription.objects.filter(refill_request=OuterRef("pk"), committer__isnull=False)
+            .filter(Q(entered_in_error__isnull=True) | ~Q(message_id=""))
+            .exclude(status=PrescriptionStatus.ERROR)
+        )
+        return self.exclude(ignored=True).exclude(Exists(answering))
 
 
 class RefillRequest(TimestampedModel, IdentifiableModel):
