@@ -1,6 +1,12 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import BaseModelManager, IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    IdentifiableModel,
+    TimestampedModel,
+)
 
 
 class PostingMethods(models.TextChoices):
@@ -32,4 +38,44 @@ class PaymentCollection(TimestampedModel, IdentifiableModel):
     description = models.TextField()
 
 
-__exports__ = ("PaymentCollection", "PostingMethods")
+class CreditCardChargeState(models.TextChoices):
+    """CreditCardChargeState."""
+
+    PENDING = "Pending", "Pending"
+    CHARGED = "Charged", "Charged"
+    SUCCESSFUL = "Successful", "Successful"
+    FAILED = "Failed", "Failed"
+
+
+class CreditCardCharge(AuditedModel, IdentifiableModel):
+    """A card charge made through a payment provider for a payment collection."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_creditcardcharge_001"
+
+    objects = BaseModelManager()
+
+    # Every charge has an originator, unlike the optional one on AuditedModel.
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
+    editors = ArrayField(models.IntegerField(), null=True, blank=True)
+    payment_collection = models.ForeignKey(
+        PaymentCollection, on_delete=models.DO_NOTHING, related_name="credit_card_charges"
+    )
+    payment_method = models.ForeignKey(
+        "v1.PaymentCard",
+        on_delete=models.DO_NOTHING,
+        related_name="credit_card_charges",
+        null=True,
+    )
+    state = models.CharField(
+        max_length=50, choices=CreditCardChargeState.choices, default=CreditCardChargeState.PENDING
+    )
+    provider = models.CharField(max_length=255, default="stripe")
+
+
+__exports__ = (
+    "CreditCardCharge",
+    "CreditCardChargeState",
+    "PaymentCollection",
+    "PostingMethods",
+)

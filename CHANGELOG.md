@@ -1,6 +1,46 @@
 # CHANGELOG
 
 
+## v1.26.0 (2026-11-27)
+
+### Features
+
+- Add a tool that structures a visit transcript into note sections
+  ([#2045](https://github.com/canvas-medical/canvas-plugins/pull/2045),
+  [`651aeec`](https://github.com/canvas-medical/canvas-plugins/commit/651aeec56b3385c1606dd4a1b39335e6ddb9a318))
+
+
+## v1.25.0 (2026-11-27)
+
+### Features
+
+- Add a tool that identifies the role of each voice in a visit transcript
+  ([#2046](https://github.com/canvas-medical/canvas-plugins/pull/2046),
+  [`16d06ae`](https://github.com/canvas-medical/canvas-plugins/commit/16d06ae97e71b271561f934cf4567e55c2845821))
+
+
+## v1.24.0 (2026-11-27)
+
+### Features
+
+- **data**: Expose protocol snooze reasons in the data module (KOALA-8708)
+  ([#2044](https://github.com/canvas-medical/canvas-plugins/pull/2044),
+  [`370e973`](https://github.com/canvas-medical/canvas-plugins/commit/370e973d21165ee68727a1b3bad05c58616ff869))
+
+
+## v1.23.0 (2026-11-27)
+
+### Features
+
+- **cli**: Check the files a deploy pushes for credentials
+  ([#2001](https://github.com/canvas-medical/canvas-plugins/pull/2001),
+  [`6e0b36f`](https://github.com/canvas-medical/canvas-plugins/commit/6e0b36f46c77ab89b2e133af46d12625d5b9a557))
+
+- **data**: Expose role groups and credit card charges in the data module (KOALA-8709)
+  ([#2043](https://github.com/canvas-medical/canvas-plugins/pull/2043),
+  [`64c800a`](https://github.com/canvas-medical/canvas-plugins/commit/64c800a1f5cca60801a04237a81df7b0f425d383))
+
+
 ## v1.22.1 (2026-11-25)
 
 ### Bug Fixes

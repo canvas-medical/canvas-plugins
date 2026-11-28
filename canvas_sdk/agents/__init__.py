@@ -6,6 +6,8 @@ from canvas_sdk.agents import (
     order_tools,  # noqa: F401  (importing it registers the imaging order and referral tools)
     questionnaire_tools,  # noqa: F401  (importing it registers the questionnaire tools)
     scheduling_tools,  # noqa: F401  (importing it registers the scheduling tools)
+    speaker_tools,  # noqa: F401  (importing it registers the speaker roles tool)
+    transcript_tools,  # noqa: F401  (importing it registers the transcript tool)
     visit_tools,  # noqa: F401  (importing it registers the reason for visit and HPI tools)
 )
 from canvas_sdk.agents.base import AgentPlugin
@@ -20,6 +22,12 @@ from canvas_sdk.agents.gateway import (
 from canvas_sdk.agents.history import DEFAULT_HISTORY_CHARS, window_messages
 from canvas_sdk.agents.note_helpers import find_open_note, find_open_note_uuid_from_ctx
 from canvas_sdk.agents.result import AgentRunResult
+from canvas_sdk.agents.speaker_tools import (
+    SPEAKER_ROLES,
+    SpeakerRole,
+    SpeakerRoles,
+    identify_speaker_roles,
+)
 from canvas_sdk.agents.standard_tools import standard_tools
 from canvas_sdk.agents.state import AgentState
 from canvas_sdk.agents.subagent import SubAgentSpec, run_subagent, run_subagents
@@ -31,6 +39,12 @@ from canvas_sdk.agents.tool_registry import (
     ToolNotAllowed,
     ToolRegistry,
     require_patient_id,
+)
+from canvas_sdk.agents.transcript_tools import (
+    StructuredVisitNote,
+    VisitProblem,
+    VisitVital,
+    structure_note_from_transcript,
 )
 
 # The modules above have registered every standard tool. Every plugin's agents adopt
@@ -53,17 +67,25 @@ __all__ = __exports__ = (
     "GatewayError",
     "RunRequester",
     "RunSubject",
+    "SPEAKER_ROLES",
+    "SpeakerRole",
+    "SpeakerRoles",
+    "StructuredVisitNote",
     "SubAgentSpec",
     "ToolCall",
     "ToolLoopResult",
     "ToolNotAllowed",
     "ToolRegistry",
+    "VisitProblem",
+    "VisitVital",
     "find_open_note",
     "find_open_note_uuid_from_ctx",
+    "identify_speaker_roles",
     "require_patient_id",
     "run_subagent",
     "run_subagents",
     "run_tool_loop",
     "standard_tools",
+    "structure_note_from_transcript",
     "window_messages",
 )

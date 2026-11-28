@@ -54,6 +54,14 @@ class StaffRoleFactory(factory.django.DjangoModelFactory[StaffRole]):
     domain_privilege_level = 100000
     permissions = factory.LazyFunction(dict)
     staff = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    role = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.RoleFactory",
+        internal_code=factory.SelfAttribute("..internal_code"),
+        name=factory.SelfAttribute("..name"),
+        public_abbreviation=factory.SelfAttribute("..public_abbreviation"),
+        domain=factory.SelfAttribute("..domain"),
+        domain_privilege_level=factory.SelfAttribute("..domain_privilege_level"),
+    )
 
 
 class StaffLicenseFactory(factory.django.DjangoModelFactory[StaffLicense]):
