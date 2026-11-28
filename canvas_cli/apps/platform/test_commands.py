@@ -2871,7 +2871,7 @@ def test_config_set_on_a_managed_plugin_stores_values_then_configures(
 
     assert result.exit_code == 0, result.output
     bodies = {
-        r.url.rsplit("/", 1)[-1]: r.json()
+        r.url.split("?")[0].rsplit("/", 1)[-1]: r.json()
         for r in requests_mock.request_history
         if r.method == "PUT"
     }
@@ -2916,6 +2916,50 @@ def test_config_unset_on_a_managed_plugin_clears_values_then_configures(
         "acme-staging",
         "acme-prod",
     ]
+
+
+@pytest.mark.parametrize(
+    ("verb", "method", "args"),
+    [("set", "PUT", ["API_KEY=v"]), ("unset", "DELETE", ["API_KEY"])],
+)
+@pytest.mark.parametrize(
+    ("record_publisher", "expected_qs"),
+    [("acme", {"publisher": ["acme"]}), (None, {})],
+    ids=["publisher-named", "no-publisher"],
+)
+def test_config_set_and_unset_send_the_managed_records_publisher(
+    verb: str,
+    method: str,
+    args: list[str],
+    record_publisher: str | None,
+    expected_qs: dict[str, list[str]],
+    requests_mock: requests_mock_module.Mocker,
+    managed_plugin: None,
+) -> None:
+    """The variables route resolves the name again, so it is told the publisher Platform
+    gave for the plugin; a record naming none leaves the query empty.
+    """
+    record: dict[str, Any] = {
+        "name": NAME,
+        "installs": [{"instance": "acme-staging", "sha": "3f2a", "enabled": True}],
+    }
+    if record_publisher:
+        record["publisher"] = record_publisher
+    requests_mock.get(f"{API}/plugins/{NAME}", json=record)
+    # A record naming no publisher counts as managed only for a Canvas employee.
+    requests_mock.get(f"{API}/me", json={"organizations": [], "canvas_employee": True})
+    url: str = f"{API}/instances/acme-staging/plugins/{NAME}/variables/API_KEY"
+    requests_mock.register_uri(method, url, status_code=200, json={})
+
+    result = runner.invoke(app, ["config", verb, NAME, *args])
+
+    assert result.exit_code == 0, result.output
+    sent: list[Any] = [
+        r
+        for r in requests_mock.request_history
+        if r.method == method and r.path.endswith("/variables/api_key")
+    ]
+    assert [r.qs for r in sent] == [expected_qs]
 
 
 def test_config_set_on_a_managed_plugin_refuses_host(managed_plugin: None) -> None:
@@ -2972,7 +3016,7 @@ def test_config_on_a_plain_name_is_refused_for_an_instance_platform_does_not_man
 
     assert result.exit_code == 1
     assert "Canvas Platform does not manage intake." in result.output
-    assert _requests_to(requests_mock, "GET", "/plugins/intake")
+    assert _requests_to(requests_mock, "GET", "/plugins/intake?instance=legacy")
     mock_update.assert_not_called()
 
 
@@ -4430,18 +4474,25 @@ def test_a_platform_that_still_requires_a_prefix_stops_the_deploy_before_git(
 def test_config_on_a_name_two_publishers_share_fails_closed(
     mock_update: Mock, requests_mock: requests_mock_module.Mocker, signed_in: None
 ) -> None:
-    """S7: an ambiguous name is not one Platform manages for the person, and is refused rather
-    than written through credentials.ini, which would change an instance behind Platform's back.
+    """S7: an ambiguous name is refused with Platform's sentence rather than written through
+    credentials.ini, which would change an instance behind Platform's back.
     """
-    sentence = "Two publishers have a plugin named 'intake': acme, big-leap. Pass ?publisher=."
+    sentence = (
+        "Acme and Big Leap Health both publish intake. Name the publisher to choose one "
+        "(publisher acme or big-leap-health)."
+    )
     requests_mock.get(
         f"{API}/plugins/intake", status_code=409, json={"error": sentence, "code": "ambiguous"}
+    )
+    requests_mock.get(
+        f"{API}/instances", json={"instances": [_instance("acme-staging", "configure_plugin")]}
     )
 
     result = runner.invoke(app, ["config", "set", "intake", "A=1", "--instance", "acme-staging"])
 
     assert result.exit_code == 1, result.output
-    assert "Canvas Platform does not manage intake." in result.output
+    assert sentence in " ".join(result.output.split())
+    assert "does not manage" not in result.output
     assert not [r for r in requests_mock.request_history if r.method == "PUT"]
     mock_update.assert_not_called()
 
