@@ -2192,6 +2192,10 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
         ),
     )
     server.add_insecure_port("127.0.0.1:" + port)
+    if settings.PLUGIN_RUNNER_GRPC_SOCKET:
+        server.add_insecure_port(f"unix:{settings.PLUGIN_RUNNER_GRPC_SOCKET}")
+        # home-app's processes run as other users, like any local caller of the TCP port.
+        os.chmod(settings.PLUGIN_RUNNER_GRPC_SOCKET, 0o666)
 
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 

@@ -1957,6 +1957,46 @@ def test_main_marks_registry_not_ready_before_loading_and_on_shutdown(
     assert event_registry.snapshot().ready is False
 
 
+@pytest.mark.parametrize("configured", [False, True])
+@patch("plugin_runner.plugin_runner.reconcile_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_serves_on_the_grpc_socket_when_configured(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_reconcile: MagicMock,
+    configured: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With a socket set, home-app's processes, which run as other users, can connect to it."""
+    grpc_socket = tmp_path / "grpc.sock"
+    monkeypatch.setattr(
+        settings, "PLUGIN_RUNNER_GRPC_SOCKET", str(grpc_socket) if configured else None
+    )
+
+    def bind(address: str) -> int:
+        if address.startswith("unix:"):
+            Path(address.removeprefix("unix:")).touch(mode=0o600)
+        return 1
+
+    mock_server = MagicMock()
+    mock_server.add_insecure_port.side_effect = bind
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+    mock_grpc.server.return_value = mock_server
+
+    main(specified_plugin_paths=[])
+
+    addresses = [call.args[0] for call in mock_server.add_insecure_port.call_args_list]
+    if configured:
+        assert addresses == ["127.0.0.1:50051", f"unix:{grpc_socket}"]
+        assert grpc_socket.stat().st_mode & 0o777 == 0o666
+    else:
+        assert addresses == ["127.0.0.1:50051"]
+
+
 @pytest.mark.parametrize(
     "install_test_plugin", ["test_strict_sandbox_fallback_plugin"], indirect=True
 )
