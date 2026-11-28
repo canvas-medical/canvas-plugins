@@ -311,8 +311,6 @@ class LabOrderSpecimen(AuditedModel, IdentifiableModel):
     source = models.CharField(max_length=255, default="")
     source_additional = models.CharField(max_length=255, default="")
     collection_date_time = models.DateTimeField(null=True)
-    # The body-site table has no SDK model, so its key is exposed as a plain column.
-    body_site_id = models.IntegerField(null=True)
 
 
 class LabOrderReason(AuditedModel):
