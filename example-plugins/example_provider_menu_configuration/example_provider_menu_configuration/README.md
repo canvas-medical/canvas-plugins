@@ -65,13 +65,16 @@ the links to `/admin` and to MFA enrollment.
 | `CAMPAIGNS`                   | Campaigns                  |
 | `DATA_INTEGRATION`            | Data integration           |
 | `QUESTIONNAIRE_BUILDER`       | Questionnaire Builder      |
+| `IDENTITY_VERIFICATION`       | Identity verification      |
 | `SETTINGS`                    | Settings                   |
 | `MULTI_FACTOR_AUTHENTICATION` | Multi-Factor Authentication |
 | `CHANGELOG`                   | Changelog                  |
 | `HELP_CENTER`                 | Help center                |
 | `GOOGLE_CALENDAR`             | Google Calendar            |
 
-The avatar and Sign out are always rendered and cannot be hidden.
+The avatar and Sign out are always rendered and cannot be hidden. `IDENTITY_VERIFICATION`
+follows ID.me availability rather than the allow-list: it renders wherever ID.me identity
+verification is turned on, whether or not it is listed, and never renders elsewhere.
 
 ## Trying it out
 
