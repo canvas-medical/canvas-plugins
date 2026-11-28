@@ -28,18 +28,19 @@ class FakeResponse:
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": ""})
-@patch("requests.Session.get")
-def test_pdf_from_url(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url(mock_post: MagicMock) -> None:
     """Test that from_url returns a PdfUrlResponse on 302 redirect."""
-    mock_get.return_value = FakeResponse(
+    mock_post.return_value = FakeResponse(
         status_code=302,
         headers={"Location": "https://s3.amazonaws.com/bucket/file.pdf"},
     )
 
     response = pdf_generator.from_url("/print/note/123/")
 
-    mock_get.assert_called_once_with(
-        "https://web-to-pdf.canvasmedical.com/generate/?customerId=test-customer&url=%2Fprint%2Fnote%2F123%2F",
+    mock_post.assert_called_once_with(
+        "https://web-to-pdf.canvasmedical.com/generate/",
+        json={"customerId": "test-customer", "url": "/print/note/123/"},
         headers={},
         timeout=30,
         allow_redirects=False,
@@ -51,10 +52,10 @@ def test_pdf_from_url(mock_get: MagicMock) -> None:
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": ""})
-@patch("requests.Session.get")
-def test_pdf_from_url_with_auth(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url_with_auth(mock_post: MagicMock) -> None:
     """Test that PdfAuthRequest propagates auth headers."""
-    mock_get.return_value = FakeResponse(
+    mock_post.return_value = FakeResponse(
         status_code=302,
         headers={"Location": "https://s3.amazonaws.com/bucket/file.pdf"},
     )
@@ -62,8 +63,9 @@ def test_pdf_from_url_with_auth(mock_get: MagicMock) -> None:
     auth = PdfAuthRequest(username="user", password="pass")
     pdf_generator.from_url("/print/note/123/", auth=auth)
 
-    mock_get.assert_called_once_with(
-        "https://web-to-pdf.canvasmedical.com/generate/?customerId=test-customer&url=%2Fprint%2Fnote%2F123%2F",
+    mock_post.assert_called_once_with(
+        "https://web-to-pdf.canvasmedical.com/generate/",
+        json={"customerId": "test-customer", "url": "/print/note/123/"},
         headers={"X-PDF-Auth-User": "user", "X-PDF-Auth-Password": "pass"},
         timeout=30,
         allow_redirects=False,
@@ -72,18 +74,22 @@ def test_pdf_from_url_with_auth(mock_get: MagicMock) -> None:
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": "https://myinstance.canvasmedical.com"})
-@patch("requests.Session.get")
-def test_pdf_from_url_with_host(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url_with_host(mock_post: MagicMock) -> None:
     """Test that CANVAS_PUBLIC_HOST env var is prepended to the print URL."""
-    mock_get.return_value = FakeResponse(
+    mock_post.return_value = FakeResponse(
         status_code=302,
         headers={"Location": "https://s3.amazonaws.com/bucket/file.pdf"},
     )
 
     pdf_generator.from_url("/print/note/123/")
 
-    mock_get.assert_called_once_with(
-        "https://web-to-pdf.canvasmedical.com/generate/?customerId=test-customer&url=https%3A%2F%2Fmyinstance.canvasmedical.com%2Fprint%2Fnote%2F123%2F",
+    mock_post.assert_called_once_with(
+        "https://web-to-pdf.canvasmedical.com/generate/",
+        json={
+            "customerId": "test-customer",
+            "url": "https://myinstance.canvasmedical.com/print/note/123/",
+        },
         headers={},
         timeout=30,
         allow_redirects=False,
@@ -92,30 +98,52 @@ def test_pdf_from_url_with_host(mock_get: MagicMock) -> None:
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": "https://myinstance.canvasmedical.com"})
-@patch("requests.Session.get")
-def test_pdf_from_url_normalizes_slashes(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url_sends_the_page_in_the_body_and_not_the_request_url(
+    mock_post: MagicMock,
+) -> None:
+    """The page's own query string can carry patient details, and the PDF service's request
+    line lands in its access logs, so the page travels in a JSON body.
+    """
+    mock_post.return_value = FakeResponse(
+        status_code=302,
+        headers={"Location": "https://s3.amazonaws.com/bucket/file.pdf"},
+    )
+
+    pdf_generator.from_url("plugin-io/api/some-plugin/printout/html?patient_name=Dr+Who")
+
+    (request_url,) = mock_post.call_args.args
+    assert "?" not in request_url
+    assert "Dr+Who" not in request_url
+    assert mock_post.call_args.kwargs["json"]["url"] == (
+        "https://myinstance.canvasmedical.com/plugin-io/api/some-plugin/printout/html"
+        "?patient_name=Dr+Who"
+    )
+
+
+@patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
+@patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": "https://myinstance.canvasmedical.com"})
+@patch("requests.Session.post")
+def test_pdf_from_url_normalizes_slashes(mock_post: MagicMock) -> None:
     """Test that a missing leading slash on print_url is handled correctly."""
-    mock_get.return_value = FakeResponse(
+    mock_post.return_value = FakeResponse(
         status_code=302,
         headers={"Location": "https://s3.amazonaws.com/bucket/file.pdf"},
     )
 
     pdf_generator.from_url("plugin-io/api/some-plugin/printout/html?note_uuid=abc")
 
-    mock_get.assert_called_once_with(
-        "https://web-to-pdf.canvasmedical.com/generate/?customerId=test-customer&url=https%3A%2F%2Fmyinstance.canvasmedical.com%2Fplugin-io%2Fapi%2Fsome-plugin%2Fprintout%2Fhtml%3Fnote_uuid%3Dabc",
-        headers={},
-        timeout=30,
-        allow_redirects=False,
+    assert mock_post.call_args.kwargs["json"]["url"] == (
+        "https://myinstance.canvasmedical.com/plugin-io/api/some-plugin/printout/html?note_uuid=abc"
     )
 
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": ""})
-@patch("requests.Session.get")
-def test_pdf_from_url_non_redirect_returns_none(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url_non_redirect_returns_none(mock_post: MagicMock) -> None:
     """Test that a non-302 response returns None."""
-    mock_get.return_value = FakeResponse(status_code=200)
+    mock_post.return_value = FakeResponse(status_code=200)
 
     response = pdf_generator.from_url("/print/note/123/")
 
@@ -124,10 +152,10 @@ def test_pdf_from_url_non_redirect_returns_none(mock_get: MagicMock) -> None:
 
 @patch("canvas_sdk.utils.pdf.CUSTOMER_IDENTIFIER", "test-customer")
 @patch.dict(os.environ, {"CANVAS_PUBLIC_HOST": ""})
-@patch("requests.Session.get")
-def test_pdf_from_url_no_location_returns_none(mock_get: MagicMock) -> None:
+@patch("requests.Session.post")
+def test_pdf_from_url_no_location_returns_none(mock_post: MagicMock) -> None:
     """Test that a 302 without Location header returns None."""
-    mock_get.return_value = FakeResponse(status_code=302)
+    mock_post.return_value = FakeResponse(status_code=302)
 
     response = pdf_generator.from_url("/print/note/123/")
 

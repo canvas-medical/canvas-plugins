@@ -49,21 +49,18 @@ class PdfGenerator(ServiceClient):
         host = os.getenv("CANVAS_PUBLIC_HOST", "")
         url = f"{host.rstrip('/')}/{print_url.lstrip('/')}"
 
-        params = urllib.parse.urlencode(
-            {
-                "customerId": CUSTOMER_IDENTIFIER,
-                "url": url,
-            }
-        )
         headers: dict[str, str] = {}
         if auth:
             headers["X-PDF-Auth-User"] = auth.username
             headers["X-PDF-Auth-Password"] = auth.password
 
+        # The page travels in a JSON body: request URLs land in the service's access logs, and
+        # the page's own query string can carry patient details.
         response = self._send(
-            f"/generate/?{params}",
-            lambda path: self._http_client._session.get(
+            "/generate/",
+            lambda path: self._http_client._session.post(
                 self._http_client.join_url(path),
+                json={"customerId": CUSTOMER_IDENTIFIER, "url": url},
                 headers=headers,
                 timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
                 allow_redirects=False,
